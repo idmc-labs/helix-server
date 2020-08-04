@@ -23,7 +23,7 @@ APPS_DIR = os.path.join(BASE_DIR, APPS_DIRNAME)
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'w(m6)jr08z!anjsq6mjz%xo^*+sfnv$e3list=gfcfxaj_^4%o'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'w(m6)jr08z!anjsq6mjz%xo^*+sfnv$e3list=gfcfxaj_^4%o')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
