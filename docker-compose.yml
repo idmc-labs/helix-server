@@ -1,0 +1,26 @@
+version: '3.2'
+
+services:
+    db:
+        build:
+          context: ./server/postgres/
+          cache_from:
+            - helix/helix-db:latest
+        volumes:
+            - helix-db-data:/var/lib/postgresql/data
+    server:
+        build:
+          context: ./server/
+          cache_from:
+            - helix/helix-server:latest
+        env_file:
+            - .env
+        volumes:
+            - ./server/:/code
+        ports:
+            - '8000:8000'
+        depends_on:
+            - db
+
+volumes:
+  helix-db-data:
