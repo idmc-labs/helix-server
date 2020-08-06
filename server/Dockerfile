@@ -11,4 +11,6 @@ RUN pip install -r requirements.txt
 
 COPY . /code/
 
+RUN python manage.py migrate \
+    && python manage.py loaddata fixtures/users.json
 CMD ["python", "manage.py", "runserver", "0.0.0.0:9000"]
