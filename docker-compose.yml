@@ -6,6 +6,8 @@ services:
           context: ./server/postgres/
           cache_from:
             - helix/helix-db:latest
+        env_file:
+            - ./server/postgres/.env
         volumes:
             - helix-db-data:/var/lib/postgresql/data
     server:
