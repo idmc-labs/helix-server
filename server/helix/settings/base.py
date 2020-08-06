@@ -13,8 +13,6 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-from datetime import timedelta
-
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 APPS_DIRNAME = 'apps'
 APPS_DIR = os.path.join(BASE_DIR, APPS_DIRNAME)
@@ -37,10 +35,7 @@ LOCAL_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
-    'django_filters',
     'graphene_django',
-    'graphql_jwt.refresh_token.apps.RefreshTokenConfig',
-    'graphql_auth',
 ]
 
 INSTALLED_APPS = [
@@ -139,40 +134,5 @@ AUTH_USER_MODEL = 'users.User'
 
 # https://docs.graphene-python.org/projects/django/en/latest/tutorial-plain/#update-settings
 GRAPHENE = {
-    'SCHEMA': 'helix.schema.schema',
-    'MIDDLEWARE': [
-        'graphql_jwt.middleware.JSONWebTokenMiddleware',
-    ],
+    'SCHEMA': 'helix.schema.schema'
 }
-
-# ===================
-# DJANGO GRAPHQL AUTH
-# ===================
-
-GRAPHQL_JWT = {
-    'JWT_ALLOW_ANY_CLASSES': [
-        'graphql_auth.relay.Register',
-        'graphql_auth.relay.VerifyAccount',
-        'graphql_auth.relay.ResendActivationEmail',
-        'graphql_auth.relay.SendPasswordResetEmail',
-        'graphql_auth.relay.PasswordReset',
-        'graphql_auth.relay.ObtainJSONWebToken',
-        'graphql_auth.relay.VerifyToken',
-        'graphql_auth.relay.RefreshToken',
-        'graphql_auth.relay.RevokeToken',
-        # 'graphql_auth.relay.VerifySecondaryEmail',
-    ],
-    'JWT_VERIFY_EXPIRATION': True,
-    'JWT_LONG_RUNNING_REFRESH_TOKEN': True,
-    'JWT_EXPIRATION_DELTA': timedelta(days=1),  # todo reduce me
-    'JWT_REFRESH_EXPIRATION_DELTA': timedelta(days=7),
-}
-
-AUTHENTICATION_BACKENDS = [
-    'graphql_auth.backends.GraphQLAuthBackend',
-    'django.contrib.auth.backends.ModelBackend',
-]
-
-# =======================
-# END DJANGO GRAPHQL AUTH
-# =======================
