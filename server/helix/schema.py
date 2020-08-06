@@ -3,8 +3,7 @@ import graphene
 import apps.users.schema
 
 
-class Query(apps.users.schema.Query, 
-            graphene.ObjectType):
+class Query(graphene.ObjectType):
     pass
 
 

@@ -4,6 +4,11 @@ from django.contrib.auth.models import AbstractUser
 
 class User(AbstractUser):
     email = models.EmailField('email address', unique=True)
+    username = models.CharField(
+        'username',
+        max_length=150,
+        help_text='Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.',
+    )
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
