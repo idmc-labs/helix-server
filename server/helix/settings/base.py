@@ -26,7 +26,8 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'w(m6)jr08z!anjsq6mjz%xo^*+sfnv
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+# fixme
+ALLOWED_HOSTS = ['*']
 
 # Application definition
 
@@ -136,3 +137,7 @@ AUTH_USER_MODEL = 'users.User'
 GRAPHENE = {
     'SCHEMA': 'helix.schema.schema'
 }
+
+AUTHENTICATION_BACKEND = [
+    'django.contrib.auth.backends.ModelBackend',
+]
