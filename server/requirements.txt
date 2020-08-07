@@ -6,4 +6,4 @@ django-extensions==3.0.4
 
 djoser==2.0.3
 # required by djoser
-django-rest-framework-0.1.0
+django-rest-framework==0.1.0
