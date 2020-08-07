@@ -1,9 +1,11 @@
 from django.contrib.auth import get_user_model, authenticate
 from django import forms
+from django.contrib.auth.tokens import default_token_generator
 from django.db import transaction
 from djoser.conf import settings as djoser_settings
+from djoser.utils import decode_uid
 
-from apps.users.utils import send_activation_email
+from apps.users.utils import send_activation_email, activation_token_is_valid
 
 User = get_user_model()
 
@@ -65,3 +67,18 @@ class LoginForm(forms.Form):
 
     def save(self):
         return
+
+
+class ActivateForm(forms.Form):
+    uid = forms.CharField()
+    token = forms.CharField()
+
+    def clean(self):
+        if not (user := activation_token_is_valid(uid=self.cleaned_data['uid'],
+                                                  token=self.cleaned_data['token'])):
+            raise forms.ValidationError('Activation link is not valid.')
+        user.is_active = True
+        user.save()
+
+    def save(self):
+        pass
