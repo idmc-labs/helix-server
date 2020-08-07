@@ -54,10 +54,12 @@ class LoginForm(forms.Form):
 
     def clean(self):
         cleaned_data = super().clean()
-        user = authenticate(email=self.cleaned_data['email'],
+        user = authenticate(email=(email := self.cleaned_data['email']),
                             password=self.cleaned_data['password'])
+        if not user and User.objects.filter(email=email).exists():
+            raise forms.ValidationError('Please activate your account first.')
         if not user:
-            raise forms.ValidationError("Invalid Email or Password")
+            raise forms.ValidationError("Invalid Email or Password.")
         cleaned_data.update(dict(user=user))
         return cleaned_data
 
