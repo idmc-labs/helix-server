@@ -137,7 +137,9 @@ AUTH_USER_MODEL = 'users.User'
 
 # https://docs.graphene-python.org/projects/django/en/latest/tutorial-plain/#update-settings
 GRAPHENE = {
-    'SCHEMA': 'helix.schema.schema'
+    'SCHEMA': 'helix.schema.schema',
+    'SCHEMA_OUTPUT': 'schema.json',  # defaults to schema.json,
+    'SCHEMA_INDENT': 2,  # Defaults to None (displays all data on a single line)
 }
 
 AUTHENTICATION_BACKEND = [
