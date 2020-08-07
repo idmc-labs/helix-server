@@ -38,6 +38,7 @@ LOCAL_APPS = [
 THIRD_PARTY_APPS = [
     'graphene_django',
     'djoser',
+    'graphene_graphiql_explorer',
 ]
 
 INSTALLED_APPS = [
@@ -149,3 +150,5 @@ DJOSER = {
 }
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
