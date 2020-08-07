@@ -141,3 +141,5 @@ GRAPHENE = {
 AUTHENTICATION_BACKEND = [
     'django.contrib.auth.backends.ModelBackend',
 ]
+
+SEND_ACTIVATION_EMAIL = os.environ.get('SEND_ACTIVATION_EMAIL', False) == 'True'
