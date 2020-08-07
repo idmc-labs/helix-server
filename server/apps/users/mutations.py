@@ -12,6 +12,13 @@ class RegisterMutation(DjangoFormMutation):
     class Meta:
         form_class = RegisterForm
 
+    @classmethod
+    def get_form_kwargs(cls, root, info, **input):
+        kwargs = super().get_form_kwargs(root, info, **input)
+        # to send activation email
+        kwargs['request'] = info.context
+        return kwargs
+
 
 class LoginMutation(DjangoFormMutation):
     class Meta:

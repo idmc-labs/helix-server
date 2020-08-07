@@ -1,6 +1,9 @@
-from django.conf import settings
 from django.contrib.auth import get_user_model, authenticate
 from django import forms
+from django.db import transaction
+from djoser.conf import settings as djoser_settings
+
+from apps.users.utils import send_activation_email
 
 User = get_user_model()
 
@@ -12,6 +15,10 @@ class RegisterForm(forms.ModelForm):
     class Meta:
         model = User
         fields = ['email', 'first_name', 'last_name', 'username']
+
+    def __init__(self, *args, **kwargs):
+        self.request = kwargs.pop("request", None)
+        super(RegisterForm, self).__init__(*args, **kwargs)
 
     def clean_email(self):
         if User.objects.filter(email=self.cleaned_data['email']).exists():
@@ -26,17 +33,18 @@ class RegisterForm(forms.ModelForm):
 
     def save(self, commit=True):
         super().save(commit=False)
-        instance = User.objects.create_user(
-            first_name=self.cleaned_data['first_name'],
-            last_name=self.cleaned_data['last_name'],
-            username=self.cleaned_data['username'],
-            email=self.cleaned_data['email'],
-            password=self.cleaned_data['password1'],
-        )
-        # if settings.get('SEND_ACTIVATION_EMAIL'):
-        #     instance.is_active = False
-        #     send_activation_email()
-        #     instance.save()
+        with transaction.atomic():
+            instance = User.objects.create_user(
+                first_name=self.cleaned_data['first_name'],
+                last_name=self.cleaned_data['last_name'],
+                username=self.cleaned_data['username'],
+                email=self.cleaned_data['email'],
+                password=self.cleaned_data['password1'],
+            )
+            if getattr(djoser_settings, 'SEND_ACTIVATION_EMAIL'):
+                instance.is_active = False
+                instance.save()
+                send_activation_email(instance, self.request)
         return instance
 
 

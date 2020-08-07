@@ -13,7 +13,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APPS_DIRNAME = 'apps'
 APPS_DIR = os.path.join(BASE_DIR, APPS_DIRNAME)
 
@@ -37,6 +37,7 @@ LOCAL_APPS = [
 
 THIRD_PARTY_APPS = [
     'graphene_django',
+    'djoser',
 ]
 
 INSTALLED_APPS = [
@@ -66,7 +67,7 @@ ROOT_URLCONF = 'helix.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -142,4 +143,9 @@ AUTHENTICATION_BACKEND = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
-SEND_ACTIVATION_EMAIL = os.environ.get('SEND_ACTIVATION_EMAIL', False) == 'True'
+DJOSER = {
+    'ACTIVATION_URL': '#/activate/{uid}/{token}',
+    'SEND_ACTIVATION_EMAIL': os.environ.get('SEND_ACTIVATION_EMAIL', "True") == 'True',
+}
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
