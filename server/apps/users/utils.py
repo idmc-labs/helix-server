@@ -14,7 +14,10 @@ def send_activation_email(user, request):
 
 def activation_token_is_valid(uid, token):
     uid = decode_uid(uid)
-    user = User.objects.get(pk=uid)
+    try:
+        user = User.objects.get(pk=uid)
+    except (User.DoesNotExist, ValueError):
+        return False
     if not default_token_generator.check_token(user, token):
         return False
     return user
