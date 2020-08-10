@@ -154,3 +154,6 @@ DJOSER = {
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+# https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-APPEND_SLASH
+APPEND_SLASH = False
