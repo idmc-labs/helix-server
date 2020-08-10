@@ -10,19 +10,10 @@ class UserType(DjangoObjectType):
         model = User
 
 
-class Viewer(ObjectType):
-    user = Field(UserType)
-
-    def resolve_user(self, info, **kwargs):
-        if info.context.user.is_authenticated:
-            return info.context.user
-        return None
-
-
 class Query(object):
-    viewer = Field(Viewer)
+    me = Field(UserType)
 
-    def resolve_viewer(self, info, **kwargs):
+    def resolve_me(self, info, **kwargs):
         if info.context.user.is_authenticated:
             return info.context.user
         return None
