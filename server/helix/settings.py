@@ -39,6 +39,7 @@ THIRD_PARTY_APPS = [
     'graphene_django',
     'djoser',
     'graphene_graphiql_explorer',
+    'corsheaders',
 ]
 
 INSTALLED_APPS = [
@@ -56,6 +57,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -154,3 +156,19 @@ DJOSER = {
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+# https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-APPEND_SLASH
+APPEND_SLASH = False
+
+########
+# CORS #
+########
+
+CORS_ORIGIN_ALLOW_ALL = True
+
+# CORS_ORIGIN_REGEX_WHITELIST = []
+# CSRF_TRUSTED_ORIGINS = []
+
+############
+# END CORS #
+############
