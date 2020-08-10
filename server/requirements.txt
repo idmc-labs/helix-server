@@ -11,3 +11,4 @@ graphene-graphiql-explorer==0.0.1
 
 django-cors-headers==3.4.0
 mock==4.0.2
+django-filter==2.3.0

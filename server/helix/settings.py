@@ -40,6 +40,7 @@ THIRD_PARTY_APPS = [
     'djoser',
     'graphene_graphiql_explorer',
     'corsheaders',
+    'django_filters',
 ]
 
 INSTALLED_APPS = [
