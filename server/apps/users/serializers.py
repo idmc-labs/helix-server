@@ -1,9 +1,7 @@
 from django.contrib.auth import get_user_model, authenticate
 from django import forms
-from django.contrib.auth.tokens import default_token_generator
 from django.db import transaction
 from djoser.conf import settings as djoser_settings
-from djoser.utils import decode_uid
 from rest_framework import serializers
 
 from apps.users.utils import send_activation_email, activation_token_is_valid
@@ -31,6 +29,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             return
         if password1 != password2:
             raise forms.ValidationError('Passwords do not match.')
+        return password2
 
     def save(self, **kwargs):
         with transaction.atomic():
