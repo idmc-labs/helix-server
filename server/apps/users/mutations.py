@@ -1,41 +1,28 @@
-import graphene
 from django.contrib.auth import get_user_model, login
-from graphene_django.forms.mutation import DjangoFormMutation
+from graphene_django.rest_framework.mutation import SerializerMutation
 
-from apps.users.forms import LoginForm, RegisterForm, ActivateForm
-from apps.users.schema import UserType
-
-User = get_user_model()
+from apps.users.serializers import LoginSerializer, RegisterSerializer, ActivateSerializer
 
 
-class RegisterMutation(DjangoFormMutation):
+class RegisterMutation(SerializerMutation):
     class Meta:
-        form_class = RegisterForm
+        serializer_class = RegisterSerializer
+
+
+class LoginMutation(SerializerMutation):
+    class Meta:
+        serializer_class = LoginSerializer
 
     @classmethod
-    def get_form_kwargs(cls, root, info, **input):
-        kwargs = super().get_form_kwargs(root, info, **input)
-        # to send activation email
-        kwargs['request'] = info.context
-        return kwargs
-
-
-class LoginMutation(DjangoFormMutation):
-    class Meta:
-        form_class = LoginForm
-
-    user = graphene.Field(UserType)
-
-    @classmethod
-    def perform_mutate(cls, form, info):
-        if user := form.cleaned_data.get('user', None):
+    def perform_mutate(cls, serializer, info):
+        if user := serializer.validated_data.get('user', None):
             login(info.context, user)
-        return super().perform_mutate(form, info)
+        return super().perform_mutate(serializer, info)
 
 
-class ActivateMutation(DjangoFormMutation):
+class ActivateMutation(SerializerMutation):
     class Meta:
-        form_class = ActivateForm
+        serializer_class = ActivateSerializer
 
 
 class Mutation(object):
