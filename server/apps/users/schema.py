@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from graphene import relay, ObjectType, Field
+from graphene import Field
 from graphene_django import DjangoObjectType
 
 User = get_user_model()
