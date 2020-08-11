@@ -31,4 +31,4 @@ class TestRegisterSerializer(HelixTestCase):
         self.assertTrue(self.serializer.is_valid(), self.serializer.errors)
 
         self.serializer.save()
-        # send_activation_email.assert_called_once() fixme
+        send_activation_email.assert_called_once()
