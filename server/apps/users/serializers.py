@@ -43,7 +43,10 @@ class RegisterSerializer(serializers.ModelSerializer):
             if getattr(djoser_settings, 'SEND_ACTIVATION_EMAIL'):
                 instance.is_active = False
                 instance.save()
-                send_activation_email(instance, self.context['request'])
+                # send_activation_email(instance, self.context['request'])
+                transaction.on_commit(
+                    lambda: send_activation_email(instance, self.context['request'])
+                )
         return instance
 
 
