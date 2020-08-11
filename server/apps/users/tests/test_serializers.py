@@ -19,7 +19,7 @@ class TestRegisterSerializer(HelixTestCase):
         )
 
     def test_register_creates_inactive_user(self):
-        self.serializer = RegisterSerializer(data=self.data)
+        self.serializer = RegisterSerializer(data=self.data, context=self.context)
         self.assertTrue(self.serializer.is_valid(), self.serializer.errors)
 
         user = self.serializer.save()
