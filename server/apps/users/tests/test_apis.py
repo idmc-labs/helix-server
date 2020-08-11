@@ -19,6 +19,13 @@ class TestLogin(HelixGraphQLTestCase):
                 }
             }
         '''
+        self.me_query = '''
+            query MeQuery {
+                me {
+                    email
+                }
+            }
+        '''
 
     def test_valid_login(self):
         response = self.query(
@@ -30,6 +37,15 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertIsNone(content['data']['login']['errors'])
+
+        response = self.query(
+            self.me_query,
+        )
+
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertEqual(content['data']['me']['email'], self.user.email)
 
     def test_invalid_email(self):
         response = self.query(
@@ -166,3 +182,68 @@ class TestActivate(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertIn('non_field_errors', [each['field'] for each in content['data']['activate']['errors']])
 
+
+class TestLogout(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.user = self.create_user()
+        self.login_query = '''
+            mutation MyMutation ($email: String!, $password: String!){
+                login(input: {email: $email, password: $password}) {
+                    errors {
+                        field
+                        messages
+                    }
+                }
+            }
+        '''
+        self.me_query = '''
+            query MeQuery {
+                me {
+                    email
+                }
+            }
+        '''
+        self.logout_query = '''
+            mutation Logout {
+                logout {
+                    ok
+                }
+            }
+        '''
+
+    def test_valid_logout(self):
+        response = self.query(
+            self.login_query,
+            variables={'email': self.user.email, 'password': self.user.raw_password},
+        )
+
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertIsNone(content['data']['login']['errors'])
+
+        response = self.query(
+            self.me_query,
+        )
+
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertEqual(content['data']['me']['email'], self.user.email)
+
+        response = self.query(
+            self.logout_query,
+        )
+
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+
+        response = self.query(
+            self.me_query,
+        )
+
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertEqual(content['data']['me'], None)

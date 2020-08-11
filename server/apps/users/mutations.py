@@ -1,4 +1,5 @@
-from django.contrib.auth import get_user_model, login
+from django.contrib.auth import get_user_model, login, logout
+import graphene
 from graphene_django.rest_framework.mutation import SerializerMutation
 
 from apps.users.serializers import LoginSerializer, RegisterSerializer, ActivateSerializer
@@ -25,7 +26,17 @@ class ActivateMutation(SerializerMutation):
         serializer_class = ActivateSerializer
 
 
+class LogoutMutation(graphene.Mutation):
+    ok = graphene.Boolean()
+
+    def mutate(self, info, *args, **kwargs):
+        if info.context.user.is_authenticated:
+            logout(info.context)
+        return LogoutMutation(ok=True)
+
+
 class Mutation(object):
     login = LoginMutation.Field()
     register = RegisterMutation.Field()
     activate = ActivateMutation.Field()
+    logout = LogoutMutation.Field()
