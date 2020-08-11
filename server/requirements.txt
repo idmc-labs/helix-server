@@ -10,3 +10,4 @@ django-rest-framework==0.1.0
 graphene-graphiql-explorer==0.0.1
 
 django-cors-headers==3.4.0
+mock==4.0.2

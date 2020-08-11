@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.test import TestCase, override_settings
 from graphene_django.utils import GraphQLTestCase
 
 User = get_user_model()
@@ -17,3 +18,10 @@ class HelixGraphQLTestCase(GraphQLTestCase):
         )
         user.raw_password = raw_password
         return user
+
+
+@override_settings(
+    EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
+)
+class HelixTestCase(TestCase):
+    pass

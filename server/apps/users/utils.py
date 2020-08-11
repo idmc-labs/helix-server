@@ -1,5 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import DjangoUnicodeDecodeError
 from djoser.compat import get_user_email
 from djoser.email import ActivationEmail
 from djoser.utils import decode_uid
@@ -13,7 +14,10 @@ def send_activation_email(user, request):
 
 
 def activation_token_is_valid(uid, token):
-    uid = decode_uid(uid)
+    try:
+        uid = decode_uid(uid)
+    except DjangoUnicodeDecodeError:
+        return False
     try:
         user = User.objects.get(pk=uid)
     except (User.DoesNotExist, ValueError):
