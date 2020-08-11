@@ -24,9 +24,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         return email
 
     def validate_password2(self, password2):
-        password1 = self.initial_data.get('password1', None)
-        if password1 is None:
-            return
+        password1 = self.initial_data.get('password1')
         if password1 != password2:
             raise forms.ValidationError('Passwords do not match.')
         return password2
