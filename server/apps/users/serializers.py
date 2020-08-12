@@ -4,30 +4,22 @@ from django.db import transaction
 from djoser.conf import settings as djoser_settings
 from rest_framework import serializers
 
-from apps.users.utils import send_activation_email, activation_token_is_valid
+from apps.users.utils import send_activation_email, get_user_from_activation_token
 
 User = get_user_model()
 
 
 class RegisterSerializer(serializers.ModelSerializer):
-    password1 = serializers.CharField(required=True, write_only=True)
-    password2 = serializers.CharField(required=True, write_only=True)
+    password = serializers.CharField(required=True, write_only=True)
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'username', 'password1',
-                  'password2']
+        fields = ['email', 'first_name', 'last_name', 'username', 'password']
 
-    def validate_email(self, email):
+    def validate_email(self, email) -> str:
         if User.objects.filter(email=email).exists():
-            raise forms.ValidationError('Email already exists.')
+            raise forms.ValidationError('That email is taken.')
         return email
-
-    def validate_password2(self, password2):
-        password1 = self.initial_data.get('password1')
-        if password1 != password2:
-            raise forms.ValidationError('Passwords do not match.')
-        return password2
 
     def save(self, **kwargs):
         with transaction.atomic():
@@ -36,7 +28,7 @@ class RegisterSerializer(serializers.ModelSerializer):
                 last_name=self.validated_data.get('last_name', ''),
                 username=self.validated_data.get('username', ''),
                 email=self.validated_data['email'],
-                password=self.validated_data['password1'],
+                password=self.validated_data['password'],
             )
             if getattr(djoser_settings, 'SEND_ACTIVATION_EMAIL'):
                 instance.is_active = False
@@ -57,11 +49,12 @@ class LoginSerializer(serializers.Serializer):
         if not user and User.objects.filter(email=email).exists():
             raise serializers.ValidationError('Please activate your account first.')
         if not user:
-            raise serializers.ValidationError("Invalid Email or Password.")
+            raise serializers.ValidationError('Invalid Email or Password.')
         attrs.update(dict(user=user))
         return attrs
 
     def save(self, **kwargs):
+        # NOOP. Compulsorily called by SerializerMutation.perform_mutation
         pass
 
 
@@ -70,12 +63,14 @@ class ActivateSerializer(serializers.Serializer):
     token = serializers.CharField(required=True, write_only=True)
 
     def validate(self, attrs):
-        if not (user := activation_token_is_valid(uid=attrs.get('uid', ''),
-                                                  token=attrs.get('token', ''))):
+        user = get_user_from_activation_token(uid=attrs.get('uid', ''),
+                                              token=attrs.get('token', ''))
+        if user is None:
             raise serializers.ValidationError('Activation link is not valid.')
         user.is_active = True
         user.save()
         return attrs
 
     def save(self):
+        # NOOP. Compulsorily called by SerializerMutation.perform_mutation
         pass

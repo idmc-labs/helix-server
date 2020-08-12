@@ -11,8 +11,7 @@ class TestRegisterSerializer(HelixTestCase):
         self.data = dict(
             email='admin@email.com',
             username='admin',
-            password1='admin123',
-            password2='admin123',
+            password='admin123',
         )
         self.context = dict(
             request=RequestFactory().post('/graphql')
