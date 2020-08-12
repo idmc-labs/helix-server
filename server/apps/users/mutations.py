@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model, login, logout
 import graphene
 from graphene_django.rest_framework.mutation import SerializerMutation
 
+from apps.users.schema import UserType
 from apps.users.serializers import LoginSerializer, RegisterSerializer, ActivateSerializer
 
 
@@ -14,11 +15,13 @@ class LoginMutation(SerializerMutation):
     class Meta:
         serializer_class = LoginSerializer
 
+    me = graphene.Field(UserType)
+
     @classmethod
     def perform_mutate(cls, serializer, info):
         if user := serializer.validated_data.get('user', None):
             login(info.context, user)
-        return super().perform_mutate(serializer, info)
+        return cls(errors=None, me=user)
 
 
 class ActivateMutation(SerializerMutation):

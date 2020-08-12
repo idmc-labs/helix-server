@@ -16,6 +16,9 @@ class TestLogin(HelixGraphQLTestCase):
                         field
                         messages
                     }
+                    me {
+                        email
+                    }
                 }
             }
         '''
@@ -37,6 +40,8 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertIsNone(content['data']['login']['errors'])
+        self.assertIsNotNone(content['data']['login']['me'])
+        self.assertIsNotNone(content['data']['login']['me']['email'])
 
         response = self.query(
             self.me_query,
