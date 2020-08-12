@@ -23,5 +23,6 @@ GraphQLView.graphiql_template = "graphene_graphiql_explorer/graphiql.html"
 urlpatterns = [
     path('admin', admin.site.urls),
     path('graphiql', csrf_exempt(GraphQLView.as_view(graphiql=True))),
+    path('graphiql/', csrf_exempt(GraphQLView.as_view(graphiql=True))),
     path('graphql', csrf_exempt(GraphQLView.as_view())),
 ]

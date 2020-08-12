@@ -41,6 +41,7 @@ THIRD_PARTY_APPS = [
     'graphene_graphiql_explorer',
     'corsheaders',
     'django_filters',
+    'debug_toolbar',
 ]
 
 INSTALLED_APPS = [
@@ -138,12 +139,16 @@ STATIC_URL = '/static/'
 
 AUTH_USER_MODEL = 'users.User'
 
-# https://docs.graphene-python.org/projects/django/en/latest/tutorial-plain/#update-settings
+# https://docs.graphene-python.org/projects/django/en/latest/settings/
 GRAPHENE = {
     'SCHEMA': 'helix.schema.schema',
     'SCHEMA_OUTPUT': 'schema.json',  # defaults to schema.json,
     'SCHEMA_INDENT': 2,  # Defaults to None (displays all data on a single line)
 }
+if DEBUG:
+    GRAPHENE['MIDDLEWARE'] = (
+        'graphene_django.debug.DjangoDebugMiddleware',
+    )
 
 AUTHENTICATION_BACKEND = [
     'django.contrib.auth.backends.ModelBackend',
@@ -170,6 +175,10 @@ CORS_ORIGIN_ALLOW_ALL = True
 # CORS_ORIGIN_REGEX_WHITELIST = []
 # CSRF_TRUSTED_ORIGINS = []
 
-############
-# END CORS #
-############
+#################
+# DEBUG TOOLBAR #
+#################
+
+INTERNAL_IPS = [
+    '127.0.0.1',
+]
