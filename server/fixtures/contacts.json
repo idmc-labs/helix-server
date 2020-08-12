@@ -1,0 +1,90 @@
+[
+  {
+    "model": "contact.contact",
+    "pk": 1,
+    "fields": {
+      "designation": 0,
+      "name": "Anish",
+      "country": 1,
+      "organization": 1,
+      "job_title": "Lee"
+    }
+  },
+  {
+    "model": "contact.contact",
+    "pk": 2,
+    "fields": {
+      "designation": 1,
+      "name": "Ball",
+      "country": 1,
+      "organization": 1,
+      "job_title": "Led"
+    }
+  },
+  {
+    "model": "contact.contact",
+    "pk": 3,
+    "fields": {
+      "designation": 0,
+      "name": "Cnish",
+      "country": 1,
+      "organization": 1,
+      "job_title": "Laa"
+    }
+  },
+  {
+    "model": "contact.contact",
+    "pk": 4,
+    "fields": {
+      "designation": 1,
+      "name": "Dall",
+      "country": 1,
+      "organization": 1,
+      "job_title": "Laaxx"
+    }
+  },
+  {
+    "model": "contact.contact",
+    "pk": 5,
+    "fields": {
+      "designation": 0,
+      "name": "xsh",
+      "country": 1,
+      "organization": 1,
+      "job_title": "Tex"
+    }
+  },
+  {
+    "model": "contact.contact",
+    "pk": 6,
+    "fields": {
+      "designation": 1,
+      "name": "6all",
+      "country": 1,
+      "organization": 1,
+      "job_title": "Tex"
+    }
+  },
+  {
+    "model": "contact.contact",
+    "pk": 7,
+    "fields": {
+      "designation": 0,
+      "name": "Gish",
+      "country": 1,
+      "organization": 1,
+      "job_title": "Tes"
+    }
+  },
+  {
+    "model": "contact.contact",
+    "pk": 8,
+    "fields": {
+      "designation": 1,
+      "name": "Vall",
+      "country": 1,
+      "organization": 1,
+      "job_title": "Tdd"
+    }
+  }
+]

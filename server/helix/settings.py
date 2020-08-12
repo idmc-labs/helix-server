@@ -147,6 +147,14 @@ GRAPHENE = {
     'SCHEMA_INDENT': 2,  # Defaults to None (displays all data on a single line)
 }
 
+GRAPHENE_DJANGO_EXTRAS = {
+    'DEFAULT_PAGINATION_CLASS': 'graphene_django_extras.paginations.PageGraphqlPagination',
+    'DEFAULT_PAGE_SIZE': 20,
+    'MAX_PAGE_SIZE': 50,
+    # 'CACHE_ACTIVE': True,
+    # 'CACHE_TIMEOUT': 300    # seconds
+}
+
 AUTHENTICATION_BACKEND = [
     'django.contrib.auth.backends.ModelBackend',
 ]

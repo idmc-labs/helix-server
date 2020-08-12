@@ -6,5 +6,8 @@ class Organization(models.Model):
     methodology = models.TextField('Methodology', help_text='')
     source_detail_methodology = models.TextField('Source detail and methodology',
                                                  help_text='')
-    parent = models.ForeignKey('Organization', null=True,
+    parent = models.ForeignKey('Organization', null=True, blank=True,
                                on_delete=models.CASCADE, related_name='sub_organizations')
+
+    def __str__(self):
+        return self.title
