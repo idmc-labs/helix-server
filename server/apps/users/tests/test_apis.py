@@ -62,6 +62,7 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertIn('non_field_errors', [each['field'] for each in content['data']['login']['errors']])
+        self.assertIsNone(content['data']['login']['me'])
 
     def test_invalid_password(self):
         response = self.query(
