@@ -2,7 +2,7 @@ name: Django Test Runner
 
 on:
   push:
-    branches: [ develop ]
+    branches: [ develop, fix/hide-sensitive-fields ]
   pull_request:
     branches: [ develop ]
 
