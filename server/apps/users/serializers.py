@@ -44,10 +44,11 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(required=True, write_only=True)
 
     def validate(self, attrs):
-        user = authenticate(email=(email := attrs.get('email', '')),
-                            password=attrs.get('password', ''))
-        if not user and User.objects.filter(email=email).exists():
+        email = attrs.get('email', '')
+        if User.objects.filter(email=email, is_active=False).exists():
             raise serializers.ValidationError('Please activate your account first.')
+        user = authenticate(email=email,
+                            password=attrs.get('password', ''))
         if not user:
             raise serializers.ValidationError('Invalid Email or Password.')
         attrs.update(dict(user=user))
