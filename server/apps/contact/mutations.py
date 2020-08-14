@@ -1,29 +1,200 @@
-from graphene_django_extras import DjangoSerializerMutation
+import graphene
+from graphene_django.rest_framework.mutation import SerializerMutation
 
-from apps.contact.customs import CustomDjangoSerializerMutation
-from apps.contact.serializers import ContactSerializer, CommunicationSerializer, CommunicationNestedSerializer
-
-
-class CommunicationNestedMutation(DjangoSerializerMutation):
-    class Meta:
-        serializer_class = CommunicationNestedSerializer
-        include_fields = ['country', 'subject', 'content', 'date', 'medium']
-        description = "Nested Communication Mutation For Contact"
+from apps.contact.enums import DesignationGrapheneEnum, CommunicationMediumGrapheneEnum
+from apps.contact.models import Contact, Communication
+from apps.contact.schema import ContactType, CommunicationType
+from apps.contact.serializers import ContactSerializer, CommunicationSerializer
+from utils.error_types import CustomErrorType, mutation_is_not_valid
 
 
-class ContactMutation(CustomDjangoSerializerMutation):
-    class Meta:
-        serializer_class = ContactSerializer
-        nested_fields = {
-            'communications': CommunicationNestedSerializer
-        }
+class ContactInputType(graphene.InputObjectType):
+    """
+    Contact InputType without Organization
+    """
+    designation = graphene.NonNull(DesignationGrapheneEnum)
+    name = graphene.String(required=True)
+    country = graphene.Int()
+    # organization
+    job_title = graphene.String(required=True)
 
 
-class CommunicationMutation(DjangoSerializerMutation):
-    class Meta:
-        serializer_class = CommunicationSerializer
+class ContactCreateInputType(graphene.InputObjectType):
+    """
+    Contact Create InputType
+    """
+    designation = graphene.NonNull(DesignationGrapheneEnum)
+    name = graphene.String(required=True)
+    country = graphene.Int()
+    organization = graphene.Int(required=True)
+    job_title = graphene.String(required=True)
+
+
+class ContactUpdateInputType(graphene.InputObjectType):
+    """
+    Contact Update InputType
+    """
+    id = graphene.Int(required=True)
+    designation = graphene.NonNull(DesignationGrapheneEnum)
+    name = graphene.String(required=True)
+    country = graphene.Int()
+    organization = graphene.Int(required=True)
+    job_title = graphene.String(required=True)
+
+
+class CreateContact(graphene.Mutation):
+    class Arguments:
+        contact = ContactCreateInputType(required=True)
+
+    errors = graphene.List(CustomErrorType)
+    ok = graphene.Boolean()
+    contact = graphene.Field(ContactType)
+
+    @staticmethod
+    def mutate(root, info, contact):
+        serializer = ContactSerializer(data=contact)
+        if errors := mutation_is_not_valid(serializer):
+            return CreateContact(errors=errors, ok=False)
+        instance = serializer.save()
+        return CreateContact(contact=instance, errors=None, ok=True)
+
+
+class UpdateContact(graphene.Mutation):
+    class Arguments:
+        contact = ContactUpdateInputType(required=True)
+
+    errors = graphene.List(CustomErrorType)
+    ok = graphene.Boolean()
+    contact = graphene.Field(ContactType)
+
+    @staticmethod
+    def mutate(root, info, contact):
+        try:
+            instance = Contact.objects.get(id=contact['id'])
+        except Contact.DoesNotExist:
+            return UpdateContact(errors=[
+                CustomErrorType(field='non_field_errors', messages=['Contact Does Not Exist.'])
+            ])
+        serializer = ContactSerializer(instance=instance, data=contact, partial=True)
+        if errors := mutation_is_not_valid(serializer):
+            return UpdateContact(errors=errors, ok=False)
+        instance = serializer.save()
+        return UpdateContact(contact=instance, errors=None, ok=True)
+
+
+class DeleteContact(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    errors = graphene.List(CustomErrorType)
+    ok = graphene.Boolean()
+    contact = graphene.Field(ContactType)
+
+    @staticmethod
+    def mutate(root, info, contact):
+        try:
+            instance = Contact.objects.get(id=contact['id'])
+        except Contact.DoesNotExist:
+            return UpdateContact(errors=[
+                CustomErrorType(field='non_field_errors', messages=['Contact Does Not Exist.'])
+            ])
+        instance.delete()
+        instance.id = contact['id']
+        return DeleteContact(contact=instance, errors=None, ok=True)
+
+
+# Communication #
+
+
+class CommunicationCreateInputType(graphene.InputObjectType):
+    """
+    Communication Create InputType
+    """
+    contact = graphene.Int(required=True)
+    country = graphene.Int()
+    subject = graphene.String(required=True)
+    content = graphene.String(required=True)
+    date = graphene.Date()
+    medium = graphene.NonNull(CommunicationMediumGrapheneEnum)
+
+
+class CommunicationUpdateInputType(graphene.InputObjectType):
+    """
+    Communication Update InputType
+    """
+    contact = graphene.Int()
+    country = graphene.Int()
+    subject = graphene.String()
+    content = graphene.String()
+    date = graphene.Date()
+    medium = graphene.NonNull(CommunicationMediumGrapheneEnum)
+
+
+class CreateCommunication(graphene.Mutation):
+    class Arguments:
+        communication = CommunicationCreateInputType(required=True)
+
+    errors = graphene.List(CustomErrorType)
+    ok = graphene.Boolean()
+    communication = graphene.Field(CommunicationType)
+
+    @staticmethod
+    def mutate(root, info, communication):
+        serializer = CommunicationSerializer(data=communication)
+        if errors := mutation_is_not_valid(serializer):
+            return CreateCommunication(errors=errors, ok=False)
+        instance = serializer.save()
+        return CreateCommunication(communication=instance, errors=None, ok=True)
+
+
+class UpdateCommunication(graphene.Mutation):
+    class Arguments:
+        communication = CommunicationUpdateInputType(required=True)
+
+    errors = graphene.List(CustomErrorType)
+    ok = graphene.Boolean()
+    communication = graphene.Field(CommunicationType)
+
+    @staticmethod
+    def mutate(root, info, communication):
+        try:
+            instance = Communication.objects.get(id=communication['id'])
+        except Communication.DoesNotExist:
+            return UpdateCommunication(errors=[
+                CustomErrorType(field='non_field_errors', messages=['Communication Does Not Exist.'])
+            ])
+        serializer = CommunicationSerializer(instance=instance, data=communication, partial=True)
+        if errors := mutation_is_not_valid(serializer):
+            return UpdateCommunication(errors=errors, ok=False)
+        instance = serializer.save()
+        return UpdateCommunication(communication=instance, errors=None, ok=True)
+
+
+class DeleteCommunication(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    errors = graphene.List(CustomErrorType)
+    ok = graphene.Boolean()
+    communication = graphene.Field(CommunicationType)
+
+    @staticmethod
+    def mutate(root, info, communication):
+        try:
+            instance = Communication.objects.get(id=communication['id'])
+        except Communication.DoesNotExist:
+            return DeleteCommunication(errors=[
+                CustomErrorType(field='non_field_errors', messages=['Communication Does Not Exist.'])
+            ])
+        instance.delete()
+        instance.id = communication['id']
+        return DeleteCommunication(communication=instance, errors=None, ok=True)
 
 
 class Mutation(object):
-    create_contact = ContactMutation.CreateField()
-    create_communication = CommunicationMutation.CreateField()
+    create_contact = CreateContact.Field()
+    update_contact = UpdateContact.Field()
+    delete_contact = DeleteContact.Field()
+    create_communication = CreateCommunication.Field()
+    update_communication = UpdateCommunication.Field()
+    delete_communication = DeleteCommunication.Field()

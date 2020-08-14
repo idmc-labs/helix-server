@@ -1,15 +1,18 @@
+from enum import Enum
+
 from django.db import models
 
 
 class Contact(models.Model):
-    MR = 0
-    MS = 1
-    DESIGNATION_CHOICES = (
-        (MR, 'Mr'),
-        (MS, 'Ms'),
-    )
+    class DESIGNATION(Enum):
+        MR = 0
+        MS = 1
 
-    designation = models.PositiveSmallIntegerField('Designation', choices=DESIGNATION_CHOICES)
+        @classmethod
+        def choices(cls):
+            return tuple((i.value, i.name) for i in cls)
+
+    designation = models.PositiveSmallIntegerField('Designation', choices=DESIGNATION.choices())
     name = models.CharField('Name', max_length=256)
     # todo country model
     country = models.PositiveIntegerField('Country', default=1)
@@ -22,12 +25,13 @@ class Contact(models.Model):
 
 
 class Communication(models.Model):
-    MAIL = 0
-    Phone = 1
-    COMMUNICATION_MEDIUM_CHOICES = (
-        (MAIL, 'Mail'),
-        (Phone, 'Phone'),
-    )
+    class COMMUNICATION_MEDIUM(Enum):
+        MAIL = 0
+        PHONE = 1
+
+        @classmethod
+        def choices(cls):
+            return tuple((i.value, i.name) for i in cls)
 
     contact = models.ForeignKey('Contact',
                                 related_name='communications', on_delete=models.CASCADE)
@@ -37,7 +41,7 @@ class Communication(models.Model):
     content = models.TextField('Content')
     date = models.DateField('Date', null=True, blank=True,
                             help_text='Date on which communication occurred.')
-    medium = models.PositiveSmallIntegerField('Medium', choices=COMMUNICATION_MEDIUM_CHOICES)
+    medium = models.PositiveSmallIntegerField('Medium', choices=COMMUNICATION_MEDIUM.choices())
 
     def __str__(self):
         return f'{self.contact} {self.date}'
