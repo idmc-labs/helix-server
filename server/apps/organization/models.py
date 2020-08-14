@@ -1,7 +1,7 @@
 from django.db import models
 
 
-class OrganizationType(models.Model):
+class OrganizationKind(models.Model):
     title = models.CharField('Title', max_length=256)
 
 
@@ -10,8 +10,9 @@ class Organization(models.Model):
     short_name = models.CharField('Short Name', max_length=64,
                                   null=True)
     # logo =
-    organization_type = models.ForeignKey('OrganizationType', null=True,
-                                          on_delete=models.SET_NULL)
+    organization_type = models.ForeignKey('OrganizationKind', null=True,
+                                          on_delete=models.SET_NULL,
+                                          related_name='organizations')
     methodology = models.TextField('Methodology', help_text='')
     source_detail_methodology = models.TextField('Source detail and methodology',
                                                  help_text='')

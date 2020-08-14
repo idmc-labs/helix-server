@@ -1,12 +1,16 @@
 from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, \
-    DjangoListObjectType, DjangoListObjectField
+    DjangoListObjectType, DjangoListObjectField, DjangoObjectField
 
 from apps.country.models import Country
+from apps.organization.schema import OrganizationListType
+from utils.fields import DjangoPaginatedListObjectField
 
 
 class CountryType(DjangoObjectType):
     class Meta:
         model = Country
+
+    organizations = DjangoPaginatedListObjectField(OrganizationListType)
 
 
 class CountryListType(DjangoListObjectType):
@@ -19,5 +23,5 @@ class CountryListType(DjangoListObjectType):
 
 
 class Query:
-    country = DjangoListObjectField(CountryType)
+    country = DjangoObjectField(CountryType)
     country_list = DjangoListObjectField(CountryListType)
