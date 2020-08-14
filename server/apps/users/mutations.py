@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model, login, logout
+from django.contrib.auth import login, logout
 import graphene
 from graphene_django.rest_framework.mutation import SerializerMutation
 

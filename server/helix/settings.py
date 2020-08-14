@@ -145,6 +145,9 @@ GRAPHENE = {
     'SCHEMA': 'helix.schema.schema',
     'SCHEMA_OUTPUT': 'schema.json',  # defaults to schema.json,
     'SCHEMA_INDENT': 2,  # Defaults to None (displays all data on a single line)
+    'MIDDLEWARE': (
+        'utils.middlewares.AuthorizationMiddleware',
+    ),
 }
 
 GRAPHENE_DJANGO_EXTRAS = {

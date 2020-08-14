@@ -12,19 +12,8 @@ class UserType(DjangoObjectType):
         exclude = ('password',)
 
 
-class UserNode(DjangoObjectType):
-    class Meta:
-        model = User
-        filter_fields = dict(
-            email=['icontains', 'iexact'],
-            is_staff=['exact'],
-        )
-        interfaces = (relay.Node,)
-
-
 class Query(object):
     me = Field(UserType)
-    all_users = DjangoFilterConnectionField(UserNode)
 
     def resolve_me(self, info, **kwargs):
         if info.context.user.is_authenticated:
