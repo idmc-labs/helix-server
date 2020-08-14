@@ -1,10 +1,11 @@
 import graphene
 from graphene_django_extras import DjangoObjectField, PageGraphqlPagination, \
-    DjangoListObjectType, DjangoListObjectField, DjangoObjectType, DjangoFilterPaginateListField
+    DjangoListObjectType, DjangoObjectType, DjangoFilterPaginateListField
 
 from apps.contact.enums import CommunicationMediumGrapheneEnum, DesignationGrapheneEnum
 from apps.contact.filters import ContactFilter
 from apps.contact.models import Contact, Communication
+from utils.fields import DjangoPaginatedListObjectField
 
 
 class CommunicationType(DjangoObjectType):
@@ -30,8 +31,7 @@ class ContactType(DjangoObjectType):
         model = Contact
 
     designation = graphene.Field(DesignationGrapheneEnum)
-    communications = DjangoFilterPaginateListField(CommunicationType,
-                                                   pagination=PageGraphqlPagination(page_size_query_param='pageSize'))
+    communications = DjangoPaginatedListObjectField(CommunicationListType)
 
 
 class ContactListType(DjangoListObjectType):
@@ -44,5 +44,5 @@ class ContactListType(DjangoListObjectType):
 class Query:
     contact = DjangoObjectField(ContactType)
     communication = DjangoObjectField(CommunicationType)
-    contact_list = DjangoListObjectField(ContactListType)
-    communication_list = DjangoListObjectField(CommunicationListType)
+    contact_list = DjangoPaginatedListObjectField(ContactListType)
+    communication_list = DjangoPaginatedListObjectField(CommunicationListType)

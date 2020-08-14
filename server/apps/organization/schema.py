@@ -1,16 +1,16 @@
-from graphene_django_extras import DjangoObjectType, DjangoFilterPaginateListField, PageGraphqlPagination, \
-    DjangoListObjectType, DjangoListObjectField
+from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, \
+    DjangoListObjectType, DjangoObjectField
 
-from apps.contact.schema import ContactType
+from apps.contact.schema import ContactListType
 from apps.organization.models import Organization
+from utils.fields import DjangoPaginatedListObjectField
 
 
 class OrganizationType(DjangoObjectType):
     class Meta:
         model = Organization
 
-    contacts = DjangoFilterPaginateListField(ContactType,
-                                             pagination=PageGraphqlPagination(page_size_query_param='pageSize'))
+    contacts = DjangoPaginatedListObjectField(ContactListType)
 
 
 class OrganizationListType(DjangoListObjectType):
@@ -21,5 +21,5 @@ class OrganizationListType(DjangoListObjectType):
 
 
 class Query:
-    organization = DjangoListObjectField(OrganizationType)
-    organization_list = DjangoListObjectField(OrganizationListType)
+    organization = DjangoObjectField(OrganizationType)
+    organization_list = DjangoPaginatedListObjectField(OrganizationListType)
