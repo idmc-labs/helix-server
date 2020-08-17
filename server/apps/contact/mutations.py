@@ -128,10 +128,10 @@ class CommunicationCreateInputType(graphene.InputObjectType):
     Communication Create InputType
     """
     contact = graphene.Int(required=True)
-    country = graphene.Int()
+    title = graphene.String()
     subject = graphene.String(required=True)
     content = graphene.String(required=True)
-    date = graphene.Date()
+    date_time = graphene.DateTime()
     medium = graphene.NonNull(CommunicationMediumGrapheneEnum)
 
 
@@ -141,10 +141,11 @@ class CommunicationUpdateInputType(graphene.InputObjectType):
     """
     contact = graphene.Int()
     country = graphene.Int()
+    title = graphene.String()
     subject = graphene.String()
     content = graphene.String()
-    date = graphene.Date()
-    medium = graphene.NonNull(CommunicationMediumGrapheneEnum)
+    date_time = graphene.DateTime()
+    medium = graphene.Field(CommunicationMediumGrapheneEnum)
 
 
 class CreateCommunication(graphene.Mutation):

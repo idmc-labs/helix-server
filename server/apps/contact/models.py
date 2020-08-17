@@ -63,6 +63,7 @@ class Communication(models.Model):
                                      null=True, blank=True,
                                      help_text='Date on which communication occurred.')
     medium = models.PositiveSmallIntegerField('Medium', choices=COMMUNICATION_MEDIUM.choices())
+    # todo attachment
 
     def __str__(self):
         return f'{self.contact} {self.date_time}'
