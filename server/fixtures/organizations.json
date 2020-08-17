@@ -1,0 +1,26 @@
+[
+  {
+    "model": "organization.organization",
+    "pk": 1,
+    "fields": {
+      "title": "org1",
+      "short_name": "org1",
+      "organization_type": null,
+      "methodology": "bla",
+      "source_detail_methodology": "blaa",
+      "parent": null
+    }
+  },
+  {
+    "model": "organization.organization",
+    "pk": 2,
+    "fields": {
+      "title": "org1",
+      "short_name": "short",
+      "organization_type": null,
+      "methodology": "meth",
+      "source_detail_methodology": "ddd",
+      "parent": null
+    }
+  }
+]
