@@ -11,7 +11,7 @@ docker-compose exec server python manage.py migrate
 
 ## Initialize DB (optional)
 ```bash
-docker-compose exec server python manage.py loaddata fixtures/users.json
+docker-compose exec server python manage.py loaddata fixtures/*.json
 ...
 ```
 
