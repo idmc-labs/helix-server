@@ -13,3 +13,9 @@ class ContactSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contact
         fields = ['id', 'designation', 'name', 'country', 'job_title']
+
+    def validate_name(self, value):
+        import random
+        if random.choice([True, False]):
+            raise serializers.ValidationError('Invalid Name...')
+        return value

@@ -9,6 +9,8 @@ from utils.error_types import CustomErrorType, mutation_is_not_valid
 
 class OrganizationCreateInputType(graphene.InputObjectType):
     title = graphene.String(required=True)
+    short_name = graphene.String(required=True)
+    organization_type = graphene.Int()
     methodology = graphene.String(required=True)
     source_detail_methodology = graphene.String(required=True)
     parent = graphene.Int()
@@ -18,6 +20,8 @@ class OrganizationCreateInputType(graphene.InputObjectType):
 class OrganizationUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
     title = graphene.String()
+    short_name = graphene.String()
+    organization_type = graphene.Int()
     methodology = graphene.String()
     source_detail_methodology = graphene.String()
     parent = graphene.Int()
