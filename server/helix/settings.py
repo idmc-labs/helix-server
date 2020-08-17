@@ -32,7 +32,10 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 LOCAL_APPS = [
+    'country',
     'users',
+    'organization',
+    'contact',
 ]
 
 THIRD_PARTY_APPS = [
@@ -157,6 +160,17 @@ GRAPHENE = {
     'SCHEMA': 'helix.schema.schema',
     'SCHEMA_OUTPUT': 'schema.json',  # defaults to schema.json,
     'SCHEMA_INDENT': 2,  # Defaults to None (displays all data on a single line)
+    'MIDDLEWARE': (
+        'utils.middlewares.AuthorizationMiddleware',
+    ),
+}
+
+GRAPHENE_DJANGO_EXTRAS = {
+    'DEFAULT_PAGINATION_CLASS': 'graphene_django_extras.paginations.PageGraphqlPagination',
+    'DEFAULT_PAGE_SIZE': 20,
+    'MAX_PAGE_SIZE': 50,
+    # 'CACHE_ACTIVE': True,
+    # 'CACHE_TIMEOUT': 300    # seconds
 }
 if DEBUG:
     GRAPHENE['MIDDLEWARE'] = (

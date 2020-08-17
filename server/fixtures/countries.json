@@ -1,0 +1,1 @@
+[{"model": "country.country", "pk": 1, "fields": {"name": "United States"}}, {"model": "country.country", "pk": 2, "fields": {"name": "Italy"}}, {"model": "country.country", "pk": 3, "fields": {"name": "Uganda"}}, {"model": "country.country", "pk": 4, "fields": {"name": "Nepal"}}, {"model": "country.country", "pk": 5, "fields": {"name": "China"}}]
