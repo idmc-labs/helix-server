@@ -1,7 +1,7 @@
 import graphene
 from graphene_django.rest_framework.mutation import SerializerMutation
 
-from apps.contact.enums import DesignationGrapheneEnum, CommunicationMediumGrapheneEnum
+from apps.contact.enums import DesignationGrapheneEnum, CommunicationMediumGrapheneEnum, GenderGrapheneEnum
 from apps.contact.models import Contact, Communication
 from apps.contact.schema import ContactType, CommunicationType
 from apps.contact.serializers import ContactSerializer, CommunicationSerializer
@@ -13,10 +13,15 @@ class ContactInputType(graphene.InputObjectType):
     Contact InputType without Organization
     """
     designation = graphene.NonNull(DesignationGrapheneEnum)
-    name = graphene.String(required=True)
-    country = graphene.Int()
-    # organization
+    first_name = graphene.String(required=True)
+    last_name = graphene.String(required=True)
+    gender = graphene.NonNull(GenderGrapheneEnum)
     job_title = graphene.String(required=True)
+    country = graphene.Int()
+    countries_of_operation = graphene.List(graphene.Int)
+    email = graphene.String()
+    phone = graphene.String()
+    comment = graphene.String()
 
 
 class ContactCreateInputType(graphene.InputObjectType):
@@ -24,10 +29,16 @@ class ContactCreateInputType(graphene.InputObjectType):
     Contact Create InputType
     """
     designation = graphene.NonNull(DesignationGrapheneEnum)
-    name = graphene.String(required=True)
-    country = graphene.Int()
-    organization = graphene.Int(required=True)
+    first_name = graphene.String(required=True)
+    last_name = graphene.String(required=True)
+    gender = graphene.NonNull(GenderGrapheneEnum)
     job_title = graphene.String(required=True)
+    organization = graphene.Int(required=True)
+    country = graphene.Int()
+    countries_of_operation = graphene.List(graphene.Int)
+    email = graphene.String()
+    phone = graphene.String()
+    comment = graphene.String()
 
 
 class ContactUpdateInputType(graphene.InputObjectType):
@@ -35,11 +46,17 @@ class ContactUpdateInputType(graphene.InputObjectType):
     Contact Update InputType
     """
     id = graphene.Int(required=True)
-    designation = graphene.NonNull(DesignationGrapheneEnum)
-    name = graphene.String(required=True)
+    designation = graphene.Field(DesignationGrapheneEnum)
+    first_name = graphene.String()
+    last_name = graphene.String()
+    gender = graphene.Field(GenderGrapheneEnum)
+    job_title = graphene.String()
+    organization = graphene.Int()
     country = graphene.Int()
-    organization = graphene.Int(required=True)
-    job_title = graphene.String(required=True)
+    countries_of_operation = graphene.List(graphene.Int)
+    email = graphene.String()
+    phone = graphene.String()
+    comment = graphene.String()
 
 
 class CreateContact(graphene.Mutation):

@@ -8,7 +8,8 @@ class ContactFilter(django_filters.FilterSet):
         model = Contact
         fields = {
             'id': ['exact'],
-            'name': ['icontains'],
+            'first_name': ['icontains'],
+            'last_name': ['icontains'],
         }
 
     # @property
