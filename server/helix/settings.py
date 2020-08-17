@@ -198,8 +198,8 @@ APPEND_SLASH = False
 ########
 
 CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3050",
-    "http://127.0.0.1:3050"
+    "http://localhost:3080",
+    "http://127.0.0.1:3080"
 ]
 CORS_ALLOW_CREDENTIALS = True
 # CORS_ORIGIN_ALLOW_ALL = True
