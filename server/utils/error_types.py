@@ -16,16 +16,13 @@ class ArrayNestedErrorType(ObjectType):
 
 
 class CustomErrorType(ObjectType):
-    """
-    Adds is_json flag to acknowledge if there are nested errors
-    """
     field = graphene.String(required=True)
     messages = graphene.String(required=False)
     object_errors = graphene.List(NestedErrorType)
     array_errors = graphene.List(ArrayNestedErrorType)
 
 
-def mutation_is_not_valid(serializer):
+def mutation_is_not_valid(serializer) -> List:
     """
     Checks if serializer is valid, if not returns list of errorTypes
     """
@@ -62,3 +59,4 @@ def mutation_is_not_valid(serializer):
                 messages = ''.join(str(msg) for msg in value)
                 errors.append(CustomErrorType(field=key, messages=messages))
         return errors
+    return []

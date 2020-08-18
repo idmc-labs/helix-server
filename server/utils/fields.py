@@ -104,18 +104,20 @@ class CustomDjangoListObjectType(DjangoListObjectType):
 
         filter_fields = filter_fields or baseType._meta.filter_fields
 
-        # if pagination:
-        #     result_container = pagination.get_pagination_field(baseType)
-        # else:
-        #     global_paginator = graphql_api_settings.DEFAULT_PAGINATION_CLASS
-        #     if global_paginator:
-        #         assert issubclass(global_paginator, BaseDjangoGraphqlPagination), (
-        #             'You need to pass a valid DjangoGraphqlPagination class in {}.Meta, received "{}".'
-        #         ).format(cls.__name__, global_paginator)
-        #
-        #         global_paginator = global_paginator()
-        #         result_container = global_paginator.get_pagination_field(baseType)
-        #     else:
+        """
+        if pagination:
+            result_container = pagination.get_pagination_field(baseType)
+        else:
+            global_paginator = graphql_api_settings.DEFAULT_PAGINATION_CLASS
+            if global_paginator:
+                assert issubclass(global_paginator, BaseDjangoGraphqlPagination), (
+                    'You need to pass a valid DjangoGraphqlPagination class in {}.Meta, received "{}".'
+                ).format(cls.__name__, global_paginator)
+
+                global_paginator = global_paginator()
+                result_container = global_paginator.get_pagination_field(baseType)
+            else:
+        """
         result_container = CustomDjangoListField(baseType)
 
         _meta = DjangoObjectOptions(cls)
@@ -190,22 +192,24 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
         kwargs.setdefault("args", {})
         kwargs["args"].update(self.filtering_args)
 
+        """
         # filtering by primary key or id seems unnecessary...
-        # if "id" not in kwargs["args"].keys():
-        #     self.filtering_args.update(
-        #         {
-        #             "id": Argument(
-        #                 ID, description="Django object unique identification field"
-        #             )
-        #         }
-        #     )
-        #     kwargs["args"].update(
-        #         {
-        #             "id": Argument(
-        #                 ID, description="Django object unique identification field"
-        #             )
-        #         }
-        #     )
+        if "id" not in kwargs["args"].keys():
+            self.filtering_args.update(
+                {
+                    "id": Argument(
+                        ID, description="Django object unique identification field"
+                    )
+                }
+            )
+            kwargs["args"].update(
+                {
+                    "id": Argument(
+                        ID, description="Django object unique identification field"
+                    )
+                }
+            )
+        """
 
         pagination = pagination or graphql_api_settings.DEFAULT_PAGINATION_CLASS()
 
