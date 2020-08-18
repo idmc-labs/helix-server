@@ -3,7 +3,7 @@ from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, \
 
 from apps.contact.schema import ContactListType
 from apps.organization.models import Organization, OrganizationKind
-from utils.fields import DjangoPaginatedListObjectField
+from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
 
 
 class OrganizationType(DjangoObjectType):
@@ -13,7 +13,7 @@ class OrganizationType(DjangoObjectType):
     contacts = DjangoPaginatedListObjectField(ContactListType)
 
 
-class OrganizationListType(DjangoListObjectType):
+class OrganizationListType(CustomDjangoListObjectType):
     class Meta:
         model = Organization
         filter_fields = {
@@ -29,7 +29,7 @@ class OrganizationKindObjectType(DjangoObjectType):
     organizations = DjangoPaginatedListObjectField(OrganizationListType)
 
 
-class OrganizationKindListType(DjangoListObjectType):
+class OrganizationKindListType(CustomDjangoListObjectType):
     class Meta:
         model = OrganizationKind
         pagination = PageGraphqlPagination(page_size_query_param='pageSize')
