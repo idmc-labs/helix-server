@@ -16,10 +16,6 @@ from graphene_django_extras.types import DjangoObjectOptions
 from graphene_django_extras.utils import queryset_factory, get_extra_filters
 
 
-# fixme check here
-# /home/anish/.virtualenvs/helix/lib/python3.8/site-packages/graphene_django_extras/paginations/utils.py:39
-
-
 class CustomDjangoListObjectBase(DjangoListObjectBase):
     def __init__(self, results, count, page, pageSize, results_field_name="results"):
         self.results = results
@@ -75,6 +71,10 @@ class CustomDjangoListObjectType(DjangoListObjectType):
         assert is_valid_django_model(model), (
             'You need to pass a valid Django Model in {}.Meta, received "{}".'
         ).format(cls.__name__, model)
+
+        assert pagination is None, (
+            'Pagination should be applied on the ListField enclosing {0} rather than its `{0}.Meta`.'
+        ).format(cls.__name__)
 
         if not DJANGO_FILTER_INSTALLED and filter_fields:
             raise Exception("Can only set filter_fields if Django-Filter is installed")
