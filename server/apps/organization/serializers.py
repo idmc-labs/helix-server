@@ -11,18 +11,30 @@ class OrganizationKindSerializer(serializers.ModelSerializer):
         model = OrganizationKind
         fields = ['id', 'title']
 
+    def validate_title(self, value):
+        raise serializers.ValidationError('blaaa title')
+
 
 class OrganizationSerializer(serializers.ModelSerializer):
     contacts = ContactWithoutOrganizationSerializer(many=True)
+    organization_kind = OrganizationKindSerializer()
 
     class Meta:
         model = Organization
-        fields = ['id', 'short_name', 'title', 'methodology', 'organization_type',
+        fields = ['id', 'short_name', 'title', 'methodology', 'organization_kind',
                   'source_detail_methodology', 'parent', 'contacts']
 
+    def validate_title(self, value):
+        raise serializers.ValidationError('blaa org title')
+
     def create(self, validated_data):
-        with transaction.atomic():
-            contacts = validated_data.pop('contacts', [])
+        contacts = validated_data.pop('contacts', [])
+        organization_kind = validated_data.pop('organization_kind', {})
+        if contacts:
+            with transaction.atomic():
+                organization_kind = OrganizationKind.objects.create(**organization_kind)
+                organization = Organization.objects.create(**validated_data, organization_kind=organization_kind)
+                Contact.objects.bulk_create([Contact(**each, organization=organization) for each in contacts])
+        else:
             organization = Organization.objects.create(**validated_data)
-            Contact.objects.bulk_create([Contact(**each, organization=organization) for each in contacts])
         return organization

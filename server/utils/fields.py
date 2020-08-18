@@ -13,7 +13,7 @@ from graphene_django_extras.paginations.pagination import BaseDjangoGraphqlPagin
 from graphene_django_extras.registry import get_global_registry
 from graphene_django_extras.settings import graphql_api_settings
 from graphene_django_extras.types import DjangoObjectOptions
-from graphene_django_extras.utils import queryset_factory, get_extra_filters
+from graphene_django_extras.utils import get_extra_filters
 
 
 class CustomDjangoListObjectBase(DjangoListObjectBase):

@@ -8,37 +8,31 @@ from apps.contact.serializers import ContactSerializer, CommunicationSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 
 
-class ContactInputType(graphene.InputObjectType):
+class ContactInputType(object):
+    designation = graphene.NonNull(DesignationGrapheneEnum)
+    first_name = graphene.String(required=True)
+    last_name = graphene.String(required=True)
+    gender = graphene.NonNull(GenderGrapheneEnum)
+    job_title = graphene.String(required=True)
+    country = graphene.Int()
+    countries_of_operation = graphene.List(graphene.Int)
+    email = graphene.String()
+    phone = graphene.String()
+    comment = graphene.String()
+
+
+class ContactWithoutOrganizationInputType(ContactInputType, graphene.InputObjectType):
     """
     Contact InputType without Organization
     """
-    designation = graphene.NonNull(DesignationGrapheneEnum)
-    first_name = graphene.String(required=True)
-    last_name = graphene.String(required=True)
-    gender = graphene.NonNull(GenderGrapheneEnum)
-    job_title = graphene.String(required=True)
-    country = graphene.Int()
-    countries_of_operation = graphene.List(graphene.Int)
-    email = graphene.String()
-    phone = graphene.String()
-    comment = graphene.String()
+    pass
 
 
-class ContactCreateInputType(graphene.InputObjectType):
+class ContactCreateInputType(ContactInputType, graphene.InputObjectType):
     """
     Contact Create InputType
     """
-    designation = graphene.NonNull(DesignationGrapheneEnum)
-    first_name = graphene.String(required=True)
-    last_name = graphene.String(required=True)
-    gender = graphene.NonNull(GenderGrapheneEnum)
-    job_title = graphene.String(required=True)
     organization = graphene.Int(required=True)
-    country = graphene.Int()
-    countries_of_operation = graphene.List(graphene.Int)
-    email = graphene.String()
-    phone = graphene.String()
-    comment = graphene.String()
 
 
 class ContactUpdateInputType(graphene.InputObjectType):

@@ -29,7 +29,7 @@ class Contact(models.Model):
     organization = models.ForeignKey('organization.Organization',
                                      related_name='contacts', on_delete=models.CASCADE)
     countries_of_operation = models.ManyToManyField('country.Country',
-                                                    blank=True, null=True,
+                                                    blank=True,
                                                     related_name='operating_contacts',
                                                     help_text='In which countries does this contact person'
                                                               ' operate?')

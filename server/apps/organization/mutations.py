@@ -1,27 +1,38 @@
 import graphene
 
-from apps.contact.mutations import ContactInputType
+from apps.contact.mutations import ContactWithoutOrganizationInputType
 from apps.organization.models import Organization
 from apps.organization.schema import OrganizationType
 from apps.organization.serializers import OrganizationSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 
 
+# organization kind
+
+
+class OrganizationKindCreateInputType(graphene.InputObjectType):
+    title = graphene.String(required=True)
+
+
+# organization
+
+
 class OrganizationCreateInputType(graphene.InputObjectType):
     title = graphene.String(required=True)
     short_name = graphene.String(required=True)
-    organization_type = graphene.Int()
+    # organization_kind = graphene.Int()
+    organization_kind = graphene.Field(OrganizationKindCreateInputType)
     methodology = graphene.String(required=True)
     source_detail_methodology = graphene.String(required=True)
     parent = graphene.Int()
-    contacts = graphene.List(ContactInputType)
+    contacts = graphene.List(ContactWithoutOrganizationInputType)
 
 
 class OrganizationUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
     title = graphene.String()
     short_name = graphene.String()
-    organization_type = graphene.Int()
+    organization_kind = graphene.Int()
     methodology = graphene.String()
     source_detail_methodology = graphene.String()
     parent = graphene.Int()

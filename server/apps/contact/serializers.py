@@ -14,6 +14,12 @@ class ContactWithoutOrganizationSerializer(serializers.ModelSerializer):
         model = Contact
         exclude = ['organization']
 
+    def validate_first_name(self, value):
+        import random
+        if random.choice([1, 0]):
+            raise serializers.ValidationError('blaaa first_name')
+        return value
+
 
 class ContactSerializer(serializers.ModelSerializer):
     class Meta:

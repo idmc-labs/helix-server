@@ -10,7 +10,7 @@ class Organization(models.Model):
     short_name = models.CharField('Short Name', max_length=64,
                                   null=True)
     # logo =
-    organization_type = models.ForeignKey('OrganizationKind', blank=True, null=True,
+    organization_kind = models.ForeignKey('OrganizationKind', blank=True, null=True,
                                           on_delete=models.SET_NULL,
                                           related_name='organizations')
     methodology = models.TextField('Methodology', help_text='')

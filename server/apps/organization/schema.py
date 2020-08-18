@@ -1,5 +1,4 @@
-from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, \
-    DjangoListObjectType, DjangoObjectField
+from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, DjangoObjectField
 
 from apps.contact.schema import ContactListType
 from apps.organization.models import Organization, OrganizationKind
