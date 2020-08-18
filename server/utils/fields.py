@@ -4,7 +4,8 @@ from django.db.models import QuerySet
 from graphene import Field, Int, Argument, ID
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django.utils import is_valid_django_model, maybe_queryset, DJANGO_FILTER_INSTALLED
-from graphene_django_extras import DjangoListObjectField, DjangoListObjectType, DjangoObjectType
+from graphene_django_extras import DjangoListObjectField, DjangoListObjectType, DjangoObjectType, \
+    DjangoFilterPaginateListField, DjangoFilterListField
 from graphene_django_extras.base_types import DjangoListObjectBase, factory_type
 from graphene_django_extras.fields import DjangoListField
 from graphene_django_extras.filters.filter import get_filterset_class
@@ -34,6 +35,22 @@ class CustomDjangoListObjectBase(DjangoListObjectBase):
             "page": self.page,
             "pageSize": self.pageSize
         }
+
+
+class CustomDjangoListField(DjangoListField):
+    @staticmethod
+    def list_resolver(
+            django_object_type, resolver, default_queryset, root, info, **args
+    ):
+        queryset = maybe_queryset(resolver(root, info, **args))
+        if queryset is None:
+            queryset = default_queryset
+
+        if isinstance(queryset, QuerySet):
+            if hasattr(django_object_type, 'get_queryset'):
+                # Pass queryset to the DjangoObjectType get_queryset method
+                queryset = maybe_queryset(django_object_type.get_queryset(queryset, info))
+        return queryset
 
 
 class CustomDjangoListObjectType(DjangoListObjectType):
@@ -87,19 +104,19 @@ class CustomDjangoListObjectType(DjangoListObjectType):
 
         filter_fields = filter_fields or baseType._meta.filter_fields
 
-        if pagination:
-            result_container = pagination.get_pagination_field(baseType)
-        else:
-            global_paginator = graphql_api_settings.DEFAULT_PAGINATION_CLASS
-            if global_paginator:
-                assert issubclass(global_paginator, BaseDjangoGraphqlPagination), (
-                    'You need to pass a valid DjangoGraphqlPagination class in {}.Meta, received "{}".'
-                ).format(cls.__name__, global_paginator)
-
-                global_paginator = global_paginator()
-                result_container = global_paginator.get_pagination_field(baseType)
-            else:
-                result_container = DjangoListField(baseType)
+        # if pagination:
+        #     result_container = pagination.get_pagination_field(baseType)
+        # else:
+        #     global_paginator = graphql_api_settings.DEFAULT_PAGINATION_CLASS
+        #     if global_paginator:
+        #         assert issubclass(global_paginator, BaseDjangoGraphqlPagination), (
+        #             'You need to pass a valid DjangoGraphqlPagination class in {}.Meta, received "{}".'
+        #         ).format(cls.__name__, global_paginator)
+        #
+        #         global_paginator = global_paginator()
+        #         result_container = global_paginator.get_pagination_field(baseType)
+        #     else:
+        result_container = CustomDjangoListField(baseType)
 
         _meta = DjangoObjectOptions(cls)
         _meta.model = model
@@ -126,8 +143,7 @@ class CustomDjangoListObjectType(DjangoListObjectType):
                     Field(
                         Int,
                         name="page",
-                        description="Current Page",
-                        default_value=0
+                        description="Page Number",
                     ),
                 ),
                 (
@@ -135,10 +151,9 @@ class CustomDjangoListObjectType(DjangoListObjectType):
                     Field(
                         Int,
                         name="pageSize",
-                        description="Current page size",
-                        default_value=0
+                        description="Page Size",
                     ),
-                ),
+                )
             ]
         )
 
@@ -147,10 +162,11 @@ class CustomDjangoListObjectType(DjangoListObjectType):
         )
 
 
-class DjangoPaginatedListObjectField(DjangoListObjectField):
+class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
     def __init__(
         self,
         _type,
+        pagination=None,
         fields=None,
         extra_filter_meta=None,
         filterset_class=None,
@@ -158,59 +174,78 @@ class DjangoPaginatedListObjectField(DjangoListObjectField):
         **kwargs,
     ):
 
-        if DJANGO_FILTER_INSTALLED:
-            _fields = _type._meta.filter_fields
-            _model = _type._meta.model
+        _fields = _type._meta.filter_fields
+        _model = _type._meta.model
 
-            self.fields = fields or _fields
+        self.fields = fields or _fields
+        meta = dict(model=_model, fields=self.fields)
+        if extra_filter_meta:
+            meta.update(extra_filter_meta)
 
-            meta = dict(model=_model, fields=self.fields)
-            if extra_filter_meta:
-                meta.update(extra_filter_meta)
+        filterset_class = filterset_class or _type._meta.filterset_class
+        self.filterset_class = get_filterset_class(filterset_class, **meta)
+        self.filtering_args = get_filtering_args_from_filterset(
+            self.filterset_class, _type
+        )
+        kwargs.setdefault("args", {})
+        kwargs["args"].update(self.filtering_args)
 
-            filterset_class = filterset_class or _type._meta.filterset_class
-            self.filterset_class = get_filterset_class(filterset_class, **meta)
-            self.filtering_args = get_filtering_args_from_filterset(
-                self.filterset_class, _type
-            )
-            kwargs.setdefault("args", {})
-            kwargs["args"].update(self.filtering_args)
+        # filtering by primary key or id seems unnecessary...
+        # if "id" not in kwargs["args"].keys():
+        #     self.filtering_args.update(
+        #         {
+        #             "id": Argument(
+        #                 ID, description="Django object unique identification field"
+        #             )
+        #         }
+        #     )
+        #     kwargs["args"].update(
+        #         {
+        #             "id": Argument(
+        #                 ID, description="Django object unique identification field"
+        #             )
+        #         }
+        #     )
 
-            if "id" not in kwargs["args"].keys():
-                id_description = "Django object unique identification field"
-                self.filtering_args.update(
-                    {"id": Argument(ID, description=id_description)}
-                )
-                kwargs["args"].update({"id": Argument(ID, description=id_description)})
+        pagination = pagination or graphql_api_settings.DEFAULT_PAGINATION_CLASS()
 
-            # ------------------- ADDED --------------------- #
-            kwargs["args"].update({"page": Argument(Int, description='Page Number')})
-            kwargs["args"].update({"pageSize": Argument(Int, description='Page Size')})
+        if pagination is not None:
+            assert isinstance(pagination, BaseDjangoGraphqlPagination), (
+                'You need to pass a valid DjangoGraphqlPagination in DjangoFilterPaginateListField, received "{}".'
+            ).format(pagination)
+
+            pagination_kwargs = pagination.to_graphql_fields()
+
+            self.pagination = pagination
+            kwargs.update(**pagination_kwargs)
 
         if not kwargs.get("description", None):
             kwargs["description"] = "{} list".format(_type._meta.model.__name__)
 
-        super(DjangoListObjectField, self).__init__(_type, *args, **kwargs)
+        super(DjangoFilterPaginateListField, self).__init__(
+            _type, *args, **kwargs
+        )
 
     def list_resolver(
-        self, manager, filterset_class, filtering_args, root, info, **kwargs
+            self, manager, filterset_class, filtering_args, root, info, **kwargs
     ):
-        qs = queryset_factory(manager, info.field_asts, info.fragments, **kwargs)
 
         filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
-
+        qs = self.get_queryset(manager, info, **kwargs)
         qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context).qs
 
         if root and is_valid_django_model(root._meta.model):
             extra_filters = get_extra_filters(root, manager.model)
             qs = qs.filter(**extra_filters)
-
         count = qs.count()
+
+        if getattr(self, "pagination", None):
+            qs = self.pagination.paginate_queryset(qs, **kwargs)
 
         return CustomDjangoListObjectBase(
             count=count,
             results=maybe_queryset(qs),
             results_field_name=self.type._meta.results_field_name,
             page=kwargs.get('page', 1),
-            pageSize=kwargs.get('pageSize', 0)
+            pageSize=kwargs.get('pageSize', graphql_api_settings.DEFAULT_PAGE_SIZE)
         )

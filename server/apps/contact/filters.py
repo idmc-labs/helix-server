@@ -11,12 +11,3 @@ class ContactFilter(django_filters.FilterSet):
             'first_name': ['icontains'],
             'last_name': ['icontains'],
         }
-
-    # @property
-    # def qs(self):
-    #     queryset = super().qs
-    #     # lets just return queryset with objects IDs is divisible by user's id
-    #     if self.request.user.id:
-    #         return queryset.annotate(remainder=F('id') % self.request.user.id).filter(remainder=0)
-    #     else:
-    #         return queryset.none()

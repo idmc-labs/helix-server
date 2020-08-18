@@ -1,27 +1,41 @@
 from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, \
     DjangoListObjectType, DjangoListObjectField, DjangoObjectField
 
+from apps.contact.schema import ContactListType
 from apps.country.models import Country
 from apps.organization.schema import OrganizationListType
-from utils.fields import DjangoPaginatedListObjectField
+from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
 
 
 class CountryType(DjangoObjectType):
     class Meta:
         model = Country
 
-    organizations = DjangoPaginatedListObjectField(OrganizationListType)
+    organizations = DjangoPaginatedListObjectField(OrganizationListType,
+                                                   pagination=PageGraphqlPagination(
+                                                       page_size_query_param='pageSize'
+                                                   ))
+    contacts = DjangoPaginatedListObjectField(ContactListType,
+                                              pagination=PageGraphqlPagination(
+                                                  page_size_query_param='pageSize'
+                                              ))
+    operatingContacts = DjangoPaginatedListObjectField(ContactListType,
+                                                       pagination=PageGraphqlPagination(
+                                                           page_size_query_param='pageSize'
+                                                       ))
 
 
-class CountryListType(DjangoListObjectType):
+class CountryListType(CustomDjangoListObjectType):
     class Meta:
         model = Country
         filter_fields = {
             'name': ['icontains']
         }
-        pagination = PageGraphqlPagination(page_size_query_param='pageSize')
 
 
 class Query:
     country = DjangoObjectField(CountryType)
-    country_list = DjangoListObjectField(CountryListType)
+    country_list = DjangoPaginatedListObjectField(CountryListType,
+                                                  pagination=PageGraphqlPagination(
+                                                      page_size_query_param='pageSize'
+                                                  ))

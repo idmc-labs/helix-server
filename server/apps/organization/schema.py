@@ -10,7 +10,8 @@ class OrganizationType(DjangoObjectType):
     class Meta:
         model = Organization
 
-    contacts = DjangoPaginatedListObjectField(ContactListType)
+    contacts = DjangoPaginatedListObjectField(ContactListType,
+                                              pagination=PageGraphqlPagination(page_size_query_param='pageSize'))
 
 
 class OrganizationListType(CustomDjangoListObjectType):
@@ -19,24 +20,29 @@ class OrganizationListType(CustomDjangoListObjectType):
         filter_fields = {
             'short_name': ['icontains']
         }
-        pagination = PageGraphqlPagination(page_size_query_param='pageSize')
 
 
 class OrganizationKindObjectType(DjangoObjectType):
     class Meta:
         model = OrganizationKind
 
-    organizations = DjangoPaginatedListObjectField(OrganizationListType)
+    organizations = DjangoPaginatedListObjectField(OrganizationListType,
+                                                   pagination=PageGraphqlPagination(page_size_query_param='pageSize'))
 
 
 class OrganizationKindListType(CustomDjangoListObjectType):
     class Meta:
         model = OrganizationKind
-        pagination = PageGraphqlPagination(page_size_query_param='pageSize')
 
 
 class Query:
     organization = DjangoObjectField(OrganizationType)
-    organization_list = DjangoPaginatedListObjectField(OrganizationListType)
+    organization_list = DjangoPaginatedListObjectField(OrganizationListType,
+                                                       pagination=PageGraphqlPagination(
+                                                           page_size_query_param='pageSize'
+                                                       ))
     organization_kind = DjangoObjectField(OrganizationKindObjectType)
-    organization_kind_list = DjangoPaginatedListObjectField(OrganizationKindListType)
+    organization_kind_list = DjangoPaginatedListObjectField(OrganizationKindListType,
+                                                            pagination=PageGraphqlPagination(
+                                                                page_size_query_param='pageSize'
+                                                            ))
