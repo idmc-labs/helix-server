@@ -47,4 +47,4 @@ jobs:
           python server/manage.py migrate
       - name: Run Tests
         run: |
-          python server/manage.py test server/
+          py.test server/

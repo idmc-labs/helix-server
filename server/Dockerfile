@@ -1,4 +1,4 @@
-FROM python:3.8.5-buster
+FROM python:3.8.2-buster
 
 MAINTAINER togglecorp info@togglecorp.com
 

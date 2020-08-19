@@ -1,14 +1,12 @@
 from django.test import RequestFactory
 
 from apps.contact.models import Contact
-from apps.organization.models import Organization
 from apps.organization.serializers import OrganizationSerializer
+from utils.factories import OrganizationFactory
 from utils.tests import HelixTestCase
 
 
 class TestCreateOrganizationSerializer(HelixTestCase):
-    fixtures = ['fixtures/organizations.json']
-
     def setUp(self) -> None:
         self.data = {
             "title": "org name",
@@ -44,9 +42,8 @@ class TestCreateOrganizationSerializer(HelixTestCase):
         self.assertIn('contacts', serializer.errors)
 
     def test_invalid_contact_phone_already_exists(self):
-        assert Organization.objects.count() > 0
         Contact.objects.create(**self.data['contacts'][0],
-                               organization=Organization.objects.first())
+                               organization=OrganizationFactory())
 
         serializer = OrganizationSerializer(data=self.data, context=self.context)
         self.assertFalse(serializer.is_valid())
