@@ -9,32 +9,30 @@ from apps.organization.models import Organization, OrganizationKind
 class OrganizationKindSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrganizationKind
-        fields = ['id', 'title']
-
-    def validate_title(self, value):
-        raise serializers.ValidationError('blaaa title')
+        fields = '__all__'
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
     contacts = ContactWithoutOrganizationSerializer(many=True)
-    organization_kind = OrganizationKindSerializer()
 
     class Meta:
         model = Organization
-        fields = ['id', 'short_name', 'title', 'methodology', 'organization_kind',
-                  'source_detail_methodology', 'parent', 'contacts']
+        fields = '__all__'
 
-    def validate_title(self, value):
-        raise serializers.ValidationError('blaa org title')
+    def validate_contacts(self, contacts):
+        phone_numbers = [phone for contact in contacts if (phone := contact['phone']) is not None]
+        if len(phone_numbers) != len(set(phone_numbers)):
+            raise serializers.ValidationError('Contacts you entered have duplicate phone numbers.')
+        return contacts
 
     def create(self, validated_data):
         contacts = validated_data.pop('contacts', [])
-        organization_kind = validated_data.pop('organization_kind', {})
         if contacts:
             with transaction.atomic():
-                organization_kind = OrganizationKind.objects.create(**organization_kind)
-                organization = Organization.objects.create(**validated_data, organization_kind=organization_kind)
-                Contact.objects.bulk_create([Contact(**each, organization=organization) for each in contacts])
+                organization = Organization.objects.create(**validated_data)
+                Contact.objects.bulk_create([
+                    Contact(**each, organization=organization) for each in contacts
+                ])
         else:
             organization = Organization.objects.create(**validated_data)
         return organization

@@ -3,25 +3,33 @@ from rest_framework import serializers
 from apps.contact.models import Contact, Communication
 
 
-class CommunicationSerializer(serializers.ModelSerializer):
+class CommonCommunicationValidatorMixin(object):
+    pass
+
+
+class CommonContactValidatorMixin(object):
+    def validate_phone(self, phone):
+        if Contact.objects.exclude(phone=None).filter(phone=phone).exists():
+            raise serializers.ValidationError('Phone Number already exists.')
+        return phone
+
+
+class CommunicationSerializer(CommonCommunicationValidatorMixin,
+                              serializers.ModelSerializer):
     class Meta:
         model = Communication
         fields = '__all__'
 
 
-class ContactWithoutOrganizationSerializer(serializers.ModelSerializer):
+class ContactWithoutOrganizationSerializer(CommonContactValidatorMixin,
+                                           serializers.ModelSerializer):
     class Meta:
         model = Contact
         exclude = ['organization']
 
-    def validate_first_name(self, value):
-        import random
-        if random.choice([1, 0]):
-            raise serializers.ValidationError('blaaa first_name')
-        return value
 
-
-class ContactSerializer(serializers.ModelSerializer):
+class ContactSerializer(CommonContactValidatorMixin,
+                        serializers.ModelSerializer):
     class Meta:
         model = Contact
         fields = '__all__'

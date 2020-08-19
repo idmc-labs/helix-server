@@ -1,5 +1,4 @@
 import graphene
-from graphene_django.rest_framework.mutation import SerializerMutation
 
 from apps.contact.enums import DesignationGrapheneEnum, CommunicationMediumGrapheneEnum, GenderGrapheneEnum
 from apps.contact.models import Contact, Communication

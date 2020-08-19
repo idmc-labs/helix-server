@@ -5,7 +5,7 @@
     "fields": {
       "title": "org1",
       "short_name": "org1",
-      "organization_type": null,
+      "organization_kind": null,
       "methodology": "bla",
       "source_detail_methodology": "blaa",
       "parent": null
@@ -17,7 +17,7 @@
     "fields": {
       "title": "org1",
       "short_name": "short",
-      "organization_type": null,
+      "organization_kind": null,
       "methodology": "meth",
       "source_detail_methodology": "ddd",
       "parent": null

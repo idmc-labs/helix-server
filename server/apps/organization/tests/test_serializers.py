@@ -1,0 +1,55 @@
+from django.test import RequestFactory
+
+from apps.contact.models import Contact
+from apps.organization.models import Organization
+from apps.organization.serializers import OrganizationSerializer
+from utils.tests import HelixTestCase
+
+
+class TestCreateOrganizationSerializer(HelixTestCase):
+    fixtures = ['fixtures/organizations.json']
+
+    def setUp(self) -> None:
+        self.data = {
+            "title": "org name",
+            "short_name": "org1",
+            "methodology": "methods",
+            "source_detail_methodology": "source1",
+            "contacts": [
+                {
+                    "designation": Contact.DESIGNATION.MR.value,
+                    "first_name": "test",
+                    "last_name": "last",
+                    "gender": Contact.GENDER.Male.value,
+                    "job_title": "job",
+                    "phone": "9989999"
+                 },
+            ]
+        }
+        self.context = dict(
+            request=RequestFactory().post('/graphql')
+        )
+
+    def test_valid_serializer(self):
+        serializer = OrganizationSerializer(data=self.data, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        organization = serializer.save()
+        self.assertEqual(organization.contacts.count(), len(self.data['contacts']))
+
+    def test_invalid_duplicate_contacts_phone_numbers(self):
+        self.data['contacts'] = self.data['contacts'][:] + self.data['contacts'][:]
+        serializer = OrganizationSerializer(data=self.data, context=self.context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('contacts', serializer.errors)
+
+    def test_invalid_contact_phone_already_exists(self):
+        assert Organization.objects.count() > 0
+        Contact.objects.create(**self.data['contacts'][0],
+                               organization=Organization.objects.first())
+
+        serializer = OrganizationSerializer(data=self.data, context=self.context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('contacts', serializer.errors)
+        self.assertIsInstance(serializer.errors['contacts'], list)
+        self.assertIn('phone', serializer.errors['contacts'][0])

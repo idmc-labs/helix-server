@@ -20,8 +20,7 @@ class OrganizationKindCreateInputType(graphene.InputObjectType):
 class OrganizationCreateInputType(graphene.InputObjectType):
     title = graphene.String(required=True)
     short_name = graphene.String(required=True)
-    # organization_kind = graphene.Int()
-    organization_kind = graphene.Field(OrganizationKindCreateInputType)
+    organization_kind = graphene.Int()
     methodology = graphene.String(required=True)
     source_detail_methodology = graphene.String(required=True)
     parent = graphene.Int()
