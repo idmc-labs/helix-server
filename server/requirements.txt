@@ -16,3 +16,4 @@ django-debug-toolbar==2.2
 
 psycopg2==2.8
 graphene-django-extras==0.4.9
+django-enumfield==2.0.1

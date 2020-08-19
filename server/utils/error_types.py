@@ -38,7 +38,7 @@ def mutation_is_not_valid(serializer) -> List:
             elif isinstance(value, list) and isinstance(value[0], dict):
                 array_errors = []
                 position = 0
-                for nested_instance in value:
+                for nested_instance in enumerate(value):
                     position += 1
                     if not nested_instance:
                         # nested instance might not have error
