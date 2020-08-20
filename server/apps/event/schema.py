@@ -1,6 +1,8 @@
 import graphene
 from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, DjangoObjectField, DjangoFilterListField
 
+from apps.country.schema import CountryType
+from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.schema import CrisisType
 from apps.event.models import Event, Trigger, TriggerSubType, Violence, ViolenceSubType, Actor, DisasterSubCategory, \
     DisasterCategory, DisasterSubType, DisasterType
@@ -108,11 +110,13 @@ class EventType(DjangoObjectType):
         model = Event
 
     crisis = graphene.Field(CrisisType)
+    event_type = graphene.Field(CrisisTypeGrapheneEnum)
     trigger = graphene.Field(TriggerType)
     trigger_sub_type = graphene.Field(TriggerSubObjectType)
     violence = graphene.Field(ViolenceType)
     violence_sub_type = graphene.Field(ViolenceSubObjectType)
     actor = graphene.Field(ActorType)
+    countries = DjangoFilterListField(CountryType)
 
 
 class EventListType(CustomDjangoListObjectType):

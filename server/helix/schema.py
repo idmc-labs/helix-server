@@ -6,7 +6,7 @@ from apps.contact import schema as contact_schema, mutations as contact_mutation
 from apps.organization import schema as organization_schema, mutations as organization_mutations
 from apps.country import schema as country_schema
 from apps.crisis import schema as crisis_schema, mutations as crisis_mutations
-from apps.event import schema as event_schema
+from apps.event import schema as event_schema, mutations as event_mutations
 
 
 class Query(user_schema.Query,
@@ -23,6 +23,7 @@ class Mutation(user_mutations.Mutation,
                contact_mutations.Mutation,
                organization_mutations.Mutation,
                crisis_mutations.Mutation,
+               event_mutations.Mutation,
                graphene.ObjectType):
     pass
 

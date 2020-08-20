@@ -1,3 +1,6 @@
+from collections import OrderedDict
+
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
@@ -50,7 +53,6 @@ class Actor(NameAttributedModels):
     """
     Conflict related actors
     """
-    name = models.CharField(verbose_name=_('Name'), max_length=256)
     # country = todo
 
 
@@ -73,7 +75,7 @@ class DisasterSubCategory(NameAttributedModels):
 
 class DisasterType(NameAttributedModels):
     """
-    Holds the possible violence choices
+    Holds the possible disaster types
     """
     disaster_sub_category = models.ForeignKey('DisasterSubCategory', verbose_name=_('Disaster Sub Category'),
                                               related_name='types', on_delete=models.CASCADE)
@@ -81,7 +83,7 @@ class DisasterType(NameAttributedModels):
 
 class DisasterSubType(NameAttributedModels):
     """
-    Holds the possible violence sub types
+    Holds the possible disaster sub types
     """
     type = models.ForeignKey('DisasterType', verbose_name=_('Disaster Sub Type'),
                              related_name='sub_types', on_delete=models.CASCADE)
@@ -92,7 +94,8 @@ class Event(models.Model):
                                related_name='events', on_delete=models.CASCADE)
     name = models.CharField(verbose_name=_('Event Name'), max_length=256)
     event_type = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Event Type'))
-    glide_number = models.CharField(verbose_name=_('Glide Number'), max_length=256)
+    glide_number = models.CharField(verbose_name=_('Glide Number'), max_length=256,
+                                    null=True, blank=True)
     # conflict related fields
     trigger = models.ForeignKey('Trigger', verbose_name=_('Trigger'),
                                 blank=True, null=True,
@@ -124,12 +127,26 @@ class Event(models.Model):
                                           related_name='events', on_delete=models.SET_NULL)
 
     countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
-                                       related_name='events')
+                                       related_name='events', blank=True)
     start_date = models.DateField(verbose_name=_('Start Date'),
                                   blank=True, null=True)
     end_date = models.DateField(verbose_name=_('End Date'),
                                 blank=True, null=True)
-    event_narrative = models.TextField(verbose_name=_('Event Narrative'))
+    event_narrative = models.TextField(verbose_name=_('Event Narrative'),
+                                       null=True, blank=True)
+
+    def clean(self) -> None:
+        errors = OrderedDict()
+        if self.event_type == Crisis.CRISIS_TYPE.CONFLICT:
+            if not self.violence:
+                errors['violence'] = 'Please mention at least the reason for violence. '
+        elif self.event_type == Crisis.CRISIS_TYPE.DISASTER:
+            if not self.disaster_category:
+                errors['disaster_category'] = 'Please mention at least the category of disaster. '
+            if not self.glide_number:
+                errors['glide_number'] = 'Glide Number is required. '
+        if errors:
+            raise ValidationError(errors)
 
     def __str__(self):
         return self.name
