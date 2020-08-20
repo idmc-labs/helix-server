@@ -1,13 +1,14 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
+from django.utils.translation import gettext_lazy as _
 
 
 class User(AbstractUser):
-    email = models.EmailField('email address', unique=True)
+    email = models.EmailField(verbose_name=_('Email Address'), unique=True)
     username = models.CharField(
-        'username',
+        verbose_name=_('Username'),
         max_length=150,
-        help_text='Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.',
+        help_text=_('Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.'),
     )
 
     USERNAME_FIELD = 'email'

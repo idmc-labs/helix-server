@@ -1,44 +1,45 @@
+from django.contrib.auth import login, logout
 import graphene
-from django.contrib.auth import get_user_model, login
-from graphene_django.forms.mutation import DjangoFormMutation
+from graphene_django.rest_framework.mutation import SerializerMutation
 
-from apps.users.forms import LoginForm, RegisterForm, ActivateForm
 from apps.users.schema import UserType
+from apps.users.serializers import LoginSerializer, RegisterSerializer, ActivateSerializer
 
-User = get_user_model()
 
-
-class RegisterMutation(DjangoFormMutation):
+class RegisterMutation(SerializerMutation):
     class Meta:
-        form_class = RegisterForm
+        serializer_class = RegisterSerializer
+
+
+class LoginMutation(SerializerMutation):
+    class Meta:
+        serializer_class = LoginSerializer
+
+    me = graphene.Field(UserType)
 
     @classmethod
-    def get_form_kwargs(cls, root, info, **input):
-        kwargs = super().get_form_kwargs(root, info, **input)
-        # to send activation email
-        kwargs['request'] = info.context
-        return kwargs
-
-
-class LoginMutation(DjangoFormMutation):
-    class Meta:
-        form_class = LoginForm
-
-    user = graphene.Field(UserType)
-
-    @classmethod
-    def perform_mutate(cls, form, info):
-        if user := form.cleaned_data.get('user', None):
+    def perform_mutate(cls, serializer, info):
+        if user := serializer.validated_data.get('user', None):
             login(info.context, user)
-        return super().perform_mutate(form, info)
+        return cls(errors=None, me=user)
 
 
-class ActivateMutation(DjangoFormMutation):
+class ActivateMutation(SerializerMutation):
     class Meta:
-        form_class = ActivateForm
+        serializer_class = ActivateSerializer
+
+
+class LogoutMutation(graphene.Mutation):
+    ok = graphene.Boolean()
+
+    def mutate(self, info, *args, **kwargs):
+        if info.context.user.is_authenticated:
+            logout(info.context)
+        return LogoutMutation(ok=True)
 
 
 class Mutation(object):
     login = LoginMutation.Field()
     register = RegisterMutation.Field()
     activate = ActivateMutation.Field()
+    logout = LogoutMutation.Field()

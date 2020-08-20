@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
-from graphene import relay, ObjectType, Field
+from graphene import Field, relay
 from graphene_django import DjangoObjectType
+from graphene_django.filter.fields import DjangoFilterConnectionField
 
 User = get_user_model()
 
@@ -8,6 +9,7 @@ User = get_user_model()
 class UserType(DjangoObjectType):
     class Meta:
         model = User
+        exclude = ('password',)
 
 
 class Query(object):

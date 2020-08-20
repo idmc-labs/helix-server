@@ -32,7 +32,10 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 LOCAL_APPS = [
+    'country',
     'users',
+    'organization',
+    'contact',
 ]
 
 THIRD_PARTY_APPS = [
@@ -40,6 +43,8 @@ THIRD_PARTY_APPS = [
     'djoser',
     'graphene_graphiql_explorer',
     'corsheaders',
+    'django_filters',
+    'debug_toolbar',
 ]
 
 INSTALLED_APPS = [
@@ -89,13 +94,26 @@ WSGI_APPLICATION = 'helix.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+if os.environ.get('GITHUB_WORKFLOW'):
+    print('Database github workflow')
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            # in the workflow environment
+            'NAME': 'postgres',
+            'USER': 'postgres',
+            'PASSWORD': 'postgres',
+            'HOST': 'localhost',
+            'PORT': 5432,
+        }
     }
-}
-
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -137,12 +155,27 @@ STATIC_URL = '/static/'
 
 AUTH_USER_MODEL = 'users.User'
 
-# https://docs.graphene-python.org/projects/django/en/latest/tutorial-plain/#update-settings
+# https://docs.graphene-python.org/projects/django/en/latest/settings/
 GRAPHENE = {
     'SCHEMA': 'helix.schema.schema',
     'SCHEMA_OUTPUT': 'schema.json',  # defaults to schema.json,
     'SCHEMA_INDENT': 2,  # Defaults to None (displays all data on a single line)
+    'MIDDLEWARE': (
+        'utils.middlewares.AuthorizationMiddleware',
+    ),
 }
+
+GRAPHENE_DJANGO_EXTRAS = {
+    'DEFAULT_PAGINATION_CLASS': 'graphene_django_extras.paginations.PageGraphqlPagination',
+    'DEFAULT_PAGE_SIZE': 20,
+    'MAX_PAGE_SIZE': 50,
+    # 'CACHE_ACTIVE': True,
+    # 'CACHE_TIMEOUT': 300    # seconds
+}
+if DEBUG:
+    GRAPHENE['MIDDLEWARE'] = (
+        'graphene_django.debug.DjangoDebugMiddleware',
+    )
 
 AUTHENTICATION_BACKEND = [
     'django.contrib.auth.backends.ModelBackend',
@@ -164,11 +197,19 @@ APPEND_SLASH = False
 # CORS #
 ########
 
-CORS_ORIGIN_ALLOW_ALL = True
-
+CORS_ORIGIN_WHITELIST = [
+    "http://localhost:3080",
+    "http://127.0.0.1:3080"
+]
+CORS_ALLOW_CREDENTIALS = True
+# CORS_ORIGIN_ALLOW_ALL = True
 # CORS_ORIGIN_REGEX_WHITELIST = []
 # CSRF_TRUSTED_ORIGINS = []
 
-############
-# END CORS #
-############
+#################
+# DEBUG TOOLBAR #
+#################
+
+INTERNAL_IPS = [
+    '127.0.0.1',
+]

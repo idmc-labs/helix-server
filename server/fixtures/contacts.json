@@ -1,0 +1,22 @@
+[
+  {
+    "model": "contact.contact",
+    "pk": 1,
+    "fields": {
+      "designation": 0,
+      "first_name": "anih",
+      "last_name": "shres",
+      "gender": 0,
+      "job_title": "dev",
+      "organization": 1,
+      "country": 5,
+      "email": null,
+      "phone": null,
+      "comment": "",
+      "countries_of_operation": [
+        4,
+        5
+      ]
+    }
+  }
+]
