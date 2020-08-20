@@ -37,6 +37,7 @@ LOCAL_APPS = [
     'organization',
     'contact',
     'crisis',
+    'event',
 ]
 
 THIRD_PARTY_APPS = [
