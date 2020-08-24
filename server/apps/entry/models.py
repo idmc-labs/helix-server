@@ -54,6 +54,7 @@ class Figure(models.Model):
 class Entry(models.Model):
     url = models.URLField(verbose_name=_('Source URL'),
                           blank=True, null=True)
+    # document todo
     article_title = models.TextField(verbose_name=_('Article Title'))
     source = models.CharField(verbose_name=_('Source'), max_length=256)
     publisher = models.CharField(verbose_name=_('Publisher'), max_length=256)
