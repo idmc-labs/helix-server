@@ -2,8 +2,10 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
+from apps.contrib.models import MetaInformationAbstractModel
 
-class Contact(models.Model):
+
+class Contact(MetaInformationAbstractModel, models.Model):
     class DESIGNATION(enum.Enum):
         MR = 0
         MS = 1
@@ -38,7 +40,7 @@ class Contact(models.Model):
         return f'{self.designation.name} {self.first_name} {self.last_name}'
 
 
-class Communication(models.Model):
+class Communication(MetaInformationAbstractModel, models.Model):
     class COMMUNICATION_MEDIUM(enum.Enum):
         MAIL = 0
         PHONE = 1

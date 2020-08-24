@@ -1,12 +1,14 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
+from apps.contrib.models import MetaInformationAbstractModel
 
-class OrganizationKind(models.Model):
+
+class OrganizationKind(MetaInformationAbstractModel, models.Model):
     title = models.CharField(verbose_name=_('Title'), max_length=256)
 
 
-class Organization(models.Model):
+class Organization(MetaInformationAbstractModel, models.Model):
     title = models.CharField(verbose_name=_('Title'), max_length=512)
     short_name = models.CharField(verbose_name=_('Short Name'), max_length=64,
                                   null=True)
