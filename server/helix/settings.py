@@ -38,6 +38,7 @@ LOCAL_APPS = [
     'contact',
     'crisis',
     'event',
+    'entry',
 ]
 
 THIRD_PARTY_APPS = [
@@ -112,8 +113,12 @@ if os.environ.get('GITHUB_WORKFLOW'):
 else:
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': os.environ.get('POSTGRES_DB', 'postgres'),
+            'USER': os.environ.get('POSTGRES_USER', 'postgres'),
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'postgres'),
+            'HOST': 'db',
+            'PORT': os.environ.get('POSTGRES_PORT', 5432),
         }
     }
 

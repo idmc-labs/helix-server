@@ -16,6 +16,7 @@ services:
           cache_from:
             - helix/helix-server:latest
         env_file:
+            - ./server/postgres/.env
             - .env
         volumes:
             - ./server/:/code
