@@ -2,8 +2,10 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
+from apps.contrib.models import MetaInformationAbstractModel
 
-class Crisis(models.Model):
+
+class Crisis(MetaInformationAbstractModel, models.Model):
     class CRISIS_TYPE(enum.Enum):
         CONFLICT = 0
         DISASTER = 1

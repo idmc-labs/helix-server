@@ -11,6 +11,9 @@ class HelixGraphQLTestCase(GraphQLTestCase):
     GRAPHQL_URL = '/graphql'
     GRAPHQL_SCHEMA = 'helix.schema.schema'
 
+    def force_login(self, user):
+        self._client.force_login(user)
+
     def create_user(self) -> User:
         raw_password = 'admin123'
         user = User.objects.create_user(

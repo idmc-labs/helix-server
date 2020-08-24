@@ -5,6 +5,14 @@ from factory.django import DjangoModelFactory
 from apps.crisis.models import Crisis
 
 
+class UserFactory(DjangoModelFactory):
+    class Meta:
+        model = 'users.User'
+
+    email = factory.Sequence(lambda n: f'admin{n}@email.com')
+    username = factory.Sequence(lambda n: f'username{n}')
+
+
 class CountryFactory(DjangoModelFactory):
     class Meta:
         model = 'country.Country'

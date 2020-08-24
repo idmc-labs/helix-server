@@ -3,6 +3,8 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
+from apps.contrib.models import MetaInformationAbstractModel
+
 
 class SubFigure(models.Model):
     figure = models.ForeignKey('Figure', verbose_name=_('Figure'),
@@ -14,7 +16,7 @@ class SubFigure(models.Model):
         abstract = True
 
 
-class Figure(models.Model):
+class Figure(MetaInformationAbstractModel, models.Model):
     class QUANTIFIER(enum.Enum):
         more_than = 0
         less_than = 1
@@ -51,7 +53,7 @@ class Figure(models.Model):
         return f'{self.quantifier} {self.reported} {self.term}'
 
 
-class Entry(models.Model):
+class Entry(MetaInformationAbstractModel, models.Model):
     url = models.URLField(verbose_name=_('Source URL'),
                           blank=True, null=True)
     # document todo
@@ -63,7 +65,8 @@ class Entry(models.Model):
                                           blank=True, null=True)
     source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
                                       blank=True, null=True)
-    source_breakdown = models.TextField(verbose_name=_('Source Breakdown and Reliability'))
+    source_breakdown = models.TextField(verbose_name=_('Source Breakdown and Reliability'),
+                                        blank=True, null=True)
     event = models.ForeignKey('event.Event', verbose_name=_('Event'),
                               related_name='entries', on_delete=models.CASCADE)
 
@@ -72,10 +75,17 @@ class Entry(models.Model):
     methodology = models.TextField(verbose_name=_('Methodology'),
                                    blank=False, null=True)
     # grid todo
-    tags = ArrayField(base_field=models.CharField(verbose_name=_('Tag'), max_length=32))
+    tags = ArrayField(base_field=models.CharField(verbose_name=_('Tag'), max_length=32),
+                      blank=True, null=True)
 
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
+                                       blank=True,
                                        related_name='review_entries')
+
+    def can_be_updated_by(self, user: 'User') -> bool:
+        # if user.role == 'ADMIN':  # todo
+        #     return True
+        return self.created_by == user
 
     def __str__(self):
         return f'Entry {self.article_title}'

@@ -5,6 +5,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
+from apps.contrib.models import MetaInformationAbstractModel
 from apps.crisis.models import Crisis
 
 
@@ -89,7 +90,7 @@ class DisasterSubType(NameAttributedModels):
                              related_name='sub_types', on_delete=models.CASCADE)
 
 
-class Event(models.Model):
+class Event(MetaInformationAbstractModel, models.Model):
     crisis = models.ForeignKey('crisis.Crisis', verbose_name=_('Crisis'),
                                related_name='events', on_delete=models.CASCADE)
     name = models.CharField(verbose_name=_('Event Name'), max_length=256)
