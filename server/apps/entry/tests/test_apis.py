@@ -1,5 +1,7 @@
 import json
 
+from django.contrib.auth.models import Permission
+
 from utils.factories import EventFactory, EntryFactory, UserFactory
 from utils.tests import HelixGraphQLTestCase
 
@@ -55,7 +57,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
 
 class TestEntryUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.monitor_expert = self.create_user()
+        self.monitor_expert = self.create_monitoring_expert()
         self.entry = EntryFactory.create(
             created_by=self.monitor_expert
         )
@@ -87,10 +89,23 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
 
+        self.assertIn('You do not have permission', response.content)
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEntry']['ok'], content)
         self.assertEqual(content['data']['updateEntry']['entry']['url'],
                          self.input['url'])
+
+    def test_invalid_update_by_reviewer(self):
+        p = Permission.objects.get(codename='change_entry')
+        self.monitor_expert.user_permissions.remove(p)
+        self.force_login(self.monitor_expert)
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertIn('You do not have permission', content['errors'])
 
     def test_invalid_entry_update_by_non_owner(self):
         self.monitor_expert2 = UserFactory.create()

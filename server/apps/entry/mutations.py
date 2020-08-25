@@ -6,6 +6,7 @@ from apps.entry.models import Entry, Figure
 from apps.entry.schema import EntryType
 from apps.entry.serializers import EntrySerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.permissions import permission_checker
 
 
 class EntryCreateInputType(graphene.InputObjectType):
@@ -68,6 +69,7 @@ class UpdateEntry(graphene.Mutation):
     entry = graphene.Field(EntryType)
 
     @staticmethod
+    @permission_checker(['entry.change_entry'])
     def mutate(root, info, entry):
         try:
             instance = Entry.objects.get(id=entry['id'])
