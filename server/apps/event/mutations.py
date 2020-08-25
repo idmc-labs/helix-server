@@ -1,4 +1,5 @@
 import graphene
+from django.utils.translation import gettext_lazy as _
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.models import Event
@@ -79,7 +80,7 @@ class UpdateEvent(graphene.Mutation):
             instance = Event.objects.get(id=event['id'])
         except Event.DoesNotExist:
             return UpdateEvent(errors=[
-                CustomErrorType(field='non_field_errors', messages=['Event Does Not Exist.'])
+                CustomErrorType(field='non_field_errors', messages=[_('Event does not exist.')])
             ])
         serializer = EventSerializer(instance=instance, data=event, partial=True)
         if errors := mutation_is_not_valid(serializer):
@@ -102,7 +103,7 @@ class DeleteEvent(graphene.Mutation):
             instance = Event.objects.get(id=event['id'])
         except Event.DoesNotExist:
             return DeleteEvent(errors=[
-                CustomErrorType(field='non_field_errors', messages=['Event Does Not Exist.'])
+                CustomErrorType(field='non_field_errors', messages=[_('Event does not exist.')])
             ])
         instance.delete()
         instance.id = event['id']

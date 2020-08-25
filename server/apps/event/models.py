@@ -139,12 +139,12 @@ class Event(models.Model):
         errors = OrderedDict()
         if self.event_type == Crisis.CRISIS_TYPE.CONFLICT:
             if not self.violence:
-                errors['violence'] = 'Please mention at least the reason for violence. '
+                errors['violence'] = _('Please mention at least the reason for violence. ')
         elif self.event_type == Crisis.CRISIS_TYPE.DISASTER:
             if not self.disaster_category:
-                errors['disaster_category'] = 'Please mention at least the category of disaster. '
+                errors['disaster_category'] = _('Please mention at least the category of disaster. ')
             if not self.glide_number:
-                errors['glide_number'] = 'Glide Number is required. '
+                errors['glide_number'] = _('Glide Number is required. ')
         if errors:
             raise ValidationError(errors)
 
