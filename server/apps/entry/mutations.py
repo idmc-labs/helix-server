@@ -1,4 +1,5 @@
 import graphene
+from django.utils.translation import gettext_lazy as _
 
 from apps.entry.enums import QuantifierGrapheneEnum, RoleGrapheneEnum, TypeGrapheneEnum, \
     TermGrapheneEnum, UnitGrapheneEnum
@@ -27,7 +28,7 @@ class EntryCreateInputType(graphene.InputObjectType):
 
 
 class EntryUpdateInputType(graphene.InputObjectType):
-    id = graphene.ID()
+    id = graphene.ID(required=True)
     url = graphene.String()
     article_title = graphene.String()
     source = graphene.String()
@@ -52,6 +53,7 @@ class CreateEntry(graphene.Mutation):
     entry = graphene.Field(EntryType)
 
     @staticmethod
+    @permission_checker(['entry.add_entry'])
     def mutate(root, info, entry):
         serializer = EntrySerializer(data=entry)
         if errors := mutation_is_not_valid(serializer):
@@ -79,7 +81,7 @@ class UpdateEntry(graphene.Mutation):
             ])
         if not instance.can_be_updated_by(info.context.user):
             return UpdateEntry(errors=[
-                CustomErrorType(field='non_field_errors', messages=['You cannot update this entry.'])
+                CustomErrorType(field='non_field_errors', messages=[_('You cannot update this entry.')])
             ])
         serializer = EntrySerializer(instance=instance, data=entry, partial=True)
         if errors := mutation_is_not_valid(serializer):
@@ -97,15 +99,20 @@ class DeleteEntry(graphene.Mutation):
     entry = graphene.Field(EntryType)
 
     @staticmethod
-    def mutate(root, info, entry):
+    @permission_checker(['entry.delete_entry'])
+    def mutate(root, info, id):
         try:
-            instance = Entry.objects.get(id=entry['id'])
+            instance = Entry.objects.get(id=id)
         except Entry.DoesNotExist:
             return DeleteEntry(errors=[
                 CustomErrorType(field='non_field_errors', messages=['Entry Does Not Exist.'])
             ])
+        if not instance.can_be_updated_by(info.context.user):
+            return DeleteEntry(errors=[
+                CustomErrorType(field='non_field_errors', messages=[_('You cannot delete this entry.')])
+            ])
         instance.delete()
-        instance.id = entry['id']
+        instance.id = id
         return DeleteEntry(entry=instance, errors=None, ok=True)
 
 

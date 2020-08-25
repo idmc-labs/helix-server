@@ -4,6 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
+from apps.users.roles import ADMIN
 
 
 class SubFigure(models.Model):
@@ -83,8 +84,11 @@ class Entry(MetaInformationAbstractModel, models.Model):
                                        related_name='review_entries')
 
     def can_be_updated_by(self, user: 'User') -> bool:
-        # if user.role == 'ADMIN':  # todo
-        #     return True
+        """
+        used to check before deleting as well
+        """
+        if ADMIN in user.groups.values_list('name', flat=True):
+            return True
         return self.created_by == user
 
     def __str__(self):

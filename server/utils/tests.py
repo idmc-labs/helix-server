@@ -1,10 +1,12 @@
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission
+from django.contrib.auth.models import Permission, Group
+from django.core import management
 from django.test import TestCase, override_settings
 from graphene_django.utils import GraphQLTestCase
 
+from apps.users.roles import MONITORING_EXPERT_EDITOR
 from utils.factories import UserFactory
 
 User = get_user_model()
@@ -14,13 +16,14 @@ class HelixGraphQLTestCase(GraphQLTestCase):
     GRAPHQL_URL = '/graphql'
     GRAPHQL_SCHEMA = 'helix.schema.schema'
 
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # initialize roles
+        management.call_command('init_roles')
+
     def force_login(self, user):
         self._client.force_login(user)
-
-    def create_monitoring_expert(self):
-        user = UserFactory.create()
-        user.user_permissions.add(Permission.objects.get(codename='change_entry'))
-        return user
 
     def create_user(self) -> User:
         raw_password = 'admin123'
@@ -31,6 +34,12 @@ class HelixGraphQLTestCase(GraphQLTestCase):
         )
         user.raw_password = raw_password
         return user
+
+
+def create_user_with_role(role: str) -> User:
+    user = UserFactory.create()
+    user.groups.set([Group.objects.get(name=role)])
+    return user
 
 
 class ImmediateOnCommitMixin(object):
