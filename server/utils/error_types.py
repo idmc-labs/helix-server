@@ -2,6 +2,7 @@ from typing import List
 
 import graphene
 from graphene import ObjectType
+from graphene_django.utils.utils import _camelize_django_str
 
 
 class NestedErrorType(ObjectType):
@@ -32,9 +33,9 @@ def mutation_is_not_valid(serializer) -> List:
                 object_errors = []
                 for k, v in value.items():
                     object_errors.append(
-                        NestedErrorType(field=k, messages=''.join(str(msg) for msg in v))
+                        NestedErrorType(field=_camelize_django_str(k), messages=''.join(str(msg) for msg in v))
                     )
-                errors.append(CustomErrorType(field=key, object_errors=object_errors))
+                errors.append(CustomErrorType(field=_camelize_django_str(key), object_errors=object_errors))
             elif isinstance(value, list) and isinstance(value[0], dict):
                 array_errors = []
                 for position, nested_instance in enumerate(value):
@@ -44,16 +45,16 @@ def mutation_is_not_valid(serializer) -> List:
                     nested_object_errors = []
                     for k, v in nested_instance.items():
                         nested_object_errors.append(NestedErrorType(
-                            field=k,
+                            field=_camelize_django_str(k),
                             messages=''.join(str(msg) for msg in v)
                         ))
                     array_errors.append(ArrayNestedErrorType(
                         key=position,
                         object_errors=nested_object_errors
                     ))
-                errors.append(CustomErrorType(field=key, array_errors=array_errors))
+                errors.append(CustomErrorType(field=_camelize_django_str(key), array_errors=array_errors))
             else:
                 messages = ''.join(str(msg) for msg in value)
-                errors.append(CustomErrorType(field=key, messages=messages))
+                errors.append(CustomErrorType(field=_camelize_django_str(key), messages=messages))
         return errors
     return []
