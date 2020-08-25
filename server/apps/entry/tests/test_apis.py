@@ -113,6 +113,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
 
+        self.assertIn('You do not have permission', response.content)
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEntry']['ok'], content)
         self.assertEqual(content['data']['updateEntry']['entry']['url'],
