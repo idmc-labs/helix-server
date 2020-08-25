@@ -9,6 +9,11 @@ docker-compose up
 docker-compose exec server python manage.py migrate 
 ```
 
+## Initialize Roles
+```bash
+docker-compose exec server python manage.py init_roles
+```
+
 ## Initialize DB (optional)
 ```bash
 docker-compose exec server python manage.py loaddata fixtures/*.json
