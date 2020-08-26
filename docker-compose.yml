@@ -2,12 +2,9 @@ version: '3.2'
 
 services:
     db:
-        build:
-          context: ./server/postgres/
-          cache_from:
-            - helix/helix-db:latest
-        env_file:
-            - ./server/postgres/.env
+        image: postgres:12
+        environment:
+            POSTGRES_PASSWORD: postgres
         volumes:
             - helix-db-data:/var/lib/postgresql/data
     server:
@@ -16,7 +13,6 @@ services:
           cache_from:
             - helix/helix-server:latest
         env_file:
-            - ./server/postgres/.env
             - .env
         volumes:
             - ./server/:/code
