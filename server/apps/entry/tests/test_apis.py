@@ -20,6 +20,9 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     }
                     entry {
                         id
+                        figures {
+                            totalCount
+                        }
                     }
                 }
             }
@@ -54,7 +57,22 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertIsNotNone(content['data']['createEntry']['entry']['id'])
 
     def test_valid_nested_figures_create(self):
-        ... # todo
+        figures = [
+            {
+                "district": "ABC",
+                "town": "XYZ",
+                "quantifier": "moreThan",
+                "reported": 10,
+                "unit": "person",
+                "term": "evacuated",
+                "type": "idpStock",
+                "role": "recommended",
+                "startDate": "2020-10-10",
+                "includeIdu": True,
+                "excerptIdu": "excerpt abc",
+            }
+        ]
+        self.input.update(figures)
 
     def test_invalid_reviewer_entry_create(self):
         reviewer = create_user_with_role(role=MONITORING_EXPERT_REVIEWER)

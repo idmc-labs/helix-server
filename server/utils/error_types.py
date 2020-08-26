@@ -22,7 +22,7 @@ class CustomErrorType(ObjectType):
     array_errors = graphene.List(ArrayNestedErrorType)
 
 
-def mutation_is_not_valid(serializer) -> List:
+def mutation_is_not_valid(serializer) -> List[CustomErrorType]:
     """
     Checks if serializer is valid, if not returns list of errorTypes
     """

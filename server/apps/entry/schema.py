@@ -45,6 +45,11 @@ class EntryListType(CustomDjangoListObjectType):
 
 
 class Query:
+    figure = DjangoObjectField(FigureType)
+    figure_list = DjangoPaginatedListObjectField(FigureListType,
+                                                 pagination=PageGraphqlPagination(
+                                                     page_size_query_param='pageSize'
+                                                 ))
     entry = DjangoObjectField(EntryType)
     entry_list = DjangoPaginatedListObjectField(EntryListType,
                                                 pagination=PageGraphqlPagination(

@@ -1,4 +1,7 @@
+from collections import OrderedDict
+
 from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
@@ -73,8 +76,26 @@ class Figure(MetaInformationAbstractModel, models.Model):
     excerpt_idu = models.TextField(verbose_name=_('Excerpt for IDU'),
                                    blank=True, null=True)
 
+    def can_be_updated_by(self, user: 'User') -> bool:
+        """
+        used to check before deleting as well
+        """
+        return self.entry.can_be_updated_by(user)
+
+    def clean_idu(self) -> OrderedDict:
+        errors = OrderedDict()
+        if self.include_idu and not (self.excerpt_idu or self.excerpt_idu.strip()):
+            errors['excerpt_idu'] = _('This field is required. ')
+        return errors
+
+    def clean(self) -> None:
+        errors = OrderedDict()
+        errors.update(self.clean_idu())
+        if errors:
+            raise ValidationError(errors)
+
     def __str__(self):
-        return f'{self.quantifier} {self.reported} {self.term}'
+        return f'{self.quantifier.label} {self.reported} {self.term.label}'
 
 
 class Entry(MetaInformationAbstractModel, models.Model):
