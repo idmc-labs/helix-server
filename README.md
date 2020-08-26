@@ -17,6 +17,7 @@ docker-compose exec server python manage.py init_roles
 ## Initialize DB (optional)
 ```bash
 docker-compose exec server python manage.py loaddata fixtures/*.json
+docker-compose exec server python manage.py create_dummy_users
 ...
 ```
 
