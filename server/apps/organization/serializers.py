@@ -1,5 +1,6 @@
 from django.db import transaction
 from rest_framework import serializers
+from django.utils.translation import gettext_lazy as _
 
 from apps.contact.models import Contact
 from apps.contact.serializers import ContactWithoutOrganizationSerializer
@@ -22,7 +23,7 @@ class OrganizationSerializer(serializers.ModelSerializer):
     def validate_contacts(self, contacts):
         phone_numbers = [phone for contact in contacts if (phone := contact['phone']) is not None]
         if len(phone_numbers) != len(set(phone_numbers)):
-            raise serializers.ValidationError('Contacts you entered have duplicate phone numbers.')
+            raise serializers.ValidationError(_('Contacts you entered have duplicate phone numbers.'))
         return contacts
 
     def create(self, validated_data):

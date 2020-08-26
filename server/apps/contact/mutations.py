@@ -1,4 +1,5 @@
 import graphene
+from django.utils.translation import gettext_lazy as _
 
 from apps.contact.enums import DesignationGrapheneEnum, CommunicationMediumGrapheneEnum, GenderGrapheneEnum
 from apps.contact.models import Contact, Communication
@@ -83,7 +84,7 @@ class UpdateContact(graphene.Mutation):
             instance = Contact.objects.get(id=contact['id'])
         except Contact.DoesNotExist:
             return UpdateContact(errors=[
-                CustomErrorType(field='non_field_errors', messages=['Contact Does Not Exist.'])
+                CustomErrorType(field='non_field_errors', messages=[_('Contact does not exist.')])
             ])
         serializer = ContactSerializer(instance=instance, data=contact, partial=True)
         if errors := mutation_is_not_valid(serializer):
@@ -106,7 +107,7 @@ class DeleteContact(graphene.Mutation):
             instance = Contact.objects.get(id=contact['id'])
         except Contact.DoesNotExist:
             return UpdateContact(errors=[
-                CustomErrorType(field='non_field_errors', messages=['Contact Does Not Exist.'])
+                CustomErrorType(field='non_field_errors', messages=[_('Contact does not exist.')])
             ])
         instance.delete()
         instance.id = contact['id']
@@ -172,7 +173,7 @@ class UpdateCommunication(graphene.Mutation):
             instance = Communication.objects.get(id=communication['id'])
         except Communication.DoesNotExist:
             return UpdateCommunication(errors=[
-                CustomErrorType(field='non_field_errors', messages=['Communication Does Not Exist.'])
+                CustomErrorType(field='non_field_errors', messages=[_('Communication does not exist.')])
             ])
         serializer = CommunicationSerializer(instance=instance, data=communication, partial=True)
         if errors := mutation_is_not_valid(serializer):
@@ -195,7 +196,7 @@ class DeleteCommunication(graphene.Mutation):
             instance = Communication.objects.get(id=communication['id'])
         except Communication.DoesNotExist:
             return DeleteCommunication(errors=[
-                CustomErrorType(field='non_field_errors', messages=['Communication Does Not Exist.'])
+                CustomErrorType(field='non_field_errors', messages=[_('Communication does not exist.')])
             ])
         instance.delete()
         instance.id = communication['id']
