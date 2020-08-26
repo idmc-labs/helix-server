@@ -88,7 +88,8 @@ class Entry(MetaInformationAbstractModel, models.Model):
         """
         used to check before deleting as well
         """
-        if ADMIN in user.groups.values_list('name', flat=True):
+        if user.is_superuser \
+                and ADMIN in user.groups.values_list('name', flat=True):
             return True
         return self.created_by == user
 
