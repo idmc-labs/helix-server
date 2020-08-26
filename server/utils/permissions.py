@@ -1,9 +1,9 @@
-from typing import List
+from typing import List, Callable
 
 from django.core.exceptions import PermissionDenied
 
 
-def permission_checker(info, perms: List[str]) -> None:
+def permission_checker(perms: List[str]) -> Callable[..., Callable]:
     def wrapped(func):
         def wrapped_func(root, info, *args, **kwargs):
             if not info.context.user.has_perms(perms):
