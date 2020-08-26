@@ -7,20 +7,10 @@ from django.utils.translation import gettext_lazy as _
 
 class UUIDAbstractModel(models.Model):
     uuid = models.UUIDField(verbose_name='UUID', unique=True,
-                            blank=True, null=True)
+                            blank=True, default=uuid4)
 
     class Meta:
         abstract = True
-
-    def save(self, *args, **kwargs):
-        if not self.uuid:
-            # if we didnt receive uuid from the client or is not pre-populated
-            while True:
-                temp = uuid4()
-                if not self.__class__._default_manager.filter(uuid=self.uuid).exists():
-                    break
-            self.uuid = temp
-        return super().save(*args, **kwargs)
 
 
 class MetaInformationAbstractModel(models.Model):
