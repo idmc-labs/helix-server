@@ -48,7 +48,8 @@ class Figure(MetaInformationAbstractModel, models.Model):
 
     start_date = models.DateField(verbose_name=_('Start Date'))
     include_idu = models.BooleanField(verbose_name=_('Include in IDU'))
-    excerpt_idu = models.TextField(verbose_name=_('Excerpt for IDU'))
+    excerpt_idu = models.TextField(verbose_name=_('Excerpt for IDU'),
+                                   blank=True, null=True)
 
     def __str__(self):
         return f'{self.quantifier} {self.reported} {self.term}'
