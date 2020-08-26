@@ -24,6 +24,10 @@ class CountryType(DjangoObjectType):
                                                            page_size_query_param='pageSize'
                                                        ))
 
+    @staticmethod
+    def get_queryset(queryset, info):
+        return queryset
+
 
 class CountryListType(CustomDjangoListObjectType):
     class Meta:

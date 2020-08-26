@@ -6,21 +6,22 @@ from django.core import management
 from django.test import TestCase, override_settings
 from graphene_django.utils import GraphQLTestCase
 
-from apps.users.roles import MONITORING_EXPERT_EDITOR
 from utils.factories import UserFactory
 
 User = get_user_model()
 
 
-class HelixGraphQLTestCase(GraphQLTestCase):
-    GRAPHQL_URL = '/graphql'
-    GRAPHQL_SCHEMA = 'helix.schema.schema'
-
+class CommonSetupClassMixin:
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         # initialize roles
         management.call_command('init_roles')
+
+
+class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
+    GRAPHQL_URL = '/graphql'
+    GRAPHQL_SCHEMA = 'helix.schema.schema'
 
     def force_login(self, user):
         self._client.force_login(user)
@@ -69,5 +70,5 @@ class ImmediateOnCommitMixin(object):
 @override_settings(
     EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
 )
-class HelixTestCase(ImmediateOnCommitMixin, TestCase):
+class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     pass

@@ -2,6 +2,7 @@ import factory
 from dateutil.utils import today
 from factory.django import DjangoModelFactory
 
+from apps.contact.models import Contact
 from apps.crisis.models import Crisis
 
 
@@ -18,9 +19,28 @@ class CountryFactory(DjangoModelFactory):
         model = 'country.Country'
 
 
+class OrganizationKindFactory(DjangoModelFactory):
+    class Meta:
+        model = 'organization.OrganizationKind'
+
+    title = factory.Faker('company_suffix')
+
+
 class OrganizationFactory(DjangoModelFactory):
     class Meta:
         model = 'organization.Organization'
+
+
+class ContactFactory(DjangoModelFactory):
+    class Meta:
+        model = 'contact.Contact'
+
+    designation = factory.Iterator(Contact.DESIGNATION)
+    first_name = factory.Faker('first_name')
+    last_name = factory.Faker('last_name')
+    gender = factory.Iterator(Contact.GENDER)
+    job_title = factory.Faker('job')
+    organization = factory.SubFactory(OrganizationFactory)
 
 
 class DisasterCategoryFactory(DjangoModelFactory):

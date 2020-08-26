@@ -6,6 +6,7 @@ from apps.event.models import Event
 from apps.event.schema import EventType
 from apps.event.serializers import EventSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.permissions import permission_checker
 
 
 class EventCreateInputType(graphene.InputObjectType):
@@ -58,6 +59,7 @@ class CreateEvent(graphene.Mutation):
     event = graphene.Field(EventType)
 
     @staticmethod
+    @permission_checker(['event.add_event'])
     def mutate(root, info, event):
         serializer = EventSerializer(data=event)
         if errors := mutation_is_not_valid(serializer):
@@ -75,6 +77,7 @@ class UpdateEvent(graphene.Mutation):
     event = graphene.Field(EventType)
 
     @staticmethod
+    @permission_checker(['event.change_event'])
     def mutate(root, info, event):
         try:
             instance = Event.objects.get(id=event['id'])
@@ -98,15 +101,16 @@ class DeleteEvent(graphene.Mutation):
     event = graphene.Field(EventType)
 
     @staticmethod
-    def mutate(root, info, event):
+    @permission_checker(['event.delete_event'])
+    def mutate(root, info, id):
         try:
-            instance = Event.objects.get(id=event['id'])
+            instance = Event.objects.get(id=id)
         except Event.DoesNotExist:
             return DeleteEvent(errors=[
                 CustomErrorType(field='non_field_errors', messages=[_('Event does not exist.')])
             ])
         instance.delete()
-        instance.id = event['id']
+        instance.id = id
         return DeleteEvent(event=instance, errors=None, ok=True)
 
 

@@ -6,6 +6,7 @@ from apps.crisis.models import Crisis
 from apps.crisis.schema import CrisisType
 from apps.crisis.serializers import CrisisSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.permissions import permission_checker
 
 
 class CrisisCreateInputType(graphene.InputObjectType):
@@ -38,6 +39,7 @@ class CreateCrisis(graphene.Mutation):
     crisis = graphene.Field(CrisisType)
 
     @staticmethod
+    @permission_checker(['crisis.add_crisis'])
     def mutate(root, info, crisis):
         serializer = CrisisSerializer(data=crisis)
         if errors := mutation_is_not_valid(serializer):
@@ -55,6 +57,7 @@ class UpdateCrisis(graphene.Mutation):
     crisis = graphene.Field(CrisisType)
 
     @staticmethod
+    @permission_checker(['crisis.change_crisis'])
     def mutate(root, info, crisis):
         try:
             instance = Crisis.objects.get(id=crisis['id'])
@@ -78,15 +81,16 @@ class DeleteCrisis(graphene.Mutation):
     crisis = graphene.Field(CrisisType)
 
     @staticmethod
-    def mutate(root, info, crisis):
+    @permission_checker(['crisis.delete_crisis'])
+    def mutate(root, info, id):
         try:
-            instance = Crisis.objects.get(id=crisis['id'])
+            instance = Crisis.objects.get(id=id)
         except Crisis.DoesNotExist:
             return DeleteCrisis(errors=[
                 CustomErrorType(field='non_field_errors', messages=[_('Crisis does not exist.')])
             ])
         instance.delete()
-        instance.id = crisis['id']
+        instance.id = id
         return DeleteCrisis(crisis=instance, errors=None, ok=True)
 
 

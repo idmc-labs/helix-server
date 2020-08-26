@@ -14,7 +14,7 @@ class OrganizationKindSerializer(serializers.ModelSerializer):
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
-    contacts = ContactWithoutOrganizationSerializer(many=True)
+    contacts = ContactWithoutOrganizationSerializer(many=True, required=False)
 
     class Meta:
         model = Organization

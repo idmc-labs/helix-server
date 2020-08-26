@@ -12,7 +12,8 @@ GUEST = 'GUEST'
 ROLES = [ADMIN, IT_HEAD, MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, GUEST]
 
 # All except user
-ALL_MODELS = {'crisis', 'event', 'entry', 'organization', 'contact', 'communication'}
+ALL_MODELS = {'crisis', 'event', 'entry', 'organization', 'organizationkind', 'contact',
+              'communication'}
 
 PERMISSIONS = {
     ADMIN: {

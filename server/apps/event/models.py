@@ -136,7 +136,13 @@ class Event(MetaInformationAbstractModel, models.Model):
     event_narrative = models.TextField(verbose_name=_('Event Narrative'),
                                        null=True, blank=True)
 
-    def clean(self) -> None:
+    def clean_dates(self) -> OrderedDict:
+        errors = OrderedDict()
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            errors['end_date'] = _('Pick the end date later than start date. ')
+        return errors
+
+    def clean_by_event_type(self) -> OrderedDict:
         errors = OrderedDict()
         if self.event_type == Crisis.CRISIS_TYPE.CONFLICT:
             if not self.violence:
@@ -146,6 +152,12 @@ class Event(MetaInformationAbstractModel, models.Model):
                 errors['disaster_category'] = _('Please mention at least the category of disaster. ')
             if not self.glide_number:
                 errors['glide_number'] = _('Glide Number is required. ')
+        return errors
+
+    def clean(self) -> None:
+        errors = OrderedDict()
+        errors.update(self.clean_dates())
+        errors.update(self.clean_by_event_type())
         if errors:
             raise ValidationError(errors)
 
