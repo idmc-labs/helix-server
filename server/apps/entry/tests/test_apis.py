@@ -60,9 +60,6 @@ class TestFigureCreation(HelixGraphQLTestCase):
                 {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
                 {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
             ],
-            "includeIdu": False,
-            "entry": self.entry.id,
-            "startDate": "2020-10-10",
         }
         self.force_login(self.creator)
 
@@ -405,6 +402,12 @@ class TestEntryCreation(HelixGraphQLTestCase):
                          content['data']['createEntry']['errors'][0]['arrayErrors'][0]['objectErrors'][0]['field'])
         self.assertEqual(uuid_error,
                          content['data']['createEntry']['errors'][0]['arrayErrors'][0]['key'])
+        # self.assertTrue(content['data']['createEntry']['ok'], content)
+        # self.assertIsNone(content['data']['createEntry']['errors'], content)
+        # self.assertIsNotNone(content['data']['createEntry']['entry']['id'])
+        # self.assertEqual(content['data']['createEntry']['entry']['figures']['totalCount'],
+        #                  len(figures))
+        # self.assertIsNotNone(content['data']['createEntry']['entry']['figures']['results'][0]['id'])
 
     def test_invalid_reviewer_entry_create(self):
         reviewer = create_user_with_role(role=MONITORING_EXPERT_REVIEWER)
