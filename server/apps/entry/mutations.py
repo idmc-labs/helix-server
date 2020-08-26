@@ -21,7 +21,7 @@ class CommonFigureCreateMixin:
     role = graphene.NonNull(RoleGrapheneEnum)
     start_date = graphene.Date(required=True)
     include_idu = graphene.Boolean(required=True)
-    excerpt_idu = graphene.String(required=True)
+    excerpt_idu = graphene.String()
 
 
 class NestedFigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectType):
@@ -63,7 +63,16 @@ class CreateFigure(graphene.Mutation):
     def mutate(root, info, figure):
         serializer = FigureSerializer(data=figure,
                                       context={'request': info.context})
-        # todo check if entry was created by user
+        try:
+            entry = Entry.objects.get(id=figure['entry'])
+        except Entry.DoesNotExist:
+            return CreateFigure(errors=[
+                CustomErrorType(field='non_field_errors', messages=[_('Entry does not exist.')])
+            ])
+        if not Figure.can_be_created_by(info.context.user, entry=entry):
+            return CreateFigure(errors=[
+                CustomErrorType(field='non_field_errors', messages=[_('You cannot create a figure into this entry.')])
+            ])
         if errors := mutation_is_not_valid(serializer):
             return CreateFigure(errors=errors, ok=False)
         instance = serializer.save()

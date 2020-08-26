@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -8,6 +9,9 @@ from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
 from apps.users.roles import ADMIN
+
+
+User = get_user_model()
 
 
 class SubFigure(models.Model):
@@ -76,7 +80,11 @@ class Figure(MetaInformationAbstractModel, models.Model):
     excerpt_idu = models.TextField(verbose_name=_('Excerpt for IDU'),
                                    blank=True, null=True)
 
-    def can_be_updated_by(self, user: 'User') -> bool:
+    @classmethod
+    def can_be_created_by(cls, user: User, entry: 'Entry') -> bool:
+        return entry.can_be_updated_by(user)
+
+    def can_be_updated_by(self, user: User) -> bool:
         """
         used to check before deleting as well
         """
@@ -84,8 +92,9 @@ class Figure(MetaInformationAbstractModel, models.Model):
 
     def clean_idu(self) -> OrderedDict:
         errors = OrderedDict()
-        if self.include_idu and not (self.excerpt_idu or self.excerpt_idu.strip()):
-            errors['excerpt_idu'] = _('This field is required. ')
+        if self.include_idu:
+            if self.excerpt_idu is None or not self.excerpt_idu.strip():
+                errors['excerpt_idu'] = _('This field is required. ')
         return errors
 
     def clean(self) -> None:
@@ -127,7 +136,7 @@ class Entry(MetaInformationAbstractModel, models.Model):
                                        blank=True,
                                        related_name='review_entries')
 
-    def can_be_updated_by(self, user: 'User') -> bool:
+    def can_be_updated_by(self, user: User) -> bool:
         """
         used to check before deleting as well
         """

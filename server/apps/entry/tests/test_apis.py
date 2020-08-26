@@ -1,9 +1,89 @@
 import json
 
+from apps.entry.models import Figure
 from apps.users.roles import MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, ADMIN, GUEST
 from utils.factories import EventFactory, EntryFactory
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
+
+
+class TestFigureCreation(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.creator = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        self.entry = EntryFactory.create(
+            created_by=self.creator
+        )
+        self.mutation = '''
+            mutation CreateFigure($input: FigureCreateInputType!) {
+                createFigure(figure: $input) {
+                    ok
+                    figure {
+                       id
+                    }
+                    errors {
+                        field
+                        messages
+                    }
+                }
+            }
+        '''
+        self.input = {
+            "entry": self.entry.id,
+            "district": "abc",
+            "town": "xyz",
+            "quantifier": Figure.QUANTIFIER.more_than.label,
+            "reported": 15,
+            "unit": Figure.UNIT.person.label,
+            "term": Figure.TERM.evacuated.label,
+            "type": Figure.TYPE.idp_stock.label,
+            "role": Figure.ROLE.recommended.label,
+            "startDate": "2020-10-10",
+            "includeIdu": False,
+        }
+        self.force_login(self.creator)
+
+    def test_invalid_create_figure_into_non_existing_entry(self):
+        # set entry to non existing value
+        self.input['entry'] = '99911'
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['createFigure']['ok'], content)
+        self.assertIn('non_field_errors',
+                      [each['field'] for each in content['data']['createFigure']['errors']])
+        self.assertIn('Entry does not exist',
+                      json.dumps(content['data']['createFigure']['errors']))
+
+    def test_invalid_figure_create_by_non_creator_entry(self):
+        creator2 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        self.force_login(creator2)
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['createFigure']['ok'], content)
+        self.assertIn('non_field_errors',
+                      [each['field'] for each in content['data']['createFigure']['errors']])
+        self.assertIn('You cannot create a figure into',
+                      json.dumps(content['data']['createFigure']['errors']))
+
+    def test_valid_figure_create_by_creator_of_entry(self):
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['createFigure']['ok'], content)
+        self.assertIsNotNone(content['data']['createFigure']['figure']['id'], content)
 
 
 class TestEntryCreation(HelixGraphQLTestCase):
@@ -21,6 +101,9 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     entry {
                         id
                         figures {
+                            results {
+                                id
+                            }
                             totalCount
                         }
                     }
@@ -42,9 +125,9 @@ class TestEntryCreation(HelixGraphQLTestCase):
             "reviewers": [],
             "event": self.event.id,
         }
+        self.force_login(self.editor)
 
     def test_valid_create_entry_without_figures(self):
-        self.force_login(self.editor)
         response = self.query(
             self.mutation,
             input_data=self.input
@@ -61,18 +144,33 @@ class TestEntryCreation(HelixGraphQLTestCase):
             {
                 "district": "ABC",
                 "town": "XYZ",
-                "quantifier": "moreThan",
+                "quantifier": Figure.QUANTIFIER.more_than.label,
                 "reported": 10,
-                "unit": "person",
-                "term": "evacuated",
-                "type": "idpStock",
-                "role": "recommended",
+                "unit": Figure.UNIT.person.label,
+                "term": Figure.TERM.evacuated.label,
+                "type": Figure.TYPE.idp_stock.label,
+                "role": Figure.ROLE.recommended.label,
                 "startDate": "2020-10-10",
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
             }
         ]
-        self.input.update(figures)
+        self.input.update({
+            'figures': figures
+        })
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['createEntry']['ok'], content)
+        self.assertIsNone(content['data']['createEntry']['errors'], content)
+        self.assertIsNotNone(content['data']['createEntry']['entry']['id'])
+        self.assertEqual(content['data']['createEntry']['entry']['figures']['totalCount'],
+                         len(figures))
+        self.assertIsNotNone(content['data']['createEntry']['entry']['figures']['results'][0]['id'])
 
     def test_invalid_reviewer_entry_create(self):
         reviewer = create_user_with_role(role=MONITORING_EXPERT_REVIEWER)
@@ -131,7 +229,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
 
-        self.assertIn('You do not have permission', response.content)
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEntry']['ok'], content)
         self.assertEqual(content['data']['updateEntry']['entry']['url'],
