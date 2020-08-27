@@ -1,3 +1,5 @@
+import os
+import shutil
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -6,9 +8,12 @@ from django.core import management
 from django.test import TestCase, override_settings
 from graphene_django.utils import GraphQLTestCase
 
+from helix.settings import BASE_DIR
 from utils.factories import UserFactory
 
 User = get_user_model()
+TEST_MEDIA_ROOT = 'media-temp'
+TEST_EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 
 class CommonSetupClassMixin:
@@ -18,7 +23,17 @@ class CommonSetupClassMixin:
         # initialize roles
         management.call_command('init_roles')
 
+    @classmethod
+    def tearDownClass(cls):
+        super().tearDownClass()
+        # clear the temporary media files
+        shutil.rmtree(os.path.join(BASE_DIR, TEST_MEDIA_ROOT))
 
+
+@override_settings(
+    EMAIL_BACKEND=TEST_EMAIL_BACKEND,
+    MEDIA_ROOT=TEST_MEDIA_ROOT
+)
 class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
     GRAPHQL_URL = '/graphql'
     GRAPHQL_SCHEMA = 'helix.schema.schema'
@@ -73,7 +88,8 @@ class ImmediateOnCommitMixin(object):
 
 
 @override_settings(
-    EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
+    EMAIL_BACKEND=TEST_EMAIL_BACKEND,
+    MEDIA_ROOT=TEST_MEDIA_ROOT
 )
 class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     pass

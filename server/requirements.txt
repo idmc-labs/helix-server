@@ -21,3 +21,4 @@ django-enumfield==2.0.1
 pytest-django==3.9.0
 pytest-sugar==0.9.4
 factory-boy==3.0.1
+graphene-file-upload==1.2.2
