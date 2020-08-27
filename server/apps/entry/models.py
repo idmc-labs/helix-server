@@ -176,7 +176,8 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
 class Entry(MetaInformationAbstractModel, models.Model):
     url = models.URLField(verbose_name=_('Source URL'),
                           blank=True, null=True)
-    # document todo
+    document = models.FileField(verbose_name=_('document'), upload_to='entry/documents',
+                                blank=True, null=True)
     article_title = models.TextField(verbose_name=_('Article Title'))
     source = models.CharField(verbose_name=_('Source'), max_length=256)
     publisher = models.CharField(verbose_name=_('Publisher'), max_length=256)

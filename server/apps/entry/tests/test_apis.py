@@ -1,6 +1,8 @@
 import json
 from uuid import uuid4
 
+from django.core.files.temp import NamedTemporaryFile
+
 from apps.entry.models import Figure
 from apps.users.roles import MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, ADMIN, GUEST
 from utils.factories import EventFactory, EntryFactory, FigureFactory
@@ -275,6 +277,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     }
                     entry {
                         id
+                        document
                         figures {
                             results {
                                 id
@@ -491,6 +494,33 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createEntry']['ok'], content)
         self.assertIn('ageTo', json.dumps(content['data']['createEntry']['errors']))
+
+    def test_create_entry_with_document(self):
+        file_text = b'fake blaa'
+        self.input['document'] = None
+        with NamedTemporaryFile() as t_file:
+            t_file.write(file_text)
+            t_file.seek(0)
+            response = self._client.post(
+                '/graphql',
+                data={
+                    'operations': json.dumps({
+                        'query': self.mutation,
+                        'variables': {
+                            'input': self.input
+                        }
+                    }),
+                    't_file': t_file,
+                    'map': json.dumps({
+                        't_file': ['variables.input.document']
+                    })
+                }
+            )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['createEntry']['ok'], content)
+        self.assertIsNotNone(content['data']['createEntry']['entry']['id'])
+        self.assertIsNotNone(content['data']['createEntry']['entry']['document'])
 
 
 class TestEntryUpdate(HelixGraphQLTestCase):
