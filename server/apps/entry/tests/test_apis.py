@@ -97,6 +97,13 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     errors {
                         field
                         messages
+                        arrayErrors {
+                            key
+                            objectErrors {
+                                field
+                                messages
+                            }
+                        }
                     }
                     entry {
                         id
@@ -171,6 +178,38 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertEqual(content['data']['createEntry']['entry']['figures']['totalCount'],
                          len(figures))
         self.assertIsNotNone(content['data']['createEntry']['entry']['figures']['results'][0]['id'])
+
+    def test_assert_nested_figures_errors(self):
+        figures = [
+            {
+                "district": "ABC",
+                "town": "XYZ",
+                "quantifier": Figure.QUANTIFIER.more_than.label,
+                "reported": -1,  # this cannot be negative
+                "unit": Figure.UNIT.person.label,
+                "term": Figure.TERM.evacuated.label,
+                "type": Figure.TYPE.idp_stock.label,
+                "role": Figure.ROLE.recommended.label,
+                "startDate": "2020-10-10",
+                "includeIdu": True,
+                "excerptIdu": "excerpt abc",
+            }
+        ]
+        self.input.update({
+            'figures': figures
+        })
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        print(json.dumps(content['data']['createEntry']['errors']))
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['createEntry']['ok'], content)
+        self.assertIsNotNone(content['data']['createEntry']['errors'], content)
+        self.assertEqual('reported',
+                         content['data']['createEntry']['errors'][0]['arrayErrors'][0]['objectErrors'][0]['field'])
 
     def test_invalid_reviewer_entry_create(self):
         reviewer = create_user_with_role(role=MONITORING_EXPERT_REVIEWER)
