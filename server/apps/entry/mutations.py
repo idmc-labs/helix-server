@@ -206,6 +206,7 @@ class EntryCreateInputType(graphene.InputObjectType):
 
 class EntryUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
+    document = Upload(required=False)
     url = graphene.String()
     article_title = graphene.String()
     source = graphene.String()
