@@ -197,7 +197,7 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = 'media'
+MEDIA_URL = 'media/'
 
 # https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-APPEND_SLASH
 APPEND_SLASH = False

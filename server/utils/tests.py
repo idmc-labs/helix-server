@@ -27,7 +27,10 @@ class CommonSetupClassMixin:
     def tearDownClass(cls):
         super().tearDownClass()
         # clear the temporary media files
-        shutil.rmtree(os.path.join(BASE_DIR, TEST_MEDIA_ROOT))
+        try:
+            shutil.rmtree(os.path.join(BASE_DIR, TEST_MEDIA_ROOT))
+        except FileNotFoundError:
+            pass
 
 
 @override_settings(
