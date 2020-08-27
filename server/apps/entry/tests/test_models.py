@@ -23,13 +23,15 @@ class TestFigureModel(HelixTestCase):
         self.assertTrue(self.figure.can_be_created_by(self.editor, self.entry))
 
     def test_figure_clean_idu(self):
-        self.figure.include_idu = False
-        self.figure.excerpt_idu = '   '
+        data = dict(
+            include_idu=False,
+            excerpt_idu='   '
+        )
         self.figure.save()
-        self.assertFalse(self.figure.clean_idu())
-        self.figure.include_idu = True
+        self.assertFalse(self.figure.clean_idu(data, self.figure))
+        data = dict(include_idu=True)
         self.figure.save()
-        self.assertIn('excerpt_idu', self.figure.clean_idu())
+        self.assertIn('excerpt_idu', self.figure.clean_idu(data, self.figure))
 
     def test_figure_saves_total_figures(self):
         figure = FigureFactory()

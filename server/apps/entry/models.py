@@ -150,18 +150,14 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
         """
         return self.entry.can_be_updated_by(user)
 
-    def clean_idu(self) -> OrderedDict:
+    @staticmethod
+    def clean_idu(values: dict, instance=None) -> OrderedDict:
         errors = OrderedDict()
-        if self.include_idu:
-            if self.excerpt_idu is None or not self.excerpt_idu.strip():
+        if values.get('include_idu', getattr(instance, 'include_idu', None)):
+            excerpt_idu = values.get('excerpt_idu', getattr(instance, 'excerpt_idu', None))
+            if excerpt_idu is None or not excerpt_idu.strip():
                 errors['excerpt_idu'] = _('This field is required. ')
         return errors
-
-    def clean(self) -> None:
-        errors = OrderedDict()
-        errors.update(self.clean_idu())
-        if errors:
-            raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
         self.total_figures = self.reported
@@ -202,6 +198,16 @@ class Entry(MetaInformationAbstractModel, models.Model):
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
                                        blank=True,
                                        related_name='review_entries')
+
+    @staticmethod
+    def clean_url_and_document(values: dict, instance=None) -> OrderedDict:
+        errors = OrderedDict()
+        url = values.get('url', getattr(instance, 'url', None))
+        document = values.get('document', getattr(instance, 'document', None))
+        if not url and not document:
+            errors['url'] = _('Please fill the URL or upload a document. ')
+            errors['document'] = _('Please fill the URL or upload a document. ')
+        return errors
 
     def can_be_updated_by(self, user: User) -> bool:
         """

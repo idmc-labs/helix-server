@@ -5,6 +5,7 @@ class MetaInformationSerializerMixin(object):
     - last_modified_by
     """
     def validate(self, attrs) -> dict:
+        attrs = super().validate(attrs)
         if self.instance is None:
             attrs.update({
                 'created_by': self.context['request'].user

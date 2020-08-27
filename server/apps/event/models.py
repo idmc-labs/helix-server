@@ -136,30 +136,28 @@ class Event(MetaInformationAbstractModel, models.Model):
     event_narrative = models.TextField(verbose_name=_('Event Narrative'),
                                        null=True, blank=True)
 
-    def clean_dates(self) -> OrderedDict:
+    @staticmethod
+    def clean_dates(values: dict, instance=None) -> OrderedDict:
         errors = OrderedDict()
-        if self.start_date and self.end_date and self.end_date < self.start_date:
+        start_date = values.get('start_date', getattr(instance, 'start_date', None))
+        end_date = values.get('end_date', getattr(instance, 'end_date', None))
+        if start_date and end_date and end_date < start_date:
             errors['end_date'] = _('Pick the end date later than start date. ')
         return errors
 
-    def clean_by_event_type(self) -> OrderedDict:
+    @staticmethod
+    def clean_by_event_type(values: dict, instance=None) -> OrderedDict:
         errors = OrderedDict()
-        if self.event_type == Crisis.CRISIS_TYPE.CONFLICT:
-            if not self.violence:
+        event_type = values.get('event_type', getattr(instance, 'event_type', None))
+        if event_type == Crisis.CRISIS_TYPE.CONFLICT:
+            if not values.get('violence', getattr(instance, 'violence', None)):
                 errors['violence'] = _('Please mention at least the reason for violence. ')
-        elif self.event_type == Crisis.CRISIS_TYPE.DISASTER:
-            if not self.disaster_category:
+        elif event_type == Crisis.CRISIS_TYPE.DISASTER:
+            if not values.get('disaster_category', getattr(instance, 'disaster_category', None)):
                 errors['disaster_category'] = _('Please mention at least the category of disaster. ')
-            if not self.glide_number:
+            if not values.get('glide_number', getattr(instance, 'glide_number', None)):
                 errors['glide_number'] = _('Glide Number is required. ')
         return errors
-
-    def clean(self) -> None:
-        errors = OrderedDict()
-        errors.update(self.clean_dates())
-        errors.update(self.clean_by_event_type())
-        if errors:
-            raise ValidationError(errors)
 
     def __str__(self):
         return self.name
