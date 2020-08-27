@@ -2,6 +2,7 @@ import json
 
 from apps.users.roles import MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, ADMIN, GUEST
 from utils.factories import EventFactory, EntryFactory
+from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
@@ -64,7 +65,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
 
-        self.assertIn('You do not have permission', content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
     def test_invalid_guest_entry_create(self):
         guest = create_user_with_role(role=GUEST)
@@ -75,7 +76,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
 
-        self.assertIn('You do not have permission', content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
 
 class TestEntryUpdate(HelixGraphQLTestCase):
@@ -126,7 +127,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
 
-        self.assertIn('You do not have permission', content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
     def test_invalid_entry_update_by_non_owner(self):
         self.editor2 = create_user_with_role(role=MONITORING_EXPERT_EDITOR)
@@ -208,7 +209,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
 
-        self.assertIn('You do not have permission', content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
     def test_invalid_entry_delete_by_non_owner(self):
         editor2 = create_user_with_role(role=MONITORING_EXPERT_EDITOR)

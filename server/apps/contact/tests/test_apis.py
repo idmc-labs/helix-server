@@ -2,6 +2,7 @@ import json
 
 from apps.users.roles import MONITORING_EXPERT_REVIEWER, GUEST
 from utils.factories import CountryFactory, ContactFactory, OrganizationFactory
+from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
@@ -74,7 +75,7 @@ class TestCreateContact(HelixGraphQLTestCase):
         )
 
         content = json.loads(response.content)
-        self.assertIn('You do not have permission', content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
 
 class TestUpdateContact(HelixGraphQLTestCase):
@@ -128,7 +129,7 @@ class TestUpdateContact(HelixGraphQLTestCase):
         )
 
         content = json.loads(response.content)
-        self.assertIn('You do not have permission', content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
 
 class TestDeleteContact(HelixGraphQLTestCase):
@@ -175,4 +176,4 @@ class TestDeleteContact(HelixGraphQLTestCase):
         )
 
         content = json.loads(response.content)
-        self.assertIn('You do not have permission', content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])

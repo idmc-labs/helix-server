@@ -2,6 +2,7 @@ import json
 
 from apps.users.roles import MONITORING_EXPERT_REVIEWER, GUEST
 from utils.factories import OrganizationFactory, OrganizationKindFactory
+from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
@@ -58,7 +59,7 @@ class TestCreateOrganization(HelixGraphQLTestCase):
         )
 
         content = json.loads(response.content)
-        self.assertIn('You do not have permission', content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
 
 class TestUpdateOrganization(HelixGraphQLTestCase):
@@ -113,7 +114,7 @@ class TestUpdateOrganization(HelixGraphQLTestCase):
         )
 
         content = json.loads(response.content)
-        self.assertIn('You do not have permission', content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
 
 class TestDeleteOrganization(HelixGraphQLTestCase):
@@ -160,7 +161,7 @@ class TestDeleteOrganization(HelixGraphQLTestCase):
         )
 
         content = json.loads(response.content)
-        self.assertIn('You do not have permission', content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
 
 class TestCreateOrganizationKind(HelixGraphQLTestCase):
@@ -209,7 +210,7 @@ class TestCreateOrganizationKind(HelixGraphQLTestCase):
         )
 
         content = json.loads(response.content)
-        self.assertIn('You do not have permission', content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
 
 class TestUpdateOrganizationKind(HelixGraphQLTestCase):
@@ -261,7 +262,7 @@ class TestUpdateOrganizationKind(HelixGraphQLTestCase):
         )
 
         content = json.loads(response.content)
-        self.assertIn('You do not have permission', content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
 
 class TestDeleteOrganizationKind(HelixGraphQLTestCase):
@@ -309,4 +310,4 @@ class TestDeleteOrganizationKind(HelixGraphQLTestCase):
         )
 
         content = json.loads(response.content)
-        self.assertIn('You do not have permission', content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
