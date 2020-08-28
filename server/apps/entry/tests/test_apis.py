@@ -58,8 +58,8 @@ class TestFigureCreation(HelixGraphQLTestCase):
                 {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
                 {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
             ],
-            "startDate": "2020-10-10",
             "includeIdu": False,
+            "entry": self.entry.id,
         }
         self.force_login(self.creator)
 
@@ -456,6 +456,41 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertFalse(content['data']['createEntry']['ok'], content)
         self.assertIn('ageTo', json.dumps(content['data']['createEntry']['errors']))
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+
+    def test_invalid_figures_age_data(self):
+        figures = [
+            {
+                "uuid": str(uuid4()),
+                "district": "ABC",
+                "town": "XYZ",
+                "quantifier": Figure.QUANTIFIER.more_than.label,
+                "reported": 10,
+                "unit": Figure.UNIT.person.label,
+                "term": Figure.TERM.evacuated.label,
+                "type": Figure.TYPE.idp_stock.label,
+                "role": Figure.ROLE.recommended.label,
+                "startDate": "2020-10-10",
+                "includeIdu": True,
+                "excerptIdu": "excerpt abc",
+                "ageJson": [
+                    # from is greater than to
+                    {"uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9", "ageFrom": 3, "ageTo": 2, "value": 3},
+                    {"uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce", "ageFrom": 3, "ageTo": 5, "value": 3}
+                ]
+            }
+        ]
+        self.input.update({
+            'figures': figures
+        })
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['createEntry']['ok'], content)
+        self.assertIn('ageTo', json.dumps(content['data']['createEntry']['errors']))
 
 
 class TestEntryUpdate(HelixGraphQLTestCase):
