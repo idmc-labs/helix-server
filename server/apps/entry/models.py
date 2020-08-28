@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from django.contrib.auth import get_user_model
-from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.fields import ArrayField, JSONField
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -10,18 +10,7 @@ from django_enumfield import enum
 from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
 from apps.users.roles import ADMIN
 
-
 User = get_user_model()
-
-
-class SubFigure(models.Model):
-    figure = models.ForeignKey('Figure', verbose_name=_('Figure'),
-                               related_name='sub_figures', on_delete=models.CASCADE)
-    # source = models.
-    # destination
-
-    class Meta:
-        abstract = True
 
 
 class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
@@ -79,6 +68,39 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
     include_idu = models.BooleanField(verbose_name=_('Include in IDU'))
     excerpt_idu = models.TextField(verbose_name=_('Excerpt for IDU'),
                                    blank=True, null=True)
+
+    is_disaggregated = models.BooleanField(verbose_name=_('Is disaggregated'),
+                                           default=False)
+    # disaggregation information
+    displacement_urban = models.PositiveIntegerField(verbose_name=_('Displacement/Urban'),
+                                        blank=True, null=True)
+    displacement_rural = models.PositiveIntegerField(verbose_name=_('Displacement/Rural'),
+                                        blank=True, null=True)
+    location_camp = models.PositiveIntegerField(verbose_name=_('Location/Camp'),
+                                       blank=True, null=True)
+    location_non_camp = models.PositiveIntegerField(verbose_name=_('Location/Non-Camp'),
+                                           blank=True, null=True)
+    sex_male = models.PositiveIntegerField(verbose_name=_('Sex/Male'),
+                                       blank=True, null=True)
+    sex_female = models.PositiveIntegerField(verbose_name=_('Sex/Female'),
+                                         blank=True, null=True)
+    age_json = ArrayField(base_field=JSONField(verbose_name=_('Age')),
+                          verbose_name=_('Age Disaggregation'),
+                          blank=True, null=True)
+    strata_json = ArrayField(base_field=JSONField(verbose_name=_('Stratum')),
+                             verbose_name=_('Strata Disaggregation'),
+                             blank=True, null=True)
+    # conflict based disaggregation
+    conflict = models.PositiveIntegerField(verbose_name=_('Conflict/Conflict'),
+                                           blank=True, null=True)
+    conflict_political = models.PositiveIntegerField(verbose_name=_('Conflict/Violence-Political'),
+                                                     blank=True, null=True)
+    conflict_criminal = models.PositiveIntegerField(verbose_name=_('Conflict/Violence-Criminal'),
+                                                    blank=True, null=True)
+    conflict_communal = models.PositiveIntegerField(verbose_name=_('Conflict/Violence-Communal'),
+                                                    blank=True, null=True)
+    conflict_other = models.PositiveIntegerField(verbose_name=_('Other'),
+                                                 blank=True, null=True)
 
     @classmethod
     def can_be_created_by(cls, user: User, entry: 'Entry') -> bool:
