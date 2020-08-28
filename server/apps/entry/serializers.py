@@ -18,8 +18,7 @@ class DisaggregatedAgeSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs.get('age_from') > attrs.get('age_to'):
-            raise serializers.ValidationError({'age_to': gettext(f'Pick an age {attrs.get("age_to")} higher than `from`'
-                                                                 f' {attrs.get("age_from")}. ')})
+            raise serializers.ValidationError({'age_to': gettext(f'Pick an age higher than `from` {attrs.get("age_from")}. ')})
         attrs['uuid'] = str(attrs['uuid'])
         return attrs
 
