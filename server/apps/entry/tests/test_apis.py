@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from apps.entry.models import Figure
 from apps.users.roles import MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, ADMIN, GUEST
-from utils.factories import EventFactory, EntryFactory
+from utils.factories import EventFactory, EntryFactory, FigureFactory
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
@@ -29,17 +29,35 @@ class TestFigureCreation(HelixGraphQLTestCase):
             }
         '''
         self.input = {
-            "entry": self.entry.id,
-            "district": "abc",
-            "town": "xyz",
+            "district": "disss",
+            "town": "town",
             "quantifier": Figure.QUANTIFIER.more_than.label,
-            "reported": 15,
+            "reported": 10,
             "unit": Figure.UNIT.person.label,
             "term": Figure.TERM.evacuated.label,
             "type": Figure.TYPE.idp_stock.label,
             "role": Figure.ROLE.recommended.label,
-            "startDate": "2020-10-10",
+            "startDate": "2020-09-09",
             "includeIdu": False,
+            "entry": self.entry.id,
+            "ageJson": [
+                {
+                    "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
+                     "ageFrom": 1,
+                     "ageTo": 3,
+                     "value": 3
+                },
+                {
+                    "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                     "ageFrom": 3,
+                     "ageTo": 5,
+                     "value": 3
+                 }
+            ],
+            "strataJson": [
+                {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
+                {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
+            ]
         }
         self.force_login(self.creator)
 
@@ -87,6 +105,146 @@ class TestFigureCreation(HelixGraphQLTestCase):
         self.assertIsNotNone(content['data']['createFigure']['figure']['id'], content)
 
 
+class TestFigureUpdate(HelixGraphQLTestCase):
+    def setUp(self):
+        self.creator = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        self.entry = EntryFactory.create(
+            created_by=self.creator
+        )
+        self.figure = FigureFactory.create(
+            created_by=self.creator,
+            entry=self.entry
+        )
+        self.mutation = '''
+            mutation UpdateFigure($input: FigureUpdateInputType!) {
+                updateFigure(figure: $input) {
+                    ok
+                    figure {
+                        id
+                        ageJson{
+                            ageFrom
+                            uuid
+                            ageTo
+                            value
+                        }
+                        strataJson{
+                            date
+                            value
+                            uuid
+                        }
+                    }
+                    errors {
+                        field
+                        messages
+                            arrayErrors {
+                                key
+                                objectErrors {
+                                field
+                                messages
+                                arrayErrors {
+                                    key
+                                    objectErrors {
+                                        field
+                                        messages
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        '''
+        self.input = {
+            "id": self.figure.id,
+            "ageJson": [
+                {
+                    "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
+                    "ageFrom": 1,
+                    "ageTo": 3,
+                    "value": 13
+                },
+                {
+                    "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                    "ageFrom": 3,
+                    "ageTo": 5,
+                    "value": 23
+                }
+            ],
+            "strataJson": [
+                {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
+                {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
+            ]
+        }
+        self.force_login(self.creator)
+
+    def test_valid_figure_update(self):
+        self.assertIsNone(self.figure.age_json)
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['updateFigure']['ok'], content)
+        self.assertIsNotNone(content['data']['updateFigure']['figure']['id'], content)
+        self.figure.refresh_from_db()
+        self.assertEqual(len(self.figure.age_json), len(self.input['ageJson']))
+        self.assertEqual(len(self.figure.strata_json), len(self.input['strataJson']))
+
+    def test_invalid_age_groups_data(self):
+        input1 = {
+            "id": self.figure.id,
+            "ageJson": [
+                {
+                    "uuid": str(uuid4()),
+                    "ageFrom": 30,
+                    "ageTo": 1,
+                    "value": 13
+                },
+            ]
+        }
+        response = self.query(
+            self.mutation,
+            input_data=input1
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['updateFigure']['ok'], content)
+        self.assertEqual('ageTo', content['data']['updateFigure']['errors'][0]['arrayErrors'][0]['objectErrors'][0]['field'])
+
+        input2 = {
+            "id": self.figure.id,
+            "ageJson": [
+                {
+                    "uuid": str(uuid4()),
+                    "ageFrom": 10,
+                    "ageTo": 30,
+                    "value": 13
+                },
+                {
+                    "uuid": str(uuid4()),
+                    "ageFrom": 20,
+                    "ageTo": 40,
+                    "value": 23
+                }
+            ]
+        }
+        response = self.query(
+            self.mutation,
+            input_data=input2
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['updateFigure']['ok'], content)
+        self.assertEqual('ageJson',
+                         content['data']['updateFigure']['errors'][0]['field'],
+                         content)
+        self.assertIsNotNone(content['data']['updateFigure']['errors'][0]['messages'], content)
+
+
 class TestEntryCreation(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.editor = create_user_with_role(MONITORING_EXPERT_EDITOR)
@@ -98,11 +256,18 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     errors {
                         field
                         messages
-                        arrayErrors {
-                            key
-                            objectErrors {
+                            arrayErrors {
+                                key
+                                objectErrors {
                                 field
                                 messages
+                                arrayErrors {
+                                    key
+                                    objectErrors {
+                                        field
+                                        messages
+                                    }
+                                }
                             }
                         }
                     }
@@ -255,6 +420,41 @@ class TestEntryCreation(HelixGraphQLTestCase):
         content = json.loads(response.content)
 
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+
+    def test_invalid_figures_age_data(self):
+        figures = [
+            {
+                "uuid": str(uuid4()),
+                "district": "ABC",
+                "town": "XYZ",
+                "quantifier": Figure.QUANTIFIER.more_than.label,
+                "reported": 10,
+                "unit": Figure.UNIT.person.label,
+                "term": Figure.TERM.evacuated.label,
+                "type": Figure.TYPE.idp_stock.label,
+                "role": Figure.ROLE.recommended.label,
+                "startDate": "2020-10-10",
+                "includeIdu": True,
+                "excerptIdu": "excerpt abc",
+                "ageJson": [
+                    # from is greater than to
+                    {"uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9", "ageFrom": 3, "ageTo": 2, "value": 3},
+                    {"uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce", "ageFrom": 3, "ageTo": 5, "value": 3}
+                ]
+            }
+        ]
+        self.input.update({
+            'figures': figures
+        })
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['createEntry']['ok'], content)
+        self.assertIn('ageTo', json.dumps(content['data']['createEntry']['errors']))
 
 
 class TestEntryUpdate(HelixGraphQLTestCase):

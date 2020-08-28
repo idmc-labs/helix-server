@@ -18,25 +18,53 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
         MORE_THAN = 0
         LESS_THAN = 1
         EXACT = 2
+        APPROXIMATELY = 0
 
         __labels__ = {
             MORE_THAN: _("More than"),
             LESS_THAN: _("Less than"),
             EXACT: _("Exact"),
+            APPROXIMATELY: _("Approximately"),
         }
 
     class UNIT(enum.Enum):
         PERSON = 0
+        HOUSEHOLD = 1
 
         __labels__ = {
             PERSON: _("Person"),
+            HOUSEHOLD: _("Household"),
         }
 
     class TERM(enum.Enum):
         EVACUATED = 0
+        DISPLACED = 1
+        DESTROYED_HOUSING = 2
+        PARTIALLY_DESTROYED_HOUSING = 3
+        UNINHABITABLE_HOUSING = 4
+        FORCED_TO_FLEE = 5
+        HOMELESS = 6
+        IN_RELIEF_CAMP = 7
+        SHELTERED = 8
+        RELOCATED = 9
+        AFFECTED = 10
+        RETURNS = 11
+        MULTIPLE_OR_OTHER = 12
 
         __labels__ = {
             EVACUATED: _("Evacuated"),
+            DISPLACED: _("Displaced"),
+            DESTROYED_HOUSING: _("Destroyed housing"),
+            PARTIALLY_DESTROYED_HOUSING: _("Partially destroyed housing"),
+            UNINHABITABLE_HOUSING: _("Uninhabitable housing"),
+            FORCED_TO_FLEE: _("Forced to flee"),
+            HOMELESS: _("Homeless"),
+            IN_RELIEF_CAMP: _("In relief camp"),
+            SHELTERED: _("Sheltered"),
+            RELOCATED: _("Relocated"),
+            AFFECTED: _("Affected"),
+            RETURNS: _("Returns"),
+            MULTIPLE_OR_OTHER: _("Multiple/Other"),
         }
 
     class TYPE(enum.Enum):

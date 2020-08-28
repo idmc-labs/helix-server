@@ -1,4 +1,8 @@
 import graphene
+from django.contrib.postgres.fields import JSONField
+from graphene import ObjectType
+from graphene.types.generic import GenericScalar
+from graphene_django_extras.converter import convert_django_field
 from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, DjangoObjectField
 
 from apps.entry.enums import QuantifierGrapheneEnum, UnitGrapheneEnum, TermGrapheneEnum, TypeGrapheneEnum, \
@@ -6,6 +10,25 @@ from apps.entry.enums import QuantifierGrapheneEnum, UnitGrapheneEnum, TermGraph
 from apps.entry.filters import EntryFilter
 from apps.entry.models import Figure, Entry
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
+
+
+@convert_django_field.register(JSONField)
+def convert_json_field_to_scalar(field, registry=None):
+    # https://github.com/graphql-python/graphene-django/issues/303#issuecomment-339939955
+    return GenericScalar()
+
+
+class DisaggregatedAgeType(ObjectType):
+    uuid = graphene.String()
+    age_from = graphene.Int()
+    age_to = graphene.Int()
+    value = graphene.Int()
+
+
+class DisaggregatedStratumType(ObjectType):
+    uuid = graphene.String()
+    date = graphene.String()  # because inside the json field
+    value = graphene.Int()
 
 
 class FigureType(DjangoObjectType):
@@ -17,6 +40,8 @@ class FigureType(DjangoObjectType):
     term = graphene.Field(TermGrapheneEnum)
     type = graphene.Field(TypeGrapheneEnum)
     role = graphene.Field(RoleGrapheneEnum)
+    age_json = graphene.List(DisaggregatedAgeType)
+    strata_json = graphene.List(DisaggregatedStratumType)
 
 
 class FigureListType(CustomDjangoListObjectType):

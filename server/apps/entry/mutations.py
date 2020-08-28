@@ -10,6 +10,19 @@ from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 
 
+class DisaggregatedAgeInputObjectType(graphene.InputObjectType):
+    uuid = graphene.String(required=False)
+    age_from = graphene.Int(required=True)
+    age_to = graphene.Int(required=True)
+    value = graphene.Int(required=True)
+
+
+class DisaggregatedStratumInputObjectType(graphene.InputObjectType):
+    uuid = graphene.String(required=False)
+    date = graphene.Date(required=True)
+    value = graphene.Int(required=True)
+
+
 class CommonFigureCreateMixin:
     district = graphene.String(required=True)
     town = graphene.String(required=True)
@@ -22,6 +35,21 @@ class CommonFigureCreateMixin:
     start_date = graphene.Date(required=True)
     include_idu = graphene.Boolean(required=True)
     excerpt_idu = graphene.String()
+    is_disaggregated = graphene.Boolean(required=False)
+    # disaggregated data
+    displacement_urban = graphene.Int(required=False)
+    displacement_rural = graphene.Int(required=False)
+    location_camp = graphene.Int(required=False)
+    location_non_camp = graphene.Int(required=False)
+    sex_male = graphene.Int(required=False)
+    sex_female = graphene.Int(required=False)
+    age_json = graphene.List(DisaggregatedAgeInputObjectType, required=False)
+    strata_json = graphene.List(DisaggregatedStratumInputObjectType, required=False)
+    conflict = graphene.Int(required=False)
+    conflict_political = graphene.Int(required=False)
+    conflict_criminal = graphene.Int(required=False)
+    conflict_communal = graphene.Int(required=False)
+    conflict_other = graphene.Int(required=False)
 
 
 class NestedFigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectType):
@@ -51,6 +79,21 @@ class FigureUpdateInputType(graphene.InputObjectType):
     start_date = graphene.Date()
     include_idu = graphene.Boolean()
     excerpt_idu = graphene.String()
+    is_disaggregated = graphene.Boolean(required=False)
+    # disaggregated data
+    displacement_urban = graphene.Int(required=False)
+    displacement_rural = graphene.Int(required=False)
+    location_camp = graphene.Int(required=False)
+    location_non_camp = graphene.Int(required=False)
+    sex_male = graphene.Int(required=False)
+    sex_female = graphene.Int(required=False)
+    age_json = graphene.List(DisaggregatedAgeInputObjectType, required=False)
+    strata_json = graphene.List(DisaggregatedStratumInputObjectType, required=False)
+    conflict = graphene.Int(required=False)
+    conflict_political = graphene.Int(required=False)
+    conflict_criminal = graphene.Int(required=False)
+    conflict_communal = graphene.Int(required=False)
+    conflict_other = graphene.Int(required=False)
 
 
 class CreateFigure(graphene.Mutation):
