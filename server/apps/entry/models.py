@@ -7,7 +7,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
-from apps.contrib.models import MetaInformationAbstractModel
+from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
 from apps.users.roles import ADMIN
 
 
@@ -24,7 +24,7 @@ class SubFigure(models.Model):
         abstract = True
 
 
-class Figure(MetaInformationAbstractModel, models.Model):
+class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
     class QUANTIFIER(enum.Enum):
         MORE_THAN = 0
         LESS_THAN = 1

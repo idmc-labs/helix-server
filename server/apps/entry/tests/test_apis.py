@@ -1,4 +1,5 @@
 import json
+from uuid import uuid4
 
 from apps.entry.models import Figure
 from apps.users.roles import MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, ADMIN, GUEST
@@ -149,6 +150,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
     def test_valid_nested_figures_create(self):
         figures = [
             {
+                "uuid": str(uuid4()),
                 "district": "ABC",
                 "town": "XYZ",
                 "quantifier": Figure.QUANTIFIER.more_than.label,
@@ -180,12 +182,31 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertIsNotNone(content['data']['createEntry']['entry']['figures']['results'][0]['id'])
 
     def test_assert_nested_figures_errors(self):
+        uuid = str(uuid4())
+        uuid_error = str(uuid4())
         figures = [
+            # valid data
             {
+                "uuid": uuid,
                 "district": "ABC",
                 "town": "XYZ",
                 "quantifier": Figure.QUANTIFIER.more_than.label,
+                "reported": 10,
+                "unit": Figure.UNIT.person.label,
+                "term": Figure.TERM.evacuated.label,
+                "type": Figure.TYPE.idp_stock.label,
+                "role": Figure.ROLE.recommended.label,
+                "startDate": "2020-10-10",
+                "includeIdu": True,
+                "excerptIdu": "excerpt abc",
+            },
+            # invalid now
+            {
+                "uuid": uuid_error,
                 "reported": -1,  # this cannot be negative
+                "district": "ABC",
+                "town": "XYZ",
+                "quantifier": Figure.QUANTIFIER.more_than.label,
                 "unit": Figure.UNIT.person.label,
                 "term": Figure.TERM.evacuated.label,
                 "type": Figure.TYPE.idp_stock.label,
@@ -210,6 +231,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertIsNotNone(content['data']['createEntry']['errors'], content)
         self.assertEqual('reported',
                          content['data']['createEntry']['errors'][0]['arrayErrors'][0]['objectErrors'][0]['field'])
+        self.assertEqual(uuid_error,
+                         content['data']['createEntry']['errors'][0]['arrayErrors'][0]['key'])
 
     def test_invalid_reviewer_entry_create(self):
         reviewer = create_user_with_role(role=MONITORING_EXPERT_REVIEWER)

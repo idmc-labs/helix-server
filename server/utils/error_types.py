@@ -28,33 +28,34 @@ def mutation_is_not_valid(serializer) -> List[CustomErrorType]:
     """
     if not serializer.is_valid():
         errors = []
-        for key, value in serializer.errors.items():
+        for field, value in serializer.errors.items():
             if isinstance(value, dict):
                 object_errors = []
                 for k, v in value.items():
                     object_errors.append(
                         NestedErrorType(field=_camelize_django_str(k), messages=''.join(str(msg) for msg in v))
                     )
-                errors.append(CustomErrorType(field=_camelize_django_str(key), object_errors=object_errors))
+                errors.append(CustomErrorType(field=_camelize_django_str(field), object_errors=object_errors))
             elif isinstance(value, list) and isinstance(value[0], dict):
                 array_errors = []
-                for position, nested_instance in enumerate(value):
+                for pos, nested_instance in enumerate(value):
                     if not nested_instance:
                         # nested instance might not have error
                         continue
                     nested_object_errors = []
+                    key = nested_instance.pop('key', f'UUID_MISSING_{pos}')
                     for k, v in nested_instance.items():
                         nested_object_errors.append(NestedErrorType(
                             field=_camelize_django_str(k),
                             messages=''.join(str(msg) for msg in v)
                         ))
                     array_errors.append(ArrayNestedErrorType(
-                        key=position,
+                        key=key,
                         object_errors=nested_object_errors
                     ))
-                errors.append(CustomErrorType(field=_camelize_django_str(key), array_errors=array_errors))
+                errors.append(CustomErrorType(field=_camelize_django_str(field), array_errors=array_errors))
             else:
                 messages = ''.join(str(msg) for msg in value)
-                errors.append(CustomErrorType(field=_camelize_django_str(key), messages=messages))
+                errors.append(CustomErrorType(field=_camelize_django_str(field), messages=messages))
         return errors
     return []

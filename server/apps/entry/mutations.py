@@ -28,14 +28,17 @@ class NestedFigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectT
     """
     Input Type used to create figures with entry
     """
+    uuid = graphene.String(required=True)
 
 
 class FigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectType):
     entry = graphene.ID(required=True)
+    uuid = graphene.String()
 
 
 class FigureUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
+    uuid = graphene.String()
     entry = graphene.ID()
     district = graphene.String()
     town = graphene.String()
