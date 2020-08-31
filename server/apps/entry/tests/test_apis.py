@@ -62,6 +62,7 @@ class TestFigureCreation(HelixGraphQLTestCase):
             ],
             "includeIdu": False,
             "entry": self.entry.id,
+            "startDate": "2020-10-10",
         }
         self.force_login(self.creator)
 
@@ -74,6 +75,7 @@ class TestFigureCreation(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
 
+        print(content)
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createFigure']['ok'], content)
         self.assertIn('non_field_errors',
