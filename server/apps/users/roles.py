@@ -13,7 +13,7 @@ ROLES = [ADMIN, IT_HEAD, MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, G
 
 # All except user
 ALL_MODELS = {'crisis', 'event', 'entry', 'organization', 'organizationkind', 'contact',
-              'communication', 'figure'}
+              'communication', 'figure', 'summary', 'contextualupdate'}
 
 PERMISSIONS = {
     ADMIN: {
