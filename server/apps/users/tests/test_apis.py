@@ -3,7 +3,9 @@ import json
 from django.contrib.auth.tokens import default_token_generator
 from djoser.utils import encode_uid
 
-from utils.tests import HelixGraphQLTestCase
+from apps.users.roles import MONITORING_EXPERT_EDITOR
+from utils.factories import EntryFactory
+from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
 class TestLogin(HelixGraphQLTestCase):
@@ -252,3 +254,48 @@ class TestLogout(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertEqual(content['data']['me'], None)
+
+
+class TestUserSchema(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.reviewer_q = '''
+        query MyQuery {
+          me {
+            email
+            reviewEntries(page: 1, pageSize: 10) {
+              totalCount
+              results {
+                id
+                articleTitle
+              }
+            }
+          }
+        }
+        '''
+
+    def test_fetch_reviews_to_be_reviewed(self):
+        e1 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        e2 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        entry = EntryFactory.create(created_by=e1)
+        entry.reviewers.set([e1, e2])
+        entry2 = EntryFactory.create(created_by=e1)
+        entry2.reviewers.set([e2])
+        self.assertEqual(entry.reviewers.count(), 2)
+
+        self.force_login(e1)
+        response = self.query(self.reviewer_q)
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertEqual(content['data']['me']['email'], e1.email)
+        self.assertIn(entry, e1.review_entries.all())
+        self.assertEqual(content['data']['me']['reviewEntries']['totalCount'], 1)
+        self.assertEqual(content['data']['me']['reviewEntries']['results'][0]['id'], str(entry.id))
+
+        self.force_login(e2)
+        response = self.query(self.reviewer_q)
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertIn(entry2, e2.review_entries.all())
+        self.assertEqual(content['data']['me']['reviewEntries']['totalCount'], 2)
+        self.assertListEqual([int(each['id']) for each in content['data']['me']['reviewEntries']['results']],
+                             [entry.id, entry2.id])

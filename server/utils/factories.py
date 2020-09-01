@@ -15,9 +15,19 @@ class UserFactory(DjangoModelFactory):
     username = factory.Sequence(lambda n: f'username{n}')
 
 
+class CountryRegionFactory(DjangoModelFactory):
+    class Meta:
+        model = 'country.CountryRegion'
+
+    name = factory.Faker('first_name')
+
+
 class CountryFactory(DjangoModelFactory):
     class Meta:
         model = 'country.Country'
+
+    name = factory.Faker('first_name')
+    region = factory.SubFactory(CountryRegionFactory)
 
 
 class OrganizationKindFactory(DjangoModelFactory):

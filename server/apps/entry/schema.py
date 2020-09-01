@@ -2,6 +2,7 @@ import graphene
 from django.contrib.postgres.fields import JSONField
 from graphene import ObjectType
 from graphene.types.generic import GenericScalar
+from graphene.types.utils import get_type
 from graphene_django_extras.converter import convert_django_field
 from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, DjangoObjectField
 
@@ -9,7 +10,7 @@ from apps.entry.enums import QuantifierGrapheneEnum, UnitGrapheneEnum, TermGraph
     RoleGrapheneEnum
 from apps.entry.filters import EntryFilter
 from apps.entry.models import Figure, Entry
-from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
+from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType, CustomDjangoListField
 
 
 @convert_django_field.register(JSONField)
@@ -57,10 +58,13 @@ class EntryType(DjangoObjectType):
     class Meta:
         model = Entry
 
+    created_by = graphene.Field('apps.users.schema.UserType')
+    last_modified_by = graphene.Field('apps.users.schema.UserType')
     figures = DjangoPaginatedListObjectField(FigureListType,
                                              pagination=PageGraphqlPagination(
                                                  page_size_query_param='perPage'
                                              ))
+    reviewers = CustomDjangoListField('apps.users.schema.UserType')
 
 
 class EntryListType(CustomDjangoListObjectType):
