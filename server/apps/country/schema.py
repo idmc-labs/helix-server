@@ -1,28 +1,29 @@
 from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, \
-    DjangoListObjectType, DjangoListObjectField, DjangoObjectField
+    DjangoObjectField
 
 from apps.contact.schema import ContactListType
-from apps.country.models import Country
+from apps.country.models import Country, CountryRegion
 from apps.organization.schema import OrganizationListType
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
+
+
+class CountryRegionType(DjangoObjectType):
+    class Meta:
+        model = CountryRegion
 
 
 class CountryType(DjangoObjectType):
     class Meta:
         model = Country
 
-    organizations = DjangoPaginatedListObjectField(OrganizationListType,
-                                                   pagination=PageGraphqlPagination(
-                                                       page_size_query_param='pageSize'
-                                                   ))
     contacts = DjangoPaginatedListObjectField(ContactListType,
                                               pagination=PageGraphqlPagination(
                                                   page_size_query_param='pageSize'
-                                              ))
-    operatingContacts = DjangoPaginatedListObjectField(ContactListType,
-                                                       pagination=PageGraphqlPagination(
-                                                           page_size_query_param='pageSize'
-                                                       ))
+                                              ), accessor='contacts')
+    operating_contacts = DjangoPaginatedListObjectField(ContactListType,
+                                                        pagination=PageGraphqlPagination(
+                                                            page_size_query_param='pageSize'
+                                                        ), accessor='operating_contacts')
 
     @staticmethod
     def get_queryset(queryset, info):
