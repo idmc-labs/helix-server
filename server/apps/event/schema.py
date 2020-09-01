@@ -3,7 +3,6 @@ from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, Djan
 
 from apps.country.schema import CountryType
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.crisis.schema import CrisisType
 from apps.event.models import Event, Trigger, TriggerSubType, Violence, ViolenceSubType, Actor, DisasterSubCategory, \
     DisasterCategory, DisasterSubType, DisasterType
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType, CustomDjangoListField
@@ -108,8 +107,8 @@ class DisasterCategoryType(DjangoObjectType):
 class EventType(DjangoObjectType):
     class Meta:
         model = Event
+        exclude_fields = ('entries',)
 
-    crisis = graphene.Field(CrisisType)
     event_type = graphene.Field(CrisisTypeGrapheneEnum)
     trigger = graphene.Field(TriggerType)
     trigger_sub_type = graphene.Field(TriggerSubObjectType)

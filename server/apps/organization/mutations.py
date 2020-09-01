@@ -9,6 +9,7 @@ from utils.error_types import CustomErrorType, mutation_is_not_valid
 
 
 # organization kind
+from utils.permissions import permission_checker
 
 
 class OrganizationKindCreateInputType(graphene.InputObjectType):
@@ -29,6 +30,7 @@ class CreateOrganizationKind(graphene.Mutation):
     organization_kind = graphene.Field(OrganizationKindObjectType)
 
     @staticmethod
+    @permission_checker(['organization.add_organizationkind'])
     def mutate(root, info, organization_kind):
         serializer = OrganizationKindSerializer(data=organization_kind)
         if errors := mutation_is_not_valid(serializer):
@@ -46,6 +48,7 @@ class UpdateOrganizationKind(graphene.Mutation):
     organization_kind = graphene.Field(OrganizationKindObjectType)
 
     @staticmethod
+    @permission_checker(['organization.change_organizationkind'])
     def mutate(root, info, organization_kind):
         try:
             instance = OrganizationKind.objects.get(id=organization_kind['id'])
@@ -69,15 +72,16 @@ class DeleteOrganizationKind(graphene.Mutation):
     organization_kind = graphene.Field(OrganizationKindObjectType)
 
     @staticmethod
-    def mutate(root, info, organization_kind):
+    @permission_checker(['organization.delete_organizationkind'])
+    def mutate(root, info, id):
         try:
-            instance = OrganizationKind.objects.get(id=organization_kind['id'])
+            instance = OrganizationKind.objects.get(id=id)
         except OrganizationKind.DoesNotExist:
             return UpdateOrganizationKind(errors=[
                 CustomErrorType(field='non_field_errors', messages=[_('Organization type does not exist.')])
             ])
         instance.delete()
-        instance.id = organization_kind['id']
+        instance.id = id
         return DeleteOrganizationKind(organization_kind=instance, errors=None, ok=True)
 
 
@@ -113,6 +117,7 @@ class CreateOrganization(graphene.Mutation):
     organization = graphene.Field(OrganizationType)
 
     @staticmethod
+    @permission_checker(['organization.add_organization'])
     def mutate(root, info, organization):
         serializer = OrganizationSerializer(data=organization)
         if errors := mutation_is_not_valid(serializer):
@@ -130,6 +135,7 @@ class UpdateOrganization(graphene.Mutation):
     organization = graphene.Field(OrganizationType)
 
     @staticmethod
+    @permission_checker(['organization.change_organization'])
     def mutate(root, info, organization):
         try:
             instance = Organization.objects.get(id=organization['id'])
@@ -153,15 +159,16 @@ class DeleteOrganization(graphene.Mutation):
     organization = graphene.Field(OrganizationType)
 
     @staticmethod
-    def mutate(root, info, organization):
+    @permission_checker(['organization.delete_organization'])
+    def mutate(root, info, id):
         try:
-            instance = Organization.objects.get(id=organization['id'])
+            instance = Organization.objects.get(id=id)
         except Organization.DoesNotExist:
             return UpdateOrganization(errors=[
                 CustomErrorType(field='non_field_errors', messages=[_('Organization does not exist.')])
             ])
         instance.delete()
-        instance.id = organization['id']
+        instance.id = id
         return DeleteOrganization(organization=instance, errors=None, ok=True)
 
 

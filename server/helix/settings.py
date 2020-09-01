@@ -38,7 +38,7 @@ LOCAL_APPS = [
     'contact',
     'crisis',
     'event',
-    # 'entry',
+    'entry',
 ]
 
 THIRD_PARTY_APPS = [
@@ -168,7 +168,7 @@ GRAPHENE = {
     'SCHEMA_OUTPUT': 'schema.json',  # defaults to schema.json,
     'SCHEMA_INDENT': 2,  # Defaults to None (displays all data on a single line)
     'MIDDLEWARE': (
-        'utils.middlewares.AuthorizationMiddleware',
+        # 'utils.middlewares.AuthorizationMiddleware',
     ),
 }
 

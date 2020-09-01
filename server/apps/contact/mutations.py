@@ -6,6 +6,7 @@ from apps.contact.models import Contact, Communication
 from apps.contact.schema import ContactType, CommunicationType
 from apps.contact.serializers import ContactSerializer, CommunicationSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.permissions import permission_checker
 
 
 class ContactInputType(object):
@@ -62,6 +63,7 @@ class CreateContact(graphene.Mutation):
     contact = graphene.Field(ContactType)
 
     @staticmethod
+    @permission_checker(['contact.add_contact'])
     def mutate(root, info, contact):
         serializer = ContactSerializer(data=contact)
         if errors := mutation_is_not_valid(serializer):
@@ -79,6 +81,7 @@ class UpdateContact(graphene.Mutation):
     contact = graphene.Field(ContactType)
 
     @staticmethod
+    @permission_checker(['contact.change_contact'])
     def mutate(root, info, contact):
         try:
             instance = Contact.objects.get(id=contact['id'])
@@ -102,15 +105,16 @@ class DeleteContact(graphene.Mutation):
     contact = graphene.Field(ContactType)
 
     @staticmethod
-    def mutate(root, info, contact):
+    @permission_checker(['contact.delete_contact'])
+    def mutate(root, info, id):
         try:
-            instance = Contact.objects.get(id=contact['id'])
+            instance = Contact.objects.get(id=id)
         except Contact.DoesNotExist:
             return UpdateContact(errors=[
                 CustomErrorType(field='non_field_errors', messages=[_('Contact does not exist.')])
             ])
         instance.delete()
-        instance.id = contact['id']
+        instance.id = id
         return DeleteContact(contact=instance, errors=None, ok=True)
 
 

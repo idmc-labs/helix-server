@@ -24,6 +24,12 @@ class CountryType(DjangoObjectType):
                                                            page_size_query_param='pageSize'
                                                        ))
 
+    @staticmethod
+    def get_queryset(queryset, info):
+        # graphene_django/fields.py:57 demands we implement this method
+        # so that we can filter based on request, but we do not need
+        return queryset
+
 
 class CountryListType(CustomDjangoListObjectType):
     class Meta:

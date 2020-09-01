@@ -5,6 +5,7 @@ from apps.country.schema import CountryListType
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.filters import CrisisFilter
 from apps.crisis.models import Crisis
+from apps.event.schema import EventListType
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
 
 
@@ -14,7 +15,13 @@ class CrisisType(DjangoObjectType):
 
     crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
     countries = DjangoPaginatedListObjectField(CountryListType,
-                                               pagination=PageGraphqlPagination(page_size_query_param='pageSize'))
+                                               pagination=PageGraphqlPagination(
+                                                   page_size_query_param='pageSize'
+                                               ))
+    events = DjangoPaginatedListObjectField(EventListType,
+                                            pagination=PageGraphqlPagination(
+                                                page_size_query_param='pageSize'
+                                            ))
 
 
 class CrisisListType(CustomDjangoListObjectType):

@@ -1,15 +1,30 @@
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission, Group
+from django.core import management
 from django.test import TestCase, override_settings
 from graphene_django.utils import GraphQLTestCase
+
+from utils.factories import UserFactory
 
 User = get_user_model()
 
 
-class HelixGraphQLTestCase(GraphQLTestCase):
+class CommonSetupClassMixin:
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # initialize roles
+        management.call_command('init_roles')
+
+
+class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
     GRAPHQL_URL = '/graphql'
     GRAPHQL_SCHEMA = 'helix.schema.schema'
+
+    def force_login(self, user):
+        self._client.force_login(user)
 
     def create_user(self) -> User:
         raw_password = 'admin123'
@@ -20,6 +35,12 @@ class HelixGraphQLTestCase(GraphQLTestCase):
         )
         user.raw_password = raw_password
         return user
+
+
+def create_user_with_role(role: str) -> User:
+    user = UserFactory.create()
+    user.groups.set([Group.objects.get(name=role)])
+    return user
 
 
 class ImmediateOnCommitMixin(object):
@@ -49,5 +70,5 @@ class ImmediateOnCommitMixin(object):
 @override_settings(
     EMAIL_BACKEND='django.core.mail.backends.console.EmailBackend'
 )
-class HelixTestCase(ImmediateOnCommitMixin, TestCase):
+class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     pass

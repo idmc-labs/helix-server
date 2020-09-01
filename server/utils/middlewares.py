@@ -2,6 +2,10 @@ APP_TO_CHECK_AGAINST = ['contact']
 
 
 class AuthorizationMiddleware(object):
+    """
+    Note: Won't be used
+    Every logged in user can query
+    """
     def resolve(self, next, root, info, **args):
         return_type = info.return_type
         while hasattr(return_type, 'of_type'):

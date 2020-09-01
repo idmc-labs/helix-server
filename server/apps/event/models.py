@@ -5,6 +5,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
+from apps.contrib.models import MetaInformationAbstractModel
 from apps.crisis.models import Crisis
 
 
@@ -89,7 +90,7 @@ class DisasterSubType(NameAttributedModels):
                              related_name='sub_types', on_delete=models.CASCADE)
 
 
-class Event(models.Model):
+class Event(MetaInformationAbstractModel, models.Model):
     crisis = models.ForeignKey('crisis.Crisis', verbose_name=_('Crisis'),
                                related_name='events', on_delete=models.CASCADE)
     name = models.CharField(verbose_name=_('Event Name'), max_length=256)
@@ -135,7 +136,13 @@ class Event(models.Model):
     event_narrative = models.TextField(verbose_name=_('Event Narrative'),
                                        null=True, blank=True)
 
-    def clean(self) -> None:
+    def clean_dates(self) -> OrderedDict:
+        errors = OrderedDict()
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            errors['end_date'] = _('Pick the end date later than start date. ')
+        return errors
+
+    def clean_by_event_type(self) -> OrderedDict:
         errors = OrderedDict()
         if self.event_type == Crisis.CRISIS_TYPE.CONFLICT:
             if not self.violence:
@@ -145,6 +152,12 @@ class Event(models.Model):
                 errors['disaster_category'] = _('Please mention at least the category of disaster. ')
             if not self.glide_number:
                 errors['glide_number'] = _('Glide Number is required. ')
+        return errors
+
+    def clean(self) -> None:
+        errors = OrderedDict()
+        errors.update(self.clean_dates())
+        errors.update(self.clean_by_event_type())
         if errors:
             raise ValidationError(errors)
 
