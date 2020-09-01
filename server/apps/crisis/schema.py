@@ -14,10 +14,10 @@ class CrisisType(DjangoObjectType):
         model = Crisis
 
     crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
-    countries = DjangoPaginatedListObjectField(CountryListType,
-                                               pagination=PageGraphqlPagination(
-                                                   page_size_query_param='pageSize'
-                                               ))
+    # countries = DjangoPaginatedListObjectField(CountryListType,
+    #                                            pagination=PageGraphqlPagination(
+    #                                                page_size_query_param='pageSize'
+    #                                            ))
     events = DjangoPaginatedListObjectField(EventListType,
                                             pagination=PageGraphqlPagination(
                                                 page_size_query_param='pageSize'

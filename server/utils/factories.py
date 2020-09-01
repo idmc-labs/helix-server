@@ -30,6 +30,22 @@ class CountryFactory(DjangoModelFactory):
     region = factory.SubFactory(CountryRegionFactory)
 
 
+class ContextualUpdateFactory(DjangoModelFactory):
+    class Meta:
+        model = 'country.ContextualUpdate'
+
+    update = factory.Faker('paragraph')
+    country = factory.SubFactory(CountryFactory)
+
+
+class SummaryFactory(DjangoModelFactory):
+    class Meta:
+        model = 'country.Summary'
+
+    summary = factory.Faker('paragraph')
+    country = factory.SubFactory(CountryFactory)
+
+
 class OrganizationKindFactory(DjangoModelFactory):
     class Meta:
         model = 'organization.OrganizationKind'
