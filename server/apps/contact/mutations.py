@@ -1,5 +1,6 @@
 import graphene
 from django.utils.translation import gettext_lazy as _
+from graphene_file_upload.scalars import Upload
 
 from apps.contact.enums import DesignationGrapheneEnum, CommunicationMediumGrapheneEnum, GenderGrapheneEnum
 from apps.contact.models import Contact, Communication
@@ -131,6 +132,7 @@ class CommunicationCreateInputType(graphene.InputObjectType):
     content = graphene.String(required=True)
     date_time = graphene.DateTime()
     medium = graphene.NonNull(CommunicationMediumGrapheneEnum)
+    attachment = Upload(required=False)
 
 
 class CommunicationUpdateInputType(graphene.InputObjectType):
@@ -144,6 +146,7 @@ class CommunicationUpdateInputType(graphene.InputObjectType):
     content = graphene.String()
     date_time = graphene.DateTime()
     medium = graphene.Field(CommunicationMediumGrapheneEnum)
+    attachment = Upload(required=False)
 
 
 class CreateCommunication(graphene.Mutation):

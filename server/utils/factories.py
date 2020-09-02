@@ -2,7 +2,7 @@ import factory
 from dateutil.utils import today
 from factory.django import DjangoModelFactory
 
-from apps.contact.models import Contact
+from apps.contact.models import Contact, Communication
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 
@@ -68,6 +68,18 @@ class ContactFactory(DjangoModelFactory):
     gender = factory.Iterator(Contact.GENDER)
     job_title = factory.Faker('job')
     organization = factory.SubFactory(OrganizationFactory)
+
+
+class CommunicationFactory(DjangoModelFactory):
+    class Meta:
+        model = 'contact.Communication'
+
+    contact = factory.SubFactory(ContactFactory)
+    title = factory.Faker('sentence')
+    subject = factory.Faker('sentence')
+    content = factory.Faker('paragraph')
+    date_time = factory.Faker('date_time_this_month')
+    medium = factory.Iterator(Communication.COMMUNICATION_MEDIUM)
 
 
 class DisasterCategoryFactory(DjangoModelFactory):
