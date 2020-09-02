@@ -74,6 +74,11 @@ class CountryType(DjangoObjectType):
         pagination=PageGraphqlPagination(
             page_size_query_param='pageSize'
         ), accessor='crises'))
+    entries = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
+        get_type('apps.entry.schema.EntryListType'),
+        pagination=PageGraphqlPagination(
+            page_size_query_param='pageSize'
+        ), accessor='entries'))
 
     @staticmethod
     def get_queryset(queryset, info):
