@@ -1,8 +1,8 @@
 class MetaInformationSerializerMixin(object):
     """
     Responsible to add following fields into the validated data
-    created_by
-    last_modified_by
+    - created_by
+    - last_modified_by
     """
     def validate(self, attrs) -> dict:
         if self.instance is None:
