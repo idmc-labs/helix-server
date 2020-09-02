@@ -76,9 +76,15 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
 
     class ROLE(enum.Enum):
         RECOMMENDED = 0
+        PARTIAL_ADDED = 1
+        PARTIAL_SUBTRACTED = 2
+        TRIANGULATION = 3
 
         __labels__ = {
-            RECOMMENDED: _("Recommended"),
+            RECOMMENDED: _("Recommended figure"),
+            PARTIAL_ADDED: _("Partial figure (Added)"),
+            PARTIAL_SUBTRACTED: _("Partial figure (Subtracted)"),
+            TRIANGULATION: _("Triangulation"),
         }
 
     entry = models.ForeignKey('Entry', verbose_name=_('Entry'),
