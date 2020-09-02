@@ -165,6 +165,12 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
             self.total_figures = self.reported * self.household_size
         return super().save(*args, **kwargs)
 
+    def save(self, *args, **kwargs):
+        self.total_figures = self.reported
+        if self.unit == self.UNIT.household:
+            self.total_figures = self.reported * self.household_size
+        return super().save(*args, **kwargs)
+
     def __str__(self):
         return f'{self.quantifier.label} {self.reported} {self.term.label}'
 

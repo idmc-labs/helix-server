@@ -41,6 +41,14 @@ class TestFigureModel(HelixTestCase):
         figure.save()
         self.assertEqual(figure.total_figures, figure.reported * figure.household_size)
 
+    def test_figure_saves_total_figures(self):
+        figure = FigureFactory()
+        figure.unit = 1
+        figure.household_size = 4
+        figure.reported = 10
+        figure.save()
+        self.assertEqual(figure.total_figures, figure.reported * figure.household_size)
+
 
 class TestEntryModel(HelixTestCase):
     def setUp(self) -> None:
