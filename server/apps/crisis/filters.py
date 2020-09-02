@@ -7,6 +7,6 @@ class CrisisFilter(django_filters.FilterSet):
     class Meta:
         model = Crisis
         fields = {
-            'countries': ['contains'],
+            'countries': ['exact'],
             'name': ['icontains']
         }

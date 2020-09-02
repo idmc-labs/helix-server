@@ -121,6 +121,11 @@ class EventType(DjangoObjectType):
 class EventListType(CustomDjangoListObjectType):
     class Meta:
         model = Event
+        filter_fields = {
+            'countries': ['exact'],
+            'start_date': ['lte', 'gte'],
+            'end_date': ['lte', 'gte'],
+        }
 
 
 class Query:

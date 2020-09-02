@@ -1,4 +1,5 @@
 import graphene
+from graphene.types.utils import get_type
 from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, \
     DjangoObjectField
 
@@ -61,13 +62,18 @@ class CountryType(DjangoObjectType):
                                                             page_size_query_param='pageSize'
                                                         ), accessor='operating_contacts')
     contextual_updates = DjangoPaginatedListObjectField(ContextualUpdateListType,
-                                                               pagination=PageGraphqlPagination(
-                                                                   page_size_query_param='pageSize'
-                                                               ), accessor='contextual_updates')
+                                                        pagination=PageGraphqlPagination(
+                                                            page_size_query_param='pageSize'
+                                                        ), accessor='contextual_updates')
     summaries = DjangoPaginatedListObjectField(SummaryListType,
-                                                     pagination=PageGraphqlPagination(
-                                                         page_size_query_param='pageSize'
-                                                     ), accessor='summaries')
+                                               pagination=PageGraphqlPagination(
+                                                   page_size_query_param='pageSize'
+                                               ), accessor='summaries')
+    crises = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
+        get_type('apps.crisis.schema.CrisisListType'),
+        pagination=PageGraphqlPagination(
+            page_size_query_param='pageSize'
+        ), accessor='crises'))
 
     @staticmethod
     def get_queryset(queryset, info):
