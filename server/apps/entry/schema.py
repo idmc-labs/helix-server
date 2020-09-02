@@ -65,6 +65,7 @@ class EntryType(DjangoObjectType):
                                                  page_size_query_param='perPage'
                                              ))
     reviewers = CustomDjangoListField('apps.users.schema.UserType')
+    total_figures = graphene.Field(graphene.Int)
 
 
 class EntryListType(CustomDjangoListObjectType):

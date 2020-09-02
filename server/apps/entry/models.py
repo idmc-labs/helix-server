@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
@@ -198,6 +199,10 @@ class Entry(MetaInformationAbstractModel, models.Model):
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
                                        blank=True,
                                        related_name='review_entries')
+
+    @property
+    def total_figures(self):
+        return self.figures.aggregate(total=Sum('total_figures'))['total']
 
     @staticmethod
     def clean_url_and_document(values: dict, instance=None) -> OrderedDict:
