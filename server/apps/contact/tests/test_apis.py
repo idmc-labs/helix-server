@@ -42,7 +42,7 @@ class TestCreateContact(HelixGraphQLTestCase):
             "designation": "MR",
             "firstName": "first",
             "lastName": "last",
-            "gender": "Male",
+            "gender": "MALE",
             "jobTitle": "dev",
             "organization": str(organization.id),
             "countriesOfOperation": [each.id for each in countries]

@@ -10,6 +10,11 @@ class Crisis(MetaInformationAbstractModel, models.Model):
         CONFLICT = 0
         DISASTER = 1
 
+        __labels__ = {
+            CONFLICT: _("Conflict"),
+            DISASTER: _("Disaster"),
+        }
+
     name = models.CharField(verbose_name=_('Name'), max_length=256)
     crisis_type = enum.EnumField(CRISIS_TYPE, verbose_name=_('Crisis Type'))
     crisis_narrative = models.TextField(_('Crisis Narrative/Summary'))

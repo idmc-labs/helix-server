@@ -10,10 +10,21 @@ class Contact(MetaInformationAbstractModel, models.Model):
         MR = 0
         MS = 1
 
+        __labels__ = {
+            MR: _("Mr"),
+            MS: _("Ms"),
+        }
+
     class GENDER(enum.Enum):
-        Male = 0
-        Female = 1
-        Other = 2
+        MALE = 0
+        FEMALE = 1
+        OTHER = 2
+
+        __labels__ = {
+            MALE: _("Male"),
+            FEMALE: _("Female"),
+            OTHER: _("Other"),
+        }
 
     designation = enum.EnumField(DESIGNATION)
     first_name = models.CharField(verbose_name=_('First Name'), max_length=256)
@@ -44,6 +55,15 @@ class Communication(MetaInformationAbstractModel, models.Model):
     class COMMUNICATION_MEDIUM(enum.Enum):
         MAIL = 0
         PHONE = 1
+        SKYPE = 2
+        PERSONAL_MEETING = 3
+
+        __labels__ = {
+            MAIL: _("Mail"),
+            PHONE: _("Phone"),
+            SKYPE: _("Skype"),
+            PERSONAL_MEETING: _("Personal Meeting"),
+        }
 
     contact = models.ForeignKey('Contact', verbose_name=_('Contact'),
                                 related_name='communications', on_delete=models.CASCADE)

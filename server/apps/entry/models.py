@@ -19,21 +19,43 @@ class SubFigure(models.Model):
 
 class Figure(MetaInformationAbstractModel, models.Model):
     class QUANTIFIER(enum.Enum):
-        more_than = 0
-        less_than = 1
-        exact = 2
+        MORE_THAN = 0
+        LESS_THAN = 1
+        EXACT = 2
+
+        __labels__ = {
+            MORE_THAN: _("More than"),
+            LESS_THAN: _("Less than"),
+            EXACT: _("Exact"),
+        }
 
     class UNIT(enum.Enum):
-        person = 0
+        PERSON = 0
+
+        __labels__ = {
+            PERSON: _("Person"),
+        }
 
     class TERM(enum.Enum):
-        evacuated = 0
+        EVACUATED = 0
+
+        __labels__ = {
+            EVACUATED: _("Evacuated"),
+        }
 
     class TYPE(enum.Enum):
-        idp_stock = 0
+        IDP_STOCK = 0
+
+        __labels__ = {
+            IDP_STOCK: _("IDP (Stock)"),
+        }
 
     class ROLE(enum.Enum):
-        recommended = 0
+        RECOMMENDED = 0
+
+        __labels__ = {
+            RECOMMENDED: _("Recommended"),
+        }
 
     entry = models.ForeignKey('Entry', verbose_name=_('Entry'),
                               related_name='figures', on_delete=models.CASCADE)
@@ -41,10 +63,10 @@ class Figure(MetaInformationAbstractModel, models.Model):
     town = models.CharField(verbose_name=_('Town/Village'), max_length=256)
     quantifier = enum.EnumField(enum=QUANTIFIER, verbose_name=_('Quantifier'))
     reported = models.PositiveIntegerField(verbose_name=_('Reported Figures'))
-    unit = enum.EnumField(enum=UNIT, verbose_name=_('Unit of Figure'), default=UNIT.person)
-    term = enum.EnumField(enum=TERM, verbose_name=_('Term'), default=TERM.evacuated)
-    type = enum.EnumField(enum=TYPE, verbose_name=_('Figure Type'), default=TYPE.idp_stock)
-    role = enum.EnumField(enum=ROLE, verbose_name=_('Role'), default=ROLE.recommended)
+    unit = enum.EnumField(enum=UNIT, verbose_name=_('Unit of Figure'), default=UNIT.PERSON)
+    term = enum.EnumField(enum=TERM, verbose_name=_('Term'), default=TERM.EVACUATED)
+    type = enum.EnumField(enum=TYPE, verbose_name=_('Figure Type'), default=TYPE.IDP_STOCK)
+    role = enum.EnumField(enum=ROLE, verbose_name=_('Role'), default=ROLE.RECOMMENDED)
 
     start_date = models.DateField(verbose_name=_('Start Date'))
     include_idu = models.BooleanField(verbose_name=_('Include in IDU'))
