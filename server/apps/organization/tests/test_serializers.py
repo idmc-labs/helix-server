@@ -18,7 +18,7 @@ class TestCreateOrganizationSerializer(HelixTestCase):
                     "designation": Contact.DESIGNATION.MR.value,
                     "first_name": "test",
                     "last_name": "last",
-                    "gender": Contact.GENDER.Male.value,
+                    "gender": Contact.GENDER.MALE.value,
                     "job_title": "job",
                     "phone": "9989999"
                  },
