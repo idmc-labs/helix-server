@@ -18,7 +18,7 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
         MORE_THAN = 0
         LESS_THAN = 1
         EXACT = 2
-        APPROXIMATELY = 0
+        APPROXIMATELY = 3
 
         __labels__ = {
             MORE_THAN: _("More than"),
@@ -165,7 +165,7 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
 
     def save(self, *args, **kwargs):
         self.total_figures = self.reported
-        if self.unit == self.UNIT.household:
+        if self.unit == self.UNIT.HOUSEHOLD:
             self.total_figures = self.reported * self.household_size
         return super().save(*args, **kwargs)
 
