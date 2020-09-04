@@ -1,4 +1,6 @@
-from apps.entry.models import Figure
+import os
+
+from apps.entry.models import Figure, SourcePreview
 from apps.users.roles import MONITORING_EXPERT_EDITOR, ADMIN, MONITORING_EXPERT_REVIEWER
 from utils.factories import EntryFactory, FigureFactory
 from utils.tests import HelixTestCase, create_user_with_role
@@ -62,3 +64,16 @@ class TestEntryModel(HelixTestCase):
         self.assertFalse(self.entry.can_be_updated_by(reviwer))
         admin = create_user_with_role(ADMIN)
         self.assertTrue(self.entry.can_be_updated_by(admin))
+
+
+class TestSourcePreviewModel(HelixTestCase):
+    def test_get_pdf(self):
+        url = 'https://github.com/JazzCore/python-pdfkit/'
+        preview = SourcePreview.get_pdf(url)
+        self.assertIn('.pdf', preview.pdf.name)
+        self.assertTrue(os.path.exists(preview.pdf.name))
+        # again
+        preview2 = SourcePreview.get_pdf(url, preview)
+        self.assertTrue(os.path.exists(preview2.pdf.name))
+        # self.assertFalse(os.path.exists(preview.pdf.name))
+        self.assertNotIn(preview.pdf.name, os.listdir(os.path.dirname(preview.pdf.name)))

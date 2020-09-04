@@ -9,7 +9,7 @@ from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, Djan
 from apps.entry.enums import QuantifierGrapheneEnum, UnitGrapheneEnum, TermGrapheneEnum, TypeGrapheneEnum, \
     RoleGrapheneEnum
 from apps.entry.filters import EntryFilter
-from apps.entry.models import Figure, Entry
+from apps.entry.models import Figure, Entry, SourcePreview
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType, CustomDjangoListField
 
 
@@ -72,6 +72,15 @@ class EntryListType(CustomDjangoListObjectType):
     class Meta:
         model = Entry
         filterset_class = EntryFilter
+
+
+class SourcePreviewType(DjangoObjectType):
+    class Meta:
+        model = SourcePreview
+        exclude_fields = ('entry',)
+
+    def resolve_pdf(root, info, **kwargs):
+        return info.context.build_absolute_uri(root.pdf.url)
 
 
 class Query:
