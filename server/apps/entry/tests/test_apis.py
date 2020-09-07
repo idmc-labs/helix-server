@@ -75,7 +75,6 @@ class TestFigureCreation(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
 
-        print(content)
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createFigure']['ok'], content)
         self.assertIn('non_field_errors',
@@ -646,7 +645,6 @@ class TestEntryDelete(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
 
-        print(content)
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['deleteEntry']['ok'], content)
         self.assertEqual(content['data']['deleteEntry']['entry']['url'],

@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
@@ -156,7 +156,7 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
         if values.get('include_idu', getattr(instance, 'include_idu', None)):
             excerpt_idu = values.get('excerpt_idu', getattr(instance, 'excerpt_idu', None))
             if excerpt_idu is None or not excerpt_idu.strip():
-                errors['excerpt_idu'] = _('This field is required. ')
+                errors['excerpt_idu'] = gettext('This field is required. ')
         return errors
 
     def save(self, *args, **kwargs):
@@ -205,8 +205,8 @@ class Entry(MetaInformationAbstractModel, models.Model):
         url = values.get('url', getattr(instance, 'url', None))
         document = values.get('document', getattr(instance, 'document', None))
         if not url and not document:
-            errors['url'] = _('Please fill the URL or upload a document. ')
-            errors['document'] = _('Please fill the URL or upload a document. ')
+            errors['url'] = gettext('Please fill the URL or upload a document. ')
+            errors['document'] = gettext('Please fill the URL or upload a document. ')
         return errors
 
     def can_be_updated_by(self, user: User) -> bool:

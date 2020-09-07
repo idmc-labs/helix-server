@@ -1,8 +1,7 @@
 from collections import OrderedDict
 
-from django.core.exceptions import ValidationError
 from django.db import models
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
@@ -142,7 +141,7 @@ class Event(MetaInformationAbstractModel, models.Model):
         start_date = values.get('start_date', getattr(instance, 'start_date', None))
         end_date = values.get('end_date', getattr(instance, 'end_date', None))
         if start_date and end_date and end_date < start_date:
-            errors['end_date'] = _('Pick the end date later than start date. ')
+            errors['end_date'] = gettext('Pick the end date later than start date. ')
         return errors
 
     @staticmethod
@@ -151,12 +150,12 @@ class Event(MetaInformationAbstractModel, models.Model):
         event_type = values.get('event_type', getattr(instance, 'event_type', None))
         if event_type == Crisis.CRISIS_TYPE.CONFLICT:
             if not values.get('violence', getattr(instance, 'violence', None)):
-                errors['violence'] = _('Please mention at least the reason for violence. ')
+                errors['violence'] = gettext('Please mention at least the reason for violence. ')
         elif event_type == Crisis.CRISIS_TYPE.DISASTER:
             if not values.get('disaster_category', getattr(instance, 'disaster_category', None)):
-                errors['disaster_category'] = _('Please mention at least the category of disaster. ')
+                errors['disaster_category'] = gettext('Please mention at least the category of disaster. ')
             if not values.get('glide_number', getattr(instance, 'glide_number', None)):
-                errors['glide_number'] = _('Glide Number is required. ')
+                errors['glide_number'] = gettext('Glide Number is required. ')
         return errors
 
     def __str__(self):
