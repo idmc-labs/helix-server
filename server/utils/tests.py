@@ -26,6 +26,11 @@ class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
     def force_login(self, user):
         self._client.force_login(user)
 
+    def create_monitoring_expert(self):
+        user = UserFactory.create()
+        user.user_permissions.add(Permission.objects.get(codename='change_entry'))
+        return user
+
     def create_user(self) -> User:
         raw_password = 'admin123'
         user = User.objects.create_user(

@@ -13,7 +13,7 @@ ROLES = [ADMIN, IT_HEAD, MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, G
 
 # All except user
 ALL_MODELS = {'crisis', 'event', 'entry', 'organization', 'organizationkind', 'contact',
-              'communication'}
+              'communication', 'figure'}
 
 PERMISSIONS = {
     ADMIN: {
@@ -33,9 +33,9 @@ PERMISSIONS = {
         'delete': ALL_MODELS,
     },
     MONITORING_EXPERT_REVIEWER: {
-        'add': ALL_MODELS - {'entry'},
-        'change': ALL_MODELS - {'entry'},
-        'delete': ALL_MODELS - {'entry'},
+        'add': ALL_MODELS - {'entry', 'figure'},
+        'change': ALL_MODELS - {'entry', 'figure'},
+        'delete': ALL_MODELS - {'entry', 'figure'},
     },
     GUEST: {
         'add': [],

@@ -2,7 +2,7 @@ version: '3.2'
 
 services:
     db:
-        image: postgres:12
+        image: postgres:11
         environment:
             POSTGRES_PASSWORD: postgres
         volumes:

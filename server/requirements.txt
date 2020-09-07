@@ -1,7 +1,7 @@
 six==1.15
 Django==3.0.5
 graphene-django>=2.0
-
+ipython
 django-extensions==3.0.4
 
 djoser==2.0.3

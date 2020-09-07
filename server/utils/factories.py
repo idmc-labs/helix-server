@@ -4,6 +4,7 @@ from factory.django import DjangoModelFactory
 
 from apps.contact.models import Contact
 from apps.crisis.models import Crisis
+from apps.entry.models import Figure
 
 
 class UserFactory(DjangoModelFactory):
@@ -79,3 +80,20 @@ class EntryFactory(DjangoModelFactory):
     source_breakdown = factory.Sequence(lambda n: f'long text breakdown {n}')
     event = factory.SubFactory(EventFactory)
     tags = factory.Sequence(lambda n: [f'tag{each}' for each in range(n % 10)])
+
+
+class FigureFactory(DjangoModelFactory):
+    class Meta:
+        model = 'entry.Figure'
+
+    entry = factory.SubFactory(EntryFactory)
+    district = factory.Faker('city')
+    town = factory.Faker('city')
+    quantifier = factory.Iterator(Figure.QUANTIFIER)
+    reported = factory.Sequence(lambda n: n + 2)
+    unit = factory.Iterator(Figure.UNIT)
+    term = factory.Iterator(Figure.TERM)
+    type = factory.Iterator(Figure.TYPE)
+    role = factory.Iterator(Figure.ROLE)
+    start_date = factory.LazyFunction(today().date)
+    include_idu = False
