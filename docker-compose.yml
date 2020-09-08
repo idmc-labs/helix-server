@@ -9,13 +9,15 @@ services:
             - helix-db-data:/var/lib/postgresql/data
     server:
         build:
-          context: ./server/
-          cache_from:
-            - helix/helix-server:latest
+          context: .
+        command: sh -c 'python manage.py migrate && python manage.py init_roles && python manage.py runserver 0.0.0.0:9000'
         env_file:
             - .env
+        environment:
+            - DJANGO_SETTINGS_MODULE=helix.settings
+            - DEBUG=True
         volumes:
-            - ./server/:/code
+            - .:/code
         ports:
             - '9000:9000'
         depends_on:
