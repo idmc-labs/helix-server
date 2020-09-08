@@ -28,8 +28,36 @@ class TestEntrySerializer(HelixTestCase):
         self.request.user = self.user = create_user_with_role(MONITORING_EXPERT_EDITOR)
 
     def test_create_entry_requires_document_or_url(self):
-        # todo
-        ...
+        self.data['url'] = None
+        self.data['document'] = None
+        serializer = EntrySerializer(data=self.data,
+                                     context={'request': self.request})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('url', serializer.errors)
+        self.assertIn('document', serializer.errors)
+
+    def test_update_entry_url_and_document_is_redundant(self):
+        entry = EntryFactory.create(
+            url='http://abc.com'
+        )
+        data = {
+            'source_methodology': 'method'
+        }
+        serializer = EntrySerializer(instance=entry,
+                                     data=data,
+                                     context={'request': self.request},
+                                     partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        data = {
+            'url': None
+        }
+        serializer = EntrySerializer(instance=entry,
+                                     data=data,
+                                     context={'request': self.request},
+                                     partial=True)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('url', serializer.errors)
+        self.assertIn('document', serializer.errors)
 
     def test_create_entry_populates_created_by(self):
         serializer = EntrySerializer(data=self.data,

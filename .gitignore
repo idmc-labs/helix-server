@@ -1,9 +1,11 @@
 __pycache__/
 .idea/
-
 .env
 
 *.sqlite3
+
+media/
+media-temp/
 
 static/
 schema.json

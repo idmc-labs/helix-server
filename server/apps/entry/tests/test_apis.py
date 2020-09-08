@@ -1,6 +1,8 @@
 import json
 from uuid import uuid4
 
+from django.core.files.temp import NamedTemporaryFile
+
 from apps.entry.models import Figure
 from apps.users.roles import MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, ADMIN, GUEST
 from utils.factories import EventFactory, EntryFactory, FigureFactory
@@ -57,7 +59,10 @@ class TestFigureCreation(HelixGraphQLTestCase):
             "strataJson": [
                 {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
                 {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
-            ]
+            ],
+            "includeIdu": False,
+            "entry": self.entry.id,
+            "startDate": "2020-10-10",
         }
         self.force_login(self.creator)
 
@@ -273,6 +278,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     }
                     entry {
                         id
+                        document
                         figures {
                             results {
                                 id
@@ -417,7 +423,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
             input_data=self.input
         )
         content = json.loads(response.content)
-
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
     def test_invalid_figures_age_data(self):
@@ -454,6 +459,33 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createEntry']['ok'], content)
         self.assertIn('ageTo', json.dumps(content['data']['createEntry']['errors']))
+
+    def test_create_entry_with_document(self):
+        file_text = b'fake blaa'
+        self.input['document'] = None
+        with NamedTemporaryFile() as t_file:
+            t_file.write(file_text)
+            t_file.seek(0)
+            response = self._client.post(
+                '/graphql',
+                data={
+                    'operations': json.dumps({
+                        'query': self.mutation,
+                        'variables': {
+                            'input': self.input
+                        }
+                    }),
+                    't_file': t_file,
+                    'map': json.dumps({
+                        't_file': ['variables.input.document']
+                    })
+                }
+            )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['createEntry']['ok'], content)
+        self.assertIsNotNone(content['data']['createEntry']['entry']['id'])
+        self.assertIsNotNone(content['data']['createEntry']['entry']['document'])
 
 
 class TestEntryUpdate(HelixGraphQLTestCase):
@@ -613,7 +645,6 @@ class TestEntryDelete(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
 
-        print(content)
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['deleteEntry']['ok'], content)
         self.assertEqual(content['data']['deleteEntry']['entry']['url'],

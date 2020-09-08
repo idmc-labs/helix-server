@@ -1,5 +1,6 @@
 import graphene
 from django.utils.translation import gettext
+from graphene_file_upload.scalars import Upload
 
 from apps.entry.enums import QuantifierGrapheneEnum, RoleGrapheneEnum, TypeGrapheneEnum, \
     TermGrapheneEnum, UnitGrapheneEnum
@@ -187,6 +188,7 @@ class DeleteFigure(graphene.Mutation):
 
 class EntryCreateInputType(graphene.InputObjectType):
     url = graphene.String()
+    document = Upload(required=False)
     article_title = graphene.String(required=True)
     source = graphene.String(required=True)
     publisher = graphene.String(required=True)
@@ -204,6 +206,7 @@ class EntryCreateInputType(graphene.InputObjectType):
 
 class EntryUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
+    document = Upload(required=False)
     url = graphene.String()
     article_title = graphene.String()
     source = graphene.String()

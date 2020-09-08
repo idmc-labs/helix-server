@@ -1,4 +1,7 @@
 from django.core.validators import MinValueValidator
+from collections import OrderedDict
+
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils.translation import gettext, gettext_lazy as _
 from rest_framework import serializers
@@ -18,7 +21,10 @@ class DisaggregatedAgeSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         if attrs.get('age_from') > attrs.get('age_to'):
-            raise serializers.ValidationError({'age_to': gettext(f'Pick an age {attrs.get("age_to")=} higher than `from` {attrs.get("age_from")=}. ')})
+            raise serializers.ValidationError(
+                {'age_to': gettext('Pick an age higher than `from` %(age_from)s.') %
+                              {'age_from': attrs.get("age_from")}}
+            )
         attrs['uuid'] = str(attrs['uuid'])
         return attrs
 
@@ -53,13 +59,15 @@ class CommonFigureValidationMixin:
 
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
-        instance = Figure(**attrs)
-        instance.clean()
+        errors = OrderedDict()
+        errors.update(Figure.clean_idu(attrs, self.instance))
+        if errors:
+            raise ValidationError(errors)
         return attrs
 
 
-class FigureSerializer(CommonFigureValidationMixin,
-                       MetaInformationSerializerMixin,
+class FigureSerializer(MetaInformationSerializerMixin,
+                       CommonFigureValidationMixin,
                        serializers.ModelSerializer):
     age_json = DisaggregatedAgeSerializer(many=True, required=False)
     strata_json = DisaggregatedStratumSerializer(many=True, required=False)
@@ -74,8 +82,8 @@ class FigureSerializer(CommonFigureValidationMixin,
         return Figure.objects.create(**validated_data)
 
 
-class NestedFigureSerializer(CommonFigureValidationMixin,
-                             MetaInformationSerializerMixin,
+class NestedFigureSerializer(MetaInformationSerializerMixin,
+                             CommonFigureValidationMixin,
                              serializers.ModelSerializer):
     age_json = DisaggregatedAgeSerializer(many=True, required=False)
     strata_json = DisaggregatedStratumSerializer(many=True, required=False)
@@ -98,6 +106,14 @@ class EntrySerializer(MetaInformationSerializerMixin,
         if len(uuids) != len(set(uuids)):
             raise serializers.ValidationError('Duplicate keys found. ')
         return figures
+
+    def validate(self, attrs: dict) -> dict:
+        attrs = super().validate(attrs)
+        errors = OrderedDict()
+        errors.update(Entry.clean_url_and_document(attrs, self.instance))
+        if errors:
+            raise ValidationError(errors)
+        return attrs
 
     def create(self, validated_data: dict) -> Entry:
         figures = validated_data.pop('figures', [])
