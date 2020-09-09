@@ -68,12 +68,15 @@ class TestEntryModel(HelixTestCase):
 
 class TestSourcePreviewModel(HelixTestCase):
     def test_get_pdf(self):
+        if os.environ.get('GITHUB_WORKFLOW'):
+            print('Skipping because wkhtmltopdf requires display...')
+            return
         url = 'https://github.com/JazzCore/python-pdfkit/'
         preview = SourcePreview.get_pdf(url)
         self.assertIn('.pdf', preview.pdf.name)
-        self.assertTrue(os.path.exists(preview.pdf.name))
+        self.assertTrue(os.path.exists(preview.pdf.path))
         # again
         preview2 = SourcePreview.get_pdf(url, preview)
-        self.assertTrue(os.path.exists(preview2.pdf.name))
-        # self.assertFalse(os.path.exists(preview.pdf.name))
-        self.assertNotIn(preview.pdf.name, os.listdir(os.path.dirname(preview.pdf.name)))
+        self.assertTrue(os.path.exists(preview2.pdf.path))
+        # self.assertFalse(os.path.exists(preview.pdf.path))
+        self.assertNotIn(preview.pdf.name, os.listdir(os.path.dirname(preview.pdf.path)))

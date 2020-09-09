@@ -242,6 +242,9 @@ class Entry(MetaInformationAbstractModel, models.Model):
     @staticmethod
     def clean_url_and_document(values: dict, instance=None) -> OrderedDict:
         errors = OrderedDict()
+        if instance:
+            # we wont allow updates to entry sources
+            return errors
         url = values.get('url', getattr(instance, 'url', None))
         document = values.get('document', getattr(instance, 'document', None))
         if not url and not document:

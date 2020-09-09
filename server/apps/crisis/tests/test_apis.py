@@ -13,7 +13,7 @@ class TestCreateCrisis(HelixGraphQLTestCase):
             createCrisis(crisis: $input) {{
                 crisis {{
                     countries {{
-                        totalCount
+                        id
                     }}
                     name
                 }}
@@ -44,7 +44,7 @@ class TestCreateCrisis(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createCrisis']['ok'], content)
         self.assertEqual(content['data']['createCrisis']['crisis']['name'], self.input['name'])
-        self.assertEqual(content['data']['createCrisis']['crisis']['countries']['totalCount'],
+        self.assertEqual(len(content['data']['createCrisis']['crisis']['countries']),
                          len(self.input['countries']))
 
     def test_invalid_crisis_creation_by_guest(self) -> None:
@@ -59,7 +59,7 @@ class TestCreateCrisis(HelixGraphQLTestCase):
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
 
-class TestEntryUpdate(HelixGraphQLTestCase):
+class TestCrisisUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.editor = create_user_with_role(MONITORING_EXPERT_EDITOR)
         self.crisis = CrisisFactory.create(

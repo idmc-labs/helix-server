@@ -16,6 +16,8 @@ class Resource(MetaInformationAbstractModel):
     url = models.URLField(verbose_name=_('URL'), max_length=256)
     group = models.ForeignKey('ResourceGroup',
                               related_name='resources', on_delete=models.PROTECT)
+    last_accessed_on = models.DateTimeField(verbose_name=_('Last Accessed On'),
+                                            blank=True, null=True)
 
     def __str__(self):
         return self.name

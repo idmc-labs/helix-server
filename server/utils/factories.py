@@ -135,3 +135,18 @@ class FigureFactory(DjangoModelFactory):
     role = factory.Iterator(Figure.ROLE)
     start_date = factory.LazyFunction(today().date)
     include_idu = False
+
+
+class ResourceGroupFactory(DjangoModelFactory):
+    class Meta:
+        model = 'resource.ResourceGroup'
+
+    name = factory.Sequence(lambda n: f'resource{n}')
+
+
+class ResourceFactory(DjangoModelFactory):
+    class Meta:
+        model = 'resource.Resource'
+
+    name = factory.Sequence(lambda n: f'resource{n}')
+    group = factory.SubFactory(ResourceGroupFactory)

@@ -458,7 +458,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createEntry']['ok'], content)
         self.assertIn('ageTo', json.dumps(content['data']['createEntry']['errors']))
-        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
     def test_create_entry_with_document(self):
         file_text = b'fake blaa'
@@ -511,7 +510,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         """
         self.input = {
             "id": self.entry.id,
-            "url": "https://updated-url.com",
+            "publisher": "updated-publisher",
         }
 
     def test_valid_update_entry(self):
@@ -524,8 +523,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEntry']['ok'], content)
-        self.assertEqual(content['data']['updateEntry']['entry']['url'],
-                         self.input['url'])
 
     def test_invalid_update_by_reviewer(self):
         reviewer = create_user_with_role(role=MONITORING_EXPERT_REVIEWER)
@@ -565,8 +562,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEntry']['ok'], content)
-        self.assertEqual(content['data']['updateEntry']['entry']['url'],
-                         self.input['url'])
 
 
 class TestEntryDelete(HelixGraphQLTestCase):
