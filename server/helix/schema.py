@@ -8,6 +8,7 @@ from apps.country import schema as country_schema, mutations as country_mutation
 from apps.crisis import schema as crisis_schema, mutations as crisis_mutations
 from apps.event import schema as event_schema, mutations as event_mutations
 from apps.entry import schema as entry_schema, mutations as entry_mutations
+from apps.resource import schema as resource_schema
 
 
 class Query(user_schema.Query,
@@ -17,6 +18,7 @@ class Query(user_schema.Query,
             crisis_schema.Query,
             event_schema.Query,
             entry_schema.Query,
+            resource_schema.Query,
             graphene.ObjectType):
     debug = graphene.Field(DjangoDebug, name='_debug')
 

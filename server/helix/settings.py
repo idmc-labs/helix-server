@@ -41,6 +41,7 @@ LOCAL_APPS = [
     'crisis',
     'event',
     'entry',
+    'resource',
 ]
 
 THIRD_PARTY_APPS = [
