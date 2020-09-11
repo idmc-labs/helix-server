@@ -24,4 +24,5 @@ class ResourceGroupFilter(df.FilterSet):
 
     @property
     def qs(self):
-        return super().qs.filter(created_by=self.request.user)
+        qs = super().qs.filter(created_by=self.request.user)
+        return qs

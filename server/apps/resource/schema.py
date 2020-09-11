@@ -5,7 +5,6 @@ from apps.resource.filters import ResourceFilter, ResourceGroupFilter
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
 
 
-
 class ResourceType(DjangoObjectType):
     class Meta:
         model = Resource

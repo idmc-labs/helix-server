@@ -160,7 +160,7 @@ class DeleteResourceGroup(graphene.Mutation):
         try:
             instance = ResourceGroup.objects.get(id=id, created_by=info.context.user)
         except ResourceGroup.DoesNotExist:
-            return UpdateResourceGroup(errors=[
+            return DeleteResourceGroup(errors=[
                 CustomErrorType(field='non_field_errors', messages=[gettext('ResourceGroup does not exist.')])
             ])
         instance.delete()
