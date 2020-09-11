@@ -82,6 +82,7 @@ class TestCreateResource(HelixGraphQLTestCase):
         self.force_login(self.reviewer)
 
     def test_valid_create_resource(self):
+        self.force_login(self.reviewer)
         response = self.query(
             self.mutation,
             input_data=self.input

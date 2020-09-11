@@ -1,3 +1,4 @@
+from django.db.models import ProtectedError
 from django.utils.translation import gettext
 import graphene
 
