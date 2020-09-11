@@ -1,5 +1,5 @@
 import graphene
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
 
 from apps.contact.mutations import ContactWithoutOrganizationInputType
 from apps.organization.models import Organization, OrganizationKind
@@ -54,7 +54,7 @@ class UpdateOrganizationKind(graphene.Mutation):
             instance = OrganizationKind.objects.get(id=organization_kind['id'])
         except OrganizationKind.DoesNotExist:
             return UpdateOrganizationKind(errors=[
-                CustomErrorType(field='non_field_errors', messages=[_('Organization type does not exist.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('Organization type does not exist.'))
             ])
         serializer = OrganizationKindSerializer(instance=instance, data=organization_kind, partial=True)
         if errors := mutation_is_not_valid(serializer):
@@ -78,7 +78,7 @@ class DeleteOrganizationKind(graphene.Mutation):
             instance = OrganizationKind.objects.get(id=id)
         except OrganizationKind.DoesNotExist:
             return UpdateOrganizationKind(errors=[
-                CustomErrorType(field='non_field_errors', messages=[_('Organization type does not exist.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('Organization type does not exist.'))
             ])
         instance.delete()
         instance.id = id
@@ -141,7 +141,7 @@ class UpdateOrganization(graphene.Mutation):
             instance = Organization.objects.get(id=organization['id'])
         except Organization.DoesNotExist:
             return UpdateOrganization(errors=[
-                CustomErrorType(field='non_field_errors', messages=[_('Organization does not exist.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('Organization does not exist.'))
             ])
         serializer = OrganizationSerializer(instance=instance, data=organization, partial=True)
         if errors := mutation_is_not_valid(serializer):
@@ -165,7 +165,7 @@ class DeleteOrganization(graphene.Mutation):
             instance = Organization.objects.get(id=id)
         except Organization.DoesNotExist:
             return UpdateOrganization(errors=[
-                CustomErrorType(field='non_field_errors', messages=[_('Organization does not exist.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('Organization does not exist.'))
             ])
         instance.delete()
         instance.id = id

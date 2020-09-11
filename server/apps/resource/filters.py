@@ -12,7 +12,9 @@ class ResourceFilter(df.FilterSet):
 
     @property
     def qs(self):
-        return super().qs.filter(created_by=self.request.user)
+        if self.request.user.is_authenticated:
+            return super().qs.filter(created_by=self.request.user)
+        return Resource.objects.none()
 
 
 class ResourceGroupFilter(df.FilterSet):
@@ -24,5 +26,6 @@ class ResourceGroupFilter(df.FilterSet):
 
     @property
     def qs(self):
-        qs = super().qs.filter(created_by=self.request.user)
-        return qs
+        if self.request.user.is_authenticated:
+            return super().qs.filter(created_by=self.request.user)
+        return ResourceGroup.objects.none()

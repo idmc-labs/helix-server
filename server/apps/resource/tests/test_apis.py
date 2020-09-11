@@ -3,6 +3,26 @@ import json
 from apps.users.roles import MONITORING_EXPERT_REVIEWER
 from apps.resource.models import ResourceGroup
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from utils.factories import ResourceGroupFactory
+
+
+class TestQueryResourceGroup(HelixGraphQLTestCase):
+    def setUp(self):
+        self.list_resource_groups = '''
+            query MyQuery {
+              resourceGroupList {
+                results {
+                  id
+                }
+              }
+            }
+        '''
+
+    def test_unauthenticated_user_list_resource_groups(self):
+        response = self.query(
+            self.list_resource_groups
+        )
+        self.assertResponseNoErrors(response)
 
 
 class TestCreateResourceGroup(HelixGraphQLTestCase):
@@ -34,3 +54,52 @@ class TestCreateResourceGroup(HelixGraphQLTestCase):
         self.assertTrue(content['data']['createResourceGroup']['ok'], content)
         self.assertEqual(content['data']['createResourceGroup']['resourceGroup']['name'], self.input['name'])
         self.assertEqual(old + 1, ResourceGroup.objects.count())
+
+
+class TestCreateResource(HelixGraphQLTestCase):
+    def setUp(self):
+        self.reviewer = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        self.group = ResourceGroupFactory.create(created_by=self.reviewer)
+        self.mutation = '''
+            mutation CreateResource($input: ResourceCreateInputType!) {
+              createResource(resource: $input) {
+                ok
+                resource { 
+                  name
+                }
+                errors {
+                  field
+                  messages
+                }
+              }
+            }
+        '''
+        self.input = {'name': 'name',
+                      'url': 'http://example.com',
+                      'group': self.group.id}
+
+    def test_valid_create_resource(self):
+        self.force_login(self.reviewer)
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['createResource']['ok'], content)
+        self.assertEqual(content['data']['createResource']['resource']['name'], self.input['name'])
+
+    def test_invalid_create_different_users_resource_group(self):
+        reviewer2 = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        self.force_login(reviewer2)
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['createResource']['ok'], content)
+        self.assertIn('group', [each['field'] for each in content['data']['createResource']['errors']])
