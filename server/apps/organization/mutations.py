@@ -17,7 +17,7 @@ class OrganizationKindCreateInputType(graphene.InputObjectType):
 
 
 class OrganizationKindUpdateInputType(graphene.InputObjectType):
-    id = graphene.Int(required=True)
+    id = graphene.ID(required=True)
     title = graphene.String(required=True)
 
 
@@ -91,10 +91,10 @@ class DeleteOrganizationKind(graphene.Mutation):
 class OrganizationCreateInputType(graphene.InputObjectType):
     title = graphene.String(required=True)
     short_name = graphene.String(required=True)
-    organization_kind = graphene.Int(description="Foreign Key to OrganizationKindObjectType")
+    organization_kind = graphene.ID(description="Foreign Key to OrganizationKindObjectType")
     methodology = graphene.String(required=True)
     source_detail_methodology = graphene.String(required=True)
-    parent = graphene.Int(description="Foreign Key to self")
+    parent = graphene.ID(description="Foreign Key to self")
     contacts = graphene.List(ContactWithoutOrganizationInputType)
 
 
@@ -102,10 +102,10 @@ class OrganizationUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
     title = graphene.String()
     short_name = graphene.String()
-    organization_kind = graphene.Int(description="Foreign Key to OrganizationKindObjectType")
+    organization_kind = graphene.ID(description="Foreign Key to OrganizationKindObjectType")
     methodology = graphene.String()
     source_detail_methodology = graphene.String()
-    parent = graphene.Int(description="Foreign Key to self")
+    parent = graphene.ID(description="Foreign Key to self")
 
 
 class CreateOrganization(graphene.Mutation):

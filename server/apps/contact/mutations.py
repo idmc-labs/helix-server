@@ -15,8 +15,8 @@ class ContactInputType(object):
     last_name = graphene.String(required=True)
     gender = graphene.NonNull(GenderGrapheneEnum)
     job_title = graphene.String(required=True)
-    country = graphene.Int()
-    countries_of_operation = graphene.List(graphene.Int)
+    country = graphene.ID()
+    countries_of_operation = graphene.List(graphene.ID)
     email = graphene.String()
     phone = graphene.String()
     comment = graphene.String()
@@ -33,22 +33,22 @@ class ContactCreateInputType(ContactInputType, graphene.InputObjectType):
     """
     Contact Create InputType
     """
-    organization = graphene.Int(required=True)
+    organization = graphene.ID(required=True)
 
 
 class ContactUpdateInputType(graphene.InputObjectType):
     """
     Contact Update InputType
     """
-    id = graphene.Int(required=True)
+    id = graphene.ID(required=True)
     designation = graphene.Field(DesignationGrapheneEnum)
     first_name = graphene.String()
     last_name = graphene.String()
     gender = graphene.Field(GenderGrapheneEnum)
     job_title = graphene.String()
-    organization = graphene.Int()
-    country = graphene.Int()
-    countries_of_operation = graphene.List(graphene.Int)
+    organization = graphene.ID()
+    country = graphene.ID()
+    countries_of_operation = graphene.List(graphene.ID)
     email = graphene.String()
     phone = graphene.String()
     comment = graphene.String()
@@ -125,7 +125,7 @@ class CommunicationCreateInputType(graphene.InputObjectType):
     """
     Communication Create InputType
     """
-    contact = graphene.Int(required=True)
+    contact = graphene.ID(required=True)
     title = graphene.String()
     subject = graphene.String(required=True)
     content = graphene.String(required=True)
@@ -137,8 +137,8 @@ class CommunicationUpdateInputType(graphene.InputObjectType):
     """
     Communication Update InputType
     """
-    contact = graphene.Int()
-    country = graphene.Int()
+    contact = graphene.ID()
+    country = graphene.ID()
     title = graphene.String()
     subject = graphene.String()
     content = graphene.String()

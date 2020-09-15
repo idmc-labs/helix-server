@@ -16,18 +16,18 @@ class CrisisCreateInputType(graphene.InputObjectType):
     name = graphene.String(required=True)
     crisis_type = graphene.NonNull(CrisisTypeGrapheneEnum)
     crisis_narrative = graphene.String()
-    countries = graphene.List(graphene.Int, required=True)
+    countries = graphene.List(graphene.ID, required=True)
 
 
 class CrisisUpdateInputType(graphene.InputObjectType):
     """
     Crisis Update InputType
     """
-    id = graphene.Int(required=True)
+    id = graphene.ID(required=True)
     name = graphene.String()
     crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
     crisis_narrative = graphene.String()
-    countries = graphene.List(graphene.Int)
+    countries = graphene.List(graphene.ID)
 
 
 class CreateCrisis(graphene.Mutation):
