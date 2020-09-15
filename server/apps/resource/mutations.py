@@ -13,6 +13,7 @@ class ResourceCreateInputType(graphene.InputObjectType):
     name = graphene.String(required=True)
     url = graphene.String(required=True)
     group = graphene.String(required=True)
+    countries = graphene.List(graphene.ID)
     last_accessed_on = graphene.String(required=False)
 
 
@@ -21,6 +22,7 @@ class ResourceUpdateInputType(graphene.InputObjectType):
     name = graphene.String()
     url = graphene.String()
     group = graphene.String()
+    countries = graphene.List(graphene.ID)
     last_accessed_on = graphene.String()
 
 

@@ -33,6 +33,8 @@ class Resource(MetaInformationAbstractModel):
     url = models.URLField(verbose_name=_('URL'), max_length=256)
     group = models.ForeignKey('ResourceGroup',
                               related_name='resources', on_delete=models.PROTECT)
+    countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
+                                       related_name='+', blank=True)
     last_accessed_on = models.DateTimeField(verbose_name=_('Last Accessed On'),
                                             blank=True, null=True)
 
