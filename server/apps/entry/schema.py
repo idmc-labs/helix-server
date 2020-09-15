@@ -80,6 +80,7 @@ class SourcePreviewType(DjangoObjectType):
         exclude_fields = ('entry',)
 
     def resolve_pdf(root, info, **kwargs):
+        # todo: check against s3 configurations
         return info.context.build_absolute_uri(root.pdf.url)
 
 

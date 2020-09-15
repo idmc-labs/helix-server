@@ -19,7 +19,7 @@ class Country(models.Model):
 
     @property
     def entries(self):
-        return Entry.objects.filter(event__countries=self.id)
+        return Entry.objects.filter(event__countries=self.id).distinct()
 
     @property
     def last_contextual_update(self):

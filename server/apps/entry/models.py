@@ -5,6 +5,7 @@ import uuid
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField, JSONField
+from django.core.files.base import ContentFile
 from django.db import models
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _, gettext
@@ -20,25 +21,20 @@ User = get_user_model()
 class SourcePreview(MetaInformationAbstractModel):
     url = models.URLField(verbose_name=_('Source URL'))
     pdf = models.FileField(verbose_name=_('Rendered Pdf'),
-                           blank=True, null=True)
+                           blank=True, null=True,
+                           upload_to='source/previews')
 
     @classmethod
     def get_pdf(cls, url: str, instance: 'SourcePreview' = None, **kwargs) -> 'SourcePreview':
+        """
+        Based on the url, generate a pdf and store it.
+        """
         filename = f'{uuid.uuid4()}.pdf'
-        preview_dir = os.path.join('source', 'previews')
-        dirname = os.path.join(settings.MEDIA_ROOT, preview_dir)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname, exist_ok=True)
-        pdfkit.from_url(url, os.path.join(dirname, filename))
-        if instance:
-            try:
-                os.remove(os.path.join(settings.MEDIA_ROOT, instance.pdf.name))
-            except:
-                pass
-        else:
-            instance = cls(**kwargs)
+        pdf_content = pdfkit.from_url(url, False)
+        if not instance:
+            instance = cls()
         instance.url = url
-        instance.pdf.name = os.path.join(preview_dir, filename)
+        instance.pdf.save(filename, ContentFile(pdf_content))
         instance.save()
         return instance
 
