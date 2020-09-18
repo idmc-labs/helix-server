@@ -12,18 +12,18 @@ from utils.permissions import permission_checker
 class ResourceCreateInputType(graphene.InputObjectType):
     name = graphene.String(required=True)
     url = graphene.String(required=True)
-    group = graphene.String(required=True)
-    countries = graphene.List(graphene.ID)
-    last_accessed_on = graphene.String(required=False)
+    group = graphene.ID()
+    countries = graphene.NonNull(graphene.List(graphene.NonNull(graphene.ID)))
+    last_accessed_on = graphene.DateTime(required=False)
 
 
 class ResourceUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
     name = graphene.String()
     url = graphene.String()
-    group = graphene.String()
+    group = graphene.ID()
     countries = graphene.List(graphene.ID)
-    last_accessed_on = graphene.String()
+    last_accessed_on = graphene.DateTime()
 
 
 class CreateResource(graphene.Mutation):

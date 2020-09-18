@@ -172,7 +172,7 @@ class DeleteFigure(graphene.Mutation):
             instance = Figure.objects.get(id=id)
         except Figure.DoesNotExist:
             return DeleteFigure(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Figure Does Not Exist.'))
+                CustomErrorType(field='non_field_errors', messages=gettext('Figure does not exist.'))
             ])
         if not instance.can_be_updated_by(info.context.user):
             return DeleteFigure(errors=[

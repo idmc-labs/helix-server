@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 import os
 import socket
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,7 +29,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'w(m6)jr08z!anjsq6mjz%xo^*+sfnv
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-print(f'\nServer running in {DEBUG=} mode.\n')
+logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 
 # fixme
 ALLOWED_HOSTS = ['*']

@@ -12,7 +12,7 @@ class ResourceSerializer(MetaInformationSerializerMixin, serializers.ModelSerial
         fields = '__all__'
 
     def validate_group(self, group):
-        if group.created_by != self.context['request'].user:
+        if group and group.created_by != self.context['request'].user:
             raise serializers.ValidationError(gettext('Group does not exist.'))
         return group
 
