@@ -1,7 +1,7 @@
-service: pdfkit
+service: htmltopdf
 # app and org for use with dashboard.serverless.com
-app: pdfkit-app
-org: annshress
+#app: htmltopdf-app
+#org: annshress
 
 frameworkVersion: '2'
 
@@ -10,33 +10,34 @@ provider:
   runtime: python3.8
   stage: dev
   profile: ${file(./config.yml):AWS_PROFILE}
-#  iamRoleStatements:
-#    - Effect: "Allow"
-#      Action:
-#        - "s3:*"
-#      Resource:
-#        - arn:aws:s3:::${file(./config.yml):S3_BUCKET_NAME}
-#        - arn:aws:s3:::${file(./config.yml):S3_BUCKET_NAME}/*
-  environment:
-    S3_BUCKET_NAME: ${file(./config.yml):S3_BUCKET_NAME}
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "s3:*"
+      Resource:
+        - arn:aws:s3:::${file(./config.yml):S3_BUCKET_NAME}
+        - arn:aws:s3:::${file(./config.yml):S3_BUCKET_NAME}/*
 
 package:
 #  individually: true
 # to optimize packaging time
   include:
-    - requirements.txt
-  exclude:
-    - README.md
+    - lambda_function.py
+    - event-sample.json
+    - config.yml
 
 functions:
   generate_pdf:
     #module: generate_pdf
     handler: lambda_function.handle
+    environment:
+      S3_BUCKET_NAME: ${file(./config.yml):S3_BUCKET_NAME}
     description: Generates pdf based on the given url and stores into s3
     memorySize: 512
     provisionedConcurrency: 3
-    #layers:
-      #- { Ref: PythonRequirementsLambdaLayer }
+    layers:
+      - { Ref: PythonRequirementsLambdaLayer }
+      - arn:aws:lambda:us-east-1:209357624314:layer:Wkhtmltox:2
     # https://www.serverless.com/framework/docs/providers/aws/guide/functions#asynchronous-invocation
     # Generate ARN:AWS:EventConfig fails: function not found
 #    maximumRetryAttempts: 1
@@ -54,4 +55,11 @@ custom:
     useStaticCache: false
     dockerizePip: false
     # layers and individual packaging dont go hand-in-hand
-    #layer: true
+    layer: true
+
+resources:
+ Resources:
+   NewResource:
+     Type: AWS::S3::Bucket
+     Properties:
+       BucketName: ${file(./config.yml):S3_BUCKET_NAME}

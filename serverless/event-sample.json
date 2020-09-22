@@ -1,3 +1,5 @@
 {
-    "lol": "boop"
+    "url": "http://google.com",
+    "filename": "test.pdf",
+    "loc": "ls /opt/bin/"
 }
