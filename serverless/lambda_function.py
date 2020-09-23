@@ -24,24 +24,31 @@ def handle(event, context):
     except Exception as e:
         logger.exception(e)
         response = {
-            "statusCode": 500,
-            "body": 'Unable to generate pdf.'
+            'statusCode': 500,
+            'body': 'Unable to generate pdf.'
+        }
+        return response
+    try:
+        client.put_object(
+            ACL='public-read',
+            Body=pdf_content,
+            ContentType='application/pdf',
+            Bucket=S3_BUCKET_NAME,
+            Key=filename
+        )
+    except Exception as e:
+        logger.exception(e)
+        response = {
+            'statusCode': 500,
+            'body': 'Unable to create object into s3.'
         }
         return response
 
-    r = client.put_object(
-        ACL='public-read',
-        Body=pdf_content,
-        ContentType='application/pdf',
-        Bucket=S3_BUCKET_NAME,
-        Key=filename
-    )
-
-    object_url = "https://{0}.s3.amazonaws.com/{1}".format(S3_BUCKET_NAME, filename)
+    object_url = 'https://{0}.s3.amazonaws.com/{1}'.format(S3_BUCKET_NAME, filename)
 
     response = {
-        "statusCode": 200,
-        "body": object_url
+        'statusCode': 200,
+        'body': object_url
     }
 
     return response
