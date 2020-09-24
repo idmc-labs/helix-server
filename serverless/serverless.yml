@@ -3,8 +3,6 @@ service: htmltopdf
 #app: htmltopdf-app
 #org: annshress
 
-frameworkVersion: '2'
-
 provider:
   name: aws
   runtime: python3.8
@@ -17,34 +15,44 @@ provider:
       Resource:
         - arn:aws:s3:::${file(./config.yml):S3_BUCKET_NAME}
         - arn:aws:s3:::${file(./config.yml):S3_BUCKET_NAME}/*
+    - Effect: "Allow"
+      Action:
+        - "lambda:InvokeFunction"
+      Resource:
+        - arn:aws:lambda:*:*:function:htmltopdf*
+
 
 package:
-#  individually: true
-# to optimize packaging time
   include:
     - lambda_function.py
     - event-sample.json
+    - success_function.py
+    - failure_function.py
     - config.yml
 
 functions:
-  generate_pdf:
+  generatePdf:
     #module: generate_pdf
     handler: lambda_function.handle
+    destinations:
+      onSuccess: pdfSuccess
+      onFailure: pdfFailure
     environment:
       S3_BUCKET_NAME: ${file(./config.yml):S3_BUCKET_NAME}
     description: Generates pdf based on the given url and stores into s3
-    memorySize: 512
-    provisionedConcurrency: 3
     layers:
       - { Ref: PythonRequirementsLambdaLayer }
       - arn:aws:lambda:us-east-1:209357624314:layer:Wkhtmltox:2
-    # https://www.serverless.com/framework/docs/providers/aws/guide/functions#asynchronous-invocation
-    # Generate ARN:AWS:EventConfig fails: function not found
-#    maximumRetryAttempts: 1
-#    maximumEventAge: 60
-#    destination:
-#      onSuccess: ...
-#      onFailure: ...
+  pdfSuccess:
+    handler: success_function.handle
+    description: Handles successful pdf generation
+    layers:
+      - { Ref: PythonRequirementsLambdaLayer }
+  pdfFailure:
+    handler: failure_function.handle
+    description: Handles failed pdf generation
+    layers:
+      - { Ref: PythonRequirementsLambdaLayer }
 
 plugins:
   - serverless-python-requirements

@@ -17,6 +17,7 @@ def handle(event, context):
     url = event.get('url', 'https://google.com')
     filename = event.get('filename', 'test.pdf')
 
+    raise Exception('You got loled...')
     import pdfkit
     config = pdfkit.configuration(wkhtmltopdf='/opt/bin/wkhtmltopdf')
     try:

@@ -27,3 +27,6 @@ s_*
 
 # custom downloaded binaries
 binary/
+
+# custom files
+response.json
