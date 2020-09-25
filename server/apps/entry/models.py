@@ -1,41 +1,67 @@
 from collections import OrderedDict
+import json
+import logging
 import os
+import shlex
+from subprocess import run
 import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField, JSONField
-from django.core.files.base import ContentFile
 from django.db import models
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
-import pdfkit
 
 from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
 from apps.users.roles import ADMIN
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
 class SourcePreview(MetaInformationAbstractModel):
     url = models.URLField(verbose_name=_('Source URL'))
+    token = models.CharField(verbose_name=_('Token'),
+                             max_length=64, db_index=True,
+                             blank=True, null=True)
     pdf = models.FileField(verbose_name=_('Rendered Pdf'),
                            blank=True, null=True,
                            upload_to='source/previews')
+    # todo remove pdf filefield
+    # url, completed and reason will be populated from lambda webhook
+    pdf_url = models.URLField(verbose_name=_('Pdf URL'),
+                              blank=True, null=True)
+    completed = models.BooleanField(default=False)
+    reason = models.CharField(verbose_name=_('Error Reason'),
+                              max_length=512,
+                              blank=True, null=True)
 
     @classmethod
     def get_pdf(cls, url: str, instance: 'SourcePreview' = None, **kwargs) -> 'SourcePreview':
         """
         Based on the url, generate a pdf and store it.
         """
-        filename = f'{uuid.uuid4()}.pdf'
-        pdf_content = pdfkit.from_url(url, False)
         if not instance:
-            instance = cls()
+            token = str(uuid.uuid4())
+            instance = cls(token=token)
         instance.url = url
-        instance.pdf.save(filename, ContentFile(pdf_content))
         instance.save()
+        lambda_func = os.environ.get('LAMBDA_FUNC', 'htmltopdf-dev-generatePdf')
+        payload = dict(
+            url=url,
+            token=instance.token,
+            filename=f'{instance.token}.pdf'
+        )
+        logger.info(f'Invoking lambda function for preview {url} {instance.token}')
+        run(shlex.split(f'aws lambda invoke \
+             --region {os.environ.get("AWS_REGION", "us-east-1")} \
+             --function-name {lambda_func} \
+             --invocation-type Event \
+             --cli-binary-format raw-in-base64-out \
+             --payload \'{json.dumps(payload)}\' \
+             response.json'))
         return instance
 
 

@@ -28,6 +28,7 @@ urlpatterns = [
     path('admin', admin.site.urls),
     path('graphiql', csrf_exempt(FileUploadGraphQLView.as_view(graphiql=True))),
     path('graphql', csrf_exempt(FileUploadGraphQLView.as_view())),
+    path('webhooks', include('helix.webhooks'))
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) \
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

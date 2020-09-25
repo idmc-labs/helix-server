@@ -77,7 +77,7 @@ class EntryListType(CustomDjangoListObjectType):
 class SourcePreviewType(DjangoObjectType):
     class Meta:
         model = SourcePreview
-        exclude_fields = ('entry',)
+        exclude_fields = ('entry', 'pdf', 'token')
 
     def resolve_pdf(root, info, **kwargs):
         # todo: check against s3 configurations
@@ -90,6 +90,7 @@ class Query:
                                                  pagination=PageGraphqlPagination(
                                                      page_size_query_param='pageSize'
                                                  ))
+    source_preview = DjangoObjectField(SourcePreviewType)
     entry = DjangoObjectField(EntryType)
     entry_list = DjangoPaginatedListObjectField(EntryListType,
                                                 pagination=PageGraphqlPagination(

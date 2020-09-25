@@ -34,23 +34,22 @@ functions:
   generatePdf:
     #module: generate_pdf
     handler: lambda_function.handle
+    # todo provisionedConcurrency (fixme, failing with destinations)
     destinations:
-      onSuccess: pdfSuccess
-      onFailure: pdfFailure
+      onSuccess: destinationHandler
+      onFailure: destinationHandler
     environment:
       S3_BUCKET_NAME: ${file(./config.yml):S3_BUCKET_NAME}
     description: Generates pdf based on the given url and stores into s3
     layers:
       - { Ref: PythonRequirementsLambdaLayer }
       - arn:aws:lambda:us-east-1:209357624314:layer:Wkhtmltox:2
-  pdfSuccess:
-    handler: success_function.handle
-    description: Handles successful pdf generation
-    layers:
-      - { Ref: PythonRequirementsLambdaLayer }
-  pdfFailure:
-    handler: failure_function.handle
-    description: Handles failed pdf generation
+  destinationHandler:
+    handler: destination_function.handle
+    description: Post handler for pdf generation
+    environment:
+      # todo in production
+      WEBHOOK_URL: 'http://79150673b1c4.ngrok.io/webhooks/generate_pdf'
     layers:
       - { Ref: PythonRequirementsLambdaLayer }
 
