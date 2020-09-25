@@ -130,6 +130,7 @@ class Query:
     disaster_category_list = DjangoFilterListField(DisasterCategoryType)
     disaster_sub_category_list = DjangoFilterListField(DisasterSubCategoryType)
     disaster_type_list = DjangoFilterListField(DisasterTypeObjectType)
+    disaster_sub_type_list = DjangoFilterListField(DisasterSubObjectType)
 
     event = DjangoObjectField(EventType)
     event_list = DjangoPaginatedListObjectField(EventListType,
