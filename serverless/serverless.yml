@@ -1,34 +1,41 @@
 service: htmltopdf
 # app and org for use with dashboard.serverless.com
-#app: htmltopdf-app
-#org: annshress
+#app: appname
+#org: togglecorp
+
+custom:
+  pythonRequirements:
+    useDownloadCache: false
+    useStaticCache: false
+    dockerizePip: false
+    # layers and individual packaging dont go hand-in-hand
+    layer: true
+  configFile: ${file(./config-${self:provider.stage}.yml)}
+  s3BucketName: ${opt:s3_bucket_name, env:S3_BUCKET_NAME}
 
 provider:
   name: aws
   runtime: python3.8
-  stage: dev
-  profile: ${file(./config.yml):AWS_PROFILE}
+  stage: ${opt:stage, env:STAGE, 'dev'}
+  profile: ${self:custom.configFile.AWS_PROFILE}
   iamRoleStatements:
     - Effect: "Allow"
       Action:
         - "s3:*"
       Resource:
-        - arn:aws:s3:::${file(./config.yml):S3_BUCKET_NAME}
-        - arn:aws:s3:::${file(./config.yml):S3_BUCKET_NAME}/*
+        - arn:aws:s3:::${self:custom.s3BucketName}
+        - arn:aws:s3:::${self:custom.s3BucketName}/*
     - Effect: "Allow"
       Action:
         - "lambda:InvokeFunction"
       Resource:
         - arn:aws:lambda:*:*:function:htmltopdf*
 
-
 package:
   include:
     - lambda_function.py
     - event-sample.json
-    - success_function.py
-    - failure_function.py
-    - config.yml
+    - destination_function.py
 
 functions:
   generatePdf:
@@ -39,7 +46,7 @@ functions:
       onSuccess: destinationHandler
       onFailure: destinationHandler
     environment:
-      S3_BUCKET_NAME: ${file(./config.yml):S3_BUCKET_NAME}
+      S3_BUCKET_NAME: ${self:custom.s3BucketName}
     description: Generates pdf based on the given url and stores into s3
     layers:
       - { Ref: PythonRequirementsLambdaLayer }
@@ -48,25 +55,16 @@ functions:
     handler: destination_function.handle
     description: Post handler for pdf generation
     environment:
-      # todo in production
-      WEBHOOK_URL: 'http://79150673b1c4.ngrok.io/webhooks/generate_pdf'
+      WEBHOOK_URL: ${self:custom.configFile.WEBHOOK_URL}
     layers:
       - { Ref: PythonRequirementsLambdaLayer }
 
 plugins:
   - serverless-python-requirements
 
-custom:
-  pythonRequirements:
-    useDownloadCache: false
-    useStaticCache: false
-    dockerizePip: false
-    # layers and individual packaging dont go hand-in-hand
-    layer: true
-
 resources:
  Resources:
    NewResource:
      Type: AWS::S3::Bucket
      Properties:
-       BucketName: ${file(./config.yml):S3_BUCKET_NAME}
+       BucketName: ${self:custom.s3BucketName}

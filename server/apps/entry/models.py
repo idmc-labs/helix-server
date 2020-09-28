@@ -1,11 +1,9 @@
 from collections import OrderedDict
 import json
 import logging
-import os
-import shlex
-from subprocess import run
 import uuid
 
+import boto3
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField, JSONField
@@ -48,20 +46,19 @@ class SourcePreview(MetaInformationAbstractModel):
             instance = cls(token=token)
         instance.url = url
         instance.save()
-        lambda_func = os.environ.get('LAMBDA_FUNC', 'htmltopdf-dev-generatePdf')
+
         payload = dict(
             url=url,
             token=instance.token,
             filename=f'{instance.token}.pdf'
         )
         logger.info(f'Invoking lambda function for preview {url} {instance.token}')
-        run(shlex.split(f'aws lambda invoke \
-             --region {os.environ.get("AWS_REGION", "us-east-1")} \
-             --function-name {lambda_func} \
-             --invocation-type Event \
-             --cli-binary-format raw-in-base64-out \
-             --payload \'{json.dumps(payload)}\' \
-             response.json'))
+        client = boto3.client('lambda')
+        client.invoke(
+            FunctionName=settings.LAMBDA_HTML_TO_PDF,
+            InvocationType='Event',
+            Payload=json.dumps(payload)
+        )
         return instance
 
 

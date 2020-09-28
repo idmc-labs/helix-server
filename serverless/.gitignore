@@ -1,4 +1,5 @@
 # Distribution / packaging
+config-*.yml
 *.pyc
 .Python
 env/

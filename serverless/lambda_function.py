@@ -24,7 +24,7 @@ def handle(event, context):
         Body=pdf_content,
         ContentType='application/pdf',
         Bucket=S3_BUCKET_NAME,
-        Key=filename
+        Key='source/previews/' + filename
     )
 
     object_url = 'https://{0}.s3.amazonaws.com/{1}'.format(S3_BUCKET_NAME, filename)

@@ -236,3 +236,9 @@ INTERNAL_IPS = [
 # https://github.com/flavors/django-graphiql-debug-toolbar/#installation
 hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
 INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
+
+AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
+S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'togglecorp-helix')
+
+PDF_GENERATOR = os.environ.get('PDF_GENERATOR', 'generatePdf')
+LAMBDA_HTML_TO_PDF = os.environ.get('LAMBDA_HTML_TO_PDF', f'htmltopdf-{"dev" if DEBUG else "prod"}-{PDF_GENERATOR}')

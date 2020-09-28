@@ -1,4 +1,5 @@
 import graphene
+from django.conf import settings
 from django.contrib.postgres.fields import JSONField
 from graphene import ObjectType
 from graphene.types.generic import GenericScalar
@@ -77,11 +78,14 @@ class EntryListType(CustomDjangoListObjectType):
 class SourcePreviewType(DjangoObjectType):
     class Meta:
         model = SourcePreview
-        exclude_fields = ('entry', 'pdf', 'token')
+        exclude_fields = ('entry', 'token')
 
     def resolve_pdf(root, info, **kwargs):
-        # todo: check against s3 configurations
-        return info.context.build_absolute_uri(root.pdf.url)
+        # fixme static url for now, until Boto3Storage is configured
+        return 'https://{0}.s3.amazonaws.com/source/previews/{1}'.format(
+            settings.S3_BUCKET_NAME,
+            root.pdf.name
+        )
 
 
 class Query:

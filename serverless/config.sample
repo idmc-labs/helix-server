@@ -1,0 +1,2 @@
+S3_BUCKET_NAME: 'bucket-name'
+AWS_PROFILE: 'awsProfile'
