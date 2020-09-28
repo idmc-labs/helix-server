@@ -3,15 +3,24 @@
 #### AWS Profile for deployment
 
 Create a new profile (eg helixProfile) in ~/.aws/credentials directory to be able to deploy the serverless,
-based on the credentials in the AWS console.
+based on the credentials in the AWS console. Also to test lambda function locally.
 
-#### Python packaging
+For docker, fill `.env` file with following keys
+
+- AWS_ACCESS_KEY_ID
+- AWS_SECRET_ACCESS_KEY
+- AWS_DEFAULT_REGION
+- AWS_REGION
+
+#### Serverless plugins
 
 `package.json` provides the required packages
 
 ```bash
 npm install
 ```
+
+1. Python Requirements
 
 If and only if package.json is missing. Or you want to ignore package.json
 
@@ -21,24 +30,29 @@ sls install -n serverless-python-requirements
 
 ##### Binary for wkhtmltopdf
 
-Download from [here](https://github.com/wkhtmltopdf/wkhtmltopdf/releases/download/0.12.4/wkhtmltox-0.12.4_linux-generic-amd64.tar.xz).
-Mind the version. [Latter versions are host dependent](https://medium.com/@_rich/richard-keller-61d9cb0f430).
-
-```bash
-pwd
-$ <PROJECT_DIR>/serverless/
-mkdir ./binary
-cd binary
-tar -xf wkhtmltox-0.12.4_linux-generic-amd64.tar.xz
-```
+Is added as a lambda layer
 
 #### The `config.yml`
 
-Deployment variables are stored in `config.yml`
+Serverless deployment variables are stored in `config.yml`.
+
+```yml
+S3_BUCKET_NAME: 'togglecorp-helix'
+AWS_PROFILE: 'helixProfile'
+```
+
+#### Async Invocation
+
+```bash
+aws lambda invoke --profile helixProfile --function-name htmltopdf-dev-generatePdf --invocation-type Event --cli-binary-format raw-in-base64-out --payload '{"url": "https://github.com", "token": "1234123412341234"}' response.json
+```
+
+#### Webhook as success/failure handler
+
+...
 
 Notes
 -
 
-1. Async Invocation
-    
-2. Individual packaging does not work with layers from serverless configuration
+- Individual packaging does not work with layers from serverless configuration
+
