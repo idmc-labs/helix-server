@@ -1,4 +1,4 @@
-service: htmltopdf
+service: helix-serverless
 # app and org for use with dashboard.serverless.com
 #app: appname
 #org: togglecorp
@@ -29,7 +29,7 @@ provider:
       Action:
         - "lambda:InvokeFunction"
       Resource:
-        - arn:aws:lambda:*:*:function:htmltopdf*
+        - arn:aws:lambda:*:*:function:${self:service}*
 
 package:
   include:

@@ -32,8 +32,7 @@ class SourcePreview(MetaInformationAbstractModel):
     pdf_url = models.URLField(verbose_name=_('Pdf URL'),
                               blank=True, null=True)
     completed = models.BooleanField(default=False)
-    reason = models.CharField(verbose_name=_('Error Reason'),
-                              max_length=512,
+    reason = models.TextField(verbose_name=_('Error Reason'),
                               blank=True, null=True)
 
     @classmethod
