@@ -31,7 +31,8 @@ def handle(event, context):
 
     response = {
         'statusCode': 200,
-        'body': object_url
+        'body': object_url,
+        's3_bucket': S3_BUCKET_NAME
     }
     return response
 
