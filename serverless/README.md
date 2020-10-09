@@ -28,6 +28,8 @@ If and only if package.json is missing. Or you want to ignore package.json
 sls install -n serverless-python-requirements
 ```
 
+Check this out to install [Serverless](https://www.serverless.com/framework/docs/providers/aws/guide/installation/).
+
 ##### Binary for wkhtmltopdf
 
 Is added as a lambda layer
@@ -46,6 +48,8 @@ AWS_PROFILE: 'helixProfile'
 ```bash
 aws lambda invoke --profile helixProfile --function-name htmltopdf-dev-generatePdf --invocation-type Event --cli-binary-format raw-in-base64-out --payload '{"url": "https://github.com", "token": "1234123412341234"}' response.json
 ```
+
+Check this out to install [AWS CLI 2](https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html) in your linux system.
 
 #### Webhook as success/failure handler
 
