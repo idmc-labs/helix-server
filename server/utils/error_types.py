@@ -4,9 +4,12 @@ import graphene
 from graphene import ObjectType
 from graphene_django.utils.utils import _camelize_django_str
 
+ARRAY_NON_MEMBER_ERRORS = 'nonMemberErrors'
+
 
 class ArrayNestedErrorType(ObjectType):
     key = graphene.String(required=True)
+    messages = graphene.String(required=False)
     object_errors = graphene.List("utils.error_types.CustomErrorType")
 
 
@@ -28,10 +31,20 @@ def serializer_error_to_error_types(errors: dict, initial_data: dict = None) -> 
             ))
         elif isinstance(value, list):
             if isinstance(value[0], str):
-                error_types.append(CustomErrorType(
-                    field=_camelize_django_str(field),
-                    messages=''.join(str(msg) for msg in value)
-                ))
+                if isinstance(initial_data[field], list):
+                    # we have found an array input with top level error
+                    error_types.append(CustomErrorType(
+                        field=_camelize_django_str(field),
+                        array_errors=[ArrayNestedErrorType(
+                            key=ARRAY_NON_MEMBER_ERRORS,
+                            messages=''.join(str(msg) for msg in value)
+                        )]
+                    ))
+                else:
+                    error_types.append(CustomErrorType(
+                        field=_camelize_django_str(field),
+                        messages=''.join(str(msg) for msg in value)
+                    ))
             elif isinstance(value[0], dict):
                 array_errors = []
                 for pos, array_item in enumerate(value):
