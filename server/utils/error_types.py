@@ -31,7 +31,7 @@ def serializer_error_to_error_types(errors: dict, initial_data: dict = None) -> 
             ))
         elif isinstance(value, list):
             if isinstance(value[0], str):
-                if isinstance(initial_data[field], list):
+                if isinstance(initial_data.get(field), list):
                     # we have found an array input with top level error
                     error_types.append(CustomErrorType(
                         field=_camelize_django_str(field),

@@ -143,6 +143,7 @@ class TestFigureUpdate(HelixGraphQLTestCase):
                         messages
                             arrayErrors {
                                 key
+                                messages
                                 objectErrors {
                                 field
                                 messages

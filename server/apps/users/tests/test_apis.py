@@ -61,7 +61,7 @@ class TestLogin(HelixGraphQLTestCase):
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)
-        self.assertIn('non_field_errors', [each['field'] for each in content['data']['login']['errors']])
+        self.assertIn('nonFieldErrors', [each['field'] for each in content['data']['login']['errors']])
         self.assertIsNone(content['data']['login']['me'])
 
     def test_invalid_password(self):
@@ -73,7 +73,7 @@ class TestLogin(HelixGraphQLTestCase):
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)
-        self.assertIn('non_field_errors', [each['field'] for each in content['data']['login']['errors']])
+        self.assertIn('nonFieldErrors', [each['field'] for each in content['data']['login']['errors']])
 
     def test_invalid_inactive_user_login(self):
         self.user.is_active = False
@@ -86,7 +86,7 @@ class TestLogin(HelixGraphQLTestCase):
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)
-        self.assertIn('non_field_errors', [each['field'] for each in content['data']['login']['errors']])
+        self.assertIn('nonFieldErrors', [each['field'] for each in content['data']['login']['errors']])
 
 
 class TestRegister(HelixGraphQLTestCase):
@@ -173,7 +173,7 @@ class TestActivate(HelixGraphQLTestCase):
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)
-        self.assertIn('non_field_errors', [each['field'] for each in content['data']['activate']['errors']])
+        self.assertIn('nonFieldErrors', [each['field'] for each in content['data']['activate']['errors']])
 
     def test_invalid_activation_token(self):
         self.input.update(dict(token='random-token'))
@@ -185,7 +185,7 @@ class TestActivate(HelixGraphQLTestCase):
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)
-        self.assertIn('non_field_errors', [each['field'] for each in content['data']['activate']['errors']])
+        self.assertIn('nonFieldErrors', [each['field'] for each in content['data']['activate']['errors']])
 
 
 class TestLogout(HelixGraphQLTestCase):

@@ -43,7 +43,7 @@ LOCAL_APPS = [
 
 THIRD_PARTY_APPS = [
     'graphene_django',
-    'rest_framework',
+    'rest_framework.authtoken', # required by djoser
     'djoser',
     'graphene_graphiql_explorer',
     'corsheaders',
