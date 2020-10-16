@@ -1,5 +1,5 @@
 import graphene
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext, gettext_lazy as _
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.models import Crisis
@@ -63,7 +63,7 @@ class UpdateCrisis(graphene.Mutation):
             instance = Crisis.objects.get(id=crisis['id'])
         except Crisis.DoesNotExist:
             return UpdateCrisis(errors=[
-                CustomErrorType(field='non_field_errors', messages=[_('Crisis does not exist.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('Crisis does not exist.'))
             ])
         serializer = CrisisSerializer(instance=instance, data=crisis, partial=True)
         if errors := mutation_is_not_valid(serializer):
@@ -87,7 +87,7 @@ class DeleteCrisis(graphene.Mutation):
             instance = Crisis.objects.get(id=id)
         except Crisis.DoesNotExist:
             return DeleteCrisis(errors=[
-                CustomErrorType(field='non_field_errors', messages=[_('Crisis does not exist.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('Crisis does not exist.'))
             ])
         instance.delete()
         instance.id = id

@@ -60,9 +60,6 @@ class TestFigureCreation(HelixGraphQLTestCase):
                 {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
                 {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
             ],
-            "includeIdu": False,
-            "entry": self.entry.id,
-            "startDate": "2020-10-10",
         }
         self.force_login(self.creator)
 
@@ -513,7 +510,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         """
         self.input = {
             "id": self.entry.id,
-            "url": "https://updated-url.com",
+            "publisher": "updated-publisher",
         }
 
     def test_valid_update_entry(self):
@@ -526,8 +523,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEntry']['ok'], content)
-        self.assertEqual(content['data']['updateEntry']['entry']['url'],
-                         self.input['url'])
 
     def test_invalid_update_by_reviewer(self):
         reviewer = create_user_with_role(role=MONITORING_EXPERT_REVIEWER)
@@ -567,8 +562,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEntry']['ok'], content)
-        self.assertEqual(content['data']['updateEntry']['entry']['url'],
-                         self.input['url'])
 
 
 class TestEntryDelete(HelixGraphQLTestCase):

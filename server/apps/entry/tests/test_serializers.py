@@ -37,8 +37,9 @@ class TestEntrySerializer(HelixTestCase):
         self.assertIn('document', serializer.errors)
 
     def test_update_entry_url_and_document_is_redundant(self):
+        OLD = 'http://abc.com'
         entry = EntryFactory.create(
-            url='http://abc.com'
+            url=OLD
         )
         data = {
             'source_methodology': 'method'
@@ -49,15 +50,15 @@ class TestEntrySerializer(HelixTestCase):
                                      partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         data = {
-            'url': None
+            'url': 'http://abc.com/new-url/',
+            'document': None
         }
         serializer = EntrySerializer(instance=entry,
                                      data=data,
                                      context={'request': self.request},
                                      partial=True)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('url', serializer.errors)
-        self.assertIn('document', serializer.errors)
+        self.assertTrue(serializer.is_valid())
+        self.assertEqual(OLD, entry.url)
 
     def test_create_entry_populates_created_by(self):
         serializer = EntrySerializer(data=self.data,

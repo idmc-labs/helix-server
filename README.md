@@ -16,9 +16,11 @@ docker-compose exec server python manage.py init_roles
 
 ## Initialize DB (optional)
 ```bash
-docker-compose exec server python manage.py loaddata fixtures/*.json
 docker-compose exec server python manage.py create_dummy_users
-...
+docker-compose exec server python manage.py loadtestdata <case sensitive model_names> --count 2
+eg.
+    docker-compose exec server python manage.py loadtestdata Country --count 2
+    docker-compose exec server python manage.py loadtestdata Resource ResourceGroup --count 2
 ```
 
 And navigate to `localhost:9000/graphiql` to view available graphs.

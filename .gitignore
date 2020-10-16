@@ -8,4 +8,5 @@ media/
 media-temp/
 
 static/
+media/
 schema.json

@@ -2,7 +2,7 @@ import factory
 from dateutil.utils import today
 from factory.django import DjangoModelFactory
 
-from apps.contact.models import Contact
+from apps.contact.models import Contact, Communication
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 
@@ -15,9 +15,35 @@ class UserFactory(DjangoModelFactory):
     username = factory.Sequence(lambda n: f'username{n}')
 
 
+class CountryRegionFactory(DjangoModelFactory):
+    class Meta:
+        model = 'country.CountryRegion'
+
+    name = factory.Faker('first_name')
+
+
 class CountryFactory(DjangoModelFactory):
     class Meta:
         model = 'country.Country'
+
+    name = factory.Faker('first_name')
+    region = factory.SubFactory(CountryRegionFactory)
+
+
+class ContextualUpdateFactory(DjangoModelFactory):
+    class Meta:
+        model = 'country.ContextualUpdate'
+
+    update = factory.Faker('paragraph')
+    country = factory.SubFactory(CountryFactory)
+
+
+class SummaryFactory(DjangoModelFactory):
+    class Meta:
+        model = 'country.Summary'
+
+    summary = factory.Faker('paragraph')
+    country = factory.SubFactory(CountryFactory)
 
 
 class OrganizationKindFactory(DjangoModelFactory):
@@ -42,6 +68,18 @@ class ContactFactory(DjangoModelFactory):
     gender = factory.Iterator(Contact.GENDER)
     job_title = factory.Faker('job')
     organization = factory.SubFactory(OrganizationFactory)
+
+
+class CommunicationFactory(DjangoModelFactory):
+    class Meta:
+        model = 'contact.Communication'
+
+    contact = factory.SubFactory(ContactFactory)
+    title = factory.Faker('sentence')
+    subject = factory.Faker('sentence')
+    content = factory.Faker('paragraph')
+    date_time = factory.Faker('date_time_this_month')
+    medium = factory.Iterator(Communication.COMMUNICATION_MEDIUM)
 
 
 class DisasterCategoryFactory(DjangoModelFactory):
@@ -97,3 +135,18 @@ class FigureFactory(DjangoModelFactory):
     role = factory.Iterator(Figure.ROLE)
     start_date = factory.LazyFunction(today().date)
     include_idu = False
+
+
+class ResourceGroupFactory(DjangoModelFactory):
+    class Meta:
+        model = 'resource.ResourceGroup'
+
+    name = factory.Sequence(lambda n: f'resource{n}')
+
+
+class ResourceFactory(DjangoModelFactory):
+    class Meta:
+        model = 'resource.Resource'
+
+    name = factory.Sequence(lambda n: f'resource{n}')
+    group = factory.SubFactory(ResourceGroupFactory)

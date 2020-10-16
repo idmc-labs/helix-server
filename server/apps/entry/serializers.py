@@ -7,7 +7,7 @@ from django.utils.translation import gettext, gettext_lazy as _
 from rest_framework import serializers
 
 from apps.contrib.serializers import MetaInformationSerializerMixin
-from apps.entry.models import Entry, Figure
+from apps.entry.models import Entry, Figure, SourcePreview
 
 
 class DisaggregatedAgeSerializer(serializers.Serializer):
@@ -126,3 +126,16 @@ class EntrySerializer(MetaInformationSerializerMixin,
         else:
             entry = super().create(validated_data)
         return entry
+
+
+class SourcePreviewSerializer(MetaInformationSerializerMixin,
+                              serializers.ModelSerializer):
+    class Meta:
+        model = SourcePreview
+        fields = '__all__'
+
+    def create(self, validated_data):
+        return SourcePreview.get_pdf(**validated_data)
+
+    def update(self, instance, validated_data):
+        return SourcePreview.get_pdf(**validated_data, instance=instance)

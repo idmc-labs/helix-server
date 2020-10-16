@@ -12,9 +12,7 @@ class TriggerSubObjectType(DjangoObjectType):
     class Meta:
         model = TriggerSubType
         exclude_fields = ('events', 'trigger')
-        filter_fields = {
-            'name': ['icontains']
-        }
+        filter_fields = {}
 
 
 class TriggerType(DjangoObjectType):
@@ -26,7 +24,7 @@ class TriggerType(DjangoObjectType):
             'name': ['icontains']
         }
 
-    sub_types = DjangoFilterListField(TriggerSubObjectType)
+    sub_types = CustomDjangoListField(TriggerSubObjectType)
 
 
 class ViolenceSubObjectType(DjangoObjectType):
@@ -74,7 +72,6 @@ class DisasterTypeObjectType(DjangoObjectType):
         model = DisasterType
         exclude_fields = ('events', 'disaster_sub_category')
         filter_fields = {
-            'id': ['exact'],
             'name': ['icontains']
         }
 
@@ -97,7 +94,6 @@ class DisasterCategoryType(DjangoObjectType):
         model = DisasterCategory
         exclude_fields = ('events',)
         filter_fields = {
-            'id': ['exact'],
             'name': ['icontains']
         }
 
@@ -121,6 +117,11 @@ class EventType(DjangoObjectType):
 class EventListType(CustomDjangoListObjectType):
     class Meta:
         model = Event
+        filter_fields = {
+            'countries': ['exact'],
+            'start_date': ['lte', 'gte'],
+            'end_date': ['lte', 'gte'],
+        }
 
 
 class Query:

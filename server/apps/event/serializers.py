@@ -13,7 +13,7 @@ class EventSerializer(MetaInformationSerializerMixin,
         model = Event
         fields = '__all__'
 
-    def validate(self, attrs: dict) -> None:
+    def validate(self, attrs: dict) -> dict:
         errors = OrderedDict()
         errors.update(Event.clean_dates(attrs, self.instance))
         errors.update(Event.clean_by_event_type(attrs, self.instance))

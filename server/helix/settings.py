@@ -11,6 +11,10 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import socket
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -24,7 +28,8 @@ APPS_DIR = os.path.join(BASE_DIR, APPS_DIRNAME)
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'w(m6)jr08z!anjsq6mjz%xo^*+sfnv$e3list=gfcfxaj_^4%o')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 
 # fixme
 ALLOWED_HOSTS = ['*']
@@ -32,6 +37,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 LOCAL_APPS = [
+    'contrib',
     'country',
     'users',
     'organization',
@@ -39,6 +45,7 @@ LOCAL_APPS = [
     'crisis',
     'event',
     'entry',
+    'resource',
 ]
 
 THIRD_PARTY_APPS = [
@@ -49,6 +56,7 @@ THIRD_PARTY_APPS = [
     'corsheaders',
     'django_filters',
     'debug_toolbar',
+    'graphiql_debug_toolbar',
 ]
 
 INSTALLED_APPS = [
@@ -68,6 +76,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
+    # 'utils.middleware.DebugToolbarMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -223,3 +232,7 @@ CORS_ALLOW_CREDENTIALS = True
 INTERNAL_IPS = [
     '127.0.0.1',
 ]
+
+# https://github.com/flavors/django-graphiql-debug-toolbar/#installation
+hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
+INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]

@@ -1,16 +1,42 @@
 from collections import OrderedDict
+import os
+import uuid
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField, JSONField
-from django.core.exceptions import ValidationError
+from django.core.files.base import ContentFile
 from django.db import models
+from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
+import pdfkit
 
 from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
 from apps.users.roles import ADMIN
 
 User = get_user_model()
+
+
+class SourcePreview(MetaInformationAbstractModel):
+    url = models.URLField(verbose_name=_('Source URL'))
+    pdf = models.FileField(verbose_name=_('Rendered Pdf'),
+                           blank=True, null=True,
+                           upload_to='source/previews')
+
+    @classmethod
+    def get_pdf(cls, url: str, instance: 'SourcePreview' = None, **kwargs) -> 'SourcePreview':
+        """
+        Based on the url, generate a pdf and store it.
+        """
+        filename = f'{uuid.uuid4()}.pdf'
+        pdf_content = pdfkit.from_url(url, False)
+        if not instance:
+            instance = cls()
+        instance.url = url
+        instance.pdf.save(filename, ContentFile(pdf_content))
+        instance.save()
+        return instance
 
 
 class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
@@ -172,6 +198,12 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
 class Entry(MetaInformationAbstractModel, models.Model):
     url = models.URLField(verbose_name=_('Source URL'),
                           blank=True, null=True)
+    preview = models.OneToOneField('SourcePreview',
+                                   related_name='entry', on_delete=models.SET_NULL,
+                                   blank=True, null=True,
+                                   help_text=_('After the preview has been generated pass its id'
+                                               ' along during entry creation, so that during entry update'
+                                               ' the preview can be obtained.'))
     document = models.FileField(verbose_name=_('document'), upload_to='entry/documents',
                                 blank=True, null=True)
     article_title = models.TextField(verbose_name=_('Article Title'))
@@ -199,9 +231,16 @@ class Entry(MetaInformationAbstractModel, models.Model):
                                        blank=True,
                                        related_name='review_entries')
 
+    @property
+    def total_figures(self):
+        return self.figures.aggregate(total=Sum('total_figures'))['total']
+
     @staticmethod
     def clean_url_and_document(values: dict, instance=None) -> OrderedDict:
         errors = OrderedDict()
+        if instance:
+            # we wont allow updates to entry sources
+            return errors
         url = values.get('url', getattr(instance, 'url', None))
         document = values.get('document', getattr(instance, 'document', None))
         if not url and not document:

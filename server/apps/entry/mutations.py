@@ -4,9 +4,9 @@ from graphene_file_upload.scalars import Upload
 
 from apps.entry.enums import QuantifierGrapheneEnum, RoleGrapheneEnum, TypeGrapheneEnum, \
     TermGrapheneEnum, UnitGrapheneEnum
-from apps.entry.models import Entry, Figure
-from apps.entry.schema import EntryType, FigureType
-from apps.entry.serializers import EntrySerializer, FigureSerializer
+from apps.entry.models import Entry, Figure, SourcePreview
+from apps.entry.schema import EntryType, FigureType, SourcePreviewType
+from apps.entry.serializers import EntrySerializer, FigureSerializer, SourcePreviewSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 
@@ -116,11 +116,11 @@ class CreateFigure(graphene.Mutation):
             entry = Entry.objects.get(id=figure['entry'])
         except Entry.DoesNotExist:
             return CreateFigure(errors=[
-                CustomErrorType(field='non_field_errors', messages=[gettext('Entry does not exist.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('Entry does not exist.'))
             ])
         if not Figure.can_be_created_by(info.context.user, entry=entry):
             return CreateFigure(errors=[
-                CustomErrorType(field='non_field_errors', messages=[gettext('You cannot create a figure into this entry.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('You cannot create a figure into this entry.'))
             ])
         if errors := mutation_is_not_valid(serializer):
             return CreateFigure(errors=errors, ok=False)
@@ -143,11 +143,11 @@ class UpdateFigure(graphene.Mutation):
             instance = Figure.objects.get(id=figure['id'])
         except Figure.DoesNotExist:
             return UpdateFigure(errors=[
-                CustomErrorType(field='non_field_errors', messages=[gettext('Figure does not exist.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('Figure does not exist.'))
             ])
         if not instance.can_be_updated_by(info.context.user):
             return UpdateFigure(errors=[
-                CustomErrorType(field='non_field_errors', messages=[gettext('You cannot update this figure.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('You cannot update this figure.'))
             ])
         serializer = FigureSerializer(instance=instance, data=figure,
                                       context={'request': info.context}, partial=True)
@@ -172,11 +172,11 @@ class DeleteFigure(graphene.Mutation):
             instance = Figure.objects.get(id=id)
         except Figure.DoesNotExist:
             return DeleteFigure(errors=[
-                CustomErrorType(field='non_field_errors', messages=[gettext('Figure Does Not Exist.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('Figure does not exist.'))
             ])
         if not instance.can_be_updated_by(info.context.user):
             return DeleteFigure(errors=[
-                CustomErrorType(field='non_field_errors', messages=[gettext('You cannot delete this figure.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('You cannot delete this figure.'))
             ])
         instance.delete()
         instance.id = id
@@ -188,6 +188,7 @@ class DeleteFigure(graphene.Mutation):
 
 class EntryCreateInputType(graphene.InputObjectType):
     url = graphene.String()
+    preview = graphene.ID(required=False)
     document = Upload(required=False)
     article_title = graphene.String(required=True)
     source = graphene.String(required=True)
@@ -206,8 +207,8 @@ class EntryCreateInputType(graphene.InputObjectType):
 
 class EntryUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
-    document = Upload(required=False)
-    url = graphene.String()
+    # document = Upload(required=False)
+    # url = graphene.String()
     article_title = graphene.String()
     source = graphene.String()
     publisher = graphene.String()
@@ -255,11 +256,11 @@ class UpdateEntry(graphene.Mutation):
             instance = Entry.objects.get(id=entry['id'])
         except Entry.DoesNotExist:
             return UpdateEntry(errors=[
-                CustomErrorType(field='non_field_errors', messages=[gettext('Entry does not exist.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('Entry does not exist.'))
             ])
         if not instance.can_be_updated_by(info.context.user):
             return UpdateEntry(errors=[
-                CustomErrorType(field='non_field_errors', messages=[gettext('You cannot update this entry.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('You cannot update this entry.'))
             ])
         serializer = EntrySerializer(instance=instance, data=entry,
                                      context={'request': info.context}, partial=True)
@@ -284,15 +285,55 @@ class DeleteEntry(graphene.Mutation):
             instance = Entry.objects.get(id=id)
         except Entry.DoesNotExist:
             return DeleteEntry(errors=[
-                CustomErrorType(field='non_field_errors', messages=[gettext('Entry does not exist.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('Entry does not exist.'))
             ])
         if not instance.can_be_updated_by(info.context.user):
             return DeleteEntry(errors=[
-                CustomErrorType(field='non_field_errors', messages=[gettext('You cannot delete this entry.')])
+                CustomErrorType(field='non_field_errors', messages=gettext('You cannot delete this entry.'))
             ])
         instance.delete()
         instance.id = id
         return DeleteEntry(entry=instance, errors=None, ok=True)
+
+
+# source preview
+
+
+class SourcePreviewInputType(graphene.InputObjectType):
+    id = graphene.ID(required=False)
+    url = graphene.String(required=True)
+
+
+class CreateSourcePreview(graphene.Mutation):
+    """
+    Pass id if you accidentally posted a wrong url, and need to change the preview.
+    """
+    class Arguments:
+        preview = SourcePreviewInputType(required=True)
+
+    ok = graphene.Boolean()
+    errors = graphene.List(CustomErrorType)
+    preview = graphene.Field(SourcePreviewType)
+
+    @staticmethod
+    @permission_checker(['entry.add_entry'])
+    def mutate(root, info, preview):
+        if preview.get('id'):
+            try:
+                instance = SourcePreview.objects.get(id=preview['id'])
+                serializer = SourcePreviewSerializer(data=preview, instance=instance,
+                                                     context={'request': info.context})
+            except SourcePreview.DoesNotExist:
+                return CreateSourcePreview(errors=[
+                    CustomErrorType(field='non_field_errors', messages=gettext('Preview does not exist.'))
+                ])
+        else:
+            serializer = SourcePreviewSerializer(data=preview,
+                                                 context={'request': info.context})
+        if errors := mutation_is_not_valid(serializer):
+            return CreateEntry(errors=errors, ok=False)
+        instance = serializer.save()
+        return CreateSourcePreview(preview=instance, errors=None, ok=True)
 
 
 class Mutation(object):
@@ -302,3 +343,4 @@ class Mutation(object):
     create_entry = CreateEntry.Field()
     update_entry = UpdateEntry.Field()
     delete_entry = DeleteEntry.Field()
+    create_source_preview = CreateSourcePreview.Field()

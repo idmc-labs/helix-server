@@ -226,6 +226,8 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
         if not kwargs.get("description", None):
             kwargs["description"] = "{} list".format(_type._meta.model.__name__)
 
+        # accessor will be used with m2m or reverse_fk fields
+        self.accessor = kwargs.pop('accessor', None)
         super(DjangoFilterPaginateListField, self).__init__(
             _type, *args, **kwargs
         )
@@ -235,12 +237,15 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
     ):
 
         filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
-        qs = self.get_queryset(manager, info, **kwargs)
-        qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context).qs
-
-        if root and is_valid_django_model(root._meta.model):
-            extra_filters = get_extra_filters(root, manager.model)
-            qs = qs.filter(**extra_filters)
+        if self.accessor:
+            qs = getattr(root, self.accessor).all()
+            qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context).qs
+        else:
+            qs = self.get_queryset(manager, info, **kwargs)
+            qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context).qs
+            if root and is_valid_django_model(root._meta.model):
+                extra_filters = get_extra_filters(root, manager.model)
+                qs = qs.filter(**extra_filters)
         count = qs.count()
 
         if getattr(self, "pagination", None):

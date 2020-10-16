@@ -2,14 +2,15 @@ import graphene
 from django.contrib.postgres.fields import JSONField
 from graphene import ObjectType
 from graphene.types.generic import GenericScalar
+from graphene.types.utils import get_type
 from graphene_django_extras.converter import convert_django_field
 from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, DjangoObjectField
 
 from apps.entry.enums import QuantifierGrapheneEnum, UnitGrapheneEnum, TermGrapheneEnum, TypeGrapheneEnum, \
     RoleGrapheneEnum
 from apps.entry.filters import EntryFilter
-from apps.entry.models import Figure, Entry
-from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
+from apps.entry.models import Figure, Entry, SourcePreview
+from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType, CustomDjangoListField
 
 
 @convert_django_field.register(JSONField)
@@ -57,16 +58,30 @@ class EntryType(DjangoObjectType):
     class Meta:
         model = Entry
 
+    created_by = graphene.Field('apps.users.schema.UserType')
+    last_modified_by = graphene.Field('apps.users.schema.UserType')
     figures = DjangoPaginatedListObjectField(FigureListType,
                                              pagination=PageGraphqlPagination(
                                                  page_size_query_param='perPage'
                                              ))
+    reviewers = CustomDjangoListField('apps.users.schema.UserType')
+    total_figures = graphene.Field(graphene.Int)
 
 
 class EntryListType(CustomDjangoListObjectType):
     class Meta:
         model = Entry
         filterset_class = EntryFilter
+
+
+class SourcePreviewType(DjangoObjectType):
+    class Meta:
+        model = SourcePreview
+        exclude_fields = ('entry',)
+
+    def resolve_pdf(root, info, **kwargs):
+        # todo: check against s3 configurations
+        return info.context.build_absolute_uri(root.pdf.url)
 
 
 class Query:
