@@ -195,15 +195,15 @@ class DeleteCommunication(graphene.Mutation):
     communication = graphene.Field(CommunicationType)
 
     @staticmethod
-    def mutate(root, info, communication):
+    def mutate(root, info, id):
         try:
-            instance = Communication.objects.get(id=communication['id'])
+            instance = Communication.objects.get(id=id)
         except Communication.DoesNotExist:
             return DeleteCommunication(errors=[
                 CustomErrorType(field='non_field_errors', messages=[_('Communication does not exist.')])
             ])
         instance.delete()
-        instance.id = communication['id']
+        instance.id = id
         return DeleteCommunication(communication=instance, errors=None, ok=True)
 
 
