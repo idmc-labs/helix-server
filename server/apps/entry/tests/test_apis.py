@@ -143,11 +143,13 @@ class TestFigureUpdate(HelixGraphQLTestCase):
                         messages
                             arrayErrors {
                                 key
+                                messages
                                 objectErrors {
                                 field
                                 messages
                                 arrayErrors {
                                     key
+                                    messages
                                     objectErrors {
                                         field
                                         messages
@@ -247,7 +249,7 @@ class TestFigureUpdate(HelixGraphQLTestCase):
         self.assertEqual('ageJson',
                          content['data']['updateFigure']['errors'][0]['field'],
                          content)
-        self.assertIsNotNone(content['data']['updateFigure']['errors'][0]['messages'], content)
+        self.assertIsNotNone(content['data']['updateFigure']['errors'][0]['arrayErrors'][0]['messages'], content)
 
 
 class TestEntryCreation(HelixGraphQLTestCase):

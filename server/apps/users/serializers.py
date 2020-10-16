@@ -17,8 +17,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ['email', 'first_name', 'last_name', 'username', 'password']
 
     def validate_email(self, email) -> str:
-        if User.objects.filter(email=email).exists():
-            raise forms.ValidationError('That email is taken.')
+        if User.objects.filter(email__iexact=email).exists():
+            raise serializers.ValidationError('The email is taken.')
         return email
 
     def save(self, **kwargs):
@@ -45,7 +45,7 @@ class LoginSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         email = attrs.get('email', '')
-        if User.objects.filter(email=email, is_active=False).exists():
+        if User.objects.filter(email__iexact=email, is_active=False).exists():
             raise serializers.ValidationError('Please activate your account first.')
         user = authenticate(email=email,
                             password=attrs.get('password', ''))
@@ -53,10 +53,6 @@ class LoginSerializer(serializers.Serializer):
             raise serializers.ValidationError('Invalid Email or Password.')
         attrs.update(dict(user=user))
         return attrs
-
-    def save(self, **kwargs):
-        # NOOP. Compulsorily called by SerializerMutation.perform_mutation
-        pass
 
 
 class ActivateSerializer(serializers.Serializer):
@@ -71,7 +67,3 @@ class ActivateSerializer(serializers.Serializer):
         user.is_active = True
         user.save()
         return attrs
-
-    def save(self):
-        # NOOP. Compulsorily called by SerializerMutation.perform_mutation
-        pass
