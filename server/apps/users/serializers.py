@@ -18,7 +18,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate_email(self, email) -> str:
         if User.objects.filter(email__iexact=email).exists():
-            raise serializers.ValidationError('That email is taken.')
+            raise serializers.ValidationError('The email is taken.')
         return email
 
     def save(self, **kwargs):
@@ -67,4 +67,3 @@ class ActivateSerializer(serializers.Serializer):
         user.is_active = True
         user.save()
         return attrs
-
