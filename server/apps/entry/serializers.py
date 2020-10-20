@@ -23,7 +23,7 @@ class DisaggregatedAgeSerializer(serializers.Serializer):
         if attrs.get('age_from') > attrs.get('age_to'):
             raise serializers.ValidationError(
                 {'age_to': gettext('Pick an age higher than `from` %(age_from)s.') %
-                              {'age_from': attrs.get("age_from")}}
+                           {'age_from': attrs.get("age_from")}}
             )
         attrs['uuid'] = str(attrs['uuid'])
         return attrs
@@ -126,6 +126,32 @@ class EntrySerializer(MetaInformationSerializerMixin,
         else:
             entry = super().create(validated_data)
         return entry
+
+
+class EntryFiguresOnlyCreateSerializer(serializers.Serializer):
+    entry = serializers.IntegerField(required=True)
+    figures = NestedFigureSerializer(many=True, required=False)
+
+    def validate_entry(self, entry_id: int):
+        if not Entry.objects.filter(id=entry_id).exists():
+            raise serializers.ValidationError(gettext('Entry does not exist.'))
+        return entry_id
+
+    def validate_figures(self, figures: list):
+        uuids = [figure['uuid'] for figure in figures]
+        if len(uuids) != len(set(uuids)):
+            raise serializers.ValidationError('Duplicate keys found. ')
+        return figures
+
+    def create(self, validated_data: dict):
+        figures = validated_data.pop('figures', [])
+        entry_id = validated_data.pop('entry', None)
+        objects = []
+        if figures:
+            objects = Figure.objects.bulk_create([
+                Figure(**each, entry_id=entry_id) for each in figures
+            ])
+        return objects
 
 
 class SourcePreviewSerializer(MetaInformationSerializerMixin,

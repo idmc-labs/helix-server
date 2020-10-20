@@ -74,7 +74,7 @@ class TestFigureCreation(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createFigure']['ok'], content)
-        self.assertIn('non_field_errors',
+        self.assertIn('nonFieldErrors',
                       [each['field'] for each in content['data']['createFigure']['errors']])
         self.assertIn('Entry does not exist',
                       json.dumps(content['data']['createFigure']['errors']))
@@ -90,7 +90,7 @@ class TestFigureCreation(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createFigure']['ok'], content)
-        self.assertIn('non_field_errors',
+        self.assertIn('nonFieldErrors',
                       [each['field'] for each in content['data']['createFigure']['errors']])
         self.assertIn('You cannot create a figure into',
                       json.dumps(content['data']['createFigure']['errors']))
@@ -105,6 +105,99 @@ class TestFigureCreation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createFigure']['ok'], content)
         self.assertIsNotNone(content['data']['createFigure']['figure']['id'], content)
+
+
+class TestMultipleFiguresCreation(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.creator = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        self.entry = EntryFactory.create(
+            created_by=self.creator
+        )
+        self.mutation = '''
+            mutation CreateFigures($input: CreateMultipleFiguresInputType!) {
+                createFigures(input: $input) {
+                    ok
+                    figures {
+                       id
+                    }
+                    errors {
+                        field
+                        messages
+                        arrayErrors {
+                            key
+                            messages
+                            objectErrors {
+                                field
+                                messages
+                            }
+                        }
+                    }
+                }
+            }
+        '''
+        self.input = {
+            'entry': self.entry.id,
+            'figures': [
+                {
+                    "uuid": str(uuid4()),
+                    "district": "abcde",
+                    "town": "XYZ",
+                    "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
+                    "reported": 10,
+                    "unit": Figure.UNIT.PERSON.name,
+                    "term": Figure.TERM.EVACUATED.name,
+                    "type": Figure.TYPE.IDP_STOCK.name,
+                    "role": Figure.ROLE.RECOMMENDED.name,
+                    "startDate": "2020-10-10",
+                    "includeIdu": True,
+                    "excerptIdu": "excerpt abc",
+                }
+            ]
+        }
+        self.force_login(self.creator)
+
+    def test_invalid_create_figures_into_non_existing_entry(self):
+        # set entry to non existing value
+        self.input['entry'] = '99911'
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['createFigures']['ok'], content)
+        self.assertIn('nonFieldErrors',
+                      [each['field'] for each in content['data']['createFigures']['errors']])
+        self.assertIn('Entry does not exist',
+                      json.dumps(content['data']['createFigures']['errors']))
+
+    def test_invalid_figures_create_by_non_creator_entry(self):
+        creator2 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        self.force_login(creator2)
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['createFigures']['ok'], content)
+        self.assertIn('nonFieldErrors',
+                      [each['field'] for each in content['data']['createFigures']['errors']])
+        self.assertIn('You cannot create a figure into',
+                      json.dumps(content['data']['createFigures']['errors']))
+
+    def test_valid_figures_create_by_creator_of_entry(self):
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['createFigures']['ok'], content)
+        self.assertIsNotNone(content['data']['createFigures']['figures'][0]['id'], content)
 
 
 class TestFigureUpdate(HelixGraphQLTestCase):
@@ -546,7 +639,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['updateEntry']['ok'], content)
-        self.assertIn('non_field_errors',
+        self.assertIn('nonFieldErrors',
                       [each['field'] for each in content['data']['updateEntry']['errors']])
         self.assertIn('You cannot update this entry',
                       json.dumps(content['data']['updateEntry']['errors']))
@@ -626,7 +719,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['deleteEntry']['ok'], content)
-        self.assertIn('non_field_errors',
+        self.assertIn('nonFieldErrors',
                       [each['field'] for each in content['data']['deleteEntry']['errors']])
         self.assertIn('You cannot delete this entry',
                       json.dumps(content['data']['deleteEntry']['errors']))
