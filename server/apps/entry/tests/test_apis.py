@@ -4,6 +4,7 @@ from uuid import uuid4
 from django.core.files.temp import NamedTemporaryFile
 
 from apps.entry.models import Figure
+from apps.entry.serializers import CANNOT_UPDATE_FIGURE
 from apps.users.roles import MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, ADMIN, GUEST
 from utils.factories import EventFactory, EntryFactory, FigureFactory
 from utils.permissions import PERMISSION_DENIED_MESSAGE
@@ -198,6 +199,88 @@ class TestMultipleFiguresCreation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createFigures']['ok'], content)
         self.assertIsNotNone(content['data']['createFigures']['figures'][0]['id'], content)
+
+
+class TestMultipleFiguresUpdate(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.creator = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        self.entry = EntryFactory.create(
+            created_by=self.creator
+        )
+        self.figure = FigureFactory.create(
+            created_by=self.creator,
+            entry=self.entry
+        )
+        self.figure2 = FigureFactory.create(
+            created_by=self.creator,
+            entry=self.entry
+        )
+        self.mutation = '''
+            mutation UpdateFigures($input: UpdateMultipleFiguresInputType!) {
+                updateFigures(input: $input) {
+                    ok
+                    figures {
+                       id
+                    }
+                    errors {
+                        field
+                        messages
+                        arrayErrors {
+                            key
+                            messages
+                            objectErrors {
+                                field
+                                messages
+                            }
+                        }
+                    }
+                }
+            }
+        '''
+        self.district = 'something new'
+        self.input = {
+            'entry': self.entry.id,
+            'figures': [
+                {
+                    "id": self.figure.id,
+                    'district': self.district
+                },
+                {
+                    "id": self.figure2.id,
+                    'district': self.district
+                }
+            ]
+        }
+        self.force_login(self.creator)
+
+    def test_valid_multiple_figures_update_by_creator_of_entry(self):
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['updateFigures']['ok'], content)
+        self.assertIsNotNone(content['data']['updateFigures']['figures'][0]['id'], content)
+
+    def test_invalid_multiple_figures_update_by_non_creator_entry(self):
+        creator2 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        self.force_login(creator2)
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = response.json()
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['updateFigures']['ok'], content)
+        self.assertIn('figures',
+                      [each['field'] for each in content['data']['updateFigures']['errors']])
+        self.assertIn('nonFieldErrors',
+                      [each['field'] for each in content['data']['updateFigures']['errors'][0]['arrayErrors'][0]['objectErrors']])
+        self.assertIn(CANNOT_UPDATE_FIGURE,
+                      json.dumps(content['data']['updateFigures']['errors'][0]['arrayErrors'][0]['objectErrors']))
 
 
 class TestFigureUpdate(HelixGraphQLTestCase):

@@ -9,6 +9,8 @@ from rest_framework import serializers
 from apps.contrib.serializers import MetaInformationSerializerMixin
 from apps.entry.models import Entry, Figure, SourcePreview
 
+CANNOT_UPDATE_FIGURE = 'You cannot update this figure.'
+
 
 class DisaggregatedAgeSerializer(serializers.Serializer):
     uuid = serializers.UUIDField(required=False)
@@ -82,6 +84,27 @@ class FigureSerializer(MetaInformationSerializerMixin,
         return Figure.objects.create(**validated_data)
 
 
+class NestedFigureUpdateSerializer(MetaInformationSerializerMixin,
+                                   CommonFigureValidationMixin,
+                                   serializers.ModelSerializer):
+    age_json = DisaggregatedAgeSerializer(many=True, required=False)
+    strata_json = DisaggregatedStratumSerializer(many=True, required=False)
+    id = serializers.IntegerField(required=True)  # overwrite the default id field
+
+    class Meta:
+        model = Figure
+        fields = '__all__'
+
+    def validate(self, attrs: dict) -> dict:
+        try:
+            figure = Figure.objects.get(id=attrs['id'])
+        except Figure.DoesNotExist:
+            raise serializers.ValidationError('Figure does not exist.')
+        if not figure.can_be_updated_by(self.context['request'].user):
+            raise serializers.ValidationError(gettext(CANNOT_UPDATE_FIGURE))
+        return attrs
+
+
 class NestedFigureSerializer(MetaInformationSerializerMixin,
                              CommonFigureValidationMixin,
                              serializers.ModelSerializer):
@@ -151,6 +174,29 @@ class EntryFiguresOnlyCreateSerializer(serializers.Serializer):
             objects = Figure.objects.bulk_create([
                 Figure(**each, entry_id=entry_id) for each in figures
             ])
+        return objects
+
+
+class EntryFiguresOnlyUpdateSerializer(serializers.Serializer):
+    entry = serializers.IntegerField(required=False)
+    figures = NestedFigureUpdateSerializer(many=True, required=False)
+
+    def validate_figures(self, figures: list):
+        uuids = [figure.get('uuid', None) for figure in figures]
+        if all(uuids) and len(uuids) != len(set(uuids)):
+            raise serializers.ValidationError('Duplicate keys found. ')
+        return figures
+
+    def save(self, **kwargs):
+        validated_data = {**self.validated_data, **kwargs}
+        figures = validated_data.pop('figures', [])
+        objects = []
+        for each in figures:
+            figure = Figure.objects.get(id=each['id'])
+            for k, v in each.items():
+                setattr(figure, k, v)
+            figure.save()
+            objects.append(figure)
         return objects
 
 

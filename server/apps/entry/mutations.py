@@ -7,7 +7,7 @@ from apps.entry.enums import QuantifierGrapheneEnum, RoleGrapheneEnum, TypeGraph
 from apps.entry.models import Entry, Figure, SourcePreview
 from apps.entry.schema import EntryType, FigureType, SourcePreviewType
 from apps.entry.serializers import EntrySerializer, FigureSerializer, SourcePreviewSerializer, \
-    EntryFiguresOnlyCreateSerializer
+    EntryFiguresOnlyCreateSerializer, EntryFiguresOnlyUpdateSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 
@@ -305,6 +305,11 @@ class CreateMultipleFiguresInputType(graphene.InputObjectType):
     figures = graphene.List(NestedFigureCreateInputType)
 
 
+class UpdateMultipleFiguresInputType(graphene.InputObjectType):
+    entry = graphene.ID(required=False)
+    figures = graphene.List(FigureUpdateInputType)
+
+
 class CreateFigures(graphene.Mutation):
     class Arguments:
         input = CreateMultipleFiguresInputType(required=True)
@@ -327,6 +332,25 @@ class CreateFigures(graphene.Mutation):
                 CustomErrorType(field='nonFieldErrors', messages=gettext('You cannot create a figure into this entry.'))
             ])
         serializer = EntryFiguresOnlyCreateSerializer(data=input, context={'request': info.context})
+        if errors := mutation_is_not_valid(serializer):
+            return CreateFigures(errors=errors, ok=False)
+        figures = serializer.save()
+        return CreateFigures(figures=figures, errors=None, ok=True)
+
+
+class UpdateFigures(graphene.Mutation):
+    class Arguments:
+        input = UpdateMultipleFiguresInputType(required=False)
+
+    ok = graphene.Boolean()
+    errors = graphene.List(CustomErrorType)
+    figures = graphene.List(FigureType)
+
+    @staticmethod
+    @permission_checker(['entry.add_figure'])
+    def mutate(root, info, input):
+        serializer = EntryFiguresOnlyUpdateSerializer(data=input, context={'request': info.context},
+                                                      partial=True)
         if errors := mutation_is_not_valid(serializer):
             return CreateFigures(errors=errors, ok=False)
         figures = serializer.save()
@@ -383,7 +407,7 @@ class Mutation(object):
     delete_entry = DeleteEntry.Field()
     # array figures mutations
     create_figures = CreateFigures.Field()
-    # update_figures = UpdateFigures.Field()
+    update_figures = UpdateFigures.Field()
     # delete_figures = DeleteFigures.Field()
     # source preview
     create_source_preview = CreateSourcePreview.Field()
