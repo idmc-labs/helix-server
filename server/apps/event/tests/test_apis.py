@@ -6,7 +6,7 @@ from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
-class TestCreateEvent(HelixGraphQLTestCase):
+class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
     def setUp(self) -> None:
         countries = CountryFactory.create_batch(2)
         self.mutation = '''mutation CreateEvent($input: EventCreateInputType!) {
@@ -214,3 +214,44 @@ class TestDeleteEvent(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+
+
+class TestEventListQuery(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.event1_name = 'blaone'
+        self.event1 = EventFactory.create(name=self.event1_name)
+        self.event2 = EventFactory.create(name='blatwo')
+        self.q = '''
+            query EventList($crisis: ID, $name: String){
+              eventList(crisis: $crisis, nameContains: $name) {
+                results {
+                  id
+                }
+              }
+            }
+        '''
+
+    def test_event_list_filter(self):
+        variables = {
+            "crisis": self.event1.crisis.id,
+        }
+        response = self.query(self.q,
+                              variables=variables)
+        content = response.json()
+
+        expected = [self.event1.id]
+        self.assertResponseNoErrors(response)
+        self.assertEqual([int(each['id']) for each in content['data']['eventList']['results']],
+                         expected)
+
+        variables = {
+            "name": self.event1_name
+        }
+        response = self.query(self.q,
+                              variables=variables)
+        content = response.json()
+
+        expected = [self.event1.id]
+        self.assertResponseNoErrors(response)
+        self.assertEqual([int(each['id']) for each in content['data']['eventList']['results']],
+                         expected)
