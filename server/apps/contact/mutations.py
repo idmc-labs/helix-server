@@ -139,6 +139,7 @@ class CommunicationUpdateInputType(graphene.InputObjectType):
     """
     Communication Update InputType
     """
+    id = graphene.ID(required=True)
     contact = graphene.ID()
     country = graphene.ID()
     title = graphene.String()
