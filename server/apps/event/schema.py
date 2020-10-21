@@ -22,7 +22,7 @@ from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectT
 class TriggerSubObjectType(DjangoObjectType):
     class Meta:
         model = TriggerSubType
-        exclude_fields = ('events', 'trigger')
+        exclude_fields = ('events',)
         filter_fields = {}
 
 
@@ -34,8 +34,6 @@ class TriggerType(DjangoObjectType):
             'id': ['exact'],
             'name': ['icontains']
         }
-
-    sub_types = CustomDjangoListField(TriggerSubObjectType)
 
 
 class ViolenceSubObjectType(DjangoObjectType):
@@ -133,6 +131,7 @@ class EventListType(CustomDjangoListObjectType):
 
 class Query:
     trigger_list = DjangoFilterListField(TriggerType)
+    sub_type_trigger_list = DjangoFilterListField(TriggerSubObjectType)
     violence_list = DjangoFilterListField(ViolenceType)
     actor_list = DjangoFilterListField(ActorType)
     disaster_category_list = DjangoFilterListField(DisasterCategoryType)

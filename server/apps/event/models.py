@@ -31,8 +31,6 @@ class TriggerSubType(NameAttributedModels):
     """
     Holds the possible trigger sub types
     """
-    trigger = models.ForeignKey('Trigger',
-                                related_name='sub_types', on_delete=models.CASCADE)
 
 
 class Violence(NameAttributedModels):
