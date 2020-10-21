@@ -1,7 +1,10 @@
 import graphene
 from graphene.types.utils import get_type
-from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, \
+from graphene_django_extras import (
+    DjangoObjectType, 
+    PageGraphqlPagination, 
     DjangoObjectField
+)
 
 from apps.contact.schema import ContactListType
 from apps.country.models import Country, CountryRegion, ContextualUpdate, Summary

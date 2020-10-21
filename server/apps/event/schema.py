@@ -3,8 +3,18 @@ from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, Djan
 
 from apps.country.schema import CountryType
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.event.models import Event, Trigger, TriggerSubType, Violence, ViolenceSubType, Actor, DisasterSubCategory, \
-    DisasterCategory, DisasterSubType, DisasterType
+from apps.event.models import (
+    Event, 
+    Trigger, 
+    TriggerSubType, 
+    Violence, 
+    ViolenceSubType, 
+    Actor, 
+    DisasterSubCategory,
+    DisasterCategory, 
+    DisasterSubType, 
+    DisasterType
+)
 from apps.event.filters import EventFilter
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType, CustomDjangoListField
 
