@@ -39,7 +39,6 @@ class OrderingOnlyArgumentPagination(BaseDjangoGraphqlPagination):
 
     def paginate_queryset(self, qs, **kwargs):
         order = kwargs.pop(self.ordering_param, None) or self.ordering
-        # order = order.strip(',').replaces(' ', '').split(',')
         if order:
             if "," in order:
                 order = order.strip(",").replace(" ", "").split(",")

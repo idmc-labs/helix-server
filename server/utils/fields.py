@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from django.db.models import QuerySet
 from graphene import Field, Int, Argument, ID
+from graphene.utils.str_converters import to_snake_case
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django.utils import is_valid_django_model, maybe_queryset, DJANGO_FILTER_INSTALLED
 from graphene_django_extras import DjangoListObjectField, DjangoListObjectType, DjangoObjectType, \
@@ -257,6 +258,9 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
         count = qs.count()
 
         if getattr(self, "pagination", None):
+            ordering = kwargs.pop(self.pagination.ordering_param, None) or self.pagination.ordering
+            ordering = ','.join([to_snake_case(each) for each in ordering.strip(',').replace(' ', '').split(',')])
+            self.pagination.ordering = ordering
             qs = self.pagination.paginate_queryset(qs, **kwargs)
 
         return CustomDjangoListObjectBase(

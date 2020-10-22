@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from apps.users.roles import MONITORING_EXPERT_REVIEWER, GUEST
 from utils.factories import OrganizationFactory, OrganizationKindFactory
@@ -311,3 +312,55 @@ class TestDeleteOrganizationKind(HelixGraphQLTestCase):
 
         content = json.loads(response.content)
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+
+
+class TestQueryResourceGroup(HelixGraphQLTestCase):
+    def setUp(self):
+        self.list_organizations = '''
+            query MyQuery($ordering: String) {
+              organizationList(ordering: $ordering) {
+                results {
+                  id
+                  shortName
+                }
+              }
+            }
+        '''
+
+    def test_organizations_ordering(self):
+        org1 = OrganizationFactory.create(
+            short_name='abc',
+            created_at=datetime(2020, 9, 9, 10, 6, 0)
+        )
+        org2 = OrganizationFactory.create(
+            short_name='abc',
+            created_at=datetime(2020, 10, 9, 10, 6, 0)
+        )
+        org3 = OrganizationFactory.create(
+            short_name='xyz',
+            created_at=datetime(2020, 9, 9, 10, 6, 0)
+        )
+        vars = {
+            'ordering': "shortName,-createdAt"
+        }
+        expected = [org2.id, org1.id, org3.id]
+        response = self.query(
+            self.list_organizations,
+            variables=vars
+        )
+        self.assertResponseNoErrors(response)
+        content = response.json()
+        obtained = [int(each['id']) for each in content['data']['organizationList']['results']]
+        self.assertEqual(expected, obtained)
+
+        vars = {
+            'ordering': "-shortName,createdAt"
+        }
+        response = self.query(
+            self.list_organizations,
+            variables=vars
+        )
+        expected = [org3.id, org1.id, org2.id]
+        content = response.json()
+        obtained = [int(each['id']) for each in content['data']['organizationList']['results']]
+        self.assertEqual(expected, obtained)
