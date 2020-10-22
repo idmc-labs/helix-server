@@ -14,6 +14,10 @@ class User(AbstractUser):
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
 
+    @property
+    def role(self):
+        return self.groups.first().name
+
     def get_full_name(self):
         return f'{self.first_name}, {self.last_name}'
 
