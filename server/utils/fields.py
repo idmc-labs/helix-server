@@ -267,6 +267,6 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             count=count,
             results=maybe_queryset(qs),
             results_field_name=self.type._meta.results_field_name,
-            page=kwargs.get('page', 1) if 'page' in kwargs else None,
-            pageSize=kwargs.get('pageSize', graphql_api_settings.DEFAULT_PAGE_SIZE) if 'page' in kwargs else None
+            page=kwargs.get('page', 1) if hasattr(self.pagination, 'page') else None,
+            pageSize=kwargs.get('pageSize', graphql_api_settings.DEFAULT_PAGE_SIZE) if hasattr(self.pagination, 'page') else None
         )
