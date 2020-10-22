@@ -218,6 +218,7 @@ APPEND_SLASH = False
 
 cookie_samesite = os.environ.get('SESSION_COOKIE_SAMESITE', 'None')
 SESSION_COOKIE_SAMESITE = None if cookie_samesite == 'None' else cookie_samesite
+CSRF_COOKIE_SAMESITE = None if cookie_samesite == 'None' else cookie_samesite
 
 CORS_ORIGIN_WHITELIST = [
     "http://localhost:3080",
