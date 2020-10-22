@@ -3,8 +3,19 @@ from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, Djan
 
 from apps.country.schema import CountryType
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.event.models import Event, Trigger, TriggerSubType, Violence, ViolenceSubType, Actor, DisasterSubCategory, \
-    DisasterCategory, DisasterSubType, DisasterType
+from apps.event.models import (
+    Event, 
+    Trigger, 
+    TriggerSubType, 
+    Violence, 
+    ViolenceSubType, 
+    Actor, 
+    DisasterSubCategory,
+    DisasterCategory, 
+    DisasterSubType, 
+    DisasterType
+)
+from apps.event.filters import EventFilter
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType, CustomDjangoListField
 
 
@@ -117,11 +128,7 @@ class EventType(DjangoObjectType):
 class EventListType(CustomDjangoListObjectType):
     class Meta:
         model = Event
-        filter_fields = {
-            'countries': ['exact'],
-            'start_date': ['lte', 'gte'],
-            'end_date': ['lte', 'gte'],
-        }
+        filterset_class = EventFilter
 
 
 class Query:
