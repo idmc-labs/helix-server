@@ -12,7 +12,6 @@ from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectT
 class CommunicationType(DjangoObjectType):
     class Meta:
         model = Communication
-        filter_fields = []
 
     medium = graphene.Field(CommunicationMediumGrapheneEnum)
 

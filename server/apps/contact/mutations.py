@@ -57,44 +57,44 @@ class ContactUpdateInputType(graphene.InputObjectType):
 
 class CreateContact(graphene.Mutation):
     class Arguments:
-        contact = ContactCreateInputType(required=True)
+        data = ContactCreateInputType(required=True)
 
     errors = graphene.List(CustomErrorType)
     ok = graphene.Boolean()
-    contact = graphene.Field(ContactType)
+    result = graphene.Field(ContactType)
 
     @staticmethod
     @permission_checker(['contact.add_contact'])
-    def mutate(root, info, contact):
-        serializer = ContactSerializer(data=contact)
+    def mutate(root, info, data):
+        serializer = ContactSerializer(data=data)
         if errors := mutation_is_not_valid(serializer):
             return CreateContact(errors=errors, ok=False)
         instance = serializer.save()
-        return CreateContact(contact=instance, errors=None, ok=True)
+        return CreateContact(result=instance, errors=None, ok=True)
 
 
 class UpdateContact(graphene.Mutation):
     class Arguments:
-        contact = ContactUpdateInputType(required=True)
+        data = ContactUpdateInputType(required=True)
 
     errors = graphene.List(CustomErrorType)
     ok = graphene.Boolean()
-    contact = graphene.Field(ContactType)
+    result = graphene.Field(ContactType)
 
     @staticmethod
     @permission_checker(['contact.change_contact'])
-    def mutate(root, info, contact):
+    def mutate(root, info, data):
         try:
-            instance = Contact.objects.get(id=contact['id'])
+            instance = Contact.objects.get(id=data['id'])
         except Contact.DoesNotExist:
             return UpdateContact(errors=[
                 CustomErrorType(field='non_field_errors', messages=gettext('Contact does not exist.'))
             ])
-        serializer = ContactSerializer(instance=instance, data=contact, partial=True)
+        serializer = ContactSerializer(instance=instance, data=data, partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateContact(errors=errors, ok=False)
         instance = serializer.save()
-        return UpdateContact(contact=instance, errors=None, ok=True)
+        return UpdateContact(result=instance, errors=None, ok=True)
 
 
 class DeleteContact(graphene.Mutation):
@@ -103,7 +103,7 @@ class DeleteContact(graphene.Mutation):
 
     errors = graphene.List(CustomErrorType)
     ok = graphene.Boolean()
-    contact = graphene.Field(ContactType)
+    result = graphene.Field(ContactType)
 
     @staticmethod
     @permission_checker(['contact.delete_contact'])
@@ -116,7 +116,7 @@ class DeleteContact(graphene.Mutation):
             ])
         instance.delete()
         instance.id = id
-        return DeleteContact(contact=instance, errors=None, ok=True)
+        return DeleteContact(result=instance, errors=None, ok=True)
 
 
 # Communication #
@@ -152,42 +152,42 @@ class CommunicationUpdateInputType(graphene.InputObjectType):
 
 class CreateCommunication(graphene.Mutation):
     class Arguments:
-        communication = CommunicationCreateInputType(required=True)
+        data = CommunicationCreateInputType(required=True)
 
     errors = graphene.List(CustomErrorType)
     ok = graphene.Boolean()
-    communication = graphene.Field(CommunicationType)
+    result = graphene.Field(CommunicationType)
 
     @staticmethod
-    def mutate(root, info, communication):
-        serializer = CommunicationSerializer(data=communication)
+    def mutate(root, info, data):
+        serializer = CommunicationSerializer(data=data)
         if errors := mutation_is_not_valid(serializer):
             return CreateCommunication(errors=errors, ok=False)
         instance = serializer.save()
-        return CreateCommunication(communication=instance, errors=None, ok=True)
+        return CreateCommunication(result=instance, errors=None, ok=True)
 
 
 class UpdateCommunication(graphene.Mutation):
     class Arguments:
-        communication = CommunicationUpdateInputType(required=True)
+        data = CommunicationUpdateInputType(required=True)
 
     errors = graphene.List(CustomErrorType)
     ok = graphene.Boolean()
-    communication = graphene.Field(CommunicationType)
+    result = graphene.Field(CommunicationType)
 
     @staticmethod
-    def mutate(root, info, communication):
+    def mutate(root, info, data):
         try:
-            instance = Communication.objects.get(id=communication['id'])
+            instance = Communication.objects.get(id=data['id'])
         except Communication.DoesNotExist:
             return UpdateCommunication(errors=[
                 CustomErrorType(field='non_field_errors', messages=gettext('Communication does not exist.'))
             ])
-        serializer = CommunicationSerializer(instance=instance, data=communication, partial=True)
+        serializer = CommunicationSerializer(instance=instance, data=data, partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateCommunication(errors=errors, ok=False)
         instance = serializer.save()
-        return UpdateCommunication(communication=instance, errors=None, ok=True)
+        return UpdateCommunication(result=instance, errors=None, ok=True)
 
 
 class DeleteCommunication(graphene.Mutation):
@@ -196,7 +196,7 @@ class DeleteCommunication(graphene.Mutation):
 
     errors = graphene.List(CustomErrorType)
     ok = graphene.Boolean()
-    communication = graphene.Field(CommunicationType)
+    result = graphene.Field(CommunicationType)
 
     @staticmethod
     def mutate(root, info, id):
@@ -208,7 +208,7 @@ class DeleteCommunication(graphene.Mutation):
             ])
         instance.delete()
         instance.id = id
-        return DeleteCommunication(communication=instance, errors=None, ok=True)
+        return DeleteCommunication(result=instance, errors=None, ok=True)
 
 
 class Mutation(object):

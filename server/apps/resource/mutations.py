@@ -28,48 +28,48 @@ class ResourceUpdateInputType(graphene.InputObjectType):
 
 class CreateResource(graphene.Mutation):
     class Arguments:
-        resource = ResourceCreateInputType(required=True)
+        data = ResourceCreateInputType(required=True)
 
     errors = graphene.List(CustomErrorType)
     ok = graphene.Boolean()
-    resource = graphene.Field(ResourceType)
+    result = graphene.Field(ResourceType)
 
     @staticmethod
     @permission_checker(['resource.add_resource'])
-    def mutate(root, info, resource):
-        serializer = ResourceSerializer(data=resource,
+    def mutate(root, info, data):
+        serializer = ResourceSerializer(data=data,
                                         context={'request': info.context})
         if errors := mutation_is_not_valid(serializer):
             return CreateResource(errors=errors, ok=False)
         instance = serializer.save()
-        return CreateResource(resource=instance, errors=None, ok=True)
+        return CreateResource(result=instance, errors=None, ok=True)
 
 
 class UpdateResource(graphene.Mutation):
     class Arguments:
-        resource = ResourceUpdateInputType(required=True)
+        data = ResourceUpdateInputType(required=True)
 
     errors = graphene.List(CustomErrorType)
     ok = graphene.Boolean()
-    resource = graphene.Field(ResourceType)
+    result = graphene.Field(ResourceType)
 
     @staticmethod
     @permission_checker(['resource.change_resource'])
-    def mutate(root, info, resource):
+    def mutate(root, info, data):
         try:
-            instance = Resource.objects.get(id=resource['id'], created_by=info.context.user)
+            instance = Resource.objects.get(id=data['id'], created_by=info.context.user)
         except Resource.DoesNotExist:
             return UpdateResource(errors=[
                 CustomErrorType(field='non_field_errors', messages=gettext('Resource does not exist.'))
             ])
         serializer = ResourceSerializer(instance=instance,
-                                        data=resource,
+                                        data=data,
                                         context={'request': info.context},
                                         partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateResource(errors=errors, ok=False)
         instance = serializer.save()
-        return UpdateResource(resource=instance, errors=None, ok=True)
+        return UpdateResource(result=instance, errors=None, ok=True)
 
 
 class DeleteResource(graphene.Mutation):
@@ -78,7 +78,7 @@ class DeleteResource(graphene.Mutation):
 
     errors = graphene.List(CustomErrorType)
     ok = graphene.Boolean()
-    resource = graphene.Field(ResourceType)
+    result = graphene.Field(ResourceType)
 
     @staticmethod
     @permission_checker(['resource.delete_resource'])
@@ -91,7 +91,7 @@ class DeleteResource(graphene.Mutation):
             ])
         instance.delete()
         instance.id = id
-        return DeleteResource(resource=instance, errors=None, ok=True)
+        return DeleteResource(result=instance, errors=None, ok=True)
 
 
 class ResourceGroupCreateInputType(graphene.InputObjectType):
@@ -105,48 +105,48 @@ class ResourceGroupUpdateInputType(graphene.InputObjectType):
 
 class CreateResourceGroup(graphene.Mutation):
     class Arguments:
-        resource_group = ResourceGroupCreateInputType(required=True)
+        data = ResourceGroupCreateInputType(required=True)
 
     errors = graphene.List(CustomErrorType)
     ok = graphene.Boolean()
-    resource_group = graphene.Field(ResourceGroupType)
+    result = graphene.Field(ResourceGroupType)
 
     @staticmethod
     @permission_checker(['resource.add_resource'])
-    def mutate(root, info, resource_group):
-        serializer = ResourceGroupSerializer(data=resource_group,
+    def mutate(root, info, data):
+        serializer = ResourceGroupSerializer(data=data,
                                              context={'request': info.context})
         if errors := mutation_is_not_valid(serializer):
             return CreateResourceGroup(errors=errors, ok=False)
         instance = serializer.save()
-        return CreateResourceGroup(resource_group=instance, errors=None, ok=True)
+        return CreateResourceGroup(result=instance, errors=None, ok=True)
 
 
 class UpdateResourceGroup(graphene.Mutation):
     class Arguments:
-        resource_group = ResourceGroupUpdateInputType(required=True)
+        data = ResourceGroupUpdateInputType(required=True)
 
     errors = graphene.List(CustomErrorType)
     ok = graphene.Boolean()
-    resource_group = graphene.Field(ResourceGroupType)
+    result = graphene.Field(ResourceGroupType)
 
     @staticmethod
     @permission_checker(['resource.change_resource'])
-    def mutate(root, info, resource_group):
+    def mutate(root, info, data):
         try:
-            instance = ResourceGroup.objects.get(id=resource_group['id'], created_by=info.context.user)
+            instance = ResourceGroup.objects.get(id=data['id'], created_by=info.context.user)
         except ResourceGroup.DoesNotExist:
             return UpdateResourceGroup(errors=[
                 CustomErrorType(field='non_field_errors', messages=gettext('ResourceGroup does not exist.'))
             ])
         serializer = ResourceGroupSerializer(instance=instance,
-                                             data=resource_group,
+                                             data=data,
                                              context={'request': info.context},
                                              partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateResourceGroup(errors=errors, ok=False)
         instance = serializer.save()
-        return UpdateResourceGroup(resource_group=instance, errors=None, ok=True)
+        return UpdateResourceGroup(result=instance, errors=None, ok=True)
 
 
 class DeleteResourceGroup(graphene.Mutation):
@@ -155,7 +155,7 @@ class DeleteResourceGroup(graphene.Mutation):
 
     errors = graphene.List(CustomErrorType)
     ok = graphene.Boolean()
-    resource_group = graphene.Field(ResourceGroupType)
+    result = graphene.Field(ResourceGroupType)
 
     @staticmethod
     @permission_checker(['resource.delete_resource'])
@@ -173,7 +173,7 @@ class DeleteResourceGroup(graphene.Mutation):
             ])
         instance.delete()
         instance.id = id
-        return DeleteResourceGroup(resource_group=instance, errors=None, ok=True)
+        return DeleteResourceGroup(result=instance, errors=None, ok=True)
 
 
 class Mutation:

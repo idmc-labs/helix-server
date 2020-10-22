@@ -17,7 +17,6 @@ class OrganizationListType(CustomDjangoListObjectType):
     class Meta:
         model = Organization
         filter_fields = {
-            'short_name': ['icontains']
         }
 
 

@@ -19,7 +19,7 @@ class UserType(DjangoObjectType):
         exclude_fields = ('password',)
 
     review_entries = DjangoPaginatedListObjectField(EntryListType,
-                                                    pagination=PageGraphqlPagination(
+                                                   pagination=PageGraphqlPagination(
                                                         page_size_query_param='pageSize'
                                                     ), accessor='review_entries')
     created_entry = DjangoPaginatedListObjectField(EntryListType,

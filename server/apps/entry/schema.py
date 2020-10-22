@@ -1,6 +1,7 @@
 import boto3
 from botocore.exceptions import ClientError
 import graphene
+from graphene.types.utils import get_type
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField
 from graphene import ObjectType
@@ -9,12 +10,16 @@ from graphene_django_extras.converter import convert_django_field
 from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, DjangoObjectField
 import logging
 
-from apps.entry.enums import QuantifierGrapheneEnum, UnitGrapheneEnum, TermGrapheneEnum, TypeGrapheneEnum, \
+from apps.entry.enums import (
+    QuantifierGrapheneEnum,
+    UnitGrapheneEnum,
+    TermGrapheneEnum,
+    TypeGrapheneEnum,
     RoleGrapheneEnum
+)
 from apps.entry.filters import EntryFilter
 from apps.entry.models import Figure, Entry, SourcePreview
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType, CustomDjangoListField
-
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +75,9 @@ class EntryType(DjangoObjectType):
                                              pagination=PageGraphqlPagination(
                                                  page_size_query_param='perPage'
                                              ))
-    reviewers = CustomDjangoListField('apps.users.schema.UserType')
+    reviewers = graphene.Dynamic(
+        lambda: DjangoPaginatedListObjectField(get_type('apps.users.schema.UserListType'))
+    )
     total_figures = graphene.Field(graphene.Int)
 
 

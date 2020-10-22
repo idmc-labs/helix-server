@@ -18,9 +18,9 @@ class TestFigureCreation(HelixGraphQLTestCase):
         )
         self.mutation = '''
             mutation CreateFigure($input: FigureCreateInputType!) {
-                createFigure(figure: $input) {
+                createFigure(data: $input) {
                     ok
-                    figure {
+                    result {
                        id
                     }
                     errors {
@@ -104,7 +104,7 @@ class TestFigureCreation(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createFigure']['ok'], content)
-        self.assertIsNotNone(content['data']['createFigure']['figure']['id'], content)
+        self.assertIsNotNone(content['data']['createFigure']['result']['id'], content)
 
 
 class TestFigureUpdate(HelixGraphQLTestCase):
@@ -119,9 +119,9 @@ class TestFigureUpdate(HelixGraphQLTestCase):
         )
         self.mutation = '''
             mutation UpdateFigure($input: FigureUpdateInputType!) {
-                updateFigure(figure: $input) {
+                updateFigure(data: $input) {
                     ok
-                    figure {
+                    result {
                         id
                         ageJson{
                             ageFrom
@@ -191,7 +191,7 @@ class TestFigureUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateFigure']['ok'], content)
-        self.assertIsNotNone(content['data']['updateFigure']['figure']['id'], content)
+        self.assertIsNotNone(content['data']['updateFigure']['result']['id'], content)
         self.figure.refresh_from_db()
         self.assertEqual(len(self.figure.age_json), len(self.input['ageJson']))
         self.assertEqual(len(self.figure.strata_json), len(self.input['strataJson']))
@@ -255,7 +255,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.event = EventFactory.create()
         self.mutation = """
             mutation CreateEntry($input: EntryCreateInputType!) {
-                createEntry(entry: $input) {
+                createEntry(data: $input) {
                     ok
                     errors {
                         field
@@ -275,7 +275,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                             }
                         }
                     }
-                    entry {
+                    result {
                         id
                         document
                         figures {
@@ -315,7 +315,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createEntry']['ok'], content)
         self.assertIsNone(content['data']['createEntry']['errors'], content)
-        self.assertIsNotNone(content['data']['createEntry']['entry']['id'])
+        self.assertIsNotNone(content['data']['createEntry']['result']['id'])
 
     def test_valid_nested_figures_create(self):
         figures = [
@@ -346,10 +346,10 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createEntry']['ok'], content)
         self.assertIsNone(content['data']['createEntry']['errors'], content)
-        self.assertIsNotNone(content['data']['createEntry']['entry']['id'])
-        self.assertEqual(content['data']['createEntry']['entry']['figures']['totalCount'],
+        self.assertIsNotNone(content['data']['createEntry']['result']['id'])
+        self.assertEqual(content['data']['createEntry']['result']['figures']['totalCount'],
                          len(figures))
-        self.assertIsNotNone(content['data']['createEntry']['entry']['figures']['results'][0]['id'])
+        self.assertIsNotNone(content['data']['createEntry']['result']['figures']['results'][0]['id'])
 
     def test_assert_nested_figures_errors(self):
         uuid = str(uuid4())
@@ -483,8 +483,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createEntry']['ok'], content)
-        self.assertIsNotNone(content['data']['createEntry']['entry']['id'])
-        self.assertIsNotNone(content['data']['createEntry']['entry']['document'])
+        self.assertIsNotNone(content['data']['createEntry']['result']['id'])
+        self.assertIsNotNone(content['data']['createEntry']['result']['document'])
 
 
 class TestEntryUpdate(HelixGraphQLTestCase):
@@ -495,13 +495,13 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         )
         self.mutation = """
             mutation UpdateEntry($input: EntryUpdateInputType!) {
-                updateEntry(entry: $input) {
+                updateEntry(data: $input) {
                     ok
                     errors {
                         field
                         messages
                     }
-                    entry {
+                    result {
                         id
                         url
                     }
@@ -578,7 +578,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
                         field
                         messages
                     }
-                    entry {
+                    result {
                         id
                         source
                         url
@@ -601,7 +601,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['deleteEntry']['ok'], content)
-        self.assertEqual(content['data']['deleteEntry']['entry']['url'],
+        self.assertEqual(content['data']['deleteEntry']['result']['url'],
                          self.entry.url)
 
     def test_invalid_delete_by_reviewer(self):
@@ -642,5 +642,5 @@ class TestEntryDelete(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['deleteEntry']['ok'], content)
-        self.assertEqual(content['data']['deleteEntry']['entry']['url'],
+        self.assertEqual(content['data']['deleteEntry']['result']['url'],
                          self.entry.url)

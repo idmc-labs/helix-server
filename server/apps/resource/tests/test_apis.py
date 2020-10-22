@@ -29,10 +29,10 @@ class TestCreateResourceGroup(HelixGraphQLTestCase):
     def setUp(self):
         self.mutation = '''
             mutation CreateResourceGroup($input: ResourceGroupCreateInputType!) {
-              createResourceGroup(resourceGroup: $input) {
+              createResourceGroup(data: $input) {
                 ok
-                resourceGroup { 
-                  name 
+                result {
+                  name
                 }
               }
             }
@@ -52,7 +52,7 @@ class TestCreateResourceGroup(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createResourceGroup']['ok'], content)
-        self.assertEqual(content['data']['createResourceGroup']['resourceGroup']['name'], self.input['name'])
+        self.assertEqual(content['data']['createResourceGroup']['result']['name'], self.input['name'])
         self.assertEqual(old + 1, ResourceGroup.objects.count())
 
 
@@ -63,9 +63,9 @@ class TestCreateResource(HelixGraphQLTestCase):
         self.countries = CountryFactory.create_batch(3)
         self.mutation = '''
             mutation CreateResource($input: ResourceCreateInputType!) {
-              createResource(resource: $input) {
+              createResource(data: $input) {
                 ok
-                resource { 
+                result {
                   name
                 }
                 errors {
@@ -91,7 +91,7 @@ class TestCreateResource(HelixGraphQLTestCase):
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createResource']['ok'], content)
-        self.assertEqual(content['data']['createResource']['resource']['name'], self.input['name'])
+        self.assertEqual(content['data']['createResource']['result']['name'], self.input['name'])
 
     def test_invalid_create_without_countries(self):
         self.input['countries'] = []
