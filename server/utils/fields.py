@@ -15,6 +15,8 @@ from graphene_django_extras.settings import graphql_api_settings
 from graphene_django_extras.types import DjangoObjectOptions
 from graphene_django_extras.utils import get_extra_filters
 
+from utils.pagination import OrderingOnlyArgumentPagination
+
 
 class CustomDjangoListObjectBase(DjangoListObjectBase):
     def __init__(self, results, count, page, pageSize, results_field_name="results"):
@@ -34,6 +36,9 @@ class CustomDjangoListObjectBase(DjangoListObjectBase):
 
 
 class CustomDjangoListField(DjangoListField):
+    """
+    Removes the compulsion of using `get_queryset` in the DjangoListField
+    """
     @staticmethod
     def list_resolver(
             django_object_type, resolver, default_queryset, root, info, **args
@@ -50,6 +55,9 @@ class CustomDjangoListField(DjangoListField):
 
 
 class CustomDjangoListObjectType(DjangoListObjectType):
+    """
+    Updates `DjangoListObjectType` to add page related fields into type definition
+    """
     class Meta:
         abstract = True
 
@@ -211,7 +219,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             )
         """
 
-        pagination = pagination or graphql_api_settings.DEFAULT_PAGINATION_CLASS()
+        pagination = pagination or OrderingOnlyArgumentPagination()
 
         if pagination is not None:
             assert isinstance(pagination, BaseDjangoGraphqlPagination), (
@@ -255,6 +263,6 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             count=count,
             results=maybe_queryset(qs),
             results_field_name=self.type._meta.results_field_name,
-            page=kwargs.get('page', 1),
-            pageSize=kwargs.get('pageSize', graphql_api_settings.DEFAULT_PAGE_SIZE)
+            page=kwargs.get('page', 1) if 'page' in kwargs else None,
+            pageSize=kwargs.get('pageSize', graphql_api_settings.DEFAULT_PAGE_SIZE) if 'page' in kwargs else None
         )
