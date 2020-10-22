@@ -2,6 +2,7 @@ from collections import OrderedDict
 
 from django.db.models import QuerySet
 from graphene import Field, Int, Argument, ID
+from graphene.utils.str_converters import to_snake_case
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django.utils import is_valid_django_model, maybe_queryset, DJANGO_FILTER_INSTALLED
 from graphene_django_extras import DjangoListObjectField, DjangoListObjectType, DjangoObjectType, \
@@ -14,6 +15,8 @@ from graphene_django_extras.registry import get_global_registry
 from graphene_django_extras.settings import graphql_api_settings
 from graphene_django_extras.types import DjangoObjectOptions
 from graphene_django_extras.utils import get_extra_filters
+
+from utils.pagination import OrderingOnlyArgumentPagination
 
 
 class CustomDjangoListObjectBase(DjangoListObjectBase):
@@ -34,6 +37,9 @@ class CustomDjangoListObjectBase(DjangoListObjectBase):
 
 
 class CustomDjangoListField(DjangoListField):
+    """
+    Removes the compulsion of using `get_queryset` in the DjangoListField
+    """
     @staticmethod
     def list_resolver(
             django_object_type, resolver, default_queryset, root, info, **args
@@ -50,6 +56,9 @@ class CustomDjangoListField(DjangoListField):
 
 
 class CustomDjangoListObjectType(DjangoListObjectType):
+    """
+    Updates `DjangoListObjectType` to add page related fields into type definition
+    """
     class Meta:
         abstract = True
 
@@ -211,7 +220,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             )
         """
 
-        pagination = pagination or graphql_api_settings.DEFAULT_PAGINATION_CLASS()
+        pagination = pagination or OrderingOnlyArgumentPagination()
 
         if pagination is not None:
             assert isinstance(pagination, BaseDjangoGraphqlPagination), (
@@ -249,12 +258,15 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
         count = qs.count()
 
         if getattr(self, "pagination", None):
+            ordering = kwargs.pop(self.pagination.ordering_param, None) or self.pagination.ordering
+            ordering = ','.join([to_snake_case(each) for each in ordering.strip(',').replace(' ', '').split(',')])
+            self.pagination.ordering = ordering
             qs = self.pagination.paginate_queryset(qs, **kwargs)
 
         return CustomDjangoListObjectBase(
             count=count,
             results=maybe_queryset(qs),
             results_field_name=self.type._meta.results_field_name,
-            page=kwargs.get('page', 1),
-            pageSize=kwargs.get('pageSize', graphql_api_settings.DEFAULT_PAGE_SIZE)
+            page=kwargs.get('page', 1) if hasattr(self.pagination, 'page') else None,
+            pageSize=kwargs.get('pageSize', graphql_api_settings.DEFAULT_PAGE_SIZE) if hasattr(self.pagination, 'page') else None
         )
