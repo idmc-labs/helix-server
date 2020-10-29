@@ -1,18 +1,23 @@
 ### Serverless
 
-#### AWS Profile for deployment
+#### Integration with Helix server
 
-Create a new profile (eg helixProfile) in ~/.aws/credentials directory to be able to deploy the serverless,
-based on the credentials in the AWS console. Also to test lambda function locally.
-
-For docker, fill `.env` file with following keys
+Fill `.env` file with following keys
 
 - AWS_ACCESS_KEY_ID
 - AWS_SECRET_ACCESS_KEY
 - AWS_DEFAULT_REGION
 - AWS_REGION
+- S3_BUCKET_NAME
 
-#### Serverless plugins
+### Development and Deployment for serverless
+
+#### AWS Profile for deployment
+
+Create a new profile (eg helixProfile) in ~/.aws/credentials directory to be able to deploy the serverless,
+based on the credentials in the AWS console. Also to test lambda function locally.
+
+#### Serverless plugins installation
 
 `package.json` provides the required packages
 
@@ -23,6 +28,8 @@ npm install
 1. Python Requirements
 
 If and only if package.json is missing. Or you want to ignore package.json
+
+ELSE
 
 ```bash
 sls install -n serverless-python-requirements
@@ -59,4 +66,3 @@ Notes
 -
 
 - Individual packaging does not work with layers from serverless configuration
-

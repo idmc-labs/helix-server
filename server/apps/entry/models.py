@@ -27,8 +27,8 @@ class SourcePreview(MetaInformationAbstractModel):
     pdf = models.FileField(verbose_name=_('Rendered Pdf'),
                            blank=True, null=True,
                            upload_to='source/previews')
-    # todo remove pdf filefield
-    # url, completed and reason will be populated from lambda webhook
+    # pdf_url will be temporary field only for development across multiple local instances
+    # pdf field should be used when the server is remote # todo when remote
     pdf_url = models.URLField(verbose_name=_('Pdf URL'),
                               blank=True, null=True)
     completed = models.BooleanField(default=False)
@@ -44,12 +44,14 @@ class SourcePreview(MetaInformationAbstractModel):
             token = str(uuid.uuid4())
             instance = cls(token=token)
         instance.url = url
+        # todo remove me
+        instance.pdf_url = f'https://{settings.S3_BUCKET_NAME}.s3.amazonaws.com/source/previews/{instance.token}.pdf'
         instance.save()
 
         payload = dict(
             url=url,
             token=instance.token,
-            filename=f'{instance.token}.pdf'
+            filename=f'{instance.token}.pdf',
         )
         logger.info(f'Invoking lambda function for preview {url} {instance.token}')
         client = boto3.client('lambda')

@@ -331,7 +331,7 @@ class CreateSourcePreview(graphene.Mutation):
             serializer = SourcePreviewSerializer(data=preview,
                                                  context={'request': info.context})
         if errors := mutation_is_not_valid(serializer):
-            return CreateEntry(errors=errors, ok=False)
+            return CreateSourcePreview(errors=errors, ok=False)
         instance = serializer.save()
         return CreateSourcePreview(preview=instance, errors=None, ok=True)
 

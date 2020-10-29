@@ -22,6 +22,7 @@ def handle_pdf_generation(request):
     if 'body' in response:
         preview.completed = True
         # preview.pdf_url = response['body']
+        # https://stackoverflow.com/a/50804853/3218199
         preview.pdf = preview.token + '.pdf'
     else:
         preview.completed = False
