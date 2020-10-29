@@ -23,9 +23,8 @@ class UserFilter(django_filters.FilterSet):
     def filter_role_in(self, queryset, name, value):
         if not value:
             return queryset
-        groups = []
-        for v in value.strip(',').replace(' ', '').split(','):
-            groups.append(Group.objects.get(name__iexact=v))
+        group_names = value.strip(',').replace(' ', '').upper().split(',')
+        groups = Group.objects.filter(name__in=group_names)
         return queryset.filter(
             groups__in=groups
         ).distinct()
