@@ -3,10 +3,7 @@ import django_filters
 import graphene
 
 from apps.users.models import User
-from utils.filters import _generate_list_filter_class
-
-
-StringListFilter = _generate_list_filter_class(graphene.String)
+from utils.filters import StringListFilter
 
 
 class UserFilter(django_filters.FilterSet):

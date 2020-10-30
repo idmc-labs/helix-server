@@ -40,3 +40,5 @@ def _generate_list_filter_class(inner_type):
 
     return filter_class
 
+
+StringListFilter = _generate_list_filter_class(graphene.String)
