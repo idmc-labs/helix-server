@@ -44,7 +44,7 @@ class SourcePreview(MetaInformationAbstractModel):
             token = str(uuid.uuid4())
             instance = cls(token=token)
         instance.url = url
-        # todo remove .pdf in production... this will happen after webhook
+        # TODO: remove .pdf in production... this will happen after webhook
         instance.pdf = cls.PREVIEW_FOLDER + '/' + instance.token + '.pdf'
 
         instance.save()
@@ -248,7 +248,7 @@ class Entry(MetaInformationAbstractModel, models.Model):
                                      blank=False, null=True)
     methodology = models.TextField(verbose_name=_('Methodology'),
                                    blank=False, null=True)
-    # grid todo
+    # grid TODO:
     tags = ArrayField(base_field=models.CharField(verbose_name=_('Tag'), max_length=32),
                       blank=True, null=True)
 

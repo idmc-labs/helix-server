@@ -1,7 +1,7 @@
 service: helix-serverless
 # app and org for use with dashboard.serverless.com
-#app: appname
-#org: togglecorp
+# app: appname
+# org: togglecorp
 
 custom:
   pythonRequirements:
@@ -39,7 +39,7 @@ package:
 
 functions:
   generatePdf:
-    #module: generate_pdf
+    # module: generate_pdf
     handler: lambda_function.handle
     # todo provisionedConcurrency (fixme, failing with destinations)
     destinations:

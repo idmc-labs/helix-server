@@ -32,7 +32,7 @@ HELIX_ENVIRONMENT = os.environ.get('HELIX_ENVIRONMENT', 'development')
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 
-# fixme
+# FIXME:
 ALLOWED_HOSTS = ['*']
 
 # Application definition
@@ -242,11 +242,11 @@ INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 
 # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
 AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'togglecorp-helix')
 AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
-AWS_S3_PRESIGN_EXPIRY_TTL = int(os.environ.get('S3_PRESIGN_EXPIRY_TTL', 12*60*60))
 AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12*60*60))
 
 SLS_SERVICE_NAME = os.environ.get('SLS_SERVICE_NAME', 'helix-serverless')
