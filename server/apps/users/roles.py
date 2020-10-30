@@ -3,6 +3,7 @@ codename will be built as <action>_<model> and used as...
 Permission.objects.get(codename=<codename>)
 """
 
+# NOTE: These are permision group names (role names) and are always assumed to be upper-cased
 ADMIN = 'ADMIN'
 IT_HEAD = 'IT_HEAD'
 MONITORING_EXPERT_EDITOR = 'EDITOR'

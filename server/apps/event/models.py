@@ -83,7 +83,7 @@ class DisasterSubType(NameAttributedModels):
     """
     Holds the possible disaster sub types
     """
-    type = models.ForeignKey('DisasterType', verbose_name=_('Disaster Sub Type'),
+    type = models.ForeignKey('DisasterType', verbose_name=_('Disaster Type'),
                              related_name='sub_types', on_delete=models.CASCADE)
 
 

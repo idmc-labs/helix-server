@@ -3,7 +3,7 @@ import json
 from django.contrib.auth.tokens import default_token_generator
 from djoser.utils import encode_uid
 
-from apps.users.roles import MONITORING_EXPERT_EDITOR
+from apps.users.roles import MONITORING_EXPERT_EDITOR, ADMIN, IT_HEAD, MONITORING_EXPERT_REVIEWER
 from utils.factories import EntryFactory
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
@@ -20,6 +20,7 @@ class TestLogin(HelixGraphQLTestCase):
                     }
                     me {
                         email
+                        role
                     }
                 }
             }
@@ -28,6 +29,7 @@ class TestLogin(HelixGraphQLTestCase):
             query MeQuery {
                 me {
                     email
+                    role
                 }
             }
         '''
@@ -53,6 +55,7 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertEqual(content['data']['me']['email'], self.user.email)
+        self.assertEqual(content['data']['me']['role'], self.user.role)
 
     def test_invalid_email(self):
         response = self.query(
@@ -299,3 +302,46 @@ class TestUserSchema(HelixGraphQLTestCase):
         self.assertEqual(content['data']['me']['reviewEntries']['totalCount'], 2)
         self.assertListEqual([int(each['id']) for each in content['data']['me']['reviewEntries']['results']],
                              [entry.id, entry2.id])
+
+
+class TestUserListSchema(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.users_q = '''
+            query MyQuery($roles: [String!]) {
+              users(roleIn: $roles) {
+                results {
+                  id
+                  role
+                }
+              }
+            }
+        '''
+
+    def test_filter_users(self):
+        ue = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        ur = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        ua = create_user_with_role(ADMIN)
+        ui = create_user_with_role(IT_HEAD)
+
+        roles = ['admin', 'editor']
+        response = self.query(
+            self.users_q,
+            variables={"roles": roles},
+        )
+
+        content = response.json()
+        print(content)
+        self.assertResponseNoErrors(response)
+        self.assertEqual(sorted([int(each['id']) for each in content['data']['users']['results']]),
+                         sorted([ue.id, ua.id]))
+
+        roles = ['reviewer', 'editor']
+        response = self.query(
+            self.users_q,
+            variables={"roles": roles},
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertEqual(sorted([int(each['id']) for each in content['data']['users']['results']]),
+                         sorted([ur.id, ue.id]))
+
