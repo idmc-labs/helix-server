@@ -19,6 +19,8 @@ class UserFilter(django_filters.FilterSet):
     def filter_role_in(self, queryset, name, value):
         if not value:
             return queryset
+        # NOTE: role names (permission group names) are always upper cased
+        # server/apps/users/roles.py:6
         value = [each.upper() for each in value]
         return queryset.filter(
             groups__name__in=value
