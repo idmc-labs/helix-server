@@ -238,8 +238,16 @@ INTERNAL_IPS = [
 hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
 INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 
-AWS_REGION = os.environ.get('AWS_REGION', 'us-east-1')
-S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'togglecorp-helix')
+# Django storage
+
+# https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'togglecorp-helix')
+AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
+AWS_S3_PRESIGN_EXPIRY_TTL = int(os.environ.get('S3_PRESIGN_EXPIRY_TTL', 12*60*60))
+AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12*60*60))
 
 SLS_SERVICE_NAME = os.environ.get('SLS_SERVICE_NAME', 'helix-serverless')
 PDF_GENERATOR = os.environ.get('PDF_GENERATOR', 'generatePdf')
@@ -251,4 +259,3 @@ SLS_STAGES = {
 }
 sls_stage = SLS_STAGES[HELIX_ENVIRONMENT.lower()]
 LAMBDA_HTML_TO_PDF = os.environ.get('LAMBDA_HTML_TO_PDF', f'{SLS_SERVICE_NAME}-{sls_stage}-{PDF_GENERATOR}')
-

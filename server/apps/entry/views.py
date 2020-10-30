@@ -21,9 +21,9 @@ def handle_pdf_generation(request):
 
     if 'body' in response:
         preview.completed = True
-        # preview.pdf_url = response['body']
         # https://stackoverflow.com/a/50804853/3218199
-        preview.pdf = preview.token + '.pdf'
+        s3_object_key = SourcePreview.PREVIEW_FOLDER + '/' + preview.token + '.pdf'
+        preview.pdf = s3_object_key
     else:
         preview.completed = False
         preview.reason = response['errorMessage']

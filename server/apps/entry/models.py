@@ -15,18 +15,22 @@ from django_enumfield import enum
 from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
 from apps.users.roles import ADMIN
 
+from utils.fields import CachedFileField
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
 class SourcePreview(MetaInformationAbstractModel):
+    PREVIEW_FOLDER = 'source/previews'
+
     url = models.URLField(verbose_name=_('Source URL'))
     token = models.CharField(verbose_name=_('Token'),
                              max_length=64, db_index=True,
                              blank=True, null=True)
-    pdf = models.FileField(verbose_name=_('Rendered Pdf'),
-                           blank=True, null=True,
-                           upload_to='source/previews')
+    pdf = CachedFileField(verbose_name=_('Rendered Pdf'),
+                          blank=True, null=True,
+                          upload_to=PREVIEW_FOLDER)
     # pdf_url will be temporary field only for development across multiple local instances
     # pdf field should be used when the server is remote # todo when remote
     pdf_url = models.URLField(verbose_name=_('Pdf URL'),

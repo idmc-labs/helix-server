@@ -6,6 +6,7 @@ django-enumfield==2.0.1
 django-extensions==3.0.4
 django-filter==2.3.0
 django-graphiql-debug-toolbar==0.1.4
+django-storages==1.10.1
 # required by djoser
 django-rest-framework==0.1.0
 djoser==2.0.3
