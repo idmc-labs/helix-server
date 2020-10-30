@@ -31,10 +31,6 @@ class SourcePreview(MetaInformationAbstractModel):
     pdf = CachedFileField(verbose_name=_('Rendered Pdf'),
                           blank=True, null=True,
                           upload_to=PREVIEW_FOLDER)
-    # pdf_url will be temporary field only for development across multiple local instances
-    # pdf field should be used when the server is remote # todo when remote
-    pdf_url = models.URLField(verbose_name=_('Pdf URL'),
-                              blank=True, null=True)
     completed = models.BooleanField(default=False)
     reason = models.TextField(verbose_name=_('Error Reason'),
                               blank=True, null=True)
@@ -48,8 +44,9 @@ class SourcePreview(MetaInformationAbstractModel):
             token = str(uuid.uuid4())
             instance = cls(token=token)
         instance.url = url
-        # todo remove me
-        instance.pdf_url = f'https://{settings.S3_BUCKET_NAME}.s3.amazonaws.com/source/previews/{instance.token}.pdf'
+        # todo remove .pdf in production... this will happen after webhook
+        instance.pdf = cls.PREVIEW_FOLDER + '/' + instance.token + '.pdf'
+
         instance.save()
 
         payload = dict(
