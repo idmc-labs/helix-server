@@ -285,6 +285,8 @@ class CachedFieldFile(FieldFile):
 
     @property
     def url(self):
+        if settings.DEFAULT_FILE_STORAGE != 'storages.backends.s3boto3.S3Boto3Storage':
+            return super().url
         key = self.CACHE_KEY.format(hash(self.name))
         url = cache.get(key)
         if url:
