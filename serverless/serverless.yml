@@ -29,7 +29,7 @@ provider:
       Action:
         - "lambda:InvokeFunction"
       Resource:
-        - arn:aws:lambda:*:*:function:${self:service}*
+        - arn:aws:lambda:::function:${self:service}-${self:provider.stage}-destinationHandler
 
 package:
   include:
