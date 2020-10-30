@@ -34,8 +34,6 @@ class UserListType(CustomDjangoListObjectType):
         model = User
         filterset_class = UserFilter
 
-    # fixme: user role not included in userlist
-
 
 class Query(object):
     me = Field(UserType)

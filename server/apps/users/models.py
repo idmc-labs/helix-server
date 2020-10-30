@@ -16,7 +16,9 @@ class User(AbstractUser):
 
     @property
     def role(self):
-        return self.groups.first().name
+        if group := self.groups.first():
+            return group.name
+        return None
 
     def get_full_name(self):
         return f'{self.first_name}, {self.last_name}'

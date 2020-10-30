@@ -1,30 +1,28 @@
-import django_filters
-
-from apps.contact.models import Contact
 from django.contrib.auth.models import Group
+import django_filters
+import graphene
+
+from apps.users.models import User
+from utils.filters import _generate_list_filter_class
+
+
+StringListFilter = _generate_list_filter_class(graphene.String)
 
 
 class UserFilter(django_filters.FilterSet):
-    role = django_filters.CharFilter(method='filter_role')
-    roleIn = django_filters.CharFilter(method='filter_role_in')
+    role = django_filters.CharFilter(field_name='groups__name',
+                                     lookup_expr='iexact',
+                                     distinct=True)
+    roleIn = StringListFilter(method='filter_role_in')
 
     class Meta:
-        model = Contact
+        model = User
         fields = ['email']
-
-    def filter_role(self, queryset, name, value):
-        if not value:
-            return queryset
-        group = Group.objects.get(name__iexact=value)
-        return queryset.filter(
-            groups=group
-        ).distinct()
 
     def filter_role_in(self, queryset, name, value):
         if not value:
             return queryset
-        group_names = value.strip(',').replace(' ', '').upper().split(',')
-        groups = Group.objects.filter(name__in=group_names)
+        value = [each.upper() for each in value]
         return queryset.filter(
-            groups__in=groups
+            groups__name__in=value
         ).distinct()
