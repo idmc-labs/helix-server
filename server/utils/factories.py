@@ -83,6 +83,12 @@ class CommunicationFactory(DjangoModelFactory):
     date_time = factory.Faker('date_time_this_month')
     medium = factory.Iterator(Communication.COMMUNICATION_MEDIUM)
 
+class CommunicationMediumFactory(DjangoModelFactory):
+    class Meta:
+        model = 'contact.CommunicationMedium'
+
+    name = factory.Sequence(lambda n: f'Medium{n}')
+
 
 class DisasterCategoryFactory(DjangoModelFactory):
     class Meta:

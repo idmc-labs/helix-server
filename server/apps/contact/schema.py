@@ -2,27 +2,33 @@ import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField, PageGraphqlPagination
 
-from apps.contact.enums import CommunicationMediumGrapheneEnum, DesignationGrapheneEnum, \
-    GenderGrapheneEnum
+from apps.contact.enums import DesignationGrapheneEnum, GenderGrapheneEnum
 from apps.contact.filters import ContactFilter
-from apps.contact.models import Contact, Communication
+from apps.contact.models import Contact, Communication, CommunicationMedium
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
+
+
+class CommunicationMediumType(DjangoObjectType):
+    class Meta:
+        model = CommunicationMedium
+        filter_fields = []
+
+
+class CommunicationMediumListType(CustomDjangoListObjectType):
+    class Meta:
+        model = CommunicationMedium
+        filter_fields = []
 
 
 class CommunicationType(DjangoObjectType):
     class Meta:
         model = Communication
 
-    medium = graphene.Field(CommunicationMediumGrapheneEnum)
-
 
 class CommunicationListType(CustomDjangoListObjectType):
     class Meta:
         model = Communication
-        filter_fields = {
-            'contact': ['exact'],
-            'subject': ['icontains']
-        }
+        filter_fields = []
 
 
 class ContactType(DjangoObjectType):
@@ -50,7 +56,9 @@ class Query:
                                                   pagination=PageGraphqlPagination(
                                                       page_size_query_param='pageSize'
                                                   ))
+    communication_medium_list = DjangoPaginatedListObjectField(CommunicationMediumListType)
     communication_list = DjangoPaginatedListObjectField(CommunicationListType,
                                                         pagination=PageGraphqlPagination(
                                                             page_size_query_param='pageSize'
                                                         ))
+
