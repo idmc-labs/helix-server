@@ -14,6 +14,7 @@ from utils.factories import UserFactory
 User = get_user_model()
 TEST_MEDIA_ROOT = 'media-temp'
 TEST_EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+TEST_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
 
 class CommonSetupClassMixin:
@@ -35,7 +36,8 @@ class CommonSetupClassMixin:
 
 @override_settings(
     EMAIL_BACKEND=TEST_EMAIL_BACKEND,
-    MEDIA_ROOT=TEST_MEDIA_ROOT
+    MEDIA_ROOT=TEST_MEDIA_ROOT,
+    DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
 )
 class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
     GRAPHQL_URL = '/graphql'
@@ -92,7 +94,8 @@ class ImmediateOnCommitMixin(object):
 
 @override_settings(
     EMAIL_BACKEND=TEST_EMAIL_BACKEND,
-    MEDIA_ROOT=TEST_MEDIA_ROOT
+    DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
+    MEDIA_ROOT=TEST_MEDIA_ROOT,
 )
 class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     pass

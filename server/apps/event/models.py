@@ -51,7 +51,7 @@ class Actor(NameAttributedModels):
     """
     Conflict related actors
     """
-    # country = todo
+    # country = TODO:
 
 
 # Models related to displacement caused by disaster

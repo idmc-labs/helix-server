@@ -1,41 +1,66 @@
 from collections import OrderedDict
-import os
+import json
+import logging
 import uuid
 
+import boto3
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField, JSONField
-from django.core.files.base import ContentFile
 from django.db import models
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
-import pdfkit
 
 from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
 from apps.users.roles import ADMIN
 
+from utils.fields import CachedFileField
+
+logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
 class SourcePreview(MetaInformationAbstractModel):
+    PREVIEW_FOLDER = 'source/previews'
+
     url = models.URLField(verbose_name=_('Source URL'))
-    pdf = models.FileField(verbose_name=_('Rendered Pdf'),
-                           blank=True, null=True,
-                           upload_to='source/previews')
+    token = models.CharField(verbose_name=_('Token'),
+                             max_length=64, db_index=True,
+                             blank=True, null=True)
+    pdf = CachedFileField(verbose_name=_('Rendered Pdf'),
+                          blank=True, null=True,
+                          upload_to=PREVIEW_FOLDER)
+    completed = models.BooleanField(default=False)
+    reason = models.TextField(verbose_name=_('Error Reason'),
+                              blank=True, null=True)
 
     @classmethod
     def get_pdf(cls, url: str, instance: 'SourcePreview' = None, **kwargs) -> 'SourcePreview':
         """
         Based on the url, generate a pdf and store it.
         """
-        filename = f'{uuid.uuid4()}.pdf'
-        pdf_content = pdfkit.from_url(url, False)
         if not instance:
-            instance = cls()
+            token = str(uuid.uuid4())
+            instance = cls(token=token)
         instance.url = url
-        instance.pdf.save(filename, ContentFile(pdf_content))
+        # TODO: remove .pdf in production... this will happen after webhook
+        instance.pdf = cls.PREVIEW_FOLDER + '/' + instance.token + '.pdf'
+
         instance.save()
+
+        payload = dict(
+            url=url,
+            token=instance.token,
+            filename=f'{instance.token}.pdf',
+        )
+        logger.info(f'Invoking lambda function for preview {url} {instance.token}')
+        client = boto3.client('lambda')
+        client.invoke(
+            FunctionName=settings.LAMBDA_HTML_TO_PDF,
+            InvocationType='Event',
+            Payload=json.dumps(payload)
+        )
         return instance
 
 
@@ -223,7 +248,7 @@ class Entry(MetaInformationAbstractModel, models.Model):
                                      blank=False, null=True)
     methodology = models.TextField(verbose_name=_('Methodology'),
                                    blank=False, null=True)
-    # grid todo
+    # grid TODO:
     tags = ArrayField(base_field=models.CharField(verbose_name=_('Tag'), max_length=32),
                       blank=True, null=True)
 

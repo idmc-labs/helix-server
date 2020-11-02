@@ -1,16 +1,22 @@
+import boto3
+from botocore.exceptions import ClientError
 import graphene
+from django.conf import settings
 from django.contrib.postgres.fields import JSONField
 from graphene import ObjectType
 from graphene.types.generic import GenericScalar
-from graphene.types.utils import get_type
 from graphene_django_extras.converter import convert_django_field
 from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, DjangoObjectField
+import logging
 
 from apps.entry.enums import QuantifierGrapheneEnum, UnitGrapheneEnum, TermGrapheneEnum, TypeGrapheneEnum, \
     RoleGrapheneEnum
 from apps.entry.filters import EntryFilter
 from apps.entry.models import Figure, Entry, SourcePreview
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType, CustomDjangoListField
+
+
+logger = logging.getLogger(__name__)
 
 
 @convert_django_field.register(JSONField)
@@ -77,11 +83,10 @@ class EntryListType(CustomDjangoListObjectType):
 class SourcePreviewType(DjangoObjectType):
     class Meta:
         model = SourcePreview
-        exclude_fields = ('entry',)
+        exclude_fields = ('entry', 'token')
 
     def resolve_pdf(root, info, **kwargs):
-        # todo: check against s3 configurations
-        return info.context.build_absolute_uri(root.pdf.url)
+        return root.pdf.url
 
 
 class Query:
@@ -90,6 +95,7 @@ class Query:
                                                  pagination=PageGraphqlPagination(
                                                      page_size_query_param='pageSize'
                                                  ))
+    source_preview = DjangoObjectField(SourcePreviewType)
     entry = DjangoObjectField(EntryType)
     entry_list = DjangoPaginatedListObjectField(EntryListType,
                                                 pagination=PageGraphqlPagination(

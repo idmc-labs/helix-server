@@ -4,9 +4,6 @@ MAINTAINER togglecorp info@togglecorp.com
 
 ENV PYTHONUNBUFFERED 1
 
-RUN apt-get update -y && \
-    apt-get install -y wkhtmltopdf
-
 WORKDIR /code
 
 COPY ./requirements.txt /code/requirements.txt

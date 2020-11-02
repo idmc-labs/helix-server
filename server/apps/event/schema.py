@@ -22,7 +22,7 @@ from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectT
 class TriggerSubObjectType(DjangoObjectType):
     class Meta:
         model = TriggerSubType
-        exclude_fields = ('events',)
+        exclude_fields = ('events', 'trigger')
         filter_fields = {}
 
 

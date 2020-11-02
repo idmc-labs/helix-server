@@ -26,12 +26,13 @@ APPS_DIR = os.path.join(BASE_DIR, APPS_DIRNAME)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'w(m6)jr08z!anjsq6mjz%xo^*+sfnv$e3list=gfcfxaj_^4%o')
+HELIX_ENVIRONMENT = os.environ.get('HELIX_ENVIRONMENT', 'development')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 
-# fixme
+# FIXME:
 ALLOWED_HOSTS = ['*']
 
 # Application definition
@@ -236,3 +237,25 @@ INTERNAL_IPS = [
 # https://github.com/flavors/django-graphiql-debug-toolbar/#installation
 hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
 INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
+
+# Django storage
+
+# https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'togglecorp-helix')
+AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
+AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12*60*60))
+
+SLS_SERVICE_NAME = os.environ.get('SLS_SERVICE_NAME', 'helix-serverless')
+PDF_GENERATOR = os.environ.get('PDF_GENERATOR', 'generatePdf')
+SLS_STAGES = {
+    'development': 'dev',
+    'production': 'prod',
+    'testing': 'nightly',
+    'nightly': 'nightly'
+}
+sls_stage = SLS_STAGES[HELIX_ENVIRONMENT.lower()]
+LAMBDA_HTML_TO_PDF = os.environ.get('LAMBDA_HTML_TO_PDF', f'{SLS_SERVICE_NAME}-{sls_stage}-{PDF_GENERATOR}')

@@ -1,7 +1,10 @@
 from collections import OrderedDict
 
-from django.db.models import QuerySet
-from graphene import Field, Int, Argument, ID
+from django.conf import settings
+from django.core.cache import cache
+from django.db.models import QuerySet, FileField
+from django.db.models.fields.files import FieldFile
+from graphene import Field, Int
 from graphene.utils.str_converters import to_snake_case
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django.utils import is_valid_django_model, maybe_queryset, DJANGO_FILTER_INSTALLED
@@ -18,6 +21,8 @@ from graphene_django_extras.utils import get_extra_filters
 
 from utils.pagination import OrderingOnlyArgumentPagination
 
+
+# Graphene related fields
 
 class CustomDjangoListObjectBase(DjangoListObjectBase):
     def __init__(self, results, count, page, pageSize, results_field_name="results"):
@@ -270,3 +275,26 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             page=kwargs.get('page', 1) if hasattr(self.pagination, 'page') else None,
             pageSize=kwargs.get('pageSize', graphql_api_settings.DEFAULT_PAGE_SIZE) if hasattr(self.pagination, 'page') else None
         )
+
+
+# Django model fields
+
+
+class CachedFieldFile(FieldFile):
+    CACHE_KEY = 'url_cache_{}'
+
+    @property
+    def url(self):
+        if settings.DEFAULT_FILE_STORAGE != 'storages.backends.s3boto3.S3Boto3Storage':
+            return super().url
+        key = self.CACHE_KEY.format(hash(self.name))
+        url = cache.get(key)
+        if url:
+            return url
+        url = super().url
+        cache.set(key, url, settings.AWS_QUERYSTRING_EXPIRE)
+        return url
+
+
+class CachedFileField(FileField):
+    attr_class = CachedFieldFile

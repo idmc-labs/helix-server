@@ -26,7 +26,7 @@ PERMISSIONS = {
         'add': ALL_MODELS,
         'change': ALL_MODELS,
         'delete': ALL_MODELS,
-        # 'lock': {'grid'}  # todo uncomment
+        # 'lock': {'grid'}  # TODO: uncomment
     },
     MONITORING_EXPERT_EDITOR: {
         'add': ALL_MODELS,
