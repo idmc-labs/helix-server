@@ -1,9 +1,9 @@
-from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, DjangoObjectField
+from graphene_django import DjangoObjectType
+from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
 
 from apps.resource.models import Resource, ResourceGroup
 from apps.resource.filters import ResourceFilter, ResourceGroupFilter
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
-
 
 
 class ResourceType(DjangoObjectType):

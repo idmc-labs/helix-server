@@ -1,5 +1,6 @@
 import graphene
-from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, DjangoObjectField, DjangoFilterListField
+from graphene_django import DjangoObjectType
+from graphene_django_extras import PageGraphqlPagination, DjangoObjectField, DjangoFilterListField
 
 from apps.country.schema import CountryType
 from apps.crisis.enums import CrisisTypeGrapheneEnum

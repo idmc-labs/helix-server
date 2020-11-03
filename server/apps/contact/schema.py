@@ -1,6 +1,6 @@
 import graphene
-from graphene_django_extras import DjangoObjectField, PageGraphqlPagination, \
-    DjangoObjectType
+from graphene_django import DjangoObjectType
+from graphene_django_extras import DjangoObjectField, PageGraphqlPagination
 
 from apps.contact.enums import CommunicationMediumGrapheneEnum, DesignationGrapheneEnum, \
     GenderGrapheneEnum
