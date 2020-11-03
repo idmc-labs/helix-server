@@ -1,13 +1,12 @@
-import boto3
-from botocore.exceptions import ClientError
 import graphene
 from graphene.types.utils import get_type
 from django.conf import settings
 from django.contrib.postgres.fields import JSONField
 from graphene import ObjectType
 from graphene.types.generic import GenericScalar
+from graphene_django import DjangoObjectType
 from graphene_django_extras.converter import convert_django_field
-from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, DjangoObjectField
+from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
 import logging
 
 from apps.entry.enums import (

@@ -1,8 +1,8 @@
 import graphene
 from graphene.types.utils import get_type
+from graphene_django import DjangoObjectType
 from graphene_django_extras import (
-    DjangoObjectType, 
-    PageGraphqlPagination, 
+    PageGraphqlPagination,
     DjangoObjectField
 )
 

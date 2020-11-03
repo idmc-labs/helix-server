@@ -8,13 +8,14 @@ from graphene import Field, Int
 from graphene.utils.str_converters import to_snake_case
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django.utils import is_valid_django_model, maybe_queryset, DJANGO_FILTER_INSTALLED
-from graphene_django_extras import DjangoListObjectField, DjangoListObjectType, DjangoObjectType, \
-    DjangoFilterPaginateListField, DjangoFilterListField
+# we will use graphene_django registry over the one from graphene_django_extras
+# since it adds information regarding nullability in the schema definition
+from graphene_django.registry import get_global_registry
+from graphene_django_extras import DjangoListObjectType, DjangoObjectType, DjangoFilterPaginateListField
 from graphene_django_extras.base_types import DjangoListObjectBase, factory_type
 from graphene_django_extras.fields import DjangoListField
 from graphene_django_extras.filters.filter import get_filterset_class
 from graphene_django_extras.paginations.pagination import BaseDjangoGraphqlPagination
-from graphene_django_extras.registry import get_global_registry
 from graphene_django_extras.settings import graphql_api_settings
 from graphene_django_extras.types import DjangoObjectOptions
 from graphene_django_extras.utils import get_extra_filters

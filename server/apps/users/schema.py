@@ -2,8 +2,8 @@ from django.contrib.auth import get_user_model
 import graphene
 from graphene import Field
 from graphene.types.utils import get_type
-# from graphene_django import DjangoObjectType
-from graphene_django_extras import PageGraphqlPagination, DjangoObjectType
+from graphene_django import DjangoObjectType
+from graphene_django_extras import PageGraphqlPagination, DjangoObjectType as ExtraDOT
 
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
 from apps.users.filters import UserFilter
