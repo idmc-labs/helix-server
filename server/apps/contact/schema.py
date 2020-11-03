@@ -3,7 +3,7 @@ from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField, PageGraphqlPagination
 
 from apps.contact.enums import DesignationGrapheneEnum, GenderGrapheneEnum
-from apps.contact.filters import ContactFilter
+from apps.contact.filters import ContactFilter, CommunicationFilter
 from apps.contact.models import Contact, Communication, CommunicationMedium
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
 
@@ -28,7 +28,7 @@ class CommunicationType(DjangoObjectType):
 class CommunicationListType(CustomDjangoListObjectType):
     class Meta:
         model = Communication
-        filter_fields = []
+        filterset_class = CommunicationFilter
 
 
 class ContactType(DjangoObjectType):
