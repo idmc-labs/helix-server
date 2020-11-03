@@ -70,6 +70,13 @@ class ContactFactory(DjangoModelFactory):
     organization = factory.SubFactory(OrganizationFactory)
 
 
+class CommunicationMediumFactory(DjangoModelFactory):
+    class Meta:
+        model = 'contact.CommunicationMedium'
+
+    name = factory.Sequence(lambda n: f'Medium{n}')
+
+
 class CommunicationFactory(DjangoModelFactory):
     class Meta:
         model = 'contact.Communication'
@@ -79,13 +86,7 @@ class CommunicationFactory(DjangoModelFactory):
     subject = factory.Faker('sentence')
     content = factory.Faker('paragraph')
     date_time = factory.Faker('date_time_this_month')
-    medium = factory.Iterator(Communication.COMMUNICATION_MEDIUM)
-
-class CommunicationMediumFactory(DjangoModelFactory):
-    class Meta:
-        model = 'contact.CommunicationMedium'
-
-    name = factory.Sequence(lambda n: f'Medium{n}')
+    medium = factory.SubFactory(CommunicationMediumFactory)
 
 
 class DisasterCategoryFactory(DjangoModelFactory):
