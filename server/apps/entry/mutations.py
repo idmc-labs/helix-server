@@ -63,12 +63,12 @@ class NestedFigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectT
 
 class FigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectType):
     entry = graphene.ID(required=True)
-    uuid = graphene.String(required=True)
+    uuid = graphene.String(required=False)
 
 
 class FigureUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
-    uuid = graphene.String(required=True)
+    uuid = graphene.String(required=False)
     entry = graphene.ID()
     district = graphene.String()
     town = graphene.String()
