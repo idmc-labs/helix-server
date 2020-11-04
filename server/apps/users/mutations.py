@@ -19,7 +19,7 @@ class Register(graphene.Mutation):
     class Arguments:
         data = RegisterInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(UserType)
 
@@ -47,7 +47,7 @@ class Login(graphene.Mutation):
         data = LoginInputType(required=True)
 
     result = graphene.Field(UserType)
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
 
     @staticmethod
@@ -74,7 +74,7 @@ class Activate(graphene.Mutation):
     class Arguments:
         data = ActivateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
 
     @staticmethod

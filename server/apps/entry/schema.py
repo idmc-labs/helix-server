@@ -52,8 +52,8 @@ class FigureType(DjangoObjectType):
     term = graphene.Field(TermGrapheneEnum)
     type = graphene.Field(TypeGrapheneEnum)
     role = graphene.Field(RoleGrapheneEnum)
-    age_json = graphene.List(DisaggregatedAgeType)
-    strata_json = graphene.List(DisaggregatedStratumType)
+    age_json = graphene.List(graphene.NonNull(DisaggregatedAgeType))
+    strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
 
 
 class FigureListType(CustomDjangoListObjectType):

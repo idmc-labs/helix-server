@@ -23,7 +23,7 @@ class EventCreateInputType(graphene.InputObjectType):
     disaster_sub_category = graphene.ID()
     disaster_type = graphene.ID()
     disaster_sub_type = graphene.ID()
-    countries = graphene.List(graphene.ID, required=False)
+    countries = graphene.List(graphene.NonNull(graphene.ID))
     start_date = graphene.Date()
     end_date = graphene.Date()
     event_narrative = graphene.String()
@@ -44,7 +44,7 @@ class EventUpdateInputType(graphene.InputObjectType):
     disaster_sub_category = graphene.ID()
     disaster_type = graphene.ID()
     disaster_sub_type = graphene.ID()
-    countries = graphene.List(graphene.ID)
+    countries = graphene.List(graphene.NonNull(graphene.ID))
     start_date = graphene.Date()
     end_date = graphene.Date()
     event_narrative = graphene.String()
@@ -54,7 +54,7 @@ class CreateEvent(graphene.Mutation):
     class Arguments:
         data = EventCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(EventType)
 
@@ -72,7 +72,7 @@ class UpdateEvent(graphene.Mutation):
     class Arguments:
         data = EventUpdateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(EventType)
 
@@ -96,7 +96,7 @@ class DeleteEvent(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(EventType)
 

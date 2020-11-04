@@ -25,7 +25,7 @@ class CreateOrganizationKind(graphene.Mutation):
     class Arguments:
         data = OrganizationKindCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(OrganizationKindObjectType)
 
@@ -43,7 +43,7 @@ class UpdateOrganizationKind(graphene.Mutation):
     class Arguments:
         data = OrganizationKindUpdateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(OrganizationKindObjectType)
 
@@ -67,7 +67,7 @@ class DeleteOrganizationKind(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(OrganizationKindObjectType)
 
@@ -95,7 +95,7 @@ class OrganizationCreateInputType(graphene.InputObjectType):
     methodology = graphene.String(required=True)
     source_detail_methodology = graphene.String(required=True)
     parent = graphene.ID(description="Foreign Key to self")
-    contacts = graphene.List(ContactWithoutOrganizationInputType)
+    contacts = graphene.List(graphene.NonNull(ContactWithoutOrganizationInputType))
 
 
 class OrganizationUpdateInputType(graphene.InputObjectType):
@@ -112,7 +112,7 @@ class CreateOrganization(graphene.Mutation):
     class Arguments:
         data = OrganizationCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(OrganizationType)
 
@@ -130,7 +130,7 @@ class UpdateOrganization(graphene.Mutation):
     class Arguments:
         data = OrganizationUpdateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(OrganizationType)
 
@@ -154,7 +154,7 @@ class DeleteOrganization(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(OrganizationType)
 

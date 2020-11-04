@@ -22,7 +22,7 @@ class ResourceUpdateInputType(graphene.InputObjectType):
     name = graphene.String()
     url = graphene.String()
     group = graphene.ID()
-    countries = graphene.List(graphene.ID)
+    countries = graphene.List(graphene.NonNull(graphene.ID))
     last_accessed_on = graphene.DateTime()
 
 
@@ -30,7 +30,7 @@ class CreateResource(graphene.Mutation):
     class Arguments:
         data = ResourceCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(ResourceType)
 
@@ -49,7 +49,7 @@ class UpdateResource(graphene.Mutation):
     class Arguments:
         data = ResourceUpdateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(ResourceType)
 
@@ -76,7 +76,7 @@ class DeleteResource(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(ResourceType)
 
@@ -107,7 +107,7 @@ class CreateResourceGroup(graphene.Mutation):
     class Arguments:
         data = ResourceGroupCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(ResourceGroupType)
 
@@ -126,7 +126,7 @@ class UpdateResourceGroup(graphene.Mutation):
     class Arguments:
         data = ResourceGroupUpdateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(ResourceGroupType)
 
@@ -153,7 +153,7 @@ class DeleteResourceGroup(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(ResourceGroupType)
 

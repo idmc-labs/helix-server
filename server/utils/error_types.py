@@ -10,14 +10,14 @@ ARRAY_NON_MEMBER_ERRORS = 'nonMemberErrors'
 class ArrayNestedErrorType(ObjectType):
     key = graphene.String(required=True)
     messages = graphene.String(required=False)
-    object_errors = graphene.List("utils.error_types.CustomErrorType")
+    object_errors = graphene.List(graphene.NonNull("utils.error_types.CustomErrorType"))
 
 
 class CustomErrorType(ObjectType):
     field = graphene.String(required=True)
     messages = graphene.String(required=False)
-    object_errors = graphene.List("utils.error_types.CustomErrorType")
-    array_errors = graphene.List(ArrayNestedErrorType)
+    object_errors = graphene.List(graphene.NonNull("utils.error_types.CustomErrorType"))
+    array_errors = graphene.List(graphene.NonNull(ArrayNestedErrorType))
 
 
 def serializer_error_to_error_types(errors: dict, initial_data: dict = None) -> List:

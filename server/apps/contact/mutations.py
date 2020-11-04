@@ -17,7 +17,7 @@ class ContactInputType(object):
     gender = graphene.NonNull(GenderGrapheneEnum)
     job_title = graphene.String(required=True)
     country = graphene.ID()
-    countries_of_operation = graphene.List(graphene.ID)
+    countries_of_operation = graphene.List(graphene.NonNull(graphene.ID))
     email = graphene.String()
     phone = graphene.String()
     comment = graphene.String()
@@ -49,7 +49,7 @@ class ContactUpdateInputType(graphene.InputObjectType):
     job_title = graphene.String()
     organization = graphene.ID()
     country = graphene.ID()
-    countries_of_operation = graphene.List(graphene.ID)
+    countries_of_operation = graphene.List(graphene.NonNull(graphene.ID))
     email = graphene.String()
     phone = graphene.String()
     comment = graphene.String()
@@ -59,7 +59,7 @@ class CreateContact(graphene.Mutation):
     class Arguments:
         data = ContactCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(ContactType)
 
@@ -77,7 +77,7 @@ class UpdateContact(graphene.Mutation):
     class Arguments:
         data = ContactUpdateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(ContactType)
 
@@ -101,7 +101,7 @@ class DeleteContact(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(ContactType)
 
@@ -154,7 +154,7 @@ class CreateCommunication(graphene.Mutation):
     class Arguments:
         data = CommunicationCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(CommunicationType)
 
@@ -171,7 +171,7 @@ class UpdateCommunication(graphene.Mutation):
     class Arguments:
         data = CommunicationUpdateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(CommunicationType)
 
@@ -194,7 +194,7 @@ class DeleteCommunication(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(CommunicationType)
 

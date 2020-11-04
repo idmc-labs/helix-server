@@ -26,7 +26,7 @@ class CreateSummary(graphene.Mutation):
     class Arguments:
         data = SummaryCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(SummaryType)
 
@@ -45,7 +45,7 @@ class CreateContextualUpdate(graphene.Mutation):
     class Arguments:
         data = ContextualUpdateCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(ContextualUpdateType)
 

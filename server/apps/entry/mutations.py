@@ -45,8 +45,8 @@ class CommonFigureCreateMixin:
     location_non_camp = graphene.Int(required=False)
     sex_male = graphene.Int(required=False)
     sex_female = graphene.Int(required=False)
-    age_json = graphene.List(DisaggregatedAgeInputType, required=False)
-    strata_json = graphene.List(DisaggregatedStratumInputType, required=False)
+    age_json = graphene.List(graphene.NonNull(DisaggregatedAgeInputType), required=False)
+    strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumInputType), required=False)
     conflict = graphene.Int(required=False)
     conflict_political = graphene.Int(required=False)
     conflict_criminal = graphene.Int(required=False)
@@ -90,8 +90,8 @@ class FigureUpdateInputType(graphene.InputObjectType):
     location_non_camp = graphene.Int(required=False)
     sex_male = graphene.Int(required=False)
     sex_female = graphene.Int(required=False)
-    age_json = graphene.List(DisaggregatedAgeInputType, required=False)
-    strata_json = graphene.List(DisaggregatedStratumInputType, required=False)
+    age_json = graphene.List(graphene.NonNull(DisaggregatedAgeInputType), required=False)
+    strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumInputType), required=False)
     conflict = graphene.Int(required=False)
     conflict_political = graphene.Int(required=False)
     conflict_criminal = graphene.Int(required=False)
@@ -103,7 +103,7 @@ class CreateFigure(graphene.Mutation):
     class Arguments:
         data = FigureCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(FigureType)
 
@@ -132,7 +132,7 @@ class UpdateFigure(graphene.Mutation):
     class Arguments:
         data = FigureUpdateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(FigureType)
 
@@ -161,7 +161,7 @@ class DeleteFigure(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(FigureType)
 
@@ -198,11 +198,11 @@ class EntryCreateInputType(graphene.InputObjectType):
     source_excerpt = graphene.String()
     source_breakdown = graphene.String()
     event = graphene.ID(required=True)
-    figures = graphene.List(NestedFigureCreateInputType)
+    figures = graphene.List(graphene.NonNull(NestedFigureCreateInputType))
     idmc_analysis = graphene.String()
     methodology = graphene.String()
-    tags = graphene.List(graphene.String, required=False)
-    reviewers = graphene.List(graphene.ID)
+    tags = graphene.List(graphene.NonNull(graphene.String), required=False)
+    reviewers = graphene.List(graphene.NonNull(graphene.ID))
 
 
 class EntryUpdateInputType(graphene.InputObjectType):
@@ -219,15 +219,15 @@ class EntryUpdateInputType(graphene.InputObjectType):
     event = graphene.ID()
     idmc_analysis = graphene.String()
     methodology = graphene.String()
-    tags = graphene.List(graphene.String)
-    reviewers = graphene.List(graphene.ID)
+    tags = graphene.List(graphene.NonNull(graphene.String))
+    reviewers = graphene.List(graphene.NonNull(graphene.ID))
 
 
 class CreateEntry(graphene.Mutation):
     class Arguments:
         data = EntryCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(EntryType)
 
@@ -245,7 +245,7 @@ class UpdateEntry(graphene.Mutation):
     class Arguments:
         data = EntryUpdateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(EntryType)
 
@@ -274,7 +274,7 @@ class DeleteEntry(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(EntryType)
 
@@ -312,7 +312,7 @@ class CreateSourcePreview(graphene.Mutation):
         data = SourcePreviewInputType(required=True)
 
     ok = graphene.Boolean()
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     result = graphene.Field(SourcePreviewType)
 
     @staticmethod

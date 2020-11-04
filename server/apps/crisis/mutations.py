@@ -16,7 +16,7 @@ class CrisisCreateInputType(graphene.InputObjectType):
     name = graphene.String(required=True)
     crisis_type = graphene.NonNull(CrisisTypeGrapheneEnum)
     crisis_narrative = graphene.String()
-    countries = graphene.List(graphene.ID, required=True)
+    countries = graphene.List(graphene.NonNull(graphene.ID), required=True)
 
 
 class CrisisUpdateInputType(graphene.InputObjectType):
@@ -27,14 +27,14 @@ class CrisisUpdateInputType(graphene.InputObjectType):
     name = graphene.String()
     crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
     crisis_narrative = graphene.String()
-    countries = graphene.List(graphene.ID)
+    countries = graphene.List(graphene.NonNull(graphene.ID))
 
 
 class CreateCrisis(graphene.Mutation):
     class Arguments:
         data = CrisisCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(CrisisType)
 
@@ -52,7 +52,7 @@ class UpdateCrisis(graphene.Mutation):
     class Arguments:
         data = CrisisUpdateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(CrisisType)
 
@@ -76,7 +76,7 @@ class DeleteCrisis(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(CrisisType)
 
