@@ -31,14 +31,14 @@ def convert_json_field_to_scalar(field, registry=None):
 
 
 class DisaggregatedAgeType(ObjectType):
-    uuid = graphene.String()
+    uuid = graphene.String(required=True)
     age_from = graphene.Int()
     age_to = graphene.Int()
     value = graphene.Int()
 
 
 class DisaggregatedStratumType(ObjectType):
-    uuid = graphene.String()
+    uuid = graphene.String(required=True)
     date = graphene.String()  # because inside the json field
     value = graphene.Int()
 

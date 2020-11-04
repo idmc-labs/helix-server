@@ -12,14 +12,14 @@ from utils.permissions import permission_checker
 
 
 class DisaggregatedAgeInputType(graphene.InputObjectType):
-    uuid = graphene.String(required=False)
+    uuid = graphene.String(required=True)
     age_from = graphene.Int(required=True)
     age_to = graphene.Int(required=True)
     value = graphene.Int(required=True)
 
 
 class DisaggregatedStratumInputType(graphene.InputObjectType):
-    uuid = graphene.String(required=False)
+    uuid = graphene.String(required=True)
     date = graphene.Date(required=True)
     value = graphene.Int(required=True)
 
@@ -63,12 +63,12 @@ class NestedFigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectT
 
 class FigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectType):
     entry = graphene.ID(required=True)
-    uuid = graphene.String()
+    uuid = graphene.String(required=True)
 
 
 class FigureUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
-    uuid = graphene.String()
+    uuid = graphene.String(required=True)
     entry = graphene.ID()
     district = graphene.String()
     town = graphene.String()
