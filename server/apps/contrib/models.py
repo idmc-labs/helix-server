@@ -4,6 +4,8 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from utils.fields import CachedFileField
+
 
 class UUIDAbstractModel(models.Model):
     uuid = models.UUIDField(verbose_name='UUID', unique=True,
@@ -27,3 +29,15 @@ class MetaInformationAbstractModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+class Attachment(MetaInformationAbstractModel):
+    ATTACHMENT_FOLDER = 'attachments'
+
+    attachment = CachedFileField(verbose_name=_('Attachment'),
+                                 blank=False, null=False,
+                                 upload_to=ATTACHMENT_FOLDER)
+    attachment_for = models.CharField(verbose_name='Entry', max_length=256,
+                                      null=True, blank=True,
+                                      help_text=_('The type of instance for which attachment was uploaded for'))
+
