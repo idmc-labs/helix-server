@@ -53,6 +53,7 @@ class SummaryListType(CustomDjangoListObjectType):
 class CountryType(DjangoObjectType):
     class Meta:
         model = Country
+        filter_fields = {}
 
     last_summary = graphene.Field(SummaryType)
     last_contextual_update = graphene.Field(ContextualUpdateType)

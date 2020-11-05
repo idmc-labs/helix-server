@@ -57,6 +57,8 @@ class OrganizationFactory(DjangoModelFactory):
     class Meta:
         model = 'organization.Organization'
 
+    short_name = factory.Sequence(lambda n: 'shortname %d' % n)
+
 
 class ContactFactory(DjangoModelFactory):
     class Meta:
@@ -133,6 +135,7 @@ class EntryFactory(DjangoModelFactory):
         model = 'entry.Entry'
 
     article_title = factory.Sequence(lambda n: f'long title {n}')
+    url = 'https://www.example.com'
     source = factory.Faker('company')
     publisher = factory.Faker('company')
     publish_date = factory.LazyFunction(today().date)
