@@ -3,7 +3,7 @@ from uuid import uuid4
 
 from django.core.files.temp import NamedTemporaryFile
 
-from apps.entry.models import Figure
+from apps.entry.models import Figure, Entry
 from apps.users.roles import MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, ADMIN, GUEST
 from utils.factories import EventFactory, EntryFactory, FigureFactory
 from utils.permissions import PERMISSION_DENIED_MESSAGE
@@ -284,6 +284,11 @@ class TestEntryCreation(HelixGraphQLTestCase):
                             }
                             totalCount
                         }
+                        reviewers {
+                            results {
+                                id
+                            }
+                        }
                     }
                 }
             }
@@ -403,7 +408,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertEqual(uuid_error,
                          content['data']['createEntry']['errors'][0]['arrayErrors'][0]['key'])
 
-    def test_invalid_reviewer_entry_create(self):
+    def test_invalid_entry_created_by_reviewer(self):
         reviewer = create_user_with_role(role=MONITORING_EXPERT_REVIEWER)
         self.force_login(reviewer)
         response = self.query(
@@ -413,6 +418,25 @@ class TestEntryCreation(HelixGraphQLTestCase):
         content = json.loads(response.content)
 
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+
+    def test_add_reviewers_while_create_entry(self):
+        r1 = create_user_with_role(role=MONITORING_EXPERT_REVIEWER)
+        r2 = create_user_with_role(role=MONITORING_EXPERT_REVIEWER)
+        r3 = create_user_with_role(role=MONITORING_EXPERT_REVIEWER)
+        self.input.update(dict(reviewers=[str(r1.id), str(r2.id), str(r3.id)]))
+
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = response.json()
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['createEntry']['ok'], content)
+        self.assertIsNone(content['data']['createEntry']['errors'], content)
+        entry = Entry.objects.get(id=content['data']['createEntry']['result']['id'])
+        self.assertEqual(entry.reviewers.count(), len(self.input['reviewers']))
+        self.assertEqual(len(content['data']['createEntry']['result']['reviewers']['results']), len(self.input['reviewers']), content)
 
     def test_invalid_guest_entry_create(self):
         guest = create_user_with_role(role=GUEST)
