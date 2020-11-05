@@ -10,12 +10,12 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
     def setUp(self) -> None:
         countries = CountryFactory.create_batch(2)
         self.mutation = '''mutation CreateEvent($input: EventCreateInputType!) {
-            createEvent(event: $input) {
+            createEvent(data: $input) {
                 errors {
                     field
                     messages
                 }
-                event {
+                result {
                     disasterType {
                         name
                     }
@@ -72,9 +72,9 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createEvent']['ok'], content)
         self.assertIsNone(content['data']['createEvent']['errors'], content)
-        self.assertEqual(content['data']['createEvent']['event']['name'],
+        self.assertEqual(content['data']['createEvent']['result']['name'],
                          self.input['name'])
-        self.assertEqual(len(content['data']['createEvent']['event']['countries']),
+        self.assertEqual(len(content['data']['createEvent']['result']['countries']),
                          len(self.input['countries']))
 
 
@@ -82,12 +82,12 @@ class TestUpdateEvent(HelixGraphQLTestCase):
     def setUp(self) -> None:
         countries = CountryFactory.create_batch(2)
         self.mutation = '''mutation UpdateEvent($input: EventUpdateInputType!) {
-            updateEvent(event: $input) {
+            updateEvent(data: $input) {
                 errors {
                     field
                     messages
                 }
-                event {
+                result {
                     startDate
                     endDate
                     name
@@ -134,9 +134,9 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEvent']['ok'], content)
         self.assertIsNone(content['data']['updateEvent']['errors'], content)
-        self.assertEqual(content['data']['updateEvent']['event']['name'],
+        self.assertEqual(content['data']['updateEvent']['result']['name'],
                          self.input['name'])
-        self.assertEqual(len(content['data']['updateEvent']['event']['countries']),
+        self.assertEqual(len(content['data']['updateEvent']['result']['countries']),
                          len(self.input['countries']))
 
     def test_invalid_update_event_by_guest(self):
@@ -158,7 +158,7 @@ class TestDeleteEvent(HelixGraphQLTestCase):
                     field
                     messages
                 }
-                event {
+                result {
                     id
                     startDate
                     endDate
@@ -200,9 +200,9 @@ class TestDeleteEvent(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['deleteEvent']['ok'], content)
         self.assertIsNone(content['data']['deleteEvent']['errors'], content)
-        self.assertEqual(content['data']['deleteEvent']['event']['name'],
+        self.assertEqual(content['data']['deleteEvent']['result']['name'],
                          self.event.name)
-        self.assertEqual(int(content['data']['deleteEvent']['event']['id']),
+        self.assertEqual(int(content['data']['deleteEvent']['result']['id']),
                          self.event.id)
 
     def test_invalid_delete_event_by_guest(self):

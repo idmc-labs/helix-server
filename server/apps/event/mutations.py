@@ -23,7 +23,7 @@ class EventCreateInputType(graphene.InputObjectType):
     disaster_sub_category = graphene.ID()
     disaster_type = graphene.ID()
     disaster_sub_type = graphene.ID()
-    countries = graphene.List(graphene.ID, required=False)
+    countries = graphene.List(graphene.NonNull(graphene.ID))
     start_date = graphene.Date()
     end_date = graphene.Date()
     event_narrative = graphene.String()
@@ -44,7 +44,7 @@ class EventUpdateInputType(graphene.InputObjectType):
     disaster_sub_category = graphene.ID()
     disaster_type = graphene.ID()
     disaster_sub_type = graphene.ID()
-    countries = graphene.List(graphene.ID)
+    countries = graphene.List(graphene.NonNull(graphene.ID))
     start_date = graphene.Date()
     end_date = graphene.Date()
     event_narrative = graphene.String()
@@ -52,53 +52,53 @@ class EventUpdateInputType(graphene.InputObjectType):
 
 class CreateEvent(graphene.Mutation):
     class Arguments:
-        event = EventCreateInputType(required=True)
+        data = EventCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    event = graphene.Field(EventType)
+    result = graphene.Field(EventType)
 
     @staticmethod
     @permission_checker(['event.add_event'])
-    def mutate(root, info, event):
-        serializer = EventSerializer(data=event)
+    def mutate(root, info, data):
+        serializer = EventSerializer(data=data)
         if errors := mutation_is_not_valid(serializer):
             return CreateEvent(errors=errors, ok=False)
         instance = serializer.save()
-        return CreateEvent(event=instance, errors=None, ok=True)
+        return CreateEvent(result=instance, errors=None, ok=True)
 
 
 class UpdateEvent(graphene.Mutation):
     class Arguments:
-        event = EventUpdateInputType(required=True)
+        data = EventUpdateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    event = graphene.Field(EventType)
+    result = graphene.Field(EventType)
 
     @staticmethod
     @permission_checker(['event.change_event'])
-    def mutate(root, info, event):
+    def mutate(root, info, data):
         try:
-            instance = Event.objects.get(id=event['id'])
+            instance = Event.objects.get(id=data['id'])
         except Event.DoesNotExist:
             return UpdateEvent(errors=[
                 CustomErrorType(field='non_field_errors', messages=gettext('Event does not exist.'))
             ])
-        serializer = EventSerializer(instance=instance, data=event, partial=True)
+        serializer = EventSerializer(instance=instance, data=data, partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateEvent(errors=errors, ok=False)
         instance = serializer.save()
-        return UpdateEvent(event=instance, errors=None, ok=True)
+        return UpdateEvent(result=instance, errors=None, ok=True)
 
 
 class DeleteEvent(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    event = graphene.Field(EventType)
+    result = graphene.Field(EventType)
 
     @staticmethod
     @permission_checker(['event.delete_event'])
@@ -111,7 +111,7 @@ class DeleteEvent(graphene.Mutation):
             ])
         instance.delete()
         instance.id = id
-        return DeleteEvent(event=instance, errors=None, ok=True)
+        return DeleteEvent(result=instance, errors=None, ok=True)
 
 
 class Mutation(object):

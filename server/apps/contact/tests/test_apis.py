@@ -12,13 +12,13 @@ class TestCreateContact(HelixGraphQLTestCase):
         organization = OrganizationFactory.create()
         self.mutation = '''
         mutation CreateContact($input: ContactCreateInputType!) {
-            createContact(contact: $input) {
+            createContact(data: $input) {
                 ok
                 errors {
                     field
                     messages
                 }
-                contact {
+                result {
                     countriesOfOperation {
                         id
                         name
@@ -60,10 +60,10 @@ class TestCreateContact(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createContact']['ok'], content)
-        self.assertEqual(content['data']['createContact']['contact']['firstName'], self.input['firstName'])
-        self.assertEqual(content['data']['createContact']['contact']['organization']['id'],
+        self.assertEqual(content['data']['createContact']['result']['firstName'], self.input['firstName'])
+        self.assertEqual(content['data']['createContact']['result']['organization']['id'],
                          self.input['organization'])
-        self.assertEqual(len(content['data']['createContact']['contact']['countriesOfOperation']),
+        self.assertEqual(len(content['data']['createContact']['result']['countriesOfOperation']),
                          len(self.input['countriesOfOperation']))
 
     def test_invalid_contact_creation_by_guest(self) -> None:
@@ -83,13 +83,13 @@ class TestUpdateContact(HelixGraphQLTestCase):
         self.contact = ContactFactory.create()
         self.mutation = '''
         mutation UpdateContact($input: ContactUpdateInputType!) {
-            updateContact(contact: $input) {
+            updateContact(data: $input) {
                 ok
                 errors {
                     field
                     messages
                 }
-                contact {
+                result {
                     firstName
                     lastName
                     organization {
@@ -117,8 +117,8 @@ class TestUpdateContact(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateContact']['ok'], content)
-        self.assertEqual(content['data']['updateContact']['contact']['firstName'], self.input['firstName'])
-        self.assertEqual(content['data']['updateContact']['contact']['lastName'], self.contact.last_name)
+        self.assertEqual(content['data']['updateContact']['result']['firstName'], self.input['firstName'])
+        self.assertEqual(content['data']['updateContact']['result']['lastName'], self.contact.last_name)
 
     def test_invalid_contact_update_by_guest(self) -> None:
         guest = create_user_with_role(GUEST)
@@ -143,7 +143,7 @@ class TestDeleteContact(HelixGraphQLTestCase):
                     field
                     messages
                 }
-                contact {
+                result {
                     id
                 }
             }
@@ -165,7 +165,7 @@ class TestDeleteContact(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['deleteContact']['ok'], content)
-        self.assertEqual(content['data']['deleteContact']['contact']['id'], self.variables['id'])
+        self.assertEqual(content['data']['deleteContact']['result']['id'], self.variables['id'])
 
     def test_invalid_contact_delete_by_guest(self) -> None:
         guest = create_user_with_role(GUEST)

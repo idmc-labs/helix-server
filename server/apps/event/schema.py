@@ -1,5 +1,6 @@
 import graphene
-from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, DjangoObjectField, DjangoFilterListField
+from graphene_django import DjangoObjectType
+from graphene_django_extras import PageGraphqlPagination, DjangoObjectField, DjangoFilterListField
 
 from apps.country.schema import CountryType
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -26,12 +27,24 @@ class TriggerSubObjectType(DjangoObjectType):
         filter_fields = {}
 
 
+class TriggerSubObjectListType(CustomDjangoListObjectType):
+    class Meta:
+        model = TriggerSubType
+        filter_fields = {
+            'name': ['icontains']
+        }
+
+
 class TriggerType(DjangoObjectType):
     class Meta:
         model = Trigger
         exclude_fields = ('events',)
+
+
+class TriggerListType(CustomDjangoListObjectType):
+    class Meta:
+        model = Trigger
         filter_fields = {
-            'id': ['exact'],
             'name': ['icontains']
         }
 
@@ -40,9 +53,13 @@ class ViolenceSubObjectType(DjangoObjectType):
     class Meta:
         model = ViolenceSubType
         exclude_fields = ('events', 'violence')
+
+
+class ViolenceSubObjectListType(CustomDjangoListObjectType):
+    class Meta:
+        model = ViolenceSubType
         filter_fields = {
-            'violence': ['exact'],
-            'name': ['icontains']
+            'id': ['iexact'],
         }
 
 
@@ -50,17 +67,27 @@ class ViolenceType(DjangoObjectType):
     class Meta:
         model = Violence
         exclude_fields = ('events',)
-        filter_fields = {
-            'name': ['icontains']
-        }
 
-    sub_types = CustomDjangoListField(ViolenceSubObjectType)
+    sub_types = DjangoPaginatedListObjectField(ViolenceSubObjectListType)
+
+
+class ViolenceListType(CustomDjangoListObjectType):
+    class Meta:
+        model = Violence
+        filter_fields = {
+            'id': ['iexact'],
+        }
 
 
 class ActorType(DjangoObjectType):
     class Meta:
         model = Actor
         exclude_fields = ('events',)
+
+
+class ActorListType(CustomDjangoListObjectType):
+    class Meta:
+        model = Actor
         filter_fields = {
             'id': ['exact'],
             'name': ['icontains']
@@ -71,8 +98,13 @@ class DisasterSubObjectType(DjangoObjectType):
     class Meta:
         model = DisasterSubType
         exclude_fields = ('events', 'type')
+
+
+class DisasterSubObjectListType(CustomDjangoListObjectType):
+    class Meta:
+        model = DisasterSubType
         filter_fields = {
-            'name': ['icontains']
+            'name': ['icontains'],
         }
 
 
@@ -80,33 +112,48 @@ class DisasterTypeObjectType(DjangoObjectType):
     class Meta:
         model = DisasterType
         exclude_fields = ('events', 'disaster_sub_category')
-        filter_fields = {
-            'name': ['icontains']
-        }
 
-    sub_types = DjangoFilterListField(DisasterSubObjectType)
+    sub_types = DjangoPaginatedListObjectField(DisasterSubObjectListType)
+
+
+class DisasterTypeObjectListType(CustomDjangoListObjectType):
+    class Meta:
+        model = DisasterType
+        filter_fields = {
+            'name': ['icontains'],
+        }
 
 
 class DisasterSubCategoryType(DjangoObjectType):
     class Meta:
         model = DisasterSubCategory
         exclude_fields = ('events', 'category')
-        filter_fields = {
-            'name': ['icontains']
-        }
 
-    types = DjangoFilterListField(DisasterTypeObjectType)
+    types = DjangoPaginatedListObjectField(DisasterTypeObjectListType)
+
+
+class DisasterSubCategoryListType(CustomDjangoListObjectType):
+    class Meta:
+        model = DisasterSubCategory
+        filter_fields = {
+            'name': ['icontains'],
+        }
 
 
 class DisasterCategoryType(DjangoObjectType):
     class Meta:
         model = DisasterCategory
         exclude_fields = ('events',)
-        filter_fields = {
-            'name': ['icontains']
-        }
 
-    sub_categories = DjangoFilterListField(DisasterSubCategoryType)
+    sub_categories = DjangoPaginatedListObjectField(DisasterSubCategoryListType)
+
+
+class DisasterCategoryListType(CustomDjangoListObjectType):
+    class Meta:
+        model = DisasterCategory
+        filter_fields = {
+            'name': ['icontains'],
+        }
 
 
 class EventType(DjangoObjectType):
@@ -130,14 +177,14 @@ class EventListType(CustomDjangoListObjectType):
 
 
 class Query:
-    trigger_list = DjangoFilterListField(TriggerType)
-    sub_type_trigger_list = DjangoFilterListField(TriggerSubObjectType)
-    violence_list = DjangoFilterListField(ViolenceType)
-    actor_list = DjangoFilterListField(ActorType)
-    disaster_category_list = DjangoFilterListField(DisasterCategoryType)
-    disaster_sub_category_list = DjangoFilterListField(DisasterSubCategoryType)
-    disaster_type_list = DjangoFilterListField(DisasterTypeObjectType)
-    disaster_sub_type_list = DjangoFilterListField(DisasterSubObjectType)
+    trigger_list = DjangoPaginatedListObjectField(TriggerListType)
+    sub_trigger_list = DjangoPaginatedListObjectField(TriggerSubObjectListType)
+    violence_list = DjangoPaginatedListObjectField(ViolenceListType)
+    actor_list = DjangoPaginatedListObjectField(ActorListType)
+    disaster_category_list = DjangoPaginatedListObjectField(DisasterCategoryListType)
+    disaster_sub_category_list = DjangoPaginatedListObjectField(DisasterSubCategoryListType)
+    disaster_type_list = DjangoPaginatedListObjectField(DisasterTypeObjectListType)
+    disaster_sub_type_list = DjangoPaginatedListObjectField(DisasterSubObjectListType)
 
     event = DjangoObjectField(EventType)
     event_list = DjangoPaginatedListObjectField(EventListType,

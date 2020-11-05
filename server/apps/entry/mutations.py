@@ -11,15 +11,15 @@ from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 
 
-class DisaggregatedAgeInputObjectType(graphene.InputObjectType):
-    uuid = graphene.String(required=False)
+class DisaggregatedAgeInputType(graphene.InputObjectType):
+    uuid = graphene.String(required=True)
     age_from = graphene.Int(required=True)
     age_to = graphene.Int(required=True)
     value = graphene.Int(required=True)
 
 
-class DisaggregatedStratumInputObjectType(graphene.InputObjectType):
-    uuid = graphene.String(required=False)
+class DisaggregatedStratumInputType(graphene.InputObjectType):
+    uuid = graphene.String(required=True)
     date = graphene.Date(required=True)
     value = graphene.Int(required=True)
 
@@ -45,8 +45,8 @@ class CommonFigureCreateMixin:
     location_non_camp = graphene.Int(required=False)
     sex_male = graphene.Int(required=False)
     sex_female = graphene.Int(required=False)
-    age_json = graphene.List(DisaggregatedAgeInputObjectType, required=False)
-    strata_json = graphene.List(DisaggregatedStratumInputObjectType, required=False)
+    age_json = graphene.List(graphene.NonNull(DisaggregatedAgeInputType), required=False)
+    strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumInputType), required=False)
     conflict = graphene.Int(required=False)
     conflict_political = graphene.Int(required=False)
     conflict_criminal = graphene.Int(required=False)
@@ -63,12 +63,12 @@ class NestedFigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectT
 
 class FigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectType):
     entry = graphene.ID(required=True)
-    uuid = graphene.String()
+    uuid = graphene.String(required=False)
 
 
 class FigureUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
-    uuid = graphene.String()
+    uuid = graphene.String(required=False)
     entry = graphene.ID()
     district = graphene.String()
     town = graphene.String()
@@ -90,8 +90,8 @@ class FigureUpdateInputType(graphene.InputObjectType):
     location_non_camp = graphene.Int(required=False)
     sex_male = graphene.Int(required=False)
     sex_female = graphene.Int(required=False)
-    age_json = graphene.List(DisaggregatedAgeInputObjectType, required=False)
-    strata_json = graphene.List(DisaggregatedStratumInputObjectType, required=False)
+    age_json = graphene.List(graphene.NonNull(DisaggregatedAgeInputType), required=False)
+    strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumInputType), required=False)
     conflict = graphene.Int(required=False)
     conflict_political = graphene.Int(required=False)
     conflict_criminal = graphene.Int(required=False)
@@ -101,19 +101,19 @@ class FigureUpdateInputType(graphene.InputObjectType):
 
 class CreateFigure(graphene.Mutation):
     class Arguments:
-        figure = FigureCreateInputType(required=True)
+        data = FigureCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    figure = graphene.Field(FigureType)
+    result = graphene.Field(FigureType)
 
     @staticmethod
     @permission_checker(['entry.add_figure'])
-    def mutate(root, info, figure):
-        serializer = FigureSerializer(data=figure,
+    def mutate(root, info, data):
+        serializer = FigureSerializer(data=data,
                                       context={'request': info.context})
         try:
-            entry = Entry.objects.get(id=figure['entry'])
+            entry = Entry.objects.get(id=data['entry'])
         except Entry.DoesNotExist:
             return CreateFigure(errors=[
                 CustomErrorType(field='non_field_errors', messages=gettext('Entry does not exist.'))
@@ -125,22 +125,22 @@ class CreateFigure(graphene.Mutation):
         if errors := mutation_is_not_valid(serializer):
             return CreateFigure(errors=errors, ok=False)
         instance = serializer.save()
-        return CreateFigure(figure=instance, errors=None, ok=True)
+        return CreateFigure(result=instance, errors=None, ok=True)
 
 
 class UpdateFigure(graphene.Mutation):
     class Arguments:
-        figure = FigureUpdateInputType(required=True)
+        data = FigureUpdateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    figure = graphene.Field(FigureType)
+    result = graphene.Field(FigureType)
 
     @staticmethod
     @permission_checker(['entry.change_figure'])
-    def mutate(root, info, figure):
+    def mutate(root, info, data):
         try:
-            instance = Figure.objects.get(id=figure['id'])
+            instance = Figure.objects.get(id=data['id'])
         except Figure.DoesNotExist:
             return UpdateFigure(errors=[
                 CustomErrorType(field='non_field_errors', messages=gettext('Figure does not exist.'))
@@ -149,21 +149,21 @@ class UpdateFigure(graphene.Mutation):
             return UpdateFigure(errors=[
                 CustomErrorType(field='non_field_errors', messages=gettext('You cannot update this figure.'))
             ])
-        serializer = FigureSerializer(instance=instance, data=figure,
+        serializer = FigureSerializer(instance=instance, data=data,
                                       context={'request': info.context}, partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateFigure(errors=errors, ok=False)
         instance = serializer.save()
-        return UpdateFigure(figure=instance, errors=None, ok=True)
+        return UpdateFigure(result=instance, errors=None, ok=True)
 
 
 class DeleteFigure(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    figure = graphene.Field(FigureType)
+    result = graphene.Field(FigureType)
 
     @staticmethod
     @permission_checker(['entry.delete_figure'])
@@ -180,7 +180,7 @@ class DeleteFigure(graphene.Mutation):
             ])
         instance.delete()
         instance.id = id
-        return DeleteFigure(figure=instance, errors=None, ok=True)
+        return DeleteFigure(result=instance, errors=None, ok=True)
 
 
 # entry
@@ -198,11 +198,11 @@ class EntryCreateInputType(graphene.InputObjectType):
     source_excerpt = graphene.String()
     source_breakdown = graphene.String()
     event = graphene.ID(required=True)
-    figures = graphene.List(NestedFigureCreateInputType)
+    figures = graphene.List(graphene.NonNull(NestedFigureCreateInputType))
     idmc_analysis = graphene.String()
     methodology = graphene.String()
-    tags = graphene.List(graphene.String, required=False)
-    reviewers = graphene.List(graphene.ID)
+    tags = graphene.List(graphene.NonNull(graphene.String), required=False)
+    reviewers = graphene.List(graphene.NonNull(graphene.ID))
 
 
 class EntryUpdateInputType(graphene.InputObjectType):
@@ -219,41 +219,41 @@ class EntryUpdateInputType(graphene.InputObjectType):
     event = graphene.ID()
     idmc_analysis = graphene.String()
     methodology = graphene.String()
-    tags = graphene.List(graphene.String)
-    reviewers = graphene.List(graphene.ID)
+    tags = graphene.List(graphene.NonNull(graphene.String))
+    reviewers = graphene.List(graphene.NonNull(graphene.ID))
 
 
 class CreateEntry(graphene.Mutation):
     class Arguments:
-        entry = EntryCreateInputType(required=True)
+        data = EntryCreateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    entry = graphene.Field(EntryType)
+    result = graphene.Field(EntryType)
 
     @staticmethod
     @permission_checker(['entry.add_entry'])
-    def mutate(root, info, entry):
-        serializer = EntrySerializer(data=entry, context={'request': info.context})
+    def mutate(root, info, data):
+        serializer = EntrySerializer(data=data, context={'request': info.context})
         if errors := mutation_is_not_valid(serializer):
             return CreateEntry(errors=errors, ok=False)
         instance = serializer.save()
-        return CreateEntry(entry=instance, errors=None, ok=True)
+        return CreateEntry(result=instance, errors=None, ok=True)
 
 
 class UpdateEntry(graphene.Mutation):
     class Arguments:
-        entry = EntryUpdateInputType(required=True)
+        data = EntryUpdateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    entry = graphene.Field(EntryType)
+    result = graphene.Field(EntryType)
 
     @staticmethod
     @permission_checker(['entry.change_entry'])
-    def mutate(root, info, entry):
+    def mutate(root, info, data):
         try:
-            instance = Entry.objects.get(id=entry['id'])
+            instance = Entry.objects.get(id=data['id'])
         except Entry.DoesNotExist:
             return UpdateEntry(errors=[
                 CustomErrorType(field='non_field_errors', messages=gettext('Entry does not exist.'))
@@ -262,21 +262,21 @@ class UpdateEntry(graphene.Mutation):
             return UpdateEntry(errors=[
                 CustomErrorType(field='non_field_errors', messages=gettext('You cannot update this entry.'))
             ])
-        serializer = EntrySerializer(instance=instance, data=entry,
+        serializer = EntrySerializer(instance=instance, data=data,
                                      context={'request': info.context}, partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateEntry(errors=errors, ok=False)
         instance = serializer.save()
-        return UpdateEntry(entry=instance, errors=None, ok=True)
+        return UpdateEntry(result=instance, errors=None, ok=True)
 
 
 class DeleteEntry(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    entry = graphene.Field(EntryType)
+    result = graphene.Field(EntryType)
 
     @staticmethod
     @permission_checker(['entry.delete_entry'])
@@ -293,7 +293,7 @@ class DeleteEntry(graphene.Mutation):
             ])
         instance.delete()
         instance.id = id
-        return DeleteEntry(entry=instance, errors=None, ok=True)
+        return DeleteEntry(result=instance, errors=None, ok=True)
 
 
 # source preview
@@ -309,31 +309,31 @@ class CreateSourcePreview(graphene.Mutation):
     Pass id if you accidentally posted a wrong url, and need to change the preview.
     """
     class Arguments:
-        preview = SourcePreviewInputType(required=True)
+        data = SourcePreviewInputType(required=True)
 
     ok = graphene.Boolean()
-    errors = graphene.List(CustomErrorType)
-    preview = graphene.Field(SourcePreviewType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    result = graphene.Field(SourcePreviewType)
 
     @staticmethod
     @permission_checker(['entry.add_entry'])
-    def mutate(root, info, preview):
-        if preview.get('id'):
+    def mutate(root, info, data):
+        if data.get('id'):
             try:
-                instance = SourcePreview.objects.get(id=preview['id'])
-                serializer = SourcePreviewSerializer(data=preview, instance=instance,
+                instance = SourcePreview.objects.get(id=data['id'])
+                serializer = SourcePreviewSerializer(data=data, instance=instance,
                                                      context={'request': info.context})
             except SourcePreview.DoesNotExist:
                 return CreateSourcePreview(errors=[
                     CustomErrorType(field='non_field_errors', messages=gettext('Preview does not exist.'))
                 ])
         else:
-            serializer = SourcePreviewSerializer(data=preview,
+            serializer = SourcePreviewSerializer(data=data,
                                                  context={'request': info.context})
         if errors := mutation_is_not_valid(serializer):
             return CreateSourcePreview(errors=errors, ok=False)
         instance = serializer.save()
-        return CreateSourcePreview(preview=instance, errors=None, ok=True)
+        return CreateSourcePreview(result=instance, errors=None, ok=True)
 
 
 class Mutation(object):

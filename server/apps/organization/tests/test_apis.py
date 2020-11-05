@@ -11,13 +11,13 @@ class TestCreateOrganization(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.mutation = '''
         mutation CreateOrganization($input: OrganizationCreateInputType!) {
-            createOrganization(organization: $input) {
+            createOrganization(data: $input) {
                 ok
                 errors {
                     field
                     messages
                 }
-                organization {
+                result {
                     id
                     methodology
                     title
@@ -46,9 +46,9 @@ class TestCreateOrganization(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createOrganization']['ok'], content)
-        self.assertEqual(content['data']['createOrganization']['organization']['title'],
+        self.assertEqual(content['data']['createOrganization']['result']['title'],
                          self.input['title'])
-        self.assertEqual(content['data']['createOrganization']['organization']['shortName'],
+        self.assertEqual(content['data']['createOrganization']['result']['shortName'],
                          self.input['shortName'])
 
     def test_invalid_organization_creation_by_guest(self) -> None:
@@ -68,13 +68,13 @@ class TestUpdateOrganization(HelixGraphQLTestCase):
         self.organization = OrganizationFactory.create()
         self.mutation = '''
         mutation UpdateOrganization($input: OrganizationUpdateInputType!) {
-            updateOrganization(organization: $input) {
+            updateOrganization(data: $input) {
                 ok
                 errors {
                     field
                     messages
                 }
-                organization {
+                result {
                     id
                     methodology
                     title
@@ -101,9 +101,9 @@ class TestUpdateOrganization(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateOrganization']['ok'], content)
-        self.assertEqual(content['data']['updateOrganization']['organization']['id'],
+        self.assertEqual(content['data']['updateOrganization']['result']['id'],
                          self.input['id'])
-        self.assertEqual(content['data']['updateOrganization']['organization']['methodology'],
+        self.assertEqual(content['data']['updateOrganization']['result']['methodology'],
                          self.input['methodology'])
 
     def test_invalid_organization_update_by_guest(self) -> None:
@@ -129,7 +129,7 @@ class TestDeleteOrganization(HelixGraphQLTestCase):
                     field
                     messages
                 }
-                organization {
+                result {
                     id
                 }
             }
@@ -151,7 +151,7 @@ class TestDeleteOrganization(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['deleteOrganization']['ok'], content)
-        self.assertEqual(content['data']['deleteOrganization']['organization']['id'], self.variables['id'])
+        self.assertEqual(content['data']['deleteOrganization']['result']['id'], self.variables['id'])
 
     def test_invalid_organization_delete_by_guest(self) -> None:
         guest = create_user_with_role(GUEST)
@@ -169,13 +169,13 @@ class TestCreateOrganizationKind(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.mutation = '''
         mutation CreateOrganizationKind($input: OrganizationKindCreateInputType!) {
-            createOrganizationKind(organizationKind: $input) {
+            createOrganizationKind(data: $input) {
                 ok
                 errors {
                     field
                     messages
                 }
-                organizationKind {
+                result {
                     id
                     title
                 }
@@ -198,8 +198,8 @@ class TestCreateOrganizationKind(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createOrganizationKind']['ok'], content)
-        self.assertIsNotNone(content['data']['createOrganizationKind']['organizationKind']['id'])
-        self.assertEqual(content['data']['createOrganizationKind']['organizationKind']['title'],
+        self.assertIsNotNone(content['data']['createOrganizationKind']['result']['id'])
+        self.assertEqual(content['data']['createOrganizationKind']['result']['title'],
                          self.input['title'])
 
     def test_invalid_organization_kind_creation_by_guest(self) -> None:
@@ -219,13 +219,13 @@ class TestUpdateOrganizationKind(HelixGraphQLTestCase):
         self.organization_kind = OrganizationKindFactory.create()
         self.mutation = '''
         mutation UpdateOrganizationKind($input: OrganizationKindUpdateInputType!) {
-            updateOrganizationKind(organizationKind: $input) {
+            updateOrganizationKind(data: $input) {
                 ok
                 errors {
                     field
                     messages
                 }
-                organizationKind {
+                result {
                     id
                     title
                 }
@@ -249,9 +249,9 @@ class TestUpdateOrganizationKind(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateOrganizationKind']['ok'], content)
-        self.assertEqual(content['data']['updateOrganizationKind']['organizationKind']['id'],
+        self.assertEqual(content['data']['updateOrganizationKind']['result']['id'],
                          self.input['id'])
-        self.assertEqual(content['data']['updateOrganizationKind']['organizationKind']['title'],
+        self.assertEqual(content['data']['updateOrganizationKind']['result']['title'],
                          self.input['title'])
 
     def test_invalid_organization_kind_update_by_guest(self) -> None:
@@ -277,7 +277,7 @@ class TestDeleteOrganizationKind(HelixGraphQLTestCase):
                     field
                     messages
                 }
-                organizationKind {
+                result {
                     id
                 }
             }
@@ -299,7 +299,7 @@ class TestDeleteOrganizationKind(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['deleteOrganizationKind']['ok'], content)
-        self.assertEqual(content['data']['deleteOrganizationKind']['organizationKind']['id'],
+        self.assertEqual(content['data']['deleteOrganizationKind']['result']['id'],
                          self.variables['id'])
 
     def test_invalid_organization_kind_delete_by_guest(self) -> None:

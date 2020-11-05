@@ -13,12 +13,12 @@ class TestLogin(HelixGraphQLTestCase):
         self.user = self.create_user()
         self.login_query = '''
             mutation MyMutation ($email: String!, $password: String!){
-                login(input: {email: $email, password: $password}) {
+                login(data: {email: $email, password: $password}) {
                     errors {
                         field
                         messages
                     }
-                    me {
+                    result {
                         email
                         role
                     }
@@ -44,8 +44,8 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertIsNone(content['data']['login']['errors'])
-        self.assertIsNotNone(content['data']['login']['me'])
-        self.assertIsNotNone(content['data']['login']['me']['email'])
+        self.assertIsNotNone(content['data']['login']['result'])
+        self.assertIsNotNone(content['data']['login']['result']['email'])
 
         response = self.query(
             self.me_query,
@@ -67,7 +67,7 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertIn('nonFieldErrors', [each['field'] for each in content['data']['login']['errors']])
-        self.assertIsNone(content['data']['login']['me'])
+        self.assertIsNone(content['data']['login']['result'])
 
     def test_invalid_password(self):
         response = self.query(
@@ -97,8 +97,8 @@ class TestLogin(HelixGraphQLTestCase):
 class TestRegister(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.register = '''
-            mutation Register ($input: RegisterMutationInput!){
-                register(input: $input) {
+            mutation Register ($input: RegisterInputType!){
+                register(data: $input) {
                     errors {
                         field
                         messages
@@ -143,8 +143,8 @@ class TestActivate(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.user = self.create_user()
         self.activate = '''
-            mutation Activate ($input: ActivateMutationInput!) {
-                activate(input: $input) {
+            mutation Activate ($input: ActivateInputType!) {
+                activate(data: $input) {
                     errors {
                         field
                         messages
@@ -198,7 +198,7 @@ class TestLogout(HelixGraphQLTestCase):
         self.user = self.create_user()
         self.login_query = '''
             mutation MyMutation ($email: String!, $password: String!){
-                login(input: {email: $email, password: $password}) {
+                login(data: {email: $email, password: $password}) {
                     errors {
                         field
                         messages

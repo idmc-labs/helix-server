@@ -1,4 +1,5 @@
-from graphene_django_extras import DjangoObjectType, PageGraphqlPagination, DjangoObjectField
+from graphene_django import DjangoObjectType
+from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
 
 from apps.contact.schema import ContactListType
 from apps.organization.models import Organization, OrganizationKind
@@ -17,7 +18,6 @@ class OrganizationListType(CustomDjangoListObjectType):
     class Meta:
         model = Organization
         filter_fields = {
-            'short_name': ['icontains']
         }
 
 

@@ -10,8 +10,8 @@ class TestCreateCrisis(HelixGraphQLTestCase):
     def setUp(self) -> None:
         countries = CountryFactory.create_batch(2)
         self.mutation = f'''mutation MyMutation($input: CrisisCreateInputType!) {{
-            createCrisis(crisis: $input) {{
-                crisis {{
+            createCrisis(data: $input) {{
+                result {{
                     countries {{
                         id
                     }}
@@ -43,8 +43,8 @@ class TestCreateCrisis(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createCrisis']['ok'], content)
-        self.assertEqual(content['data']['createCrisis']['crisis']['name'], self.input['name'])
-        self.assertEqual(len(content['data']['createCrisis']['crisis']['countries']),
+        self.assertEqual(content['data']['createCrisis']['result']['name'], self.input['name'])
+        self.assertEqual(len(content['data']['createCrisis']['result']['countries']),
                          len(self.input['countries']))
 
     def test_invalid_crisis_creation_by_guest(self) -> None:
@@ -67,13 +67,13 @@ class TestCrisisUpdate(HelixGraphQLTestCase):
         )
         self.mutation = """
             mutation UpdateCrisis($input: CrisisUpdateInputType!) {
-              updateCrisis(crisis: $input) {
+              updateCrisis(data: $input) {
                 ok
                 errors {
                   field
                   messages
                 }
-                crisis {
+                result {
                   name
                 }
               }
@@ -94,7 +94,7 @@ class TestCrisisUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateCrisis']['ok'], content)
-        self.assertEqual(content['data']['updateCrisis']['crisis']['name'],
+        self.assertEqual(content['data']['updateCrisis']['result']['name'],
                          self.input['name'])
 
     def test_valid_update_crisis_by_different_user(self):
@@ -108,7 +108,7 @@ class TestCrisisUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateCrisis']['ok'], content)
-        self.assertEqual(content['data']['updateCrisis']['crisis']['name'],
+        self.assertEqual(content['data']['updateCrisis']['result']['name'],
                          self.input['name'])
 
     def test_invalid_update_crisis_by_guest(self):
@@ -136,7 +136,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
                   field
                   messages
                 }
-                crisis {
+                result {
                   name
                 }
               }
@@ -156,7 +156,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['deleteCrisis']['ok'], content)
-        self.assertIsNotNone(content['data']['deleteCrisis']['crisis']['name'])
+        self.assertIsNotNone(content['data']['deleteCrisis']['result']['name'])
 
     def test_valid_delete_crisis_by_different_monitoring_expert(self):
         editor2 = create_user_with_role(MONITORING_EXPERT_EDITOR)
@@ -169,7 +169,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['deleteCrisis']['ok'], content)
-        self.assertIsNotNone(content['data']['deleteCrisis']['crisis']['name'])
+        self.assertIsNotNone(content['data']['deleteCrisis']['result']['name'])
 
     def test_invalid_delete_crisis_by_guest(self):
         guest = create_user_with_role(GUEST)

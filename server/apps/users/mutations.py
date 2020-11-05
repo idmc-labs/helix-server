@@ -7,7 +7,7 @@ from apps.users.serializers import LoginSerializer, RegisterSerializer, Activate
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 
 
-class RegisterMutationInput(graphene.InputObjectType):
+class RegisterInputType(graphene.InputObjectType):
     email = graphene.String(required=True)
     first_name = graphene.String()
     last_name = graphene.String()
@@ -15,94 +15,88 @@ class RegisterMutationInput(graphene.InputObjectType):
     username = graphene.String(required=True)
 
 
-class RegisterMutation(graphene.Mutation):
+class Register(graphene.Mutation):
     class Arguments:
-        input = RegisterMutationInput(required=True)
+        data = RegisterInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    first_name = graphene.String()
-    last_name = graphene.String()
-    email = graphene.String()
-    username = graphene.String()
+    result = graphene.Field(UserType)
 
     @staticmethod
-    def mutate(root, info, input):
-        serializer = RegisterSerializer(data=input,
+    def mutate(root, info, data):
+        serializer = RegisterSerializer(data=data,
                                         context={'request': info.context})
         if errors := mutation_is_not_valid(serializer):
-            return RegisterMutation(errors=errors, ok=False)
+            return Register(errors=errors, ok=False)
         instance = serializer.save()
-        return RegisterMutation(
-            first_name=instance.first_name, 
-            last_name=instance.last_name, 
-            email=instance.email, 
-            username=instance.username, 
+        return Register(
+            result=instance,
             errors=None, 
             ok=True
         )
 
 
-class LoginMutationInput(graphene.InputObjectType):
+class LoginInputType(graphene.InputObjectType):
     email = graphene.String(required=True)
     password = graphene.String(required=True)
 
 
-class LoginMutation(graphene.Mutation):
+class Login(graphene.Mutation):
     class Arguments:
-        input = LoginMutationInput(required=True)
+        data = LoginInputType(required=True)
 
-    me = graphene.Field(UserType)
-    errors = graphene.List(CustomErrorType)
+    result = graphene.Field(UserType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, info, input):
-        serializer = LoginSerializer(data=input,
+    def mutate(root, info, data):
+        serializer = LoginSerializer(data=data,
                                      context={'request': info.context})
         if errors := mutation_is_not_valid(serializer):
-            return LoginMutation(errors=errors, ok=False)
+            return Login(errors=errors, ok=False)
         if user := serializer.validated_data.get('user'):
             login(info.context, user)
-        return LoginMutation(
-            me=user,
+        return Login(
+            result=user,
             errors=None,
             ok=True
         )
 
 
-class ActivateMutationInput(graphene.InputObjectType):
+class ActivateInputType(graphene.InputObjectType):
     uid = graphene.String(required=True)
     token = graphene.String(required=True)
 
 
-class ActivateMutation(graphene.Mutation):
+class Activate(graphene.Mutation):
     class Arguments:
-        input = ActivateMutationInput(required=True)
+        data = ActivateInputType(required=True)
 
-    errors = graphene.List(CustomErrorType)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, info, input):
-        serializer = ActivateSerializer(data=input,
+    def mutate(root, info, data):
+        serializer = ActivateSerializer(data=data,
                                         context={'request': info.context})
         if errors := mutation_is_not_valid(serializer):
-            return ActivateMutation(errors=errors, ok=False)
-        return ActivateMutation(errors=None, ok=True)
+            return Activate(errors=errors, ok=False)
+        return Activate(errors=None, ok=True)
 
 
-class LogoutMutation(graphene.Mutation):
+class Logout(graphene.Mutation):
     ok = graphene.Boolean()
 
     def mutate(self, info, *args, **kwargs):
         if info.context.user.is_authenticated:
             logout(info.context)
-        return LogoutMutation(ok=True)
+        return Logout(ok=True)
 
 
 class Mutation(object):
-    login = LoginMutation.Field()
-    register = RegisterMutation.Field()
-    activate = ActivateMutation.Field()
-    logout = LogoutMutation.Field()
+    login = Login.Field()
+    register = Register.Field()
+    activate = Activate.Field()
+    logout = Logout.Field()
