@@ -14,7 +14,7 @@ class AttachmentType(DjangoObjectType):
         model = Attachment
 
     def resolve_attachment(root, info, **kwargs):
-        return root.attachment.url
+        return info.context.build_absolute_uri(root.attachment.url)
 
 
 class Query:
