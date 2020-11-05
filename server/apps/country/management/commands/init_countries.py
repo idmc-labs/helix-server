@@ -32,7 +32,7 @@ class Command(BaseCommand):
                     idmc_short_name_fr=row[12],
                     idmc_short_name_ar=row[13],
                 )
-                if Country.objects.filter(name__iexact=data['name']):
+                if Country.objects.filter(iso3__iexact=data['iso3']).exists():
                     self.stdout.write(f'{data["name"]} already exists.')
                     continue
                 Country.objects.create(**data)
