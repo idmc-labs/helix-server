@@ -2,7 +2,7 @@ from django.core.exceptions import ValidationError
 
 from apps.crisis.models import Crisis
 from apps.event.models import Event, Violence
-from utils.factories import CrisisFactory, DisasterCategoryFactory, CountryFactory, EventFactory
+from utils.factories import CrisisFactory, DisasterSubTypeFactory, CountryFactory, EventFactory
 from utils.tests import HelixTestCase
 
 
@@ -13,19 +13,19 @@ class TestEventModel(HelixTestCase):
             "name": "Event1",
             "event_type": Crisis.CRISIS_TYPE.DISASTER,
             "glide_number": "glide number",
-            "disaster_category": DisasterCategoryFactory(),
+            "disaster_sub_type": DisasterSubTypeFactory(),
         }
 
     def test_valid_clean(self):
         event = Event(**self.data)
         self.assertIsNone(event.clean())
 
-    def test_invalid_clean_disaster_without_glide_or_disaster_category(self):
+    def test_invalid_clean_disaster_without_glide_or_disaster_sub_type(self):
         self.data.pop('glide_number')
-        self.data.pop('disaster_category')
+        self.data.pop('disaster_sub_type')
         errors = Event.clean_by_event_type(self.data)
         self.assertIn('glide_number', errors)
-        self.assertIn('disaster_category', errors)
+        self.assertIn('disaster_sub_type', errors)
 
     def test_invalid_clean_conflict_without_violence(self):
         self.data['event_type'] = Crisis.CRISIS_TYPE.CONFLICT
