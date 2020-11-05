@@ -74,9 +74,10 @@ class EntryType(DjangoObjectType):
                                              pagination=PageGraphqlPagination(
                                                  page_size_query_param='perPage'
                                              ))
-    reviewers = graphene.Dynamic(
-        lambda: DjangoPaginatedListObjectField(get_type('apps.users.schema.UserListType'))
-    )
+    reviewers = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
+        get_type('apps.users.schema.UserListType'),
+        accessor='reviewers'
+    ))
     total_figures = graphene.Field(graphene.Int)
 
 
