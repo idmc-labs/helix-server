@@ -87,6 +87,27 @@ class DisasterCategoryFactory(DjangoModelFactory):
         model = 'event.DisasterCategory'
 
 
+class DisasterSubCategoryFactory(DjangoModelFactory):
+    class Meta:
+        model = 'event.DisasterSubCategory'
+
+    category = factory.SubFactory(DisasterCategoryFactory)
+
+
+class DisasterTypeFactory(DjangoModelFactory):
+    class Meta:
+        model = 'event.DisasterType'
+
+    disaster_sub_category = factory.SubFactory(DisasterSubCategoryFactory)
+
+
+class DisasterSubTypeFactory(DjangoModelFactory):
+    class Meta:
+        model = 'event.DisasterSubType'
+
+    type = factory.SubFactory(DisasterTypeFactory)
+
+
 class ViolenceFactory(DjangoModelFactory):
     class Meta:
         model = 'event.Violence'
