@@ -183,13 +183,13 @@ class TestCommunication(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.mutation = '''
         mutation MyMutation($input: CommunicationCreateInputType!) {
-          createCommunication(communication: $input) {
+          createCommunication(data: $input) {
             ok
             errors {
               field
               messages
             }
-            communication {
+            result {
               id
               medium {
                 name
@@ -212,5 +212,4 @@ class TestCommunication(HelixGraphQLTestCase):
         content = response.json()
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createCommunication']['ok'], content)
-        self.assertTrue(content['data']['createCommunication']['communication']['id'], content)
 
