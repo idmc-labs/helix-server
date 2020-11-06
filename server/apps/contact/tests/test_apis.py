@@ -1,7 +1,7 @@
 import json
 
 from apps.users.roles import MONITORING_EXPERT_REVIEWER, GUEST
-from utils.factories import CountryFactory, ContactFactory, OrganizationFactory
+from utils.factories import CountryFactory, ContactFactory, OrganizationFactory, CommunicationMediumFactory
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
@@ -177,3 +177,39 @@ class TestDeleteContact(HelixGraphQLTestCase):
 
         content = json.loads(response.content)
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+
+
+class TestCommunication(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.mutation = '''
+        mutation MyMutation($input: CommunicationCreateInputType!) {
+          createCommunication(data: $input) {
+            ok
+            errors {
+              field
+              messages
+            }
+            result {
+              id
+              medium {
+                name
+              }
+            }
+          }
+        }
+        '''
+        self.contact = ContactFactory.create()
+        self.medium = CommunicationMediumFactory.create()
+        self.input = {"contact": str(self.contact.id), "subject": "Subject", "content": "Content", "medium": str(self.medium.id)}
+
+    def test_valid_communication_creation(self):
+        reviewer = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        self.force_login(reviewer)
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['createCommunication']['ok'], content)
+

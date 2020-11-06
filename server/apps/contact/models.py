@@ -51,19 +51,16 @@ class Contact(MetaInformationAbstractModel, models.Model):
         return f'{self.designation.name} {self.first_name} {self.last_name}'
 
 
+class CommunicationMedium(models.Model):
+    name = models.CharField(verbose_name=_('Name'), max_length=256)
+
+    def __str__(self):
+        return f'{self.name}'
+
+
 class Communication(MetaInformationAbstractModel, models.Model):
     class COMMUNICATION_MEDIUM(enum.Enum):
-        MAIL = 0
-        PHONE = 1
-        SKYPE = 2
-        PERSONAL_MEETING = 3
-
-        __labels__ = {
-            MAIL: _("Mail"),
-            PHONE: _("Phone"),
-            SKYPE: _("Skype"),
-            PERSONAL_MEETING: _("Personal Meeting"),
-        }
+        pass
 
     contact = models.ForeignKey('Contact', verbose_name=_('Contact'),
                                 related_name='communications', on_delete=models.CASCADE)
@@ -74,7 +71,9 @@ class Communication(MetaInformationAbstractModel, models.Model):
     date_time = models.DateTimeField(verbose_name=_('Date'),
                                      null=True, blank=True,
                                      help_text=_('Date on which communication occurred.'))
-    medium = enum.EnumField(COMMUNICATION_MEDIUM)
+    medium = models.ForeignKey(CommunicationMedium,
+                               null=True, blank=False,
+                               related_name='+', on_delete=models.SET_NULL)
     attachment = models.FileField(verbose_name=_('attachment'), upload_to='communication/attachments',
                                   blank=True, null=True)
 
