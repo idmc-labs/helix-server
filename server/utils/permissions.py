@@ -14,3 +14,12 @@ def permission_checker(perms: List[str]) -> Callable[..., Callable]:
             return func(root, info, *args, **kwargs)
         return wrapped_func
     return wrapped
+
+def is_authenticated() -> Callable[..., Callable]:
+    def wrapped(func):
+        def wrapped_func(root, info, *args, **kwargs):
+            if not info.context.user.is_authenticated:
+                raise PermissionDenied(gettext(PERMISSION_DENIED_MESSAGE))
+            return func(root, info, *args, **kwargs)
+        return wrapped_func
+    return wrapped

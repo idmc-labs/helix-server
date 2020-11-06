@@ -1,3 +1,8 @@
+from rest_framework import serializers
+
+from apps.contrib.models import Attachment
+
+
 class MetaInformationSerializerMixin(object):
     """
     Responsible to add following fields into the validated data
@@ -15,3 +20,10 @@ class MetaInformationSerializerMixin(object):
                 'last_modified_by': self.context['request'].user
             })
         return attrs
+
+
+class AttachmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Attachment
+        fields = '__all__'
+

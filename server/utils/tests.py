@@ -33,6 +33,10 @@ class CommonSetupClassMixin:
         except FileNotFoundError:
             pass
 
+    def assertResponseNoErrors(self, response):
+        content = response.json()
+        self.assertIsNone(content.get('errors'), content)
+
 
 @override_settings(
     EMAIL_BACKEND=TEST_EMAIL_BACKEND,
