@@ -241,7 +241,8 @@ INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 # Django storage
 
 # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
-DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+if HELIX_ENVIRONMENT in ('production', 'nightly'):
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')

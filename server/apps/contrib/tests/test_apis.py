@@ -29,7 +29,7 @@ class TestAttachment(HelixGraphQLTestCase):
             }
         """
         self.variables = {
-            "data": {"attachmentFor": "entry", "attachment": None}
+            "data": {"attachmentFor": Attachment.FOR_CHOICES.ENTRY, "attachment": None}
         }
         self.force_login(self.editor)
 
