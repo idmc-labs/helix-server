@@ -13,12 +13,12 @@ from utils.permissions import permission_checker
 
 
 class OrganizationKindCreateInputType(graphene.InputObjectType):
-    title = graphene.String(required=True)
+    name = graphene.String(required=True)
 
 
 class OrganizationKindUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
-    title = graphene.String(required=True)
+    name = graphene.String(required=True)
 
 
 class CreateOrganizationKind(graphene.Mutation):
@@ -89,7 +89,7 @@ class DeleteOrganizationKind(graphene.Mutation):
 
 
 class OrganizationCreateInputType(graphene.InputObjectType):
-    title = graphene.String(required=True)
+    name = graphene.String(required=True)
     short_name = graphene.String(required=True)
     organization_kind = graphene.ID(description="Foreign Key to OrganizationKindObjectType")
     methodology = graphene.String(required=True)
@@ -100,7 +100,7 @@ class OrganizationCreateInputType(graphene.InputObjectType):
 
 class OrganizationUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
-    title = graphene.String()
+    name = graphene.String()
     short_name = graphene.String()
     organization_kind = graphene.ID(description="Foreign Key to OrganizationKindObjectType")
     methodology = graphene.String()
