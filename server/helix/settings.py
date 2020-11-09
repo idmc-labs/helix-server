@@ -81,8 +81,9 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+if HELIX_ENVIRONMENT in ('production', 'nightly'):
+    MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
 
 ROOT_URLCONF = 'helix.urls'
 
