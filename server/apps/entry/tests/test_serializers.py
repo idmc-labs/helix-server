@@ -77,3 +77,4 @@ class TestEntrySerializer(HelixTestCase):
         self.assertEqual(instance.last_modified_by, self.user)
         self.assertIsNotNone(instance.created_at)
         self.assertIsNotNone(instance.modified_at)
+

@@ -87,6 +87,9 @@ class NestedFigureSerializer(MetaInformationSerializerMixin,
                              serializers.ModelSerializer):
     age_json = DisaggregatedAgeSerializer(many=True, required=False)
     strata_json = DisaggregatedStratumSerializer(many=True, required=False)
+    # to allow updating
+    id = serializers.IntegerField(required=False)
+    uuid = serializers.CharField(required=False)
 
     class Meta:
         model = Figure
@@ -125,6 +128,25 @@ class EntrySerializer(MetaInformationSerializerMixin,
                 ])
         else:
             entry = super().create(validated_data)
+        return entry
+
+    def update(self, instance, validated_data: dict) -> Entry:
+        figures = validated_data.pop('figures', [])
+        if figures:
+            with transaction.atomic():
+                entry = super().update(instance, validated_data)
+                # delete missing figures
+                entry.figures.exclude(id__in=[each['id'] for each in figures if each.get('id')]).delete()
+                # create if has no ids
+                Figure.objects.bulk_create([
+                    Figure(**each, entry=entry) for each in figures if not each.get('id')
+                ])
+                # update if has ids
+                for each in figures:
+                    if each.get('id'):
+                        Figure.objects.filter(id=each.pop('id')).update(**each, entry=entry)
+        else:
+            entry = super().update(instance, validated_data)
         return entry
 
 

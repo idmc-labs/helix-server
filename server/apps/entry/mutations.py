@@ -61,6 +61,14 @@ class NestedFigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectT
     uuid = graphene.String(required=True)
 
 
+class NestedFigureUpdateInputType(CommonFigureCreateMixin, graphene.InputObjectType):
+    """
+    Input Type used to update figures with entry
+    """
+    uuid = graphene.String(required=True)
+    id = graphene.ID()
+
+
 class FigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectType):
     entry = graphene.ID(required=True)
     uuid = graphene.String(required=False)
@@ -221,6 +229,7 @@ class EntryUpdateInputType(graphene.InputObjectType):
     methodology = graphene.String()
     tags = graphene.List(graphene.NonNull(graphene.String))
     reviewers = graphene.List(graphene.NonNull(graphene.ID))
+    figures = graphene.List(graphene.NonNull(NestedFigureUpdateInputType))
 
 
 class CreateEntry(graphene.Mutation):

@@ -490,19 +490,34 @@ class TestEntryUpdate(HelixGraphQLTestCase):
             created_by=self.editor
         )
         self.mutation = """
-            mutation UpdateEntry($input: EntryUpdateInputType!) {
-                updateEntry(data: $input) {
-                    ok
-                    errors {
-                        field
-                        messages
-                    }
-                    result {
-                        id
-                        url
-                    }
+        mutation MyMutation($input: EntryUpdateInputType!) {
+          updateEntry(data: $input) {
+            ok
+            errors {
+              field
+              messages
+              arrayErrors {
+                key
+                messages
+                objectErrors {
+                    field
+                    messages
                 }
+              }
             }
+            result {
+              id
+              figures {
+                results {
+                  id
+                  createdAt
+                }
+              }
+              createdAt
+              articleTitle
+            }
+          }
+        }
         """
         self.input = {
             "id": self.entry.id,
@@ -558,6 +573,90 @@ class TestEntryUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEntry']['ok'], content)
+
+    def test_valid_update_entry_with_figures(self):
+        figure = FigureFactory.create(entry=self.entry)
+        deleted_figure = FigureFactory.create(entry=self.entry)
+        figures = [
+            {
+            "uuid": "1cd00034-037e-4c5f-b196-fa05b6bed803",
+            "district": "disss",
+            "town": "town",
+            "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
+            "reported": 10,
+            "unit": Figure.UNIT.PERSON.name,
+            "term": Figure.TERM.EVACUATED.name,
+            "type": Figure.TYPE.IDP_STOCK.name,
+            "role": Figure.ROLE.RECOMMENDED.name,
+            "startDate": "2020-09-09",
+            "includeIdu": False,
+            "ageJson": [
+                {
+                    "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
+                     "ageFrom": 1,
+                     "ageTo": 3,
+                     "value": 3
+                },
+                {
+                    "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                     "ageFrom": 3,
+                     "ageTo": 5,
+                     "value": 3
+                 }
+            ],
+            "strataJson": [
+                {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
+                {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
+            ]
+            },
+            {
+            "id": figure.id,
+            "uuid": str(figure.uuid),
+            "district": "disss",
+            "town": "town",
+            "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
+            "reported": 10,
+            "unit": Figure.UNIT.PERSON.name,
+            "term": Figure.TERM.EVACUATED.name,
+            "type": Figure.TYPE.IDP_STOCK.name,
+            "role": Figure.ROLE.RECOMMENDED.name,
+            "startDate": "2020-09-09",
+            "includeIdu": False,
+            "ageJson": [
+                {
+                    "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
+                     "ageFrom": 1,
+                     "ageTo": 3,
+                     "value": 3
+                },
+                {
+                    "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                     "ageFrom": 3,
+                     "ageTo": 5,
+                     "value": 3
+                 }
+            ],
+            "strataJson": [
+                {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
+                {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
+            ]
+            },
+        ]
+        old_figures_count = self.entry.figures.count()
+
+        self.force_login(self.editor)
+        self.input['figures'] = figures
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['updateEntry']['ok'], content)
+        self.entry.refresh_from_db()
+        self.assertNotIn(deleted_figure, self.entry.figures.all())
+        self.assertEqual(self.entry.figures.count(), old_figures_count)
 
 
 class TestEntryDelete(HelixGraphQLTestCase):
