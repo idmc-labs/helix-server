@@ -611,7 +611,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
             },
             {
             "id": figure.id,
-            "uuid": "20a5a258-a83e-47c3-8fff-0c2dab77113a", # str(figure.uuid),
+            "uuid": str(figure.uuid),
             "district": "disss",
             "town": "town",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.name,

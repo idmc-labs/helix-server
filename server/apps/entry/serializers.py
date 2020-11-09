@@ -89,6 +89,7 @@ class NestedFigureSerializer(MetaInformationSerializerMixin,
     strata_json = DisaggregatedStratumSerializer(many=True, required=False)
     # to allow updating
     id = serializers.IntegerField(required=False)
+    uuid = serializers.CharField(required=False)
 
     class Meta:
         model = Figure
