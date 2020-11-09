@@ -189,7 +189,7 @@ class DeleteFigure(graphene.Mutation):
 class EntryCreateInputType(graphene.InputObjectType):
     url = graphene.String()
     preview = graphene.ID(required=False)
-    document = Upload(required=False)
+    document = graphene.ID(required=False)
     article_title = graphene.String(required=True)
     source = graphene.String(required=True)
     publisher = graphene.String(required=True)

@@ -229,11 +229,9 @@ class Entry(MetaInformationAbstractModel, models.Model):
                                    help_text=_('After the preview has been generated pass its id'
                                                ' along during entry creation, so that during entry update'
                                                ' the preview can be obtained.'))
-    # document = models.FileField(verbose_name=_('document'), upload_to='entry/documents',
-    #                             blank=True, null=True)
-    # document = models.ForeignKey('contrib.Attachment', verbose_name='Attachment',
-    #                              on_delete=models.CASCADE, related_name='+',
-    #                              null=True, blank=True)
+    document = models.ForeignKey('contrib.Attachment', verbose_name='Attachment',
+                                 on_delete=models.CASCADE, related_name='+',
+                                 null=True, blank=True)
     article_title = models.TextField(verbose_name=_('Article Title'))
     source = models.CharField(verbose_name=_('Source'), max_length=256)
     publisher = models.CharField(verbose_name=_('Publisher'), max_length=256)
