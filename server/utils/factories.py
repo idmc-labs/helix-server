@@ -50,7 +50,7 @@ class OrganizationKindFactory(DjangoModelFactory):
     class Meta:
         model = 'organization.OrganizationKind'
 
-    title = factory.Faker('company_suffix')
+    name = factory.Faker('company_suffix')
 
 
 class OrganizationFactory(DjangoModelFactory):

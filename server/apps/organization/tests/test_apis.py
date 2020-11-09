@@ -20,7 +20,7 @@ class TestCreateOrganization(HelixGraphQLTestCase):
                 result {
                     id
                     methodology
-                    title
+                    name
                     shortName
                     sourceDetailMethodology
                 }
@@ -28,7 +28,7 @@ class TestCreateOrganization(HelixGraphQLTestCase):
         }
         '''
         self.input = {
-            "title": "Title1",
+            "name": "Title1",
             "shortName": "ABC",
             "methodology": "Methodology1",
             "sourceDetailMethodology": "Source1"
@@ -46,8 +46,8 @@ class TestCreateOrganization(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createOrganization']['ok'], content)
-        self.assertEqual(content['data']['createOrganization']['result']['title'],
-                         self.input['title'])
+        self.assertEqual(content['data']['createOrganization']['result']['name'],
+                         self.input['name'])
         self.assertEqual(content['data']['createOrganization']['result']['shortName'],
                          self.input['shortName'])
 
@@ -77,7 +77,7 @@ class TestUpdateOrganization(HelixGraphQLTestCase):
                 result {
                     id
                     methodology
-                    title
+                    name
                     shortName
                     sourceDetailMethodology
                 }
@@ -177,13 +177,13 @@ class TestCreateOrganizationKind(HelixGraphQLTestCase):
                 }
                 result {
                     id
-                    title
+                    name
                 }
             }
         }
         '''
         self.input = {
-            "title": "Title1",
+            "name": "Title1",
         }
 
     def test_valid_organization_kind_creation(self) -> None:
@@ -199,8 +199,8 @@ class TestCreateOrganizationKind(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createOrganizationKind']['ok'], content)
         self.assertIsNotNone(content['data']['createOrganizationKind']['result']['id'])
-        self.assertEqual(content['data']['createOrganizationKind']['result']['title'],
-                         self.input['title'])
+        self.assertEqual(content['data']['createOrganizationKind']['result']['name'],
+                         self.input['name'])
 
     def test_invalid_organization_kind_creation_by_guest(self) -> None:
         guest = create_user_with_role(GUEST)
@@ -227,14 +227,14 @@ class TestUpdateOrganizationKind(HelixGraphQLTestCase):
                 }
                 result {
                     id
-                    title
+                    name
                 }
             }
         }
         '''
         self.input = {
             "id": str(self.organization_kind.id),
-            "title": "New1"
+            "name": "New1"
         }
 
     def test_valid_organization_kind_update(self) -> None:
@@ -251,8 +251,8 @@ class TestUpdateOrganizationKind(HelixGraphQLTestCase):
         self.assertTrue(content['data']['updateOrganizationKind']['ok'], content)
         self.assertEqual(content['data']['updateOrganizationKind']['result']['id'],
                          self.input['id'])
-        self.assertEqual(content['data']['updateOrganizationKind']['result']['title'],
-                         self.input['title'])
+        self.assertEqual(content['data']['updateOrganizationKind']['result']['name'],
+                         self.input['name'])
 
     def test_invalid_organization_kind_update_by_guest(self) -> None:
         guest = create_user_with_role(GUEST)

@@ -5,11 +5,11 @@ from apps.contrib.models import MetaInformationAbstractModel
 
 
 class OrganizationKind(MetaInformationAbstractModel, models.Model):
-    title = models.CharField(verbose_name=_('Title'), max_length=256)
+    name = models.CharField(verbose_name=_('Title'), max_length=256)
 
 
 class Organization(MetaInformationAbstractModel, models.Model):
-    title = models.CharField(verbose_name=_('Title'), max_length=512)
+    name = models.CharField(verbose_name=_('Title'), max_length=512)
     short_name = models.CharField(verbose_name=_('Short Name'), max_length=64,
                                   null=True)
     # logo =

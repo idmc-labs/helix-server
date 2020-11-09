@@ -9,7 +9,7 @@ from utils.tests import HelixTestCase
 class TestCreateOrganizationSerializer(HelixTestCase):
     def setUp(self) -> None:
         self.data = {
-            "title": "org name",
+            "name": "org name",
             "short_name": "org1",
             "methodology": "methods",
             "source_detail_methodology": "source1",
