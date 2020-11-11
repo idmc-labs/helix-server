@@ -21,14 +21,9 @@ class User(AbstractUser):
         return None
 
     def get_full_name(self):
-        l = []
-        if self.first_name:
-            l.append(self.first_name)
-        if self.last_name:
-            l.append(self.last_name)
-        if not l:
-            return self.email
-        return ' '.join(l)
+       return ' '.join([
+           l for l in [self.first_name, self.last_name] if l
+       ]) or self.email
 
     @property
     def full_name(self):
