@@ -27,6 +27,7 @@ class UserType(DjangoObjectType):
                                                        page_size_query_param='pageSize'
                                                    ), accessor='created_entry')
     role = Field(graphene.String)
+    full_name = Field(graphene.String)
 
 
 class UserListType(CustomDjangoListObjectType):

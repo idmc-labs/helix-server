@@ -21,7 +21,13 @@ class User(AbstractUser):
         return None
 
     def get_full_name(self):
-        return f'{self.first_name}, {self.last_name}'
+       return ' '.join([
+           l for l in [self.first_name, self.last_name] if l
+       ]) or self.email
+
+    @property
+    def full_name(self):
+        return self.get_full_name()
 
     def get_short_name(self):
         return self.first_name
