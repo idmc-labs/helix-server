@@ -8,10 +8,7 @@ class CommonCommunicationValidatorMixin(object):
 
 
 class CommonContactValidatorMixin(object):
-    def validate_phone(self, phone):
-        if Contact.objects.exclude(phone=None).filter(phone=phone).exists():
-            raise serializers.ValidationError('Phone Number already exists.')
-        return phone
+    pass
 
 
 class CommunicationSerializer(CommonCommunicationValidatorMixin,
