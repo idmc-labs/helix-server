@@ -93,7 +93,7 @@ class OrganizationCreateInputType(graphene.InputObjectType):
     short_name = graphene.String(required=True)
     organization_kind = graphene.ID(description="Foreign Key to OrganizationKindObjectType")
     methodology = graphene.String(required=True)
-    source_detail_methodology = graphene.String(required=True)
+    breakdown = graphene.String(required=False)
     parent = graphene.ID(description="Foreign Key to self")
     contacts = graphene.List(graphene.NonNull(ContactWithoutOrganizationInputType))
 
@@ -104,7 +104,7 @@ class OrganizationUpdateInputType(graphene.InputObjectType):
     short_name = graphene.String()
     organization_kind = graphene.ID(description="Foreign Key to OrganizationKindObjectType")
     methodology = graphene.String()
-    source_detail_methodology = graphene.String()
+    breakdown = graphene.String()
     parent = graphene.ID(description="Foreign Key to self")
 
 

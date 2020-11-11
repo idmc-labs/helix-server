@@ -12,7 +12,7 @@ class TestCreateOrganizationSerializer(HelixTestCase):
             "name": "org name",
             "short_name": "org1",
             "methodology": "methods",
-            "source_detail_methodology": "source1",
+            "methodology": "source1",
             "contacts": [
                 {
                     "designation": Contact.DESIGNATION.MR.value,

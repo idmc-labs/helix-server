@@ -299,11 +299,9 @@ class TestEntryCreation(HelixGraphQLTestCase):
             "publisher": str(OrganizationFactory.create().id),
             "publishDate": "2020-09-09",
             "tags": ["2020", "grid2020", "south", "asia"],
-            "sourceMethodology": "method",
             "sourceExcerpt": "excerpt one",
-            "sourceBreakdown": "break down",
             "idmcAnalysis": "analysis one",
-            "methodology": "methoddddd",
+            "calculationLogic": "methoddddd",
             "reviewers": [],
             "event": self.event.id,
         }

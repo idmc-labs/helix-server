@@ -243,15 +243,15 @@ class Entry(MetaInformationAbstractModel, models.Model):
     publish_date = models.DateField(verbose_name=_('Published Date'))
     source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
                                       blank=True, null=True)
-    source_breakdown = models.TextField(verbose_name=_('Source Breakdown and Reliability'),
-                                        blank=True, null=True)
     event = models.ForeignKey('event.Event', verbose_name=_('Event'),
                               related_name='entries', on_delete=models.CASCADE)
 
     idmc_analysis = models.TextField(verbose_name=_('IDMC Analysis'),
                                      blank=False, null=True)
-    methodology = models.TextField(verbose_name=_('Methodology'),
-                                   blank=True)
+    calculation_logic = models.TextField(verbose_name=_('Calculation Logic'),
+                                         blank=True, null=True)
+    confidential = models.BooleanField(verbose_name=_('Confidential Source'), default=False)
+    caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
     # grid TODO:
     tags = ArrayField(base_field=models.CharField(verbose_name=_('Tag'), max_length=32),
                       blank=True, null=True)

@@ -146,7 +146,6 @@ class EntryFactory(DjangoModelFactory):
     source = factory.SubFactory(OrganizationFactory)
     publisher = factory.SubFactory(OrganizationFactory)
     publish_date = factory.LazyFunction(today().date)
-    source_breakdown = factory.Sequence(lambda n: f'long text breakdown {n}')
     event = factory.SubFactory(EventFactory)
     tags = factory.Sequence(lambda n: [f'tag{each}' for each in range(n % 10)])
 
