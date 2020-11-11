@@ -233,8 +233,12 @@ class Entry(MetaInformationAbstractModel, models.Model):
                                  on_delete=models.CASCADE, related_name='+',
                                  null=True, blank=True)
     article_title = models.TextField(verbose_name=_('Article Title'))
-    source = models.CharField(verbose_name=_('Source'), max_length=256)
-    publisher = models.CharField(verbose_name=_('Publisher'), max_length=256)
+    source = models.ForeignKey('organization.Organization', verbose_name=_('Source'),
+                               null=True, blank=True,
+                               related_name='sourced_entries', on_delete=models.CASCADE)
+    publisher = models.ForeignKey('organization.Organization', verbose_name=_('Publisher'),
+                                  null=True, blank=True,
+                                  related_name='published_entires', on_delete=models.CASCADE)
     publish_date = models.DateField(verbose_name=_('Published Date'))
     source_methodology = models.TextField(verbose_name=_('Source Methodology'),
                                           blank=True, null=True)
