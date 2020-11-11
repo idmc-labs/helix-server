@@ -5,7 +5,7 @@ from django.core.files.temp import NamedTemporaryFile
 
 from apps.entry.models import Figure, Entry
 from apps.users.roles import MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, ADMIN, GUEST
-from utils.factories import EventFactory, EntryFactory, FigureFactory
+from utils.factories import EventFactory, EntryFactory, FigureFactory, OrganizationFactory
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
@@ -295,8 +295,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.input = {
             "url": "https://yoko-onos-blog.com",
             "articleTitle": "title 1",
-            "source": "source 1",
-            "publisher": "publisher 1",
+            "source": str(OrganizationFactory.create().id),
+            "publisher": str(OrganizationFactory.create().id),
             "publishDate": "2020-09-09",
             "tags": ["2020", "grid2020", "south", "asia"],
             "sourceMethodology": "method",
@@ -521,7 +521,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         """
         self.input = {
             "id": self.entry.id,
-            "publisher": "updated-publisher",
+            "articleTitle": "updated-bla",
         }
 
     def test_valid_update_entry(self):
@@ -675,7 +675,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
                     }
                     result {
                         id
-                        source
+                        source{id}
                         url
                         createdAt
                     }

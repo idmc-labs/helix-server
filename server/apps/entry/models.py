@@ -211,6 +211,7 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
         return errors
 
     def save(self, *args, **kwargs):
+        # TODO: set household size from the country
         self.total_figures = self.reported
         if self.unit == self.UNIT.HOUSEHOLD:
             self.total_figures = self.reported * self.household_size
@@ -240,8 +241,6 @@ class Entry(MetaInformationAbstractModel, models.Model):
                                   null=True, blank=True,
                                   related_name='published_entires', on_delete=models.CASCADE)
     publish_date = models.DateField(verbose_name=_('Published Date'))
-    source_methodology = models.TextField(verbose_name=_('Source Methodology'),
-                                          blank=True, null=True)
     source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
                                       blank=True, null=True)
     source_breakdown = models.TextField(verbose_name=_('Source Breakdown and Reliability'),
@@ -252,7 +251,7 @@ class Entry(MetaInformationAbstractModel, models.Model):
     idmc_analysis = models.TextField(verbose_name=_('IDMC Analysis'),
                                      blank=False, null=True)
     methodology = models.TextField(verbose_name=_('Methodology'),
-                                   blank=False, null=True)
+                                   blank=True)
     # grid TODO:
     tags = ArrayField(base_field=models.CharField(verbose_name=_('Tag'), max_length=32),
                       blank=True, null=True)
@@ -260,6 +259,10 @@ class Entry(MetaInformationAbstractModel, models.Model):
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
                                        blank=True,
                                        related_name='review_entries')
+
+    @property
+    def source_methodology(self):
+        return self.source.methodolgy
 
     @property
     def total_figures(self):
