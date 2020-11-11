@@ -24,4 +24,4 @@ class Organization(MetaInformationAbstractModel, models.Model):
                                on_delete=models.CASCADE, related_name='sub_organizations')
 
     def __str__(self):
-        return self.title
+        return self.name

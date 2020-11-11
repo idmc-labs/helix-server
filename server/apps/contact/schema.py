@@ -35,6 +35,7 @@ class ContactType(DjangoObjectType):
     class Meta:
         model = Contact
 
+    full_name = graphene.Field(graphene.String)
     designation = graphene.Field(DesignationGrapheneEnum)
     gender = graphene.Field(GenderGrapheneEnum)
     communications = DjangoPaginatedListObjectField(CommunicationListType,
