@@ -167,7 +167,7 @@ class EventType(DjangoObjectType):
     violence = graphene.Field(ViolenceType)
     violence_sub_type = graphene.Field(ViolenceSubObjectType)
     actor = graphene.Field(ActorType)
-    countries = DjangoFilterListField(CountryType)
+    countries = graphene.List(graphene.NonNull(CountryType))
 
 
 class EventListType(CustomDjangoListObjectType):
