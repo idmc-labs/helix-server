@@ -8,5 +8,5 @@ class EntryFilter(django_filters.FilterSet):
 
     class Meta:
         model = Entry
-        fields = ['event']
+        fields = ['event', 'created_by', 'reviewers']
 
