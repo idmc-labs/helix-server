@@ -79,6 +79,7 @@ class EntryType(DjangoObjectType):
         accessor='reviewers'
     ))
     total_figures = graphene.Field(graphene.Int)
+    source_methodology = graphene.Field(graphene.String)
 
 
 class EntryListType(CustomDjangoListObjectType):

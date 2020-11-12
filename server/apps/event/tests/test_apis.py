@@ -51,9 +51,6 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
                     violenceSubType {
                         name
                     }
-                    countries {
-                        name
-                    }
                 }
                 ok
                 }
@@ -81,8 +78,6 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         self.assertIsNone(content['data']['createEvent']['errors'], content)
         self.assertEqual(content['data']['createEvent']['result']['name'],
                          self.input['name'])
-        self.assertEqual(len(content['data']['createEvent']['result']['countries']),
-                         len(self.input['countries']))
 
 
 class TestUpdateEvent(HelixGraphQLTestCase):
@@ -109,9 +104,6 @@ class TestUpdateEvent(HelixGraphQLTestCase):
                         name
                     }
                     violenceSubType {
-                        name
-                    }
-                    countries {
                         name
                     }
                 }
@@ -143,8 +135,6 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.assertIsNone(content['data']['updateEvent']['errors'], content)
         self.assertEqual(content['data']['updateEvent']['result']['name'],
                          self.input['name'])
-        self.assertEqual(len(content['data']['updateEvent']['result']['countries']),
-                         len(self.input['countries']))
 
     def test_invalid_update_event_by_guest(self):
         guest = create_user_with_role(GUEST)
@@ -181,9 +171,6 @@ class TestDeleteEvent(HelixGraphQLTestCase):
                         name
                     }
                     violenceSubType {
-                        name
-                    }
-                    countries {
                         name
                     }
                 }

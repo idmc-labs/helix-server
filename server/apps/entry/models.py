@@ -211,6 +211,7 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
         return errors
 
     def save(self, *args, **kwargs):
+        # TODO: set household size from the country
         self.total_figures = self.reported
         if self.unit == self.UNIT.HOUSEHOLD:
             self.total_figures = self.reported * self.household_size
@@ -233,22 +234,27 @@ class Entry(MetaInformationAbstractModel, models.Model):
                                  on_delete=models.CASCADE, related_name='+',
                                  null=True, blank=True)
     article_title = models.TextField(verbose_name=_('Article Title'))
-    source = models.CharField(verbose_name=_('Source'), max_length=256)
-    publisher = models.CharField(verbose_name=_('Publisher'), max_length=256)
+    source = models.ForeignKey('organization.Organization', verbose_name=_('Source'),
+                               null=True, blank=True,
+                               related_name='sourced_entries', on_delete=models.SET_NULL)
+    publisher = models.ForeignKey('organization.Organization', verbose_name=_('Publisher'),
+                                  null=True, blank=True,
+                                  related_name='published_entires', on_delete=models.SET_NULL)
     publish_date = models.DateField(verbose_name=_('Published Date'))
-    source_methodology = models.TextField(verbose_name=_('Source Methodology'),
-                                          blank=True, null=True)
     source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
                                       blank=True, null=True)
-    source_breakdown = models.TextField(verbose_name=_('Source Breakdown and Reliability'),
-                                        blank=True, null=True)
     event = models.ForeignKey('event.Event', verbose_name=_('Event'),
                               related_name='entries', on_delete=models.CASCADE)
 
     idmc_analysis = models.TextField(verbose_name=_('IDMC Analysis'),
                                      blank=False, null=True)
-    methodology = models.TextField(verbose_name=_('Methodology'),
-                                   blank=False, null=True)
+    calculation_logic = models.TextField(verbose_name=_('Calculation Logic'),
+                                         blank=True, null=True)
+    is_confidential = models.BooleanField(
+        verbose_name=_('Confidential Source'),
+        default=False,
+    )
+    caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
     # grid TODO:
     tags = ArrayField(base_field=models.CharField(verbose_name=_('Tag'), max_length=32),
                       blank=True, null=True)
@@ -256,6 +262,10 @@ class Entry(MetaInformationAbstractModel, models.Model):
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
                                        blank=True,
                                        related_name='review_entries')
+
+    @property
+    def source_methodology(self):
+        return self.source and self.source.methodolgy
 
     @property
     def total_figures(self):

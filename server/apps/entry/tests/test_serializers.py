@@ -2,7 +2,7 @@ from django.test import RequestFactory
 
 from apps.entry.serializers import EntrySerializer
 from apps.users.roles import MONITORING_EXPERT_EDITOR
-from utils.factories import EventFactory, EntryFactory
+from utils.factories import EventFactory, EntryFactory, OrganizationFactory
 from utils.tests import HelixTestCase, create_user_with_role
 
 
@@ -10,11 +10,12 @@ class TestEntrySerializer(HelixTestCase):
     def setUp(self) -> None:
         self.factory = RequestFactory()
         self.event = EventFactory.create()
+        self.publisher = OrganizationFactory.create()
         self.data = {
             "url": "https://yoko-onos-blog.com",
             "article_title": "title 1",
-            "source": "source 1",
-            "publisher": "publisher 1",
+            "source": self.publisher.id,
+            "publisher": self.publisher.id,
             "publish_date": "2020-09-09",
             "tags": ["2020", "grid2020", "south", "asia"],
             "source_methodology": "method",

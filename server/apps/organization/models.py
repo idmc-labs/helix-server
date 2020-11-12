@@ -20,8 +20,8 @@ class Organization(MetaInformationAbstractModel, models.Model):
                                           blank=True, null=True,
                                           on_delete=models.SET_NULL,
                                           related_name='organizations')
-    methodology = models.TextField(verbose_name=_('Methodology'))
-    source_detail_methodology = models.TextField(_('Source detail and methodology'))
+    methodology = models.TextField(verbose_name=_('Methodology'), blank=True, null=True)
+    breakdown = models.TextField(verbose_name=_('Source Breakdown and Reliability'), blank=True, null=True)
     parent = models.ForeignKey('Organization', verbose_name=_('Organization'),
                                null=True, blank=True,
                                on_delete=models.CASCADE, related_name='sub_organizations')
