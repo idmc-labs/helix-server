@@ -236,10 +236,10 @@ class Entry(MetaInformationAbstractModel, models.Model):
     article_title = models.TextField(verbose_name=_('Article Title'))
     source = models.ForeignKey('organization.Organization', verbose_name=_('Source'),
                                null=True, blank=True,
-                               related_name='sourced_entries', on_delete=models.CASCADE)
+                               related_name='sourced_entries', on_delete=models.SET_NULL)
     publisher = models.ForeignKey('organization.Organization', verbose_name=_('Publisher'),
                                   null=True, blank=True,
-                                  related_name='published_entires', on_delete=models.CASCADE)
+                                  related_name='published_entires', on_delete=models.SET_NULL)
     publish_date = models.DateField(verbose_name=_('Published Date'))
     source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
                                       blank=True, null=True)
@@ -250,7 +250,10 @@ class Entry(MetaInformationAbstractModel, models.Model):
                                      blank=False, null=True)
     calculation_logic = models.TextField(verbose_name=_('Calculation Logic'),
                                          blank=True, null=True)
-    confidential = models.BooleanField(verbose_name=_('Confidential Source'), default=False)
+    is_confidential = models.BooleanField(
+        verbose_name=_('Confidential Source'),
+        default=False,
+    )
     caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
     # grid TODO:
     tags = ArrayField(base_field=models.CharField(verbose_name=_('Tag'), max_length=32),
@@ -262,7 +265,7 @@ class Entry(MetaInformationAbstractModel, models.Model):
 
     @property
     def source_methodology(self):
-        return self.source.methodolgy
+        return self.source and self.source.methodolgy
 
     @property
     def total_figures(self):

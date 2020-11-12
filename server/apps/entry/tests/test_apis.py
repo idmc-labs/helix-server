@@ -301,6 +301,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
             "tags": ["2020", "grid2020", "south", "asia"],
             "sourceExcerpt": "excerpt one",
             "idmcAnalysis": "analysis one",
+            "isConfidential": True,
             "calculationLogic": "methoddddd",
             "reviewers": [],
             "event": self.event.id,
