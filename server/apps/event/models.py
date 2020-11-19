@@ -89,6 +89,7 @@ class DisasterSubType(NameAttributedModels):
 
 class Event(MetaInformationAbstractModel, models.Model):
     crisis = models.ForeignKey('crisis.Crisis', verbose_name=_('Crisis'),
+                               blank=True, null=True,
                                related_name='events', on_delete=models.CASCADE)
     name = models.CharField(verbose_name=_('Event Name'), max_length=256)
     event_type = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Event Type'))
