@@ -1,6 +1,6 @@
 import graphene
 
-from apps.entry.models import Figure
+from apps.entry.models import Figure, EntryReviewer
 
 from utils.enums import enum_description
 
@@ -9,3 +9,4 @@ UnitGrapheneEnum = graphene.Enum.from_enum(Figure.UNIT, description=enum_descrip
 TermGrapheneEnum = graphene.Enum.from_enum(Figure.TERM, description=enum_description)
 TypeGrapheneEnum = graphene.Enum.from_enum(Figure.TYPE, description=enum_description)
 RoleGrapheneEnum = graphene.Enum.from_enum(Figure.ROLE, description=enum_description)
+EntryReviewerGrapheneEnum = graphene.Enum.from_enum(EntryReviewer.REVIEW_STATUS, description=enum_description)

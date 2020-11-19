@@ -8,6 +8,7 @@ from rest_framework import serializers
 
 from apps.contrib.serializers import MetaInformationSerializerMixin
 from apps.entry.models import Entry, Figure, SourcePreview
+from apps.users.models import User
 
 
 class DisaggregatedAgeSerializer(serializers.Serializer):
@@ -99,6 +100,7 @@ class NestedFigureSerializer(MetaInformationSerializerMixin,
 class EntrySerializer(MetaInformationSerializerMixin,
                       serializers.ModelSerializer):
     figures = NestedFigureSerializer(many=True, required=False)
+    reviewers = serializers.ListField(child=serializers.IntegerField(), required=False)
 
     class Meta:
         model = Entry
@@ -109,6 +111,12 @@ class EntrySerializer(MetaInformationSerializerMixin,
         if len(uuids) != len(set(uuids)):
             raise serializers.ValidationError('Duplicate keys found. ')
         return figures
+
+    def validate_reviewers(self, revs):
+        for reviewer in revs:
+            if not User.objects.filter(id=reviewer).exists():
+                raise serializers.ValidationError('Reviewer does not exist.')
+        return revs
 
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)

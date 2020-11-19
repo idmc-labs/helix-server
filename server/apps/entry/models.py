@@ -273,7 +273,8 @@ class Entry(MetaInformationAbstractModel, models.Model):
 
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
                                        blank=True,
-                                       related_name='review_entries')
+                                       related_name='review_entries',
+                                       through='EntryReviewer')
 
     @property
     def source_methodology(self):
@@ -307,3 +308,24 @@ class Entry(MetaInformationAbstractModel, models.Model):
 
     def __str__(self):
         return f'Entry {self.article_title}'
+
+
+class EntryReviewer(models.Model):
+    class REVIEW_STATUS(enum.Enum):
+        UNDER_REVIEW = 0
+        REVIEW_COMPLETED = 1
+
+        __labels__ = {
+            UNDER_REVIEW: _("Under Review"),
+            REVIEW_COMPLETED: _("Review Completed"),
+        }
+
+    entry = models.ForeignKey(Entry, verbose_name=_('Entry'),
+                              related_name='reviewing', on_delete=models.CASCADE)
+    reviewer = models.ForeignKey('users.User', verbose_name=_('Reviewer'),
+                                 related_name='reviewing', on_delete=models.CASCADE)
+    status = enum.EnumField(enum=REVIEW_STATUS, verbose_name=_('Review Status'),
+                            null=True, blank=True)
+
+    def __str__(self):
+        return f'{self.entry_id} {self.reviewer} {self.status}'

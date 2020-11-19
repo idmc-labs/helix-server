@@ -47,6 +47,7 @@ LOCAL_APPS = [
     'event',
     'entry',
     'resource',
+    'review',
 ]
 
 THIRD_PARTY_APPS = [
