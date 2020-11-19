@@ -10,7 +10,7 @@ from utils.permissions import permission_checker
 
 
 class EventCreateInputType(graphene.InputObjectType):
-    crisis = graphene.ID(required=True)
+    crisis = graphene.ID(required=False)
     name = graphene.String(required=True)
     event_type = graphene.NonNull(CrisisTypeGrapheneEnum)
     glide_number = graphene.String()
