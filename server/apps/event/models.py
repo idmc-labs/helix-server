@@ -152,8 +152,8 @@ class Event(MetaInformationAbstractModel, models.Model):
         elif event_type == Crisis.CRISIS_TYPE.DISASTER:
             if not values.get('disaster_sub_type', getattr(instance, 'disaster_sub_type', None)):
                 errors['disaster_sub_type'] = gettext('Please mention the sub-type of disaster. ')
-            if not values.get('glide_number', getattr(instance, 'glide_number', None)):
-                errors['glide_number'] = gettext('Glide Number is required. ')
+            # if not values.get('glide_number', getattr(instance, 'glide_number', None)):
+            #     errors['glide_number'] = gettext('Glide Number is required. ')
         return errors
 
     def __str__(self):
