@@ -11,7 +11,7 @@ class ContactFilter(django_filters.FilterSet):
 
     class Meta:
         model = Contact
-        fields = ['id']
+        fields = ['id', 'country']
 
     def filter_name_contains(self, qs, name, value):
         return qs.filter(models.Q(first_name__icontains=value) | models.Q(last_name__icontains=value))
