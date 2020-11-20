@@ -14,10 +14,10 @@ docker-compose exec server python manage.py migrate
 docker-compose exec server python manage.py init_roles
 ```
 
-## Initialize Countries
+## Initialize assets
 ```bash
 docker-compose exec server python manage.py init_countries
-
+docker-compose exec server python manage.py init_organizations
 ```
 
 ## Initialize DB (optional)
