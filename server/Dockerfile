@@ -1,14 +1,15 @@
 FROM python:3.8.2-buster
 
-MAINTAINER togglecorp info@togglecorp.com
+LABEL maintainer="dev@togglecorp.com"
 
 ENV PYTHONUNBUFFERED 1
 
 WORKDIR /code
 
 COPY ./requirements.txt /code/requirements.txt
-RUN pip install -r requirements.txt
+RUN python3 -m pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
 COPY . /code/
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:9000"]
+CMD ./deploy/scripts/run_prod.sh

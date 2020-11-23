@@ -1,25 +1,28 @@
 version: '3.2'
 
 services:
-    db:
-        image: postgres:11
-        environment:
-            POSTGRES_PASSWORD: postgres
-        volumes:
-            - helix-db-data:/var/lib/postgresql/data
-    server:
-        build:
-          context: ./server/
-          cache_from:
-            - helix/helix-server:latest
-        env_file:
-            - .env
-        volumes:
-            - ./server/:/code
-        ports:
-            - '9000:9000'
-        depends_on:
-            - db
+  db:
+    image: postgres:11
+    environment:
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - helix-db-data:/var/lib/postgresql/data
+
+  server:
+    image: helix/helix-server:latest
+    build:
+      context: ./server/
+      cache_from:
+        - helix/helix-server:latest
+    env_file:
+      - .env
+    command: bash -c 'python3 manage.py runserver 0.0.0.0:9000'
+    volumes:
+      - ./server/:/code
+    ports:
+      - '9000:9000'
+    depends_on:
+      - db
 
 volumes:
   helix-db-data:
