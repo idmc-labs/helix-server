@@ -120,9 +120,21 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
 
     class TYPE(enum.Enum):
         IDP_STOCK = 0
+        NEW_DISPLACEMENT = 1
+        RETURNEES = 2
+        LOCALLY_INTEGRATED_IDP = 3
+        IDP_SETTLED_ELSEWHERE = 4
+        PEOPLE_DISPLACED_ACROSS_BORDERS = 5
+        MULTIPLE_DISPLACEMENT = 6
 
         __labels__ = {
             IDP_STOCK: _("IDP (Stock)"),
+            NEW_DISPLACEMENT: _('New Displacement (Flow)'),
+            RETURNEES: _('Returnees (Stock)'),
+            LOCALLY_INTEGRATED_IDP: _('Locally Integrated IDPs (Stock)'),
+            IDP_SETTLED_ELSEWHERE: _('IDPs Settled elsewhere (Stock)'),
+            PEOPLE_DISPLACED_ACROSS_BORDERS: _('People displaced across borders (Stock)'),
+            MULTIPLE_DISPLACEMENT: _('Multiple displacement (Flow)'),
         }
 
     class ROLE(enum.Enum):
