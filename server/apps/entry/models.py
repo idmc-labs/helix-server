@@ -11,6 +11,7 @@ from django.db import models
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
+from rest_framework.exceptions import PermissionDenied
 
 from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
 from apps.users.roles import ADMIN
@@ -314,10 +315,12 @@ class EntryReviewer(models.Model):
     class REVIEW_STATUS(enum.Enum):
         UNDER_REVIEW = 0
         REVIEW_COMPLETED = 1
+        SIGNED_OFF = 2
 
         __labels__ = {
             UNDER_REVIEW: _("Under Review"),
             REVIEW_COMPLETED: _("Review Completed"),
+            SIGNED_OFF: _("Signed Off"),
         }
 
     entry = models.ForeignKey(Entry, verbose_name=_('Entry'),
@@ -329,3 +332,9 @@ class EntryReviewer(models.Model):
 
     def __str__(self):
         return f'{self.entry_id} {self.reviewer} {self.status}'
+
+    def save(self, *args, **kwargs):
+        if self.status == self.REVIEW_STATUS.SIGNED_OFF\
+                or self.reviewer.email in settings.ENTRY_SIGNER_EMAILS:
+            raise PermissionDenied('Current reviewer cannot sign off the entry.')
+        return super().save(*args, **kwargs)

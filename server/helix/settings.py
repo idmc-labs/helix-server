@@ -262,3 +262,6 @@ SLS_STAGES = {
 }
 sls_stage = SLS_STAGES[HELIX_ENVIRONMENT.lower()]
 LAMBDA_HTML_TO_PDF = os.environ.get('LAMBDA_HTML_TO_PDF', f'{SLS_SERVICE_NAME}-{sls_stage}-{PDF_GENERATOR}')
+
+# sign off admin emails
+ENTRY_SIGNER_EMAILS = ','.split(os.environ.get('ENTRY_SIGNER_EMAILS', 'admin@helix.com'))
