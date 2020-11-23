@@ -14,12 +14,11 @@ class Command(BaseCommand):
 
     def fetch_organizations(self, offset=0, limit=1000):
         print('Fetching organizations starting from: {} to {}'.format(offset, offset + limit))
-        URL = 'https://api.reliefweb.int/v1/sources?fields[include][]=logo&fields[include][]=' \
-              'country.iso3&fields[include][]=shortname&fields[include][]=longname&fields' \
-              '[include][]=homepage&fields[include][]=type&offset={}&limit={}'.format(
-                offset,
-                limit,
-                )
+        URL = (
+            'https://api.reliefweb.int/v1/sources?fields[include][]=logo&fields[include][]='
+            'country.iso3&fields[include][]=shortname&fields[include][]=longname&fields'
+            f'[include][]=homepage&fields[include][]=type&offset={offset}&limit={limit}'
+        )
         response = requests.get(URL).json()
 
         print('Loading organizations')
