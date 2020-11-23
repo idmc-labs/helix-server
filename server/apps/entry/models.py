@@ -299,12 +299,20 @@ class Entry(MetaInformationAbstractModel, models.Model):
             errors['document'] = gettext('Please fill the URL or upload a document. ')
         return errors
 
+    @property
+    def locked(self):
+        if self.reviewers.through.objects.filter(status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF).exists():
+            return True
+        return False
+
     def can_be_updated_by(self, user: User) -> bool:
         """
         used to check before deleting as well
+            i.e `can be DELETED by`
         """
-        if user.is_superuser \
-                or ADMIN in user.groups.values_list('name', flat=True):
+        if self.locked:
+            return False
+        if ADMIN in user.groups.values_list('name', flat=True):
             return True
         return self.created_by == user
 
@@ -340,15 +348,12 @@ class EntryReviewer(models.Model):
     def __str__(self):
         return f'{self.entry_id} {self.reviewer} {self.status}'
 
-    def can_update_status(self, status):
+    def update_status(self, status):
         if status == self.REVIEW_STATUS.SIGNED_OFF \
                 and not self.reviewer.has_perms(('entry.sign_off_entry',)):
             raise self.CannotUpdateStatusException()
         self.status = status
-        self._can_update_status = 0
 
     def save(self, *args, **kwargs):
-        # NOTE: Update status using `can_update_status`
-        if not hasattr(self, '_can_update_status'):
-            raise Exception(gettext('Please call `can_update_status` method first.'))
+        self.update_status(self.status)
         return super().save(*args, **kwargs)

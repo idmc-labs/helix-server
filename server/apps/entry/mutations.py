@@ -374,7 +374,7 @@ class UpdateEntryReview(graphene.Mutation):
             ])
         try:
             entry_review = EntryReviewer.objects.get(entry=entry, reviewer=reviewer)
-            entry_review.can_update_status(data['status'])
+            entry_review.status = data['status']
             entry_review.save()
         except EntryReviewer.DoesNotExist:
             return UpdateEntryReview(errors=[

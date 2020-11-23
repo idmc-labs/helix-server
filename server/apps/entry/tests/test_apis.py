@@ -74,7 +74,7 @@ class TestFigureCreation(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createFigure']['ok'], content)
-        self.assertIn('non_field_errors',
+        self.assertIn('nonFieldErrors',
                       [each['field'] for each in content['data']['createFigure']['errors']])
         self.assertIn('Entry does not exist',
                       json.dumps(content['data']['createFigure']['errors']))
@@ -90,7 +90,7 @@ class TestFigureCreation(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createFigure']['ok'], content)
-        self.assertIn('non_field_errors',
+        self.assertIn('nonFieldErrors',
                       [each['field'] for each in content['data']['createFigure']['errors']])
         self.assertIn('You cannot create a figure into',
                       json.dumps(content['data']['createFigure']['errors']))
@@ -556,7 +556,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['updateEntry']['ok'], content)
-        self.assertIn('non_field_errors',
+        self.assertIn('nonFieldErrors',
                       [each['field'] for each in content['data']['updateEntry']['errors']])
         self.assertIn('You cannot update this entry',
                       json.dumps(content['data']['updateEntry']['errors']))
@@ -720,7 +720,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['deleteEntry']['ok'], content)
-        self.assertIn('non_field_errors',
+        self.assertIn('nonFieldErrors',
                       [each['field'] for each in content['data']['deleteEntry']['errors']])
         self.assertIn('You cannot delete this entry',
                       json.dumps(content['data']['deleteEntry']['errors']))
