@@ -3,8 +3,8 @@ from uuid import uuid4
 
 from django.core.files.temp import NamedTemporaryFile
 
-from apps.entry.models import Figure, Entry
-from apps.users.roles import MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, ADMIN, GUEST
+from apps.entry.models import Figure, Entry, EntryReviewer, CANNOT_UPDATE_MESSAGE
+from apps.users.roles import MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, ADMIN, GUEST, IT_HEAD
 from utils.factories import EventFactory, EntryFactory, FigureFactory, OrganizationFactory
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -738,3 +738,64 @@ class TestEntryDelete(HelixGraphQLTestCase):
         self.assertTrue(content['data']['deleteEntry']['ok'], content)
         self.assertEqual(content['data']['deleteEntry']['result']['url'],
                          self.entry.url)
+
+
+class TestEntryReviewUpdate(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.entry = EntryFactory.create()
+        self.r1 = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        self.r2 = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        self.r3 = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        self.it = create_user_with_role(IT_HEAD)
+        self.entry.reviewers.set([self.r1, self.r2, self.r3, self.it])
+        self.q = '''
+        mutation MyMutation ($input: EntryReviewStatusInputType!){
+          updateEntryReview(data: $input) {
+            errors {
+              field
+              messages
+            }
+            ok
+          }
+        }
+        '''
+
+    def test_update_review_status(self):
+        input = dict(
+            entry=str(self.entry.id),
+            status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW.name
+        )
+        self.force_login(self.r1)
+        response = self.query(
+            self.q,
+            input_data=input
+        )
+        content = response.json()
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['updateEntryReview']['ok'], content)
+
+        # trying to signoff should fail
+        input['status'] = EntryReviewer.REVIEW_STATUS.SIGNED_OFF.name
+        response = self.query(
+            self.q,
+            input_data=input
+        )
+        content = response.json()
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['updateEntryReview']['ok'], content)
+        self.assertIn(str(CANNOT_UPDATE_MESSAGE),
+                      content['data']['updateEntryReview']['errors'][0]['messages'])
+
+        # signoff by it head should succeed
+        self.force_login(self.it)
+        input['status'] = EntryReviewer.REVIEW_STATUS.SIGNED_OFF.name
+        response = self.query(
+            self.q,
+            input_data=input
+        )
+        content = response.json()
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['updateEntryReview']['ok'], content)

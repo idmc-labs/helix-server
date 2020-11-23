@@ -20,6 +20,7 @@ from utils.fields import CachedFileField
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+CANNOT_UPDATE_MESSAGE = _('You cannot sign off the entry.')
 
 
 class SourcePreview(MetaInformationAbstractModel):
@@ -310,8 +311,14 @@ class Entry(MetaInformationAbstractModel, models.Model):
     def __str__(self):
         return f'Entry {self.article_title}'
 
+    class Meta:
+        permissions = (('sign_off_entry', 'Can sign off the entry'),)
+
 
 class EntryReviewer(models.Model):
+    class CannotUpdateStatusException(Exception):
+        message = CANNOT_UPDATE_MESSAGE
+
     class REVIEW_STATUS(enum.Enum):
         UNDER_REVIEW = 0
         REVIEW_COMPLETED = 1
@@ -333,8 +340,15 @@ class EntryReviewer(models.Model):
     def __str__(self):
         return f'{self.entry_id} {self.reviewer} {self.status}'
 
+    def can_update_status(self, status):
+        if status == self.REVIEW_STATUS.SIGNED_OFF \
+                and not self.reviewer.has_perms(('entry.sign_off_entry',)):
+            raise self.CannotUpdateStatusException()
+        self.status = status
+        self._can_update_status = 0
+
     def save(self, *args, **kwargs):
-        if self.status == self.REVIEW_STATUS.SIGNED_OFF\
-                or self.reviewer.email in settings.ENTRY_SIGNER_EMAILS:
-            raise PermissionDenied('Current reviewer cannot sign off the entry.')
+        # NOTE: Update status using `can_update_status`
+        if not hasattr(self, '_can_update_status'):
+            raise Exception(gettext('Please call `can_update_status` method first.'))
         return super().save(*args, **kwargs)
