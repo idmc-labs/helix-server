@@ -14,6 +14,8 @@ import os
 import socket
 import logging
 
+from . import sentry
+
 logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -33,7 +35,7 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 
 # FIXME:
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST', '*')]
 
 # Application definition
 
@@ -52,7 +54,7 @@ LOCAL_APPS = [
 
 THIRD_PARTY_APPS = [
     'graphene_django',
-    'rest_framework.authtoken', # required by djoser
+    'rest_framework.authtoken',  # required by djoser
     'djoser',
     'graphene_graphiql_explorer',
     'corsheaders',
@@ -180,9 +182,10 @@ GRAPHENE = {
     'SCHEMA': 'helix.schema.schema',
     'SCHEMA_OUTPUT': 'schema.json',  # defaults to schema.json,
     'SCHEMA_INDENT': 2,  # Defaults to None (displays all data on a single line)
-    'MIDDLEWARE': (
+    'MIDDLEWARE': [
+        'helix.sentry.SentryMiddleware',
         # 'utils.middlewares.AuthorizationMiddleware',
-    ),
+    ],
 }
 
 GRAPHENE_DJANGO_EXTRAS = {
@@ -193,9 +196,7 @@ GRAPHENE_DJANGO_EXTRAS = {
     # 'CACHE_TIMEOUT': 300    # seconds
 }
 if DEBUG:
-    GRAPHENE['MIDDLEWARE'] = (
-        'graphene_django.debug.DjangoDebugMiddleware',
-    )
+    GRAPHENE['MIDDLEWARE'].append('graphene_django.debug.DjangoDebugMiddleware')
 
 AUTHENTICATION_BACKEND = [
     'django.contrib.auth.backends.ModelBackend',
@@ -246,11 +247,17 @@ INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 if HELIX_ENVIRONMENT in ('production', 'nightly'):
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'togglecorp-helix')
 AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
-AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12*60*60))
+AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12 * 60 * 60))
+AWS_S3_FILE_OVERWRITE = False
+AWS_IS_GZIPPED = True
+GZIP_CONTENT_TYPES = [
+    'text/css', 'text/javascript', 'application/javascript', 'application/x-javascript', 'image/svg+xml',
+    'application/json',
+]
 
 SLS_SERVICE_NAME = os.environ.get('SLS_SERVICE_NAME', 'helix-serverless')
 PDF_GENERATOR = os.environ.get('PDF_GENERATOR', 'generatePdf')
@@ -265,3 +272,23 @@ LAMBDA_HTML_TO_PDF = os.environ.get('LAMBDA_HTML_TO_PDF', f'{SLS_SERVICE_NAME}-{
 
 # sign off admin emails
 ENTRY_SIGNER_EMAILS = ','.split(os.environ.get('ENTRY_SIGNER_EMAILS', 'admin@helix.com'))
+
+# Sentry Config
+SENTRY_DSN = os.environ.get('SENTRY_DSN')
+
+if SENTRY_DSN:
+    SENTRY_CONFIG = {
+        'dsn': SENTRY_DSN,
+        'send_default_pii': True,
+        # TODO: Move server to root directory to get access to .git
+        # 'release': sentry.fetch_git_sha(os.path.dirname(BASE_DIR)),
+        'environment': HELIX_ENVIRONMENT,
+        'debug': DEBUG,
+        'tags': {
+            'site': ALLOWED_HOSTS[0],
+        },
+    }
+    sentry.init_sentry(
+        app_type='server',
+        **SENTRY_CONFIG,
+    )
