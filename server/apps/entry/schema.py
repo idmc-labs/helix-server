@@ -68,6 +68,7 @@ class FigureListType(CustomDjangoListObjectType):
 class EntryType(DjangoObjectType):
     class Meta:
         model = Entry
+        exclude_fields = ('reviewers',)
 
     created_by = graphene.Field('apps.users.schema.UserType')
     last_modified_by = graphene.Field('apps.users.schema.UserType')
@@ -102,7 +103,7 @@ class EntryReviewerType(DjangoObjectType):
     class Meta:
         model = EntryReviewer
 
-    review_status = graphene.Field(EntryReviewerGrapheneEnum)
+    status = graphene.Field(EntryReviewerGrapheneEnum)
 
 
 class EntryReviewerListType(CustomDjangoListObjectType):

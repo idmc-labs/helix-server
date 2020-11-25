@@ -273,6 +273,7 @@ class Entry(MetaInformationAbstractModel, models.Model):
     tags = ArrayField(base_field=models.CharField(verbose_name=_('Tag'), max_length=32),
                       blank=True, null=True)
 
+    # TODO: restrict guest users here
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
                                        blank=True,
                                        related_name='review_entries',
