@@ -113,9 +113,8 @@ class EntrySerializer(MetaInformationSerializerMixin,
         return figures
 
     def validate_reviewers(self, revs):
-        for reviewer in revs:
-            if not User.objects.filter(id=reviewer).exists():
-                raise serializers.ValidationError('Reviewer does not exist.')
+        if User.objects.filter(id__in=revs).count() != len(revs):
+            raise serializers.ValidationError('Reviewer does not exist.')
         return revs
 
     def validate(self, attrs: dict) -> dict:
