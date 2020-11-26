@@ -44,3 +44,32 @@ class Attachment(MetaInformationAbstractModel):
                                  upload_to=ATTACHMENT_FOLDER)
     attachment_for = enum.EnumField(enum=FOR_CHOICES, verbose_name=_('Attachment for'), null=True, blank=True, help_text=_('The type of instance for which attachment was uploaded for'))
 
+
+class SoftDeleteQueryset(models.QuerySet):
+    def delete(self):
+        self.update(deleted_on=timezone.now())
+
+
+class SoftDeleteManager(models.Manager):
+    def get_queryset(self):
+        return SoftDeleteQueryset(self.model, using=self._db).filter(deleted_on__isnull=True)
+
+
+class SoftDeleteModel(models.Model):
+    deleted_on = models.DateTimeField(null=True, blank=True)
+
+    objects = SoftDeleteManager()
+    _objects = models.Manager()
+
+    def delete(self, *args, **kwargs):
+        self.deleted_on = timezone.now()
+        self.save()
+        return self
+
+    def undelete(self, *args, **kwargs):
+        self.deleted_on = None
+        self.save()
+        return self
+
+    class Meta:
+        abstract = True
