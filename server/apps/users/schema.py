@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 import graphene
-from graphene import Field
+from graphene import Field, ObjectType
 from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
 from graphene_django_extras import PageGraphqlPagination, DjangoObjectType as ExtraDOT
@@ -11,6 +11,11 @@ from apps.users.filters import UserFilter
 User = get_user_model()
 
 EntryListType = get_type('apps.entry.schema.EntryListType')
+
+
+class PermissionsType(ObjectType):
+    action = graphene.String()
+    entities = graphene.List(graphene.String)
 
 
 class UserType(DjangoObjectType):
@@ -27,6 +32,7 @@ class UserType(DjangoObjectType):
                                                        page_size_query_param='pageSize'
                                                    ), accessor='created_entry')
     role = Field(graphene.String)
+    permissions = graphene.List(PermissionsType)
     full_name = Field(graphene.String)
 
 

@@ -1,6 +1,10 @@
+import json
+
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
+
+from .roles import PERMISSIONS
 
 
 class User(AbstractUser):
@@ -19,6 +23,12 @@ class User(AbstractUser):
         if group := self.groups.first():
             return group.name
         return None
+
+    @property
+    def permissions(self):
+        if self.role and self.role in PERMISSIONS:
+            return [{'action': k, 'entities': list(v)} for k, v in PERMISSIONS[self.role].items()]
+        return []
 
     def get_full_name(self):
        return ' '.join([
