@@ -32,7 +32,7 @@ class Register(graphene.Mutation):
         instance = serializer.save()
         return Register(
             result=instance,
-            errors=None, 
+            errors=None,
             ok=True
         )
 
