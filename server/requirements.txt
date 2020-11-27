@@ -21,4 +21,5 @@ pdfkit==0.6.1
 psycopg2==2.8
 pytest-django==3.9.0
 pytest-sugar==0.9.4
+requests
 six==1.15
