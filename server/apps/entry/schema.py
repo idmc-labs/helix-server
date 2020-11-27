@@ -14,10 +14,11 @@ from apps.entry.enums import (
     UnitGrapheneEnum,
     TermGrapheneEnum,
     TypeGrapheneEnum,
-    RoleGrapheneEnum
+    RoleGrapheneEnum,
+    EntryReviewerGrapheneEnum
 )
-from apps.entry.filters import EntryFilter
-from apps.entry.models import Figure, Entry, SourcePreview
+from apps.entry.filters import EntryFilter, EntryReviewerFilter
+from apps.entry.models import Figure, Entry, SourcePreview, EntryReviewer
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType, CustomDjangoListField
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,7 @@ class FigureListType(CustomDjangoListObjectType):
 class EntryType(DjangoObjectType):
     class Meta:
         model = Entry
+        exclude_fields = ('reviewers',)
 
     created_by = graphene.Field('apps.users.schema.UserType')
     last_modified_by = graphene.Field('apps.users.schema.UserType')
@@ -97,6 +99,19 @@ class SourcePreviewType(DjangoObjectType):
         return root.pdf.url
 
 
+class EntryReviewerType(DjangoObjectType):
+    class Meta:
+        model = EntryReviewer
+
+    status = graphene.Field(EntryReviewerGrapheneEnum)
+
+
+class EntryReviewerListType(CustomDjangoListObjectType):
+    class Meta:
+        model = EntryReviewer
+        filterset_class = EntryReviewerFilter
+
+
 class Query:
     figure = DjangoObjectField(FigureType)
     figure_list = DjangoPaginatedListObjectField(FigureListType,
@@ -109,3 +124,9 @@ class Query:
                                                 pagination=PageGraphqlPagination(
                                                     page_size_query_param='pageSize'
                                                 ))
+    entry_review = DjangoObjectField(EntryReviewerType)
+    entry_reviewer_list = DjangoPaginatedListObjectField(
+        EntryReviewerListType,
+        pagination=PageGraphqlPagination(
+            page_size_query_param='pageSize'
+        ))

@@ -3,12 +3,12 @@ from django.utils.translation import gettext
 from graphene_file_upload.scalars import Upload
 
 from apps.entry.enums import QuantifierGrapheneEnum, RoleGrapheneEnum, TypeGrapheneEnum, \
-    TermGrapheneEnum, UnitGrapheneEnum
-from apps.entry.models import Entry, Figure, SourcePreview
+    TermGrapheneEnum, UnitGrapheneEnum, EntryReviewerGrapheneEnum
+from apps.entry.models import Entry, Figure, SourcePreview, EntryReviewer
 from apps.entry.schema import EntryType, FigureType, SourcePreviewType
 from apps.entry.serializers import EntrySerializer, FigureSerializer, SourcePreviewSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import permission_checker
+from utils.permissions import permission_checker, is_authenticated
 
 
 class DisaggregatedAgeInputType(graphene.InputObjectType):
@@ -124,11 +124,11 @@ class CreateFigure(graphene.Mutation):
             entry = Entry.objects.get(id=data['entry'])
         except Entry.DoesNotExist:
             return CreateFigure(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Entry does not exist.'))
+                CustomErrorType(field='nonFieldErrors', messages=gettext('Entry does not exist.'))
             ])
         if not Figure.can_be_created_by(info.context.user, entry=entry):
             return CreateFigure(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('You cannot create a figure into this entry.'))
+                CustomErrorType(field='nonFieldErrors', messages=gettext('You cannot create a figure into this entry.'))
             ])
         if errors := mutation_is_not_valid(serializer):
             return CreateFigure(errors=errors, ok=False)
@@ -151,11 +151,11 @@ class UpdateFigure(graphene.Mutation):
             instance = Figure.objects.get(id=data['id'])
         except Figure.DoesNotExist:
             return UpdateFigure(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Figure does not exist.'))
+                CustomErrorType(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
             ])
         if not instance.can_be_updated_by(info.context.user):
             return UpdateFigure(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('You cannot update this figure.'))
+                CustomErrorType(field='nonFieldErrors', messages=gettext('You cannot update this figure.'))
             ])
         serializer = FigureSerializer(instance=instance, data=data,
                                       context={'request': info.context}, partial=True)
@@ -180,11 +180,11 @@ class DeleteFigure(graphene.Mutation):
             instance = Figure.objects.get(id=id)
         except Figure.DoesNotExist:
             return DeleteFigure(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Figure does not exist.'))
+                CustomErrorType(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
             ])
         if not instance.can_be_updated_by(info.context.user):
             return DeleteFigure(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('You cannot delete this figure.'))
+                CustomErrorType(field='nonFieldErrors', messages=gettext('You cannot delete this figure.'))
             ])
         instance.delete()
         instance.id = id
@@ -267,11 +267,11 @@ class UpdateEntry(graphene.Mutation):
             instance = Entry.objects.get(id=data['id'])
         except Entry.DoesNotExist:
             return UpdateEntry(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Entry does not exist.'))
+                CustomErrorType(field='nonFieldErrors', messages=gettext('Entry does not exist.'))
             ])
         if not instance.can_be_updated_by(info.context.user):
             return UpdateEntry(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('You cannot update this entry.'))
+                CustomErrorType(field='nonFieldErrors', messages=gettext('You cannot update this entry.'))
             ])
         serializer = EntrySerializer(instance=instance, data=data,
                                      context={'request': info.context}, partial=True)
@@ -296,11 +296,11 @@ class DeleteEntry(graphene.Mutation):
             instance = Entry.objects.get(id=id)
         except Entry.DoesNotExist:
             return DeleteEntry(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Entry does not exist.'))
+                CustomErrorType(field='nonFieldErrors', messages=gettext('Entry does not exist.'))
             ])
         if not instance.can_be_updated_by(info.context.user):
             return DeleteEntry(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('You cannot delete this entry.'))
+                CustomErrorType(field='nonFieldErrors', messages=gettext('You cannot delete this entry.'))
             ])
         instance.delete()
         instance.id = id
@@ -336,7 +336,7 @@ class CreateSourcePreview(graphene.Mutation):
                                                      context={'request': info.context})
             except SourcePreview.DoesNotExist:
                 return CreateSourcePreview(errors=[
-                    CustomErrorType(field='non_field_errors', messages=gettext('Preview does not exist.'))
+                    CustomErrorType(field='nonFieldErrors', messages=gettext('Preview does not exist.'))
                 ])
         else:
             serializer = SourcePreviewSerializer(data=data,
@@ -347,6 +347,46 @@ class CreateSourcePreview(graphene.Mutation):
         return CreateSourcePreview(result=instance, errors=None, ok=True)
 
 
+# Entry review
+
+
+class EntryReviewStatusInputType(graphene.InputObjectType):
+    entry = graphene.ID(required=True)
+    status = graphene.Field(EntryReviewerGrapheneEnum, required=True)
+
+
+class UpdateEntryReview(graphene.Mutation):
+    class Arguments:
+        data = EntryReviewStatusInputType(required=True)
+
+    ok = graphene.Boolean()
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+
+    @staticmethod
+    @is_authenticated()
+    def mutate(root, info, data):
+        reviewer = info.context.user
+        try:
+            entry = Entry.objects.get(id=data['entry'])
+        except Entry.DoesNotExist:
+            return UpdateEntryReview(errors=[
+                CustomErrorType(field='nonFieldErrors', messages=gettext('Entry does not exist.'))
+            ])
+        try:
+            entry_review = EntryReviewer.objects.get(entry=entry, reviewer=reviewer)
+            entry_review.status = data['status']
+            entry_review.save()
+        except EntryReviewer.DoesNotExist:
+            return UpdateEntryReview(errors=[
+                CustomErrorType(field='nonFieldErrors', messages=gettext('Review not found.'))
+            ])
+        except EntryReviewer.CannotUpdateStatusException as e:
+            return UpdateEntryReview(errors=[
+                CustomErrorType(field='nonFieldErrors', messages=gettext(e.message))
+            ])
+        return CreateSourcePreview(errors=None, ok=True)
+
+
 class Mutation(object):
     create_figure = CreateFigure.Field()
     update_figure = UpdateFigure.Field()
@@ -355,3 +395,5 @@ class Mutation(object):
     update_entry = UpdateEntry.Field()
     delete_entry = DeleteEntry.Field()
     create_source_preview = CreateSourcePreview.Field()
+    # entry review
+    update_entry_review = UpdateEntryReview.Field()

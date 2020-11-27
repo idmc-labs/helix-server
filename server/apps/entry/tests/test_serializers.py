@@ -2,6 +2,8 @@ from django.test import RequestFactory
 
 from apps.entry.serializers import EntrySerializer
 from apps.users.roles import MONITORING_EXPERT_EDITOR
+from apps.entry.models import EntryReviewer, Entry
+from apps.users.models import User
 from utils.factories import EventFactory, EntryFactory, OrganizationFactory
 from utils.tests import HelixTestCase, create_user_with_role
 
@@ -79,3 +81,44 @@ class TestEntrySerializer(HelixTestCase):
         self.assertIsNotNone(instance.created_at)
         self.assertIsNotNone(instance.modified_at)
 
+    def test_entry_creation_create_entry_reviewers(self):
+        reviewer1 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        reviewer2 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        self.data['reviewers'] = [reviewer1.id, reviewer2.id]
+        serializer = EntrySerializer(data=self.data,
+                                     context={'request': self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+        entry = serializer.instance
+        self.assertEqual(entry.reviewers.count(), len([reviewer1, reviewer2]))
+        self.assertEqual(sorted(list(entry.reviewers.through.objects.values_list('reviewer', flat=1))),
+                         sorted([reviewer1.id, reviewer2.id]))
+
+    def test_entry_update_entry_reviewers(self):
+        x = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        y = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        z = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        entry = EntryFactory.create()
+        entry.reviewers.set([x, y, z])
+
+        reviewer1 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        reviewer2 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        reviewer3 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        entry = EntryFactory.create()
+        entry.reviewers.set([reviewer1, reviewer2, reviewer3])
+        self.assertEqual(sorted(list(entry.reviewers.filter(reviewing__status=None).values_list('id', flat=1))),
+                         sorted([each.id for each in [reviewer1, reviewer2, reviewer3]]))
+        entry.reviewers.through.objects.all().update(status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW)
+
+        old_count = EntryReviewer.objects.count()
+        serializer = EntrySerializer(instance=entry, data={
+            'reviewers': [reviewer1.id, reviewer2.id]
+        }, context={'request': self.request}, partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+        self.assertTrue(entry.reviewers.count(), 2)
+        self.assertTrue(entry.reviewers.through.objects.count(), 2)
+        self.assertEqual(set(entry.reviewers.through.objects.values_list('status', flat=1)),
+                         {EntryReviewer.REVIEW_STATUS.UNDER_REVIEW})
+
+        self.assertEqual(old_count-1, EntryReviewer.objects.count())

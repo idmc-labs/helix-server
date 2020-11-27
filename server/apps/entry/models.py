@@ -11,6 +11,7 @@ from django.db import models
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
+from rest_framework.exceptions import PermissionDenied
 
 from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
 from apps.users.roles import ADMIN
@@ -19,6 +20,7 @@ from utils.fields import CachedFileField
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+CANNOT_UPDATE_MESSAGE = _('You cannot sign off the entry.')
 
 
 class SourcePreview(MetaInformationAbstractModel):
@@ -271,9 +273,11 @@ class Entry(MetaInformationAbstractModel, models.Model):
     tags = ArrayField(base_field=models.CharField(verbose_name=_('Tag'), max_length=32),
                       blank=True, null=True)
 
+    # TODO: restrict guest users here
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
                                        blank=True,
-                                       related_name='review_entries')
+                                       related_name='review_entries',
+                                       through='EntryReviewer')
 
     @property
     def source_methodology(self):
@@ -296,14 +300,61 @@ class Entry(MetaInformationAbstractModel, models.Model):
             errors['document'] = gettext('Please fill the URL or upload a document. ')
         return errors
 
+    @property
+    def locked(self):
+        if self.reviewers.through.objects.filter(status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF).exists():
+            return True
+        return False
+
     def can_be_updated_by(self, user: User) -> bool:
         """
         used to check before deleting as well
+            i.e `can be DELETED by`
         """
-        if user.is_superuser \
-                or ADMIN in user.groups.values_list('name', flat=True):
+        if self.locked:
+            return False
+        if ADMIN in user.groups.values_list('name', flat=True):
             return True
         return self.created_by == user
 
     def __str__(self):
         return f'Entry {self.article_title}'
+
+    class Meta:
+        permissions = (('sign_off_entry', 'Can sign off the entry'),)
+
+
+class EntryReviewer(models.Model):
+    class CannotUpdateStatusException(Exception):
+        message = CANNOT_UPDATE_MESSAGE
+
+    class REVIEW_STATUS(enum.Enum):
+        UNDER_REVIEW = 0
+        REVIEW_COMPLETED = 1
+        SIGNED_OFF = 2
+
+        __labels__ = {
+            UNDER_REVIEW: _("Under Review"),
+            REVIEW_COMPLETED: _("Review Completed"),
+            SIGNED_OFF: _("Signed Off"),
+        }
+
+    entry = models.ForeignKey(Entry, verbose_name=_('Entry'),
+                              related_name='reviewing', on_delete=models.CASCADE)
+    reviewer = models.ForeignKey('users.User', verbose_name=_('Reviewer'),
+                                 related_name='reviewing', on_delete=models.CASCADE)
+    status = enum.EnumField(enum=REVIEW_STATUS, verbose_name=_('Review Status'),
+                            null=True, blank=True)
+
+    def __str__(self):
+        return f'{self.entry_id} {self.reviewer} {self.status}'
+
+    def update_status(self, status):
+        if status == self.REVIEW_STATUS.SIGNED_OFF \
+                and not self.reviewer.has_perms(('entry.sign_off_entry',)):
+            raise self.CannotUpdateStatusException()
+        self.status = status
+
+    def save(self, *args, **kwargs):
+        self.update_status(self.status)
+        return super().save(*args, **kwargs)

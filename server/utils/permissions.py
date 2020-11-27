@@ -15,6 +15,7 @@ def permission_checker(perms: List[str]) -> Callable[..., Callable]:
         return wrapped_func
     return wrapped
 
+
 def is_authenticated() -> Callable[..., Callable]:
     def wrapped(func):
         def wrapped_func(root, info, *args, **kwargs):

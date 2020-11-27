@@ -16,6 +16,7 @@ ROLES = [ADMIN, IT_HEAD, MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, G
 ALL_MODELS = {'crisis', 'event', 'entry', 'organization', 'organizationkind', 'contact',
               'communication', 'figure', 'summary', 'contextualupdate', 'resource'}
 
+# NOTE: To add custom permissions, add `bla_model` like `sign_off_model`.
 PERMISSIONS = {
     ADMIN: {
         'add': ALL_MODELS | {'user'},
@@ -26,7 +27,7 @@ PERMISSIONS = {
         'add': ALL_MODELS,
         'change': ALL_MODELS,
         'delete': ALL_MODELS,
-        # 'lock': {'grid'}  # TODO: uncomment
+        'sign_off': {'entry'},
     },
     MONITORING_EXPERT_EDITOR: {
         'add': ALL_MODELS,
