@@ -280,6 +280,14 @@ class Entry(MetaInformationAbstractModel, models.Model):
                                        through='EntryReviewer')
 
     @property
+    def latest_reviews(self):
+        return self.reviews.order_by(
+            'figure', 'field', 'age_id', 'strata_id', '-created_at'
+        ).distinct(
+            'figure', 'field', 'age_id', 'strata_id'
+        )
+
+    @property
     def source_methodology(self):
         return self.source and self.source.methodolgy
 

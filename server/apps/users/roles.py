@@ -12,7 +12,7 @@ USER_ROLES = [USER_ROLE.ADMIN, USER_ROLE.IT_HEAD, USER_ROLE.MONITORING_EXPERT_ED
 ALL_MODELS = {PERMISSION_ENTITY.crisis, PERMISSION_ENTITY.event, PERMISSION_ENTITY.entry, PERMISSION_ENTITY.organization,
               PERMISSION_ENTITY.organizationkind, PERMISSION_ENTITY.contact, PERMISSION_ENTITY.communication,
               PERMISSION_ENTITY.figure, PERMISSION_ENTITY.summary, PERMISSION_ENTITY.contextualupdate,
-              PERMISSION_ENTITY.resource}
+              PERMISSION_ENTITY.resource, PERMISSION_ENTITY.review}
 
 # NOTE: To add custom permissions, add `bla_model` like `sign_off_model`.
 PERMISSIONS = {
