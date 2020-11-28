@@ -8,6 +8,7 @@ from graphene_django_extras import (
 
 from apps.contact.schema import ContactListType
 from apps.country.models import Country, CountryRegion, ContextualUpdate, Summary
+from apps.country.filters import CountryFilter
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
 
 
@@ -94,9 +95,7 @@ class CountryType(DjangoObjectType):
 class CountryListType(CustomDjangoListObjectType):
     class Meta:
         model = Country
-        filter_fields = {
-            'name': ['icontains']
-        }
+        filterset_class = CountryFilter
 
 
 class Query:
