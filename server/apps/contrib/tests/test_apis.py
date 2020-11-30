@@ -3,13 +3,13 @@ import json
 from django.core.files.temp import NamedTemporaryFile
 
 from apps.contrib.models import Attachment
-from apps.users.roles import MONITORING_EXPERT_EDITOR
+from apps.users.enums import ROLE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
 class TestAttachment(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        self.editor = create_user_with_role(ROLE.MONITORING_EXPERT_EDITOR.name)
         self.mutation = """
             mutation ($data: AttachmentCreateInputType!) {
               createAttachment(data: $data) {

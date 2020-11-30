@@ -9,37 +9,37 @@ ROLES = [ROLE.ADMIN, ROLE.IT_HEAD, ROLE.MONITORING_EXPERT_EDITOR,
          ROLE.MONITORING_EXPERT_REVIEWER, ROLE.GUEST]
 
 # All except user
-ALL_MODELS = {MODEL.CRISIS, MODEL.EVENT, MODEL.ENTRY, MODEL.ORGANIZATION,
-              MODEL.ORGANIZATION_KIND, MODEL.CONTACT, MODEL.COMMUNICATION,
-              MODEL.FIGURE, MODEL.SUMMARY, MODEL.CONTEXTUAL_UPDATE,
-              MODEL.RESOURCE}
+ALL_MODELS = {MODEL.crisis, MODEL.event, MODEL.entry, MODEL.organization,
+              MODEL.organizationkind, MODEL.contact, MODEL.communication,
+              MODEL.figure, MODEL.summary, MODEL.contextualupdate,
+              MODEL.resource}
 
 # NOTE: To add custom permissions, add `bla_model` like `sign_off_model`.
 PERMISSIONS = {
     ROLE.ADMIN: {
-        ACTION.ADD: ALL_MODELS | {ROLE.USER},
-        ACTION.CHANGE: ALL_MODELS | {ROLE.USER},
-        ACTION.DELETE: ALL_MODELS | {ROLE.USER},
+        ACTION.add: ALL_MODELS | {MODEL.user},
+        ACTION.change: ALL_MODELS | {MODEL.user},
+        ACTION.delete: ALL_MODELS | {MODEL.user},
     },
     ROLE.IT_HEAD: {
-        ACTION.ADD: ALL_MODELS,
-        ACTION.CHANGE: ALL_MODELS,
-        ACTION.DELETE: ALL_MODELS,
-        ACTION.SIGN_OFF: {ROLE.ENTRY},
+        ACTION.add: ALL_MODELS,
+        ACTION.change: ALL_MODELS,
+        ACTION.delete: ALL_MODELS,
+        ACTION.sign_off: {MODEL.entry},
     },
     ROLE.MONITORING_EXPERT_EDITOR: {
-        ACTION.ADD: ALL_MODELS,
-        ACTION.CHANGE: ALL_MODELS,
-        ACTION.DELETE: ALL_MODELS,
+        ACTION.add: ALL_MODELS,
+        ACTION.change: ALL_MODELS,
+        ACTION.delete: ALL_MODELS,
     },
     ROLE.MONITORING_EXPERT_REVIEWER: {
-        ACTION.ADD: ALL_MODELS - {MODEL.ENTRY, MODEL.FIGURE},
-        ACTION.CHANGE: ALL_MODELS - {MODEL.ENTRY, MODEL.FIGURE},
-        ACTION.DELETE: ALL_MODELS - {MODEL.ENTRY, MODEL.FIGURE},
+        ACTION.add: ALL_MODELS - {MODEL.entry, MODEL.figure},
+        ACTION.change: ALL_MODELS - {MODEL.entry, MODEL.figure},
+        ACTION.delete: ALL_MODELS - {MODEL.entry, MODEL.figure},
     },
     ROLE.GUEST: {
-        ACTION.ADD: set(),
-        ACTION.CHANGE: set(),
-        ACTION.DELETE: set(),
+        ACTION.add: set(),
+        ACTION.change: set(),
+        ACTION.delete: set(),
     }
 }

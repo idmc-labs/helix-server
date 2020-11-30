@@ -14,7 +14,7 @@ from django_enumfield import enum
 from rest_framework.exceptions import PermissionDenied
 
 from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
-from apps.users.roles import ADMIN
+from apps.users.enums import ROLE
 
 from utils.fields import CachedFileField
 
@@ -313,7 +313,7 @@ class Entry(MetaInformationAbstractModel, models.Model):
         """
         if self.locked:
             return False
-        if ADMIN in user.groups.values_list('name', flat=True):
+        if ROLE.ADMIN.name in user.groups.values_list('name', flat=True):
             return True
         return self.created_by == user
 

@@ -1,7 +1,7 @@
 import json
 from datetime import datetime
 
-from apps.users.roles import MONITORING_EXPERT_REVIEWER, GUEST
+from apps.users.enums import ROLE
 from utils.factories import OrganizationFactory, OrganizationKindFactory
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -34,7 +34,7 @@ class TestCreateOrganization(HelixGraphQLTestCase):
         }
 
     def test_valid_organization_creation(self) -> None:
-        reviewer = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        reviewer = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -51,7 +51,7 @@ class TestCreateOrganization(HelixGraphQLTestCase):
                          self.input['shortName'])
 
     def test_invalid_organization_creation_by_guest(self) -> None:
-        guest = create_user_with_role(GUEST)
+        guest = create_user_with_role(ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,
@@ -88,7 +88,7 @@ class TestUpdateOrganization(HelixGraphQLTestCase):
         }
 
     def test_valid_organization_update(self) -> None:
-        reviewer = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        reviewer = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -105,7 +105,7 @@ class TestUpdateOrganization(HelixGraphQLTestCase):
                          self.input['methodology'])
 
     def test_invalid_organization_update_by_guest(self) -> None:
-        guest = create_user_with_role(GUEST)
+        guest = create_user_with_role(ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,
@@ -138,7 +138,7 @@ class TestDeleteOrganization(HelixGraphQLTestCase):
         }
 
     def test_valid_organization_delete(self) -> None:
-        reviewer = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        reviewer = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -152,7 +152,7 @@ class TestDeleteOrganization(HelixGraphQLTestCase):
         self.assertEqual(content['data']['deleteOrganization']['result']['id'], self.variables['id'])
 
     def test_invalid_organization_delete_by_guest(self) -> None:
-        guest = create_user_with_role(GUEST)
+        guest = create_user_with_role(ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,
@@ -185,7 +185,7 @@ class TestCreateOrganizationKind(HelixGraphQLTestCase):
         }
 
     def test_valid_organization_kind_creation(self) -> None:
-        reviewer = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        reviewer = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -201,7 +201,7 @@ class TestCreateOrganizationKind(HelixGraphQLTestCase):
                          self.input['name'])
 
     def test_invalid_organization_kind_creation_by_guest(self) -> None:
-        guest = create_user_with_role(GUEST)
+        guest = create_user_with_role(ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,
@@ -236,7 +236,7 @@ class TestUpdateOrganizationKind(HelixGraphQLTestCase):
         }
 
     def test_valid_organization_kind_update(self) -> None:
-        reviewer = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        reviewer = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -253,7 +253,7 @@ class TestUpdateOrganizationKind(HelixGraphQLTestCase):
                          self.input['name'])
 
     def test_invalid_organization_kind_update_by_guest(self) -> None:
-        guest = create_user_with_role(GUEST)
+        guest = create_user_with_role(ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,
@@ -286,7 +286,7 @@ class TestDeleteOrganizationKind(HelixGraphQLTestCase):
         }
 
     def test_valid_organization_kind_delete(self) -> None:
-        reviewer = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        reviewer = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -301,7 +301,7 @@ class TestDeleteOrganizationKind(HelixGraphQLTestCase):
                          self.variables['id'])
 
     def test_invalid_organization_kind_delete_by_guest(self) -> None:
-        guest = create_user_with_role(GUEST)
+        guest = create_user_with_role(ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,

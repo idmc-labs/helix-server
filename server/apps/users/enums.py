@@ -6,57 +6,57 @@ from utils.enums import enum_description
 
 
 class ACTION(enum.Enum):
-    ADD = 'add'
-    CHANGE = 'change'
-    DELETE = 'delete'
-    SIGN_OFF = 'sign_off'
+    add = 0
+    change = 1
+    delete = 2
+    sign_off = 3
 
     __labels__ = {
-        ADD: _("Add"),
-        CHANGE: _("Change"),
-        DELETE: _("Delete"),
-        SIGN_OFF: ("Sign Off")
+        add: _("Add"),
+        change: _("Change"),
+        delete: _("Delete"),
+        sign_off: ("Sign Off")
     }
 
 
 class MODEL(enum.Enum):
-    CRISIS = 'crisis'
-    EVENT = 'event'
-    ENTRY = 'entry'
-    ORGANIZATION = 'organization'
-    ORGANIZATION_KIND = 'organizationkind'
-    CONTACT = 'contact'
-    COMMUNICATION = 'communication'
-    FIGURE = 'figure'
-    SUMMARY = 'summary'
-    CONTEXTUAL_UPDATE = 'contextualupdate'
-    RESOURCE = 'resource'
-    USER = 'user'
+    crisis = 0
+    event = 1
+    entry = 2
+    organization = 3
+    organizationkind = 4
+    contact = 5
+    communication = 6
+    figure = 7
+    summary = 8
+    contextualupdate = 9
+    resource = 10
+    user = 11
 
     __labels__ = {
-        CRISIS: _('crisis'),
-        EVENT: _('event'),
-        ENTRY: _('entry'),
-        ORGANIZATION: _('organization'),
-        ORGANIZATION_KIND: _('organizationkind'),
-        CONTACT: _('contact'),
-        COMMUNICATION: _('communication'),
-        FIGURE: _('figure'),
-        SUMMARY: _('summary'),
-        CONTEXTUAL_UPDATE: _('contextualupdate'),
-        RESOURCE: _('resource'),
-        USER: _('user'),
+        crisis: _('Crisis'),
+        event: _('Event'),
+        entry: _('Entry'),
+        organization: _('Organization'),
+        organizationkind: _('Organization Kind'),
+        contact: _('Contact'),
+        communication: _('Communication'),
+        figure: _('Figure'),
+        summary: _('Summary'),
+        contextualupdate: _('Contextual Update'),
+        resource: _('Resource'),
+        user: _('User'),
     }
 
 
 # NOTE: These are permision group names (role names) and are always assumed to
 # be upper-cased
 class ROLE(enum.Enum):
-    ADMIN = 'ADMIN'
-    IT_HEAD = 'IT_HEAD'
-    MONITORING_EXPERT_EDITOR = 'MONITORING_EXPERT_EDITOR'
-    MONITORING_EXPERT_REVIEWER = 'MONITORING_EXPERT_REVIEWER'
-    GUEST = 'GUEST'
+    ADMIN = 0
+    IT_HEAD = 1
+    MONITORING_EXPERT_EDITOR = 2
+    MONITORING_EXPERT_REVIEWER = 3
+    GUEST = 4
 
     __labels__ = {
         ADMIN: _('ADMIN'),

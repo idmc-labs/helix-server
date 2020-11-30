@@ -9,12 +9,12 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         for role in ROLES:
-            group, created = Group.objects.get_or_create(name=role)
+            group, created = Group.objects.get_or_create(name=role.name)
             permissions = list()
             for action, models in PERMISSIONS[role].items():
                 permissions.extend([
-                    Permission.objects.get(codename=f'{action}_{model}') for model in models
+                    Permission.objects.get(codename=f'{action.name}_{model.name}') for model in models
                 ])
             group.permissions.set(permissions)
             self.stdout.write(self.style.SUCCESS(f'{"Created" if created else "Updated"} '
-                                                 f'{role} with {len(permissions)} permissions.'))
+                                                 f'{role.name} with {len(permissions)} permissions.'))
