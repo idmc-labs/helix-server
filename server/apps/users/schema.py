@@ -33,7 +33,7 @@ class UserType(DjangoObjectType):
                                                    pagination=PageGraphqlPagination(
                                                        page_size_query_param='pageSize'
                                                    ), accessor='created_entry')
-    role = Field(PermissionModelEnum)
+    role = Field(PermissionRoleEnum)
     permissions = graphene.List(PermissionsType)
     full_name = Field(graphene.String)
 
