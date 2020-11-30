@@ -16,8 +16,8 @@ EntryListType = get_type('apps.entry.schema.EntryListType')
 
 
 class PermissionsType(ObjectType):
-    action = Field(PermissionActionEnum)
-    entities = graphene.List(PermissionModelEnum)
+    action = Field(PermissionActionEnum, required=True)
+    entities = graphene.List(graphene.NonNull(PermissionModelEnum), required=True)
 
 
 class UserType(DjangoObjectType):
@@ -34,7 +34,7 @@ class UserType(DjangoObjectType):
                                                        page_size_query_param='pageSize'
                                                    ), accessor='created_entry')
     role = Field(PermissionRoleEnum)
-    permissions = graphene.List(PermissionsType)
+    permissions = graphene.List(graphene.NonNull(PermissionsType))
     full_name = Field(graphene.String)
 
 

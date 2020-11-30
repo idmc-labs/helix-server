@@ -322,9 +322,9 @@ class TestUserListSchema(HelixGraphQLTestCase):
         ue = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         ur = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         ua = create_user_with_role(USER_ROLE.ADMIN.name)
-        ui = create_user_with_role(ROLE.IT_HEAD.name)
+        create_user_with_role(USER_ROLE.IT_HEAD.name)
 
-        roles = ['admin', 'editor']
+        roles = [USER_ROLE.ADMIN.name, USER_ROLE.MONITORING_EXPERT_EDITOR.name]
         response = self.query(
             self.users_q,
             variables={"roles": roles},
@@ -336,7 +336,7 @@ class TestUserListSchema(HelixGraphQLTestCase):
         self.assertEqual(sorted([int(each['id']) for each in content['data']['users']['results']]),
                          sorted([ue.id, ua.id]))
 
-        roles = ['reviewer', 'editor']
+        roles = [USER_ROLE.MONITORING_EXPERT_REVIEWER.name, USER_ROLE.MONITORING_EXPERT_EDITOR.name]
         response = self.query(
             self.users_q,
             variables={"roles": roles},
