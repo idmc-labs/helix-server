@@ -3,45 +3,43 @@ codename will be built as <action>_<model> and used as...
 Permission.objects.get(codename=<codename>)
 """
 
-# NOTE: These are permision group names (role names) and are always assumed to be upper-cased
-ADMIN = 'ADMIN'
-IT_HEAD = 'IT_HEAD'
-MONITORING_EXPERT_EDITOR = 'EDITOR'
-MONITORING_EXPERT_REVIEWER = 'REVIEWER'
-GUEST = 'GUEST'
+from .enums import ACTION, MODEL, ROLE
 
-ROLES = [ADMIN, IT_HEAD, MONITORING_EXPERT_EDITOR, MONITORING_EXPERT_REVIEWER, GUEST]
+ROLES = [ROLE.ADMIN, ROLE.IT_HEAD, ROLE.MONITORING_EXPERT_EDITOR,
+         ROLE.MONITORING_EXPERT_REVIEWER, ROLE.GUEST]
 
 # All except user
-ALL_MODELS = {'crisis', 'event', 'entry', 'organization', 'organizationkind', 'contact',
-              'communication', 'figure', 'summary', 'contextualupdate', 'resource'}
+ALL_MODELS = {MODEL.CRISIS, MODEL.EVENT, MODEL.ENTRY, MODEL.ORGANIZATION,
+              MODEL.ORGANIZATION_KIND, MODEL.CONTACT, MODEL.COMMUNICATION,
+              MODEL.FIGURE, MODEL.SUMMARY, MODEL.CONTEXTUAL_UPDATE,
+              MODEL.RESOURCE}
 
 # NOTE: To add custom permissions, add `bla_model` like `sign_off_model`.
 PERMISSIONS = {
-    ADMIN: {
-        'add': ALL_MODELS | {'user'},
-        'change': ALL_MODELS | {'user'},
-        'delete': ALL_MODELS | {'user'},
+    ROLE.ADMIN: {
+        ACTION.ADD: ALL_MODELS | {ROLE.USER},
+        ACTION.CHANGE: ALL_MODELS | {ROLE.USER},
+        ACTION.DELETE: ALL_MODELS | {ROLE.USER},
     },
-    IT_HEAD: {
-        'add': ALL_MODELS,
-        'change': ALL_MODELS,
-        'delete': ALL_MODELS,
-        'sign_off': {'entry'},
+    ROLE.IT_HEAD: {
+        ACTION.ADD: ALL_MODELS,
+        ACTION.CHANGE: ALL_MODELS,
+        ACTION.DELETE: ALL_MODELS,
+        ACTION.SIGN_OFF: {ROLE.ENTRY},
     },
-    MONITORING_EXPERT_EDITOR: {
-        'add': ALL_MODELS,
-        'change': ALL_MODELS,
-        'delete': ALL_MODELS,
+    ROLE.MONITORING_EXPERT_EDITOR: {
+        ACTION.ADD: ALL_MODELS,
+        ACTION.CHANGE: ALL_MODELS,
+        ACTION.DELETE: ALL_MODELS,
     },
-    MONITORING_EXPERT_REVIEWER: {
-        'add': ALL_MODELS - {'entry', 'figure'},
-        'change': ALL_MODELS - {'entry', 'figure'},
-        'delete': ALL_MODELS - {'entry', 'figure'},
+    ROLE.MONITORING_EXPERT_REVIEWER: {
+        ACTION.ADD: ALL_MODELS - {MODEL.ENTRY, MODEL.FIGURE},
+        ACTION.CHANGE: ALL_MODELS - {MODEL.ENTRY, MODEL.FIGURE},
+        ACTION.DELETE: ALL_MODELS - {MODEL.ENTRY, MODEL.FIGURE},
     },
-    GUEST: {
-        'add': [],
-        'change': [],
-        'delete': [],
+    ROLE.GUEST: {
+        ACTION.ADD: set(),
+        ACTION.CHANGE: set(),
+        ACTION.DELETE: set(),
     }
 }

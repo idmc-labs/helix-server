@@ -27,13 +27,14 @@ class User(AbstractUser):
     @property
     def permissions(self):
         if self.role and self.role in PERMISSIONS:
-            return [{'action': k, 'entities': list(v)} for k, v in PERMISSIONS[self.role].items()]
+            return [{'action': k, 'entities': list(v)} for k, v in
+                    PERMISSIONS[self.role].items()]
         return []
 
     def get_full_name(self):
-       return ' '.join([
-           l for l in [self.first_name, self.last_name] if l
-       ]) or self.email
+        return ' '.join([
+            l for l in [self.first_name, self.last_name] if l
+        ]) or self.email
 
     @property
     def full_name(self):
