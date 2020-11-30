@@ -77,9 +77,9 @@ class TestEntryModel(HelixTestCase):
             2: 'xyz'
         }
         comment = ReviewCommentFactory.create(entry=e)
-        r1 = ReviewFactory.create(entry=e, field=fields[0], value=Review.REVIEW_STATUS.RED)
-        r2 = ReviewFactory.create(entry=e, field=fields[0], value=Review.REVIEW_STATUS.GREEN)
-        r3 = ReviewFactory.create(entry=e, field=fields[1], value=Review.REVIEW_STATUS.GREEN)
+        r1 = ReviewFactory.create(entry=e, field=fields[0], value=Review.ENTRY_REVIEW_STATUS.RED)
+        r2 = ReviewFactory.create(entry=e, field=fields[0], value=Review.ENTRY_REVIEW_STATUS.GREEN)
+        r3 = ReviewFactory.create(entry=e, field=fields[1], value=Review.ENTRY_REVIEW_STATUS.GREEN)
         obtained = set(e.latest_reviews)
         expected = {r3, r2}  # not r1 because it should be replaced by r2
         self.assertEqual(obtained, expected)

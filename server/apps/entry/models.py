@@ -15,6 +15,7 @@ from rest_framework.exceptions import PermissionDenied
 
 from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
 from apps.users.enums import USER_ROLE
+from apps.review.models import Review
 
 from utils.fields import CachedFileField
 
@@ -282,9 +283,9 @@ class Entry(MetaInformationAbstractModel, models.Model):
     @property
     def latest_reviews(self):
         return self.reviews.order_by(
-            'figure', 'field', 'age_id', 'strata_id', '-created_at'
+            *Review.UNIQUE_TOGETHER_WITHOUT_ENTRY_FIELDS, '-created_at'
         ).distinct(
-            'figure', 'field', 'age_id', 'strata_id'
+            *Review.UNIQUE_TOGETHER_WITHOUT_ENTRY_FIELDS
         )
 
     @property

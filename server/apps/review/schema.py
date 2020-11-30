@@ -1,13 +1,17 @@
+import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField, PageGraphqlPagination
 
 from apps.review.models import ReviewComment, Review
+from apps.review.enums import ReviewStatusEnum
 from utils.fields import CustomDjangoListObjectType, DjangoPaginatedListObjectField
 
 
 class ReviewType(DjangoObjectType):
     class Meta:
         model = Review
+
+    value = graphene.NonNull(ReviewStatusEnum)
 
 
 class ReviewListType(CustomDjangoListObjectType):

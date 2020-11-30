@@ -50,7 +50,7 @@ class CreateContextualUpdate(graphene.Mutation):
     result = graphene.Field(ContextualUpdateType)
 
     @staticmethod
-    @permission_checker(['country.add_contextual_update'])
+    @permission_checker(['country.add_contextualupdate'])
     def mutate(root, info, data):
         serializer = ContextualUpdateSerializer(data=data,
                                                 context={'request': info.context})
