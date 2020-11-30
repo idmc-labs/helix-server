@@ -35,4 +35,3 @@ def handle(event, context):
         's3_bucket': S3_BUCKET_NAME
     }
     return response
-

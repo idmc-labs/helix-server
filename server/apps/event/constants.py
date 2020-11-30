@@ -10,12 +10,12 @@ VIOLENCES = {
 }
 
 TRIGGERS = {
-    "Violence against civilians", 
-    "Battle", 
-    "Explosions/remote violence ", 
-    "Riots", 
-    "Security operations and evictions", 
-    "Other", 
+    "Violence against civilians",
+    "Battle",
+    "Explosions/remote violence ",
+    "Riots",
+    "Security operations and evictions",
+    "Other",
 }
 
 SUB_TRIGGERS = {
@@ -37,7 +37,7 @@ SUB_TRIGGERS = {
 
 DISASTERS = {
     "Geophysical": {
-        "Geophysical": { 
+        "Geophysical": {
             "Earthquake": ["Earthquake", "Tsunami"],
             "Mass Movement": ["Dry mass movement", "Sinkhole"],
             "Volcanic activity": ["Volcanic activity"],

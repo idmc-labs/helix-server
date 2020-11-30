@@ -200,7 +200,8 @@ class TestCommunication(HelixGraphQLTestCase):
         '''
         self.contact = ContactFactory.create()
         self.medium = CommunicationMediumFactory.create()
-        self.input = {"contact": str(self.contact.id), "subject": "Subject", "content": "Content", "medium": str(self.medium.id)}
+        self.input = {"contact": str(self.contact.id), "subject": "Subject",
+                      "content": "Content", "medium": str(self.medium.id)}
 
     def test_valid_communication_creation(self):
         reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
@@ -212,4 +213,3 @@ class TestCommunication(HelixGraphQLTestCase):
         content = response.json()
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createCommunication']['ok'], content)
-

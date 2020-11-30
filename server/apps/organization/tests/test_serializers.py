@@ -21,7 +21,7 @@ class TestCreateOrganizationSerializer(HelixTestCase):
                     "gender": Contact.GENDER.MALE.value,
                     "job_title": "job",
                     "phone": "9989999"
-                 },
+                },
             ]
         }
         self.context = dict(

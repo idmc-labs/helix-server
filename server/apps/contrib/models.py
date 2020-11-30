@@ -42,7 +42,8 @@ class Attachment(MetaInformationAbstractModel):
     attachment = CachedFileField(verbose_name=_('Attachment'),
                                  blank=False, null=False,
                                  upload_to=ATTACHMENT_FOLDER)
-    attachment_for = enum.EnumField(enum=FOR_CHOICES, verbose_name=_('Attachment for'), null=True, blank=True, help_text=_('The type of instance for which attachment was uploaded for'))
+    attachment_for = enum.EnumField(enum=FOR_CHOICES, verbose_name=_('Attachment for'), null=True,
+                                    blank=True, help_text=_('The type of instance for which attachment was uploaded for'))
 
 
 class SoftDeleteQueryset(models.QuerySet):

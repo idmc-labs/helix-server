@@ -33,7 +33,6 @@ class TestAttachment(HelixGraphQLTestCase):
         }
         self.force_login(self.editor)
 
-
     def test_create_attachment(self):
         file_text = b'fake blaa'
         with NamedTemporaryFile() as t_file:
@@ -57,4 +56,3 @@ class TestAttachment(HelixGraphQLTestCase):
         self.assertTrue(content['data']['createAttachment']['ok'], content)
         self.assertIsNotNone(content['data']['createAttachment']['result']['id'])
         self.assertIsNotNone(content['data']['createAttachment']['result']['attachment'])
-

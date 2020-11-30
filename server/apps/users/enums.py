@@ -12,10 +12,10 @@ class PERMISSION_ACTION(enum.Enum):
     sign_off = 3
 
     __labels__ = {
-        add: _("Add"),
-        change: _("Change"),
-        delete: _("Delete"),
-        sign_off: ("Sign Off")
+        add: _('Add'),
+        change: _('Change'),
+        delete: _('Delete'),
+        sign_off: _('Sign Off')
     }
 
 

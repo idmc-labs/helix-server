@@ -345,4 +345,3 @@ class TestUserListSchema(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertEqual(sorted([int(each['id']) for each in content['data']['users']['results']]),
                          sorted([ur.id, ue.id]))
-

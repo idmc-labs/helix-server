@@ -45,16 +45,16 @@ class TestFigureCreation(HelixGraphQLTestCase):
             "ageJson": [
                 {
                     "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
-                     "ageFrom": 1,
-                     "ageTo": 3,
-                     "value": 3
+                    "ageFrom": 1,
+                    "ageTo": 3,
+                    "value": 3
                 },
                 {
                     "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                     "ageFrom": 3,
-                     "ageTo": 5,
-                     "value": 3
-                 }
+                    "ageFrom": 3,
+                    "ageTo": 5,
+                    "value": 3
+                }
             ],
             "strataJson": [
                 {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
@@ -434,7 +434,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertIsNone(content['data']['createEntry']['errors'], content)
         entry = Entry.objects.get(id=content['data']['createEntry']['result']['id'])
         self.assertEqual(entry.reviewers.count(), len(self.input['reviewers']))
-        self.assertEqual(len(content['data']['createEntry']['result']['reviewers']['results']), len(self.input['reviewers']), content)
+        self.assertEqual(len(content['data']['createEntry']['result']['reviewers']
+                             ['results']), len(self.input['reviewers']), content)
 
     def test_invalid_guest_entry_create(self):
         guest = create_user_with_role(role=USER_ROLE.GUEST.name)

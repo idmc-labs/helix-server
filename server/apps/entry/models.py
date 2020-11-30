@@ -176,17 +176,17 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
                                            default=False)
     # disaggregation information
     displacement_urban = models.PositiveIntegerField(verbose_name=_('Displacement/Urban'),
-                                        blank=True, null=True)
+                                                     blank=True, null=True)
     displacement_rural = models.PositiveIntegerField(verbose_name=_('Displacement/Rural'),
-                                        blank=True, null=True)
+                                                     blank=True, null=True)
     location_camp = models.PositiveIntegerField(verbose_name=_('Location/Camp'),
-                                       blank=True, null=True)
+                                                blank=True, null=True)
     location_non_camp = models.PositiveIntegerField(verbose_name=_('Location/Non-Camp'),
-                                           blank=True, null=True)
+                                                    blank=True, null=True)
     sex_male = models.PositiveIntegerField(verbose_name=_('Sex/Male'),
-                                       blank=True, null=True)
+                                           blank=True, null=True)
     sex_female = models.PositiveIntegerField(verbose_name=_('Sex/Female'),
-                                         blank=True, null=True)
+                                             blank=True, null=True)
     age_json = ArrayField(base_field=JSONField(verbose_name=_('Age')),
                           verbose_name=_('Age Disaggregation'),
                           blank=True, null=True)

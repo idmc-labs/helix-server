@@ -121,4 +121,4 @@ class TestEntrySerializer(HelixTestCase):
         self.assertEqual(set(entry.reviewers.through.objects.values_list('status', flat=1)),
                          {EntryReviewer.REVIEW_STATUS.UNDER_REVIEW})
 
-        self.assertEqual(old_count-1, EntryReviewer.objects.count())
+        self.assertEqual(old_count - 1, EntryReviewer.objects.count())

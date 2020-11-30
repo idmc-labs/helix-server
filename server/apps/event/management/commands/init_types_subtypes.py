@@ -5,9 +5,9 @@ from django.core.management.base import BaseCommand
 
 from apps.event.constants import VIOLENCES, TRIGGERS, SUB_TRIGGERS, DISASTERS
 from apps.event.models import (
-    Violence, 
-    ViolenceSubType, 
-    Trigger, 
+    Violence,
+    ViolenceSubType,
+    Trigger,
     TriggerSubType,
     DisasterCategory,
     DisasterSubCategory,
@@ -30,7 +30,8 @@ class Command(BaseCommand):
                 if not ViolenceSubType.objects.filter(name__iexact=sub_type, violence__name__iexact=violence.name).exists():
                     violence_sub_type = ViolenceSubType.objects.create(name=sub_type, violence=violence)
                 else:
-                    violence_sub_type = ViolenceSubType.objects.get(name__iexact=sub_type, violence__name__iexact=violence.name)
+                    violence_sub_type = ViolenceSubType.objects.get(
+                        name__iexact=sub_type, violence__name__iexact=violence.name)
                 violence_sub_type.save()
         self.stdout.write(self.style.SUCCESS('Saved {} violences with {} violences sub types.'.format(
             Violence.objects.count(),
@@ -68,14 +69,18 @@ class Command(BaseCommand):
                     sub_category = DisasterSubCategory.objects.create(name=subcat, category=category)
                 for dtype in DISASTERS[cat][subcat]:
                     # disaster types
-                    if DisasterType.objects.filter(name__iexact=dtype, disaster_sub_category__name__iexact=sub_category.name).exists():
-                        disaster_type = DisasterType.objects.get(name__iexact=dtype, disaster_sub_category__name__iexact=sub_category.name)
+                    if DisasterType.objects.filter(name__iexact=dtype,
+                                                   disaster_sub_category__name__iexact=sub_category.name).exists():
+                        disaster_type = DisasterType.objects.get(
+                            name__iexact=dtype, disaster_sub_category__name__iexact=sub_category.name)
                     else:
                         disaster_type = DisasterType.objects.create(name=dtype, disaster_sub_category=sub_category)
                     # disaster sub types
                     for dsubtype in DISASTERS[cat][subcat][dtype]:
-                        if DisasterSubType.objects.filter(name__iexact=dsubtype, type__name__iexact=disaster_type.name).exists():
-                            disaster_sub_type = DisasterSubType.objects.get(name__iexact=dsubtype, type__name__iexact=disaster_type.name)
+                        if DisasterSubType.objects.filter(name__iexact=dsubtype,
+                                                          type__name__iexact=disaster_type.name).exists():
+                            disaster_sub_type = DisasterSubType.objects.get(
+                                name__iexact=dsubtype, type__name__iexact=disaster_type.name)
                         else:
                             disaster_sub_type = DisasterSubType.objects.create(name=dsubtype, type=disaster_type)
         self.stdout.write(self.style.SUCCESS('Saved {} disaster categories.'.format(

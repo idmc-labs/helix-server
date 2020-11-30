@@ -82,6 +82,7 @@ class ImmediateOnCommitMixin(object):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+
         def immediate_on_commit(func, using=None):
             func()
         # Context manager executing transaction.on_commit() hooks immediately

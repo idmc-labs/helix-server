@@ -9,6 +9,7 @@ class MetaInformationSerializerMixin(object):
     - created_by
     - last_modified_by
     """
+
     def validate(self, attrs) -> dict:
         attrs = super().validate(attrs)
         if self.instance is None:
@@ -26,4 +27,3 @@ class AttachmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attachment
         fields = '__all__'
-
