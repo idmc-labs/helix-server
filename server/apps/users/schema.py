@@ -16,7 +16,7 @@ EntryListType = get_type('apps.entry.schema.EntryListType')
 
 
 class PermissionsType(ObjectType):
-    action = PermissionActionEnum
+    action = Field(PermissionActionEnum)
     entities = graphene.List(PermissionModelEnum)
 
 

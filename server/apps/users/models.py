@@ -26,7 +26,8 @@ class User(AbstractUser):
 
     @property
     def permissions(self):
-        if self.role and self.role in PERMISSIONS:
+        print(self.role, PERMISSIONS, type(self.role), type(PERMISSIONS))
+        if self.role is not None and self.role in PERMISSIONS:
             return [{'action': k, 'entities': list(v)} for k, v in
                     PERMISSIONS[self.role].items()]
         return []

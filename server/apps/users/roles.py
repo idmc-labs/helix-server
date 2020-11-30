@@ -3,43 +3,43 @@ codename will be built as <action>_<model> and used as...
 Permission.objects.get(codename=<codename>)
 """
 
-from .enums import ACTION, MODEL, USER_ROLE
+from .enums import PERMISSION_ACTION, PERMISSION_ENTITY, USER_ROLE
 
 USER_ROLES = [USER_ROLE.ADMIN, USER_ROLE.IT_HEAD, USER_ROLE.MONITORING_EXPERT_EDITOR,
          USER_ROLE.MONITORING_EXPERT_REVIEWER, USER_ROLE.GUEST]
 
 # All except user
-ALL_MODELS = {MODEL.crisis, MODEL.event, MODEL.entry, MODEL.organization,
-              MODEL.organizationkind, MODEL.contact, MODEL.communication,
-              MODEL.figure, MODEL.summary, MODEL.contextualupdate,
-              MODEL.resource}
+ALL_MODELS = {PERMISSION_ENTITY.crisis, PERMISSION_ENTITY.event, PERMISSION_ENTITY.entry, PERMISSION_ENTITY.organization,
+              PERMISSION_ENTITY.organizationkind, PERMISSION_ENTITY.contact, PERMISSION_ENTITY.communication,
+              PERMISSION_ENTITY.figure, PERMISSION_ENTITY.summary, PERMISSION_ENTITY.contextualupdate,
+              PERMISSION_ENTITY.resource}
 
 # NOTE: To add custom permissions, add `bla_model` like `sign_off_model`.
 PERMISSIONS = {
     USER_ROLE.ADMIN: {
-        ACTION.add: ALL_MODELS | {MODEL.user},
-        ACTION.change: ALL_MODELS | {MODEL.user},
-        ACTION.delete: ALL_MODELS | {MODEL.user},
+        PERMISSION_ACTION.add: ALL_MODELS | {PERMISSION_ENTITY.user},
+        PERMISSION_ACTION.change: ALL_MODELS | {PERMISSION_ENTITY.user},
+        PERMISSION_ACTION.delete: ALL_MODELS | {PERMISSION_ENTITY.user},
     },
     USER_ROLE.IT_HEAD: {
-        ACTION.add: ALL_MODELS,
-        ACTION.change: ALL_MODELS,
-        ACTION.delete: ALL_MODELS,
-        ACTION.sign_off: {MODEL.entry},
+        PERMISSION_ACTION.add: ALL_MODELS,
+        PERMISSION_ACTION.change: ALL_MODELS,
+        PERMISSION_ACTION.delete: ALL_MODELS,
+        PERMISSION_ACTION.sign_off: {PERMISSION_ENTITY.entry},
     },
     USER_ROLE.MONITORING_EXPERT_EDITOR: {
-        ACTION.add: ALL_MODELS,
-        ACTION.change: ALL_MODELS,
-        ACTION.delete: ALL_MODELS,
+        PERMISSION_ACTION.add: ALL_MODELS,
+        PERMISSION_ACTION.change: ALL_MODELS,
+        PERMISSION_ACTION.delete: ALL_MODELS,
     },
     USER_ROLE.MONITORING_EXPERT_REVIEWER: {
-        ACTION.add: ALL_MODELS - {MODEL.entry, MODEL.figure},
-        ACTION.change: ALL_MODELS - {MODEL.entry, MODEL.figure},
-        ACTION.delete: ALL_MODELS - {MODEL.entry, MODEL.figure},
+        PERMISSION_ACTION.add: ALL_MODELS - {PERMISSION_ENTITY.entry, PERMISSION_ENTITY.figure},
+        PERMISSION_ACTION.change: ALL_MODELS - {PERMISSION_ENTITY.entry, PERMISSION_ENTITY.figure},
+        PERMISSION_ACTION.delete: ALL_MODELS - {PERMISSION_ENTITY.entry, PERMISSION_ENTITY.figure},
     },
     USER_ROLE.GUEST: {
-        ACTION.add: set(),
-        ACTION.change: set(),
-        ACTION.delete: set(),
+        PERMISSION_ACTION.add: set(),
+        PERMISSION_ACTION.change: set(),
+        PERMISSION_ACTION.delete: set(),
     }
 }

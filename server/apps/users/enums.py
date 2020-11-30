@@ -5,7 +5,7 @@ from django_enumfield import enum
 from utils.enums import enum_description
 
 
-class ACTION(enum.Enum):
+class PERMISSION_ACTION(enum.Enum):
     add = 0
     change = 1
     delete = 2
@@ -19,7 +19,7 @@ class ACTION(enum.Enum):
     }
 
 
-class MODEL(enum.Enum):
+class PERMISSION_ENTITY(enum.Enum):
     crisis = 0
     event = 1
     entry = 2
@@ -67,6 +67,6 @@ class USER_ROLE(enum.Enum):
     }
 
 
-PermissionActionEnum = graphene.Enum.from_enum(ACTION, enum_description)
-PermissionModelEnum = graphene.Enum.from_enum(MODEL, enum_description)
+PermissionActionEnum = graphene.Enum.from_enum(PERMISSION_ACTION, enum_description)
+PermissionModelEnum = graphene.Enum.from_enum(PERMISSION_ENTITY, enum_description)
 PermissionRoleEnum = graphene.Enum.from_enum(USER_ROLE, enum_description)
