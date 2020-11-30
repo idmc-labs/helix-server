@@ -4,7 +4,7 @@ from uuid import uuid4
 from django.core.files.temp import NamedTemporaryFile
 
 from apps.entry.models import Figure, Entry, EntryReviewer, CANNOT_UPDATE_MESSAGE
-from apps.users.enums import ROLE
+from apps.users.enums import USER_ROLE
 from utils.factories import EventFactory, EntryFactory, FigureFactory, OrganizationFactory
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -12,7 +12,7 @@ from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 class TestFigureCreation(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.creator = create_user_with_role(ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.entry = EntryFactory.create(
             created_by=self.creator
         )
@@ -80,7 +80,7 @@ class TestFigureCreation(HelixGraphQLTestCase):
                       json.dumps(content['data']['createFigure']['errors']))
 
     def test_invalid_figure_create_by_non_creator_entry(self):
-        creator2 = create_user_with_role(ROLE.MONITORING_EXPERT_EDITOR.name)
+        creator2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.force_login(creator2)
         response = self.query(
             self.mutation,
@@ -109,7 +109,7 @@ class TestFigureCreation(HelixGraphQLTestCase):
 
 class TestFigureUpdate(HelixGraphQLTestCase):
     def setUp(self):
-        self.creator = create_user_with_role(ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.entry = EntryFactory.create(
             created_by=self.creator
         )
@@ -251,7 +251,7 @@ class TestFigureUpdate(HelixGraphQLTestCase):
 
 class TestEntryCreation(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.event = EventFactory.create()
         self.mutation = """
             mutation CreateEntry($input: EntryCreateInputType!) {
@@ -407,7 +407,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                          content['data']['createEntry']['errors'][0]['arrayErrors'][0]['key'])
 
     def test_invalid_entry_created_by_reviewer(self):
-        reviewer = create_user_with_role(role=ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -418,9 +418,9 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
     def test_add_reviewers_while_create_entry(self):
-        r1 = create_user_with_role(role=ROLE.MONITORING_EXPERT_REVIEWER.name)
-        r2 = create_user_with_role(role=ROLE.MONITORING_EXPERT_REVIEWER.name)
-        r3 = create_user_with_role(role=ROLE.MONITORING_EXPERT_REVIEWER.name)
+        r1 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        r2 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        r3 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.input.update(dict(reviewers=[str(r1.id), str(r2.id), str(r3.id)]))
 
         response = self.query(
@@ -437,7 +437,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertEqual(len(content['data']['createEntry']['result']['reviewers']['results']), len(self.input['reviewers']), content)
 
     def test_invalid_guest_entry_create(self):
-        guest = create_user_with_role(role=ROLE.GUEST.name)
+        guest = create_user_with_role(role=USER_ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,
@@ -484,7 +484,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
 
 class TestEntryUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.entry = EntryFactory.create(
             created_by=self.editor
         )
@@ -535,7 +535,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.assertTrue(content['data']['updateEntry']['ok'], content)
 
     def test_invalid_update_by_reviewer(self):
-        reviewer = create_user_with_role(role=ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -546,7 +546,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
     def test_invalid_entry_update_by_non_owner(self):
-        self.editor2 = create_user_with_role(role=ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor2 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.force_login(self.editor2)
         response = self.query(
             self.mutation,
@@ -562,7 +562,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                       json.dumps(content['data']['updateEntry']['errors']))
 
     def test_valid_entry_update_by_admins(self):
-        admin = create_user_with_role(ROLE.ADMIN.name)
+        admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.force_login(admin)
         response = self.query(
             self.mutation,
@@ -578,67 +578,67 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         deleted_figure = FigureFactory.create(entry=self.entry)
         figures = [
             {
-            "uuid": "1cd00034-037e-4c5f-b196-fa05b6bed803",
-            "district": "disss",
-            "town": "town",
-            "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
-            "reported": 10,
-            "unit": Figure.UNIT.PERSON.name,
-            "term": Figure.TERM.EVACUATED.name,
-            "type": Figure.TYPE.IDP_STOCK.name,
-            "role": Figure.ROLE.RECOMMENDED.name,
-            "startDate": "2020-09-09",
-            "includeIdu": False,
-            "ageJson": [
-                {
-                    "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
-                     "ageFrom": 1,
-                     "ageTo": 3,
-                     "value": 3
-                },
-                {
-                    "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                     "ageFrom": 3,
-                     "ageTo": 5,
-                     "value": 3
-                 }
-            ],
-            "strataJson": [
-                {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
-                {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
-            ]
+                "uuid": "1cd00034-037e-4c5f-b196-fa05b6bed803",
+                "district": "disss",
+                "town": "town",
+                "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
+                "reported": 10,
+                "unit": Figure.UNIT.PERSON.name,
+                "term": Figure.TERM.EVACUATED.name,
+                "type": Figure.TYPE.IDP_STOCK.name,
+                "role": Figure.ROLE.RECOMMENDED.name,
+                "startDate": "2020-09-09",
+                "includeIdu": False,
+                "ageJson": [
+                    {
+                        "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
+                        "ageFrom": 1,
+                        "ageTo": 3,
+                        "value": 3
+                    },
+                    {
+                        "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                        "ageFrom": 3,
+                        "ageTo": 5,
+                        "value": 3
+                    }
+                ],
+                "strataJson": [
+                    {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
+                    {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
+                ]
             },
             {
-            "id": figure.id,
-            "uuid": str(figure.uuid),
-            "district": "disss",
-            "town": "town",
-            "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
-            "reported": 10,
-            "unit": Figure.UNIT.PERSON.name,
-            "term": Figure.TERM.EVACUATED.name,
-            "type": Figure.TYPE.IDP_STOCK.name,
-            "role": Figure.ROLE.RECOMMENDED.name,
-            "startDate": "2020-09-09",
-            "includeIdu": False,
-            "ageJson": [
-                {
-                    "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
-                     "ageFrom": 1,
-                     "ageTo": 3,
-                     "value": 3
-                },
-                {
-                    "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                     "ageFrom": 3,
-                     "ageTo": 5,
-                     "value": 3
-                 }
-            ],
-            "strataJson": [
-                {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
-                {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
-            ]
+                "id": figure.id,
+                "uuid": str(figure.uuid),
+                "district": "disss",
+                "town": "town",
+                "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
+                "reported": 10,
+                "unit": Figure.UNIT.PERSON.name,
+                "term": Figure.TERM.EVACUATED.name,
+                "type": Figure.TYPE.IDP_STOCK.name,
+                "role": Figure.ROLE.RECOMMENDED.name,
+                "startDate": "2020-09-09",
+                "includeIdu": False,
+                "ageJson": [
+                    {
+                        "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
+                        "ageFrom": 1,
+                        "ageTo": 3,
+                        "value": 3
+                    },
+                    {
+                        "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                        "ageFrom": 3,
+                        "ageTo": 5,
+                        "value": 3
+                    }
+                ],
+                "strataJson": [
+                    {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
+                    {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
+                ]
             },
         ]
         old_figures_count = self.entry.figures.count()
@@ -660,7 +660,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
 
 class TestEntryDelete(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.entry = EntryFactory.create(
             created_by=self.editor
         )
@@ -699,7 +699,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
                          self.entry.url)
 
     def test_invalid_delete_by_reviewer(self):
-        reviewer = create_user_with_role(role=ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -710,7 +710,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
     def test_invalid_entry_delete_by_non_owner(self):
-        editor2 = create_user_with_role(role=ROLE.MONITORING_EXPERT_EDITOR.name)
+        editor2 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.force_login(editor2)
         response = self.query(
             self.mutation,
@@ -726,7 +726,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
                       json.dumps(content['data']['deleteEntry']['errors']))
 
     def test_valid_entry_delete_by_admins(self):
-        admin = create_user_with_role(ROLE.ADMIN.name)
+        admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.force_login(admin)
         response = self.query(
             self.mutation,
@@ -743,10 +743,10 @@ class TestEntryDelete(HelixGraphQLTestCase):
 class TestEntryReviewUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.entry = EntryFactory.create()
-        self.r1 = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
-        self.r2 = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
-        self.r3 = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
-        self.it = create_user_with_role(ROLE.IT_HEAD.name)
+        self.r1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.r3 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.it = create_user_with_role(USER_ROLE.IT_HEAD.name)
         self.entry.reviewers.set([self.r1, self.r2, self.r3, self.it])
         self.q = '''
         mutation MyMutation ($input: EntryReviewStatusInputType!){

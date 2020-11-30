@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.management.base import BaseCommand
 
-from apps.users.enums import ROLE
+from apps.users.enums import USER_ROLE
 
 
 class Command(BaseCommand):
@@ -11,10 +11,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         User = get_user_model()
         raw_password = 'admin123'
-        roles = [('admin', ROLE.ADMIN.name),
-                 ('editor', ROLE.MONITORING_EXPERT_EDITOR.name),
-                 ('reviewer', ROLE.MONITORING_EXPERT_REVIEWER.name),
-                 ('guest', ROLE.GUEST.name)]
+        roles = [('admin', USER_ROLE.ADMIN.name),
+                 ('editor', USER_ROLE.MONITORING_EXPERT_EDITOR.name),
+                 ('reviewer', USER_ROLE.MONITORING_EXPERT_REVIEWER.name),
+                 ('guest', USER_ROLE.GUEST.name)]
 
         for name, role in roles:
             email = f'{name}@helix.com'

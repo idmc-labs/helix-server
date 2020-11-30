@@ -1,14 +1,14 @@
 from django.contrib.auth.models import Permission, Group
 from django.core.management.base import BaseCommand
 
-from apps.users.roles import ROLES, PERMISSIONS
+from apps.users.roles import USER_ROLES, PERMISSIONS
 
 
 class Command(BaseCommand):
     help = 'Initialize or update roles.'
 
     def handle(self, *args, **options):
-        for role in ROLES:
+        for role in USER_ROLES:
             group, created = Group.objects.get_or_create(name=role.name)
             permissions = list()
             for action, models in PERMISSIONS[role].items():

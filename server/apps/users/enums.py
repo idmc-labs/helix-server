@@ -51,7 +51,7 @@ class MODEL(enum.Enum):
 
 # NOTE: These are permision group names (role names) and are always assumed to
 # be upper-cased
-class ROLE(enum.Enum):
+class USER_ROLE(enum.Enum):
     ADMIN = 0
     IT_HEAD = 1
     MONITORING_EXPERT_EDITOR = 2
@@ -69,4 +69,4 @@ class ROLE(enum.Enum):
 
 PermissionActionEnum = graphene.Enum.from_enum(ACTION, enum_description)
 PermissionModelEnum = graphene.Enum.from_enum(MODEL, enum_description)
-PermissionRoleEnum = graphene.Enum.from_enum(ROLE, enum_description)
+PermissionRoleEnum = graphene.Enum.from_enum(USER_ROLE, enum_description)

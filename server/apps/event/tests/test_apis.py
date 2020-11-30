@@ -1,6 +1,6 @@
 import json
 
-from apps.users.enums import ROLE
+from apps.users.enums import USER_ROLE
 from utils.factories import (
     CountryFactory,
     DisasterCategoryFactory,
@@ -63,7 +63,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
             "disasterSubType": DisasterSubTypeFactory().id,
             "countries": [each.id for each in countries]
         }
-        editor = create_user_with_role(ROLE.MONITORING_EXPERT_EDITOR.name)
+        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.force_login(editor)
 
     def test_valid_event_creation(self) -> None:
@@ -120,7 +120,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
             "startDate": "2020-10-20",
             "violence": ViolenceFactory.create().id,
         }
-        editor = create_user_with_role(ROLE.MONITORING_EXPERT_EDITOR.name)
+        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.force_login(editor)
 
     def test_valid_event_update(self) -> None:
@@ -137,7 +137,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
                          self.input['name'])
 
     def test_invalid_update_event_by_guest(self):
-        guest = create_user_with_role(ROLE.GUEST.name)
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,
@@ -181,7 +181,7 @@ class TestDeleteEvent(HelixGraphQLTestCase):
         self.variables = {
             "id": self.event.id,
         }
-        editor = create_user_with_role(ROLE.MONITORING_EXPERT_EDITOR.name)
+        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.force_login(editor)
 
     def test_valid_event_delete(self) -> None:
@@ -200,7 +200,7 @@ class TestDeleteEvent(HelixGraphQLTestCase):
                          self.event.id)
 
     def test_invalid_delete_event_by_guest(self):
-        guest = create_user_with_role(ROLE.GUEST.name)
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,

@@ -1,6 +1,6 @@
 import json
 
-from apps.users.enums import ROLE
+from apps.users.enums import USER_ROLE
 from utils.factories import CountryFactory, ContactFactory, OrganizationFactory, CommunicationMediumFactory
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -49,7 +49,7 @@ class TestCreateContact(HelixGraphQLTestCase):
         }
 
     def test_valid_contact_creation(self) -> None:
-        reviewer = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -67,7 +67,7 @@ class TestCreateContact(HelixGraphQLTestCase):
                          len(self.input['countriesOfOperation']))
 
     def test_invalid_contact_creation_by_guest(self) -> None:
-        guest = create_user_with_role(ROLE.GUEST.name)
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,
@@ -106,7 +106,7 @@ class TestUpdateContact(HelixGraphQLTestCase):
         }
 
     def test_valid_contact_update(self) -> None:
-        reviewer = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -121,7 +121,7 @@ class TestUpdateContact(HelixGraphQLTestCase):
         self.assertEqual(content['data']['updateContact']['result']['lastName'], self.contact.last_name)
 
     def test_invalid_contact_update_by_guest(self) -> None:
-        guest = create_user_with_role(ROLE.GUEST.name)
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,
@@ -154,7 +154,7 @@ class TestDeleteContact(HelixGraphQLTestCase):
         }
 
     def test_valid_contact_delete(self) -> None:
-        reviewer = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -168,7 +168,7 @@ class TestDeleteContact(HelixGraphQLTestCase):
         self.assertEqual(content['data']['deleteContact']['result']['id'], self.variables['id'])
 
     def test_invalid_contact_delete_by_guest(self) -> None:
-        guest = create_user_with_role(ROLE.GUEST.name)
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,
@@ -203,7 +203,7 @@ class TestCommunication(HelixGraphQLTestCase):
         self.input = {"contact": str(self.contact.id), "subject": "Subject", "content": "Content", "medium": str(self.medium.id)}
 
     def test_valid_communication_creation(self):
-        reviewer = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,

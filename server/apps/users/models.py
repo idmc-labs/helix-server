@@ -4,7 +4,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 
-from .roles import PERMISSIONS, ROLE
+from .roles import PERMISSIONS, USER_ROLE
 
 
 class User(AbstractUser):
@@ -21,7 +21,7 @@ class User(AbstractUser):
     @property
     def role(self):
         if group := self.groups.first():
-            return ROLE[group.name]
+            return USER_ROLE[group.name]
         return None
 
     @property

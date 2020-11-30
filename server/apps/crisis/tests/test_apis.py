@@ -1,6 +1,6 @@
 import json
 
-from apps.users.enums import ROLE
+from apps.users.enums import USER_ROLE
 from utils.factories import CountryFactory, CrisisFactory
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -32,7 +32,7 @@ class TestCreateCrisis(HelixGraphQLTestCase):
         }
 
     def test_valid_crisis_creation(self) -> None:
-        reviewer = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -48,7 +48,7 @@ class TestCreateCrisis(HelixGraphQLTestCase):
                          len(self.input['countries']))
 
     def test_invalid_crisis_creation_by_guest(self) -> None:
-        guest = create_user_with_role(ROLE.GUEST.name)
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,
@@ -61,7 +61,7 @@ class TestCreateCrisis(HelixGraphQLTestCase):
 
 class TestCrisisUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.crisis = CrisisFactory.create(
             created_by=self.editor
         )
@@ -98,7 +98,7 @@ class TestCrisisUpdate(HelixGraphQLTestCase):
                          self.input['name'])
 
     def test_valid_update_crisis_by_different_user(self):
-        reviewer = create_user_with_role(ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -112,7 +112,7 @@ class TestCrisisUpdate(HelixGraphQLTestCase):
                          self.input['name'])
 
     def test_invalid_update_crisis_by_guest(self):
-        guest = create_user_with_role(ROLE.GUEST.name)
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,
@@ -124,7 +124,7 @@ class TestCrisisUpdate(HelixGraphQLTestCase):
 
 class TestEntryDelete(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.crisis = CrisisFactory.create(
             created_by=self.editor
         )
@@ -159,7 +159,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
         self.assertIsNotNone(content['data']['deleteCrisis']['result']['name'])
 
     def test_valid_delete_crisis_by_different_monitoring_expert(self):
-        editor2 = create_user_with_role(ROLE.MONITORING_EXPERT_EDITOR.name)
+        editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.force_login(editor2)
         response = self.query(
             self.mutation,
@@ -172,7 +172,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
         self.assertIsNotNone(content['data']['deleteCrisis']['result']['name'])
 
     def test_invalid_delete_crisis_by_guest(self):
-        guest = create_user_with_role(ROLE.GUEST.name)
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(guest)
         response = self.query(
             self.mutation,
