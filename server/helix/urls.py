@@ -13,6 +13,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+import json
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.conf import settings
@@ -22,12 +23,32 @@ from django.views.decorators.csrf import csrf_exempt
 # from django.contrib.auth.mixins import LoginRequiredMixin
 from graphene_file_upload.django import FileUploadGraphQLView
 
-FileUploadGraphQLView.graphiql_template = "graphene_graphiql_explorer/graphiql.html"
+
+class CustomGraphQLView(FileUploadGraphQLView):
+    """Handles multipart/form-data content type in django views"""
+
+    def parse_body(self, request):
+        """
+        Allow for variable batch
+        https://github.com/graphql-python/graphene-django/issues/967#issuecomment-640480919
+        :param request:
+        :return:
+        """
+        try:
+            body = request.body.decode("utf-8")
+            request_json = json.loads(body)
+            self.batch = isinstance(request_json, list)
+        except:
+            self.batch = False
+        return super().parse_body(request)
+
+
+CustomGraphQLView.graphiql_template = "graphene_graphiql_explorer/graphiql.html"
 
 urlpatterns = [
     path('admin', admin.site.urls),
-    path('graphiql', csrf_exempt(FileUploadGraphQLView.as_view(graphiql=True))),
-    path('graphql', csrf_exempt(FileUploadGraphQLView.as_view())),
+    path('graphiql', csrf_exempt(CustomGraphQLView.as_view(graphiql=True))),
+    path('graphql', csrf_exempt(CustomGraphQLView.as_view())),
     path('webhooks', include('helix.webhooks'))
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) \
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
