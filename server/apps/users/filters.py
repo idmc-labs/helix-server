@@ -1,6 +1,6 @@
-from django.contrib.auth.models import Group
+from django.db.models import Value
+from django.db.models.functions import Lower, StrIndex, Concat
 import django_filters
-import graphene
 
 from apps.users.models import User
 from utils.filters import StringListFilter
@@ -11,6 +11,7 @@ class UserFilter(django_filters.FilterSet):
                                      lookup_expr='iexact',
                                      distinct=True)
     roleIn = StringListFilter(method='filter_role_in')
+    full_name = django_filters.CharFilter(method='filter_full_name')
 
     class Meta:
         model = User
@@ -25,3 +26,12 @@ class UserFilter(django_filters.FilterSet):
         return queryset.filter(
             groups__name__in=value
         ).distinct()
+
+    def filter_full_name(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.annotate(
+                full=Concat(Lower('first_name'), Lower('last_name'))
+            ).annotate(
+                idx=StrIndex('full', Value(value.lower()))
+            ).filter(idx__gt=0).order_by('idx', 'full')
