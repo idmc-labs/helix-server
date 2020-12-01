@@ -1,9 +1,8 @@
 import graphene
 from django.utils.translation import gettext
-from graphene_file_upload.scalars import Upload
 
 from apps.entry.enums import QuantifierGrapheneEnum, RoleGrapheneEnum, TypeGrapheneEnum, \
-    TermGrapheneEnum, UnitGrapheneEnum, EntryReviewerGrapheneEnum
+    TermGrapheneEnum, UnitGrapheneEnum, EntryReviewerGrapheneEnum, OSMAccuracyGrapheneEnum
 from apps.entry.models import Entry, Figure, SourcePreview, EntryReviewer
 from apps.entry.schema import EntryType, FigureType, SourcePreviewType, EntryReviewerType
 from apps.entry.serializers import EntrySerializer, FigureSerializer, SourcePreviewSerializer
@@ -22,6 +21,35 @@ class DisaggregatedStratumInputType(graphene.InputObjectType):
     uuid = graphene.String(required=True)
     date = graphene.Date(required=True)
     value = graphene.Int(required=True)
+
+
+class OSMNameInputType(graphene.InputObjectType):
+    wikipedia = graphene.String(required=False)
+    rank = graphene.Int(required=False)
+    country = graphene.String(required=True)
+    country_code = graphene.String(required=True)
+    street = graphene.String(required=False)
+    wiki_data = graphene.String(required=False)
+    osm_id = graphene.String(required=True)
+    osm_type = graphene.String(required=True)
+    house_numbers = graphene.String(required=False)
+    identifier = graphene.Int(required=True)
+    city = graphene.String(required=False)
+    display_name = graphene.String(required=True)
+    lon = graphene.Float(required=True)
+    lat = graphene.Float(required=True)
+    state = graphene.String(required=False)
+    bounding_box = graphene.List(graphene.NonNull(graphene.Float))
+    type = graphene.String(required=False)
+    importance = graphene.Float(required=False)
+    class_name = graphene.String(required=False)
+    name = graphene.String(required=True)
+    name_suffix = graphene.String(required=False)
+    place_rank = graphene.Int(required=False)
+    alternative_names = graphene.String(required=False)
+    accuracy = graphene.NonNull(OSMAccuracyGrapheneEnum)
+    reported_name = graphene.String(required=True)
+    moved = graphene.Boolean(required=False)
 
 
 class CommonFigureCreateMixin:
@@ -52,6 +80,9 @@ class CommonFigureCreateMixin:
     conflict_criminal = graphene.Int(required=False)
     conflict_communal = graphene.Int(required=False)
     conflict_other = graphene.Int(required=False)
+    # locations
+    source = graphene.Field(OSMNameInputType, required=False)
+    destination = graphene.Field(OSMNameInputType, required=False)
 
 
 class NestedFigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectType):
