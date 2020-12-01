@@ -26,7 +26,6 @@ class User(AbstractUser):
 
     @property
     def permissions(self):
-        print(self.role, PERMISSIONS, type(self.role), type(PERMISSIONS))
         if self.role is not None and self.role in PERMISSIONS:
             return [{'action': k, 'entities': list(v)} for k, v in
                     PERMISSIONS[self.role].items()]
@@ -34,7 +33,7 @@ class User(AbstractUser):
 
     def get_full_name(self):
         return ' '.join([
-            l for l in [self.first_name, self.last_name] if l
+            name for name in [self.first_name, self.last_name] if name
         ]) or self.email
 
     @property
