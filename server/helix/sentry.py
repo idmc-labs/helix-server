@@ -81,6 +81,7 @@ class SentryMiddleware(object):
     Properly capture errors during query execution and send them to Sentry.
     Then raise the error again and let Graphene handle it.
     """
+
     def on_error(self, root, info, **args):
         def _on_error(error):
             with sentry_sdk.configure_scope() as scope:

@@ -4,7 +4,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 
-from .roles import PERMISSIONS
+from .roles import PERMISSIONS, USER_ROLE
 
 
 class User(AbstractUser):
@@ -21,19 +21,20 @@ class User(AbstractUser):
     @property
     def role(self):
         if group := self.groups.first():
-            return group.name
+            return USER_ROLE[group.name]
         return None
 
     @property
     def permissions(self):
-        if self.role and self.role in PERMISSIONS:
-            return [{'action': k, 'entities': list(v)} for k, v in PERMISSIONS[self.role].items()]
+        if self.role is not None and self.role in PERMISSIONS:
+            return [{'action': k, 'entities': list(v)} for k, v in
+                    PERMISSIONS[self.role].items()]
         return []
 
     def get_full_name(self):
-       return ' '.join([
-           l for l in [self.first_name, self.last_name] if l
-       ]) or self.email
+        return ' '.join([
+            name for name in [self.first_name, self.last_name] if name
+        ]) or self.email
 
     @property
     def full_name(self):

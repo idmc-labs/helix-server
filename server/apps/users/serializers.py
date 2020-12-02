@@ -67,4 +67,3 @@ class ActivateSerializer(serializers.Serializer):
         user.is_active = True
         user.save()
         return attrs
-

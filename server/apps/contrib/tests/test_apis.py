@@ -3,13 +3,13 @@ import json
 from django.core.files.temp import NamedTemporaryFile
 
 from apps.contrib.models import Attachment
-from apps.users.roles import MONITORING_EXPERT_EDITOR
+from apps.users.enums import USER_ROLE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
 class TestAttachment(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.mutation = """
             mutation ($data: AttachmentCreateInputType!) {
               createAttachment(data: $data) {
@@ -32,7 +32,6 @@ class TestAttachment(HelixGraphQLTestCase):
             "data": {"attachmentFor": Attachment.FOR_CHOICES.ENTRY, "attachment": None}
         }
         self.force_login(self.editor)
-
 
     def test_create_attachment(self):
         file_text = b'fake blaa'
@@ -57,4 +56,3 @@ class TestAttachment(HelixGraphQLTestCase):
         self.assertTrue(content['data']['createAttachment']['ok'], content)
         self.assertIsNotNone(content['data']['createAttachment']['result']['id'])
         self.assertIsNotNone(content['data']['createAttachment']['result']['attachment'])
-

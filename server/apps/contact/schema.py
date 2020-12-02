@@ -62,4 +62,3 @@ class Query:
                                                         pagination=PageGraphqlPagination(
                                                             page_size_query_param='pageSize'
                                                         ))
-

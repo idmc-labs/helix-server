@@ -44,7 +44,7 @@ class Contact(MetaInformationAbstractModel, models.Model):
                                 blank=True, null=True,
                                 related_name='contacts', on_delete=models.SET_NULL)
     email = models.EmailField(verbose_name=_('Email'), blank=True, null=True)
-    phone = models.CharField(verbose_name=_('Phone'), max_length=32, 
+    phone = models.CharField(verbose_name=_('Phone'), max_length=32,
                              blank=True, null=True,
                              unique=True)
     comment = models.TextField(verbose_name=_('Comment'), blank=True, null=True)

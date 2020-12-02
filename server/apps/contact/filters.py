@@ -23,4 +23,3 @@ class CommunicationFilter(django_filters.FilterSet):
     class Meta:
         model = Communication
         fields = ['id', 'contact']
-

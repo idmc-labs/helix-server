@@ -8,14 +8,16 @@ from graphene_django_extras import PageGraphqlPagination, DjangoObjectType as Ex
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
 from apps.users.filters import UserFilter
 
+from .enums import PermissionActionEnum, PermissionModelEnum, PermissionRoleEnum
+
 User = get_user_model()
 
 EntryListType = get_type('apps.entry.schema.EntryListType')
 
 
 class PermissionsType(ObjectType):
-    action = graphene.String()
-    entities = graphene.List(graphene.String)
+    action = Field(PermissionActionEnum, required=True)
+    entities = graphene.List(graphene.NonNull(PermissionModelEnum), required=True)
 
 
 class UserType(DjangoObjectType):
@@ -24,15 +26,15 @@ class UserType(DjangoObjectType):
         exclude_fields = ('password',)
 
     review_entries = DjangoPaginatedListObjectField(EntryListType,
-                                                   pagination=PageGraphqlPagination(
+                                                    pagination=PageGraphqlPagination(
                                                         page_size_query_param='pageSize'
                                                     ), accessor='review_entries')
     created_entry = DjangoPaginatedListObjectField(EntryListType,
                                                    pagination=PageGraphqlPagination(
                                                        page_size_query_param='pageSize'
                                                    ), accessor='created_entry')
-    role = Field(graphene.String)
-    permissions = graphene.List(PermissionsType)
+    role = Field(PermissionRoleEnum)
+    permissions = graphene.List(graphene.NonNull(PermissionsType))
     full_name = Field(graphene.String)
 
 

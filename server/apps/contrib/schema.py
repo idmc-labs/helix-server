@@ -2,7 +2,7 @@ import graphene
 from graphene_django import DjangoObjectType
 from graphene.types.utils import get_type
 from graphene_django_extras import (
-    PageGraphqlPagination, 
+    PageGraphqlPagination,
     DjangoObjectField
 )
 
@@ -19,4 +19,3 @@ class AttachmentType(DjangoObjectType):
 
 class Query:
     attachment = DjangoObjectField(AttachmentType)
-

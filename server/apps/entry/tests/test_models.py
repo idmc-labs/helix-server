@@ -3,26 +3,26 @@ import os
 from django.core.files.storage import default_storage
 
 from apps.entry.models import Figure, SourcePreview
-from apps.users.roles import MONITORING_EXPERT_EDITOR, ADMIN, MONITORING_EXPERT_REVIEWER
+from apps.users.enums import USER_ROLE
 from utils.factories import EntryFactory, FigureFactory
 from utils.tests import HelixTestCase, create_user_with_role
 
 
 class TestFigureModel(HelixTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(MONITORING_EXPERT_EDITOR)
-        self.admin = create_user_with_role(ADMIN)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.entry = EntryFactory.create(created_by=self.editor)
         self.figure = FigureFactory.create(entry=self.entry, created_by=self.editor)
 
     def test_figure_can_be_updated_by(self):
-        editor2 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.assertFalse(self.figure.can_be_updated_by(editor2))
         self.assertTrue(self.figure.can_be_updated_by(self.editor))
         self.assertTrue(self.figure.can_be_updated_by(self.admin))
 
     def test_figure_can_be_created_by(self):
-        editor2 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.assertFalse(self.figure.can_be_created_by(editor2, self.entry))
         self.assertTrue(self.figure.can_be_created_by(self.editor, self.entry))
 
@@ -56,15 +56,15 @@ class TestFigureModel(HelixTestCase):
 
 class TestEntryModel(HelixTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.entry = EntryFactory.create(created_by=self.editor)
 
     def test_entry_can_be_updated_by(self):
-        editor2 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.assertFalse(self.entry.can_be_updated_by(editor2))
-        reviwer = create_user_with_role(MONITORING_EXPERT_REVIEWER)
+        reviwer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.assertFalse(self.entry.can_be_updated_by(reviwer))
-        admin = create_user_with_role(ADMIN)
+        admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.assertTrue(self.entry.can_be_updated_by(admin))
 
 

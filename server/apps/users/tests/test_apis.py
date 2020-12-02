@@ -3,7 +3,8 @@ import json
 from django.contrib.auth.tokens import default_token_generator
 from djoser.utils import encode_uid
 
-from apps.users.roles import MONITORING_EXPERT_EDITOR, ADMIN, IT_HEAD, MONITORING_EXPERT_REVIEWER
+
+from apps.users.enums import USER_ROLE
 from utils.factories import EntryFactory
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
@@ -277,8 +278,8 @@ class TestUserSchema(HelixGraphQLTestCase):
         '''
 
     def test_fetch_reviews_to_be_reviewed(self):
-        e1 = create_user_with_role(MONITORING_EXPERT_EDITOR)
-        e2 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        e1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        e2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         entry = EntryFactory.create(created_by=e1)
         entry.reviewers.set([e1, e2])
         entry2 = EntryFactory.create(created_by=e1)
@@ -318,12 +319,12 @@ class TestUserListSchema(HelixGraphQLTestCase):
         '''
 
     def test_filter_users(self):
-        ue = create_user_with_role(MONITORING_EXPERT_EDITOR)
-        ur = create_user_with_role(MONITORING_EXPERT_REVIEWER)
-        ua = create_user_with_role(ADMIN)
-        ui = create_user_with_role(IT_HEAD)
+        ue = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        ur = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        ua = create_user_with_role(USER_ROLE.ADMIN.name)
+        create_user_with_role(USER_ROLE.IT_HEAD.name)
 
-        roles = ['admin', 'editor']
+        roles = [USER_ROLE.ADMIN.name, USER_ROLE.MONITORING_EXPERT_EDITOR.name]
         response = self.query(
             self.users_q,
             variables={"roles": roles},
@@ -335,7 +336,7 @@ class TestUserListSchema(HelixGraphQLTestCase):
         self.assertEqual(sorted([int(each['id']) for each in content['data']['users']['results']]),
                          sorted([ue.id, ua.id]))
 
-        roles = ['reviewer', 'editor']
+        roles = [USER_ROLE.MONITORING_EXPERT_REVIEWER.name, USER_ROLE.MONITORING_EXPERT_EDITOR.name]
         response = self.query(
             self.users_q,
             variables={"roles": roles},
@@ -344,4 +345,3 @@ class TestUserListSchema(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertEqual(sorted([int(each['id']) for each in content['data']['users']['results']]),
                          sorted([ur.id, ue.id]))
-

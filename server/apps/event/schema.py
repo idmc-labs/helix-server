@@ -5,15 +5,15 @@ from graphene_django_extras import PageGraphqlPagination, DjangoObjectField, Dja
 from apps.country.schema import CountryType
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.models import (
-    Event, 
-    Trigger, 
-    TriggerSubType, 
-    Violence, 
-    ViolenceSubType, 
-    Actor, 
+    Event,
+    Trigger,
+    TriggerSubType,
+    Violence,
+    ViolenceSubType,
+    Actor,
     DisasterSubCategory,
-    DisasterCategory, 
-    DisasterSubType, 
+    DisasterCategory,
+    DisasterSubType,
     DisasterType
 )
 from apps.event.filters import EventFilter

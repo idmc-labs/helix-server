@@ -14,7 +14,7 @@ from django_enumfield import enum
 from rest_framework.exceptions import PermissionDenied
 
 from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
-from apps.users.roles import ADMIN
+from apps.users.enums import USER_ROLE
 
 from utils.fields import CachedFileField
 
@@ -176,17 +176,17 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
                                            default=False)
     # disaggregation information
     displacement_urban = models.PositiveIntegerField(verbose_name=_('Displacement/Urban'),
-                                        blank=True, null=True)
+                                                     blank=True, null=True)
     displacement_rural = models.PositiveIntegerField(verbose_name=_('Displacement/Rural'),
-                                        blank=True, null=True)
+                                                     blank=True, null=True)
     location_camp = models.PositiveIntegerField(verbose_name=_('Location/Camp'),
-                                       blank=True, null=True)
+                                                blank=True, null=True)
     location_non_camp = models.PositiveIntegerField(verbose_name=_('Location/Non-Camp'),
-                                           blank=True, null=True)
+                                                    blank=True, null=True)
     sex_male = models.PositiveIntegerField(verbose_name=_('Sex/Male'),
-                                       blank=True, null=True)
+                                           blank=True, null=True)
     sex_female = models.PositiveIntegerField(verbose_name=_('Sex/Female'),
-                                         blank=True, null=True)
+                                             blank=True, null=True)
     age_json = ArrayField(base_field=JSONField(verbose_name=_('Age')),
                           verbose_name=_('Age Disaggregation'),
                           blank=True, null=True)
@@ -313,7 +313,7 @@ class Entry(MetaInformationAbstractModel, models.Model):
         """
         if self.locked:
             return False
-        if ADMIN in user.groups.values_list('name', flat=True):
+        if USER_ROLE.ADMIN.name in user.groups.values_list('name', flat=True):
             return True
         return self.created_by == user
 

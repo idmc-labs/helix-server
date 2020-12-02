@@ -1,7 +1,7 @@
 from django.test import RequestFactory
 
 from apps.entry.serializers import EntrySerializer
-from apps.users.roles import MONITORING_EXPERT_EDITOR
+from apps.users.enums import USER_ROLE
 from apps.entry.models import EntryReviewer, Entry
 from apps.users.models import User
 from utils.factories import EventFactory, EntryFactory, OrganizationFactory
@@ -28,7 +28,7 @@ class TestEntrySerializer(HelixTestCase):
             "event": self.event.id,
         }
         self.request = self.factory.get('/graphql')
-        self.request.user = self.user = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
 
     def test_create_entry_requires_document_or_url(self):
         self.data['url'] = None
@@ -82,8 +82,8 @@ class TestEntrySerializer(HelixTestCase):
         self.assertIsNotNone(instance.modified_at)
 
     def test_entry_creation_create_entry_reviewers(self):
-        reviewer1 = create_user_with_role(MONITORING_EXPERT_EDITOR)
-        reviewer2 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.data['reviewers'] = [reviewer1.id, reviewer2.id]
         serializer = EntrySerializer(data=self.data,
                                      context={'request': self.request})
@@ -95,15 +95,15 @@ class TestEntrySerializer(HelixTestCase):
                          sorted([reviewer1.id, reviewer2.id]))
 
     def test_entry_update_entry_reviewers(self):
-        x = create_user_with_role(MONITORING_EXPERT_EDITOR)
-        y = create_user_with_role(MONITORING_EXPERT_EDITOR)
-        z = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        x = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        y = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        z = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         entry = EntryFactory.create()
         entry.reviewers.set([x, y, z])
 
-        reviewer1 = create_user_with_role(MONITORING_EXPERT_EDITOR)
-        reviewer2 = create_user_with_role(MONITORING_EXPERT_EDITOR)
-        reviewer3 = create_user_with_role(MONITORING_EXPERT_EDITOR)
+        reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        reviewer3 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         entry = EntryFactory.create()
         entry.reviewers.set([reviewer1, reviewer2, reviewer3])
         self.assertEqual(sorted(list(entry.reviewers.filter(reviewing__status=None).values_list('id', flat=1))),
@@ -121,4 +121,4 @@ class TestEntrySerializer(HelixTestCase):
         self.assertEqual(set(entry.reviewers.through.objects.values_list('status', flat=1)),
                          {EntryReviewer.REVIEW_STATUS.UNDER_REVIEW})
 
-        self.assertEqual(old_count-1, EntryReviewer.objects.count())
+        self.assertEqual(old_count - 1, EntryReviewer.objects.count())
