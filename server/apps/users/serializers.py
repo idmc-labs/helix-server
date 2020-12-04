@@ -1,9 +1,11 @@
 from django.contrib.auth import get_user_model, authenticate
-from django import forms
 from django.db import transaction
+from django.utils.translation import gettext
+from django_enumfield.contrib.drf import EnumField
 from djoser.conf import settings as djoser_settings
 from rest_framework import serializers
 
+from apps.users.enums import USER_ROLE
 from apps.users.utils import send_activation_email, get_user_from_activation_token
 
 User = get_user_model()
@@ -67,3 +69,28 @@ class ActivateSerializer(serializers.Serializer):
         user.is_active = True
         user.save()
         return attrs
+
+
+class UserSerializer(serializers.ModelSerializer):
+    role = EnumField(USER_ROLE, required=False)
+
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'username', 'is_active', 'role']
+
+    def validate_role(self, role):
+        if not self.context['request'].user.has_perm('users.change_user'):
+            raise serializers.ValidationError(gettext('You are not allowed to change the role.'))
+        return role
+
+    def validate(self, attrs):
+        if not User.can_update_user(self.instance.id, self.context['request'].user):
+            raise serializers.ValidationError(gettext('You are not allowed to update this user.'))
+        return attrs
+
+    def update(self, instance, validated_data):
+        role = validated_data.pop('role', None)
+        instance = super().update(instance, validated_data)
+        if role is not None:
+            instance.set_role(role)
+        return instance

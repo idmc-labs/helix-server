@@ -1,9 +1,17 @@
 from django.contrib.auth import login, logout
+from django.utils.translation import gettext
 import graphene
-from graphene_django.rest_framework.mutation import SerializerMutation
 
+from apps.users.enums import PermissionRoleEnum
 from apps.users.schema import UserType
-from apps.users.serializers import LoginSerializer, RegisterSerializer, ActivateSerializer
+from apps.users.models import User
+from apps.users.serializers import (
+    LoginSerializer,
+    RegisterSerializer,
+    ActivateSerializer,
+    UserSerializer,
+    )
+from utils.permissions import is_authenticated
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 
 
@@ -95,8 +103,47 @@ class Logout(graphene.Mutation):
         return Logout(ok=True)
 
 
+class UserUpdateInputType(graphene.InputObjectType):
+    id = graphene.ID(required=True)
+    first_name = graphene.String()
+    last_name = graphene.String()
+    username = graphene.String()
+    is_active = graphene.Boolean()
+    role = graphene.Field(PermissionRoleEnum)
+
+
+class UpdateUser(graphene.Mutation):
+    class Arguments:
+        data = UserUpdateInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(UserType)
+
+    @staticmethod
+    @is_authenticated()
+    def mutate(root, info, data):
+        try:
+            user = User.objects.get(id=data['id'])
+        except User.DoesNotExist:
+            return UpdateUser(
+                errors=[
+                    CustomErrorType(field='nonFieldErrors', messages=gettext('User not found.'))
+                    ]
+                )
+        serializer = UserSerializer(instance=user,
+                                    data=data,
+                                    context={'request': info.context},
+                                    partial=True)
+        if errors := mutation_is_not_valid(serializer):
+            return UpdateUser(errors=errors, ok=False)
+        serializer.save()
+        return UpdateUser(result=user, errors=None, ok=True)
+
+
 class Mutation(object):
     login = Login.Field()
     register = Register.Field()
     activate = Activate.Field()
     logout = Logout.Field()
+    update_user = UpdateUser.Field()

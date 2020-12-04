@@ -1,10 +1,12 @@
-import json
+import logging
 
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth.models import AbstractUser, Group
 from django.utils.translation import gettext_lazy as _
 
 from .roles import PERMISSIONS, USER_ROLE
+
+logger = logging.getLogger(__name__)
 
 
 class User(AbstractUser):
@@ -17,6 +19,20 @@ class User(AbstractUser):
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
+
+    @classmethod
+    def can_update_user(cls, user_id: int, authenticated_user: 'User') -> bool:
+        return authenticated_user.has_perm('users.change_user') or\
+                user_id == authenticated_user.id
+
+    def set_role(self, role: int) -> None:
+        try:
+            group = Group.objects.get(name=USER_ROLE.get(role).name)
+            self.groups.set([group])
+        except AttributeError:
+            logger.warning(f'User role with {role=} does not exist.')
+        except Group.DoesNotExist:
+            logger.warning(f'Group(UserRole) with name {USER_ROLE[role].name} does not exist.')
 
     @property
     def role(self):
