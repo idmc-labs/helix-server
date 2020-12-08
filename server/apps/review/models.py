@@ -38,6 +38,6 @@ class Review(MetaInformationAbstractModel, models.Model):
 
 
 class ReviewComment(MetaInformationAbstractModel, models.Model):
-    body = models.TextField(verbose_name=_('Body'))
+    body = models.TextField(verbose_name=_('Body'), null=True)
     entry = models.ForeignKey('entry.Entry', verbose_name=_('Entry'),
                               related_name='review_comments', on_delete=models.CASCADE)

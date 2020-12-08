@@ -31,6 +31,12 @@ class ReviewCommentSerializer(MetaInformationSerializerMixin,
             )
         return reviews
 
+    def validate_body(self, body: str):
+        # we will store null for empty bodies
+        if not body.strip():
+            return None
+        return body
+
     def validate(self, attrs) -> dict:
         if not attrs['entry'].reviewers.filter(id=self.context['request'].user.id).exists():
             raise serializers.ValidationError(NOT_ALLOWED_TO_REVIEW)
