@@ -1,12 +1,12 @@
-import django_filters
+from django_filters import rest_framework as df
 
 from apps.entry.models import Entry, EntryReviewer
 from utils.filters import StringListFilter
 
 
-class EntryFilter(django_filters.FilterSet):
-    article_title_contains = django_filters.CharFilter(field_name='article_title', lookup_expr='icontains')
-    country = django_filters.NumberFilter(field_name='event__countries', lookup_expr='in')
+class EntryFilter(df.FilterSet):
+    article_title_contains = df.CharFilter(field_name='article_title', lookup_expr='icontains')
+    country = df.NumberFilter(field_name='event__countries', lookup_expr='in')
     countries = StringListFilter(method='filter_countries')
 
     class Meta:
@@ -19,7 +19,7 @@ class EntryFilter(django_filters.FilterSet):
         return qs.filter(event__countries__in=value).distinct()
 
 
-class EntryReviewerFilter(django_filters.FilterSet):
+class EntryReviewerFilter(df.FilterSet):
     class Meta:
         model = EntryReviewer
         fields = ('entry', )

@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import json
 import logging
+from typing import List
 import uuid
 
 import boto3
@@ -278,7 +279,8 @@ class Entry(MetaInformationAbstractModel, models.Model):
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
                                        blank=True,
                                        related_name='review_entries',
-                                       through='EntryReviewer')
+                                       through='EntryReviewer',
+                                       through_fields=('entry', 'reviewer'))
 
     @property
     def latest_reviews(self):
@@ -311,7 +313,9 @@ class Entry(MetaInformationAbstractModel, models.Model):
 
     @property
     def locked(self):
-        if self.reviewers.through.objects.filter(status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF).exists():
+        if self.reviewers.through.objects.filter(
+                status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
+        ).exists():
             return True
         return False
 
@@ -333,7 +337,8 @@ class Entry(MetaInformationAbstractModel, models.Model):
         permissions = (('sign_off_entry', 'Can sign off the entry'),)
 
 
-class EntryReviewer(models.Model):
+class EntryReviewer(MetaInformationAbstractModel,
+                    models.Model):
     class CannotUpdateStatusException(Exception):
         message = CANNOT_UPDATE_MESSAGE
 
@@ -358,7 +363,13 @@ class EntryReviewer(models.Model):
     def __str__(self):
         return f'{self.entry_id} {self.reviewer} {self.status}'
 
-    def update_status(self, status):
+    @classmethod
+    def assign_creator(cls, entry: 'Entry', user: 'User') -> None:
+        entry.reviewers.through.objects.filter(
+            created_by__isnull=True
+        ).update(created_by=user)
+
+    def update_status(self, status: REVIEW_STATUS) -> None:
         if status == self.REVIEW_STATUS.SIGNED_OFF \
                 and not self.reviewer.has_perms(('entry.sign_off_entry',)):
             raise self.CannotUpdateStatusException()

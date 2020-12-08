@@ -7,7 +7,7 @@ from django.utils.translation import gettext, gettext_lazy as _
 from rest_framework import serializers
 
 from apps.contrib.serializers import MetaInformationSerializerMixin
-from apps.entry.models import Entry, Figure, SourcePreview
+from apps.entry.models import Entry, Figure, SourcePreview, EntryReviewer
 from apps.users.models import User
 
 
@@ -135,6 +135,8 @@ class EntrySerializer(MetaInformationSerializerMixin,
                 ])
         else:
             entry = super().create(validated_data)
+        EntryReviewer.assign_creator(entry=entry,
+                                     user=self.context['request'].user)
         return entry
 
     def update(self, instance, validated_data: dict) -> Entry:
@@ -154,6 +156,8 @@ class EntrySerializer(MetaInformationSerializerMixin,
                         Figure.objects.filter(id=each.pop('id')).update(**each, entry=entry)
         else:
             entry = super().update(instance, validated_data)
+        EntryReviewer.assign_creator(entry=entry,
+                                     user=self.context['request'].user)
         return entry
 
 
