@@ -10,4 +10,4 @@ class ReviewCommentFilter(df.FilterSet):
 
     @property
     def qs(self):
-        return super().qs.filter(body__is_null=False)
+        return super().qs.filter(body__isnull=False)

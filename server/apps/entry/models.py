@@ -313,11 +313,9 @@ class Entry(MetaInformationAbstractModel, models.Model):
 
     @property
     def locked(self):
-        if self.reviewers.through.objects.filter(
-                status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
-        ).exists():
-            return True
-        return False
+        return self.reviewers.through.objects.filter(
+            status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
+        ).exists()
 
     def can_be_updated_by(self, user: User) -> bool:
         """
@@ -346,11 +344,13 @@ class EntryReviewer(MetaInformationAbstractModel,
         UNDER_REVIEW = 0
         REVIEW_COMPLETED = 1
         SIGNED_OFF = 2
+        TO_BE_REVIEWED = 3
 
         __labels__ = {
             UNDER_REVIEW: _("Under Review"),
             REVIEW_COMPLETED: _("Review Completed"),
             SIGNED_OFF: _("Signed Off"),
+            TO_BE_REVIEWED: _("To be reviewed"),
         }
 
     entry = models.ForeignKey(Entry, verbose_name=_('Entry'),
@@ -358,7 +358,7 @@ class EntryReviewer(MetaInformationAbstractModel,
     reviewer = models.ForeignKey('users.User', verbose_name=_('Reviewer'),
                                  related_name='reviewing', on_delete=models.CASCADE)
     status = enum.EnumField(enum=REVIEW_STATUS, verbose_name=_('Review Status'),
-                            null=True, blank=True)
+                            default=REVIEW_STATUS.TO_BE_REVIEWED)
 
     def __str__(self):
         return f'{self.entry_id} {self.reviewer} {self.status}'

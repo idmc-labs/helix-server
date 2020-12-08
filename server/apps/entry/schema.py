@@ -135,9 +135,3 @@ class Query:
                                                 pagination=PageGraphqlPagination(
                                                     page_size_query_param='pageSize'
                                                 ))
-    entry_review = DjangoObjectField(EntryReviewerType)
-    entry_reviewer_list = DjangoPaginatedListObjectField(
-        EntryReviewerListType,
-        pagination=PageGraphqlPagination(
-            page_size_query_param='pageSize'
-        ))

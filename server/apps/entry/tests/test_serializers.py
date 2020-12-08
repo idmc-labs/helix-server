@@ -106,9 +106,17 @@ class TestEntrySerializer(HelixTestCase):
         reviewer3 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         entry = EntryFactory.create()
         entry.reviewers.set([reviewer1, reviewer2, reviewer3])
-        self.assertEqual(sorted(list(entry.reviewers.filter(reviewing__status=None).values_list('id', flat=1))),
-                         sorted([each.id for each in [reviewer1, reviewer2, reviewer3]]))
-        entry.reviewers.through.objects.all().update(status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW)
+        self.assertEqual(
+            sorted(list(
+                entry.reviewers.filter(
+                    reviewing__status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
+                ).values_list('id', flat=1))
+            ),
+            sorted([each.id for each in [reviewer1, reviewer2, reviewer3]])
+        )
+        entry.reviewers.through.objects.all().update(
+            status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
+        )
 
         old_count = EntryReviewer.objects.count()
         serializer = EntrySerializer(instance=entry, data={
