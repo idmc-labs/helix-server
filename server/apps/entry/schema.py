@@ -16,7 +16,7 @@ from apps.entry.enums import (
     RoleGrapheneEnum,
     EntryReviewerGrapheneEnum,
 )
-from apps.entry.filters import EntryFilter, EntryReviewerFilter
+from apps.entry.filters import EntryFilter, EntryReviewerFilter, OSMNameFilter
 from apps.entry.models import Figure, Entry, SourcePreview, EntryReviewer, OSMName
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
 
@@ -47,6 +47,12 @@ class OSMNameType(DjangoObjectType):
         model = OSMName
 
 
+class OSMNameListType(CustomDjangoListObjectType):
+    class Meta:
+        model = OSMName
+        filterset_class = OSMNameFilter
+
+
 class FigureType(DjangoObjectType):
     class Meta:
         model = Figure
@@ -58,8 +64,8 @@ class FigureType(DjangoObjectType):
     role = graphene.Field(RoleGrapheneEnum)
     age_json = graphene.List(graphene.NonNull(DisaggregatedAgeType))
     strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
-    source = graphene.Field(OSMNameType, required=False)
-    destination = graphene.Field(OSMNameType, required=False)
+    sources = DjangoPaginatedListObjectField(OSMNameListType, accessor='sources')
+    destinations = DjangoPaginatedListObjectField(OSMNameListType, accessor='destinations')
 
 
 class FigureListType(CustomDjangoListObjectType):

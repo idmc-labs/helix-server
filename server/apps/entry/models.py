@@ -1,7 +1,6 @@
 from collections import OrderedDict
 import json
 import logging
-from typing import List
 import uuid
 
 import boto3
@@ -56,14 +55,14 @@ class SourcePreview(MetaInformationAbstractModel):
             url=url,
             token=instance.token,
             filename=f'{instance.token}.pdf',
-            )
+        )
         logger.info(f'Invoking lambda function for preview {url} {instance.token}')
         client = boto3.client('lambda')
         client.invoke(
             FunctionName=settings.LAMBDA_HTML_TO_PDF,
             InvocationType='Event',
             Payload=json.dumps(payload)
-            )
+        )
         return instance
 
 
@@ -75,7 +74,8 @@ class OSMName(UUIDAbstractModel, models.Model):
         __labels__ = {
             ADMIN: _('Admin'),
             POINT: _('Point'),
-            }
+        }
+
     # external API fields
     wikipedia = models.TextField(verbose_name=_('Wikipedia'),
                                  blank=True, null=True)
@@ -135,7 +135,7 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
             LESS_THAN: _("Less than"),
             EXACT: _("Exact"),
             APPROXIMATELY: _("Approximately"),
-            }
+        }
 
     class UNIT(enum.Enum):
         PERSON = 0
@@ -144,7 +144,7 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
         __labels__ = {
             PERSON: _("Person"),
             HOUSEHOLD: _("Household"),
-            }
+        }
 
     class TERM(enum.Enum):
         EVACUATED = 0
@@ -175,7 +175,7 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
             AFFECTED: _("Affected"),
             RETURNS: _("Returns"),
             MULTIPLE_OR_OTHER: _("Multiple/Other"),
-            }
+        }
 
     class TYPE(enum.Enum):
         IDP_STOCK = 0
@@ -194,7 +194,7 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
             IDP_SETTLED_ELSEWHERE: _('IDPs Settled elsewhere (Stock)'),
             PEOPLE_DISPLACED_ACROSS_BORDERS: _('People displaced across borders (Stock)'),
             MULTIPLE_DISPLACEMENT: _('Multiple displacement (Flow)'),
-            }
+        }
 
     class ROLE(enum.Enum):
         RECOMMENDED = 0
@@ -207,7 +207,7 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
             PARTIAL_ADDED: _("Partial figure (Added)"),
             PARTIAL_SUBTRACTED: _("Partial figure (Subtracted)"),
             TRIANGULATION: _("Triangulation"),
-            }
+        }
 
     entry = models.ForeignKey('Entry', verbose_name=_('Entry'),
                               related_name='figures', on_delete=models.CASCADE)
@@ -262,12 +262,10 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
     conflict_other = models.PositiveIntegerField(verbose_name=_('Other'),
                                                  blank=True, null=True)
     # locations
-    source = models.ForeignKey('OSMName', verbose_name=_('Source'),
-                               blank=True, null=True,
-                               related_name='+', on_delete=models.SET_NULL)
-    destination = models.ForeignKey('OSMName', verbose_name=_('Destination'),
-                                    blank=True, null=True,
-                                    related_name='+', on_delete=models.SET_NULL)
+    sources = models.ManyToManyField('OSMName', verbose_name=_('Source'),
+                                     related_name='+')
+    destinations = models.ManyToManyField('OSMName', verbose_name=_('Destination'),
+                                          related_name='+')
 
     @classmethod
     def can_be_created_by(cls, user: User, entry: 'Entry') -> bool:
@@ -331,7 +329,7 @@ class Entry(MetaInformationAbstractModel, models.Model):
     is_confidential = models.BooleanField(
         verbose_name=_('Confidential Source'),
         default=False,
-        )
+    )
     caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
     # grid TODO:
     tags = ArrayField(base_field=models.CharField(verbose_name=_('Tag'), max_length=32),

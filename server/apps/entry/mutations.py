@@ -24,6 +24,8 @@ class DisaggregatedStratumInputType(graphene.InputObjectType):
 
 
 class OSMNameInputType(graphene.InputObjectType):
+    id = graphene.ID(required=False)
+    uuid = graphene.String(required=False)
     wikipedia = graphene.String(required=False)
     rank = graphene.Int(required=False)
     country = graphene.String(required=True)
@@ -81,8 +83,8 @@ class CommonFigureCreateMixin:
     conflict_communal = graphene.Int(required=False)
     conflict_other = graphene.Int(required=False)
     # locations
-    source = graphene.Field(OSMNameInputType, required=False)
-    destination = graphene.Field(OSMNameInputType, required=False)
+    sources = graphene.List(graphene.NonNull(OSMNameInputType), required=False)
+    destinations = graphene.List(graphene.NonNull(OSMNameInputType), required=False)
 
 
 class NestedFigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectType):

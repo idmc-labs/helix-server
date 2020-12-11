@@ -1,107 +1,11 @@
 import json
 from uuid import uuid4
 
-from django.core.files.temp import NamedTemporaryFile
-
 from apps.entry.models import Figure, Entry, EntryReviewer, CANNOT_UPDATE_MESSAGE
 from apps.users.enums import USER_ROLE
 from utils.factories import EventFactory, EntryFactory, FigureFactory, OrganizationFactory
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
-
-
-class TestFigureCreation(HelixGraphQLTestCase):
-    def setUp(self) -> None:
-        self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-        self.entry = EntryFactory.create(
-            created_by=self.creator
-        )
-        self.mutation = '''
-            mutation CreateFigure($input: FigureCreateInputType!) {
-                createFigure(data: $input) {
-                    ok
-                    result {
-                       id
-                    }
-                    errors
-                }
-            }
-        '''
-        self.input = {
-            "district": "disss",
-            "town": "town",
-            "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
-            "reported": 10,
-            "unit": Figure.UNIT.PERSON.name,
-            "term": Figure.TERM.EVACUATED.name,
-            "type": Figure.TYPE.IDP_STOCK.name,
-            "role": Figure.ROLE.RECOMMENDED.name,
-            "startDate": "2020-09-09",
-            "includeIdu": False,
-            "entry": self.entry.id,
-            "ageJson": [
-                {
-                    "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
-                    "ageFrom": 1,
-                    "ageTo": 3,
-                    "value": 3
-                },
-                {
-                    "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                    "ageFrom": 3,
-                    "ageTo": 5,
-                    "value": 3
-                }
-            ],
-            "strataJson": [
-                {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
-                {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
-            ],
-        }
-        self.force_login(self.creator)
-
-    def test_invalid_create_figure_into_non_existing_entry(self):
-        # set entry to non existing value
-        self.input['entry'] = '99911'
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
-        content = json.loads(response.content)
-
-        self.assertResponseNoErrors(response)
-        self.assertFalse(content['data']['createFigure']['ok'], content)
-        self.assertIn('nonFieldErrors',
-                      [each['field'] for each in content['data']['createFigure']['errors']])
-        self.assertIn('Entry does not exist',
-                      json.dumps(content['data']['createFigure']['errors']))
-
-    def test_invalid_figure_create_by_non_creator_entry(self):
-        creator2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-        self.force_login(creator2)
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
-        content = json.loads(response.content)
-
-        self.assertResponseNoErrors(response)
-        self.assertFalse(content['data']['createFigure']['ok'], content)
-        self.assertIn('nonFieldErrors',
-                      [each['field'] for each in content['data']['createFigure']['errors']])
-        self.assertIn('You cannot create a figure into',
-                      json.dumps(content['data']['createFigure']['errors']))
-
-    def test_valid_figure_create_by_creator_of_entry(self):
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
-        content = json.loads(response.content)
-
-        self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['createFigure']['ok'], content)
-        self.assertIsNotNone(content['data']['createFigure']['result']['id'], content)
 
 
 class TestFigureUpdate(HelixGraphQLTestCase):
