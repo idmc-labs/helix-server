@@ -49,7 +49,10 @@ class UserListType(CustomDjangoListObjectType):
 
 class Query(object):
     me = Field(UserType)
-    users = DjangoPaginatedListObjectField(UserListType)
+    users = DjangoPaginatedListObjectField(UserListType,
+                                           pagination=PageGraphqlPagination(
+                                               page_size_query_param='pageSize'
+                                           ))
 
     def resolve_me(self, info, **kwargs):
         if info.context.user.is_authenticated:

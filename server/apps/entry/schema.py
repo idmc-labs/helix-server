@@ -88,7 +88,10 @@ class EntryType(DjangoObjectType):
     review_comments = graphene.Dynamic(
         lambda: DjangoPaginatedListObjectField(
             get_type('apps.review.schema.ReviewCommentListType'),
-            accessor='review_comments'
+            accessor='review_comments',
+            pagination=PageGraphqlPagination(
+                page_size_query_param='pageSize'
+            )
         )
     )
     total_figures = graphene.Field(graphene.Int)
