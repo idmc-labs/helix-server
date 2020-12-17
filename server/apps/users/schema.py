@@ -13,6 +13,7 @@ from .enums import PermissionActionEnum, PermissionModelEnum, PermissionRoleEnum
 User = get_user_model()
 
 EntryListType = get_type('apps.entry.schema.EntryListType')
+EntryReviewerListType = get_type('apps.entry.schema.EntryReviewerListType')
 
 
 class PermissionsType(ObjectType):
@@ -23,12 +24,14 @@ class PermissionsType(ObjectType):
 class UserType(DjangoObjectType):
     class Meta:
         model = User
-        exclude_fields = ('password',)
+        fields = ('created_entry', 'date_joined', 'email', 'first_name', 'last_name',
+                  'full_name', 'id', 'is_active', 'last_login',
+                  'permissions', 'reviewing', 'role', 'username')
 
-    review_entries = DjangoPaginatedListObjectField(EntryListType,
-                                                    pagination=PageGraphqlPagination(
-                                                        page_size_query_param='pageSize'
-                                                    ), accessor='review_entries')
+    reviewing = DjangoPaginatedListObjectField(EntryReviewerListType,
+                                               pagination=PageGraphqlPagination(
+                                                   page_size_query_param='pageSize'
+                                               ), accessor='reviewing')
     created_entry = DjangoPaginatedListObjectField(EntryListType,
                                                    pagination=PageGraphqlPagination(
                                                        page_size_query_param='pageSize'
@@ -46,7 +49,10 @@ class UserListType(CustomDjangoListObjectType):
 
 class Query(object):
     me = Field(UserType)
-    users = DjangoPaginatedListObjectField(UserListType)
+    users = DjangoPaginatedListObjectField(UserListType,
+                                           pagination=PageGraphqlPagination(
+                                               page_size_query_param='pageSize'
+                                           ))
 
     def resolve_me(self, info, **kwargs):
         if info.context.user.is_authenticated:

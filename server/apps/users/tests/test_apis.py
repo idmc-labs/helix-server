@@ -266,11 +266,13 @@ class TestUserSchema(HelixGraphQLTestCase):
         query MyQuery {
           me {
             email
-            reviewEntries(page: 1, pageSize: 10) {
+            reviewing(page: 1, pageSize: 10) {
               totalCount
               results {
                 id
-                articleTitle
+                entry {
+                  id
+                }
               }
             }
           }
@@ -292,17 +294,20 @@ class TestUserSchema(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertEqual(content['data']['me']['email'], e1.email)
         self.assertIn(entry, e1.review_entries.all())
-        self.assertEqual(content['data']['me']['reviewEntries']['totalCount'], 1)
-        self.assertEqual(content['data']['me']['reviewEntries']['results'][0]['id'], str(entry.id))
+        self.assertEqual(content['data']['me']['reviewing']['totalCount'], 1)
+        self.assertEqual(content['data']['me']['reviewing']['results'][0]['entry']['id'],
+                         str(entry.id))
 
         self.force_login(e2)
         response = self.query(self.reviewer_q)
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
         self.assertIn(entry2, e2.review_entries.all())
-        self.assertEqual(content['data']['me']['reviewEntries']['totalCount'], 2)
-        self.assertListEqual([int(each['id']) for each in content['data']['me']['reviewEntries']['results']],
-                             [entry.id, entry2.id])
+        self.assertEqual(content['data']['me']['reviewing']['totalCount'], 2)
+        self.assertListEqual(
+            [int(each['entry']['id']) for each in content['data']['me']['reviewing']['results']],
+            [entry.id, entry2.id]
+        )
 
 
 class TestUserListSchema(HelixGraphQLTestCase):

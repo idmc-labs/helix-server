@@ -15,11 +15,14 @@ from apps.entry.enums import (
     TermGrapheneEnum,
     TypeGrapheneEnum,
     RoleGrapheneEnum,
-    EntryReviewerGrapheneEnum
+    EntryReviewerGrapheneEnum,
 )
 from apps.entry.filters import EntryFilter, EntryReviewerFilter
 from apps.entry.models import Figure, Entry, SourcePreview, EntryReviewer
-from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType, CustomDjangoListField
+from utils.fields import (
+    DjangoPaginatedListObjectField, CustomDjangoListObjectType,
+    CustomDjangoListField,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +71,7 @@ class FigureListType(CustomDjangoListObjectType):
 class EntryType(DjangoObjectType):
     class Meta:
         model = Entry
-        exclude_fields = ('reviewers',)
+        exclude_fields = ('reviews',)
 
     created_by = graphene.Field('apps.users.schema.UserType')
     last_modified_by = graphene.Field('apps.users.schema.UserType')
@@ -76,10 +79,21 @@ class EntryType(DjangoObjectType):
                                              pagination=PageGraphqlPagination(
                                                  page_size_query_param='perPage'
                                              ))
-    reviewers = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
-        get_type('apps.users.schema.UserListType'),
-        accessor='reviewers'
-    ))
+    latest_reviews = graphene.List('apps.review.schema.ReviewType')
+    reviewers = graphene.Dynamic(
+        lambda: DjangoPaginatedListObjectField(
+            get_type('apps.users.schema.UserListType'),
+            accessor='reviewers'
+        ))
+    review_comments = graphene.Dynamic(
+        lambda: DjangoPaginatedListObjectField(
+            get_type('apps.review.schema.ReviewCommentListType'),
+            accessor='review_comments',
+            pagination=PageGraphqlPagination(
+                page_size_query_param='pageSize'
+            )
+        )
+    )
     total_figures = graphene.Field(graphene.Int)
     source_methodology = graphene.Field(graphene.String)
 
@@ -124,9 +138,3 @@ class Query:
                                                 pagination=PageGraphqlPagination(
                                                     page_size_query_param='pageSize'
                                                 ))
-    entry_review = DjangoObjectField(EntryReviewerType)
-    entry_reviewer_list = DjangoPaginatedListObjectField(
-        EntryReviewerListType,
-        pagination=PageGraphqlPagination(
-            page_size_query_param='pageSize'
-        ))

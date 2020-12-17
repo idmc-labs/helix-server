@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import json
 import logging
+from typing import List
 import uuid
 
 import boto3
@@ -15,6 +16,7 @@ from rest_framework.exceptions import PermissionDenied
 
 from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
 from apps.users.enums import USER_ROLE
+from apps.review.models import Review
 
 from utils.fields import CachedFileField
 
@@ -277,7 +279,16 @@ class Entry(MetaInformationAbstractModel, models.Model):
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
                                        blank=True,
                                        related_name='review_entries',
-                                       through='EntryReviewer')
+                                       through='EntryReviewer',
+                                       through_fields=('entry', 'reviewer'))
+
+    @property
+    def latest_reviews(self):
+        return self.reviews.order_by(
+            *Review.UNIQUE_TOGETHER_WITHOUT_ENTRY_FIELDS, '-created_at'
+        ).distinct(
+            *Review.UNIQUE_TOGETHER_WITHOUT_ENTRY_FIELDS
+        )
 
     @property
     def source_methodology(self):
@@ -302,9 +313,9 @@ class Entry(MetaInformationAbstractModel, models.Model):
 
     @property
     def locked(self):
-        if self.reviewers.through.objects.filter(status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF).exists():
-            return True
-        return False
+        return self.reviewers.through.objects.filter(
+            status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
+        ).exists()
 
     def can_be_updated_by(self, user: User) -> bool:
         """
@@ -324,7 +335,8 @@ class Entry(MetaInformationAbstractModel, models.Model):
         permissions = (('sign_off_entry', 'Can sign off the entry'),)
 
 
-class EntryReviewer(models.Model):
+class EntryReviewer(MetaInformationAbstractModel,
+                    models.Model):
     class CannotUpdateStatusException(Exception):
         message = CANNOT_UPDATE_MESSAGE
 
@@ -332,11 +344,13 @@ class EntryReviewer(models.Model):
         UNDER_REVIEW = 0
         REVIEW_COMPLETED = 1
         SIGNED_OFF = 2
+        TO_BE_REVIEWED = 3
 
         __labels__ = {
             UNDER_REVIEW: _("Under Review"),
             REVIEW_COMPLETED: _("Review Completed"),
             SIGNED_OFF: _("Signed Off"),
+            TO_BE_REVIEWED: _("To be reviewed"),
         }
 
     entry = models.ForeignKey(Entry, verbose_name=_('Entry'),
@@ -344,12 +358,18 @@ class EntryReviewer(models.Model):
     reviewer = models.ForeignKey('users.User', verbose_name=_('Reviewer'),
                                  related_name='reviewing', on_delete=models.CASCADE)
     status = enum.EnumField(enum=REVIEW_STATUS, verbose_name=_('Review Status'),
-                            null=True, blank=True)
+                            default=REVIEW_STATUS.TO_BE_REVIEWED)
 
     def __str__(self):
         return f'{self.entry_id} {self.reviewer} {self.status}'
 
-    def update_status(self, status):
+    @classmethod
+    def assign_creator(cls, entry: 'Entry', user: 'User') -> None:
+        entry.reviewers.through.objects.filter(
+            created_by__isnull=True
+        ).update(created_by=user)
+
+    def update_status(self, status: REVIEW_STATUS) -> None:
         if status == self.REVIEW_STATUS.SIGNED_OFF \
                 and not self.reviewer.has_perms(('entry.sign_off_entry',)):
             raise self.CannotUpdateStatusException()

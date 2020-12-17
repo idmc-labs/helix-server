@@ -5,7 +5,7 @@ from graphene_file_upload.scalars import Upload
 from apps.entry.enums import QuantifierGrapheneEnum, RoleGrapheneEnum, TypeGrapheneEnum, \
     TermGrapheneEnum, UnitGrapheneEnum, EntryReviewerGrapheneEnum
 from apps.entry.models import Entry, Figure, SourcePreview, EntryReviewer
-from apps.entry.schema import EntryType, FigureType, SourcePreviewType
+from apps.entry.schema import EntryType, FigureType, SourcePreviewType, EntryReviewerType
 from apps.entry.serializers import EntrySerializer, FigureSerializer, SourcePreviewSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker, is_authenticated
@@ -361,6 +361,7 @@ class UpdateEntryReview(graphene.Mutation):
 
     ok = graphene.Boolean()
     errors = graphene.List(graphene.NonNull(CustomErrorType))
+    result = graphene.Field(EntryReviewerType)
 
     @staticmethod
     @is_authenticated()
@@ -384,7 +385,7 @@ class UpdateEntryReview(graphene.Mutation):
             return UpdateEntryReview(errors=[
                 CustomErrorType(field='nonFieldErrors', messages=gettext(e.message))
             ])
-        return CreateSourcePreview(errors=None, ok=True)
+        return CreateSourcePreview(errors=None, ok=True, result=entry_review)
 
 
 class Mutation(object):

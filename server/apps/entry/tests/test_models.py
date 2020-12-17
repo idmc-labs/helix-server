@@ -2,9 +2,10 @@ import os
 
 from django.core.files.storage import default_storage
 
-from apps.entry.models import Figure, SourcePreview
 from apps.users.enums import USER_ROLE
-from utils.factories import EntryFactory, FigureFactory
+from apps.entry.models import SourcePreview
+from apps.review.models import Review
+from utils.factories import EntryFactory, FigureFactory, ReviewFactory, ReviewCommentFactory
 from utils.tests import HelixTestCase, create_user_with_role
 
 
@@ -66,6 +67,22 @@ class TestEntryModel(HelixTestCase):
         self.assertFalse(self.entry.can_be_updated_by(reviwer))
         admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.assertTrue(self.entry.can_be_updated_by(admin))
+
+    def test_entry_get_latest_reviews(self):
+        e = EntryFactory.create(created_by=self.editor)
+        f = FigureFactory.create(entry=e)
+        fields = {
+            0: 'abc',
+            1: 'def',
+            2: 'xyz'
+        }
+        comment = ReviewCommentFactory.create(entry=e)
+        r1 = ReviewFactory.create(entry=e, field=fields[0], value=Review.ENTRY_REVIEW_STATUS.RED)
+        r2 = ReviewFactory.create(entry=e, field=fields[0], value=Review.ENTRY_REVIEW_STATUS.GREEN)
+        r3 = ReviewFactory.create(entry=e, field=fields[1], value=Review.ENTRY_REVIEW_STATUS.GREEN)
+        obtained = set(e.latest_reviews)
+        expected = {r3, r2}  # not r1 because it should be replaced by r2
+        self.assertEqual(obtained, expected)
 
 
 class TestSourcePreviewModel(HelixTestCase):

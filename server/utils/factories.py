@@ -180,3 +180,18 @@ class ResourceFactory(DjangoModelFactory):
 
     name = factory.Sequence(lambda n: f'resource{n}')
     group = factory.SubFactory(ResourceGroupFactory)
+
+
+class ReviewCommentFactory(DjangoModelFactory):
+    class Meta:
+        model = 'review.ReviewComment'
+
+    entry = factory.SubFactory(EntryFactory)
+
+
+class ReviewFactory(DjangoModelFactory):
+    class Meta:
+        model = 'review.Review'
+
+    entry = factory.SubFactory(EntryFactory)
+    comment = factory.SubFactory(ReviewCommentFactory)
