@@ -47,7 +47,7 @@ class ViolenceSubType(NameAttributedModels):
                                  related_name='sub_types', on_delete=models.CASCADE)
 
 
-class Actor(NameAttributedModels):
+class Actor(MetaInformationAbstractModel, NameAttributedModels):
     """
     Conflict related actors
     """
