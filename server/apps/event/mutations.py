@@ -83,7 +83,7 @@ class UpdateEvent(graphene.Mutation):
             instance = Event.objects.get(id=data['id'])
         except Event.DoesNotExist:
             return UpdateEvent(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Event does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
             ])
         serializer = EventSerializer(instance=instance, data=data, partial=True)
         if errors := mutation_is_not_valid(serializer):
@@ -107,7 +107,7 @@ class DeleteEvent(graphene.Mutation):
             instance = Event.objects.get(id=id)
         except Event.DoesNotExist:
             return DeleteEvent(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Event does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
             ])
         instance.delete()
         instance.id = id

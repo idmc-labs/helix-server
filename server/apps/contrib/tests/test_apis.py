@@ -14,10 +14,7 @@ class TestAttachment(HelixGraphQLTestCase):
             mutation ($data: AttachmentCreateInputType!) {
               createAttachment(data: $data) {
                 ok
-                errors {
-                  field
-                  messages
-                }
+                errors
                 result {
                   attachment
                   attachmentFor

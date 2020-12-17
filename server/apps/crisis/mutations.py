@@ -63,7 +63,7 @@ class UpdateCrisis(graphene.Mutation):
             instance = Crisis.objects.get(id=data['id'])
         except Crisis.DoesNotExist:
             return UpdateCrisis(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Crisis does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Crisis does not exist.'))
             ])
         serializer = CrisisSerializer(instance=instance, data=data, partial=True)
         if errors := mutation_is_not_valid(serializer):
@@ -87,7 +87,7 @@ class DeleteCrisis(graphene.Mutation):
             instance = Crisis.objects.get(id=id)
         except Crisis.DoesNotExist:
             return DeleteCrisis(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Crisis does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Crisis does not exist.'))
             ])
         instance.delete()
         instance.id = id

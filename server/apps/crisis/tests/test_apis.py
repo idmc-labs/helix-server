@@ -18,10 +18,7 @@ class TestCreateCrisis(HelixGraphQLTestCase):
                     name
                 }}
                 ok
-                errors {{
-                    field
-                    messages
-                }}
+                errors
             }}
         }}'''
         self.input = {
@@ -69,10 +66,7 @@ class TestCrisisUpdate(HelixGraphQLTestCase):
             mutation UpdateCrisis($input: CrisisUpdateInputType!) {
               updateCrisis(data: $input) {
                 ok
-                errors {
-                  field
-                  messages
-                }
+                errors
                 result {
                   name
                 }
@@ -132,10 +126,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
             mutation DeleteCrisis($id: ID!) {
               deleteCrisis(id: $id) {
                 ok
-                errors {
-                  field
-                  messages
-                }
+                errors
                 result {
                   name
                 }

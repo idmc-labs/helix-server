@@ -68,10 +68,7 @@ class TestCreateResource(HelixGraphQLTestCase):
                 result {
                   name
                 }
-                errors {
-                  field
-                  messages
-                }
+                errors
               }
             }
         '''
