@@ -12,6 +12,7 @@ class UserFilter(django_filters.FilterSet):
                                      distinct=True)
     roleIn = StringListFilter(method='filter_role_in')
     full_name = django_filters.CharFilter(method='filter_full_name')
+    id = django_filters.CharFilter(field_name='id', lookup_expr='iexact')
 
     class Meta:
         model = User
