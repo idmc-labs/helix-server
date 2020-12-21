@@ -31,13 +31,8 @@ class RegisterSerializer(serializers.ModelSerializer):
                 username=self.validated_data.get('username', ''),
                 email=self.validated_data['email'],
                 password=self.validated_data['password'],
+                is_active=False
             )
-            if getattr(djoser_settings, 'SEND_ACTIVATION_EMAIL'):
-                instance.is_active = False
-                instance.save()
-                transaction.on_commit(
-                    lambda: send_activation_email(instance, self.context['request'])
-                )
         return instance
 
 
@@ -48,7 +43,7 @@ class LoginSerializer(serializers.Serializer):
     def validate(self, attrs):
         email = attrs.get('email', '')
         if User.objects.filter(email__iexact=email, is_active=False).exists():
-            raise serializers.ValidationError('Please activate your account first.')
+            raise serializers.ValidationError('Request an admin to activate your account.')
         user = authenticate(email=email,
                             password=attrs.get('password', ''))
         if not user:

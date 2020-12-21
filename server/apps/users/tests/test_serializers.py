@@ -8,6 +8,7 @@ from apps.users.serializers import UserSerializer
 from utils.tests import HelixTestCase, create_user_with_role
 
 ADMIN = USER_ROLE.ADMIN.name
+GUEST = USER_ROLE.GUEST.name
 MONITORING_EXPERT_REVIEWER = USER_ROLE.MONITORING_EXPERT_REVIEWER.name
 
 
@@ -29,13 +30,11 @@ class TestRegisterSerializer(HelixTestCase):
         user = self.serializer.save()
         self.assertFalse(user.is_active)
 
-    @patch('apps.users.serializers.send_activation_email')
-    def test_register_sends_activation_email(self, send_activation_email):
-        self.serializer = RegisterSerializer(data=self.data, context=self.context)
-        self.assertTrue(self.serializer.is_valid(), self.serializer.errors)
-
-        self.serializer.save()
-        send_activation_email.assert_called_once()
+    def test_registered_user_defaults_to_guest_role(self):
+        serializer = RegisterSerializer(data=self.data, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        user = serializer.save()
+        self.assertEqual(user.role, USER_ROLE[GUEST])
 
 
 class TestUserSerializer(HelixTestCase):
