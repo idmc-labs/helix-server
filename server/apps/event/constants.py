@@ -2,7 +2,8 @@ VIOLENCES = {
     # TYPE: SUB_TYPE
     "Military occupation": ["N/A"],
     "International state-based armed conflict": ["N/A"],
-    "Inter-communal violence": ["Agricultural/pastoralist", "Inter-religious violence", "Inter-ethnic violence", "Other inter-communal conflict"],
+    "Inter-communal violence": ["Agricultural/pastoralist", "Inter-religious violence",
+                                "Inter-ethnic violence", "Other inter-communal conflict"],
     "Political and electoral violence ": ["Electoral violence", "Clashes between political groups", "Voter intimidation"],
     "Criminal violence": ["Banditry", "Cattle-rustling", "Cartel violence", "Organised crime violence"],
     "Rebel-rebel or rebel-government violence ": ["Intra-state", "Non-state"],
@@ -59,7 +60,8 @@ DISASTERS = {
         },
         "Meteorological": {
             "Extreme Temperature": ["Cold wave, Heat wave"],
-            "Storm": ["Hailstorm, Sand/dust storm, Storm, Storm surge, Tornado, Typhoon/Hurricane/Cyclone, Winter storm/Blizzard"]
+            "Storm": ["Hailstorm", "Sand/dust storm", "Storm", "Storm surge",
+                      "Tornado", "Typhoon/Hurricane/Cyclone", "Winter storm/Blizzard"]
         }
     }
 }
