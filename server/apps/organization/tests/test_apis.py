@@ -13,10 +13,7 @@ class TestCreateOrganization(HelixGraphQLTestCase):
         mutation CreateOrganization($input: OrganizationCreateInputType!) {
             createOrganization(data: $input) {
                 ok
-                errors {
-                    field
-                    messages
-                }
+                errors
                 result {
                     id
                     methodology
@@ -69,10 +66,7 @@ class TestUpdateOrganization(HelixGraphQLTestCase):
         mutation UpdateOrganization($input: OrganizationUpdateInputType!) {
             updateOrganization(data: $input) {
                 ok
-                errors {
-                    field
-                    messages
-                }
+                errors
                 result {
                     id
                     methodology
@@ -123,10 +117,7 @@ class TestDeleteOrganization(HelixGraphQLTestCase):
         mutation DeleteOrganization($id: ID!) {
             deleteOrganization(id: $id) {
                 ok
-                errors {
-                    field
-                    messages
-                }
+                errors
                 result {
                     id
                 }
@@ -169,10 +160,7 @@ class TestCreateOrganizationKind(HelixGraphQLTestCase):
         mutation CreateOrganizationKind($input: OrganizationKindCreateInputType!) {
             createOrganizationKind(data: $input) {
                 ok
-                errors {
-                    field
-                    messages
-                }
+                errors
                 result {
                     id
                     name
@@ -219,10 +207,7 @@ class TestUpdateOrganizationKind(HelixGraphQLTestCase):
         mutation UpdateOrganizationKind($input: OrganizationKindUpdateInputType!) {
             updateOrganizationKind(data: $input) {
                 ok
-                errors {
-                    field
-                    messages
-                }
+                errors
                 result {
                     id
                     name
@@ -271,10 +256,7 @@ class TestDeleteOrganizationKind(HelixGraphQLTestCase):
         mutation DeleteOrganizationKind($id: ID!) {
             deleteOrganizationKind(id: $id) {
                 ok
-                errors {
-                    field
-                    messages
-                }
+                errors
                 result {
                     id
                 }

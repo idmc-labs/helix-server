@@ -18,10 +18,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         countries = CountryFactory.create_batch(2)
         self.mutation = '''mutation CreateEvent($input: EventCreateInputType!) {
             createEvent(data: $input) {
-                errors {
-                    field
-                    messages
-                }
+                errors
                 result {
                     disasterType {
                         name
@@ -85,10 +82,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         countries = CountryFactory.create_batch(2)
         self.mutation = '''mutation UpdateEvent($input: EventUpdateInputType!) {
             updateEvent(data: $input) {
-                errors {
-                    field
-                    messages
-                }
+                errors
                 result {
                     startDate
                     endDate
@@ -151,10 +145,7 @@ class TestDeleteEvent(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.mutation = '''mutation DeleteEvent($id: ID!) {
             deleteEvent(id: $id) {
-                errors {
-                    field
-                    messages
-                }
+                errors
                 result {
                     id
                     startDate

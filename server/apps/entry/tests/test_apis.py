@@ -23,10 +23,7 @@ class TestFigureCreation(HelixGraphQLTestCase):
                     result {
                        id
                     }
-                    errors {
-                        field
-                        messages
-                    }
+                    errors
                 }
             }
         '''
@@ -135,26 +132,7 @@ class TestFigureUpdate(HelixGraphQLTestCase):
                             uuid
                         }
                     }
-                    errors {
-                        field
-                        messages
-                            arrayErrors {
-                                key
-                                messages
-                                objectErrors {
-                                field
-                                messages
-                                arrayErrors {
-                                    key
-                                    messages
-                                    objectErrors {
-                                        field
-                                        messages
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    errors
                 }
             }
         '''
@@ -257,24 +235,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
             mutation CreateEntry($input: EntryCreateInputType!) {
                 createEntry(data: $input) {
                     ok
-                    errors {
-                        field
-                        messages
-                            arrayErrors {
-                                key
-                                objectErrors {
-                                field
-                                messages
-                                arrayErrors {
-                                    key
-                                    objectErrors {
-                                        field
-                                        messages
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    errors
                     result {
                         id
                         figures {
@@ -493,18 +454,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         mutation MyMutation($input: EntryUpdateInputType!) {
           updateEntry(data: $input) {
             ok
-            errors {
-              field
-              messages
-              arrayErrors {
-                key
-                messages
-                objectErrors {
-                    field
-                    messages
-                }
-              }
-            }
+            errors
             result {
               id
               figures {
@@ -669,10 +619,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
             mutation DeleteEntry($id: ID!) {
                 deleteEntry(id: $id) {
                     ok
-                    errors {
-                        field
-                        messages
-                    }
+                    errors
                     result {
                         id
                         source{id}
@@ -752,10 +699,7 @@ class TestEntryReviewUpdate(HelixGraphQLTestCase):
         self.q = '''
         mutation MyMutation ($input: EntryReviewStatusInputType!){
           updateEntryReview(data: $input) {
-            errors {
-              field
-              messages
-            }
+            errors
             ok
           }
         }

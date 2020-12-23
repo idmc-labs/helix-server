@@ -88,7 +88,7 @@ class UpdateContact(graphene.Mutation):
             instance = Contact.objects.get(id=data['id'])
         except Contact.DoesNotExist:
             return UpdateContact(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Contact does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Contact does not exist.'))
             ])
         serializer = ContactSerializer(instance=instance, data=data, partial=True)
         if errors := mutation_is_not_valid(serializer):
@@ -112,7 +112,7 @@ class DeleteContact(graphene.Mutation):
             instance = Contact.objects.get(id=id)
         except Contact.DoesNotExist:
             return UpdateContact(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Contact does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Contact does not exist.'))
             ])
         instance.delete()
         instance.id = id
@@ -181,7 +181,7 @@ class UpdateCommunication(graphene.Mutation):
             instance = Communication.objects.get(id=data['id'])
         except Communication.DoesNotExist:
             return UpdateCommunication(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Communication does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Communication does not exist.'))
             ])
         serializer = CommunicationSerializer(instance=instance, data=data, partial=True)
         if errors := mutation_is_not_valid(serializer):
@@ -204,7 +204,7 @@ class DeleteCommunication(graphene.Mutation):
             instance = Communication.objects.get(id=id)
         except Communication.DoesNotExist:
             return DeleteCommunication(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Communication does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Communication does not exist.'))
             ])
         instance.delete()
         instance.id = id

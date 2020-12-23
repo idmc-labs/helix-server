@@ -60,7 +60,7 @@ class UpdateResource(graphene.Mutation):
             instance = Resource.objects.get(id=data['id'], created_by=info.context.user)
         except Resource.DoesNotExist:
             return UpdateResource(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Resource does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Resource does not exist.'))
             ])
         serializer = ResourceSerializer(instance=instance,
                                         data=data,
@@ -87,7 +87,7 @@ class DeleteResource(graphene.Mutation):
             instance = Resource.objects.get(id=id, created_by=info.context.user)
         except Resource.DoesNotExist:
             return UpdateResource(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Resource does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Resource does not exist.'))
             ])
         instance.delete()
         instance.id = id
@@ -137,7 +137,7 @@ class UpdateResourceGroup(graphene.Mutation):
             instance = ResourceGroup.objects.get(id=data['id'], created_by=info.context.user)
         except ResourceGroup.DoesNotExist:
             return UpdateResourceGroup(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('ResourceGroup does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('ResourceGroup does not exist.'))
             ])
         serializer = ResourceGroupSerializer(instance=instance,
                                              data=data,
@@ -164,12 +164,12 @@ class DeleteResourceGroup(graphene.Mutation):
             instance = ResourceGroup.objects.get(id=id, created_by=info.context.user)
         except ResourceGroup.DoesNotExist:
             return DeleteResourceGroup(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('ResourceGroup does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('ResourceGroup does not exist.'))
             ])
         can_delete, msg = instance.can_delete()
         if not can_delete:
             return DeleteResourceGroup(errors=[
-                CustomErrorType(field='non_field_errors', messages=msg)
+                dict(field='nonFieldErrors', messages=msg)
             ])
         instance.delete()
         instance.id = id

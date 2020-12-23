@@ -128,7 +128,7 @@ class UpdateUser(graphene.Mutation):
         except User.DoesNotExist:
             return UpdateUser(
                 errors=[
-                    CustomErrorType(field='nonFieldErrors', messages=gettext('User not found.'))
+                    dict(field='nonFieldErrors', messages=gettext('User not found.'))
                     ]
                 )
         serializer = UserSerializer(instance=user,

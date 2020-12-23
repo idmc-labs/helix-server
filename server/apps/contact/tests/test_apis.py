@@ -14,10 +14,7 @@ class TestCreateContact(HelixGraphQLTestCase):
         mutation CreateContact($input: ContactCreateInputType!) {
             createContact(data: $input) {
                 ok
-                errors {
-                    field
-                    messages
-                }
+                errors
                 result {
                     countriesOfOperation {
                         id
@@ -85,10 +82,7 @@ class TestUpdateContact(HelixGraphQLTestCase):
         mutation UpdateContact($input: ContactUpdateInputType!) {
             updateContact(data: $input) {
                 ok
-                errors {
-                    field
-                    messages
-                }
+                errors
                 result {
                     firstName
                     lastName
@@ -139,10 +133,7 @@ class TestDeleteContact(HelixGraphQLTestCase):
         mutation DeleteContact($id: ID!) {
             deleteContact(id: $id) {
                 ok
-                errors {
-                    field
-                    messages
-                }
+                errors
                 result {
                     id
                 }
@@ -185,10 +176,7 @@ class TestCommunication(HelixGraphQLTestCase):
         mutation MyMutation($input: CommunicationCreateInputType!) {
           createCommunication(data: $input) {
             ok
-            errors {
-              field
-              messages
-            }
+            errors
             result {
               id
               medium {

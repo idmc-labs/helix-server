@@ -15,10 +15,7 @@ class TestLogin(HelixGraphQLTestCase):
         self.login_query = '''
             mutation MyMutation ($email: String!, $password: String!){
                 login(data: {email: $email, password: $password}) {
-                    errors {
-                        field
-                        messages
-                    }
+                    errors
                     result {
                         email
                         role
@@ -100,10 +97,7 @@ class TestRegister(HelixGraphQLTestCase):
         self.register = '''
             mutation Register ($input: RegisterInputType!){
                 register(data: $input) {
-                    errors {
-                        field
-                        messages
-                    }
+                    errors
                 }
             }
         '''
@@ -146,10 +140,7 @@ class TestActivate(HelixGraphQLTestCase):
         self.activate = '''
             mutation Activate ($input: ActivateInputType!) {
                 activate(data: $input) {
-                    errors {
-                        field
-                        messages
-                    }
+                    errors
                 }
             }
         '''
@@ -200,10 +191,7 @@ class TestLogout(HelixGraphQLTestCase):
         self.login_query = '''
             mutation MyMutation ($email: String!, $password: String!){
                 login(data: {email: $email, password: $password}) {
-                    errors {
-                        field
-                        messages
-                    }
+                    errors
                 }
             }
         '''

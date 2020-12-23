@@ -54,7 +54,7 @@ class UpdateOrganizationKind(graphene.Mutation):
             instance = OrganizationKind.objects.get(id=data['id'])
         except OrganizationKind.DoesNotExist:
             return UpdateOrganizationKind(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Organization type does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Organization type does not exist.'))
             ])
         serializer = OrganizationKindSerializer(instance=instance, data=data, partial=True)
         if errors := mutation_is_not_valid(serializer):
@@ -78,7 +78,7 @@ class DeleteOrganizationKind(graphene.Mutation):
             instance = OrganizationKind.objects.get(id=id)
         except OrganizationKind.DoesNotExist:
             return UpdateOrganizationKind(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Organization type does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Organization type does not exist.'))
             ])
         instance.delete()
         instance.id = id
@@ -141,7 +141,7 @@ class UpdateOrganization(graphene.Mutation):
             instance = Organization.objects.get(id=data['id'])
         except Organization.DoesNotExist:
             return UpdateOrganization(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Organization does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Organization does not exist.'))
             ])
         serializer = OrganizationSerializer(instance=instance, data=data, partial=True)
         if errors := mutation_is_not_valid(serializer):
@@ -165,7 +165,7 @@ class DeleteOrganization(graphene.Mutation):
             instance = Organization.objects.get(id=id)
         except Organization.DoesNotExist:
             return UpdateOrganization(errors=[
-                CustomErrorType(field='non_field_errors', messages=gettext('Organization does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Organization does not exist.'))
             ])
         instance.delete()
         instance.id = id

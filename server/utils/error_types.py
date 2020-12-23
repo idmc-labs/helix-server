@@ -2,9 +2,13 @@ from typing import List, Union
 
 import graphene
 from graphene import ObjectType
+from graphene.types.generic import GenericScalar
+from graphene.utils.str_converters import to_snake_case
 from graphene_django.utils.utils import _camelize_django_str
 
 ARRAY_NON_MEMBER_ERRORS = 'nonMemberErrors'
+# generalize all the CustomErrorType
+CustomErrorType = GenericScalar
 
 
 class ArrayNestedErrorType(ObjectType):
@@ -12,12 +16,30 @@ class ArrayNestedErrorType(ObjectType):
     messages = graphene.String(required=False)
     object_errors = graphene.List(graphene.NonNull("utils.error_types.CustomErrorType"))
 
+    def keys(self):
+        return ['key', 'messages', 'objectErrors']
 
-class CustomErrorType(ObjectType):
+    def __getitem__(self, key):
+        key = to_snake_case(key)
+        if key in ('object_errors',) and getattr(self, key):
+            return [dict(each) for each in getattr(self, key)]
+        return getattr(self, key)
+
+
+class _CustomErrorType(ObjectType):
     field = graphene.String(required=True)
     messages = graphene.String(required=False)
     object_errors = graphene.List(graphene.NonNull("utils.error_types.CustomErrorType"))
     array_errors = graphene.List(graphene.NonNull(ArrayNestedErrorType))
+
+    def keys(self):
+        return ['field', 'messages', 'objectErrors', 'arrayErrors']
+
+    def __getitem__(self, key):
+        key = to_snake_case(key)
+        if key in ('object_errors', 'array_errors') and getattr(self, key):
+            return [dict(each) for each in getattr(self, key)]
+        return getattr(self, key)
 
 
 def serializer_error_to_error_types(errors: dict, initial_data: dict = None) -> List:
@@ -25,7 +47,7 @@ def serializer_error_to_error_types(errors: dict, initial_data: dict = None) -> 
     error_types = list()
     for field, value in errors.items():
         if isinstance(value, dict):
-            error_types.append(CustomErrorType(
+            error_types.append(_CustomErrorType(
                 field=_camelize_django_str(field),
                 object_errors=serializer_error_to_error_types(value)
             ))
@@ -33,7 +55,7 @@ def serializer_error_to_error_types(errors: dict, initial_data: dict = None) -> 
             if isinstance(value[0], str):
                 if isinstance(initial_data.get(field), list):
                     # we have found an array input with top level error
-                    error_types.append(CustomErrorType(
+                    error_types.append(_CustomErrorType(
                         field=_camelize_django_str(field),
                         array_errors=[ArrayNestedErrorType(
                             key=ARRAY_NON_MEMBER_ERRORS,
@@ -41,7 +63,7 @@ def serializer_error_to_error_types(errors: dict, initial_data: dict = None) -> 
                         )]
                     ))
                 else:
-                    error_types.append(CustomErrorType(
+                    error_types.append(_CustomErrorType(
                         field=_camelize_django_str(field),
                         messages=''.join(str(msg) for msg in value)
                     ))
@@ -57,23 +79,24 @@ def serializer_error_to_error_types(errors: dict, initial_data: dict = None) -> 
                         key=key,
                         object_errors=serializer_error_to_error_types(array_item, initial_data[field][pos])
                     ))
-                error_types.append(CustomErrorType(
+                error_types.append(_CustomErrorType(
                     field=_camelize_django_str(field),
                     array_errors=array_errors
                 ))
         else:
             # fallback
-            error_types.append(CustomErrorType(
+            error_types.append(_CustomErrorType(
                 field=_camelize_django_str(field),
                 messages=' '.join(str(msg) for msg in value)
             ))
     return error_types
 
 
-def mutation_is_not_valid(serializer) -> List[CustomErrorType]:
+def mutation_is_not_valid(serializer) -> List[dict]:
     """
     Checks if serializer is valid, if not returns list of errorTypes
     """
     if not serializer.is_valid():
-        return serializer_error_to_error_types(serializer.errors, serializer.initial_data)
+        errors = serializer_error_to_error_types(serializer.errors, serializer.initial_data)
+        return [dict(each) for each in errors]
     return []
