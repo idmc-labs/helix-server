@@ -53,7 +53,7 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertEqual(content['data']['me']['email'], self.user.email)
-        self.assertEqual(content['data']['me']['role'], self.user.role)
+        self.assertEqual(content['data']['me']['role'], self.user.role.name)
 
     def test_invalid_email(self):
         response = self.query(

@@ -58,3 +58,11 @@ class User(AbstractUser):
 
     def get_short_name(self):
         return self.first_name
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        group_count = self.groups.count()
+        if group_count == 0:  # Set default group/role is guest
+            self.set_role(USER_ROLE.GUEST.value)
+        elif group_count > 1:  # Multiple groups can exist, but not allowed
+            self.groups.set([self.groups.first()])
