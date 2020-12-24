@@ -122,8 +122,8 @@ class UpdateReviewComment(graphene.Mutation):
         except ReviewComment.DoesNotExist:
             return UpdateReviewComment(
                 errors=[
-                    CustomErrorType(field='nonFieldErrors',
-                                    messages=gettext('Comment does not exist.'))
+                    dict(field='nonFieldErrors',
+                         messages=gettext('Comment does not exist.'))
                 ],
                 ok=False
             )
@@ -161,6 +161,7 @@ class DeleteReviewComment(graphene.Mutation):
                 ok=False
             )
         instance.delete()
+        instance.id = id
         return DeleteReviewComment(result=instance, errors=None, ok=True)
 
 
