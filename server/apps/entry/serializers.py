@@ -167,8 +167,13 @@ class EntrySerializer(MetaInformationSerializerMixin,
     figures = NestedFigureSerializer(many=True, required=False)
     reviewers = serializers.PrimaryKeyRelatedField(
         many=True,
-        queryset=User.objects.exclude(
-            groups__name=USER_ROLE.GUEST.name
+        queryset=User.objects.filter(
+            groups__name__in=[
+                USER_ROLE.IT_HEAD.name,
+                USER_ROLE.ADMIN.name,
+                USER_ROLE.MONITORING_EXPERT_REVIEWER.name,
+                USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+            ]
         ),
         required=False
     )
