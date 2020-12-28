@@ -85,8 +85,7 @@ class CommonFigureCreateMixin:
     conflict_communal = graphene.Int(required=False)
     conflict_other = graphene.Int(required=False)
     # locations
-    sources = graphene.List(graphene.NonNull(OSMNameInputType), required=False)
-    destinations = graphene.List(graphene.NonNull(OSMNameInputType), required=False)
+    geo_locations = graphene.List(graphene.NonNull(OSMNameInputType), required=False)
 
 
 class NestedFigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectType):

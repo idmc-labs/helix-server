@@ -79,19 +79,13 @@ class CommonFigureValidationMixin:
         return attrs
 
     def create(self, validated_data: dict) -> Figure:
-        sources = validated_data.pop('sources', [])
-        destinations = validated_data.pop('destinations', [])
-        if sources:
-            sources = OSMName.objects.bulk_create(
-                [OSMName(**each) for each in sources]
-            )
-        if destinations:
-            destinations = OSMName.objects.bulk_create(
-                [OSMName(**each) for each in destinations]
+        geo_locations = validated_data.pop('geo_locations', [])
+        if geo_locations:
+            geo_locations = OSMName.objects.bulk_create(
+                [OSMName(**each) for each in geo_locations]
             )
         instance = Figure.objects.create(**validated_data)
-        instance.sources.set(sources)
-        instance.destinations.set(destinations)
+        instance.geo_locations.set(geo_locations)
         return instance
 
 
@@ -100,8 +94,7 @@ class FigureSerializer(MetaInformationSerializerMixin,
                        serializers.ModelSerializer):
     age_json = DisaggregatedAgeSerializer(many=True, required=False)
     strata_json = DisaggregatedStratumSerializer(many=True, required=False)
-    sources = OSMNameSerializer(many=True, required=False)
-    destination = OSMNameSerializer(many=True, required=False)
+    geo_locations = OSMNameSerializer(many=True, required=False)
 
     class Meta:
         model = Figure
@@ -113,8 +106,7 @@ class NestedFigureSerializer(MetaInformationSerializerMixin,
                              serializers.ModelSerializer):
     age_json = DisaggregatedAgeSerializer(many=True, required=False)
     strata_json = DisaggregatedStratumSerializer(many=True, required=False)
-    sources = OSMNameSerializer(many=True, required=False)
-    destinations = OSMNameSerializer(many=True, required=False)
+    geo_locations = OSMNameSerializer(many=True, required=False)
     # to allow updating
     id = serializers.IntegerField(required=False)
     uuid = serializers.CharField(required=False)
@@ -123,32 +115,21 @@ class NestedFigureSerializer(MetaInformationSerializerMixin,
         model = Figure
         exclude = ('entry',)
 
-    def _validate_sources(self, sources) -> list:
+    def _validate_geo_locations(self, geo_locations) -> list:
         if self.instance:
-            if {each['id'] for each in sources if 'id' in each}.difference(
-                list(self.instance.sources.values_list('id', flat=True))
+            if {each['id'] for each in geo_locations if 'id' in each}.difference(
+                list(self.instance.geo_locations.values_list('id', flat=True))
             ):
                 raise serializers.ValidationError(
-                    dict(sources='Some sources not found.')
+                    dict(geo_locations='Some geo locations not found.')
                 )
-        return sources
-
-    def _validate_destinations(self, destinations) -> list:
-        if self.instance:
-            if {each['id'] for each in destinations if 'id' in each}.difference(
-                list(self.instance.destinations.values_list('id', flat=True))
-            ):
-                raise serializers.ValidationError(
-                    dict(destinations='Some destinations not found.')
-                )
-        return destinations
+        return geo_locations
 
     def validate(self, attrs) -> dict:
         # manually call validate by setting the instance
         if not self.instance and attrs.get('id'):
             self.instance = Figure.objects.get(id=attrs['id'])
-        self._validate_sources(attrs.get('sources', []))
-        self._validate_destinations(attrs.get('destinations', []))
+        self._validate_geo_locations(attrs.get('geo_locations', []))
         return attrs
 
     def _update_locations(self, instance, attr: str, data: list):
@@ -172,16 +153,12 @@ class NestedFigureSerializer(MetaInformationSerializerMixin,
         getattr(instance, attr).set(osms)
 
     def update(self, instance, validated_data):
-        sources = validated_data.pop('sources', [])
-        destinations = validated_data.pop('destinations', [])
+        geo_locations = validated_data.pop('geo_locations', [])
         with transaction.atomic():
             instance = super().update(instance, validated_data)
             self._update_locations(instance=instance,
-                                   attr='sources',
-                                   data=sources)
-            self._update_locations(instance=instance,
-                                   attr='destinations',
-                                   data=destinations)
+                                   attr='geo_locations',
+                                   data=geo_locations)
         return instance
 
 

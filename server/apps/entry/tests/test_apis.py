@@ -3,7 +3,13 @@ from uuid import uuid4
 
 from apps.entry.models import Figure, Entry, EntryReviewer, CANNOT_UPDATE_MESSAGE
 from apps.users.enums import USER_ROLE
-from utils.factories import EventFactory, EntryFactory, FigureFactory, OrganizationFactory
+from utils.factories import (
+    EventFactory,
+    EntryFactory,
+    FigureFactory,
+    OrganizationFactory,
+    CountryFactory,
+)
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
@@ -133,6 +139,8 @@ class TestFigureUpdate(HelixGraphQLTestCase):
 
 class TestEntryCreation(HelixGraphQLTestCase):
     def setUp(self) -> None:
+        self.country = CountryFactory.create()
+        self.country_id = str(self.country.id)
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.event = EventFactory.create()
         self.mutation = """
@@ -189,6 +197,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         figures = [
             {
                 "uuid": str(uuid4()),
+                "country": self.country_id,
                 "district": "ABC",
                 "town": "XYZ",
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
@@ -226,6 +235,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
             # valid data
             {
                 "uuid": uuid,
+                "country": self.country_id,
                 "district": "ABC",
                 "town": "XYZ",
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
@@ -241,6 +251,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
             # invalid now
             {
                 "uuid": uuid_error,
+                "country": self.country_id,
                 "reported": -1,  # this cannot be negative
                 "district": "ABC",
                 "town": "XYZ",
@@ -316,6 +327,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         figures = [
             {
                 "uuid": str(uuid4()),
+                "country": self.country_id,
                 "district": "ABC",
                 "town": "XYZ",
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
@@ -350,6 +362,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
 
 class TestEntryUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
+        self.country = CountryFactory.create()
+        self.country_id = str(self.country.id)
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.entry = EntryFactory.create(
             created_by=self.editor
@@ -434,6 +448,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         figures = [
             {
                 "uuid": "1cd00034-037e-4c5f-b196-fa05b6bed803",
+                "country": self.country_id,
                 "district": "disss",
                 "town": "town",
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
@@ -466,6 +481,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
             {
                 "id": figure.id,
                 "uuid": str(figure.uuid),
+                "country": self.country_id,
                 "district": "disss",
                 "town": "town",
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,

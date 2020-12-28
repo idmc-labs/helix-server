@@ -268,10 +268,8 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
     conflict_other = models.PositiveIntegerField(verbose_name=_('Other'),
                                                  blank=True, null=True)
     # locations
-    sources = models.ManyToManyField('OSMName', verbose_name=_('Source'),
-                                     related_name='+')
-    destinations = models.ManyToManyField('OSMName', verbose_name=_('Destination'),
-                                          related_name='+')
+    geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
+                                           related_name='+')
 
     @classmethod
     def can_be_created_by(cls, user: User, entry: 'Entry') -> bool:
