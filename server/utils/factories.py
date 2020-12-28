@@ -122,6 +122,13 @@ class ViolenceFactory(DjangoModelFactory):
         model = 'event.Violence'
 
 
+class ViolenceSubTypeFactory(DjangoModelFactory):
+    class Meta:
+        model = 'event.ViolenceSubType'
+
+    violence = factory.SubFactory(ViolenceFactory)
+
+
 class CrisisFactory(DjangoModelFactory):
     class Meta:
         model = 'crisis.Crisis'

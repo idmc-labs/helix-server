@@ -1,8 +1,11 @@
-from django.core.exceptions import ValidationError
-
 from apps.crisis.models import Crisis
 from apps.event.models import Event, Violence
-from utils.factories import CrisisFactory, DisasterSubTypeFactory, CountryFactory, EventFactory
+from utils.factories import (
+    CrisisFactory,
+    DisasterSubTypeFactory,
+    ViolenceSubTypeFactory,
+    EventFactory,
+)
 from utils.tests import HelixTestCase
 
 
@@ -30,10 +33,10 @@ class TestEventModel(HelixTestCase):
     def test_invalid_clean_conflict_without_violence(self):
         self.data['event_type'] = Crisis.CRISIS_TYPE.CONFLICT
         errors = Event.clean_by_event_type(self.data)
-        self.assertIn('violence', errors)
-        violence = Violence(name='abc')
+        self.assertIn('violence_sub_type', errors)
+        violence = ViolenceSubTypeFactory.create()
         violence.save()
-        self.data['violence'] = violence
+        self.data['violence_sub_type'] = violence
         self.assertFalse(Event.clean_by_event_type(self.data))
 
     def test_invalid_clean_end_smaller_than_start_date(self):
