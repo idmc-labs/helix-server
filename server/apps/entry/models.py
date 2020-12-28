@@ -225,9 +225,15 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
     role = enum.EnumField(enum=ROLE, verbose_name=_('Role'), default=ROLE.RECOMMENDED)
 
     start_date = models.DateField(verbose_name=_('Start Date'))
+    end_date= models.DateField(verbose_name=_('End Date'),
+                               blank=True, null=True)
     include_idu = models.BooleanField(verbose_name=_('Include in IDU'))
     excerpt_idu = models.TextField(verbose_name=_('Excerpt for IDU'),
                                    blank=True, null=True)
+
+    country = models.ForeignKey('country.Country', verbose_name=_('Country'),
+                                 blank=True, null=True,
+                                 related_name='figures', on_delete=models.SET_NULL)
 
     is_disaggregated = models.BooleanField(verbose_name=_('Is disaggregated'),
                                            default=False)
