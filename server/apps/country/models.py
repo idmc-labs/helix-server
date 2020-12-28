@@ -28,6 +28,8 @@ class Country(models.Model):
                                related_name='countries', on_delete=models.PROTECT)
     sub_region = models.CharField(verbose_name=_('Sub Region'), max_length=256, null=True)
 
+    iso2 = models.CharField(verbose_name=_('ISO2'), max_length=4,
+                            null=True, blank=True)
     iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5,
                             null=True, blank=True)
     country_code = models.PositiveSmallIntegerField(verbose_name=_('Country Code'), null=True, blank=False)
