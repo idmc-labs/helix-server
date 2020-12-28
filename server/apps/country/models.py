@@ -36,7 +36,8 @@ class Country(models.Model):
     idmc_short_name = models.CharField(verbose_name=_('IDMC Short Name'), max_length=256, null=True, blank=False)
     idmc_full_name = models.CharField(verbose_name=_('IDMC Full Name'), max_length=256, null=True, blank=False)
     centroid = ArrayField(verbose_name=_('Centroid'), base_field=models.FloatField(blank=False), null=True)
-    boundingbox = ArrayField(verbose_name=_('Bounding Box'), base_field=models.FloatField(blank=False), null=True)
+    bounding_box = ArrayField(verbose_name=_('Bounding Box'),
+                              base_field=models.FloatField(blank=False), null=True)
     idmc_short_name_es = models.CharField(verbose_name=_('IDMC Short Name Es'), max_length=256, null=True)
     idmc_short_name_fr = models.CharField(verbose_name=_('IDMC Short Name Fr'), max_length=256, null=True)
     idmc_short_name_ar = models.CharField(verbose_name=_('IDMC Short Name Ar'), max_length=256, null=True)
