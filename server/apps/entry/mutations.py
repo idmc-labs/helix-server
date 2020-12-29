@@ -25,7 +25,7 @@ class DisaggregatedStratumInputType(graphene.InputObjectType):
 
 class OSMNameInputType(graphene.InputObjectType):
     id = graphene.ID(required=False)
-    uuid = graphene.String(required=False)
+    uuid = graphene.String(required=True)
     wikipedia = graphene.String(required=False)
     rank = graphene.Int(required=False)
     country = graphene.String(required=True)
