@@ -217,7 +217,7 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
     reported = models.PositiveIntegerField(verbose_name=_('Reported Figures'))
     unit = enum.EnumField(enum=UNIT, verbose_name=_('Unit of Figure'), default=UNIT.PERSON)
     household_size = models.PositiveSmallIntegerField(verbose_name=_('Household Size'),
-                                                      default=1)
+                                                      blank=True, null=True)
     total_figures = models.PositiveIntegerField(verbose_name=_('Total Figures'), default=0,
                                                 editable=False)
     term = enum.EnumField(enum=TERM, verbose_name=_('Term'), default=TERM.EVACUATED)

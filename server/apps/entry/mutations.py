@@ -117,7 +117,7 @@ class FigureUpdateInputType(graphene.InputObjectType):
     quantifier = graphene.Field(QuantifierGrapheneEnum)
     reported = graphene.Int()
     unit = graphene.Field(UnitGrapheneEnum)
-    household_size = graphene.Int()
+    household_size = graphene.Int(required=False)
     term = graphene.Field(TermGrapheneEnum)
     type = graphene.Field(TypeGrapheneEnum)
     role = graphene.Field(RoleGrapheneEnum)
