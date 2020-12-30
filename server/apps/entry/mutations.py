@@ -1,8 +1,6 @@
-import graphene
 from django.utils.translation import gettext
 
-from apps.entry.enums import QuantifierGrapheneEnum, RoleGrapheneEnum, TypeGrapheneEnum, \
-    TermGrapheneEnum, UnitGrapheneEnum, EntryReviewerGrapheneEnum, OSMAccuracyGrapheneEnum
+from apps.entry.enums import *
 from apps.entry.models import Entry, Figure, SourcePreview, EntryReviewer
 from apps.entry.schema import EntryType, FigureType, SourcePreviewType, EntryReviewerType
 from apps.entry.serializers import EntrySerializer, FigureSerializer, SourcePreviewSerializer
@@ -35,7 +33,7 @@ class OSMNameInputType(graphene.InputObjectType):
     osm_id = graphene.String(required=True)
     osm_type = graphene.String(required=True)
     house_numbers = graphene.String(required=False)
-    identifier = graphene.Int(required=True)
+    identifier = graphene.NonNull(IdentifierGrapheneEnum)
     city = graphene.String(required=False)
     display_name = graphene.String(required=True)
     lon = graphene.Float(required=True)

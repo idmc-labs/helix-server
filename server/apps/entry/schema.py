@@ -16,6 +16,7 @@ from apps.entry.enums import (
     RoleGrapheneEnum,
     EntryReviewerGrapheneEnum,
     OSMAccuracyGrapheneEnum,
+    IdentifierGrapheneEnum,
 )
 from apps.entry.filters import EntryFilter, EntryReviewerFilter, OSMNameFilter
 from apps.entry.models import Figure, Entry, SourcePreview, EntryReviewer, OSMName
@@ -48,6 +49,7 @@ class OSMNameType(DjangoObjectType):
         model = OSMName
 
     accuracy = graphene.Field(OSMAccuracyGrapheneEnum)
+    identifier = graphene.Field(IdentifierGrapheneEnum)
 
 
 class OSMNameListType(CustomDjangoListObjectType):

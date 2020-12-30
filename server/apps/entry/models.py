@@ -76,6 +76,15 @@ class OSMName(UUIDAbstractModel, models.Model):
             POINT: _('Point'),
         }
 
+    class IDENTIFIER(enum.Enum):
+        SOURCE = 0
+        DESTINATION = 1
+
+        __labels__ = {
+            SOURCE: _('Source'),
+            DESTINATION: _('Destination'),
+        }
+
     # external API fields
     wikipedia = models.TextField(verbose_name=_('Wikipedia'),
                                  blank=True, null=True)
@@ -91,7 +100,7 @@ class OSMName(UUIDAbstractModel, models.Model):
     osm_type = models.CharField(verbose_name=_('OSM Type'), max_length=256)
     house_numbers = models.TextField(verbose_name=_('House numbers'),
                                      blank=True, null=True)
-    identifier = models.IntegerField(verbose_name=_('Identifier'))
+    identifier = enum.EnumField(verbose_name=_('Identifier'), enum=IDENTIFIER)
     city = models.CharField(verbose_name=_('City'), max_length=256,
                             blank=True, null=True)
     display_name = models.CharField(verbose_name=_('Display name'), max_length=512)
