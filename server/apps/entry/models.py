@@ -241,8 +241,8 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
                                    blank=True, null=True)
 
     country = models.ForeignKey('country.Country', verbose_name=_('Country'),
-                                 blank=True, null=True,
-                                 related_name='figures', on_delete=models.SET_NULL)
+                                blank=True, null=True,
+                                related_name='figures', on_delete=models.SET_NULL)
 
     is_disaggregated = models.BooleanField(verbose_name=_('Is disaggregated'),
                                            default=False)

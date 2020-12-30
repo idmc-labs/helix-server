@@ -71,20 +71,23 @@ class CommonFigureValidationMixin:
                 gettext('Make sure the dates are unique in a figure. '))
         return strata
 
-    def validate_household_size(self, attrs):
+    def validate_unit_and_household_size(self, attrs):
+        errors = OrderedDict()
         if attrs.get('unit',
                      getattr(self.instance, 'unit', Figure.UNIT.PERSON.value)
-                     ) == Figure.UNIT.HOUSEHOLD.value and \
-            not attrs.get('household_size',
-                          getattr(self.instance, 'household_size', 0)):
+                     == Figure.UNIT.HOUSEHOLD.value) and \
+                not attrs.get('household_size',
+                              getattr(self.instance, 'household_size', 0)):
             raise serializers.ValidationError(
-                gettext('Please pass in household size for household unit.')
+                dict(household_size=gettext('Please pass in household size for household unit.'))
             )
+        return errors
 
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
         errors = OrderedDict()
         errors.update(Figure.clean_idu(attrs, self.instance))
+        errors.update(self.validate_unit_and_household_size(attrs))
         if errors:
             raise ValidationError(errors)
         return attrs
@@ -129,7 +132,7 @@ class NestedFigureSerializer(MetaInformationSerializerMixin,
     def _validate_geo_locations(self, geo_locations) -> list:
         if self.instance:
             if {each['id'] for each in geo_locations if 'id' in each}.difference(
-                list(self.instance.geo_locations.values_list('id', flat=True))
+                    list(self.instance.geo_locations.values_list('id', flat=True))
             ):
                 raise serializers.ValidationError(
                     dict(geo_locations='Some geo locations not found.')
@@ -141,6 +144,7 @@ class NestedFigureSerializer(MetaInformationSerializerMixin,
         if not self.instance and attrs.get('id'):
             self.instance = Figure.objects.get(id=attrs['id'])
         self._validate_geo_locations(attrs.get('geo_locations', []))
+        super().validate(attrs)
         return attrs
 
     def _update_locations(self, instance, attr: str, data: list):

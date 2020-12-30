@@ -333,6 +333,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
+                "householdSize": 1,
                 "term": Figure.TERM.EVACUATED.name,
                 "type": Figure.TYPE.IDP_STOCK.name,
                 "role": Figure.ROLE.RECOMMENDED.name,
@@ -358,6 +359,37 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createEntry']['ok'], content)
         self.assertIn('ageTo', json.dumps(content['data']['createEntry']['errors']))
+
+    def test_invalid_figures_household_size(self):
+        figures = [
+            {
+                "uuid": str(uuid4()),
+                "country": self.country_id,
+                "district": "ABC",
+                "town": "XYZ",
+                "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
+                "reported": 10,
+                "unit": Figure.UNIT.HOUSEHOLD.name,  # missing household_size
+                "term": Figure.TERM.EVACUATED.name,
+                "type": Figure.TYPE.IDP_STOCK.name,
+                "role": Figure.ROLE.RECOMMENDED.name,
+                "startDate": "2020-10-10",
+                "includeIdu": True,
+                "excerptIdu": "excerpt abc",
+            }
+        ]
+        self.input.update({
+            'figures': figures
+        })
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['createEntry']['ok'], content)
+        self.assertIn('householdSize', json.dumps(content['data']['createEntry']['errors']))
 
 
 class TestEntryUpdate(HelixGraphQLTestCase):
@@ -527,6 +559,38 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.entry.refresh_from_db()
         self.assertNotIn(deleted_figure, self.entry.figures.all())
         self.assertEqual(self.entry.figures.count(), old_figures_count)
+
+    def test_invalid_figures_household_size(self):
+        figures = [
+            {
+                "uuid": str(uuid4()),
+                "country": self.country_id,
+                "district": "ABC",
+                "town": "XYZ",
+                "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
+                "reported": 10,
+                "unit": Figure.UNIT.HOUSEHOLD.name,  # missing household_size
+                "term": Figure.TERM.EVACUATED.name,
+                "type": Figure.TYPE.IDP_STOCK.name,
+                "role": Figure.ROLE.RECOMMENDED.name,
+                "startDate": "2020-10-10",
+                "includeIdu": True,
+                "excerptIdu": "excerpt abc",
+            }
+        ]
+        self.input.update({
+            'figures': figures
+        })
+        self.force_login(self.editor)
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['updateEntry']['ok'], content)
+        self.assertIn('householdSize', json.dumps(content['data']['updateEntry']['errors']))
 
 
 class TestEntryDelete(HelixGraphQLTestCase):
