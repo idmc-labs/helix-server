@@ -248,3 +248,5 @@ class TestEntrySerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('figures', serializer.errors)
         self.assertIn('geo_locations', serializer.errors['figures'][0].keys())
+
+    # TODO: test entry serializer validation for figure household size

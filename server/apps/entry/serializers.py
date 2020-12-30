@@ -47,6 +47,7 @@ class DisaggregatedStratumSerializer(serializers.Serializer):
 
 class OSMNameSerializer(serializers.ModelSerializer):
     # to allow updating
+    uuid = serializers.UUIDField(required=False)
     id = serializers.IntegerField(required=False)
 
     class Meta:
@@ -69,6 +70,16 @@ class CommonFigureValidationMixin:
             raise serializers.ValidationError(
                 gettext('Make sure the dates are unique in a figure. '))
         return strata
+
+    def validate_household_size(self, attrs):
+        if attrs.get('unit',
+                     getattr(self.instance, 'unit', Figure.UNIT.PERSON.value)
+                     ) == Figure.UNIT.HOUSEHOLD.value and \
+            not attrs.get('household_size',
+                          getattr(self.instance, 'household_size', 0)):
+            raise serializers.ValidationError(
+                gettext('Please pass in household size for household unit.')
+            )
 
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
