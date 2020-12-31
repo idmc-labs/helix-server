@@ -16,6 +16,14 @@ class UUIDAbstractModel(models.Model):
         abstract = True
 
 
+class ArchiveAbstractModel(models.Model):
+    old_id = models.CharField(verbose_name=_('Old primary key'), max_length=32,
+                              null=True, blank=True)
+
+    class Meta:
+        abstract = True
+
+
 class MetaInformationAbstractModel(models.Model):
     created_at = models.DateTimeField(verbose_name=_('Created At'), default=timezone.now)
     modified_at = models.DateTimeField(verbose_name=_('Modified At'), auto_now=True)
@@ -28,6 +36,11 @@ class MetaInformationAbstractModel(models.Model):
     version_id = models.CharField(verbose_name=_('Version'), max_length=16,
                                   blank=True, null=True)
 
+    class Meta:
+        abstract = True
+
+
+class MetaInformationArchiveAbstractModel(ArchiveAbstractModel, MetaInformationAbstractModel):
     class Meta:
         abstract = True
 

@@ -4,10 +4,10 @@ from django.db import models
 from django.db.models import ProtectedError
 from django.utils.translation import gettext, gettext_lazy as _
 
-from apps.contrib.models import MetaInformationAbstractModel
+from apps.contrib.models import MetaInformationArchiveAbstractModel
 
 
-class ResourceGroup(MetaInformationAbstractModel):
+class ResourceGroup(MetaInformationArchiveAbstractModel):
     name = models.CharField(verbose_name=_('Name'), max_length=256)
 
     def is_deletable(self) -> bool:
@@ -28,7 +28,7 @@ class ResourceGroup(MetaInformationAbstractModel):
         return self.name
 
 
-class Resource(MetaInformationAbstractModel):
+class Resource(MetaInformationArchiveAbstractModel):
     name = models.CharField(verbose_name=_('Name'), max_length=256)
     url = models.URLField(verbose_name=_('URL'), max_length=256)
     group = models.ForeignKey('ResourceGroup', verbose_name=_('Resource Group'),

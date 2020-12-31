@@ -1,17 +1,17 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from apps.contrib.models import MetaInformationAbstractModel, SoftDeleteModel
+from apps.contrib.models import MetaInformationArchiveAbstractModel, SoftDeleteModel
 
 
-class OrganizationKind(MetaInformationAbstractModel, models.Model):
+class OrganizationKind(MetaInformationArchiveAbstractModel, models.Model):
     name = models.CharField(verbose_name=_('Title'), max_length=256)
 
     def __str__(self):
         return self.name
 
 
-class Organization(MetaInformationAbstractModel,
+class Organization(MetaInformationArchiveAbstractModel,
                    SoftDeleteModel,
                    models.Model):
     name = models.CharField(verbose_name=_('Title'), max_length=512)
