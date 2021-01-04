@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 
-from apps.contrib.models import MetaInformationAbstractModel
+from apps.contrib.models import MetaInformationArchiveAbstractModel
 from apps.entry.models import Entry
 
 
@@ -58,13 +58,13 @@ class Country(models.Model):
         return self.name
 
 
-class ContextualUpdate(MetaInformationAbstractModel, models.Model):
+class ContextualUpdate(MetaInformationArchiveAbstractModel, models.Model):
     country = models.ForeignKey('Country', verbose_name=_('Country'),
                                 on_delete=models.CASCADE, related_name='contextual_updates')
     update = models.TextField(verbose_name=_('Update'), blank=False)
 
 
-class Summary(MetaInformationAbstractModel, models.Model):
+class Summary(MetaInformationArchiveAbstractModel, models.Model):
     country = models.ForeignKey('Country', verbose_name=_('Country'),
                                 on_delete=models.CASCADE, related_name='summaries')
     summary = models.TextField(verbose_name=_('Summary'), blank=False)

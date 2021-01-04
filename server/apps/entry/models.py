@@ -12,7 +12,11 @@ from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
-from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
+from apps.contrib.models import (
+    MetaInformationAbstractModel,
+    UUIDAbstractModel,
+    MetaInformationArchiveAbstractModel,
+)
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
 
@@ -132,7 +136,7 @@ class OSMName(UUIDAbstractModel, models.Model):
                                 default=False)
 
 
-class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
+class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Model):
     class QUANTIFIER(enum.Enum):
         MORE_THAN = 0
         LESS_THAN = 1
@@ -234,8 +238,8 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
     role = enum.EnumField(enum=ROLE, verbose_name=_('Role'), default=ROLE.RECOMMENDED)
 
     start_date = models.DateField(verbose_name=_('Start Date'))
-    end_date= models.DateField(verbose_name=_('End Date'),
-                               blank=True, null=True)
+    end_date = models.DateField(verbose_name=_('End Date'),
+                                blank=True, null=True)
     include_idu = models.BooleanField(verbose_name=_('Include in IDU'))
     excerpt_idu = models.TextField(verbose_name=_('Excerpt for IDU'),
                                    blank=True, null=True)
@@ -310,7 +314,7 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
         return f'{self.quantifier.label} {self.reported} {self.term.label}'
 
 
-class Entry(MetaInformationAbstractModel, models.Model):
+class Entry(MetaInformationArchiveAbstractModel, models.Model):
     url = models.URLField(verbose_name=_('Source URL'),
                           blank=True, null=True)
     preview = models.OneToOneField('SourcePreview',
@@ -408,8 +412,7 @@ class Entry(MetaInformationAbstractModel, models.Model):
         permissions = (('sign_off_entry', 'Can sign off the entry'),)
 
 
-class EntryReviewer(MetaInformationAbstractModel,
-                    models.Model):
+class EntryReviewer(MetaInformationAbstractModel, models.Model):
     class CannotUpdateStatusException(Exception):
         message = CANNOT_UPDATE_MESSAGE
 
