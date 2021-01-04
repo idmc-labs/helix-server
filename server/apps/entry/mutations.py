@@ -1,9 +1,6 @@
-import graphene
 from django.utils.translation import gettext
-from graphene_file_upload.scalars import Upload
 
-from apps.entry.enums import QuantifierGrapheneEnum, RoleGrapheneEnum, TypeGrapheneEnum, \
-    TermGrapheneEnum, UnitGrapheneEnum, EntryReviewerGrapheneEnum
+from apps.entry.enums import *
 from apps.entry.models import Entry, Figure, SourcePreview, EntryReviewer
 from apps.entry.schema import EntryType, FigureType, SourcePreviewType, EntryReviewerType
 from apps.entry.serializers import EntrySerializer, FigureSerializer, SourcePreviewSerializer
@@ -24,6 +21,37 @@ class DisaggregatedStratumInputType(graphene.InputObjectType):
     value = graphene.Int(required=True)
 
 
+class OSMNameInputType(graphene.InputObjectType):
+    id = graphene.ID(required=False)
+    uuid = graphene.String(required=True)
+    wikipedia = graphene.String(required=False)
+    rank = graphene.Int(required=False)
+    country = graphene.String(required=True)
+    country_code = graphene.String(required=True)
+    street = graphene.String(required=False)
+    wiki_data = graphene.String(required=False)
+    osm_id = graphene.String(required=True)
+    osm_type = graphene.String(required=True)
+    house_numbers = graphene.String(required=False)
+    identifier = graphene.NonNull(IdentifierGrapheneEnum)
+    city = graphene.String(required=False)
+    display_name = graphene.String(required=True)
+    lon = graphene.Float(required=True)
+    lat = graphene.Float(required=True)
+    state = graphene.String(required=False)
+    bounding_box = graphene.List(graphene.NonNull(graphene.Float))
+    type = graphene.String(required=False)
+    importance = graphene.Float(required=False)
+    class_name = graphene.String(required=False)
+    name = graphene.String(required=True)
+    name_suffix = graphene.String(required=False)
+    place_rank = graphene.Int(required=False)
+    alternative_names = graphene.String(required=False)
+    accuracy = graphene.NonNull(OSMAccuracyGrapheneEnum)
+    reported_name = graphene.String(required=True)
+    moved = graphene.Boolean(required=False)
+
+
 class CommonFigureCreateMixin:
     district = graphene.String(required=True)
     town = graphene.String(required=True)
@@ -35,6 +63,8 @@ class CommonFigureCreateMixin:
     type = graphene.NonNull(TypeGrapheneEnum)
     role = graphene.NonNull(RoleGrapheneEnum)
     start_date = graphene.Date(required=True)
+    country = graphene.ID(required=True)
+    end_date = graphene.Date()
     include_idu = graphene.Boolean(required=True)
     excerpt_idu = graphene.String()
     is_disaggregated = graphene.Boolean(required=False)
@@ -52,6 +82,8 @@ class CommonFigureCreateMixin:
     conflict_criminal = graphene.Int(required=False)
     conflict_communal = graphene.Int(required=False)
     conflict_other = graphene.Int(required=False)
+    # locations
+    geo_locations = graphene.List(graphene.NonNull(OSMNameInputType), required=False)
 
 
 class NestedFigureCreateInputType(CommonFigureCreateMixin, graphene.InputObjectType):
@@ -83,11 +115,13 @@ class FigureUpdateInputType(graphene.InputObjectType):
     quantifier = graphene.Field(QuantifierGrapheneEnum)
     reported = graphene.Int()
     unit = graphene.Field(UnitGrapheneEnum)
-    household_size = graphene.Int()
+    household_size = graphene.Int(required=False)
     term = graphene.Field(TermGrapheneEnum)
     type = graphene.Field(TypeGrapheneEnum)
     role = graphene.Field(RoleGrapheneEnum)
     start_date = graphene.Date()
+    end_date = graphene.Date()
+    country = graphene.ID()
     include_idu = graphene.Boolean()
     excerpt_idu = graphene.String()
     is_disaggregated = graphene.Boolean(required=False)

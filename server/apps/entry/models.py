@@ -1,7 +1,6 @@
 from collections import OrderedDict
 import json
 import logging
-from typing import List
 import uuid
 
 import boto3
@@ -12,7 +11,6 @@ from django.db import models
 from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
-from rest_framework.exceptions import PermissionDenied
 
 from apps.contrib.models import MetaInformationAbstractModel, UUIDAbstractModel
 from apps.users.enums import USER_ROLE
@@ -66,6 +64,72 @@ class SourcePreview(MetaInformationAbstractModel):
             Payload=json.dumps(payload)
         )
         return instance
+
+
+class OSMName(UUIDAbstractModel, models.Model):
+    class OSM_ACCURACY(enum.Enum):
+        ADMIN = 0
+        POINT = 1
+
+        __labels__ = {
+            ADMIN: _('Admin'),
+            POINT: _('Point'),
+        }
+
+    class IDENTIFIER(enum.Enum):
+        SOURCE = 0
+        DESTINATION = 1
+
+        __labels__ = {
+            SOURCE: _('Source'),
+            DESTINATION: _('Destination'),
+        }
+
+    # external API fields
+    wikipedia = models.TextField(verbose_name=_('Wikipedia'),
+                                 blank=True, null=True)
+    rank = models.IntegerField(verbose_name=_('Rank'),
+                               blank=True, null=True)
+    country = models.TextField(verbose_name=_('Country'))
+    country_code = models.CharField(verbose_name=_('Country Code'), max_length=8)
+    street = models.TextField(verbose_name=_('Street'),
+                              blank=True, null=True)
+    wiki_data = models.TextField(verbose_name=_('Wiki data'),
+                                 blank=True, null=True)
+    osm_id = models.CharField(verbose_name=_('OSM Id'), max_length=256)
+    osm_type = models.CharField(verbose_name=_('OSM Type'), max_length=256)
+    house_numbers = models.TextField(verbose_name=_('House numbers'),
+                                     blank=True, null=True)
+    identifier = enum.EnumField(verbose_name=_('Identifier'), enum=IDENTIFIER)
+    city = models.CharField(verbose_name=_('City'), max_length=256,
+                            blank=True, null=True)
+    display_name = models.CharField(verbose_name=_('Display name'), max_length=512)
+    lon = models.FloatField(verbose_name=_('Longitude'))
+    lat = models.FloatField(verbose_name=_('Latitude'))
+    state = models.TextField(verbose_name=_('State'),
+                             blank=True, null=True)
+    bounding_box = ArrayField(verbose_name=_('Bounding Box'),
+                              base_field=models.FloatField(),
+                              blank=True, null=True)
+    type = models.TextField(verbose_name=_('Type'),
+                            blank=True, null=True)
+    importance = models.FloatField(verbose_name=_('Importance'),
+                                   blank=True, null=True)
+    class_name = models.TextField(verbose_name=_('Class'),
+                                  blank=True, null=True)
+    name = models.TextField(verbose_name=_('Name'))
+    name_suffix = models.TextField(verbose_name=_('Name Suffix'),
+                                   blank=True, null=True)
+    place_rank = models.IntegerField(verbose_name=_('Place Rank'),
+                                     blank=True, null=True)
+    alternative_names = models.TextField(verbose_name=_('Alternative names'),
+                                         blank=True, null=True)
+    # custom fields
+    accuracy = enum.EnumField(verbose_name=_('Accuracy'),
+                              enum=OSM_ACCURACY)
+    reported_name = models.TextField(verbose_name=_('Reported Name'))
+    moved = models.BooleanField(verbose_name=_('Moved'),
+                                default=False)
 
 
 class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
@@ -162,7 +226,7 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
     reported = models.PositiveIntegerField(verbose_name=_('Reported Figures'))
     unit = enum.EnumField(enum=UNIT, verbose_name=_('Unit of Figure'), default=UNIT.PERSON)
     household_size = models.PositiveSmallIntegerField(verbose_name=_('Household Size'),
-                                                      default=1)
+                                                      blank=True, null=True)
     total_figures = models.PositiveIntegerField(verbose_name=_('Total Figures'), default=0,
                                                 editable=False)
     term = enum.EnumField(enum=TERM, verbose_name=_('Term'), default=TERM.EVACUATED)
@@ -170,9 +234,15 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
     role = enum.EnumField(enum=ROLE, verbose_name=_('Role'), default=ROLE.RECOMMENDED)
 
     start_date = models.DateField(verbose_name=_('Start Date'))
+    end_date= models.DateField(verbose_name=_('End Date'),
+                               blank=True, null=True)
     include_idu = models.BooleanField(verbose_name=_('Include in IDU'))
     excerpt_idu = models.TextField(verbose_name=_('Excerpt for IDU'),
                                    blank=True, null=True)
+
+    country = models.ForeignKey('country.Country', verbose_name=_('Country'),
+                                blank=True, null=True,
+                                related_name='figures', on_delete=models.SET_NULL)
 
     is_disaggregated = models.BooleanField(verbose_name=_('Is disaggregated'),
                                            default=False)
@@ -206,6 +276,9 @@ class Figure(MetaInformationAbstractModel, UUIDAbstractModel, models.Model):
                                                     blank=True, null=True)
     conflict_other = models.PositiveIntegerField(verbose_name=_('Other'),
                                                  blank=True, null=True)
+    # locations
+    geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
+                                           related_name='+')
 
     @classmethod
     def can_be_created_by(cls, user: User, entry: 'Entry') -> bool:
@@ -244,8 +317,8 @@ class Entry(MetaInformationAbstractModel, models.Model):
                                    related_name='entry', on_delete=models.SET_NULL,
                                    blank=True, null=True,
                                    help_text=_('After the preview has been generated pass its id'
-                                               ' along during entry creation, so that during entry update'
-                                               ' the preview can be obtained.'))
+                                               'along during entry creation, so that during entry '
+                                               'update the preview can be obtained.'))
     document = models.ForeignKey('contrib.Attachment', verbose_name='Attachment',
                                  on_delete=models.CASCADE, related_name='+',
                                  null=True, blank=True)
@@ -255,7 +328,7 @@ class Entry(MetaInformationAbstractModel, models.Model):
                                related_name='sourced_entries', on_delete=models.SET_NULL)
     publisher = models.ForeignKey('organization.Organization', verbose_name=_('Publisher'),
                                   null=True, blank=True,
-                                  related_name='published_entires', on_delete=models.SET_NULL)
+                                  related_name='published_entries', on_delete=models.SET_NULL)
     publish_date = models.DateField(verbose_name=_('Published Date'))
     source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
                                       blank=True, null=True)

@@ -20,19 +20,19 @@ TRIGGERS = {
 }
 
 SUB_TRIGGERS = {
-    "Looting ",
-    "Vandalism ",
-    "Raid/clearance/search operations ",
-    "Demolitions/evictions ",
-    "Burning/torching of homes/housing destruction ",
-    "[Perceived] threat of attack/Intimidation ",
-    "Mob violence/lynching ",
-    "Knife/Machetes ",
-    "Shooting ",
-    "Shelling  ",
-    "Chemical weapons  ",
-    "Biological weapons  ",
-    "Other ",
+    "Looting",
+    "Vandalism",
+    "Raid/clearance/search operations",
+    "Demolitions/evictions",
+    "Burning/torching of homes/housing destruction",
+    "[Perceived] threat of attack/Intimidation",
+    "Mob violence/lynching",
+    "Knife/Machetes",
+    "Shooting",
+    "Shelling",
+    "Chemical weapons",
+    "Biological weapons",
+    "Other",
     "Threat of attack",
 }
 
@@ -59,7 +59,7 @@ DISASTERS = {
             "Wave action": ["Rogue Wave"],
         },
         "Meteorological": {
-            "Extreme Temperature": ["Cold wave, Heat wave"],
+            "Extreme Temperature": ["Cold wave", "Heat wave"],
             "Storm": ["Hailstorm", "Sand/dust storm", "Storm", "Storm surge",
                       "Tornado", "Typhoon/Hurricane/Cyclone", "Winter storm/Blizzard"]
         }

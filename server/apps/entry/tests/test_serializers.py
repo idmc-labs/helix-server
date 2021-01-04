@@ -1,15 +1,19 @@
+from copy import copy
+from uuid import uuid4
+
 from django.test import RequestFactory
 
 from apps.entry.serializers import EntrySerializer
 from apps.users.enums import USER_ROLE
-from apps.entry.models import EntryReviewer, Entry
-from apps.users.models import User
+from apps.entry.models import EntryReviewer, OSMName, Figure
 from utils.factories import EventFactory, EntryFactory, OrganizationFactory
 from utils.tests import HelixTestCase, create_user_with_role
 
 
 class TestEntrySerializer(HelixTestCase):
     def setUp(self) -> None:
+        r1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.factory = RequestFactory()
         self.event = EventFactory.create()
         self.publisher = OrganizationFactory.create()
@@ -26,6 +30,7 @@ class TestEntrySerializer(HelixTestCase):
             "idmc_analysis": "analysis one",
             "methodology": "methoddddd",
             "event": self.event.id,
+            "reviewers": [r1.id, r2.id]
         }
         self.request = self.factory.get('/graphql')
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
@@ -129,4 +134,119 @@ class TestEntrySerializer(HelixTestCase):
         self.assertEqual(set(entry.reviewers.through.objects.values_list('status', flat=1)),
                          {EntryReviewer.REVIEW_STATUS.UNDER_REVIEW})
 
-        self.assertEqual(old_count - 1, EntryReviewer.objects.count())
+        self.assertEqual(old_count-1, EntryReviewer.objects.count())
+
+    def test_entry_serializer_with_figures_source(self):
+        source1 = dict(
+            rank=101,
+            country='abc',
+            country_code='xyz',
+            osm_id='ted',
+            osm_type='okay',
+            display_name='okay',
+            lat=68.88,
+            lon=46.66,
+            name='name',
+            accuracy=OSMName.OSM_ACCURACY.ADMIN.value,
+            reported_name='reported',
+            identifier=OSMName.IDENTIFIER.SOURCE.value,
+            )
+        source2 = copy(source1)
+        source2['lat'] = 67.5
+        source3 = copy(source1)
+        source3['lon'] = 45.9
+        figures = [{
+            "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
+            "district": "disctrict",
+            "town": "town",
+            "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
+            "reported": 10,
+            "unit": Figure.UNIT.PERSON.value,
+            "term": Figure.TERM.EVACUATED.value,
+            "type": Figure.TYPE.IDP_STOCK.value,
+            "role": Figure.ROLE.RECOMMENDED.value,
+            "start_date": "2020-09-09",
+            "include_idu": False,
+            "geo_locations": [source1, source2, source3],
+            }]
+        self.data['figures'] = figures
+
+        serializer = EntrySerializer(instance=None,
+                                     data=self.data,
+                                     context={'request': self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        entry = serializer.save()
+        self.assertEqual(entry.figures.count(), len(figures))
+        figure = entry.figures.first()
+        self.assertEqual(figure.geo_locations.count(),
+                         len(figures[0]['geo_locations']))
+
+        # now trying to update
+        new_source = copy(source1)
+        new_source.update({
+            'lat': 33.8,
+            'lon': 33.8,
+            'identifier': OSMName.IDENTIFIER.SOURCE.value,
+            'reported_name': 'new source',
+        })
+        existing = figure.geo_locations.first()
+        old_source = {
+            'id': existing.id,
+            'reported_name': 'updated old source'
+        }
+        figures = [{
+                "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
+                "id": figure.id,
+                "geo_locations": [new_source, old_source],
+                "district": "new name",
+            }, {
+                "uuid": "f1b42e79-da44-4032-8cb6-0dd4b7b97b57",
+                "district": "district",
+                "town": "town",
+                "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
+                "reported": 10,
+                "unit": Figure.UNIT.PERSON.value,
+                "term": Figure.TERM.EVACUATED.value,
+                "type": Figure.TYPE.IDP_STOCK.value,
+                "role": Figure.ROLE.RECOMMENDED.value,
+                "start_date": "2020-09-09",
+                "include_idu": False,
+                "geo_locations": [new_source],
+            }]
+        self.data['figures'] = figures
+        serializer = EntrySerializer(instance=entry,
+                                     data=self.data,
+                                     context={'request': self.request},
+                                     partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        entry = serializer.save()
+        entry.refresh_from_db()
+        self.assertEqual(entry.figures.count(), len(figures))
+
+        expected_sources_count = {len(each['geo_locations']) for each in figures}
+        existing_count = {each.geo_locations.count() for each in entry.figures.all()}
+        self.assertEqual(expected_sources_count, existing_count,
+                         f'expected: {expected_sources_count}, obtained: {existing_count}')
+
+        # now checking if source on a different figure can be updated using this serializer
+        loc1 = OSMName.objects.create(**source1)
+        figure = entry.figures.first()
+        different_source = {
+            'id': loc1.id,
+            'reported_name': 'different source'
+        }
+        figures = [dict(
+            uuid=str(uuid4()),
+            id=figure.id,
+            geo_locations=[different_source]  # I do not belong to above entry figures
+        )]
+        self.data['figures'] = figures
+        serializer = EntrySerializer(instance=entry,
+                                     data=self.data,
+                                     context={'request': self.request},
+                                     partial=True)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('figures', serializer.errors)
+        self.assertIn('geo_locations', serializer.errors['figures'][0].keys())
+
+    # TODO: test entry serializer validation for figure household size

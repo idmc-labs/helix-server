@@ -1,12 +1,17 @@
 from django_filters import rest_framework as df
 
-from apps.entry.models import Entry, EntryReviewer
+from apps.entry.models import Entry, EntryReviewer, OSMName
 from utils.filters import StringListFilter
+
+
+class OSMNameFilter(df.FilterSet):
+    class Meta:
+        model = OSMName
+        fields = []
 
 
 class EntryFilter(df.FilterSet):
     article_title_contains = df.CharFilter(field_name='article_title', lookup_expr='icontains')
-    country = df.NumberFilter(field_name='event__countries', lookup_expr='in')
     countries = StringListFilter(method='filter_countries')
 
     class Meta:

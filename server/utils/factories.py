@@ -160,6 +160,7 @@ class FigureFactory(DjangoModelFactory):
     quantifier = factory.Iterator(Figure.QUANTIFIER)
     reported = factory.Sequence(lambda n: n + 2)
     unit = factory.Iterator(Figure.UNIT)
+    household_size = 1  # validation based on unit in the serializer
     term = factory.Iterator(Figure.TERM)
     type = factory.Iterator(Figure.TYPE)
     role = factory.Iterator(Figure.ROLE)
