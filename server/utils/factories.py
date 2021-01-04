@@ -5,6 +5,7 @@ from factory.django import DjangoModelFactory
 from apps.contact.models import Contact
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
+from apps.entry.constants import STOCK, FLOW
 
 
 class UserFactory(DjangoModelFactory):
@@ -152,7 +153,13 @@ class EntryFactory(DjangoModelFactory):
     url = 'https://www.example.com'
     publish_date = factory.LazyFunction(today().date)
     event = factory.SubFactory(EventFactory)
-    tags = factory.Sequence(lambda n: [f'tag{each}' for each in range(n % 10)])
+
+
+class FigureCategoryFactory(DjangoModelFactory):
+    class Meta:
+        model = 'entry.FigureCategory'
+
+    type = factory.Iterator([STOCK, FLOW])
 
 
 class FigureFactory(DjangoModelFactory):
@@ -160,6 +167,7 @@ class FigureFactory(DjangoModelFactory):
         model = 'entry.Figure'
 
     entry = factory.SubFactory(EntryFactory)
+    category = factory.SubFactory(FigureCategoryFactory)
     district = factory.Faker('city')
     town = factory.Faker('city')
     quantifier = factory.Iterator(Figure.QUANTIFIER)
@@ -167,7 +175,6 @@ class FigureFactory(DjangoModelFactory):
     unit = factory.Iterator(Figure.UNIT)
     household_size = 1  # validation based on unit in the serializer
     term = factory.Iterator(Figure.TERM)
-    type = factory.Iterator(Figure.TYPE)
     role = factory.Iterator(Figure.ROLE)
     start_date = factory.LazyFunction(today().date)
     include_idu = False
@@ -201,3 +208,8 @@ class ReviewFactory(DjangoModelFactory):
 
     entry = factory.SubFactory(EntryFactory)
     comment = factory.SubFactory(ReviewCommentFactory)
+
+
+class TagFactory(DjangoModelFactory):
+    class Meta:
+        model = 'entry.FigureTag'

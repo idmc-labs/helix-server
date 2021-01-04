@@ -7,7 +7,6 @@ from apps.entry.enums import (
     QuantifierGrapheneEnum,
     UnitGrapheneEnum,
     TermGrapheneEnum,
-    TypeGrapheneEnum,
     RoleGrapheneEnum,
     EntryReviewerGrapheneEnum,
 )
@@ -70,7 +69,7 @@ class CommonFigureCreateMixin:
     unit = graphene.NonNull(UnitGrapheneEnum)
     household_size = graphene.Int(required=False)
     term = graphene.NonNull(TermGrapheneEnum)
-    type = graphene.NonNull(TypeGrapheneEnum)
+    sub_type = graphene.ID(required=True)
     role = graphene.NonNull(RoleGrapheneEnum)
     start_date = graphene.Date(required=True)
     country = graphene.ID(required=True)
@@ -127,7 +126,7 @@ class FigureUpdateInputType(graphene.InputObjectType):
     unit = graphene.Field(UnitGrapheneEnum)
     household_size = graphene.Int(required=False)
     term = graphene.Field(TermGrapheneEnum)
-    type = graphene.Field(TypeGrapheneEnum)
+    sub_type = graphene.ID()
     role = graphene.Field(RoleGrapheneEnum)
     start_date = graphene.Date()
     end_date = graphene.Date()

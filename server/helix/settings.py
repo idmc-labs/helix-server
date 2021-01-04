@@ -50,6 +50,7 @@ LOCAL_APPS = [
     'entry',
     'resource',
     'review',
+    'extraction',
 ]
 
 THIRD_PARTY_APPS = [

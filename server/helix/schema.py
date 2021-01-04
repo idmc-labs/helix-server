@@ -9,6 +9,7 @@ from apps.country import schema as country_schema, mutations as country_mutation
 from apps.crisis import schema as crisis_schema, mutations as crisis_mutations
 from apps.event import schema as event_schema, mutations as event_mutations
 from apps.entry import schema as entry_schema, mutations as entry_mutations
+from apps.extraction import schema as extraction_schema, mutations as extraction_mutations
 from apps.resource import schema as resource_schema, mutations as resource_mutations
 from apps.review import schema as review_schema, mutations as review_mutations
 
@@ -21,6 +22,7 @@ class Query(user_schema.Query,
             crisis_schema.Query,
             event_schema.Query,
             entry_schema.Query,
+            extraction_schema.Query,
             resource_schema.Query,
             review_schema.Query,
             graphene.ObjectType):
@@ -35,6 +37,7 @@ class Mutation(user_mutations.Mutation,
                crisis_mutations.Mutation,
                event_mutations.Mutation,
                entry_mutations.Mutation,
+               extraction_mutations.Mutation,
                resource_mutations.Mutation,
                review_mutations.Mutation,
                graphene.ObjectType):
