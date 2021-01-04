@@ -4,7 +4,14 @@ from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
 from apps.contrib.serializers import MetaInformationSerializerMixin
-from apps.event.models import Event
+from apps.event.models import Event, Actor
+
+
+class ActorSerializer(MetaInformationSerializerMixin,
+                      serializers.ModelSerializer):
+    class Meta:
+        model = Actor
+        fields = '__all__'
 
 
 class EventSerializer(MetaInformationSerializerMixin,

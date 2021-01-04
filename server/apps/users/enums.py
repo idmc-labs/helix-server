@@ -33,6 +33,7 @@ class PERMISSION_ENTITY(enum.Enum):
     resource = 10
     user = 11
     review = 12
+    actor = 13
 
     __labels__ = {
         crisis: _('Crisis'),
@@ -48,6 +49,7 @@ class PERMISSION_ENTITY(enum.Enum):
         resource: _('Resource'),
         user: _('User'),
         review: _('Review'),
+        actor: _('Actor'),
     }
 
 

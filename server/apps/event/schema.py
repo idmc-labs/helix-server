@@ -89,7 +89,6 @@ class ActorListType(CustomDjangoListObjectType):
     class Meta:
         model = Actor
         filter_fields = {
-            'id': ['exact'],
             'name': ['icontains']
         }
 
@@ -179,7 +178,11 @@ class Query:
     trigger_list = DjangoPaginatedListObjectField(TriggerListType)
     sub_trigger_list = DjangoPaginatedListObjectField(TriggerSubObjectListType)
     violence_list = DjangoPaginatedListObjectField(ViolenceListType)
-    actor_list = DjangoPaginatedListObjectField(ActorListType)
+    actor = DjangoObjectField(ActorType)
+    actor_list = DjangoPaginatedListObjectField(ActorListType,
+                                                pagination=PageGraphqlPagination(
+                                                    page_size_query_param='pageSize'
+                                                ))
     disaster_category_list = DjangoPaginatedListObjectField(DisasterCategoryListType)
     disaster_sub_category_list = DjangoPaginatedListObjectField(DisasterSubCategoryListType)
     disaster_type_list = DjangoPaginatedListObjectField(DisasterTypeObjectListType)
