@@ -2,8 +2,8 @@ import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import PageGraphqlPagination, DjangoObjectField, DjangoFilterListField
 
-from apps.country.schema import CountryType
 from apps.crisis.enums import CrisisTypeGrapheneEnum
+from apps.event.enums import EventOtherSubTypeEnum
 from apps.event.models import (
     Event,
     Trigger,
@@ -161,6 +161,7 @@ class EventType(DjangoObjectType):
         exclude_fields = ('entries',)
 
     event_type = graphene.Field(CrisisTypeGrapheneEnum)
+    other_sub_type = graphene.Field(EventOtherSubTypeEnum)
     trigger = graphene.Field(TriggerType)
     trigger_sub_type = graphene.Field(TriggerSubObjectType)
     violence = graphene.Field(ViolenceType)
