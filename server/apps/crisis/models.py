@@ -9,7 +9,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
     class CRISIS_TYPE(enum.Enum):
         CONFLICT = 0
         DISASTER = 1
-        OTHER = 1
+        OTHER = 2
 
         __labels__ = {
             CONFLICT: _("Conflict"),
