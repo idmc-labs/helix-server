@@ -20,7 +20,9 @@ class Command(BaseCommand):
             email = f'{name}@helix.com'
             user, _ = User.objects.get_or_create(
                 username=name,
-                email=email
+                email=email,
+                first_name=f'f{name}',
+                last_name=f'l{name}',
             )
             user.set_password(raw_password)
             user.save()
