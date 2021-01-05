@@ -93,6 +93,21 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         self.assertEqual(content['data']['createEvent']['result']['otherSubType'],
                          None)
 
+        self.input['eventType'] = "OTHER"
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['createEvent']['ok'], content)
+        self.assertIsNone(content['data']['createEvent']['errors'], content)
+        self.assertEqual(content['data']['createEvent']['result']['name'],
+                         self.input['name'])
+        self.assertNotEqual(content['data']['createEvent']['result']['otherSubType'],
+                            None)
+
 
 class TestUpdateEvent(HelixGraphQLTestCase):
     def setUp(self) -> None:

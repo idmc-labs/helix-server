@@ -29,7 +29,7 @@ class EventSerializer(MetaInformationSerializerMixin,
             raise ValidationError(errors)
         if attrs.get('event_type',
                      getattr(self.instance, 'event_type', None)
-                     ) is not Crisis.CRISIS_TYPE.OTHER:
+                     ) is not Crisis.CRISIS_TYPE.OTHER.value:
             # only let following field if the event type is other
             attrs['other_sub_type'] = None
         return attrs
