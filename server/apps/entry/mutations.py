@@ -1,6 +1,16 @@
 from django.utils.translation import gettext
+import graphene
 
-from apps.entry.enums import *
+from apps.entry.enums import (
+    IdentifierGrapheneEnum,
+    OSMAccuracyGrapheneEnum,
+    QuantifierGrapheneEnum,
+    UnitGrapheneEnum,
+    TermGrapheneEnum,
+    TypeGrapheneEnum,
+    RoleGrapheneEnum,
+    EntryReviewerGrapheneEnum,
+)
 from apps.entry.models import Entry, Figure, SourcePreview, EntryReviewer
 from apps.entry.schema import EntryType, FigureType, SourcePreviewType, EntryReviewerType
 from apps.entry.serializers import EntrySerializer, FigureSerializer, SourcePreviewSerializer
