@@ -134,7 +134,7 @@ class TestEntrySerializer(HelixTestCase):
         self.assertEqual(set(entry.reviewers.through.objects.values_list('status', flat=1)),
                          {EntryReviewer.REVIEW_STATUS.UNDER_REVIEW})
 
-        self.assertEqual(old_count-1, EntryReviewer.objects.count())
+        self.assertEqual(old_count - 1, EntryReviewer.objects.count())
 
     def test_entry_serializer_with_figures_source(self):
         source1 = dict(
@@ -150,7 +150,7 @@ class TestEntrySerializer(HelixTestCase):
             accuracy=OSMName.OSM_ACCURACY.ADMIN.value,
             reported_name='reported',
             identifier=OSMName.IDENTIFIER.SOURCE.value,
-            )
+        )
         source2 = copy(source1)
         source2['lat'] = 67.5
         source3 = copy(source1)
@@ -168,7 +168,7 @@ class TestEntrySerializer(HelixTestCase):
             "start_date": "2020-09-09",
             "include_idu": False,
             "geo_locations": [source1, source2, source3],
-            }]
+        }]
         self.data['figures'] = figures
 
         serializer = EntrySerializer(instance=None,
@@ -195,24 +195,24 @@ class TestEntrySerializer(HelixTestCase):
             'reported_name': 'updated old source'
         }
         figures = [{
-                "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
-                "id": figure.id,
-                "geo_locations": [new_source, old_source],
-                "district": "new name",
-            }, {
-                "uuid": "f1b42e79-da44-4032-8cb6-0dd4b7b97b57",
-                "district": "district",
-                "town": "town",
-                "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
-                "reported": 10,
-                "unit": Figure.UNIT.PERSON.value,
-                "term": Figure.TERM.EVACUATED.value,
-                "type": Figure.TYPE.IDP_STOCK.value,
-                "role": Figure.ROLE.RECOMMENDED.value,
-                "start_date": "2020-09-09",
-                "include_idu": False,
-                "geo_locations": [new_source],
-            }]
+            "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
+            "id": figure.id,
+            "geo_locations": [new_source, old_source],
+            "district": "new name",
+        }, {
+            "uuid": "f1b42e79-da44-4032-8cb6-0dd4b7b97b57",
+            "district": "district",
+            "town": "town",
+            "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
+            "reported": 10,
+            "unit": Figure.UNIT.PERSON.value,
+            "term": Figure.TERM.EVACUATED.value,
+            "type": Figure.TYPE.IDP_STOCK.value,
+            "role": Figure.ROLE.RECOMMENDED.value,
+            "start_date": "2020-09-09",
+            "include_idu": False,
+            "geo_locations": [new_source],
+        }]
         self.data['figures'] = figures
         serializer = EntrySerializer(instance=entry,
                                      data=self.data,

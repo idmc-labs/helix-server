@@ -19,7 +19,7 @@ class Review(MetaInformationArchiveAbstractModel, models.Model):
             RED: _("Red"),
             GREEN: _("Green"),
             GREY: _("Grey"),
-            }
+        }
 
     entry = models.ForeignKey('entry.Entry', verbose_name=_('Entry'),
                               related_name='reviews', on_delete=models.CASCADE)

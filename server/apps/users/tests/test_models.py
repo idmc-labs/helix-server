@@ -21,4 +21,3 @@ class TestRegisterSerializer(HelixTestCase):
 
         self.user.save()
         self.assertEqual(self.user.groups.count(), 1)
-

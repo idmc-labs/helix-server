@@ -26,7 +26,7 @@ class DisaggregatedAgeSerializer(serializers.Serializer):
         if attrs.get('age_from') > attrs.get('age_to'):
             raise serializers.ValidationError(
                 {'age_to': gettext('Pick an age higher than `from` %(age_from)s.') %
-                           {'age_from': attrs.get("age_from")}}
+                 {'age_from': attrs.get("age_from")}}
             )
         attrs['uuid'] = str(attrs['uuid'])
         return attrs
@@ -74,8 +74,8 @@ class CommonFigureValidationMixin:
     def validate_unit_and_household_size(self, attrs):
         errors = OrderedDict()
         if attrs.get('unit',
-                     getattr(self.instance, 'unit', Figure.UNIT.PERSON.value)
-                     == Figure.UNIT.HOUSEHOLD.value) and \
+                     getattr(self.instance, 'unit', Figure.UNIT.PERSON.value) ==
+                     Figure.UNIT.HOUSEHOLD.value) and \
                 not attrs.get('household_size',
                               getattr(self.instance, 'household_size', 0)):
             raise serializers.ValidationError(
