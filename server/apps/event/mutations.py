@@ -1,5 +1,5 @@
 import graphene
-from django.utils.translation import gettext, gettext_lazy as _
+from django.utils.translation import gettext
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.models import Event, Actor

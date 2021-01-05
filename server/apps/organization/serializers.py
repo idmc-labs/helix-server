@@ -1,6 +1,6 @@
 from django.db import transaction
 from rest_framework import serializers
-from django.utils.translation import gettext_lazy as _, gettext
+from django.utils.translation import gettext
 
 from apps.contact.models import Contact
 from apps.contact.serializers import ContactWithoutOrganizationSerializer

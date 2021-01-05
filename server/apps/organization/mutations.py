@@ -1,5 +1,5 @@
 import graphene
-from django.utils.translation import gettext, gettext_lazy as _
+from django.utils.translation import gettext
 
 from apps.contact.mutations import ContactWithoutOrganizationInputType
 from apps.organization.models import Organization, OrganizationKind

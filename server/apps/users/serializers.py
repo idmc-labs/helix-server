@@ -2,11 +2,10 @@ from django.contrib.auth import get_user_model, authenticate
 from django.db import transaction
 from django.utils.translation import gettext
 from django_enumfield.contrib.drf import EnumField
-from djoser.conf import settings as djoser_settings
 from rest_framework import serializers
 
 from apps.users.enums import USER_ROLE
-from apps.users.utils import send_activation_email, get_user_from_activation_token
+from apps.users.utils import get_user_from_activation_token
 
 User = get_user_model()
 

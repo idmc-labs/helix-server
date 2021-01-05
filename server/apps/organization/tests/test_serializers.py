@@ -11,7 +11,6 @@ class TestCreateOrganizationSerializer(HelixTestCase):
         self.data = {
             "name": "org name",
             "short_name": "org1",
-            "methodology": "methods",
             "methodology": "source1",
             "contacts": [
                 {

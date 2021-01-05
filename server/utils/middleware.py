@@ -1,6 +1,5 @@
 import json
 
-from django.conf import settings
 from debug_toolbar.middleware import DebugToolbarMiddleware as BaseMiddleware
 from debug_toolbar.middleware import get_show_toolbar
 from debug_toolbar.toolbar import DebugToolbar

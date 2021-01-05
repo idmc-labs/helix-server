@@ -1,9 +1,7 @@
 from django.contrib.auth.models import Group
 
 from apps.users.enums import USER_ROLE
-from apps.users.models import User
-from apps.users.serializers import UserSerializer
-from utils.tests import HelixTestCase, create_user_with_role
+from utils.tests import HelixTestCase
 from utils.factories import UserFactory
 
 ADMIN = USER_ROLE.ADMIN.name

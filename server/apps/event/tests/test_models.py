@@ -1,5 +1,5 @@
 from apps.crisis.models import Crisis
-from apps.event.models import Event, Violence
+from apps.event.models import Event
 from utils.factories import (
     CrisisFactory,
     DisasterSubTypeFactory,

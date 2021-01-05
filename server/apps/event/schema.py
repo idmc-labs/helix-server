@@ -1,6 +1,6 @@
 import graphene
 from graphene_django import DjangoObjectType
-from graphene_django_extras import PageGraphqlPagination, DjangoObjectField, DjangoFilterListField
+from graphene_django_extras import DjangoObjectField, PageGraphqlPagination
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.enums import EventOtherSubTypeEnum
@@ -17,7 +17,7 @@ from apps.event.models import (
     DisasterType
 )
 from apps.event.filters import EventFilter
-from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType, CustomDjangoListField
+from utils.fields import CustomDjangoListObjectType, DjangoPaginatedListObjectField
 
 
 class TriggerSubObjectType(DjangoObjectType):
