@@ -7,7 +7,7 @@ from graphene_django_extras import (
 )
 
 from apps.contact.schema import ContactListType
-from apps.country.models import Country, CountryRegion, ContextualUpdate, Summary
+from apps.country.models import Country, CountryRegion, ContextualUpdate, Summary, HouseholdSize
 from apps.country.filters import CountryFilter
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
 
@@ -98,9 +98,23 @@ class CountryListType(CustomDjangoListObjectType):
         filterset_class = CountryFilter
 
 
+class CountryHouseholdSizeType(DjangoObjectType):
+    class Meta:
+        model = HouseholdSize
+
+
 class Query:
     country = DjangoObjectField(CountryType)
     country_list = DjangoPaginatedListObjectField(CountryListType,
                                                   pagination=PageGraphqlPagination(
                                                       page_size_query_param='pageSize'
                                                   ))
+    household_size = graphene.Field(CountryHouseholdSizeType,
+                                    country=graphene.ID(required=True),
+                                    year=graphene.Int(required=True))
+
+    def resolve_household_size(root, info, country, year):
+        try:
+            return HouseholdSize.objects.get(country=country, year=year)
+        except HouseholdSize.DoesNotExist:
+            return HouseholdSize.objects.none()

@@ -1,8 +1,9 @@
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 
-from apps.contrib.models import MetaInformationArchiveAbstractModel
+from apps.contrib.models import MetaInformationArchiveAbstractModel, ArchiveAbstractModel
 from apps.entry.models import Entry
 
 
@@ -68,3 +69,16 @@ class Summary(MetaInformationArchiveAbstractModel, models.Model):
     country = models.ForeignKey('Country', verbose_name=_('Country'),
                                 on_delete=models.CASCADE, related_name='summaries')
     summary = models.TextField(verbose_name=_('Summary'), blank=False)
+
+
+class HouseholdSize(ArchiveAbstractModel):
+    country = models.ForeignKey('Country',
+                                related_name='household_sizes', on_delete=models.CASCADE)
+    year = models.PositiveSmallIntegerField(verbose_name=_('Year'))
+    size = models.FloatField(verbose_name=_('Size'), default=1.0,
+                             validators=[
+                                 MinValueValidator(0, message="Should be positive")
+                             ])
+
+    class Meta:
+        unique_together = (('country', 'year'),)
