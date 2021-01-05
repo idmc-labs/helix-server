@@ -78,7 +78,8 @@ class DisasterType(NameAttributedModels):
     """
     Holds the possible disaster types
     """
-    disaster_sub_category = models.ForeignKey('DisasterSubCategory', verbose_name=_('Disaster Sub Category'),
+    disaster_sub_category = models.ForeignKey('DisasterSubCategory',
+                                              verbose_name=_('Disaster Sub Category'),
                                               related_name='types', on_delete=models.CASCADE)
 
 
@@ -151,14 +152,22 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         errors = OrderedDict()
         event_type = values.get('event_type', getattr(instance, 'event_type', None))
         if event_type == Crisis.CRISIS_TYPE.CONFLICT:
-            if not values.get('violence', getattr(instance, 'violence', None)):
-                errors['violence'] = gettext('Please mention at least the reason for violence. ')
+            if not values.get('violence_sub_type', getattr(instance, 'violence_sub_type', None)):
+                errors['violence_sub_type'] = gettext('Please mention at least'
+                                                      ' the reason for violence.')
         elif event_type == Crisis.CRISIS_TYPE.DISASTER:
             if not values.get('disaster_sub_type', getattr(instance, 'disaster_sub_type', None)):
                 errors['disaster_sub_type'] = gettext('Please mention the sub-type of disaster. ')
-            # if not values.get('glide_number', getattr(instance, 'glide_number', None)):
-            #     errors['glide_number'] = gettext('Glide Number is required. ')
         return errors
+
+    def save(self, *args, **kwargs):
+        if self.disaster_sub_type:
+            self.disaster_type = self.disaster_sub_type.type
+            self.disaster_sub_category = self.disaster_type.disaster_sub_category
+            self.disaster_category = self.disaster_sub_category.category
+        if self.violence_sub_type:
+            self.violence = self.violence_sub_type.violence
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
