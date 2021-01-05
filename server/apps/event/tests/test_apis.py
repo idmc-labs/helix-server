@@ -35,6 +35,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
                     endDate
                     name
                     eventType
+                    otherSubType
                     violence {
                         name
                     }
@@ -74,6 +75,38 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         self.assertIsNone(content['data']['createEvent']['errors'], content)
         self.assertEqual(content['data']['createEvent']['result']['name'],
                          self.input['name'])
+
+    def test_valid_event_creation_with_other_sub_type(self) -> None:
+        self.input['eventType'] = "DISASTER"
+        self.input['otherSubType'] = "DEVELOPMENT"  # this will not be set
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['createEvent']['ok'], content)
+        self.assertIsNone(content['data']['createEvent']['errors'], content)
+        self.assertEqual(content['data']['createEvent']['result']['name'],
+                         self.input['name'])
+        self.assertEqual(content['data']['createEvent']['result']['otherSubType'],
+                         None)
+
+        self.input['eventType'] = "OTHER"
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['createEvent']['ok'], content)
+        self.assertIsNone(content['data']['createEvent']['errors'], content)
+        self.assertEqual(content['data']['createEvent']['result']['name'],
+                         self.input['name'])
+        self.assertNotEqual(content['data']['createEvent']['result']['otherSubType'],
+                            None)
 
 
 class TestUpdateEvent(HelixGraphQLTestCase):

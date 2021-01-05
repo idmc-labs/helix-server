@@ -10,7 +10,7 @@ from apps.users.serializers import (
     RegisterSerializer,
     ActivateSerializer,
     UserSerializer,
-    )
+)
 from utils.permissions import is_authenticated
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 
@@ -129,8 +129,8 @@ class UpdateUser(graphene.Mutation):
             return UpdateUser(
                 errors=[
                     dict(field='nonFieldErrors', messages=gettext('User not found.'))
-                    ]
-                )
+                ]
+            )
         serializer = UserSerializer(instance=user,
                                     data=data,
                                     context={'request': info.context},

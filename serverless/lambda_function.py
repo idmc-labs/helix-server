@@ -1,10 +1,8 @@
 try:
-    import unzip_requirements
+    pass
 except ImportError:
     pass
 import os
-from subprocess import call
-import sys
 
 import boto3
 import pdfkit

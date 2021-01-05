@@ -1,7 +1,6 @@
 from utils.tests import HelixTestCase
 from utils.factories import UserFactory
 from apps.users.filters import UserFilter
-from apps.users.models import User
 
 
 class TestUserFilter(HelixTestCase):

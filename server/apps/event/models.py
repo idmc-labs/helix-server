@@ -92,11 +92,25 @@ class DisasterSubType(NameAttributedModels):
 
 
 class Event(MetaInformationArchiveAbstractModel, models.Model):
+    class EVENT_OTHER_SUB_TYPE(enum.Enum):
+        DEVELOPMENT = 0
+        EVICTION = 1
+        TECHNICAL_DISASTER = 2
+        # TODO: add more based on IDMC inputs
+
+        __labels__ = {
+            DEVELOPMENT: _('Development'),
+            EVICTION: _('Eviction'),
+            TECHNICAL_DISASTER: _('Technical disaster'),
+        }
+
     crisis = models.ForeignKey('crisis.Crisis', verbose_name=_('Crisis'),
                                blank=True, null=True,
                                related_name='events', on_delete=models.CASCADE)
     name = models.CharField(verbose_name=_('Event Name'), max_length=256)
     event_type = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Event Type'))
+    other_sub_type = enum.EnumField(EVENT_OTHER_SUB_TYPE, verbose_name=_('Other subtypes'),
+                                    blank=True, null=True)
     glide_number = models.CharField(verbose_name=_('Glide Number'), max_length=256,
                                     null=True, blank=True)
     # conflict related fields

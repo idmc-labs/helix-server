@@ -1,4 +1,3 @@
-from unittest.mock import patch
 
 from django.test import RequestFactory
 
@@ -42,7 +41,7 @@ class TestUserSerializer(HelixTestCase):
         self.data = dict(
             first_name='firstname',
             last_name='last_name',
-            )
+        )
         self.admin_user = create_user_with_role(ADMIN)
         self.reviewer = create_user_with_role(MONITORING_EXPERT_REVIEWER)
         self.request = RequestFactory().post('/graphql')
@@ -51,7 +50,7 @@ class TestUserSerializer(HelixTestCase):
         self.request.user = self.reviewer
         context = dict(
             request=self.request
-            )
+        )
         serializer = UserSerializer(instance=self.reviewer, data=self.data, context=context,
                                     partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -59,7 +58,7 @@ class TestUserSerializer(HelixTestCase):
         self.request.user = self.admin_user
         context = dict(
             request=self.request
-            )
+        )
         serializer = UserSerializer(instance=self.reviewer, data=self.data, context=context,
                                     partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -69,7 +68,7 @@ class TestUserSerializer(HelixTestCase):
         self.request.user = reviewer2
         context = dict(
             request=self.request
-            )
+        )
         serializer = UserSerializer(instance=self.reviewer, data=self.data, context=context,
                                     partial=True)
         self.assertFalse(serializer.is_valid())
@@ -80,7 +79,7 @@ class TestUserSerializer(HelixTestCase):
         self.data['role'] = USER_ROLE.ADMIN.value
         context = dict(
             request=self.request
-            )
+        )
         serializer = UserSerializer(instance=self.reviewer, data=self.data, context=context,
                                     partial=True)
         self.assertFalse(serializer.is_valid())

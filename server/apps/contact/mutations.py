@@ -2,7 +2,7 @@ from django.utils.translation import gettext
 import graphene
 from graphene_file_upload.scalars import Upload
 
-from apps.contact.enums import DesignationGrapheneEnum, CommunicationMediumGrapheneEnum, GenderGrapheneEnum
+from apps.contact.enums import DesignationGrapheneEnum, GenderGrapheneEnum
 from apps.contact.models import Contact, Communication
 from apps.contact.schema import ContactType, CommunicationType
 from apps.contact.serializers import ContactSerializer, CommunicationSerializer
@@ -27,7 +27,6 @@ class ContactWithoutOrganizationInputType(ContactInputType, graphene.InputObject
     """
     Contact InputType without Organization
     """
-    pass
 
 
 class ContactCreateInputType(ContactInputType, graphene.InputObjectType):

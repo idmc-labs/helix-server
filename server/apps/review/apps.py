@@ -6,4 +6,4 @@ class ReviewConfig(AppConfig):
 
     def ready(self):
         # registering receiver
-        import apps.review.receivers
+        pass

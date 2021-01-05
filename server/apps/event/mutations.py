@@ -1,10 +1,11 @@
 import graphene
-from django.utils.translation import gettext, gettext_lazy as _
+from django.utils.translation import gettext
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.models import Event, Actor
 from apps.event.schema import EventType, ActorType
 from apps.event.serializers import EventSerializer, ActorSerializer
+from apps.event.enums import EventOtherSubTypeEnum
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 
@@ -87,6 +88,7 @@ class EventCreateInputType(graphene.InputObjectType):
     crisis = graphene.ID(required=False)
     name = graphene.String(required=True)
     event_type = graphene.NonNull(CrisisTypeGrapheneEnum)
+    other_sub_type = graphene.Field(EventOtherSubTypeEnum)
     glide_number = graphene.String()
     trigger = graphene.ID()
     trigger_sub_type = graphene.ID()
@@ -104,6 +106,7 @@ class EventUpdateInputType(graphene.InputObjectType):
     crisis = graphene.ID()
     name = graphene.String()
     event_type = graphene.Field(CrisisTypeGrapheneEnum)
+    other_sub_type = graphene.Field(EventOtherSubTypeEnum)
     glide_number = graphene.String()
     trigger = graphene.ID()
     trigger_sub_type = graphene.ID()

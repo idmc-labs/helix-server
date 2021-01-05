@@ -6,7 +6,7 @@ from apps.review.models import Review, ReviewComment
 from apps.review.schema import ReviewCommentType, ReviewType
 from apps.review.serializers import ReviewSerializer, ReviewCommentSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import permission_checker, is_authenticated
+from utils.permissions import permission_checker
 
 
 class ReviewCreateInputType(graphene.InputObjectType):

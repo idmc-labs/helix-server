@@ -23,7 +23,7 @@ class User(AbstractUser):
     @classmethod
     def can_update_user(cls, user_id: int, authenticated_user: 'User') -> bool:
         return authenticated_user.has_perm('users.change_user') or\
-                user_id == authenticated_user.id
+            user_id == authenticated_user.id
 
     def set_role(self, role: int) -> None:
         try:

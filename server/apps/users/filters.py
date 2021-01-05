@@ -32,7 +32,7 @@ class UserFilter(django_filters.FilterSet):
         if not value:
             return queryset
         return queryset.annotate(
-                full=Concat(Lower('first_name'), Lower('last_name'))
-            ).annotate(
-                idx=StrIndex('full', Value(value.lower()))
-            ).filter(idx__gt=0).order_by('idx', 'full')
+            full=Concat(Lower('first_name'), Lower('last_name'))
+        ).annotate(
+            idx=StrIndex('full', Value(value.lower()))
+        ).filter(idx__gt=0).order_by('idx', 'full')

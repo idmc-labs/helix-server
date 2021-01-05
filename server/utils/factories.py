@@ -2,7 +2,7 @@ import factory
 from dateutil.utils import today
 from factory.django import DjangoModelFactory
 
-from apps.contact.models import Contact, Communication
+from apps.contact.models import Contact
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 
