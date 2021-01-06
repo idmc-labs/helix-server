@@ -1,6 +1,6 @@
 import graphene
 from graphene_django import DjangoObjectType
-from graphene_django_extras import PageGraphqlPagination
+from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
 
 from apps.review.enums import ReviewStatusEnum
 from apps.review.filters import ReviewCommentFilter
@@ -39,6 +39,7 @@ class Query(object):
                                                  pagination=PageGraphqlPagination(
                                                      page_size_query_param='pageSize'
                                                  ))
+    review_comment = DjangoObjectField(ReviewCommentType)
     review_comments = DjangoPaginatedListObjectField(ReviewCommentListType,
                                                      pagination=PageGraphqlPagination(
                                                          page_size_query_param='pageSize'

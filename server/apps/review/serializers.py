@@ -37,21 +37,28 @@ class ReviewCommentSerializer(MetaInformationSerializerMixin,
             return None
         return body
 
+    def validate_body_without_reviews(self, attrs):
+        if not attrs.get('reviews') and not attrs.get('body', '').strip():
+            raise serializers.ValidationError(dict(body='Comment is empty.'))
+
     def validate(self, attrs) -> dict:
-        if not attrs['entry'].reviewers.filter(id=self.context['request'].user.id).exists():
+        if not self.instance and \
+                not attrs['entry'].reviewers.filter(id=self.context['request'].user.id).exists():
             raise serializers.ValidationError(NOT_ALLOWED_TO_REVIEW)
+        self.validate_body_without_reviews(attrs)
         return super().validate(attrs)
 
     def create(self, validated_data):
         reviews_data = validated_data.pop('reviews', [])
         review_comment = super().create(validated_data)
-        Review.objects.bulk_create([
-            Review(
-                **review,
-                created_by_id=review_comment.created_by.id,
-                entry_id=review_comment.entry.id,
-                comment_id=review_comment.id
-            )
-            for review in reviews_data
-        ])
+        if reviews_data:
+            Review.objects.bulk_create([
+                Review(
+                    **review,
+                    created_by_id=review_comment.created_by.id,
+                    entry_id=review_comment.entry.id,
+                    comment_id=review_comment.id
+                )
+                for review in reviews_data
+            ])
         return review_comment

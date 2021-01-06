@@ -117,12 +117,13 @@ class UpdateReviewComment(graphene.Mutation):
     @permission_checker(['review.change_review'])
     def mutate(root, info, data):
         try:
-            instance = ReviewComment.objects.get(id)
+            instance = ReviewComment.objects.get(created_by=info.context.user,
+                                                 id=data['id'])
         except ReviewComment.DoesNotExist:
             return UpdateReviewComment(
                 errors=[
-                    CustomErrorType(field='nonFieldErrors',
-                                    messages=gettext('Comment does not exist.'))
+                    dict(field='nonFieldErrors',
+                         messages=gettext('Comment does not exist.'))
                 ],
                 ok=False
             )
@@ -147,18 +148,20 @@ class DeleteReviewComment(graphene.Mutation):
 
     @staticmethod
     @permission_checker(['review.delete_review'])
-    def mutate(root, info, data):
+    def mutate(root, info, id):
         try:
-            instance = ReviewComment.objects.get(id=data['id'])
+            instance = ReviewComment.objects.get(created_by=info.context.user,
+                                                 id=id)
         except ReviewComment.DoesNotExist:
             return DeleteReviewComment(
                 errors=[
-                    CustomErrorType(field='nonFieldErrors',
-                                    messages=gettext('Review does not exist.'))
+                    dict(field='nonFieldErrors',
+                         messages=gettext('Comment does not exist.'))
                 ],
                 ok=False
             )
         instance.delete()
+        instance.id = id
         return DeleteReviewComment(result=instance, errors=None, ok=True)
 
 
