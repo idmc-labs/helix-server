@@ -19,12 +19,13 @@ class ExtractionQuery(MetaInformationAbstractModel):
                                     blank=True, related_name='+')
     figure_categories = models.ManyToManyField('entry.FigureCategory',
                                                verbose_name=_('figure categories'),
-                                               related_name='+', blank=True,)
+                                               related_name='+', blank=True)
     event_after = models.DateField(verbose_name=_('From Date'), blank=True, null=True)
     event_before = models.DateField(verbose_name=_('To Date'), blank=True, null=True)
-    figure_roles = ArrayField(base_field=enum.EnumField(enum=Figure.ROLE), blank=True)
+    figure_roles = ArrayField(base_field=enum.EnumField(enum=Figure.ROLE),
+                              blank=True, null=True)
     figure_tags = models.ManyToManyField('entry.FigureTag', verbose_name=_('Figure Tags'),
-                                         blank=True, null=True)
+                                         blank=True, related_name='+')
 
     @classmethod
     def get_entries(cls, data=None) -> ['Entry']:  # noqa
@@ -32,4 +33,14 @@ class ExtractionQuery(MetaInformationAbstractModel):
 
     @property
     def entries(self) -> ['Entry']:  # noqa
-        return self.get_entries(data=self.__dict__)
+        return self.get_entries(data=dict(
+            countries=list(self.countries.all().values_list('id', flat=True)),
+            regions=list(self.regions.all().values_list('id', flat=True)),
+            crises=list(self.crises.all().values_list('id', flat=True)),
+            figure_categories=list(self.figure_categories.all().values_list('id', flat=True)),
+            figure_tags=list(self.figure_tags.all().values_list('id', flat=True)),
+            districts=self.districts,
+            figure_roles=self.figure_roles,
+            event_after=self.event_after,
+            event_before=self.event_before,
+        ))

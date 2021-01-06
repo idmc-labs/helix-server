@@ -5,9 +5,10 @@ from utils.filters import StringListFilter
 
 
 class EntryExtractionFilterSet(df.FilterSet):
+    # NOTE: these filter names exactly match the extraction query model field names
     regions = StringListFilter(method='filter_regions')
     countries = StringListFilter(method='filter_countries')
-    # districts = StringListFilter(method='filter_districts')
+    districts = StringListFilter(method='filter_districts')
     crises = StringListFilter(method='filter_crises')
     figure_categories = StringListFilter(method='filter_figure_categories')
     event_after = df.DateFilter(method='filter_time_frame_after')

@@ -19,7 +19,10 @@ class ExtractionQueryObjectType(DjangoObjectType):
     class Meta:
         model = ExtractionQuery
 
-    entries = DjangoPaginatedListObjectField(EntryListType)
+    entries = DjangoPaginatedListObjectField(EntryListType,
+                                             pagination=PageGraphqlPagination(
+                                                 page_size_query_param='pageSize'
+                                             ), accessor='entries')
 
 
 class ExtractionQueryListType(CustomDjangoListObjectType):

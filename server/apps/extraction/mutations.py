@@ -74,6 +74,29 @@ class UpdateExtraction(graphene.Mutation):
         return UpdateExtraction(result=instance, errors=None, ok=True)
 
 
+class DeleteExtraction(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(ExtractionQueryObjectType)
+
+    @staticmethod
+    def mutate(root, info, id):
+        try:
+            instance = ExtractionQuery.objects.get(id=id,
+                                                   created_by=info.context.user)  # TODO: correct?
+        except ExtractionQuery.DoesNotExist:
+            return DeleteExtraction(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Extraction Query does not exist.'))
+            ])
+        instance.delete()
+        instance.id = id
+        return DeleteExtraction(result=instance, errors=None, ok=True)
+
+
 class Mutation:
     create_extraction = CreateExtraction.Field()
     update_extraction = UpdateExtraction.Field()
+    delete_extraction = DeleteExtraction.Field()
