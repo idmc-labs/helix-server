@@ -27,8 +27,13 @@ APPS_DIR = os.path.join(BASE_DIR, APPS_DIRNAME)
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'w(m6)jr08z!anjsq6mjz%xo^*+sfnv$e3list=gfcfxaj_^4%o')
-HELIX_ENVIRONMENT = os.environ.get('HELIX_ENVIRONMENT', 'development')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY',
+                            'w(m6)jr08z!anjsq6mjz%xo^*+sfnv$e3list=gfcfxaj_^4%o')
+PRODUCTION = 'production'
+DEVELOPMENT = 'development'
+ALPHA = 'alpha'
+NIGHTLY = 'nightly'
+HELIX_ENVIRONMENT = os.environ.get('HELIX_ENVIRONMENT', DEVELOPMENT)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
@@ -86,7 +91,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
-if HELIX_ENVIRONMENT in ('production', 'nightly'):
+if HELIX_ENVIRONMENT in (PRODUCTION, NIGHTLY):
     MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
 
 ROOT_URLCONF = 'helix.urls'
@@ -185,7 +190,6 @@ GRAPHENE = {
     'SCHEMA_INDENT': 2,  # Defaults to None (displays all data on a single line)
     'MIDDLEWARE': [
         'helix.sentry.SentryMiddleware',
-        # 'utils.middlewares.AuthorizationMiddleware',
     ],
 }
 
@@ -196,8 +200,8 @@ GRAPHENE_DJANGO_EXTRAS = {
     # 'CACHE_ACTIVE': True,
     # 'CACHE_TIMEOUT': 300    # seconds
 }
-if DEBUG:
-    GRAPHENE['MIDDLEWARE'].append('graphene_django.debug.DjangoDebugMiddleware')
+if HELIX_ENVIRONMENT not in [DEVELOPMENT]:
+    GRAPHENE['MIDDLEWARE'].append('utils.middleware.DisableIntrospectionSchemaMiddleware')
 
 AUTHENTICATION_BACKEND = [
     'django.contrib.auth.backends.ModelBackend',
@@ -245,7 +249,7 @@ INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 # Django storage
 
 # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
-if HELIX_ENVIRONMENT in ('production', 'nightly'):
+if HELIX_ENVIRONMENT in (PRODUCTION, NIGHTLY):
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
@@ -263,10 +267,10 @@ GZIP_CONTENT_TYPES = [
 SLS_SERVICE_NAME = os.environ.get('SLS_SERVICE_NAME', 'helix-serverless')
 PDF_GENERATOR = os.environ.get('PDF_GENERATOR', 'generatePdf')
 SLS_STAGES = {
-    'development': 'dev',
-    'production': 'prod',
-    'testing': 'nightly',
-    'nightly': 'nightly'
+    DEVELOPMENT: 'dev',
+    PRODUCTION: 'prod',
+    ALPHA: 'nightly',
+    NIGHTLY: 'nightly'
 }
 sls_stage = SLS_STAGES[HELIX_ENVIRONMENT.lower()]
 LAMBDA_HTML_TO_PDF = os.environ.get('LAMBDA_HTML_TO_PDF', f'{SLS_SERVICE_NAME}-{sls_stage}-{PDF_GENERATOR}')
