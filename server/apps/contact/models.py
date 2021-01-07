@@ -70,6 +70,10 @@ class Communication(MetaInformationArchiveAbstractModel, models.Model):
 
     contact = models.ForeignKey('Contact', verbose_name=_('Contact'),
                                 related_name='communications', on_delete=models.CASCADE)
+    country = models.ForeignKey('country.Country',
+                                verbose_name=_('Country'),
+                                blank=False, null=True,
+                                related_name='communications', on_delete=models.SET_NULL)
     title = models.CharField(verbose_name=_('Title'), max_length=256,
                              blank=True, null=True)
     subject = models.CharField(verbose_name=_('Subject'), max_length=512)
