@@ -117,4 +117,4 @@ class Query:
         try:
             return HouseholdSize.objects.get(country=country, year=year)
         except HouseholdSize.DoesNotExist:
-            return HouseholdSize.objects.none()
+            return None
