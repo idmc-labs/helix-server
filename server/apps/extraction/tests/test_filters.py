@@ -77,7 +77,7 @@ class TestUserFilter(HelixTestCase):
             countries=[self.country3reg3.id]
         )
         fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {})
+        self.assertEqual(set(fqs), set())
 
     def test_filter_by_crises(self):
         data = dict(

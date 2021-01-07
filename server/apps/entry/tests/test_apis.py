@@ -9,6 +9,7 @@ from utils.factories import (
     FigureFactory,
     OrganizationFactory,
     CountryFactory,
+    FigureCategoryFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -141,6 +142,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.country = CountryFactory.create()
         self.country_id = str(self.country.id)
+        self.fig_cat = FigureCategoryFactory.create()
+        self.fig_cat_id = str(self.fig_cat.id)
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.event = EventFactory.create()
         self.mutation = """
@@ -171,7 +174,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
             "sources": [str(OrganizationFactory.create().id)],
             "publishers": [str(OrganizationFactory.create().id)],
             "publishDate": "2020-09-09",
-            "tags": ["2020", "grid2020", "south", "asia"],
             "sourceExcerpt": "excerpt one",
             "idmcAnalysis": "analysis one",
             "isConfidential": True,
@@ -204,7 +206,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
                 "term": Figure.TERM.EVACUATED.name,
-                "type": Figure.TYPE.IDP_STOCK.name,
+                "category": self.fig_cat_id,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
                 "includeIdu": True,
@@ -242,7 +244,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
                 "term": Figure.TERM.EVACUATED.name,
-                "type": Figure.TYPE.IDP_STOCK.name,
+                "category": self.fig_cat_id,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
                 "includeIdu": True,
@@ -258,7 +260,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "unit": Figure.UNIT.PERSON.name,
                 "term": Figure.TERM.EVACUATED.name,
-                "type": Figure.TYPE.IDP_STOCK.name,
+                "category": self.fig_cat_id,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
                 "includeIdu": True,
@@ -335,7 +337,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "unit": Figure.UNIT.PERSON.name,
                 "householdSize": 1,
                 "term": Figure.TERM.EVACUATED.name,
-                "type": Figure.TYPE.IDP_STOCK.name,
+                "category": self.fig_cat_id,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
                 "includeIdu": True,
@@ -371,7 +373,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "reported": 10,
                 "unit": Figure.UNIT.HOUSEHOLD.name,  # missing household_size
                 "term": Figure.TERM.EVACUATED.name,
-                "type": Figure.TYPE.IDP_STOCK.name,
+                "category": self.fig_cat_id,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
                 "includeIdu": True,
@@ -396,6 +398,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.country = CountryFactory.create()
         self.country_id = str(self.country.id)
+        self.fig_cat = FigureCategoryFactory.create()
+        self.fig_cat_id = str(self.fig_cat.id)
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.entry = EntryFactory.create(
             created_by=self.editor
@@ -487,7 +491,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
                 "term": Figure.TERM.EVACUATED.name,
-                "type": Figure.TYPE.IDP_STOCK.name,
+                "category": self.fig_cat_id,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-09-09",
                 "includeIdu": False,
@@ -520,7 +524,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
                 "term": Figure.TERM.EVACUATED.name,
-                "type": Figure.TYPE.IDP_STOCK.name,
+                "category": self.fig_cat_id,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-09-09",
                 "includeIdu": False,
@@ -571,7 +575,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "reported": 10,
                 "unit": Figure.UNIT.HOUSEHOLD.name,  # missing household_size
                 "term": Figure.TERM.EVACUATED.name,
-                "type": Figure.TYPE.IDP_STOCK.name,
+                "category": self.fig_cat_id,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
                 "includeIdu": True,

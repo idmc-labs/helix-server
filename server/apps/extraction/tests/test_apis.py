@@ -45,6 +45,11 @@ class TestCreateExtraction(HelixGraphQLTestCase):
           createExtraction(data: $input) {
             result {
               id
+              entries {
+                results {
+                  id
+                }
+              }
             }
             ok
             errors
@@ -69,5 +74,5 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         self.assertEqual(
             set([each['id'] for each in
                  content['data']['createExtraction']['result']['entries']['results']]),
-            {self.entry3ev2.id}
+            {str(self.entry3ev2.id)}
         )

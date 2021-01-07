@@ -69,7 +69,7 @@ class CommonFigureCreateMixin:
     unit = graphene.NonNull(UnitGrapheneEnum)
     household_size = graphene.Int(required=False)
     term = graphene.NonNull(TermGrapheneEnum)
-    sub_type = graphene.ID(required=True)
+    category = graphene.ID(required=True)
     role = graphene.NonNull(RoleGrapheneEnum)
     start_date = graphene.Date(required=True)
     country = graphene.ID(required=True)
