@@ -61,6 +61,7 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.force_login(reviewer)
         _input = dict(
+            name='LOl',
             regions=[str(self.reg1.id)]
         )
         response = self.query(

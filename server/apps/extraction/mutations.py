@@ -23,10 +23,11 @@ class CommonExtractionInputMixin:
 
 
 class CreateExtractInputType(CommonExtractionInputMixin, graphene.InputObjectType):
-    pass
+    name = graphene.String(required=True)
 
 
 class UpdateExtractInputType(CommonExtractionInputMixin, graphene.InputObjectType):
+    name = graphene.String()
     id = graphene.ID(required=True)
 
 

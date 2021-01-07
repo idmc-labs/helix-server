@@ -9,6 +9,7 @@ from apps.extraction.filters import EntryExtractionFilterSet
 
 
 class ExtractionQuery(MetaInformationAbstractModel):
+    name = models.CharField(verbose_name=_('Name'), max_length=128)
     regions = models.ManyToManyField('country.CountryRegion', verbose_name=_('Regions'),
                                      blank=True, related_name='+')
     countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
