@@ -74,7 +74,7 @@ class TestUserSerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('non_field_errors', serializer.errors)
 
-        # user cannot change their role themselves
+        # non-admin cannot change their role themselves
         self.request.user = self.reviewer
         self.data['role'] = USER_ROLE.ADMIN.value
         context = dict(
@@ -84,3 +84,26 @@ class TestUserSerializer(HelixTestCase):
                                     partial=True)
         self.assertFalse(serializer.is_valid())
         self.assertIn('role', serializer.errors)
+
+    def test_invalid_role_or_activation_updates(self):
+        # even admins are not allowed to change their own roles
+        self.request.user = self.admin_user
+        self.data['role'] = USER_ROLE.MONITORING_EXPERT_EDITOR.value
+        context = dict(
+            request=self.request
+        )
+        serializer = UserSerializer(instance=self.request.user, data=self.data, context=context,
+                                    partial=True)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('role', serializer.errors)
+
+        # any user is not allowed to activate/deactivate themselves
+        self.data['is_active'] = False
+        context = dict(
+            request=self.request
+        )
+        serializer = UserSerializer(instance=self.request.user, data=self.data, context=context,
+                                    partial=True)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('is_active', serializer.errors)
+
