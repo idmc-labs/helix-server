@@ -13,6 +13,7 @@ class ReviewCreateInputType(graphene.InputObjectType):
     # entry is filled from comment
     entry = graphene.ID(required=True)
     figure = graphene.ID(required=False)
+    geo_location = graphene.ID(required=False)
     field = graphene.String(required=True)
     value = graphene.NonNull(ReviewStatusEnum)
     age_id = graphene.String(required=False)
@@ -23,6 +24,7 @@ class ReviewUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
     entry = graphene.ID(required=False)
     figure = graphene.ID(required=False)
+    geo_location = graphene.ID(required=False)
     field = graphene.String(required=False)
     value = graphene.NonNull(ReviewStatusEnum)
     age_id = graphene.String(required=False)

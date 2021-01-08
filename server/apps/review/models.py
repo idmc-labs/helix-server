@@ -32,6 +32,9 @@ class Review(MetaInformationArchiveAbstractModel, models.Model):
                               null=True, blank=True)
     strata_id = models.CharField(verbose_name=_('Strata ID'), max_length=256,
                                  null=True, blank=True)
+    geo_location = models.ForeignKey('entry.OSMName', verbose_name=_('Geolocation/OSM'),
+                                     null=True, blank=True,
+                                     related_name='reviews', on_delete=models.SET_NULL)
     comment = models.ForeignKey('review.ReviewComment', verbose_name=_('Comment'),
                                 blank=True, null=True,
                                 related_name='reviews', on_delete=models.CASCADE)
