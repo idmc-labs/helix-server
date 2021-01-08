@@ -20,6 +20,7 @@ from apps.entry.enums import (
 from apps.entry.filters import EntryFilter, EntryReviewerFilter, OSMNameFilter
 from apps.entry.models import (
     Figure,
+    FigureTag,
     Entry,
     SourcePreview,
     EntryReviewer,
@@ -165,9 +166,25 @@ class EntryReviewerListType(CustomDjangoListObjectType):
         filterset_class = EntryReviewerFilter
 
 
+class FigureTagType(DjangoObjectType):
+    class Meta:
+        model = FigureTag
+        exclude_fields = ('entry_set',)
+
+
+class FigureTagListType(CustomDjangoListObjectType):
+    class Meta:
+        model = FigureTag
+        filter_fields = {
+            'name': ('icontains',),
+        }
+
+
 class Query:
     figure_category = DjangoObjectField(FigureCategoryObjectType)
     figure_category_list = DjangoPaginatedListObjectField(FigureCategoryListType)
+    figure_tag = DjangoObjectField(FigureTagType)
+    figure_tag_list = DjangoPaginatedListObjectField(FigureTagListType)
 
     figure = DjangoObjectField(FigureType)
     figure_list = DjangoPaginatedListObjectField(FigureListType,

@@ -17,6 +17,14 @@ class CountryRegionType(DjangoObjectType):
         model = CountryRegion
 
 
+class CountryRegionListType(CustomDjangoListObjectType):
+    class Meta:
+        model = CountryRegion
+        filter_fields = {
+            'name': ('icontains',),
+        }
+
+
 class ContextualUpdateType(DjangoObjectType):
     class Meta:
         model = ContextualUpdate
@@ -109,6 +117,7 @@ class Query:
                                                   pagination=PageGraphqlPagination(
                                                       page_size_query_param='pageSize'
                                                   ))
+    country_region_list = DjangoPaginatedListObjectField(CountryRegionListType)
     household_size = graphene.Field(CountryHouseholdSizeType,
                                     country=graphene.ID(required=True),
                                     year=graphene.Int(required=True))
