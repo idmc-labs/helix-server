@@ -81,7 +81,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     def validate_is_active(self, is_active):
         if self.instance and self.context['request'].user == self.instance:
-            raise serializers.ValidationError(gettext('You are not activate/deactivate yourself.'))
+            raise serializers.ValidationError(gettext('You cannot activate/deactivate yourself.'))
         return is_active
 
     def validate(self, attrs):
