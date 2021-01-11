@@ -91,7 +91,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
-if HELIX_ENVIRONMENT in (PRODUCTION, NIGHTLY):
+if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
     MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
 
 ROOT_URLCONF = 'helix.urls'
@@ -249,7 +249,7 @@ INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 # Django storage
 
 # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
-if HELIX_ENVIRONMENT in (PRODUCTION, NIGHTLY):
+if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
