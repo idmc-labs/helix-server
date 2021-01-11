@@ -327,12 +327,10 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                                  on_delete=models.CASCADE, related_name='+',
                                  null=True, blank=True)
     article_title = models.TextField(verbose_name=_('Article Title'))
-    source = models.ForeignKey('organization.Organization', verbose_name=_('Source'),
-                               null=True, blank=True,
-                               related_name='sourced_entries', on_delete=models.SET_NULL)
-    publisher = models.ForeignKey('organization.Organization', verbose_name=_('Publisher'),
-                                  null=True, blank=True,
-                                  related_name='published_entries', on_delete=models.SET_NULL)
+    sources = models.ManyToManyField('organization.Organization', verbose_name=_('Source'),
+                                     blank=True, related_name='sourced_entries')
+    publishers = models.ManyToManyField('organization.Organization', verbose_name=_('Publisher'),
+                                        blank=True, related_name='published_entries')
     publish_date = models.DateField(verbose_name=_('Published Date'))
     source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
                                       blank=True, null=True)

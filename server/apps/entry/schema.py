@@ -20,6 +20,7 @@ from apps.entry.enums import (
 )
 from apps.entry.filters import EntryFilter, EntryReviewerFilter, OSMNameFilter
 from apps.entry.models import Figure, Entry, SourcePreview, EntryReviewer, OSMName
+from apps.organization.schema import OrganizationListType
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
 
 logger = logging.getLogger(__name__)
@@ -88,6 +89,10 @@ class EntryType(DjangoObjectType):
 
     created_by = graphene.Field('apps.users.schema.UserType')
     last_modified_by = graphene.Field('apps.users.schema.UserType')
+    sources = DjangoPaginatedListObjectField(OrganizationListType,
+                                             accessor='sources')
+    publishers = DjangoPaginatedListObjectField(OrganizationListType,
+                                                accessor='publishers')
     figures = DjangoPaginatedListObjectField(FigureListType,
                                              pagination=PageGraphqlPagination(
                                                  page_size_query_param='perPage'

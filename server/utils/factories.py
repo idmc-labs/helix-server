@@ -150,8 +150,6 @@ class EntryFactory(DjangoModelFactory):
 
     article_title = factory.Sequence(lambda n: f'long title {n}')
     url = 'https://www.example.com'
-    source = factory.SubFactory(OrganizationFactory)
-    publisher = factory.SubFactory(OrganizationFactory)
     publish_date = factory.LazyFunction(today().date)
     event = factory.SubFactory(EventFactory)
     tags = factory.Sequence(lambda n: [f'tag{each}' for each in range(n % 10)])
