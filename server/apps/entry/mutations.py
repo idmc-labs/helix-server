@@ -126,7 +126,7 @@ class FigureUpdateInputType(graphene.InputObjectType):
     unit = graphene.Field(UnitGrapheneEnum)
     household_size = graphene.Int(required=False)
     term = graphene.Field(TermGrapheneEnum)
-    sub_type = graphene.ID()
+    category = graphene.ID()
     role = graphene.Field(RoleGrapheneEnum)
     start_date = graphene.Date()
     end_date = graphene.Date()
