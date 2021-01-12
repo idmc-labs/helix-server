@@ -12,6 +12,7 @@ class UserFilter(django_filters.FilterSet):
                                      distinct=True)
     roleIn = StringListFilter(method='filter_role_in')
     full_name = django_filters.CharFilter(method='filter_full_name')
+    include_inactive = django_filters.BooleanFilter(method='filter_noop')
     id = django_filters.CharFilter(field_name='id', lookup_expr='iexact')
 
     class Meta:
@@ -36,3 +37,13 @@ class UserFilter(django_filters.FilterSet):
         ).annotate(
             idx=StrIndex('full', Value(value.lower()))
         ).filter(idx__gt=0).order_by('idx', 'full')
+
+    def filter_noop(self, queryset, name, value):
+        return queryset
+
+    @property
+    def qs(self):
+        include_inactive = self.data.get('include_inactive', False)
+        if not include_inactive:
+            return super().qs.filter(is_active=True)
+        return super().qs

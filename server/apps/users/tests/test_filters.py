@@ -14,7 +14,6 @@ class TestUserFilter(HelixTestCase):
 
         data = dict(full_name='abcd')
         filtered = UserFilter(data).qs
-        print(filtered.count())
         self.assertEqual([each for each in filtered], [u1, u3])
 
         data = dict(full_name='def')
@@ -24,3 +23,15 @@ class TestUserFilter(HelixTestCase):
         data = dict(full_name='zy')
         filtered = UserFilter(data).qs
         self.assertEqual([each for each in filtered], [u3])
+
+    def test_filter_users_defaults_to_active_only(self):
+        u1 = UserFactory.create(first_name='abc', last_name='def', is_active=False)
+        u2 = UserFactory.create(first_name='bcd', last_name='efa', is_active=True)
+
+        data = dict()
+        filtered = UserFilter(data).qs
+        self.assertEqual([each for each in filtered], [u2])
+
+        data['include_inactive'] = True
+        filtered = UserFilter(data).qs
+        self.assertEqual([each for each in filtered], [u1, u2])
