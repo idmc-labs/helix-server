@@ -1,18 +1,20 @@
+from django.contrib.auth.models import Permission
 from django.db.models import Value
 from django.db.models.functions import Lower, StrIndex, Concat
 import django_filters
 
 from apps.users.models import User
-from utils.filters import StringListFilter
+from utils.filters import AllowInitialFilterSetMixin, StringListFilter
 
 
-class UserFilter(django_filters.FilterSet):
+class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
     role = django_filters.CharFilter(field_name='groups__name',
                                      lookup_expr='iexact',
                                      distinct=True)
     roleIn = StringListFilter(method='filter_role_in')
     full_name = django_filters.CharFilter(method='filter_full_name')
-    include_inactive = django_filters.BooleanFilter(method='filter_noop')
+    include_inactive = django_filters.BooleanFilter(method='filter_include_inactive',
+                                                    initial=False)
     id = django_filters.CharFilter(field_name='id', lookup_expr='iexact')
 
     class Meta:
@@ -38,12 +40,15 @@ class UserFilter(django_filters.FilterSet):
             idx=StrIndex('full', Value(value.lower()))
         ).filter(idx__gt=0).order_by('idx', 'full')
 
-    def filter_noop(self, queryset, name, value):
+    def filter_include_inactive(self, queryset, name, value):
+        if value is False:
+            return queryset.filter(is_active=True)
         return queryset
 
+
+class ReviewerUserFilter(UserFilter):
     @property
     def qs(self):
-        include_inactive = self.data.get('include_inactive', False)
-        if not include_inactive:
-            return super().qs.filter(is_active=True)
-        return super().qs
+        return super().qs.filter(
+            groups__permissions__id=Permission.objects.get(codename='add_review').id
+        )
