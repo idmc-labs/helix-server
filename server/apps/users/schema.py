@@ -6,7 +6,7 @@ from graphene_django import DjangoObjectType
 from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
 
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
-from apps.users.filters import UserFilter
+from apps.users.filters import UserFilter, ReviewerUserFilter
 
 from .enums import PermissionActionEnum, PermissionModelEnum, PermissionRoleEnum
 
@@ -54,6 +54,10 @@ class Query(object):
                                            pagination=PageGraphqlPagination(
                                                page_size_query_param='pageSize'
                                            ))
+    reviewer_user_list = DjangoPaginatedListObjectField(UserListType,
+                                                        pagination=PageGraphqlPagination(
+                                                            page_size_query_param='pageSize'
+                                                        ), filterset_class=ReviewerUserFilter)
 
     def resolve_me(self, info, **kwargs):
         if info.context.user.is_authenticated:
