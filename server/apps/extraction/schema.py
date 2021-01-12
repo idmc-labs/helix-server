@@ -1,3 +1,4 @@
+import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField, PageGraphqlPagination
 import logging
@@ -7,6 +8,7 @@ from apps.extraction.models import (
     ExtractionQuery,
 )
 from apps.entry.schema import EntryListType
+from apps.entry.enums import RoleGrapheneEnum
 from utils.fields import (
     DjangoPaginatedListObjectField,
     CustomDjangoListObjectType,
@@ -23,6 +25,7 @@ class ExtractionQueryObjectType(DjangoObjectType):
                                              pagination=PageGraphqlPagination(
                                                  page_size_query_param='pageSize'
                                              ), accessor='entries')
+    figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
 
 
 class ExtractionQueryListType(CustomDjangoListObjectType):
