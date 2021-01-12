@@ -20,6 +20,8 @@ docker-compose exec server python manage.py init_organizations
 docker-compose exec server python manage.py init_types_subtypes
 docker-compose exec server python manage.py init_communication_media
 docker-compose exec server python manage.py init_figure_types
+docker-compose exec server python manage.py init_figure_tags
+docker-compose exec server python manage.py init_countries
 ```
 
 ## Initialize DB (optional)
