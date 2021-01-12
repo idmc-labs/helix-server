@@ -12,16 +12,26 @@ from apps.entry.enums import (
     QuantifierGrapheneEnum,
     UnitGrapheneEnum,
     TermGrapheneEnum,
-    TypeGrapheneEnum,
     RoleGrapheneEnum,
     EntryReviewerGrapheneEnum,
     OSMAccuracyGrapheneEnum,
     IdentifierGrapheneEnum,
 )
 from apps.entry.filters import EntryFilter, EntryReviewerFilter, OSMNameFilter
-from apps.entry.models import Figure, Entry, SourcePreview, EntryReviewer, OSMName
+from apps.entry.models import (
+    Figure,
+    FigureTag,
+    Entry,
+    SourcePreview,
+    EntryReviewer,
+    FigureCategory,
+    OSMName,
+)
 from apps.organization.schema import OrganizationListType
-from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
+from utils.fields import (
+    DjangoPaginatedListObjectField,
+    CustomDjangoListObjectType,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +69,19 @@ class OSMNameListType(CustomDjangoListObjectType):
         filterset_class = OSMNameFilter
 
 
+class FigureCategoryObjectType(DjangoObjectType):
+    class Meta:
+        model = FigureCategory
+
+
+class FigureCategoryListType(CustomDjangoListObjectType):
+    class Meta:
+        model = FigureCategory
+        filter_fields = {
+            'name': ('icontains',),
+        }
+
+
 class FigureType(DjangoObjectType):
     class Meta:
         model = Figure
@@ -66,7 +89,6 @@ class FigureType(DjangoObjectType):
     quantifier = graphene.Field(QuantifierGrapheneEnum)
     unit = graphene.Field(UnitGrapheneEnum)
     term = graphene.Field(TermGrapheneEnum)
-    type = graphene.Field(TypeGrapheneEnum)
     role = graphene.Field(RoleGrapheneEnum)
     age_json = graphene.List(graphene.NonNull(DisaggregatedAgeType))
     strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
@@ -144,7 +166,26 @@ class EntryReviewerListType(CustomDjangoListObjectType):
         filterset_class = EntryReviewerFilter
 
 
+class FigureTagType(DjangoObjectType):
+    class Meta:
+        model = FigureTag
+        exclude_fields = ('entry_set',)
+
+
+class FigureTagListType(CustomDjangoListObjectType):
+    class Meta:
+        model = FigureTag
+        filter_fields = {
+            'name': ('icontains',),
+        }
+
+
 class Query:
+    figure_category = DjangoObjectField(FigureCategoryObjectType)
+    figure_category_list = DjangoPaginatedListObjectField(FigureCategoryListType)
+    figure_tag = DjangoObjectField(FigureTagType)
+    figure_tag_list = DjangoPaginatedListObjectField(FigureTagListType)
+
     figure = DjangoObjectField(FigureType)
     figure_list = DjangoPaginatedListObjectField(FigureListType,
                                                  pagination=PageGraphqlPagination(

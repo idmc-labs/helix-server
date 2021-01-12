@@ -17,6 +17,7 @@ from apps.contrib.models import (
     UUIDAbstractModel,
     MetaInformationArchiveAbstractModel,
 )
+from apps.entry.constants import STOCK, FLOW
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
 
@@ -136,7 +137,18 @@ class OSMName(UUIDAbstractModel, models.Model):
                                 default=False)
 
 
+class FigureCategory(models.Model):
+    name = models.CharField(verbose_name=_('Name'), max_length=256)
+    type = models.CharField(verbose_name=_('Type'), max_length=8, choices=(
+        (STOCK, STOCK),
+        (FLOW, FLOW),
+    ), default=STOCK)
+
+
 class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Model):
+    class TYPE(enum.Enum):  # temp filler for migration file
+        pass
+
     class QUANTIFIER(enum.Enum):
         MORE_THAN = 0
         LESS_THAN = 1
@@ -190,25 +202,6 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
             MULTIPLE_OR_OTHER: _("Multiple/Other"),
         }
 
-    class TYPE(enum.Enum):
-        IDP_STOCK = 0
-        NEW_DISPLACEMENT = 1
-        RETURNEES = 2
-        LOCALLY_INTEGRATED_IDP = 3
-        IDP_SETTLED_ELSEWHERE = 4
-        PEOPLE_DISPLACED_ACROSS_BORDERS = 5
-        MULTIPLE_DISPLACEMENT = 6
-
-        __labels__ = {
-            IDP_STOCK: _("IDP (Stock)"),
-            NEW_DISPLACEMENT: _('New Displacement (Flow)'),
-            RETURNEES: _('Returnees (Stock)'),
-            LOCALLY_INTEGRATED_IDP: _('Locally Integrated IDPs (Stock)'),
-            IDP_SETTLED_ELSEWHERE: _('IDPs Settled elsewhere (Stock)'),
-            PEOPLE_DISPLACED_ACROSS_BORDERS: _('People displaced across borders (Stock)'),
-            MULTIPLE_DISPLACEMENT: _('Multiple displacement (Flow)'),
-        }
-
     class ROLE(enum.Enum):
         RECOMMENDED = 0
         PARTIAL_ADDED = 1
@@ -234,7 +227,9 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
     total_figures = models.PositiveIntegerField(verbose_name=_('Total Figures'), default=0,
                                                 editable=False)
     term = enum.EnumField(enum=TERM, verbose_name=_('Term'), default=TERM.EVACUATED)
-    type = enum.EnumField(enum=TYPE, verbose_name=_('Figure Type'), default=TYPE.IDP_STOCK)
+    category = models.ForeignKey('FigureCategory', verbose_name=_('Figure category'),
+                                 related_name='figures', on_delete=models.PROTECT,
+                                 blank=False, null=True)
     role = enum.EnumField(enum=ROLE, verbose_name=_('Role'), default=ROLE.RECOMMENDED)
 
     start_date = models.DateField(verbose_name=_('Start Date'))
@@ -314,6 +309,10 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
         return f'{self.quantifier.label} {self.reported} {self.term.label}'
 
 
+class FigureTag(MetaInformationAbstractModel):
+    name = models.CharField(verbose_name=_('Name'), max_length=256)
+
+
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
     url = models.URLField(verbose_name=_('Source URL'),
                           blank=True, null=True)
@@ -346,9 +345,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         default=False,
     )
     caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
-    # grid TODO:
-    tags = ArrayField(base_field=models.CharField(verbose_name=_('Tag'), max_length=32),
-                      blank=True, null=True)
+    # TODO: grid
+    tags = models.ManyToManyField('FigureTag', blank=True)
 
     # TODO: restrict guest users here
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
@@ -366,11 +364,11 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         )
 
     @property
-    def source_methodology(self):
-        return self.source and self.source.methodolgy
+    def source_methodology(self) -> str:
+        return getattr(self.source, 'methodology', '')
 
     @property
-    def total_figures(self):
+    def total_figures(self) -> int:
         return self.figures.aggregate(total=Sum('total_figures'))['total']
 
     @staticmethod

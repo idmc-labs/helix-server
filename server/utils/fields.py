@@ -253,7 +253,9 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
 
         filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
         if self.accessor:
-            qs = getattr(root, self.accessor).all()
+            qs = getattr(root, self.accessor)
+            if hasattr(qs, 'all'):
+                qs = qs.all()
             qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context).qs
         else:
             qs = self.get_queryset(manager, info, **kwargs)

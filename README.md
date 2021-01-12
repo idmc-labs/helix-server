@@ -16,10 +16,10 @@ docker-compose exec server python manage.py init_roles
 
 ## Initialize assets
 ```bash
-docker-compose exec server python manage.py init_countries
 docker-compose exec server python manage.py init_organizations
 docker-compose exec server python manage.py init_types_subtypes
 docker-compose exec server python manage.py init_communication_media
+docker-compose exec server python manage.py init_figure_types
 ```
 
 ## Initialize DB (optional)

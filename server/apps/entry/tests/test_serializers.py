@@ -23,7 +23,6 @@ class TestEntrySerializer(HelixTestCase):
             "sources": [self.publisher.id],
             "publishers": [self.publisher.id],
             "publish_date": "2020-09-09",
-            "tags": ["2020", "grid2020", "south", "asia"],
             "source_methodology": "method",
             "source_excerpt": "excerpt one",
             "source_breakdown": "break down",
@@ -71,7 +70,7 @@ class TestEntrySerializer(HelixTestCase):
     def test_create_entry_populates_created_by(self):
         serializer = EntrySerializer(data=self.data,
                                      context={'request': self.request})
-        self.assertTrue(serializer.is_valid())
+        self.assertTrue(serializer.is_valid(), serializer.errors)
         instance = serializer.save()
         self.assertEqual(instance.created_by, self.user)
 
@@ -163,7 +162,6 @@ class TestEntrySerializer(HelixTestCase):
             "reported": 10,
             "unit": Figure.UNIT.PERSON.value,
             "term": Figure.TERM.EVACUATED.value,
-            "type": Figure.TYPE.IDP_STOCK.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
@@ -207,7 +205,6 @@ class TestEntrySerializer(HelixTestCase):
             "reported": 10,
             "unit": Figure.UNIT.PERSON.value,
             "term": Figure.TERM.EVACUATED.value,
-            "type": Figure.TYPE.IDP_STOCK.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
