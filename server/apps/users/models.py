@@ -3,6 +3,7 @@ import logging
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from django.utils.translation import gettext_lazy as _
+from django_enumfield import enum
 
 from .roles import PERMISSIONS, USER_ROLE
 
@@ -33,6 +34,11 @@ class User(AbstractUser):
             logger.warning(f'User role with {role=} does not exist.')
         except Group.DoesNotExist:
             logger.warning(f'Group(UserRole) with name {USER_ROLE[role].name} does not exist.')
+
+    def check_role(self, role) -> bool:
+        if not isinstance(role, enum.Enum):
+            role = USER_ROLE.get(role)
+        return self.role == role
 
     @property
     def role(self):

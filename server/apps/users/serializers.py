@@ -75,7 +75,8 @@ class UserSerializer(serializers.ModelSerializer):
     def validate_role(self, role):
         if not self.context['request'].user.has_perm('users.change_user'):
             raise serializers.ValidationError(gettext('You are not allowed to change the role.'))
-        if self.instance and self.context['request'].user == self.instance:
+        if self.instance and self.context['request'].user == self.instance and not \
+                self.instance.check_role(role):
             raise serializers.ValidationError(gettext('You are not allowed to change your role.'))
         return role
 

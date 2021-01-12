@@ -1,4 +1,3 @@
-
 from django.test import RequestFactory
 
 from apps.users.serializers import RegisterSerializer
@@ -88,6 +87,7 @@ class TestUserSerializer(HelixTestCase):
     def test_invalid_role_or_activation_updates(self):
         # even admins are not allowed to change their own roles
         self.request.user = self.admin_user
+
         self.data['role'] = USER_ROLE.MONITORING_EXPERT_EDITOR.value
         context = dict(
             request=self.request
@@ -97,11 +97,14 @@ class TestUserSerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('role', serializer.errors)
 
+        # lets keep the role as is
+        self.data['role'] = USER_ROLE.ADMIN.value
+        serializer = UserSerializer(instance=self.request.user, data=self.data, context=context,
+                                    partial=True)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
         # any user is not allowed to activate/deactivate themselves
         self.data['is_active'] = False
-        context = dict(
-            request=self.request
-        )
         serializer = UserSerializer(instance=self.request.user, data=self.data, context=context,
                                     partial=True)
         self.assertFalse(serializer.is_valid())
