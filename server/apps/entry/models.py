@@ -138,7 +138,7 @@ class OSMName(UUIDAbstractModel, models.Model):
 
 
 class FigureCategory(models.Model):
-    name = models.CharField(verbose_name=_('Name'), max_length=8)
+    name = models.CharField(verbose_name=_('Name'), max_length=256)
     type = models.CharField(verbose_name=_('Type'), max_length=8, choices=(
         (STOCK, STOCK),
         (FLOW, FLOW),

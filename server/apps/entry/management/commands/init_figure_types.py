@@ -13,7 +13,7 @@ class Command(BaseCommand):
         for cat, sub_cats in FIGURE_TYPE_SUB_TYPES.items():
             figure_type = cat
             for sub_cat in sub_cats:
-                FigureCategory.objects.get_or_create(name=sub_cat, parent=figure_type)
+                FigureCategory.objects.get_or_create(name=sub_cat, type=figure_type)
         self.stdout.write(self.style.SUCCESS(
             'Saved {} figure categories.'.format(
                 FigureCategory.objects.count(),
