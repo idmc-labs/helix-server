@@ -35,11 +35,11 @@ class ExtractionQuery(MetaInformationAbstractModel):
     @property
     def entries(self) -> ['Entry']:  # noqa
         return self.get_entries(data=dict(
-            countries=list(self.countries.all().values_list('id', flat=True)),
-            regions=list(self.regions.all().values_list('id', flat=True)),
-            crises=list(self.crises.all().values_list('id', flat=True)),
-            figure_categories=list(self.figure_categories.all().values_list('id', flat=True)),
-            figure_tags=list(self.figure_tags.all().values_list('id', flat=True)),
+            countries=self.countries.all(),
+            regions=self.regions.all(),
+            crises=self.crises.all(),
+            figure_categories=self.figure_categories.all(),
+            figure_tags=self.figure_tags.all(),
             districts=self.districts,
             figure_roles=self.figure_roles,
             event_after=self.event_after,

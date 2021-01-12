@@ -22,48 +22,48 @@ class EntryExtractionFilterSet(df.FilterSet):
         fields = []
 
     def filter_regions(self, qs, name, value):
-        if not value:
-            return qs
-        qs = qs.filter(event__countries__region__in=value).distinct()
+        if value:
+            qs = qs.filter(event__countries__region__in=value).distinct()
         return qs
 
     def filter_countries(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(event__countries__in=value).distinct()
+        if value:
+            return qs.filter(event__countries__in=value).distinct()
+        return qs
 
     def filter_districts(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(figures__disctrict__in=value).distinct()
+        if value:
+            return qs.filter(figures__disctrict__in=value).distinct()
+        return qs
 
     def filter_crises(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(event__crisis__in=value).distinct()
+        if value:
+            return qs.filter(event__crisis__in=value).distinct()
+        return qs
 
     def filter_figure_categories(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(figures__category__in=value).distinct()
+        if value:
+            return qs.filter(figures__category__in=value).distinct()
+        return qs
 
     def filter_time_frame_after(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.exclude(figures__start_date__isnull=True)\
-            .filter(figures__start_date__gte=value).distinct()
+        if value:
+            return qs.exclude(figures__start_date__isnull=True)\
+                .filter(figures__start_date__gte=value).distinct()
+        return qs
 
     def filter_time_frame_before(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(figures__end_date__lt=value).distinct()
+        if value:
+            return qs.exclude(figures__end_date__isnull=True).\
+                filter(figures__end_date__lt=value).distinct()
+        return qs
 
     def filter_figure_roles(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(figures__role__in=value).distinct()
+        if value:
+            return qs.filter(figures__role__in=value).distinct()
+        return qs
 
     def filter_figure_tags(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(tags__in=value).distinct()
+        if value:
+            return qs.filter(tags__in=value).distinct()
+        return qs
