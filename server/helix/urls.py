@@ -26,7 +26,6 @@ from graphene_file_upload.django import FileUploadGraphQLView
 
 class CustomGraphQLView(FileUploadGraphQLView):
     """Handles multipart/form-data content type in django views"""
-
     def parse_body(self, request):
         """
         Allow for variable batch
