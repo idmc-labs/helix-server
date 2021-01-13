@@ -73,11 +73,15 @@ class SourcePreview(MetaInformationAbstractModel):
 
 class OSMName(UUIDAbstractModel, models.Model):
     class OSM_ACCURACY(enum.Enum):
-        ADMIN = 0
-        POINT = 1
+        COUNTRY = 0
+        STATE = 1
+        COUNTY = 2
+        POINT = 3
 
         __labels__ = {
-            ADMIN: _('Admin'),
+            COUNTRY: _('Country'),
+            STATE: _('State/District'),
+            COUNTY: _('County/City/Town/Village/Hamlet'),
             POINT: _('Point'),
         }
 
