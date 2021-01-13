@@ -146,7 +146,7 @@ class TestEntrySerializer(HelixTestCase):
             lat=68.88,
             lon=46.66,
             name='name',
-            accuracy=OSMName.OSM_ACCURACY.ADMIN.value,
+            accuracy=OSMName.OSM_ACCURACY.COUNTRY.value,
             reported_name='reported',
             identifier=OSMName.IDENTIFIER.SOURCE.value,
         )
