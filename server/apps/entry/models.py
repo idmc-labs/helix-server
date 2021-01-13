@@ -221,8 +221,9 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
 
     entry = models.ForeignKey('Entry', verbose_name=_('Entry'),
                               related_name='figures', on_delete=models.CASCADE)
-    district = models.TextField(verbose_name=_('District(s)'))
-    town = models.CharField(verbose_name=_('Town/Village'), max_length=256)
+    district = models.TextField(verbose_name=_('District(s)'), null=True, blank=True)
+    town = models.CharField(verbose_name=_('Town/Village'), max_length=256,
+                            null=True, blank=True)
     quantifier = enum.EnumField(enum=QUANTIFIER, verbose_name=_('Quantifier'))
     reported = models.PositiveIntegerField(verbose_name=_('Reported Figures'))
     unit = enum.EnumField(enum=UNIT, verbose_name=_('Unit of Figure'), default=UNIT.PERSON)
