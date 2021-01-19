@@ -298,3 +298,6 @@ if SENTRY_DSN:
         app_type='server',
         **SENTRY_CONFIG,
     )
+
+RESOURCE_NUMBER = 10
+RESOURCEGROUP_NUMBER = 10
