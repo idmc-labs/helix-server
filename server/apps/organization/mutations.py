@@ -6,11 +6,10 @@ from apps.organization.models import Organization, OrganizationKind
 from apps.organization.schema import OrganizationType, OrganizationKindObjectType
 from apps.organization.serializers import OrganizationSerializer, OrganizationKindSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.permissions import permission_checker
 
 
 # organization kind
-from utils.permissions import permission_checker
-
 
 class OrganizationKindCreateInputType(graphene.InputObjectType):
     name = graphene.String(required=True)
@@ -77,7 +76,7 @@ class DeleteOrganizationKind(graphene.Mutation):
         try:
             instance = OrganizationKind.objects.get(id=id)
         except OrganizationKind.DoesNotExist:
-            return UpdateOrganizationKind(errors=[
+            return DeleteOrganizationKind(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Organization type does not exist.'))
             ])
         instance.delete()
@@ -164,7 +163,7 @@ class DeleteOrganization(graphene.Mutation):
         try:
             instance = Organization.objects.get(id=id)
         except Organization.DoesNotExist:
-            return UpdateOrganization(errors=[
+            return DeleteOrganization(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Organization does not exist.'))
             ])
         instance.delete()
