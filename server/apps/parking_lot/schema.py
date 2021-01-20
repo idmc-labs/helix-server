@@ -19,7 +19,7 @@ class ParkingLotListType(CustomDjangoListObjectType):
         model = ParkingLot
         filter_fields = {
             'title': ['icontains'],
-            'submitted_by': ['exact'],
+            'created_by': ['exact']
         }
 
 

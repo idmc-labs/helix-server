@@ -34,6 +34,7 @@ class PERMISSION_ENTITY(enum.Enum):
     user = 11
     review = 12
     actor = 13
+    parkinglot = 14
 
     __labels__ = {
         crisis: _('Crisis'),
@@ -50,6 +51,7 @@ class PERMISSION_ENTITY(enum.Enum):
         user: _('User'),
         review: _('Review'),
         actor: _('Actor'),
+        parkinglot: _('Parking Lot'),
     }
 
 

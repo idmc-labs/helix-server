@@ -211,3 +211,10 @@ class ReviewFactory(DjangoModelFactory):
 class TagFactory(DjangoModelFactory):
     class Meta:
         model = 'entry.FigureTag'
+
+
+class ParkingLotFactory(DjangoModelFactory):
+    class Meta:
+        model = 'parking_lot.ParkingLot'
+
+    country = factory.SubFactory(CountryFactory)

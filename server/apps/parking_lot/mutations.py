@@ -13,7 +13,7 @@ class ParkingLotCreateInputType(graphene.InputObjectType):
     country = graphene.ID(required=True)
     title = graphene.String(required=True)
     url = graphene.String(required=True)
-    owner_sign_off = graphene.String(required=True)
+    assigned_to = graphene.ID(required=False)
     status = graphene.NonNull(ParkingLotGrapheneEnum)
     comments = graphene.String(required=False)
 
@@ -23,7 +23,7 @@ class ParkingLotUpdateInputType(graphene.InputObjectType):
     country = graphene.ID()
     title = graphene.String()
     url = graphene.String()
-    owner_sign_off = graphene.String()
+    assigned_to = graphene.ID()
     status = graphene.Field(ParkingLotGrapheneEnum)
     comments = graphene.String()
 
@@ -58,12 +58,13 @@ class UpdateParkingLot(graphene.Mutation):
     @permission_checker(['parking_lot.change_parkinglot'])
     def mutate(root, info, data):
         try:
-            instance = ParkingLot.objects.get(id=data['id'], submitted_by=info.context.user)
+            instance = ParkingLot.objects.get(id=data['id'], created_by=info.context.user)
         except ParkingLot.DoesNotExist:
             return UpdateParkingLot(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Parked item does not exist.'))
             ])
-        serializer = ParkingLotSerializer(instance=instance, data=data, partial=True)
+        serializer = ParkingLotSerializer(instance=instance, data=data, partial=True,
+                                          context=dict(request=info.context))
         if errors := mutation_is_not_valid(serializer):
             return UpdateParkingLot(errors=errors, ok=False)
         instance = serializer.save()
@@ -82,7 +83,7 @@ class DeleteParkingLot(graphene.Mutation):
     @permission_checker(['parking_lot.delete_parkinglot'])
     def mutate(root, info, id):
         try:
-            instance = ParkingLot.objects.get(id=id, submitted_by=info.context.user)
+            instance = ParkingLot.objects.get(id=id, created_by=info.context.user)
         except ParkingLot.DoesNotExist:
             return DeleteParkingLot(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Parked item does not exist.'))
