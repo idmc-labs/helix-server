@@ -45,6 +45,10 @@ class MetaInformationArchiveAbstractModel(ArchiveAbstractModel, MetaInformationA
         abstract = True
 
 
+def attachment_upload_to(instance: 'Attachment', filename: str) -> 'str':
+    return f'attachments/{Attachment.FOR_CHOICES.get(instance.attachment_for).name}/{filename}'
+
+
 class Attachment(MetaInformationAbstractModel):
     ATTACHMENT_FOLDER = 'attachments'
 
@@ -54,7 +58,7 @@ class Attachment(MetaInformationAbstractModel):
 
     attachment = CachedFileField(verbose_name=_('Attachment'),
                                  blank=False, null=False,
-                                 upload_to=ATTACHMENT_FOLDER)
+                                 upload_to=attachment_upload_to)
     attachment_for = enum.EnumField(enum=FOR_CHOICES, verbose_name=_('Attachment for'), null=True,
                                     blank=True, help_text=_('The type of instance for which attachment was uploaded for'))
 
