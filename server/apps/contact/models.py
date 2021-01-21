@@ -37,8 +37,10 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
                                                     verbose_name=_('Countries of Operation'),
                                                     blank=True,
                                                     related_name='operating_contacts',
-                                                    help_text=_('In which countries does this contact person'
-                                                                ' operate?'))
+                                                    help_text=_(
+                                                        'In which countries does this contact person'
+                                                        ' operate?'
+                                                    ))
     country = models.ForeignKey('country.Country',
                                 verbose_name=_('Country'),
                                 blank=True, null=True,
@@ -80,8 +82,9 @@ class Communication(MetaInformationArchiveAbstractModel, models.Model):
     medium = models.ForeignKey(CommunicationMedium,
                                null=True, blank=False,
                                related_name='+', on_delete=models.SET_NULL)
-    attachment = models.FileField(verbose_name=_('attachment'), upload_to='communication/attachments',
-                                  blank=True, null=True)
+    attachment = models.ForeignKey('contrib.Attachment', verbose_name='Attachment',
+                                   on_delete=models.CASCADE, related_name='+',
+                                   null=True, blank=True)
 
     def __str__(self):
         return f'{self.contact} {self.date_time}'
