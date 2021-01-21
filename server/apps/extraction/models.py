@@ -14,8 +14,6 @@ class ExtractionQuery(MetaInformationAbstractModel):
                                      blank=True, related_name='+')
     countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
                                        blank=True, related_name='+')
-    districts = ArrayField(base_field=models.CharField(max_length=256),
-                           blank=True, null=True)
     crises = models.ManyToManyField('crisis.Crisis', verbose_name=_('Crises'),
                                     blank=True, related_name='+')
     figure_categories = models.ManyToManyField('entry.FigureCategory',
@@ -40,7 +38,6 @@ class ExtractionQuery(MetaInformationAbstractModel):
             crises=self.crises.all(),
             figure_categories=self.figure_categories.all(),
             figure_tags=self.figure_tags.all(),
-            districts=self.districts,
             figure_roles=self.figure_roles,
             event_after=self.event_after,
             event_before=self.event_before,

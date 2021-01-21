@@ -13,7 +13,6 @@ from utils.error_types import CustomErrorType, mutation_is_not_valid
 class CommonExtractionInputMixin:
     regions = graphene.List(graphene.NonNull(graphene.String), required=False)
     countries = graphene.List(graphene.NonNull(graphene.String), required=False)
-    districts = graphene.List(graphene.NonNull(graphene.String), required=False)
     crises = graphene.List(graphene.NonNull(graphene.String), required=False)
     figure_categories = graphene.List(graphene.NonNull(graphene.String), required=False)
     event_after = graphene.Date(required=False)

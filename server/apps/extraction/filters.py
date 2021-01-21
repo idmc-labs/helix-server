@@ -8,7 +8,6 @@ class EntryExtractionFilterSet(df.FilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
     regions = StringListFilter(method='filter_regions')
     countries = StringListFilter(method='filter_countries')
-    districts = StringListFilter(method='filter_districts')
     crises = StringListFilter(method='filter_crises')
     figure_categories = StringListFilter(method='filter_figure_categories')
     event_after = df.DateFilter(method='filter_time_frame_after')
@@ -29,11 +28,6 @@ class EntryExtractionFilterSet(df.FilterSet):
     def filter_countries(self, qs, name, value):
         if value:
             return qs.filter(event__countries__in=value).distinct()
-        return qs
-
-    def filter_districts(self, qs, name, value):
-        if value:
-            return qs.filter(figures__disctrict__in=value).distinct()
         return qs
 
     def filter_crises(self, qs, name, value):

@@ -200,8 +200,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
             {
                 "uuid": str(uuid4()),
                 "country": self.country_id,
-                "district": "ABC",
-                "town": "XYZ",
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
@@ -238,8 +236,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
             {
                 "uuid": uuid,
                 "country": self.country_id,
-                "district": "ABC",
-                "town": "XYZ",
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
@@ -255,8 +251,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "uuid": uuid_error,
                 "country": self.country_id,
                 "reported": -1,  # this cannot be negative
-                "district": "ABC",
-                "town": "XYZ",
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "unit": Figure.UNIT.PERSON.name,
                 "term": Figure.TERM.EVACUATED.name,
@@ -330,8 +324,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
             {
                 "uuid": str(uuid4()),
                 "country": self.country_id,
-                "district": "ABC",
-                "town": "XYZ",
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
@@ -367,8 +359,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
             {
                 "uuid": str(uuid4()),
                 "country": self.country_id,
-                "district": "ABC",
-                "town": "XYZ",
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.HOUSEHOLD.name,  # missing household_size
@@ -485,8 +475,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
             {
                 "uuid": "1cd00034-037e-4c5f-b196-fa05b6bed803",
                 "country": self.country_id,
-                "district": "disss",
-                "town": "town",
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
@@ -518,8 +506,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "id": figure.id,
                 "uuid": str(figure.uuid),
                 "country": self.country_id,
-                "district": "disss",
-                "town": "town",
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
@@ -569,8 +555,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
             {
                 "uuid": str(uuid4()),
                 "country": self.country_id,
-                "district": "ABC",
-                "town": "XYZ",
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.HOUSEHOLD.name,  # missing household_size

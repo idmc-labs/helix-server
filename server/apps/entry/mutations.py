@@ -62,8 +62,6 @@ class OSMNameInputType(graphene.InputObjectType):
 
 
 class CommonFigureCreateMixin:
-    district = graphene.String()
-    town = graphene.String()
     quantifier = graphene.NonNull(QuantifierGrapheneEnum)
     reported = graphene.Int(required=True)
     unit = graphene.NonNull(UnitGrapheneEnum)
@@ -119,8 +117,6 @@ class FigureUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
     uuid = graphene.String(required=False)
     entry = graphene.ID()
-    district = graphene.String()
-    town = graphene.String()
     quantifier = graphene.Field(QuantifierGrapheneEnum)
     reported = graphene.Int()
     unit = graphene.Field(UnitGrapheneEnum)
