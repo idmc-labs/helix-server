@@ -1,4 +1,5 @@
 import json
+import magic
 
 from django.core.files.temp import NamedTemporaryFile
 
@@ -21,6 +22,9 @@ class TestAttachment(HelixGraphQLTestCase):
                   createdAt
                   id
                   modifiedAt
+                  mimetype
+                  encoding
+                  filetypeDetail
                 }
               }
             }
@@ -53,3 +57,12 @@ class TestAttachment(HelixGraphQLTestCase):
         self.assertTrue(content['data']['createAttachment']['ok'], content)
         self.assertIsNotNone(content['data']['createAttachment']['result']['id'])
         self.assertIsNotNone(content['data']['createAttachment']['result']['attachment'])
+        with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
+            self.assertEqual(content['data']['createAttachment']['result']['mimetype'],
+                             m.id_buffer(file_text))
+        with magic.Magic(flags=magic.MAGIC_MIME_ENCODING) as m:
+            self.assertEqual(content['data']['createAttachment']['result']['encoding'],
+                             m.id_buffer(file_text))
+        with magic.Magic() as m:
+            self.assertEqual(content['data']['createAttachment']['result']['filetypeDetail'],
+                             m.id_buffer(file_text))

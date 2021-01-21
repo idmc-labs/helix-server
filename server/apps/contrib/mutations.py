@@ -21,7 +21,7 @@ class CreateAttachment(graphene.Mutation):
     result = graphene.Field(AttachmentType)
 
     @staticmethod
-    # @is_authenticated()
+    @is_authenticated()
     def mutate(root, info, data):
         serializer = AttachmentSerializer(data=data,
                                           context={'request': info.context})
