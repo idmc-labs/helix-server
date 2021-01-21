@@ -4,6 +4,7 @@ from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
 
 from apps.parking_lot.models import ParkingLot
 from apps.parking_lot.enums import ParkingLotGrapheneEnum
+from apps.parking_lot.filters import ParkingLotFilter
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
 
 
@@ -17,10 +18,7 @@ class ParkingLotType(DjangoObjectType):
 class ParkingLotListType(CustomDjangoListObjectType):
     class Meta:
         model = ParkingLot
-        filter_fields = {
-            'title': ['icontains'],
-            'created_by': ['exact']
-        }
+        filterset_class = ParkingLotFilter
 
 
 class Query:
