@@ -31,8 +31,8 @@ class ResourceGroup(MetaInformationArchiveAbstractModel):
         return self.name
 
     def save(self, *args, **kwargs):
-        if ResourceGroup.objects.filter(created_by=self.created_by).count() >= RESOURCEGROUP_NUMBER:
-            raise ValidationError(f"Can only create {RESOURCEGROUP_NUMBER} ResourceGroup")
+        if self.pk is None and ResourceGroup.objects.filter(created_by=self.created_by).count() >= RESOURCEGROUP_NUMBER:
+            raise ValidationError(gettext(f"Can only create {RESOURCEGROUP_NUMBER} resource groups"))
         return super(ResourceGroup, self).save(*args, **kwargs)
 
 
@@ -51,6 +51,6 @@ class Resource(MetaInformationArchiveAbstractModel):
         return self.name
 
     def save(self, *args, **kwargs):
-        if Resource.objects.filter(created_by=self.created_by).count() >= RESOURCE_NUMBER:
-            raise ValidationError(f"Can only create {RESOURCE_NUMBER} Resource")
+        if self.pk is None and Resource.objects.filter(created_by=self.created_by).count() >= RESOURCE_NUMBER:
+            raise ValidationError(gettext(f"Can only create {RESOURCE_NUMBER} Resource"))
         return super(Resource, self).save(*args, **kwargs)
