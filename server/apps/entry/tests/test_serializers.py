@@ -156,8 +156,6 @@ class TestEntrySerializer(HelixTestCase):
         source3['lon'] = 45.9
         figures = [{
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
-            "district": "disctrict",
-            "town": "town",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
             "unit": Figure.UNIT.PERSON.value,
@@ -196,11 +194,8 @@ class TestEntrySerializer(HelixTestCase):
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
             "id": figure.id,
             "geo_locations": [new_source, old_source],
-            "district": "new name",
         }, {
             "uuid": "f1b42e79-da44-4032-8cb6-0dd4b7b97b57",
-            "district": "district",
-            "town": "town",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
             "unit": Figure.UNIT.PERSON.value,

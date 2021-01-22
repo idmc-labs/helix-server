@@ -168,8 +168,6 @@ class FigureFactory(DjangoModelFactory):
 
     entry = factory.SubFactory(EntryFactory)
     category = factory.SubFactory(FigureCategoryFactory)
-    district = factory.Faker('city')
-    town = factory.Faker('city')
     quantifier = factory.Iterator(Figure.QUANTIFIER)
     reported = factory.Sequence(lambda n: n + 2)
     unit = factory.Iterator(Figure.UNIT)
