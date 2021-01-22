@@ -7,7 +7,14 @@ from django.utils.translation import gettext, gettext_lazy as _
 from rest_framework import serializers
 
 from apps.contrib.serializers import MetaInformationSerializerMixin
-from apps.entry.models import Entry, Figure, SourcePreview, OSMName, EntryReviewer
+from apps.entry.models import (
+    Entry,
+    Figure,
+    SourcePreview,
+    OSMName,
+    EntryReviewer,
+    FigureTag,
+)
 from apps.users.models import User
 from apps.users.enums import USER_ROLE
 
@@ -273,3 +280,10 @@ class SourcePreviewSerializer(MetaInformationSerializerMixin,
 
     def update(self, instance, validated_data):
         return SourcePreview.get_pdf(**validated_data, instance=instance)
+
+
+class FigureTagSerializer(MetaInformationSerializerMixin,
+                          serializers.ModelSerializer):
+    class Meta:
+        model = FigureTag
+        fields = '__all__'
