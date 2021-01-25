@@ -33,12 +33,16 @@ class ExtractionQueryListType(CustomDjangoListObjectType):
         model = ExtractionQuery
         filter_fields = {
             'id': ('exact',),
+            'name': ('icontains',),
         }
 
 
 class Query:
     extraction_query = DjangoObjectField(ExtractionQueryObjectType)
-    extraction_query_list = DjangoPaginatedListObjectField(ExtractionQueryListType)
+    extraction_query_list = DjangoPaginatedListObjectField(ExtractionQueryListType,
+                                                           pagination=PageGraphqlPagination(
+                                                               page_size_query_param='pageSize'
+                                                           ))
     extraction_entry_list = DjangoPaginatedListObjectField(EntryListType,
                                                            pagination=PageGraphqlPagination(
                                                                page_size_query_param='pageSize'

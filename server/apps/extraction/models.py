@@ -25,6 +25,8 @@ class ExtractionQuery(MetaInformationAbstractModel):
                               blank=True, null=True)
     figure_tags = models.ManyToManyField('entry.FigureTag', verbose_name=_('Figure Tags'),
                                          blank=True, related_name='+')
+    article_title = models.TextField(verbose_name=_('Article Title'),
+                                     blank=True, null=True)
 
     @classmethod
     def get_entries(cls, data=None) -> ['Entry']:  # noqa
@@ -41,4 +43,5 @@ class ExtractionQuery(MetaInformationAbstractModel):
             figure_roles=self.figure_roles,
             event_after=self.event_after,
             event_before=self.event_before,
+            article_title=self.article_title,
         ))

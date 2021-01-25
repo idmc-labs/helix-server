@@ -15,10 +15,11 @@ class EntryExtractionFilterSet(df.FilterSet):
     figure_roles = StringListFilter(method='filter_figure_roles')
     figure_tags = StringListFilter(method='filter_figure_tags')
     # TODO: GRID filter
+    article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
 
     class Meta:
         model = Entry
-        fields = []
+        fields = {}
 
     def filter_regions(self, qs, name, value):
         if value:
