@@ -6,7 +6,8 @@ from utils.filters import StringListFilter
 
 class ParkingLotFilter(df.FilterSet):
     status_in = StringListFilter(method='filter_status_in')
-    assigned_to_in = StringListFilter(field_name='assigned_to', lookup_expr='in')
+    # assigned_to_in = StringListFilter(field_name='assigned_to', lookup_expr='in')
+    assigned_to_in = StringListFilter(method='filter_assigned_to')
 
     class Meta:
         model = ParkingLot
@@ -20,6 +21,11 @@ class ParkingLotFilter(df.FilterSet):
             # map enum names to values
             return queryset.filter(status__in=[ParkingLot.PARKING_LOT_STATUS.get(each)
                                                for each in value])
+        return queryset
+
+    def filter_assigned_to(self, queryset, name, value):
+        if value:
+            return queryset.filter(assigned_to__in=value)
         return queryset
 
     @property
