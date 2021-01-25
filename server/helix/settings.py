@@ -56,6 +56,7 @@ LOCAL_APPS = [
     'resource',
     'review',
     'extraction',
+    'parking_lot',
 ]
 
 THIRD_PARTY_APPS = [

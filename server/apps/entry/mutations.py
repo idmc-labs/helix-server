@@ -10,9 +10,20 @@ from apps.entry.enums import (
     RoleGrapheneEnum,
     EntryReviewerGrapheneEnum,
 )
-from apps.entry.models import Entry, Figure, SourcePreview, EntryReviewer
-from apps.entry.schema import EntryType, FigureType, SourcePreviewType, EntryReviewerType
-from apps.entry.serializers import EntrySerializer, FigureSerializer, SourcePreviewSerializer
+from apps.entry.models import Entry, Figure, SourcePreview, EntryReviewer, FigureTag
+from apps.entry.schema import (
+    EntryType,
+    FigureType,
+    SourcePreviewType,
+    EntryReviewerType,
+    FigureTagType,
+)
+from apps.entry.serializers import (
+    EntrySerializer,
+    FigureSerializer,
+    SourcePreviewSerializer,
+    FigureTagSerializer,
+)
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker, is_authenticated
 
@@ -361,6 +372,7 @@ class CreateSourcePreview(graphene.Mutation):
     """
     Pass id if you accidentally posted a wrong url, and need to change the preview.
     """
+
     class Arguments:
         data = SourcePreviewInputType(required=True)
 
@@ -430,6 +442,83 @@ class UpdateEntryReview(graphene.Mutation):
         return CreateSourcePreview(errors=None, ok=True, result=entry_review)
 
 
+# Figure Tag
+
+
+class FigureTagCreateInputType(graphene.InputObjectType):
+    name = graphene.String(required=True)
+
+
+class FigureTagUpdateInputType(graphene.InputObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
+class CreateFigureTag(graphene.Mutation):
+    class Arguments:
+        data = FigureTagCreateInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(FigureTagType)
+
+    @staticmethod
+    @is_authenticated()
+    def mutate(root, info, data):
+        serializer = FigureTagSerializer(data=data, context={'request': info.context})
+        if errors := mutation_is_not_valid(serializer):
+            return CreateFigureTag(errors=errors, ok=False)
+        instance = serializer.save()
+        return CreateFigureTag(result=instance, errors=None, ok=True)
+
+
+class UpdateFigureTag(graphene.Mutation):
+    class Arguments:
+        data = FigureTagUpdateInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(FigureTagType)
+
+    @staticmethod
+    @is_authenticated()
+    def mutate(root, info, data):
+        try:
+            instance = FigureTag.objects.get(id=data['id'])
+        except FigureTag.DoesNotExist:
+            return UpdateFigureTag(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Tag does not exist.'))
+            ])
+        serializer = FigureTagSerializer(instance=instance, data=data,
+                                         context={'request': info.context}, partial=True)
+        if errors := mutation_is_not_valid(serializer):
+            return UpdateFigureTag(errors=errors, ok=False)
+        instance = serializer.save()
+        return UpdateFigureTag(result=instance, errors=None, ok=True)
+
+
+class DeleteFigureTag(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(FigureTagType)
+
+    @staticmethod
+    @is_authenticated()
+    def mutate(root, info, id):
+        try:
+            instance = FigureTag.objects.get(id=id)
+        except FigureTag.DoesNotExist:
+            return DeleteFigureTag(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Tag does not exist.'))
+            ])
+        instance.delete()
+        instance.id = id
+        return DeleteFigureTag(result=instance, errors=None, ok=True)
+
+
 class Mutation(object):
     create_figure = CreateFigure.Field()
     update_figure = UpdateFigure.Field()
@@ -440,3 +529,7 @@ class Mutation(object):
     create_source_preview = CreateSourcePreview.Field()
     # entry review
     update_entry_review = UpdateEntryReview.Field()
+    # figure tags
+    create_figure_tag = CreateFigureTag.Field()
+    update_figure_tag = UpdateFigureTag.Field()
+    delete_figure_tag = DeleteFigureTag.Field()
