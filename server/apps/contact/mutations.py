@@ -131,7 +131,7 @@ class CommunicationCreateInputType(graphene.InputObjectType):
     content = graphene.String(required=True)
     date_time = graphene.DateTime()
     medium = graphene.ID(required=True)
-    attachment = Upload(required=False)
+    attachment = graphene.ID(required=False)
 
 
 class CommunicationUpdateInputType(graphene.InputObjectType):
@@ -146,7 +146,7 @@ class CommunicationUpdateInputType(graphene.InputObjectType):
     content = graphene.String()
     date_time = graphene.DateTime()
     medium = graphene.ID()
-    attachment = Upload(required=False)
+    attachment = graphene.ID(required=False)
 
 
 class CreateCommunication(graphene.Mutation):

@@ -1,3 +1,6 @@
+import mimetypes
+import magic
+
 from rest_framework import serializers
 
 from apps.contrib.models import Attachment
@@ -27,3 +30,14 @@ class AttachmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attachment
         fields = '__all__'
+
+    def validate(self, attrs) -> dict:
+        attachment = attrs['attachment']
+        byte_stream = attachment.file.read()
+        with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
+            attrs['mimetype'] = m.id_buffer(byte_stream)
+        with magic.Magic(flags=magic.MAGIC_MIME_ENCODING) as m:
+            attrs['encoding'] = m.id_buffer(byte_stream)
+        with magic.Magic() as m:
+            attrs['filetype_detail'] = m.id_buffer(byte_stream)
+        return attrs

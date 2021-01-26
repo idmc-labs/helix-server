@@ -45,18 +45,30 @@ class MetaInformationArchiveAbstractModel(ArchiveAbstractModel, MetaInformationA
         abstract = True
 
 
-class Attachment(MetaInformationAbstractModel):
-    ATTACHMENT_FOLDER = 'attachments'
+def attachment_upload_to(instance: 'Attachment', filename: str) -> 'str':
+    return (f'attachments'
+            f'/{Attachment.FOR_CHOICES.get(getattr(instance, "attachment_for", "unknowns")).name}'
+            f'/{filename}')
 
+
+class Attachment(MetaInformationAbstractModel):
     class FOR_CHOICES(enum.Enum):
         ENTRY = 0
         COMMUNICATION = 1
 
     attachment = CachedFileField(verbose_name=_('Attachment'),
                                  blank=False, null=False,
-                                 upload_to=ATTACHMENT_FOLDER)
-    attachment_for = enum.EnumField(enum=FOR_CHOICES, verbose_name=_('Attachment for'), null=True,
-                                    blank=True, help_text=_('The type of instance for which attachment was uploaded for'))
+                                 upload_to=attachment_upload_to)
+    attachment_for = enum.EnumField(enum=FOR_CHOICES, verbose_name=_('Attachment for'),
+                                    null=True, blank=True,
+                                    help_text=_('The type of instance for which attachment was'
+                                                ' uploaded for'))
+    mimetype = models.CharField(verbose_name=_('Mimetype'), max_length=256,
+                                blank=True, null=True)
+    encoding = models.CharField(verbose_name=_('Encoding'), max_length=256,
+                                blank=True, null=True)
+    filetype_detail = models.CharField(verbose_name=_('File type detail'), max_length=256,
+                                       blank=True, null=True)
 
 
 class SoftDeleteQueryset(models.QuerySet):
