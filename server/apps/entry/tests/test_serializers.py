@@ -148,7 +148,7 @@ class TestEntrySerializer(HelixTestCase):
             name='name',
             accuracy=OSMName.OSM_ACCURACY.COUNTRY.value,
             reported_name='reported',
-            identifier=OSMName.IDENTIFIER.SOURCE.value,
+            identifier=OSMName.IDENTIFIER.ORIGIN.value,
         )
         source2 = copy(source1)
         source2['lat'] = 67.5
@@ -182,7 +182,7 @@ class TestEntrySerializer(HelixTestCase):
         new_source.update({
             'lat': 33.8,
             'lon': 33.8,
-            'identifier': OSMName.IDENTIFIER.SOURCE.value,
+            'identifier': OSMName.IDENTIFIER.ORIGIN.value,
             'reported_name': 'new source',
         })
         existing = figure.geo_locations.first()
