@@ -9,10 +9,12 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
     class DESIGNATION(enum.Enum):
         MR = 0
         MS = 1
+        MRS = 2
 
         __labels__ = {
             MR: _("Mr"),
             MS: _("Ms"),
+            MRS: _("Mrs"),
         }
 
     class GENDER(enum.Enum):
@@ -32,6 +34,7 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
     gender = enum.EnumField(GENDER, verbose_name=_('Gender'))
     job_title = models.CharField(verbose_name=_('Job Title'), max_length=256)
     organization = models.ForeignKey('organization.Organization', verbose_name=_('Organization'),
+                                     blank=True, null=True,
                                      related_name='contacts', on_delete=models.CASCADE)
     countries_of_operation = models.ManyToManyField('country.Country',
                                                     verbose_name=_('Countries of Operation'),
@@ -48,7 +51,7 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
     email = models.EmailField(verbose_name=_('Email'), blank=True, null=True)
     skype = models.CharField(verbose_name=_('Skype'), max_length=32,
                              blank=True, null=True)
-    phone = models.CharField(verbose_name=_('Phone'), max_length=32,
+    phone = models.CharField(verbose_name=_('Phone'), max_length=256,
                              blank=True, null=True,
                              unique=True)
     comment = models.TextField(verbose_name=_('Comment'), blank=True, null=True)

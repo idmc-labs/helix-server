@@ -34,7 +34,7 @@ class ContactCreateInputType(ContactInputType, graphene.InputObjectType):
     """
     Contact Create InputType
     """
-    organization = graphene.ID(required=True)
+    organization = graphene.ID()
 
 
 class ContactUpdateInputType(graphene.InputObjectType):

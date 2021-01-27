@@ -31,4 +31,14 @@ class Migration(migrations.Migration):
             name='skype',
             field=models.CharField(blank=True, max_length=32, null=True, verbose_name='Skype'),
         ),
+        migrations.AlterField(
+            model_name='contact',
+            name='organization',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='contacts', to='organization.Organization', verbose_name='Organization'),
+        ),
+        migrations.AlterField(
+            model_name='contact',
+            name='phone',
+            field=models.CharField(blank=True, max_length=256, null=True, unique=True, verbose_name='Phone'),
+        ),
     ]
