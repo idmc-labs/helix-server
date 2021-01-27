@@ -22,6 +22,8 @@ class Crisis(MetaInformationAbstractModel, models.Model):
     crisis_narrative = models.TextField(_('Crisis Narrative/Summary'))
     countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
                                        related_name='crises')
+    start_date = models.DateField(verbose_name=_('Start Date'), blank=True, null=True)
+    end_date = models.DateField(verbose_name=_('End Date'), blank=True, null=True)
 
     def __str__(self):
         return self.name
