@@ -9,8 +9,10 @@ from apps.crisis.models import Crisis
 from apps.extraction.filters import EntryExtractionFilterSet
 
 
-class ExtractionQuery(MetaInformationAbstractModel):
+class QueryAbstractModel(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=128)
+    displacement_type = ArrayField(base_field=enum.EnumField(Crisis.CRISIS_TYPE, null=False),
+                                   blank=True, null=True)
     event_regions = models.ManyToManyField('country.CountryRegion', verbose_name=_('Regions'),
                                            blank=True, related_name='+')
     event_countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
@@ -31,6 +33,11 @@ class ExtractionQuery(MetaInformationAbstractModel):
     event_crisis_types = ArrayField(enum.EnumField(enum=Crisis.CRISIS_TYPE),
                                     blank=True, null=True)
 
+    class Meta:
+        abstract = True
+
+
+class ExtractionQuery(MetaInformationAbstractModel, QueryAbstractModel):
     @classmethod
     def get_entries(cls, data=None) -> ['Entry']:  # noqa
         return EntryExtractionFilterSet(data=data).qs
@@ -38,6 +45,7 @@ class ExtractionQuery(MetaInformationAbstractModel):
     @property
     def entries(self) -> ['Entry']:  # noqa
         return self.get_entries(data=dict(
+            displacement_type=self.displacement_type,
             event_countries=self.event_countries.all(),
             event_regions=self.event_regions.all(),
             event_crises=self.event_crises.all(),

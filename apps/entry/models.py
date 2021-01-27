@@ -100,7 +100,46 @@ class FigureCategory(models.Model):
     ), default=STOCK)
 
 
-class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Model):
+class FigureDisaggregationAbstractModel(models.Model):
+    # disaggregation information
+    displacement_urban = models.PositiveIntegerField(verbose_name=_('Displacement/Urban'),
+                                                     blank=True, null=True)
+    displacement_rural = models.PositiveIntegerField(verbose_name=_('Displacement/Rural'),
+                                                     blank=True, null=True)
+    location_camp = models.PositiveIntegerField(verbose_name=_('Location/Camp'),
+                                                blank=True, null=True)
+    location_non_camp = models.PositiveIntegerField(verbose_name=_('Location/Non-Camp'),
+                                                    blank=True, null=True)
+    sex_male = models.PositiveIntegerField(verbose_name=_('Sex/Male'),
+                                           blank=True, null=True)
+    sex_female = models.PositiveIntegerField(verbose_name=_('Sex/Female'),
+                                             blank=True, null=True)
+    age_json = ArrayField(base_field=JSONField(verbose_name=_('Age')),
+                          verbose_name=_('Age Disaggregation'),
+                          blank=True, null=True)
+    strata_json = ArrayField(base_field=JSONField(verbose_name=_('Stratum')),
+                             verbose_name=_('Strata Disaggregation'),
+                             blank=True, null=True)
+    # conflict based disaggregation
+    conflict = models.PositiveIntegerField(verbose_name=_('Conflict/Conflict'),
+                                           blank=True, null=True)
+    conflict_political = models.PositiveIntegerField(verbose_name=_('Conflict/Violence-Political'),
+                                                     blank=True, null=True)
+    conflict_criminal = models.PositiveIntegerField(verbose_name=_('Conflict/Violence-Criminal'),
+                                                    blank=True, null=True)
+    conflict_communal = models.PositiveIntegerField(verbose_name=_('Conflict/Violence-Communal'),
+                                                    blank=True, null=True)
+    conflict_other = models.PositiveIntegerField(verbose_name=_('Other'),
+                                                 blank=True, null=True)
+
+    class Meta:
+        abstract = True
+
+
+class Figure(MetaInformationArchiveAbstractModel,
+             UUIDAbstractModel,
+             FigureDisaggregationAbstractModel,
+             models.Model):
     class TYPE(enum.Enum):  # temp filler for migration file
         pass
 
@@ -200,36 +239,6 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
         verbose_name=_('Housing destruction (recommended estimate for this entry)'),
         default=False)
 
-    # disaggregation information
-    displacement_urban = models.PositiveIntegerField(verbose_name=_('Displacement/Urban'),
-                                                     blank=True, null=True)
-    displacement_rural = models.PositiveIntegerField(verbose_name=_('Displacement/Rural'),
-                                                     blank=True, null=True)
-    location_camp = models.PositiveIntegerField(verbose_name=_('Location/Camp'),
-                                                blank=True, null=True)
-    location_non_camp = models.PositiveIntegerField(verbose_name=_('Location/Non-Camp'),
-                                                    blank=True, null=True)
-    sex_male = models.PositiveIntegerField(verbose_name=_('Sex/Male'),
-                                           blank=True, null=True)
-    sex_female = models.PositiveIntegerField(verbose_name=_('Sex/Female'),
-                                             blank=True, null=True)
-    age_json = ArrayField(base_field=JSONField(verbose_name=_('Age')),
-                          verbose_name=_('Age Disaggregation'),
-                          blank=True, null=True)
-    strata_json = ArrayField(base_field=JSONField(verbose_name=_('Stratum')),
-                             verbose_name=_('Strata Disaggregation'),
-                             blank=True, null=True)
-    # conflict based disaggregation
-    conflict = models.PositiveIntegerField(verbose_name=_('Conflict/Conflict'),
-                                           blank=True, null=True)
-    conflict_political = models.PositiveIntegerField(verbose_name=_('Conflict/Violence-Political'),
-                                                     blank=True, null=True)
-    conflict_criminal = models.PositiveIntegerField(verbose_name=_('Conflict/Violence-Criminal'),
-                                                    blank=True, null=True)
-    conflict_communal = models.PositiveIntegerField(verbose_name=_('Conflict/Violence-Communal'),
-                                                    blank=True, null=True)
-    conflict_other = models.PositiveIntegerField(verbose_name=_('Other'),
-                                                 blank=True, null=True)
     # locations
     geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
                                            related_name='+')
