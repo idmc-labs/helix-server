@@ -57,3 +57,12 @@ class TestReviewCommentSerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('non_field_errors', serializer.errors)
         self.assertIn(NOT_ALLOWED_TO_REVIEW, serializer.errors['non_field_errors'])
+
+        # however if user is only trying to comment, he is allowed
+        data = dict(
+            body='a new body',
+            entry=self.entry.id
+        )
+        serializer = ReviewCommentSerializer(data=data,
+                                             context={'request': self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
