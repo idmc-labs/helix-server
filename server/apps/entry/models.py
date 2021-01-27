@@ -281,6 +281,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
     geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
                                            related_name='+')
 
+    # methods
+
     @classmethod
     def can_be_created_by(cls, user: User, entry: 'Entry') -> bool:
         return entry.can_be_updated_by(user)
@@ -299,6 +301,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
             if excerpt_idu is None or not excerpt_idu.strip():
                 errors['excerpt_idu'] = gettext('This field is required. ')
         return errors
+
+    # core
 
     def save(self, *args, **kwargs):
         # TODO: set household size from the country
@@ -378,8 +382,16 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                            values_list('methodology', flat=True))
 
     @property
-    def total_figures(self) -> int:
-        return self.figures.aggregate(total=Sum('total_figures'))['total']
+    def total_stock_figures(self) -> int:
+        return self.figures.filter(
+            category__type=STOCK
+        ).aggregate(total=Sum('total_figures'))['total']
+
+    @property
+    def total_flow_figures(self) -> int:
+        return self.figures.filter(
+            category__type=FLOW
+        ).aggregate(total=Sum('total_figures'))['total']
 
     @staticmethod
     def clean_url_and_document(values: dict, instance=None) -> OrderedDict:

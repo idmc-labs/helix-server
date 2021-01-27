@@ -134,7 +134,9 @@ class EntryType(DjangoObjectType):
             )
         )
     )
-    total_figures = graphene.Field(graphene.Int)
+    # optimize these
+    total_stock_figures = graphene.Field(graphene.Int)
+    total_flow_figures = graphene.Field(graphene.Int)
     source_methodology = graphene.Field(graphene.String)
 
 
