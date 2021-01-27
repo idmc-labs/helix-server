@@ -19,6 +19,7 @@ class ContactInputType(object):
     country = graphene.ID()
     countries_of_operation = graphene.List(graphene.NonNull(graphene.ID))
     email = graphene.String()
+    skype = graphene.String()
     phone = graphene.String()
     comment = graphene.String()
 
@@ -50,6 +51,7 @@ class ContactUpdateInputType(graphene.InputObjectType):
     country = graphene.ID()
     countries_of_operation = graphene.List(graphene.NonNull(graphene.ID))
     email = graphene.String()
+    skype = graphene.String()
     phone = graphene.String()
     comment = graphene.String()
 
@@ -126,10 +128,11 @@ class CommunicationCreateInputType(graphene.InputObjectType):
     Communication Create InputType
     """
     contact = graphene.ID(required=True)
+    country = graphene.ID()
     title = graphene.String()
     subject = graphene.String(required=True)
     content = graphene.String(required=True)
-    date_time = graphene.DateTime()
+    date = graphene.Date()
     medium = graphene.ID(required=True)
     attachment = graphene.ID(required=False)
 
@@ -144,7 +147,7 @@ class CommunicationUpdateInputType(graphene.InputObjectType):
     title = graphene.String()
     subject = graphene.String()
     content = graphene.String()
-    date_time = graphene.DateTime()
+    date = graphene.Date()
     medium = graphene.ID()
     attachment = graphene.ID(required=False)
 

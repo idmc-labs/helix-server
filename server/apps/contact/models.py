@@ -46,6 +46,8 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
                                 blank=True, null=True,
                                 related_name='contacts', on_delete=models.SET_NULL)
     email = models.EmailField(verbose_name=_('Email'), blank=True, null=True)
+    skype = models.CharField(verbose_name=_('Skype'), max_length=32,
+                             blank=True, null=True)
     phone = models.CharField(verbose_name=_('Phone'), max_length=32,
                              blank=True, null=True,
                              unique=True)
@@ -68,17 +70,21 @@ class CommunicationMedium(models.Model):
 
 class Communication(MetaInformationArchiveAbstractModel, models.Model):
     class COMMUNICATION_MEDIUM(enum.Enum):
+        # keeping for the sake of migrations, remove it when recreating all migrations
         pass
 
     contact = models.ForeignKey('Contact', verbose_name=_('Contact'),
+                                related_name='communications', on_delete=models.CASCADE)
+    country = models.ForeignKey('country.Country', verbose_name=_('Country'),
+                                blank=True, null=True,
                                 related_name='communications', on_delete=models.CASCADE)
     title = models.CharField(verbose_name=_('Title'), max_length=256,
                              blank=True, null=True)
     subject = models.CharField(verbose_name=_('Subject'), max_length=512)
     content = models.TextField(verbose_name=_('Content'))
-    date_time = models.DateTimeField(verbose_name=_('Date'),
-                                     null=True, blank=True,
-                                     help_text=_('Date on which communication occurred.'))
+    date = models.DateField(verbose_name=_('Conducted Date'),
+                            null=True, blank=True,
+                            help_text=_('Date on which communication occurred.'))
     medium = models.ForeignKey(CommunicationMedium,
                                null=True, blank=False,
                                related_name='+', on_delete=models.SET_NULL)
@@ -87,4 +93,4 @@ class Communication(MetaInformationArchiveAbstractModel, models.Model):
                                    null=True, blank=True)
 
     def __str__(self):
-        return f'{self.contact} {self.date_time}'
+        return f'{self.contact} {self.date}'
