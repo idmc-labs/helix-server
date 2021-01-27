@@ -215,6 +215,6 @@ class TagFactory(DjangoModelFactory):
 
 class ParkingLotFactory(DjangoModelFactory):
     class Meta:
-        model = 'parking_lot.ParkingLot'
+        model = 'parking_lot.ParkedItem'
 
     country = factory.SubFactory(CountryFactory)
