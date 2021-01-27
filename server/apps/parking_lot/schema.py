@@ -13,6 +13,7 @@ class ParkedItemType(DjangoObjectType):
         model = ParkedItem
 
     status = graphene.Field(ParkedItemGrapheneEnum)
+    entry = graphene.Field('apps.entry.schema.EntryType')
 
 
 class ParkedItemListType(CustomDjangoListObjectType):
