@@ -15,7 +15,7 @@ ALL_MODELS = {PERMISSION_ENTITY.crisis, PERMISSION_ENTITY.event,
               PERMISSION_ENTITY.communication, PERMISSION_ENTITY.figure,
               PERMISSION_ENTITY.summary, PERMISSION_ENTITY.contextualupdate,
               PERMISSION_ENTITY.resource, PERMISSION_ENTITY.review,
-              PERMISSION_ENTITY.actor, PERMISSION_ENTITY.parkinglot}
+              PERMISSION_ENTITY.actor, PERMISSION_ENTITY.parkeditem}
 
 # NOTE: To add custom permissions, add `bla_model` like `sign_off_model`.
 PERMISSIONS = {

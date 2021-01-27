@@ -1,8 +1,8 @@
 import graphene
 
-from apps.parking_lot.models import ParkingLot
+from apps.parking_lot.models import ParkedItem
 
 from utils.enums import enum_description
 
-ParkingLotGrapheneEnum = graphene.Enum.from_enum(ParkingLot.PARKING_LOT_STATUS,
+ParkedItemGrapheneEnum = graphene.Enum.from_enum(ParkedItem.PARKING_LOT_STATUS,
                                                  description=enum_description)

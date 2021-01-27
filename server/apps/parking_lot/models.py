@@ -5,7 +5,7 @@ from django_enumfield import enum
 from apps.contrib.models import MetaInformationAbstractModel
 
 
-class ParkingLot(MetaInformationAbstractModel):
+class ParkedItem(MetaInformationAbstractModel):
     class PARKING_LOT_STATUS(enum.Enum):
         TO_BE_REVIEWED = 0
         REVIEWED = 1
@@ -22,7 +22,7 @@ class ParkingLot(MetaInformationAbstractModel):
     title = models.TextField(verbose_name=_('Title'))
     url = models.URLField(verbose_name=_('URL'))
     assigned_to = models.ForeignKey('users.User', verbose_name=_('Assigned To'),
-                                    related_name='assigned_parking_lots',
+                                    related_name='assigned_parked_items',
                                     on_delete=models.SET_NULL,
                                     blank=True, null=True)
     status = enum.EnumField(PARKING_LOT_STATUS, verbose_name=_('Status'),

@@ -317,6 +317,10 @@ class FigureTag(MetaInformationAbstractModel):
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
     url = models.URLField(verbose_name=_('Source URL'), max_length=2000,
                           blank=True, null=True)
+    associated_parked_item = models.OneToOneField('parking_lot.ParkedItem',
+                                                  blank=True, null=True,
+                                                  on_delete=models.SET_NULL, related_name='entry')
+    url = models.URLField(verbose_name=_('Source URL'),
     preview = models.OneToOneField('SourcePreview',
                                    related_name='entry', on_delete=models.SET_NULL,
                                    blank=True, null=True,
