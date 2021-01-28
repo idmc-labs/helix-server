@@ -86,11 +86,11 @@ class OSMName(UUIDAbstractModel, models.Model):
         }
 
     class IDENTIFIER(enum.Enum):
-        SOURCE = 0
+        ORIGIN = 0
         DESTINATION = 1
 
         __labels__ = {
-            SOURCE: _('Source'),
+            ORIGIN: _('Origin'),
             DESTINATION: _('Destination'),
         }
 
