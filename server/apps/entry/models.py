@@ -31,7 +31,7 @@ CANNOT_UPDATE_MESSAGE = _('You cannot sign off the entry.')
 class SourcePreview(MetaInformationAbstractModel):
     PREVIEW_FOLDER = 'source/previews'
 
-    url = models.URLField(verbose_name=_('Source URL'))
+    url = models.URLField(verbose_name=_('Source URL'), max_length=2000)
     token = models.CharField(verbose_name=_('Token'),
                              max_length=64, db_index=True,
                              blank=True, null=True)
@@ -316,7 +316,7 @@ class FigureTag(MetaInformationAbstractModel):
 
 
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
-    url = models.URLField(verbose_name=_('Source URL'),
+    url = models.URLField(verbose_name=_('Source URL'), max_length=2000,
                           blank=True, null=True)
     preview = models.OneToOneField('SourcePreview',
                                    related_name='entry', on_delete=models.SET_NULL,
