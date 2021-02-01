@@ -9,8 +9,8 @@ class TestUpdateReviewComment(HelixGraphQLTestCase):
         self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.instance = ReviewCommentFactory.create(created_by=self.creator)
         self.mutation = '''
-        mutation($input: ReviewCommentUpdateInputType!){
-          updateReviewComment(data: $input) {
+        mutation($input: CommentUpdateInputType!){
+          updateComment(data: $input) {
             ok
             errors
             result {
@@ -34,8 +34,8 @@ class TestUpdateReviewComment(HelixGraphQLTestCase):
         content = response.json()
 
         self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['updateReviewComment']['ok'], content)
-        self.assertEqual(content['data']['updateReviewComment']['result']['body'],
+        self.assertTrue(content['data']['updateComment']['ok'], content)
+        self.assertEqual(content['data']['updateComment']['result']['body'],
                          self.input['body'])
 
     def test_invalid_review_comment_update_by_non_creator(self) -> None:
@@ -48,9 +48,9 @@ class TestUpdateReviewComment(HelixGraphQLTestCase):
 
         content = response.json()
         self.assertEqual('nonFieldErrors',
-                         content['data']['updateReviewComment']['errors'][0]['field'])
+                         content['data']['updateComment']['errors'][0]['field'])
         self.assertIn('does not exist',
-                      content['data']['updateReviewComment']['errors'][0]['messages'].lower())
+                      content['data']['updateComment']['errors'][0]['messages'].lower())
 
 
 class TestDeleteReviewComment(HelixGraphQLTestCase):
