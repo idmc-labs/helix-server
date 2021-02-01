@@ -52,8 +52,7 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
     skype = models.CharField(verbose_name=_('Skype'), max_length=32,
                              blank=True, null=True)
     phone = models.CharField(verbose_name=_('Phone'), max_length=256,
-                             blank=True, null=True,
-                             unique=True)
+                             blank=True, null=True)
     comment = models.TextField(verbose_name=_('Comment'), blank=True, null=True)
 
     def __str__(self):
