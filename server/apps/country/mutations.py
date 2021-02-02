@@ -1,6 +1,8 @@
 import graphene
 
 from apps.country.schema import SummaryType, ContextualUpdateType
+from apps.crisis.enums import CrisisTypeGrapheneEnum
+
 from apps.country.serializers import SummarySerializer, ContextualUpdateSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
@@ -20,6 +22,8 @@ class ContextualUpdateCreateInputType(graphene.InputObjectType):
     """
     update = graphene.String(required=True)
     country = graphene.ID(required=True)
+    publish_date = graphene.Date()
+    crisis_type = graphene.NonNull(CrisisTypeGrapheneEnum)
 
 
 class CreateSummary(graphene.Mutation):

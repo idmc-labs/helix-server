@@ -1,0 +1,11 @@
+#! /bin/bash
+# Run migrations
+docker-compose exec server python manage.py migrate
+
+# Init roles
+docker-compose exec server python manage.py init_roles
+
+# Init assets
+docker-compose exec server python manage.py init_types_subtypes # event related
+docker-compose exec server python manage.py init_figure_types # figure related
+docker-compose exec server python manage.py init_figure_tags

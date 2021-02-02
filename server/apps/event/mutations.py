@@ -12,11 +12,15 @@ from utils.permissions import permission_checker
 
 class ActorCreateInputType(graphene.InputObjectType):
     name = graphene.String(required=True)
+    country = graphene.ID(required=True)
+    torg = graphene.String()
 
 
 class ActorUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
     name = graphene.String(required=True)
+    country = graphene.ID()
+    torg = graphene.String()
 
 
 class CreateActor(graphene.Mutation):

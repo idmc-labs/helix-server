@@ -68,7 +68,6 @@ class OSMNameInputType(graphene.InputObjectType):
     place_rank = graphene.Int(required=False)
     alternative_names = graphene.String(required=False)
     accuracy = graphene.NonNull(OSMAccuracyGrapheneEnum)
-    reported_name = graphene.String(required=True)
     moved = graphene.Boolean(required=False)
 
 
@@ -86,6 +85,7 @@ class CommonFigureCreateMixin:
     include_idu = graphene.Boolean(required=True)
     excerpt_idu = graphene.String()
     is_disaggregated = graphene.Boolean(required=False)
+    is_housing_destruction = graphene.Boolean(required=False)
     # disaggregated data
     displacement_urban = graphene.Int(required=False)
     displacement_rural = graphene.Int(required=False)
@@ -141,6 +141,7 @@ class FigureUpdateInputType(graphene.InputObjectType):
     include_idu = graphene.Boolean()
     excerpt_idu = graphene.String()
     is_disaggregated = graphene.Boolean(required=False)
+    is_housing_destruction = graphene.Boolean(required=False)
     # disaggregated data
     displacement_urban = graphene.Int(required=False)
     displacement_rural = graphene.Int(required=False)
