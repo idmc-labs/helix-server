@@ -17,6 +17,8 @@ class CrisisCreateInputType(graphene.InputObjectType):
     crisis_type = graphene.NonNull(CrisisTypeGrapheneEnum)
     crisis_narrative = graphene.String()
     countries = graphene.List(graphene.NonNull(graphene.ID), required=True)
+    start_date = graphene.Date()
+    end_date = graphene.Date()
 
 
 class CrisisUpdateInputType(graphene.InputObjectType):
@@ -28,6 +30,8 @@ class CrisisUpdateInputType(graphene.InputObjectType):
     crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
     crisis_narrative = graphene.String()
     countries = graphene.List(graphene.NonNull(graphene.ID))
+    start_date = graphene.Date()
+    end_date = graphene.Date()
 
 
 class CreateCrisis(graphene.Mutation):
