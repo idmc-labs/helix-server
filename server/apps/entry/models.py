@@ -242,6 +242,10 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
 
     is_disaggregated = models.BooleanField(verbose_name=_('Is disaggregated'),
                                            default=False)
+    is_housing_destruction = models.BooleanField(
+        verbose_name=_('Housing destruction (recommended estimate for this entry)'),
+        default=False)
+
     # disaggregation information
     displacement_urban = models.PositiveIntegerField(verbose_name=_('Displacement/Urban'),
                                                      blank=True, null=True)
