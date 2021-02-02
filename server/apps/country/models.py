@@ -2,9 +2,11 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
+from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel, ArchiveAbstractModel
 from apps.entry.models import Entry
+from apps.crisis.models import Crisis
 
 
 class GeographicalGroup(models.Model):
@@ -69,6 +71,8 @@ class Summary(MetaInformationArchiveAbstractModel, models.Model):
     country = models.ForeignKey('Country', verbose_name=_('Country'),
                                 on_delete=models.CASCADE, related_name='summaries')
     summary = models.TextField(verbose_name=_('Summary'), blank=False)
+    publish_date = models.DateField(verbose_name=_('Published Date'))
+    crisis_type = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Crisis Type'))
 
 
 class HouseholdSize(ArchiveAbstractModel):
@@ -77,8 +81,7 @@ class HouseholdSize(ArchiveAbstractModel):
     year = models.PositiveSmallIntegerField(verbose_name=_('Year'))
     size = models.FloatField(verbose_name=_('Size'), default=1.0,
                              validators=[
-                                 MinValueValidator(0, message="Should be positive")
-                             ])
+                                 MinValueValidator(0, message="Should be positive")])
 
     class Meta:
         unique_together = (('country', 'year'),)
