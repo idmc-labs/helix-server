@@ -1,7 +1,10 @@
 from mock import patch
 from django.db.models import ProtectedError
+from django.core.exceptions import ValidationError
 
+from helix.settings import RESOURCE_NUMBER
 from apps.users.enums import USER_ROLE
+from apps.resource.models import Resource
 from utils.factories import ResourceGroupFactory, ResourceFactory
 from utils.tests import HelixTestCase, create_user_with_role
 
@@ -24,3 +27,23 @@ class TestResourceGroupModel(HelixTestCase):
     def test_can_delete(self, is_deletable):
         self.group.can_delete()
         is_deletable.assert_called_once()
+
+    def test_resources_creation_by_user(self):
+        old_count = Resource.objects.filter(created_by=self.reviewer).count()
+        with self.assertRaises(ValidationError):
+            RESOURCE_CREATED = RESOURCE_NUMBER + 1
+            resource = ResourceFactory.create_batch(RESOURCE_CREATED,
+                                                    created_by=self.reviewer,
+                                                    group=self.group)
+
+        new_count = Resource.objects.filter(created_by=self.reviewer).count()
+        self.assertEqual(new_count, RESOURCE_NUMBER)  # new resources be created
+
+    def test_resource_update(self):
+        ResourceFactory.create_batch(RESOURCE_NUMBER - 2,
+                                     created_by=self.reviewer,
+                                     group=self.group)
+        resource = ResourceFactory.create(created_by=self.reviewer, group=self.group)
+        self.assertTrue(Resource.objects.filter(id=resource.id).update(name='hari'))
+        with self.assertRaises(ValidationError):
+            ResourceFactory.create(created_by=self.reviewer, group=self.group)

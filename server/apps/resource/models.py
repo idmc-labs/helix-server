@@ -3,6 +3,9 @@ from typing import Tuple
 from django.db import models
 from django.db.models import ProtectedError
 from django.utils.translation import gettext, gettext_lazy as _
+from django.core.exceptions import ValidationError
+
+from helix.settings import RESOURCE_NUMBER, RESOURCEGROUP_NUMBER
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel
 
@@ -27,6 +30,11 @@ class ResourceGroup(MetaInformationArchiveAbstractModel):
     def __str__(self):
         return self.name
 
+    def save(self, *args, **kwargs):
+        if self.pk is None and ResourceGroup.objects.filter(created_by=self.created_by).count() >= RESOURCEGROUP_NUMBER:
+            raise ValidationError(gettext(f"Can only create {RESOURCEGROUP_NUMBER} resource groups"))
+        return super(ResourceGroup, self).save(*args, **kwargs)
+
 
 class Resource(MetaInformationArchiveAbstractModel):
     name = models.CharField(verbose_name=_('Name'), max_length=256)
@@ -41,3 +49,8 @@ class Resource(MetaInformationArchiveAbstractModel):
 
     def __str__(self):
         return self.name
+
+    def save(self, *args, **kwargs):
+        if self.pk is None and Resource.objects.filter(created_by=self.created_by).count() >= RESOURCE_NUMBER:
+            raise ValidationError(gettext(f"Can only create {RESOURCE_NUMBER} Resource"))
+        return super(Resource, self).save(*args, **kwargs)

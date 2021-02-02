@@ -33,19 +33,3 @@ class TestCreateOrganizationSerializer(HelixTestCase):
 
         organization = serializer.save()
         self.assertEqual(organization.contacts.count(), len(self.data['contacts']))
-
-    def test_invalid_duplicate_contacts_phone_numbers(self):
-        self.data['contacts'] = self.data['contacts'][:] + self.data['contacts'][:]
-        serializer = OrganizationSerializer(data=self.data, context=self.context)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('contacts', serializer.errors)
-
-    def test_invalid_contact_phone_already_exists(self):
-        Contact.objects.create(**self.data['contacts'][0],
-                               organization=OrganizationFactory())
-
-        serializer = OrganizationSerializer(data=self.data, context=self.context)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('contacts', serializer.errors)
-        self.assertIsInstance(serializer.errors['contacts'], list)
-        self.assertIn('phone', serializer.errors['contacts'][0])

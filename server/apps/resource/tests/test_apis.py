@@ -3,7 +3,7 @@ import json
 from apps.users.enums import USER_ROLE
 from apps.resource.models import ResourceGroup
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
-from utils.factories import CountryFactory, ResourceGroupFactory
+from utils.factories import CountryFactory, ResourceGroupFactory, ResourceFactory
 
 
 class TestQueryResourceGroup(HelixGraphQLTestCase):
@@ -115,3 +115,40 @@ class TestCreateResource(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createResource']['ok'], content)
         self.assertIn('group', [each['field'] for each in content['data']['createResource']['errors']])
+
+
+class TestQueryResource(HelixGraphQLTestCase):
+    def setUp(self):
+        self.list_resources = '''
+            query MyQuery {
+              resourceList {
+                results {
+                  id
+                  name
+                  createdBy {
+                    id
+                  }
+                }
+              }
+            }
+        '''
+
+    def test_resources_by_user(self):
+        self.reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        resource1 = ResourceFactory.create(
+            name='test111',
+            created_by=self.reviewer1,
+        )
+        resource2 = ResourceFactory.create(
+            name='test222',
+            created_by=self.reviewer2,
+        )
+        self.force_login(self.reviewer2)
+        response = self.query(
+            self.list_resources
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertEqual(len(content['data']['resourceList']), 1)  # only the resource created by user
+        self.assertEqual(int(content['data']['resourceList']['results'][0]['createdBy']['id']), self.reviewer2.id)
