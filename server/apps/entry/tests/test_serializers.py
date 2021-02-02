@@ -147,7 +147,6 @@ class TestEntrySerializer(HelixTestCase):
             lon=46.66,
             name='name',
             accuracy=OSMName.OSM_ACCURACY.COUNTRY.value,
-            reported_name='reported',
             identifier=OSMName.IDENTIFIER.ORIGIN.value,
         )
         source2 = copy(source1)
@@ -183,12 +182,10 @@ class TestEntrySerializer(HelixTestCase):
             'lat': 33.8,
             'lon': 33.8,
             'identifier': OSMName.IDENTIFIER.ORIGIN.value,
-            'reported_name': 'new source',
         })
         existing = figure.geo_locations.first()
         old_source = {
             'id': existing.id,
-            'reported_name': 'updated old source'
         }
         figures = [{
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
@@ -225,7 +222,6 @@ class TestEntrySerializer(HelixTestCase):
         figure = entry.figures.first()
         different_source = {
             'id': loc1.id,
-            'reported_name': 'different source'
         }
         figures = [dict(
             uuid=str(uuid4()),

@@ -68,7 +68,6 @@ class OSMNameInputType(graphene.InputObjectType):
     place_rank = graphene.Int(required=False)
     alternative_names = graphene.String(required=False)
     accuracy = graphene.NonNull(OSMAccuracyGrapheneEnum)
-    reported_name = graphene.String(required=True)
     moved = graphene.Boolean(required=False)
 
 

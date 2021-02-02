@@ -136,7 +136,6 @@ class OSMName(UUIDAbstractModel, models.Model):
     # custom fields
     accuracy = enum.EnumField(verbose_name=_('Accuracy'),
                               enum=OSM_ACCURACY)
-    reported_name = models.TextField(verbose_name=_('Reported Name'))
     moved = models.BooleanField(verbose_name=_('Moved'),
                                 default=False)
 
@@ -208,14 +207,10 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
 
     class ROLE(enum.Enum):
         RECOMMENDED = 0
-        PARTIAL_ADDED = 1
-        PARTIAL_SUBTRACTED = 2
-        TRIANGULATION = 3
+        TRIANGULATION = 1
 
         __labels__ = {
             RECOMMENDED: _("Recommended figure"),
-            PARTIAL_ADDED: _("Partial figure (Added)"),
-            PARTIAL_SUBTRACTED: _("Partial figure (Subtracted)"),
             TRIANGULATION: _("Triangulation"),
         }
 
