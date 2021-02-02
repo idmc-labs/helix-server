@@ -54,7 +54,11 @@ class Actor(MetaInformationAbstractModel, NameAttributedModels):
     """
     Conflict related actors
     """
-    # country = TODO:
+    country = models.ForeignKey('country.Country', verbose_name=_('Country'),
+                                null=True,
+                                on_delete=models.SET_NULL, related_name='actors')
+    # NOTE: torg is used to map actors in the system to it's external source
+    torg = models.CharField(verbose_name=_('Torg'), max_length=10, null=True)
 
 
 # Models related to displacement caused by disaster

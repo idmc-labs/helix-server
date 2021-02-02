@@ -65,14 +65,19 @@ class ContextualUpdate(MetaInformationArchiveAbstractModel, models.Model):
     country = models.ForeignKey('Country', verbose_name=_('Country'),
                                 on_delete=models.CASCADE, related_name='contextual_updates')
     update = models.TextField(verbose_name=_('Update'), blank=False)
+    publish_date = models.DateField(verbose_name=_('Published Date'),
+                                    blank=True,
+                                    null=True)
+    crisis_type = enum.EnumField(Crisis.CRISIS_TYPE,
+                                 verbose_name=_('Crisis Type'),
+                                 blank=True,
+                                 null=True)
 
 
 class Summary(MetaInformationArchiveAbstractModel, models.Model):
     country = models.ForeignKey('Country', verbose_name=_('Country'),
                                 on_delete=models.CASCADE, related_name='summaries')
     summary = models.TextField(verbose_name=_('Summary'), blank=False)
-    publish_date = models.DateField(verbose_name=_('Published Date'))
-    crisis_type = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Crisis Type'))
 
 
 class HouseholdSize(ArchiveAbstractModel):
