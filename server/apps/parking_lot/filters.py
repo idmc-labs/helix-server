@@ -1,6 +1,6 @@
 from django_filters import rest_framework as df
 
-from apps.parking_lot.models import ParkingLot
+from apps.parking_lot.models import ParkedItem
 from utils.filters import StringListFilter
 
 
@@ -10,7 +10,7 @@ class ParkingLotFilter(df.FilterSet):
     assigned_to_in = StringListFilter(method='filter_assigned_to')
 
     class Meta:
-        model = ParkingLot
+        model = ParkedItem
         fields = {
             'title': ['icontains'],
             'created_by': ['exact'],
@@ -19,7 +19,7 @@ class ParkingLotFilter(df.FilterSet):
     def filter_status_in(self, queryset, name, value):
         if value:
             # map enum names to values
-            return queryset.filter(status__in=[ParkingLot.PARKING_LOT_STATUS.get(each)
+            return queryset.filter(status__in=[ParkedItem.PARKING_LOT_STATUS.get(each)
                                                for each in value])
         return queryset
 

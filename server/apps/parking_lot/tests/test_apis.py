@@ -5,12 +5,12 @@ from utils.factories import CountryFactory, ParkingLotFactory
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
-class TestCreateParkingLot(HelixGraphQLTestCase):
+class TestCreateParkedItem(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.country_id = str(CountryFactory.create().id)
         self.mutation = '''
-        mutation CreateParkingLot($input: ParkingLotCreateInputType!) {
-            createParkingLot(data: $input) {
+        mutation CreateParkedItem($input: ParkedItemCreateInputType!) {
+            createParkedItem(data: $input) {
                 ok
                 errors
                 result {
@@ -41,19 +41,19 @@ class TestCreateParkingLot(HelixGraphQLTestCase):
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['createParkingLot']['ok'], content)
-        self.assertEqual(content['data']['createParkingLot']['result']['title'],
+        self.assertTrue(content['data']['createParkedItem']['ok'], content)
+        self.assertEqual(content['data']['createParkedItem']['result']['title'],
                          self.input['title'])
 
 
-class TestUpdateParkingLot(HelixGraphQLTestCase):
+class TestUpdateParkedItem(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.country = CountryFactory.create()
         self.reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.parking_lot = ParkingLotFactory.create(created_by=self.reviewer)
         self.mutation = '''
-        mutation UpdateParkingLot($input: ParkingLotUpdateInputType!) {
-            updateParkingLot(data: $input) {
+        mutation UpdateParkedItem($input: ParkedItemUpdateInputType!) {
+            updateParkedItem(data: $input) {
                 ok
                 errors
                 result {
@@ -78,6 +78,6 @@ class TestUpdateParkingLot(HelixGraphQLTestCase):
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['updateParkingLot']['ok'], content)
-        self.assertEqual(content['data']['updateParkingLot']['result']['title'],
+        self.assertTrue(content['data']['updateParkedItem']['ok'], content)
+        self.assertEqual(content['data']['updateParkedItem']['result']['title'],
                          self.input['title'])

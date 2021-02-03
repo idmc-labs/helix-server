@@ -20,6 +20,7 @@ from apps.contrib.models import (
 from apps.entry.constants import STOCK, FLOW
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
+from apps.parking_lot.models import ParkedItem
 
 from utils.fields import CachedFileField
 
@@ -317,6 +318,9 @@ class FigureTag(MetaInformationAbstractModel):
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
     url = models.URLField(verbose_name=_('Source URL'), max_length=2000,
                           blank=True, null=True)
+    associated_parked_item = models.OneToOneField('parking_lot.ParkedItem',
+                                                  blank=True, null=True,
+                                                  on_delete=models.SET_NULL, related_name='entry')
     preview = models.OneToOneField('SourcePreview',
                                    related_name='entry', on_delete=models.SET_NULL,
                                    blank=True, null=True,
@@ -356,6 +360,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                                        through='EntryReviewer',
                                        through_fields=('entry', 'reviewer'))
 
+    # Properties
+
     @property
     def latest_reviews(self):
         return self.reviews.order_by(
@@ -366,7 +372,10 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
     @property
     def source_methodology(self) -> str:
-        return getattr(self.source, 'methodology', '')
+        return '\n\n'.join(self.sources.
+                           filter(methodology__isnull=False).
+                           exclude(methodology='').
+                           values_list('methodology', flat=True))
 
     @property
     def total_figures(self) -> int:
@@ -391,6 +400,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
         ).exists()
 
+    # Methods
+
     def can_be_updated_by(self, user: User) -> bool:
         """
         used to check before deleting as well
@@ -402,11 +413,24 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             return True
         return self.created_by == user
 
-    def __str__(self):
-        return f'Entry {self.article_title}'
+    def update_associated_parked_item(self):
+        self.associated_parked_item.status = ParkedItem.PARKING_LOT_STATUS.REVIEWED
+        self.associated_parked_item.save()
+
+    # Core
+
+    def save(self, *args, **kwargs):
+        if self.associated_parked_item:
+            self.update_associated_parked_item()
+        return super().save(*args, **kwargs)
 
     class Meta:
         permissions = (('sign_off_entry', 'Can sign off the entry'),)
+
+    # Dunders
+
+    def __str__(self):
+        return f'Entry {self.article_title}'
 
 
 class EntryReviewer(MetaInformationAbstractModel, models.Model):
