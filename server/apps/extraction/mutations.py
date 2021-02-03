@@ -19,6 +19,7 @@ class CommonExtractionInputMixin:
     event_before = graphene.Date(required=False)
     figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum), required=False)
     figure_tags = graphene.List(graphene.NonNull(graphene.String), required=False)
+    article_title = graphene.String()
 
 
 class CreateExtractInputType(CommonExtractionInputMixin, graphene.InputObjectType):
