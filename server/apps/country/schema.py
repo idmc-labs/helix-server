@@ -3,11 +3,11 @@ from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
 from graphene_django_extras import (
     PageGraphqlPagination,
-    DjangoObjectField
+    DjangoObjectField,
 )
 
 from apps.contact.schema import ContactListType
-from apps.country.models import Country, CountryRegion, ContextualUpdate, Summary, HouseholdSize
+from apps.country.models import Country, CountryRegion, ContextualAnalysis, Summary, HouseholdSize
 from apps.country.filters import CountryFilter
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
@@ -26,9 +26,9 @@ class CountryRegionListType(CustomDjangoListObjectType):
         }
 
 
-class ContextualUpdateType(DjangoObjectType):
+class ContextualAnalysisType(DjangoObjectType):
     class Meta:
-        model = ContextualUpdate
+        model = ContextualAnalysis
         exclude_fields = ('country',)
 
     created_by = graphene.Field('apps.users.schema.UserType')
@@ -36,9 +36,9 @@ class ContextualUpdateType(DjangoObjectType):
     crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
 
 
-class ContextualUpdateListType(CustomDjangoListObjectType):
+class ContextualAnalysisListType(CustomDjangoListObjectType):
     class Meta:
-        model = ContextualUpdate
+        model = ContextualAnalysis
         filter_fields = {
             'created_at': ['lte', 'gte']
         }
@@ -67,7 +67,7 @@ class CountryType(DjangoObjectType):
         filter_fields = {}
 
     last_summary = graphene.Field(SummaryType)
-    last_contextual_update = graphene.Field(ContextualUpdateType)
+    last_contextual_analysis = graphene.Field(ContextualAnalysisType)
     contacts = DjangoPaginatedListObjectField(ContactListType,
                                               pagination=PageGraphqlPagination(
                                                   page_size_query_param='pageSize'
@@ -76,10 +76,10 @@ class CountryType(DjangoObjectType):
                                                         pagination=PageGraphqlPagination(
                                                             page_size_query_param='pageSize'
                                                         ), accessor='operating_contacts')
-    contextual_updates = DjangoPaginatedListObjectField(ContextualUpdateListType,
-                                                        pagination=PageGraphqlPagination(
-                                                            page_size_query_param='pageSize'
-                                                        ), accessor='contextual_updates')
+    contextual_analyses = DjangoPaginatedListObjectField(ContextualAnalysisListType,
+                                                         pagination=PageGraphqlPagination(
+                                                             page_size_query_param='pageSize'
+                                                         ), accessor='contextual_analyses')
     summaries = DjangoPaginatedListObjectField(SummaryListType,
                                                pagination=PageGraphqlPagination(
                                                    page_size_query_param='pageSize'

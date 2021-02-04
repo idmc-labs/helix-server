@@ -1,9 +1,9 @@
 import graphene
 
-from apps.country.schema import SummaryType, ContextualUpdateType
+from apps.country.schema import SummaryType, ContextualAnalysisType
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 
-from apps.country.serializers import SummarySerializer, ContextualUpdateSerializer
+from apps.country.serializers import SummarySerializer, ContextualAnalysisSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 
@@ -16,7 +16,7 @@ class SummaryCreateInputType(graphene.InputObjectType):
     country = graphene.ID(required=True)
 
 
-class ContextualUpdateCreateInputType(graphene.InputObjectType):
+class ContextualAnalysisCreateInputType(graphene.InputObjectType):
     """
     Crisis Create InputType
     """
@@ -45,25 +45,25 @@ class CreateSummary(graphene.Mutation):
         return CreateSummary(result=instance, errors=None, ok=True)
 
 
-class CreateContextualUpdate(graphene.Mutation):
+class CreateContextualAnalysis(graphene.Mutation):
     class Arguments:
-        data = ContextualUpdateCreateInputType(required=True)
+        data = ContextualAnalysisCreateInputType(required=True)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.Field(ContextualUpdateType)
+    result = graphene.Field(ContextualAnalysisType)
 
     @staticmethod
-    @permission_checker(['country.add_contextualupdate'])
+    @permission_checker(['country.add_contextualanalysis'])
     def mutate(root, info, data):
-        serializer = ContextualUpdateSerializer(data=data,
+        serializer = ContextualAnalysisSerializer(data=data,
                                                 context={'request': info.context})
         if errors := mutation_is_not_valid(serializer):
-            return CreateContextualUpdate(errors=errors, ok=False)
+            return CreateContextualAnalysis(errors=errors, ok=False)
         instance = serializer.save()
-        return CreateContextualUpdate(result=instance, errors=None, ok=True)
+        return CreateContextualAnalysis(result=instance, errors=None, ok=True)
 
 
 class Mutation:
     create_summary = CreateSummary.Field()
-    create_contextual_update = CreateContextualUpdate.Field()
+    create_contextual_analysis = CreateContextualAnalysis.Field()
