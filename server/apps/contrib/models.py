@@ -1,15 +1,12 @@
-import json
 import logging
 import uuid
 from uuid import uuid4
-
-import boto3
-from django.conf import settings
 
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
+from apps.entry.tasks import generate_pdf
 
 from utils.fields import CachedFileField
 
@@ -133,21 +130,14 @@ class SourcePreview(MetaInformationAbstractModel):
             token = str(uuid.uuid4())
             instance = cls(token=token)
         instance.url = url
-        # TODO: remove .pdf in production... this will happen after webhook
-        instance.pdf = cls.PREVIEW_FOLDER + '/' + instance.token + '.pdf'
-
         instance.save()
 
-        payload = dict(
-            url=url,
-            token=instance.token,
-            filename=f'{instance.token}.pdf',
-        )
-        logger.info(f'Invoking lambda function for preview {url} {instance.token}')
-        client = boto3.client('lambda')
-        client.invoke(
-            FunctionName=settings.LAMBDA_HTML_TO_PDF,
-            InvocationType='Event',
-            Payload=json.dumps(payload)
+        # TODO: remove .pdf in production... this will happen after webhook
+        final_path = cls.PREVIEW_FOLDER + '/' + instance.token + '.pdf'
+
+        generate_pdf.send(
+            instance.pk,
+            instance.url,
+            final_path,
         )
         return instance
