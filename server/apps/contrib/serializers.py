@@ -4,6 +4,7 @@ import magic
 from rest_framework import serializers
 
 from apps.contrib.models import Attachment
+from apps.contrib.models import SourcePreview
 
 
 class MetaInformationSerializerMixin(object):
@@ -41,3 +42,16 @@ class AttachmentSerializer(serializers.ModelSerializer):
         with magic.Magic() as m:
             attrs['filetype_detail'] = m.id_buffer(byte_stream)
         return attrs
+
+
+class SourcePreviewSerializer(MetaInformationSerializerMixin,
+                              serializers.ModelSerializer):
+    class Meta:
+        model = SourcePreview
+        fields = '__all__'
+
+    def create(self, validated_data):
+        return SourcePreview.get_pdf(**validated_data)
+
+    def update(self, instance, validated_data):
+        return SourcePreview.get_pdf(**validated_data, instance=instance)

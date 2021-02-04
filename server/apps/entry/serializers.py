@@ -10,7 +10,6 @@ from apps.contrib.serializers import MetaInformationSerializerMixin
 from apps.entry.models import (
     Entry,
     Figure,
-    SourcePreview,
     OSMName,
     EntryReviewer,
     FigureTag,
@@ -267,19 +266,6 @@ class EntrySerializer(MetaInformationSerializerMixin,
         EntryReviewer.assign_creator(entry=entry,
                                      user=self.context['request'].user)
         return entry
-
-
-class SourcePreviewSerializer(MetaInformationSerializerMixin,
-                              serializers.ModelSerializer):
-    class Meta:
-        model = SourcePreview
-        fields = '__all__'
-
-    def create(self, validated_data):
-        return SourcePreview.get_pdf(**validated_data)
-
-    def update(self, instance, validated_data):
-        return SourcePreview.get_pdf(**validated_data, instance=instance)
 
 
 class FigureTagSerializer(MetaInformationSerializerMixin,

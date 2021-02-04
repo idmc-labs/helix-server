@@ -1,6 +1,7 @@
 from django.utils.translation import gettext
 import graphene
 
+from apps.contrib.models import SourcePreview
 from apps.entry.enums import (
     IdentifierGrapheneEnum,
     OSMAccuracyGrapheneEnum,
@@ -10,7 +11,7 @@ from apps.entry.enums import (
     RoleGrapheneEnum,
     EntryReviewerGrapheneEnum,
 )
-from apps.entry.models import Entry, Figure, SourcePreview, EntryReviewer, FigureTag
+from apps.entry.models import Entry, Figure, EntryReviewer, FigureTag
 from apps.entry.schema import (
     EntryType,
     FigureType,
@@ -21,9 +22,9 @@ from apps.entry.schema import (
 from apps.entry.serializers import (
     EntrySerializer,
     FigureSerializer,
-    SourcePreviewSerializer,
     FigureTagSerializer,
 )
+from apps.contrib.serializers import SourcePreviewSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker, is_authenticated
 
@@ -264,7 +265,7 @@ class EntryCreateInputType(graphene.InputObjectType):
     calculation_logic = graphene.String(required=False)
     is_confidential = graphene.Boolean(required=False)
     caveats = graphene.String()
-    tags = graphene.List(graphene.NonNull(graphene.String), required=False)
+    tags = graphene.List(graphene.NonNull(graphene.ID), required=False)
     reviewers = graphene.List(graphene.NonNull(graphene.ID))
 
 

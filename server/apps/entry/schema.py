@@ -22,11 +22,11 @@ from apps.entry.models import (
     Figure,
     FigureTag,
     Entry,
-    SourcePreview,
     EntryReviewer,
     FigureCategory,
     OSMName,
 )
+from apps.contrib.models import SourcePreview
 from apps.organization.schema import OrganizationListType
 from utils.fields import (
     DjangoPaginatedListObjectField,
