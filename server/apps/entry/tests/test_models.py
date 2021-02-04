@@ -3,7 +3,7 @@ import os
 from django.core.files.storage import default_storage
 
 from apps.users.enums import USER_ROLE
-from apps.entry.models import SourcePreview
+from apps.contrib.models import SourcePreview
 from apps.review.models import Review
 from utils.factories import EntryFactory, FigureFactory, ReviewFactory, ReviewCommentFactory
 from utils.tests import HelixTestCase, create_user_with_role
