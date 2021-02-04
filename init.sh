@@ -3,6 +3,7 @@
 docker-compose exec server python manage.py migrate
 
 # Init roles
+docker-compose exec server python manage.py remove_stale_contenttypes
 docker-compose exec server python manage.py init_roles
 
 # Init assets
