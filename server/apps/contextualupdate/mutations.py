@@ -45,7 +45,7 @@ class CreateContextualUpdate(graphene.Mutation):
     @staticmethod
     @permission_checker(['contextualupdate.add_contextualupdate'])
     def mutate(root, info, data):
-        serializer = ContextualUpdateSerializer(data=data)
+        serializer = ContextualUpdateSerializer(data=data, context=dict(request=info.context))
         if errors := mutation_is_not_valid(serializer):
             return CreateContextualUpdate(errors=errors, ok=False)
         instance = serializer.save()
@@ -69,7 +69,8 @@ class UpdateContextualUpdate(graphene.Mutation):
             return UpdateContextualUpdate(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Contextual Update does not exist.'))
             ])
-        serializer = ContextualUpdateSerializer(instance=instance, data=data, partial=True)
+        serializer = ContextualUpdateSerializer(instance=instance, data=data, partial=True,
+                                                context=dict(request=info.context))
         if errors := mutation_is_not_valid(serializer):
             return UpdateContextualUpdate(errors=errors, ok=False)
         instance = serializer.save()

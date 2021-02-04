@@ -24,7 +24,8 @@ class ContextualUpdate(MetaInformationArchiveAbstractModel, models.Model):
                                      blank=True, related_name='sourced_contextual_updates')
     publishers = models.ManyToManyField('organization.Organization', verbose_name=_('Publisher'),
                                         blank=True, related_name='published_contextual_updates')
-    publish_date = models.DateTimeField(verbose_name=_('Published DateTime'))
+    publish_date = models.DateTimeField(verbose_name=_('Published DateTime'),
+                                        blank=True, null=True)
     source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
                                       blank=True, null=True)
 
@@ -37,5 +38,6 @@ class ContextualUpdate(MetaInformationArchiveAbstractModel, models.Model):
     tags = models.ManyToManyField('entry.FigureTag', blank=True)
     countries = models.ManyToManyField('country.Country', blank=True)
     crisis_types = ArrayField(
-        base_field=enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Crisis Type'))
+        base_field=enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Crisis Type')),
+        blank=True, null=True
     )
