@@ -27,3 +27,6 @@ six==1.15
 
 uwsgi
 sentry-sdk>=0.10,<0.20
+
+dramatiq[redis,watch]==1.10.0
+django_dramatiq==0.9.1

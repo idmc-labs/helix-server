@@ -2,6 +2,7 @@ from django.contrib.auth import login, logout
 from django.utils.translation import gettext
 import graphene
 
+from apps.users.tasks import generate_log
 from apps.users.enums import PermissionRoleEnum
 from apps.users.schema import UserType
 from apps.users.models import User
@@ -125,6 +126,7 @@ class UpdateUser(graphene.Mutation):
     def mutate(root, info, data):
         try:
             user = User.objects.get(id=data['id'])
+            generate_log.send(1)
         except User.DoesNotExist:
             return UpdateUser(
                 errors=[

@@ -8,6 +8,11 @@ services:
     volumes:
       - helix-db-data:/var/lib/postgresql/data
 
+  redis:
+    image: redis:latest
+    volumes:
+      - helix-redis-data:/data
+
   server:
     image: helix/helix-server:latest
     build:
@@ -16,13 +21,16 @@ services:
         - helix/helix-server:latest
     env_file:
       - .env
-    command: bash -c 'python3 manage.py runserver 0.0.0.0:9000'
+
+    command: bash -c '/code/deploy/scripts/run_dev.sh'
     volumes:
       - ./server/:/code
     ports:
       - '9000:9000'
     depends_on:
       - db
+      - redis
 
 volumes:
   helix-db-data:
+  helix-redis-data:
