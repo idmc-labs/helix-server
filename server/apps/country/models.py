@@ -50,8 +50,8 @@ class Country(models.Model):
         return Entry.objects.filter(event__countries=self.id).distinct()
 
     @property
-    def last_contextual_update(self):
-        return self.contextual_updates.last()
+    def last_contextual_analysis(self):
+        return self.contextual_analyses.last()
 
     @property
     def last_summary(self):
@@ -61,9 +61,9 @@ class Country(models.Model):
         return self.name
 
 
-class ContextualUpdate(MetaInformationArchiveAbstractModel, models.Model):
+class ContextualAnalysis(MetaInformationArchiveAbstractModel, models.Model):
     country = models.ForeignKey('Country', verbose_name=_('Country'),
-                                on_delete=models.CASCADE, related_name='contextual_updates')
+                                on_delete=models.CASCADE, related_name='contextual_analyses')
     update = models.TextField(verbose_name=_('Update'), blank=False)
     publish_date = models.DateField(verbose_name=_('Published Date'),
                                     blank=True,

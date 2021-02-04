@@ -29,7 +29,7 @@ class PERMISSION_ENTITY(enum.Enum):
     communication = 6
     figure = 7
     summary = 8
-    contextualupdate = 9
+    contextualanalysis = 9
     resource = 10
     user = 11
     review = 12
@@ -47,7 +47,7 @@ class PERMISSION_ENTITY(enum.Enum):
         communication: _('Communication'),
         figure: _('Figure'),
         summary: _('Summary'),
-        contextualupdate: _('Contextual Update'),
+        contextualanalysis: _('Contextual Analysis'),
         resource: _('Resource'),
         user: _('User'),
         review: _('Review'),

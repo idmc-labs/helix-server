@@ -31,9 +31,9 @@ class CountryFactory(DjangoModelFactory):
     region = factory.SubFactory(CountryRegionFactory)
 
 
-class ContextualUpdateFactory(DjangoModelFactory):
+class ContextualAnalysisFactory(DjangoModelFactory):
     class Meta:
-        model = 'country.ContextualUpdate'
+        model = 'country.ContextualAnalysis'
 
     update = factory.Faker('paragraph')
     country = factory.SubFactory(CountryFactory)
