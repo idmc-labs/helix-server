@@ -9,6 +9,7 @@ from graphene_django_extras import (
 from apps.contact.schema import ContactListType
 from apps.country.models import Country, CountryRegion, ContextualUpdate, Summary, HouseholdSize
 from apps.country.filters import CountryFilter
+from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
 
 
@@ -32,6 +33,7 @@ class ContextualUpdateType(DjangoObjectType):
 
     created_by = graphene.Field('apps.users.schema.UserType')
     last_modified_by = graphene.Field('apps.users.schema.UserType')
+    crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
 
 
 class ContextualUpdateListType(CustomDjangoListObjectType):
