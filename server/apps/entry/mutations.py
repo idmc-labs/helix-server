@@ -250,6 +250,7 @@ class DeleteFigure(graphene.Mutation):
 
 class EntryCreateInputType(graphene.InputObjectType):
     url = graphene.String()
+    associated_parked_item = graphene.ID()
     preview = graphene.ID(required=False)
     document = graphene.ID(required=False)
     article_title = graphene.String(required=True)
@@ -271,6 +272,7 @@ class EntryUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
     # document = Upload(required=False)
     # url = graphene.String()
+    associated_parked_item = graphene.ID()
     article_title = graphene.String()
     publish_date = graphene.Date()
     sources = graphene.List(graphene.NonNull(graphene.ID))
