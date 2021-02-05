@@ -23,9 +23,9 @@ class ExtractionQuery(MetaInformationAbstractModel):
     figure_end_before = models.DateField(verbose_name=_('To Date'), blank=True, null=True)
     figure_roles = ArrayField(base_field=enum.EnumField(enum=Figure.ROLE),
                               blank=True, null=True)
-    event_tags = models.ManyToManyField('entry.FigureTag', verbose_name=_('Figure Tags'),
+    entry_tags = models.ManyToManyField('entry.FigureTag', verbose_name=_('Figure Tags'),
                                         blank=True, related_name='+')
-    event_article_title = models.TextField(verbose_name=_('Article Title'),
+    entry_article_title = models.TextField(verbose_name=_('Article Title'),
                                            blank=True, null=True)
     event_crisis_type = models.TextField(verbose_name=_('Crisis Type'),
                                          blank=True, null=True)
@@ -41,10 +41,10 @@ class ExtractionQuery(MetaInformationAbstractModel):
             event_regions=self.event_regions.all(),
             event_crises=self.event_crises.all(),
             figure_categories=self.figure_categories.all(),
-            event_tags=self.event_tags.all(),
+            entry_tags=self.entry_tags.all(),
             figure_roles=self.figure_roles,
             figure_start_after=self.figure_start_after,
             figure_end_before=self.figure_end_before,
-            event_article_title=self.event_article_title,
+            entry_article_title=self.entry_article_title,
             event_crisis_type=self.event_crisis_type,
         ))

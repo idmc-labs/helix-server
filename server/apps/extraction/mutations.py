@@ -7,6 +7,7 @@ from apps.extraction.schema import (
     ExtractionQueryObjectType,
 )
 from apps.entry.enums import RoleGrapheneEnum
+from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 
 
@@ -18,8 +19,9 @@ class CommonExtractionInputMixin:
     figure_start_after = graphene.Date(required=False)
     figure_end_before = graphene.Date(required=False)
     figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum), required=False)
-    event_tags = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    event_article_title = graphene.String()
+    entry_tags = graphene.List(graphene.NonNull(graphene.ID), required=False)
+    entry_article_title = graphene.String()
+    event_crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
 
 
 class CreateExtractInputType(CommonExtractionInputMixin, graphene.InputObjectType):

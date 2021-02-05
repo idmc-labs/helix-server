@@ -2,21 +2,21 @@ from django_filters import rest_framework as df
 
 from apps.entry.models import Entry, Figure
 from apps.crisis.models import Crisis
-from utils.filters import StringListFilter
+from utils.filters import StringListFilter, IDListFilter
 
 
 class EntryExtractionFilterSet(df.FilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
-    event_regions = StringListFilter(method='filter_regions')
-    event_countries = StringListFilter(method='filter_countries')
-    event_crises = StringListFilter(method='filter_crises')
-    figure_categories = StringListFilter(method='filter_figure_categories')
+    event_regions = IDListFilter(method='filter_regions')
+    event_countries = IDListFilter(method='filter_countries')
+    event_crises = IDListFilter(method='filter_crises')
+    figure_categories = IDListFilter(method='filter_figure_categories')
     figure_start_after = df.DateFilter(method='filter_time_frame_after')
     figure_end_before = df.DateFilter(method='filter_time_frame_before')
     figure_roles = StringListFilter(method='filter_figure_roles')
-    event_tags = StringListFilter(method='filter_figure_tags')
+    entry_tags = IDListFilter(method='filter_tags')
     # TODO: GRID filter
-    event_article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
+    entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
     event_crisis_type = df.CharFilter(method='filter_crisis_type')
 
     class Meta:
@@ -60,7 +60,7 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs.filter(figures__role__in=[Figure.ROLE.get(item) for item in value]).distinct()
         return qs
 
-    def filter_figure_tags(self, qs, name, value):
+    def filter_tags(self, qs, name, value):
         if value:
             return qs.filter(tags__in=value).distinct()
         return qs

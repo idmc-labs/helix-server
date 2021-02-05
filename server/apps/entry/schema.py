@@ -108,7 +108,7 @@ class TotalFigureFilterInputType(graphene.InputObjectType):
     categories = graphene.List(graphene.NonNull(graphene.ID))
     start_date = graphene.Date()
     end_date = graphene.Date()
-    roles = graphene.List(graphene.NonNull(graphene.ID))
+    roles = graphene.List(graphene.NonNull(graphene.String))
 
 
 class EntryType(DjangoObjectType):
