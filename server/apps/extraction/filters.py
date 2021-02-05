@@ -57,7 +57,13 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     def filter_figure_roles(self, qs, name, value):
         if value:
-            return qs.filter(figures__role__in=[Figure.ROLE.get(item) for item in value]).distinct()
+            if isinstance(value[0], int):
+                # coming from saved query
+                return qs.filter(figures__role__in=value).distinct()
+            else:
+                # coming from client side
+                return qs.filter(figures__role__in=[Figure.ROLE.get(item).value for item in
+                                                    value]).distinct()
         return qs
 
     def filter_tags(self, qs, name, value):
@@ -67,5 +73,10 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     def filter_crisis_type(self, qs, name, value):
         if value:
-            return qs.filter(event__event_type=Crisis.CRISIS_TYPE.get(value).value)
+            if isinstance(value[0], int):
+                # coming from saved query
+                return qs.filter(event__event_type=value).distinct()
+            else:
+                # coming from client side
+                return qs.filter(event__event_type=Crisis.CRISIS_TYPE.get(value).value)
         return qs
