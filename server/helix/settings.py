@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import json
 import socket
 import logging
 
@@ -28,7 +29,7 @@ APPS_DIR = os.path.join(BASE_DIR, APPS_DIRNAME)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'w(m6)jr08z!anjsq6mjz%xo^*+sfnv$e3list=gfcfxaj_^4%o')
-HELIX_ENVIRONMENT = os.environ.get('HELIX_ENVIRONMENT', 'development')
+HELIX_ENVIRONMENT = os.environ.get('COPILOT_ENVIRONMENT_NAME') or os.environ.get('HELIX_ENVIRONMENT', 'development')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
@@ -85,7 +86,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
-if HELIX_ENVIRONMENT in ('production', 'nightly'):
+if not DEBUG:
     MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
 
 ROOT_URLCONF = 'helix.urls'
@@ -112,7 +113,21 @@ WSGI_APPLICATION = 'helix.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
-if os.environ.get('GITHUB_WORKFLOW'):
+# In AWS ECS
+if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
+    RDS_SECRET = json.loads(os.environ['RDS_SECRET'])
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': os.environ['RDS_DATABASE_NAME'],
+            'USER': RDS_SECRET['username'],
+            'PASSWORD': RDS_SECRET['password'],
+            'HOST': os.environ['RDS_ENDPOINT'],
+            'PORT': 5432,
+        }
+    }
+# TODO: REMOVE THIS (Use docker in github workflow)
+elif os.environ.get('GITHUB_WORKFLOW'):
     print('Database github workflow')
     DATABASES = {
         'default': {
@@ -244,28 +259,28 @@ INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 # Django storage
 
 # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
-if HELIX_ENVIRONMENT in ('production', 'nightly'):
+if not DEBUG:
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'togglecorp-helix')
-AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
-AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12 * 60 * 60))
-AWS_S3_FILE_OVERWRITE = False
-AWS_IS_GZIPPED = True
-GZIP_CONTENT_TYPES = [
-    'text/css', 'text/javascript', 'application/javascript', 'application/x-javascript', 'image/svg+xml',
-    'application/json',
-]
+    AWS_S3_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+    AWS_S3_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'togglecorp-helix')
+    AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
+    AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12 * 60 * 60))
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_IS_GZIPPED = True
+    GZIP_CONTENT_TYPES = [
+        'text/css', 'text/javascript', 'application/javascript', 'application/x-javascript', 'image/svg+xml',
+        'application/json',
+    ]
 
 SLS_SERVICE_NAME = os.environ.get('SLS_SERVICE_NAME', 'helix-serverless')
 PDF_GENERATOR = os.environ.get('PDF_GENERATOR', 'generatePdf')
 SLS_STAGES = {
     'development': 'dev',
+    'nightly': 'nightly',
+    'testing': 'test',
     'production': 'prod',
-    'testing': 'nightly',
-    'nightly': 'nightly'
 }
 sls_stage = SLS_STAGES[HELIX_ENVIRONMENT.lower()]
 LAMBDA_HTML_TO_PDF = os.environ.get('LAMBDA_HTML_TO_PDF', f'{SLS_SERVICE_NAME}-{sls_stage}-{PDF_GENERATOR}')

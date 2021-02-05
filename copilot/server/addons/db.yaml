@@ -1,0 +1,213 @@
+# https://github.com/copilot-example-voting-app/api/blob/main/copilot/api/addons/db.template.yaml
+
+Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  Name:
+    Type: String
+    Description: The name of the service, job, or workflow being deployed.
+
+  DBName:
+    Type: String
+    Description: Name of the database
+    Default: 'helix'
+  EngineVersion:
+    Type: String
+    Description: Database engine version
+    Default: '11'
+
+Conditions:
+  ISProduction:
+    !Equals [!Ref Env, prod]
+  ISNotProduction:
+    !Not [Condition: ISProduction]
+
+Mappings:
+  EnvConfigMap:
+    test:
+      Engine: postgres
+      DBFamily: 'postgres11'
+      DBInstanceClass: db.t3.small
+    prod:
+      Engine: aurora-postgresql
+      DBFamily: 'aurora-postgresql11'
+      DBInstanceClass: db.t2.medium
+
+Resources:
+  DBKMSCMK:
+    Type: 'AWS::KMS::Key'
+    # DeletionPolicy: Retain
+    Properties:
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+            Action: 'kms:*'
+            Resource: '*'
+          - Effect: Allow
+            Principal:
+              AWS: '*'
+            Action:
+              - 'kms:Encrypt'
+              - 'kms:Decrypt'
+              - 'kms:ReEncrypt*'
+              - 'kms:GenerateDataKey*'
+              - 'kms:CreateGrant'
+              - 'kms:ListGrants'
+              - 'kms:DescribeKey'
+            Resource: '*'
+            Condition:
+              StringEquals:
+                'kms:CallerAccount': !Ref 'AWS::AccountId'
+                'kms:ViaService': !Sub 'rds.${AWS::Region}.amazonaws.com'
+
+  AuroraKMSCMKAlias:
+    Type: 'AWS::KMS::Alias'
+    # DeletionPolicy: Retain
+    Condition: ISProduction
+    DependsOn: ['AuroraDBCluster']
+    Properties:
+      AliasName: !Sub 'alias/${AuroraDBCluster}'
+      TargetKeyId: !Ref DBKMSCMK
+
+  RdsKMSCMKAlias:
+    Type: 'AWS::KMS::Alias'
+    # DeletionPolicy: Retain
+    Condition: ISNotProduction
+    DependsOn: ['RDSInstance']
+    Properties:
+      AliasName: !Sub 'alias/${RDSInstance}'
+      TargetKeyId: !Ref DBKMSCMK
+
+  DBSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: !Ref 'AWS::StackName'
+      SubnetIds: !Split [ ',', { 'Fn::ImportValue': !Sub '${App}-${Env}-PrivateSubnets' } ]
+
+  DBSecurityGroup:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupDescription: !Ref 'AWS::StackName'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: { 'Fn::ImportValue': !Sub '${App}-${Env}-EnvironmentSecurityGroup' }
+          Description: 'Access to environment security group'
+      VpcId: { 'Fn::ImportValue': !Sub '${App}-${Env}-VpcId' }
+
+  DBMasterSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Join [ '/', [ !Ref App, !Ref Env, !Ref Name, 'aurora-pg' ] ]
+      Description: !Join [ '', [ 'Aurora PostgreSQL Master User Secret ', 'for CloudFormation Stack ', !Ref 'AWS::StackName' ] ]
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "postgres"}'
+        GenerateStringKey: "password"
+        ExcludeCharacters: '"@/\'
+        PasswordLength: 16
+
+  # For PROD ---------------------------------------------------------------------------------------------------------------------
+  DBClusterParameterGroup:
+    Type: 'AWS::RDS::DBClusterParameterGroup'
+    Condition: ISProduction
+    Properties:
+      Description: !Ref 'AWS::StackName'
+      Family: !FindInMap [EnvConfigMap, !Ref Env, DBFamily]
+      Parameters:
+        client_encoding: 'UTF8'
+
+  DBSecretClusterAttachment:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Condition: ISProduction
+    Properties:
+      SecretId: !Ref DBMasterSecret
+      TargetId: !Ref AuroraDBCluster
+      TargetType: AWS::RDS::DBCluster
+
+  AuroraDBCluster:
+    Type: 'AWS::RDS::DBCluster'
+    Condition: ISProduction
+    Properties:
+      DBClusterIdentifier: !Sub '${App}-${Env}-cluster'
+      MasterUsername: !Join ['', ['{{resolve:secretsmanager:', !Ref DBMasterSecret, ':SecretString:username}}' ]]
+      MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref DBMasterSecret, ':SecretString:password}}' ]]
+      DatabaseName: !Ref DBName
+      Engine: !FindInMap [EnvConfigMap, !Ref Env, Engine]
+      EngineVersion: !Ref EngineVersion
+      StorageEncrypted: true
+      KmsKeyId: !Ref DBKMSCMK
+      DBClusterParameterGroupName: !Ref DBClusterParameterGroup
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref DBSecurityGroup
+
+  AuroraRDSInstance:
+    Type: "AWS::RDS::DBInstance"
+    # DeletionPolicy: Retain
+    Condition: ISProduction
+    Properties:
+      AutoMinorVersionUpgrade: True
+      DBInstanceClass: !FindInMap [EnvConfigMap, !Ref Env, DBInstanceClass]
+      Engine: !FindInMap [EnvConfigMap, !Ref Env, Engine]
+      DBClusterIdentifier: !Ref AuroraDBCluster
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      PubliclyAccessible: false
+    DependsOn: ['AuroraDBCluster']
+
+  # For DEV ----------------------------------------------------------------------------------------------------------------------
+  DBParameterGroup:
+    Type: 'AWS::RDS::DBParameterGroup'
+    Condition: ISNotProduction
+    Properties:
+      Description: !Ref 'AWS::StackName'
+      Family: !FindInMap [EnvConfigMap, !Ref Env, DBFamily]
+      Parameters:
+        client_encoding: 'UTF8'
+
+  RDSInstance:
+    Type: "AWS::RDS::DBInstance"
+    Condition: ISNotProduction
+    # DeletionPolicy: Retain
+    Properties:
+      DBInstanceIdentifier: !Sub '${App}-${Env}-db'
+      MasterUsername: !Join ['', ['{{resolve:secretsmanager:', !Ref DBMasterSecret, ':SecretString:username}}' ]]
+      MasterUserPassword: !Join ['', ['{{resolve:secretsmanager:', !Ref DBMasterSecret, ':SecretString:password}}' ]]
+      DatabaseName: !Ref DBName
+      StorageEncrypted: True
+      KmsKeyId: !Ref DBKMSCMK
+      AutoMinorVersionUpgrade: True
+      StorageType: "gp2"
+      AllocatedStorage: "20"
+      MaxAllocatedStorage: 50
+      DBInstanceClass: !FindInMap [EnvConfigMap, !Ref Env, DBInstanceClass]
+      Engine: !FindInMap [EnvConfigMap, !Ref Env, Engine]
+      EngineVersion: !Ref EngineVersion
+      DBSubnetGroupName: !Ref DBSubnetGroup
+      DBParameterGroupName: !Ref DBParameterGroup
+      PubliclyAccessible: false
+      VPCSecurityGroups:
+        - !Ref DBSecurityGroup
+
+Outputs:
+  RdsDatabaseName: # injected as RDS_DATABASE_NAME environment variable by Copilot.
+    Description: 'The connection endpoint for the DB cluster.'
+    Value: !Ref DBName
+
+  RdsEndpoint: # injected as RDS_ENDPOINT environment variable by Copilot.
+    Description: 'The connection endpoint for the DB cluster.'
+    Value: !If
+      - ISProduction
+      - !GetAtt 'AuroraDBCluster.Endpoint.Address'
+      - !GetAtt 'RDSInstance.Endpoint.Address'
+
+  RdsSecret: # injected as RDS_SECRET environment variable by Copilot.
+    Description: 'The secret that username and password.'
+    Value: !Ref DBMasterSecret
