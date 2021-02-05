@@ -12,7 +12,7 @@ from utils.factories import (
 from apps.extraction.filters import EntryExtractionFilterSet as f
 
 
-class TestUserFilter(HelixTestCase):
+class TestExtractionFilter(HelixTestCase):
     def setUp(self) -> None:
         self.reg1 = CountryRegionFactory.create()
         self.reg2 = CountryRegionFactory.create()
@@ -63,30 +63,30 @@ class TestUserFilter(HelixTestCase):
 
     def test_filter_by_region(self):
         regions = [self.reg1.id]
-        fqs = f(data=dict(regions=regions)).qs
+        fqs = f(data=dict(event_regions=regions)).qs
         self.assertEqual(set(fqs), {self.entry3ev2})
 
     def test_filter_by_country(self):
         data = dict(
-            countries=[self.country2reg2.id]
+            event_countries=[self.country2reg2.id]
         )
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
 
         data = dict(
-            countries=[self.country3reg3.id]
+            event_countries=[self.country3reg3.id]
         )
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), set())
 
     def test_filter_by_crises(self):
         data = dict(
-            crises=[self.crisis1.id]
+            event_crises=[self.crisis1.id]
         )
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1, self.entry3ev2})
 
-        data['crises'] = [self.crisis2.id]
+        data['event_crises'] = [self.crisis2.id]
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), set())
 
@@ -104,13 +104,13 @@ class TestUserFilter(HelixTestCase):
 
     def test_filter_by_time_frame(self):
         data = dict(
-            event_after=self.mid_oct
+            figure_start_after=self.mid_oct
         )
         eqs = {self.entry1ev1, self.entry3ev2}
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), eqs)
 
-        data['event_before'] = self.mid_nov
+        data['figure_end_before'] = self.mid_nov
         eqs = {self.entry1ev1}
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), eqs)
