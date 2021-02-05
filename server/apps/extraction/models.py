@@ -5,6 +5,7 @@ from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
 from apps.entry.models import Figure
+from apps.crisis.models import Crisis
 from apps.extraction.filters import EntryExtractionFilterSet
 
 
@@ -27,8 +28,8 @@ class ExtractionQuery(MetaInformationAbstractModel):
                                         blank=True, related_name='+')
     entry_article_title = models.TextField(verbose_name=_('Article Title'),
                                            blank=True, null=True)
-    event_crisis_type = models.TextField(verbose_name=_('Crisis Type'),
-                                         blank=True, null=True)
+    event_crisis_type = enum.EnumField(enum=Crisis.CRISIS_TYPE,
+                                       blank=True, null=True)
 
     @classmethod
     def get_entries(cls, data=None) -> ['Entry']:  # noqa
