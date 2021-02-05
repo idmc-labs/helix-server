@@ -1,6 +1,11 @@
 from django_filters import rest_framework as df
 
-from apps.entry.models import Entry, EntryReviewer, OSMName
+from apps.entry.models import (
+    Entry,
+    EntryReviewer,
+    OSMName,
+    Figure,
+)
 from utils.filters import StringListFilter
 
 
@@ -8,6 +13,39 @@ class OSMNameFilter(df.FilterSet):
     class Meta:
         model = OSMName
         fields = []
+
+
+class FigureFilter(df.FilterSet):
+    categories = StringListFilter(method='filter_figure_categories')
+    start_date = df.DateFilter(method='filter_time_frame_after')
+    end_date = df.DateFilter(method='filter_time_frame_before')
+    roles = StringListFilter(method='filter_figure_roles')
+
+    class Meta:
+        model = Figure
+        fields = []
+
+    def filter_figure_categories(self, qs, name, value):
+        if value:
+            return qs.filter(category__in=value)
+        return qs
+
+    def filter_time_frame_after(self, qs, name, value):
+        if value:
+            return qs.exclude(start_date__isnull=True)\
+                .filter(start_date__gte=value)
+        return qs
+
+    def filter_time_frame_before(self, qs, name, value):
+        if value:
+            return qs.exclude(end_date__isnull=True).\
+                filter(end_date__lt=value)
+        return qs
+
+    def filter_figure_roles(self, qs, name, value):
+        if value:
+            return qs.filter(role__in=value)
+        return qs
 
 
 class EntryFilter(df.FilterSet):

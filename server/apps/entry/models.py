@@ -358,7 +358,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     # TODO: grid
     tags = models.ManyToManyField('FigureTag', blank=True)
 
-    # TODO: restrict guest users here
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
                                        blank=True,
                                        related_name='review_entries',
@@ -382,18 +381,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                            exclude(methodology='').
                            values_list('methodology', flat=True))
 
-    @property
-    def total_stock_figures(self) -> int:
-        return self.figures.filter(
-            category__type=STOCK
-        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
-
-    @property
-    def total_flow_figures(self) -> int:
-        return self.figures.filter(
-            category__type=FLOW
-        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
-
     @staticmethod
     def clean_url_and_document(values: dict, instance=None) -> OrderedDict:
         errors = OrderedDict()
@@ -414,6 +401,18 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         ).exists()
 
     # Methods
+
+    def total_stock_figures(self, filters) -> int:
+        from apps.entry.filters import FigureFilter
+        return FigureFilter(data=filters or dict(), queryset=self.figures.all()).qs.filter(
+            category__type=STOCK
+        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
+
+    def total_flow_figures(self, filters) -> int:
+        from apps.entry.filters import FigureFilter
+        return FigureFilter(data=filters or dict(), queryset=self.figures.all()).qs.filter(
+            category__type=FLOW
+        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
 
     def can_be_updated_by(self, user: User) -> bool:
         """

@@ -15,6 +15,45 @@ from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
+class TestEntryQuery(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.country = CountryFactory.create()
+        self.country_id = str(self.country.id)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.entry = EntryFactory.create(
+            created_by=self.editor
+        )
+        self.entry_query = '''
+        query MyQuery($id: ID!) {
+          entry(id: $id) {
+            totalStockFigures(data: {categories: ""})
+          }
+        }
+        '''
+
+    def test_figure_count_filtered_resolvers(self):
+        self.fig_cat = FigureCategoryFactory.create()
+        self.fig_cat_id = str(self.fig_cat.id)
+        self.fig_cat2 = FigureCategoryFactory.create()
+        self.fig_cat_id2 = str(self.fig_cat2.id)
+        figure1 = FigureFactory.create(entry=self.entry,
+                                       category=self.fig_cat,
+                                       reported=100,
+                                       unit=Figure.UNIT.PERSON)
+        figure2 = FigureFactory.create(entry=self.entry,
+                                       category=self.fig_cat,
+                                       reported=100,
+                                       unit=Figure.UNIT.PERSON)
+        figure3 = FigureFactory.create(entry=self.entry,
+                                       category=self.fig_cat2,
+                                       reported=50,
+                                       unit=Figure.UNIT.PERSON)
+        response = self.query(
+            self.entry_query,
+            input=dict(id=str(self.entry.id))
+        )
+
+
 class TestFigureUpdate(HelixGraphQLTestCase):
     def setUp(self):
         self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
