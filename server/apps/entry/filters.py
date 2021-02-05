@@ -44,7 +44,7 @@ class FigureFilter(df.FilterSet):
 
     def filter_figure_roles(self, qs, name, value):
         if value:
-            return qs.filter(role__in=value)
+            return qs.filter(role__in=[Figure.ROLE.get(item) for item in value]).distinct()
         return qs
 
 
