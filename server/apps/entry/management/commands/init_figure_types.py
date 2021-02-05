@@ -19,3 +19,4 @@ class Command(BaseCommand):
                 FigureCategory.objects.count(),
             )
         ))
+        FigureCategory.objects.filter(name='IDP').delete()
