@@ -11,15 +11,15 @@ from utils.error_types import CustomErrorType, mutation_is_not_valid
 
 
 class CommonExtractionInputMixin:
-    regions = graphene.List(graphene.NonNull(graphene.String), required=False)
-    countries = graphene.List(graphene.NonNull(graphene.String), required=False)
-    crises = graphene.List(graphene.NonNull(graphene.String), required=False)
-    figure_categories = graphene.List(graphene.NonNull(graphene.String), required=False)
-    event_after = graphene.Date(required=False)
-    event_before = graphene.Date(required=False)
+    event_regions = graphene.List(graphene.NonNull(graphene.ID), required=False)
+    event_countries = graphene.List(graphene.NonNull(graphene.ID), required=False)
+    event_crises = graphene.List(graphene.NonNull(graphene.ID), required=False)
+    figure_categories = graphene.List(graphene.NonNull(graphene.ID), required=False)
+    figure_start_after = graphene.Date(required=False)
+    figure_end_before = graphene.Date(required=False)
     figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum), required=False)
-    figure_tags = graphene.List(graphene.NonNull(graphene.String), required=False)
-    article_title = graphene.String()
+    event_tags = graphene.List(graphene.NonNull(graphene.ID), required=False)
+    event_article_title = graphene.String()
 
 
 class CreateExtractInputType(CommonExtractionInputMixin, graphene.InputObjectType):

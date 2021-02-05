@@ -1,21 +1,23 @@
 from django_filters import rest_framework as df
 
-from apps.entry.models import Entry
+from apps.entry.models import Entry, Figure
+from apps.crisis.models import Crisis
 from utils.filters import StringListFilter
 
 
 class EntryExtractionFilterSet(df.FilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
-    regions = StringListFilter(method='filter_regions')
-    countries = StringListFilter(method='filter_countries')
-    crises = StringListFilter(method='filter_crises')
+    event_regions = StringListFilter(method='filter_regions')
+    event_countries = StringListFilter(method='filter_countries')
+    event_crises = StringListFilter(method='filter_crises')
     figure_categories = StringListFilter(method='filter_figure_categories')
-    event_after = df.DateFilter(method='filter_time_frame_after')
-    event_before = df.DateFilter(method='filter_time_frame_before')
+    figure_start_after = df.DateFilter(method='filter_time_frame_after')
+    figure_end_before = df.DateFilter(method='filter_time_frame_before')
     figure_roles = StringListFilter(method='filter_figure_roles')
-    figure_tags = StringListFilter(method='filter_figure_tags')
+    event_tags = StringListFilter(method='filter_figure_tags')
     # TODO: GRID filter
-    article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
+    event_article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
+    event_crisis_type = df.CharFilter(method='filter_crisis_type')
 
     class Meta:
         model = Entry
@@ -55,10 +57,15 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     def filter_figure_roles(self, qs, name, value):
         if value:
-            return qs.filter(figures__role__in=value).distinct()
+            return qs.filter(figures__role__in=[Figure.ROLE.get(item) for item in value]).distinct()
         return qs
 
     def filter_figure_tags(self, qs, name, value):
         if value:
             return qs.filter(tags__in=value).distinct()
+        return qs
+
+    def filter_crisis_type(self, qs, name, value):
+        if value:
+            return qs.filter(event__event_type=Crisis.CRISIS_TYPE.get(value).value)
         return qs

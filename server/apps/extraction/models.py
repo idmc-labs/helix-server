@@ -10,23 +10,25 @@ from apps.extraction.filters import EntryExtractionFilterSet
 
 class ExtractionQuery(MetaInformationAbstractModel):
     name = models.CharField(verbose_name=_('Name'), max_length=128)
-    regions = models.ManyToManyField('country.CountryRegion', verbose_name=_('Regions'),
-                                     blank=True, related_name='+')
-    countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
-                                       blank=True, related_name='+')
-    crises = models.ManyToManyField('crisis.Crisis', verbose_name=_('Crises'),
-                                    blank=True, related_name='+')
+    event_regions = models.ManyToManyField('country.CountryRegion', verbose_name=_('Regions'),
+                                           blank=True, related_name='+')
+    event_countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
+                                             blank=True, related_name='+')
+    event_crises = models.ManyToManyField('crisis.Crisis', verbose_name=_('Crises'),
+                                          blank=True, related_name='+')
     figure_categories = models.ManyToManyField('entry.FigureCategory',
                                                verbose_name=_('figure categories'),
                                                related_name='+', blank=True)
-    event_after = models.DateField(verbose_name=_('From Date'), blank=True, null=True)
-    event_before = models.DateField(verbose_name=_('To Date'), blank=True, null=True)
+    figure_start_after = models.DateField(verbose_name=_('From Date'), blank=True, null=True)
+    figure_end_before = models.DateField(verbose_name=_('To Date'), blank=True, null=True)
     figure_roles = ArrayField(base_field=enum.EnumField(enum=Figure.ROLE),
                               blank=True, null=True)
-    figure_tags = models.ManyToManyField('entry.FigureTag', verbose_name=_('Figure Tags'),
-                                         blank=True, related_name='+')
-    article_title = models.TextField(verbose_name=_('Article Title'),
-                                     blank=True, null=True)
+    event_tags = models.ManyToManyField('entry.FigureTag', verbose_name=_('Figure Tags'),
+                                        blank=True, related_name='+')
+    event_article_title = models.TextField(verbose_name=_('Article Title'),
+                                           blank=True, null=True)
+    event_crisis_type = models.TextField(verbose_name=_('Crisis Type'),
+                                         blank=True, null=True)
 
     @classmethod
     def get_entries(cls, data=None) -> ['Entry']:  # noqa
@@ -35,13 +37,14 @@ class ExtractionQuery(MetaInformationAbstractModel):
     @property
     def entries(self) -> ['Entry']:  # noqa
         return self.get_entries(data=dict(
-            countries=self.countries.all(),
-            regions=self.regions.all(),
-            crises=self.crises.all(),
+            event_countries=self.event_countries.all(),
+            event_regions=self.event_regions.all(),
+            event_crises=self.event_crises.all(),
             figure_categories=self.figure_categories.all(),
-            figure_tags=self.figure_tags.all(),
+            event_tags=self.event_tags.all(),
             figure_roles=self.figure_roles,
-            event_after=self.event_after,
-            event_before=self.event_before,
-            article_title=self.article_title,
+            figure_start_after=self.figure_start_after,
+            figure_end_before=self.figure_end_before,
+            event_article_title=self.event_article_title,
+            event_crisis_type=self.event_crisis_type,
         ))
