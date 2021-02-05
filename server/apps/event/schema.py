@@ -167,6 +167,8 @@ class EventType(DjangoObjectType):
     violence = graphene.Field(ViolenceType)
     violence_sub_type = graphene.Field(ViolenceSubObjectType)
     actor = graphene.Field(ActorType)
+    total_stock_figures = graphene.Field(graphene.Int)
+    total_flow_figures = graphene.Field(graphene.Int)
 
 
 class EventListType(CustomDjangoListObjectType):

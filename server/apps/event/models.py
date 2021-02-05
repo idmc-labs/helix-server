@@ -1,6 +1,8 @@
 from collections import OrderedDict
 
 from django.db import models
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
@@ -9,6 +11,8 @@ from apps.contrib.models import (
     MetaInformationArchiveAbstractModel,
 )
 from apps.crisis.models import Crisis
+from apps.entry.models import Figure
+from apps.entry.constants import STOCK, FLOW
 
 
 class NameAttributedModels(models.Model):
@@ -155,6 +159,24 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                                 blank=True, null=True)
     event_narrative = models.TextField(verbose_name=_('Event Narrative'),
                                        null=True, blank=True)
+
+    # property
+
+    @property
+    def total_stock_figures(self) -> int:
+        return Figure.objects.filter(
+            entry__event_id=self.id,
+            category__type=STOCK
+        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
+
+    @property
+    def total_flow_figures(self) -> int:
+        return Figure.objects.filter(
+            entry__event_id=self.id,
+            category__type=FLOW
+        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
+
+    # methods
 
     @staticmethod
     def clean_dates(values: dict, instance=None) -> OrderedDict:

@@ -8,7 +8,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
@@ -385,13 +386,13 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     def total_stock_figures(self) -> int:
         return self.figures.filter(
             category__type=STOCK
-        ).aggregate(total=Sum('total_figures'))['total']
+        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
 
     @property
     def total_flow_figures(self) -> int:
         return self.figures.filter(
             category__type=FLOW
-        ).aggregate(total=Sum('total_figures'))['total']
+        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
 
     @staticmethod
     def clean_url_and_document(values: dict, instance=None) -> OrderedDict:
