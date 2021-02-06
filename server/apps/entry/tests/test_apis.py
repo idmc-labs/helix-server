@@ -673,7 +673,7 @@ class TestEntryDelete(HelixGraphQLTestCase):
                         id
                         sources{
                           results {
-                            id 
+                            id
                           }
                         }
                         url

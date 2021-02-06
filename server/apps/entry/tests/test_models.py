@@ -46,14 +46,6 @@ class TestFigureModel(HelixTestCase):
         figure.save()
         self.assertEqual(figure.total_figures, figure.reported * figure.household_size)
 
-    def test_figure_saves_total_figures(self):
-        figure = FigureFactory()
-        figure.unit = 1
-        figure.household_size = 4
-        figure.reported = 10
-        figure.save()
-        self.assertEqual(figure.total_figures, figure.reported * figure.household_size)
-
 
 class TestEntryModel(HelixTestCase):
     def setUp(self) -> None:
@@ -70,14 +62,14 @@ class TestEntryModel(HelixTestCase):
 
     def test_entry_get_latest_reviews(self):
         e = EntryFactory.create(created_by=self.editor)
-        f = FigureFactory.create(entry=e)
+        FigureFactory.create(entry=e)
         fields = {
             0: 'abc',
             1: 'def',
             2: 'xyz'
         }
-        comment = ReviewCommentFactory.create(entry=e)
-        r1 = ReviewFactory.create(entry=e, field=fields[0], value=Review.ENTRY_REVIEW_STATUS.RED)
+        ReviewCommentFactory.create(entry=e)
+        ReviewFactory.create(entry=e, field=fields[0], value=Review.ENTRY_REVIEW_STATUS.RED)
         r2 = ReviewFactory.create(entry=e, field=fields[0], value=Review.ENTRY_REVIEW_STATUS.GREEN)
         r3 = ReviewFactory.create(entry=e, field=fields[1], value=Review.ENTRY_REVIEW_STATUS.GREEN)
         obtained = set(e.latest_reviews)

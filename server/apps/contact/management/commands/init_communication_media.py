@@ -19,4 +19,3 @@ class Command(BaseCommand):
                 CommunicationMedium.objects.count(),
             )
         ))
-

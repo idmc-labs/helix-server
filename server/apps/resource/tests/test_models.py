@@ -29,12 +29,12 @@ class TestResourceGroupModel(HelixTestCase):
         is_deletable.assert_called_once()
 
     def test_resources_creation_by_user(self):
-        old_count = Resource.objects.filter(created_by=self.reviewer).count()
+        Resource.objects.filter(created_by=self.reviewer).count()
         with self.assertRaises(ValidationError):
             RESOURCE_CREATED = RESOURCE_NUMBER + 1
-            resource = ResourceFactory.create_batch(RESOURCE_CREATED,
-                                                    created_by=self.reviewer,
-                                                    group=self.group)
+            ResourceFactory.create_batch(RESOURCE_CREATED,
+                                         created_by=self.reviewer,
+                                         group=self.group)
 
         new_count = Resource.objects.filter(created_by=self.reviewer).count()
         self.assertEqual(new_count, RESOURCE_NUMBER)  # new resources be created
