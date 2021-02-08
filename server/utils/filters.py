@@ -42,6 +42,7 @@ def _generate_list_filter_class(inner_type):
 
 
 StringListFilter = _generate_list_filter_class(graphene.String)
+IDListFilter = _generate_list_filter_class(graphene.ID)
 
 
 class AllowInitialFilterSetMixin:

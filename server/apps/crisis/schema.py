@@ -18,6 +18,8 @@ class CrisisType(DjangoObjectType):
                                             pagination=PageGraphqlPagination(
                                                 page_size_query_param='pageSize'
                                             ))
+    total_stock_figures = graphene.Field(graphene.Int)
+    total_flow_figures = graphene.Field(graphene.Int)
 
 
 class CrisisListType(CustomDjangoListObjectType):

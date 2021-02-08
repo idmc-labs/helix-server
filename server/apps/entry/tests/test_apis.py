@@ -2,6 +2,7 @@ import json
 from uuid import uuid4
 
 from apps.entry.models import Figure, Entry, EntryReviewer, CANNOT_UPDATE_MESSAGE
+from apps.entry.constants import STOCK, FLOW
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     EventFactory,
@@ -13,6 +14,82 @@ from utils.factories import (
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
+
+
+class TestEntryQuery(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.country = CountryFactory.create()
+        self.country_id = str(self.country.id)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.entry = EntryFactory.create(
+            created_by=self.editor
+        )
+        self.entry_query = '''
+        query MyQuery($id: ID!, $data: TotalFigureFilterInputType) {
+          entry(id: $id) {
+            totalStockFigures(data: $data)
+            totalFlowFigures
+          }
+        }
+        '''
+
+    def test_figure_count_filtered_resolvers(self):
+        self.fig_cat = FigureCategoryFactory.create(type=STOCK)
+        self.fig_cat_id = str(self.fig_cat.id)
+        self.fig_cat2 = FigureCategoryFactory.create(type=STOCK)
+        self.fig_cat_id2 = str(self.fig_cat2.id)
+        self.fig_cat3 = FigureCategoryFactory.create(type=FLOW)
+        self.fig_cat_id3 = str(self.fig_cat3.id)
+        figure1 = FigureFactory.create(entry=self.entry,
+                                       category=self.fig_cat,
+                                       reported=100,
+                                       unit=Figure.UNIT.PERSON)
+        figure2 = FigureFactory.create(entry=self.entry,
+                                       category=self.fig_cat,
+                                       reported=100,
+                                       unit=Figure.UNIT.PERSON)
+        figure3 = FigureFactory.create(entry=self.entry,
+                                       category=self.fig_cat2,
+                                       reported=50,
+                                       unit=Figure.UNIT.PERSON)
+        figure4 = FigureFactory.create(entry=self.entry,
+                                       category=self.fig_cat3,
+                                       reported=70,
+                                       unit=Figure.UNIT.PERSON)
+        response = self.query(
+            self.entry_query,
+            variables=dict(
+                id=str(self.entry.id),
+                data=dict(categories=[self.fig_cat_id])
+            )
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertEqual(
+            content['data']['entry']['totalStockFigures'],
+            figure1.total_figures + figure2.total_figures
+        )
+        self.assertEqual(
+            content['data']['entry']['totalStockFigures'],
+            figure1.total_figures + figure2.total_figures
+        )
+        self.assertEqual(
+            content['data']['entry']['totalFlowFigures'],
+            figure4.total_figures
+        )
+        response = self.query(
+            self.entry_query,
+            variables=dict(
+                id=str(self.entry.id),
+                data=dict(categories=[self.fig_cat_id2])
+            )
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertEqual(
+            content['data']['entry']['totalStockFigures'],
+            figure3.total_figures
+        )
 
 
 class TestFigureUpdate(HelixGraphQLTestCase):

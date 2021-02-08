@@ -104,10 +104,18 @@ class FigureListType(CustomDjangoListObjectType):
         }
 
 
+class TotalFigureFilterInputType(graphene.InputObjectType):
+    categories = graphene.List(graphene.NonNull(graphene.ID))
+    start_date = graphene.Date()
+    end_date = graphene.Date()
+    roles = graphene.List(graphene.NonNull(graphene.String))
+
+
 class EntryType(DjangoObjectType):
     class Meta:
         model = Entry
         exclude_fields = ('reviews',)
+        filter_fields = ('article_title',)
 
     created_by = graphene.Field('apps.users.schema.UserType')
     last_modified_by = graphene.Field('apps.users.schema.UserType')
@@ -134,8 +142,18 @@ class EntryType(DjangoObjectType):
             )
         )
     )
-    total_figures = graphene.Field(graphene.Int)
+    # TODO: data loader
+    total_stock_figures = graphene.Field(graphene.Int,
+                                         data=TotalFigureFilterInputType())
+    total_flow_figures = graphene.Field(graphene.Int,
+                                        data=TotalFigureFilterInputType())
     source_methodology = graphene.Field(graphene.String)
+
+    def resolve_total_stock_figures(root, info, **kwargs):
+        return root.total_stock_figures(kwargs.get('data'))
+
+    def resolve_total_flow_figures(root, info, **kwargs):
+        return root.total_flow_figures(kwargs.get('data'))
 
 
 class EntryListType(CustomDjangoListObjectType):

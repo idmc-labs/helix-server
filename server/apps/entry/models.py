@@ -8,7 +8,8 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
@@ -281,6 +282,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
     geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
                                            related_name='+')
 
+    # methods
+
     @classmethod
     def can_be_created_by(cls, user: User, entry: 'Entry') -> bool:
         return entry.can_be_updated_by(user)
@@ -299,6 +302,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
             if excerpt_idu is None or not excerpt_idu.strip():
                 errors['excerpt_idu'] = gettext('This field is required. ')
         return errors
+
+    # core
 
     def save(self, *args, **kwargs):
         # TODO: set household size from the country
@@ -353,7 +358,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     # TODO: grid
     tags = models.ManyToManyField('FigureTag', blank=True)
 
-    # TODO: restrict guest users here
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
                                        blank=True,
                                        related_name='review_entries',
@@ -377,10 +381,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                            exclude(methodology='').
                            values_list('methodology', flat=True))
 
-    @property
-    def total_figures(self) -> int:
-        return self.figures.aggregate(total=Sum('total_figures'))['total']
-
     @staticmethod
     def clean_url_and_document(values: dict, instance=None) -> OrderedDict:
         errors = OrderedDict()
@@ -401,6 +401,18 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         ).exists()
 
     # Methods
+
+    def total_stock_figures(self, filters) -> int:
+        from apps.entry.filters import FigureFilter
+        return FigureFilter(data=filters or dict(), queryset=self.figures.all()).qs.filter(
+            category__type=STOCK
+        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
+
+    def total_flow_figures(self, filters) -> int:
+        from apps.entry.filters import FigureFilter
+        return FigureFilter(data=filters or dict(), queryset=self.figures.all()).qs.filter(
+            category__type=FLOW
+        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
 
     def can_be_updated_by(self, user: User) -> bool:
         """
