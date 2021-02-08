@@ -281,7 +281,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                                    related_name='entry', on_delete=models.SET_NULL,
                                    blank=True, null=True,
                                    help_text=_('After the preview has been generated pass its id'
-                                               'along during entry creation, so that during entry '
+                                               ' along during entry creation, so that during entry '
                                                'update the preview can be obtained.'))
     document = models.ForeignKey('contrib.Attachment', verbose_name='Attachment',
                                  on_delete=models.CASCADE, related_name='+',

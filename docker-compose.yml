@@ -7,8 +7,6 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - helix-db-data:/var/lib/postgresql/data
-    ports:
-      - '9999:5432'
 
   server:
     image: helix/helix-server:latest
