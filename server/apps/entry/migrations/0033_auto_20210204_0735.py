@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='entry',
             name='preview',
-            field=models.OneToOneField(blank=True, help_text='After the preview has been generated pass its idalong during entry creation, so that during entry update the preview can be obtained.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='entry', to='contrib.SourcePreview'),
+            field=models.OneToOneField(blank=True, help_text='After the preview has been generated pass its id along during entry creation, so that during entry update the preview can be obtained.', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='entry', to='contrib.SourcePreview'),
         ),
         migrations.DeleteModel(
             name='SourcePreview',
