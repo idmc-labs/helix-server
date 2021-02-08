@@ -1,15 +1,62 @@
-import graphene
 from django.utils.translation import gettext
+from django_enumfield import enum
+import graphene
+from graphene_django.rest_framework.mutation import fields_for_serializer
+from graphene_django.rest_framework.serializer_converter import get_graphene_type_from_serializer_field
+from rest_framework import serializers
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.models import Crisis
 from apps.crisis.schema import CrisisType
 from apps.crisis.serializers import CrisisSerializer
+from utils.enums import enum_description
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 
 
-class CrisisCreateInputType(graphene.InputObjectType):
+@get_graphene_type_from_serializer_field.register(serializers.ChoiceField)
+def convert_serializer_field_to_enum(field):
+    # enums require a name
+    enum_type = type(list(field.choices.values())[0])
+    print(isinstance(enum_type, enum.Enum))
+    print(enum_type)
+    # return graphene.String
+    try:
+        return graphene.Enum.from_enum(enum_type, description=enum_description)
+    except AssertionError:
+        return graphene.String
+
+
+def generate_input_type_for_serializer(
+    name: str,
+    serializer_class,
+    mutation_type: str = 'create',
+    required_fields: list = []
+) -> graphene.InputObjectType:
+    exclude_fields = []
+    if mutation_type == 'create':
+        exclude_fields.append('id')
+    data_members = fields_for_serializer(
+        serializer_class(),
+        only_fields=[],
+        exclude_fields=exclude_fields,
+    )
+    return type(name, (graphene.InputObjectType,), data_members)
+
+
+CrisisCreateInputType = generate_input_type_for_serializer(
+    'CrisisCreateInputType',
+    CrisisSerializer
+)
+
+CrisisUpdateInputType_ = generate_input_type_for_serializer(
+    'CrisisUpdateInputType',
+    CrisisSerializer,
+    mutation_type='update'
+)
+
+
+class CrisisCreateInputType_(graphene.InputObjectType):
     """
     Crisis Create InputType
     """
