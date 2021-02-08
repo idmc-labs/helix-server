@@ -1,3 +1,4 @@
+from datetime import datetime, timedelta
 import json
 
 from apps.users.enums import USER_ROLE
@@ -15,6 +16,8 @@ from utils.tests import HelixGraphQLTestCase, create_user_with_role
 class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
     def setUp(self) -> None:
         countries = CountryFactory.create_batch(2)
+        crisis = CrisisFactory.create()
+        crisis.countries.set(countries)
         self.mutation = '''mutation CreateEvent($input: EventCreateInputType!) {
             createEvent(data: $input) {
                 errors
@@ -53,7 +56,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
                 }
             }'''
         self.input = {
-            "crisis": CrisisFactory().id,
+            "crisis": str(crisis.id),
             "name": "Event1",
             "eventType": "DISASTER",
             "glideNumber": "glide number",
@@ -108,10 +111,20 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         self.assertNotEqual(content['data']['createEvent']['result']['otherSubType'],
                             None)
 
+    def test_invalid_event_countries_beyond_crisis(self) -> None:
+        self.input['countries'] = [each.id for each in CountryFactory.create_batch(2)]
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['createEvent']['ok'], content)
+        self.assertIn('countries', [item['field'] for item in content['data']['createEvent']['errors']], content)
+
 
 class TestUpdateEvent(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        countries = CountryFactory.create_batch(2)
         self.mutation = '''mutation UpdateEvent($input: EventUpdateInputType!) {
             updateEvent(data: $input) {
                 errors
@@ -136,9 +149,9 @@ class TestUpdateEvent(HelixGraphQLTestCase):
                 ok
                 }
             }'''
+        self.event = EventFactory.create()
         self.input = {
-            "id": EventFactory.create().id,
-            "countries": [each.id for each in countries],
+            "id": self.event.id,
             "endDate": "2020-10-29",
             "eventNarrative": "",
             "eventType": "CONFLICT",
@@ -148,6 +161,23 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         }
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.force_login(editor)
+
+    def test_invalid_event_dates_beyond_crisis(self):
+        crisis = self.event.crisis
+        crisis.start_date = datetime.today()
+        crisis.end_date = datetime.today() + timedelta(days=10)
+        crisis.save()
+        self.input['startDate'] = (crisis.start_date - timedelta(days=1)).strftime('%Y-%m-%d')
+        self.input['endDate'] = (crisis.end_date + timedelta(days=1)).strftime('%Y-%m-%d')
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['updateEvent']['ok'], content)
+        self.assertIn('startDate', [item['field'] for item in content['data']['updateEvent']['errors']], content)
+        self.assertIn('endDate', [item['field'] for item in content['data']['updateEvent']['errors']], content)
 
     def test_valid_event_update(self) -> None:
         response = self.query(
