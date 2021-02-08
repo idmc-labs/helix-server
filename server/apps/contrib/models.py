@@ -2,7 +2,7 @@ import logging
 import uuid
 from uuid import uuid4
 
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
@@ -135,9 +135,7 @@ class SourcePreview(MetaInformationAbstractModel):
         # TODO: remove .pdf in production... this will happen after webhook
         final_path = cls.PREVIEW_FOLDER + '/' + instance.token + '.pdf'
 
-        generate_pdf.send(
-            instance.pk,
-            instance.url,
-            final_path,
-        )
+        transaction.on_commit(lambda: generate_pdf.send(
+            instance.pk, instance.url, final_path
+        ))
         return instance
