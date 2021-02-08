@@ -57,6 +57,7 @@ LOCAL_APPS = [
     'review',
     'extraction',
     'parking_lot',
+    'contextualupdate',
 ]
 
 THIRD_PARTY_APPS = [

@@ -1,10 +1,6 @@
 from collections import OrderedDict
-import json
 import logging
-import uuid
 
-import boto3
-from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
@@ -23,54 +19,9 @@ from apps.users.enums import USER_ROLE
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
 
-from utils.fields import CachedFileField
-
 logger = logging.getLogger(__name__)
 User = get_user_model()
 CANNOT_UPDATE_MESSAGE = _('You cannot sign off the entry.')
-
-
-class SourcePreview(MetaInformationAbstractModel):
-    PREVIEW_FOLDER = 'source/previews'
-
-    url = models.URLField(verbose_name=_('Source URL'), max_length=2000)
-    token = models.CharField(verbose_name=_('Token'),
-                             max_length=64, db_index=True,
-                             blank=True, null=True)
-    pdf = CachedFileField(verbose_name=_('Rendered Pdf'),
-                          blank=True, null=True,
-                          upload_to=PREVIEW_FOLDER)
-    completed = models.BooleanField(default=False)
-    reason = models.TextField(verbose_name=_('Error Reason'),
-                              blank=True, null=True)
-
-    @classmethod
-    def get_pdf(cls, url: str, instance: 'SourcePreview' = None, **kwargs) -> 'SourcePreview':
-        """
-        Based on the url, generate a pdf and store it.
-        """
-        if not instance:
-            token = str(uuid.uuid4())
-            instance = cls(token=token)
-        instance.url = url
-        # TODO: remove .pdf in production... this will happen after webhook
-        instance.pdf = cls.PREVIEW_FOLDER + '/' + instance.token + '.pdf'
-
-        instance.save()
-
-        payload = dict(
-            url=url,
-            token=instance.token,
-            filename=f'{instance.token}.pdf',
-        )
-        logger.info(f'Invoking lambda function for preview {url} {instance.token}')
-        client = boto3.client('lambda')
-        client.invoke(
-            FunctionName=settings.LAMBDA_HTML_TO_PDF,
-            InvocationType='Event',
-            Payload=json.dumps(payload)
-        )
-        return instance
 
 
 class OSMName(UUIDAbstractModel, models.Model):
@@ -326,11 +277,11 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     associated_parked_item = models.OneToOneField('parking_lot.ParkedItem',
                                                   blank=True, null=True,
                                                   on_delete=models.SET_NULL, related_name='entry')
-    preview = models.OneToOneField('SourcePreview',
+    preview = models.OneToOneField('contrib.SourcePreview',
                                    related_name='entry', on_delete=models.SET_NULL,
                                    blank=True, null=True,
                                    help_text=_('After the preview has been generated pass its id'
-                                               'along during entry creation, so that during entry '
+                                               ' along during entry creation, so that during entry '
                                                'update the preview can be obtained.'))
     document = models.ForeignKey('contrib.Attachment', verbose_name='Attachment',
                                  on_delete=models.CASCADE, related_name='+',
