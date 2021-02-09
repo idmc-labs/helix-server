@@ -168,7 +168,7 @@ class SourcePreviewType(DjangoObjectType):
         exclude_fields = ('entry', 'token')
 
     def resolve_pdf(root, info, **kwargs):
-        if root.completed:
+        if root.completed and not root.reason:
             return info.context.build_absolute_uri(root.pdf.url)
         return None
 
