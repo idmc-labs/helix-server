@@ -110,6 +110,19 @@ class SoftDeleteModel(models.Model):
 class SourcePreview(MetaInformationAbstractModel):
     PREVIEW_FOLDER = 'source/previews'
 
+    class PREVIEW_STATUS(enum.Enum):
+        PENDING = 0
+        COMPLETED = 1
+        FAILED = 2
+        IN_PROGRESS = 3
+
+        __labels__ = {
+            PENDING: _("Pending"),
+            COMPLETED: _("Completed"),
+            FAILED: _("Failed"),
+            IN_PROGRESS: _("In Progress"),
+        }
+
     url = models.URLField(verbose_name=_('Source URL'), max_length=2000)
     token = models.CharField(verbose_name=_('Token'),
                              max_length=64, db_index=True,
@@ -117,8 +130,8 @@ class SourcePreview(MetaInformationAbstractModel):
     pdf = CachedFileField(verbose_name=_('Rendered Pdf'),
                           blank=True, null=True,
                           upload_to=PREVIEW_FOLDER)
-    completed = models.BooleanField(default=False)
-    reason = models.TextField(verbose_name=_('Error Reason'),
+    status = enum.EnumField(enum=PREVIEW_STATUS, default=PREVIEW_STATUS.PENDING)
+    remark = models.TextField(verbose_name=_('Remark'),
                               blank=True, null=True)
 
     @classmethod
@@ -133,9 +146,8 @@ class SourcePreview(MetaInformationAbstractModel):
         instance.save()
 
         # TODO: remove .pdf in production... this will happen after webhook
-        final_path = cls.PREVIEW_FOLDER + '/' + instance.token + '.pdf'
 
         transaction.on_commit(lambda: generate_pdf.send(
-            instance.pk, instance.url, final_path
+            instance.pk
         ))
         return instance
