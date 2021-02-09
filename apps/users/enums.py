@@ -1,3 +1,5 @@
+__all__ = ['PermissionRoleEnum', 'PermissionActionEnum', 'PermissionModelEnum']
+
 import graphene
 
 from django.utils.translation import gettext_lazy as _
@@ -86,3 +88,9 @@ class USER_ROLE(enum.Enum):
 PermissionActionEnum = graphene.Enum.from_enum(PERMISSION_ACTION, enum_description)
 PermissionModelEnum = graphene.Enum.from_enum(PERMISSION_ENTITY, enum_description)
 PermissionRoleEnum = graphene.Enum.from_enum(USER_ROLE, enum_description)
+
+enum_map = dict(
+    PERMISSION_ENTITY=PermissionModelEnum,
+    PERMISSION_ACTION=PermissionActionEnum,
+    USER_ROLE=PermissionRoleEnum
+)
