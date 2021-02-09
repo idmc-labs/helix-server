@@ -5,7 +5,7 @@ from django.core.files.base import ContentFile
 
 @dramatiq.actor
 def generate_pdf(pk, url, path):
-    from apps.entry.models import SourcePreview
+    from apps.contrib.models import SourcePreview
 
     source_preview = SourcePreview.objects.get(pk=pk)
     try:
