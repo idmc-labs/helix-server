@@ -1,7 +1,14 @@
+from datetime import datetime, timedelta
 import json
 from uuid import uuid4
 
-from apps.entry.models import Figure, Entry, EntryReviewer, CANNOT_UPDATE_MESSAGE
+from apps.entry.models import (
+    Figure,
+    Entry,
+    EntryReviewer,
+    CANNOT_UPDATE_MESSAGE,
+    OSMName,
+)
 from apps.entry.constants import STOCK, FLOW
 from apps.users.enums import USER_ROLE
 from utils.factories import (
@@ -101,6 +108,94 @@ class TestEntryQuery(HelixGraphQLTestCase):
         )
 
 
+class TestCreateFigure(HelixGraphQLTestCase):
+    def setUp(self):
+        self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.country = CountryFactory.create(country_code=123)
+        self.entry = EntryFactory.create(
+            created_by=self.creator,
+        )
+
+        self.fig_cat = FigureCategoryFactory.create()
+        self.mutation = """
+            mutation CreateFigure($input: FigureCreateInputType!) {
+                createFigure(data: $input) {
+                    ok
+                    errors
+                    result {
+                        id
+                    }
+                }
+            }
+        """
+        self.input = {
+            "entry": self.entry.id,
+            "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
+            "reported": 10,
+            "unit": Figure.UNIT.PERSON.name,
+            "term": Figure.TERM.EVACUATED.name,
+            "category": self.fig_cat.id,
+            "role": Figure.ROLE.RECOMMENDED.name,
+            "startDate": "2020-10-10",
+            "includeIdu": True,
+            "excerptIdu": "excerpt abc",
+            "country": self.country.id,
+        }
+        self.force_login(self.creator)
+
+    def test_valid_create_figures(self):
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['createFigure']['ok'], content)
+        self.assertIsNone(content['data']['createFigure']['errors'], content)
+        self.assertIsNotNone(content['data']['createFigure']['result']['id'])
+
+    def test_invalid_geo_locations(self):
+        self.input['geoLocations'] = [
+            {
+                "country": "Nepal",
+                "countryCode": "23",
+                "osmId": "tets1",
+                "osmType": "HA",
+                "identifier": OSMName.IDENTIFIER.ORIGIN.name,
+                "displayName": "testname",
+                "lon": 12.34,
+                "lat": 23.21,
+                "name": "testme",
+                "accuracy": OSMName.OSM_ACCURACY.COUNTRY.name,
+                "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                "boundingBox": [1.2],
+            },
+            {
+                "country": "Nepal",
+                "countryCode": "423",
+                "osmId": "tets1",
+                "osmType": "HA",
+                "identifier": OSMName.IDENTIFIER.ORIGIN.name,
+                "displayName": "testname",
+                "lon": 12.34,
+                "lat": 23.21,
+                "name": "testme",
+                "accuracy": OSMName.OSM_ACCURACY.COUNTRY.name,
+                "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                "boundingBox": [1.2],
+            },
+        ]
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['createFigure']['ok'], content)
+        self.assertIn('geoLocations', [item['field'] for item in content['data']['createFigure']['errors']], content)
+
+
 class TestFigureUpdate(HelixGraphQLTestCase):
     def setUp(self):
         self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
@@ -163,7 +258,6 @@ class TestFigureUpdate(HelixGraphQLTestCase):
             input_data=self.input
         )
         content = json.loads(response.content)
-
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateFigure']['ok'], content)
         self.assertIsNotNone(content['data']['updateFigure']['result']['id'], content)
