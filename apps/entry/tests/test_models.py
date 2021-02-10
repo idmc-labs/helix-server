@@ -1,11 +1,13 @@
 import os
+from datetime import datetime, timedelta
 
 from django.core.files.storage import default_storage
 
 from apps.users.enums import USER_ROLE
 from apps.contrib.models import SourcePreview
 from apps.review.models import Review
-from utils.factories import EntryFactory, FigureFactory, ReviewFactory, ReviewCommentFactory
+from apps.entry.models import Figure
+from utils.factories import EntryFactory, FigureFactory, ReviewFactory, ReviewCommentFactory, EventFactory
 from utils.tests import HelixTestCase, create_user_with_role
 
 
@@ -45,6 +47,15 @@ class TestFigureModel(HelixTestCase):
         figure.reported = 10
         figure.save()
         self.assertEqual(figure.total_figures, figure.reported * figure.household_size)
+
+    def test_figure_dates(self):
+        data = dict(
+            start_date=(datetime.today() + timedelta(days=12)).strftime('%Y-%m-%d'),
+            end_date=(datetime.today()).strftime('%Y-%m-%d'),
+        )
+        self.figure.save()
+        errors = Figure.clean_dates(data)
+        self.assertIn('end_date', errors)
 
 
 class TestEntryModel(HelixTestCase):
