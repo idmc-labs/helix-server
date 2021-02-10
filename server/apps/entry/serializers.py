@@ -93,6 +93,7 @@ class CommonFigureValidationMixin:
         attrs = super().validate(attrs)
         errors = OrderedDict()
         errors.update(Figure.clean_idu(attrs, self.instance))
+        errors.update(Figure.clean_dates(attrs, self.instance))
         errors.update(self.validate_unit_and_household_size(attrs))
         if errors:
             raise ValidationError(errors)
@@ -119,6 +120,28 @@ class FigureSerializer(MetaInformationSerializerMixin,
     class Meta:
         model = Figure
         fields = '__all__'
+
+    def validate_figure_geo_locations(self, attrs):
+        errors = OrderedDict()
+        if not attrs.get('geo_locations') or not attrs.get('country'):
+            return errors
+        location_code = attrs['country'].country_code
+        locations_code = set([
+            location['country_code'] for location in attrs['geo_locations']
+        ])
+        if locations_code != str([location_code]):
+            errors.update({
+                'geo_locations': 'All geo locations should be from given country'
+            })
+            return errors
+
+    def validate(self, attrs: dict) -> dict:
+        attrs = super().validate(attrs)
+        errors = OrderedDict()
+        errors.update(self.validate_figure_geo_locations(attrs))
+        if errors:
+            raise ValidationError(errors)
+        return attrs
 
 
 class NestedFigureSerializer(MetaInformationSerializerMixin,
