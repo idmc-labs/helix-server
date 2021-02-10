@@ -129,6 +129,7 @@ class FigureSerializer(MetaInformationSerializerMixin,
         locations_code = set([
             location['country_code'] for location in attrs['geo_locations']
         ])
+        
         if locations_code != str([location_code]):
             errors.update({
                 'geo_locations': 'All geo locations should be from given country'
