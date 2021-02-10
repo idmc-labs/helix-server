@@ -61,6 +61,7 @@ class TestFigureModel(HelixTestCase):
             start_date=(datetime.today() + timedelta(days=12)).strftime('%Y-%m-%d'),
             end_date=(datetime.today()).strftime('%Y-%m-%d'),
         )
+        
         self.figure.save()
         errors = Figure.clean_dates(data)
         self.assertIn('end_date', errors)
