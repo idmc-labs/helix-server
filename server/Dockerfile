@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /code
 
-RUN apt-get update -y && apt-get install -y wkhtmltopdf
+RUN apt update -y && apt install -y chromium chromium-driver
 
 COPY ./requirements.txt /code/requirements.txt
 RUN python3 -m pip install --upgrade pip \

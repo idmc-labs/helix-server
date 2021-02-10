@@ -30,3 +30,5 @@ sentry-sdk>=0.10,<0.20
 
 dramatiq[redis,watch]==1.10.0
 django_dramatiq==0.9.1
+
+selenium==3.141.0
