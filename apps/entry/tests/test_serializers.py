@@ -3,7 +3,11 @@ from uuid import uuid4
 
 from django.test import RequestFactory
 
-from apps.entry.serializers import EntrySerializer, FigureSerializer
+from apps.entry.serializers import (
+    EntryCreateSerializer,
+    EntryUpdateSerializer,
+    NestedFigureCreateSerializer as FigureSerializer,
+)
 from apps.users.enums import USER_ROLE
 from apps.entry.models import EntryReviewer, OSMName, Figure
 from utils.factories import (
@@ -38,13 +42,14 @@ class TestEntrySerializer(HelixTestCase):
             "reviewers": [r1.id, r2.id]
         }
         self.request = self.factory.get('/graphql')
-        self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.request.user = self.user = create_user_with_role(
+            USER_ROLE.MONITORING_EXPERT_EDITOR.name)
 
     def test_create_entry_requires_document_or_url(self):
         self.data['url'] = None
         self.data['document'] = None
-        serializer = EntrySerializer(data=self.data,
-                                     context={'request': self.request})
+        serializer = EntryCreateSerializer(data=self.data,
+                                           context={'request': self.request})
         self.assertFalse(serializer.is_valid())
         self.assertIn('url', serializer.errors)
         self.assertIn('document', serializer.errors)
@@ -57,34 +62,34 @@ class TestEntrySerializer(HelixTestCase):
         data = {
             'source_methodology': 'method'
         }
-        serializer = EntrySerializer(instance=entry,
-                                     data=data,
-                                     context={'request': self.request},
-                                     partial=True)
+        serializer = EntryCreateSerializer(instance=entry,
+                                           data=data,
+                                           context={'request': self.request},
+                                           partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         data = {
             'url': 'http://abc.com/new-url/',
             'document': None
         }
-        serializer = EntrySerializer(instance=entry,
-                                     data=data,
-                                     context={'request': self.request},
-                                     partial=True)
+        serializer = EntryCreateSerializer(instance=entry,
+                                           data=data,
+                                           context={'request': self.request},
+                                           partial=True)
         self.assertTrue(serializer.is_valid())
         self.assertEqual(OLD, entry.url)
 
     def test_create_entry_populates_created_by(self):
-        serializer = EntrySerializer(data=self.data,
-                                     context={'request': self.request})
+        serializer = EntryCreateSerializer(data=self.data,
+                                           context={'request': self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         instance = serializer.save()
         self.assertEqual(instance.created_by, self.user)
 
     def test_update_entry_populates_last_modified_by(self):
         entry = EntryFactory.create()
-        serializer = EntrySerializer(instance=entry,
-                                     data=self.data,
-                                     context={'request': self.request})
+        serializer = EntryCreateSerializer(instance=entry,
+                                           data=self.data,
+                                           context={'request': self.request})
         self.assertTrue(serializer.is_valid())
         instance = serializer.save()
         self.assertEqual(instance.last_modified_by, self.user)
@@ -95,14 +100,16 @@ class TestEntrySerializer(HelixTestCase):
         reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.data['reviewers'] = [reviewer1.id, reviewer2.id]
-        serializer = EntrySerializer(data=self.data,
-                                     context={'request': self.request})
+        serializer = EntryCreateSerializer(data=self.data,
+                                           context={'request': self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
         entry = serializer.instance
         self.assertEqual(entry.reviewers.count(), len([reviewer1, reviewer2]))
-        self.assertEqual(sorted(list(entry.reviewing.values_list('reviewer', flat=1))),
-                         sorted([reviewer1.id, reviewer2.id]))
+        self.assertEqual(
+            sorted(list(entry.reviewers.through.objects.values_list('reviewer', flat=1))),
+            sorted([reviewer1.id, reviewer2.id])
+        )
 
     def test_entry_update_entry_reviewers(self):
         x = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
@@ -129,7 +136,7 @@ class TestEntrySerializer(HelixTestCase):
         )
 
         old_count = EntryReviewer.objects.count()
-        serializer = EntrySerializer(instance=entry, data={
+        serializer = EntryCreateSerializer(instance=entry, data={
             'reviewers': [reviewer1.id, reviewer2.id]
         }, context={'request': self.request}, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -172,9 +179,9 @@ class TestEntrySerializer(HelixTestCase):
         }]
         self.data['figures'] = figures
 
-        serializer = EntrySerializer(instance=None,
-                                     data=self.data,
-                                     context={'request': self.request})
+        serializer = EntryCreateSerializer(instance=None,
+                                           data=self.data,
+                                           context={'request': self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         entry = serializer.save()
         self.assertEqual(entry.figures.count(), len(figures))
@@ -209,10 +216,10 @@ class TestEntrySerializer(HelixTestCase):
             "geo_locations": [new_source],
         }]
         self.data['figures'] = figures
-        serializer = EntrySerializer(instance=entry,
-                                     data=self.data,
-                                     context={'request': self.request},
-                                     partial=True)
+        serializer = EntryUpdateSerializer(instance=entry,
+                                           data=self.data,
+                                           context={'request': self.request},
+                                           partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         entry = serializer.save()
         entry.refresh_from_db()
@@ -236,10 +243,10 @@ class TestEntrySerializer(HelixTestCase):
             geo_locations=[different_source]  # I do not belong to above entry figures
         )]
         self.data['figures'] = figures
-        serializer = EntrySerializer(instance=entry,
-                                     data=self.data,
-                                     context={'request': self.request},
-                                     partial=True)
+        serializer = EntryUpdateSerializer(instance=entry,
+                                           data=self.data,
+                                           context={'request': self.request},
+                                           partial=True)
         self.assertFalse(serializer.is_valid())
         self.assertIn('figures', serializer.errors)
         self.assertIn('geo_locations', serializer.errors['figures'][0].keys())

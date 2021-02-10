@@ -1,6 +1,4 @@
 import graphene
-from graphene_django.rest_framework.serializer_converter import get_graphene_type_from_serializer_field
-from rest_framework import serializers
 
 from apps.contrib.models import Attachment
 from apps.contact.enums import enum_map as contact_enums
@@ -19,7 +17,7 @@ enum_map = dict(
     FOR_CHOICES=AttachmentForGrapheneEnum
 )
 
-ENUM_TO_GRPAHENE_ENUM_MAP = {
+ENUM_TO_GRAPHENE_ENUM_MAP = {
     **enum_map,
     **contact_enums,
     **crisis_enums,
@@ -29,9 +27,3 @@ ENUM_TO_GRPAHENE_ENUM_MAP = {
     **review_enums,
     **user_enums,
 }
-
-
-@get_graphene_type_from_serializer_field.register(serializers.ChoiceField)
-def convert_serializer_field_to_enum(field):
-    enum_type = type(list(field.choices.values())[0])
-    return graphene.Field(ENUM_TO_GRPAHENE_ENUM_MAP[enum_type.name])

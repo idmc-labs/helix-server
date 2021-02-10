@@ -1,10 +1,15 @@
 from rest_framework import serializers
 
 from apps.crisis.models import Crisis
+from apps.contrib.serializers import UpdateSerializerMixin
 
 
 class CrisisSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crisis
-        # fields = '__all__'
-        fields = ['id', 'countries', 'name', 'crisis_type']
+        fields = '__all__'
+
+
+class CrisisUpdateSerializer(UpdateSerializerMixin, CrisisSerializer):
+    """Created simply to generate the input type for mutations"""
+    id = serializers.IntegerField(required=True)

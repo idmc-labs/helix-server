@@ -1,31 +1,12 @@
 from django.utils.translation import gettext
 import graphene
-from graphene_django.rest_framework.mutation import fields_for_serializer
 
-from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.models import Crisis
 from apps.crisis.schema import CrisisType
-from apps.crisis.serializers import CrisisSerializer
+from apps.crisis.serializers import CrisisSerializer, CrisisUpdateSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
-
-
-def generate_input_type_for_serializer(
-    name: str,
-    serializer_class,
-    mutation_type: str = 'create',
-    required_fields: list = []
-) -> graphene.InputObjectType:
-    exclude_fields = []
-    if mutation_type == 'create':
-        exclude_fields.append('id')
-    data_members = fields_for_serializer(
-        serializer_class(),
-        only_fields=[],
-        exclude_fields=exclude_fields,
-    )
-    return type(name, (graphene.InputObjectType,), data_members)
-
+from utils.mutation import generate_input_type_for_serializer
 
 CrisisCreateInputType = generate_input_type_for_serializer(
     'CrisisCreateInputType',
@@ -34,34 +15,8 @@ CrisisCreateInputType = generate_input_type_for_serializer(
 
 CrisisUpdateInputType = generate_input_type_for_serializer(
     'CrisisUpdateInputType',
-    CrisisSerializer,
-    mutation_type='update'
+    CrisisUpdateSerializer,
 )
-
-
-class CrisisCreateInputType_(graphene.InputObjectType):
-    """
-    Crisis Create InputType
-    """
-    name = graphene.String(required=True)
-    crisis_type = graphene.NonNull(CrisisTypeGrapheneEnum)
-    crisis_narrative = graphene.String()
-    countries = graphene.List(graphene.NonNull(graphene.ID), required=True)
-    start_date = graphene.Date()
-    end_date = graphene.Date()
-
-
-class CrisisUpdateInputType_(graphene.InputObjectType):
-    """
-    Crisis Update InputType
-    """
-    id = graphene.ID(required=True)
-    name = graphene.String()
-    crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
-    crisis_narrative = graphene.String()
-    countries = graphene.List(graphene.NonNull(graphene.ID))
-    start_date = graphene.Date()
-    end_date = graphene.Date()
 
 
 class CreateCrisis(graphene.Mutation):

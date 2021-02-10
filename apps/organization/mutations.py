@@ -1,23 +1,30 @@
 import graphene
 from django.utils.translation import gettext
 
-from apps.contact.mutations import ContactWithoutOrganizationInputType
 from apps.organization.models import Organization, OrganizationKind
 from apps.organization.schema import OrganizationType, OrganizationKindObjectType
-from apps.organization.serializers import OrganizationSerializer, OrganizationKindSerializer
+from apps.organization.serializers import (
+    OrganizationSerializer,
+    OrganizationUpdateSerializer,
+    OrganizationKindSerializer,
+    OrganizationKindUpdateSerializer,
+)
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
+from utils.mutation import generate_input_type_for_serializer
 
 
 # organization kind
 
-class OrganizationKindCreateInputType(graphene.InputObjectType):
-    name = graphene.String(required=True)
+OrganizationKindCreateInputType = generate_input_type_for_serializer(
+    'OrganizationKindCreateInputType',
+    OrganizationKindSerializer
+)
 
-
-class OrganizationKindUpdateInputType(graphene.InputObjectType):
-    id = graphene.ID(required=True)
-    name = graphene.String(required=True)
+OrganizationKindUpdateInputType = generate_input_type_for_serializer(
+    'OrganizationKindUpdateInputType',
+    OrganizationKindUpdateSerializer
+)
 
 
 class CreateOrganizationKind(graphene.Mutation):
@@ -87,24 +94,15 @@ class DeleteOrganizationKind(graphene.Mutation):
 # organization
 
 
-class OrganizationCreateInputType(graphene.InputObjectType):
-    name = graphene.String(required=True)
-    short_name = graphene.String(required=True)
-    organization_kind = graphene.ID(description="Foreign Key to OrganizationKindObjectType")
-    methodology = graphene.String(required=True)
-    breakdown = graphene.String(required=False)
-    parent = graphene.ID(description="Foreign Key to self")
-    contacts = graphene.List(graphene.NonNull(ContactWithoutOrganizationInputType))
+OrganizationCreateInputType = generate_input_type_for_serializer(
+    'OrganizationCreateInputType',
+    OrganizationSerializer
+)
 
-
-class OrganizationUpdateInputType(graphene.InputObjectType):
-    id = graphene.ID(required=True)
-    name = graphene.String()
-    short_name = graphene.String()
-    organization_kind = graphene.ID(description="Foreign Key to OrganizationKindObjectType")
-    methodology = graphene.String()
-    breakdown = graphene.String()
-    parent = graphene.ID(description="Foreign Key to self")
+OrganizationUpdateInputType = generate_input_type_for_serializer(
+    'OrganizationUpdateInputType',
+    OrganizationUpdateSerializer
+)
 
 
 class CreateOrganization(graphene.Mutation):

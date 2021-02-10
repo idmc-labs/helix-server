@@ -5,7 +5,7 @@ from helix.settings import RESOURCE_NUMBER, RESOURCEGROUP_NUMBER
 
 from apps.resource.models import Resource, ResourceGroup
 
-from apps.contrib.serializers import MetaInformationSerializerMixin
+from apps.contrib.serializers import MetaInformationSerializerMixin, UpdateSerializerMixin
 
 
 class ResourceSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
@@ -26,6 +26,10 @@ class ResourceSerializer(MetaInformationSerializerMixin, serializers.ModelSerial
         return super().validate(attrs)
 
 
+class ResourceUpdateSerializer(UpdateSerializerMixin, ResourceSerializer):
+    id = serializers.IntegerField(required=True)
+
+
 class ResourceGroupSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = ResourceGroup
@@ -37,3 +41,7 @@ class ResourceGroupSerializer(MetaInformationSerializerMixin, serializers.ModelS
         ).count() >= RESOURCEGROUP_NUMBER:
             raise serializers.ValidationError(gettext(f"Can only create {RESOURCEGROUP_NUMBER} resource groups"))
         return super().validate(attrs)
+
+
+class ResourceGroupUpdateSerializer(UpdateSerializerMixin, ResourceGroupSerializer):
+    id = serializers.IntegerField(required=True)

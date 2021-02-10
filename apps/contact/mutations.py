@@ -1,58 +1,29 @@
 from django.utils.translation import gettext
 import graphene
 
-from apps.contact.enums import DesignationGrapheneEnum, GenderGrapheneEnum
 from apps.contact.models import Contact, Communication
 from apps.contact.schema import ContactType, CommunicationType
-from apps.contact.serializers import ContactSerializer, CommunicationSerializer
+from apps.contact.serializers import (
+    ContactSerializer,
+    CommunicationSerializer,
+    ContactUpdateSerializer,
+    CommunicationUpdateSerializer,
+)
+from utils.mutation import generate_input_type_for_serializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 
 
-class ContactInputType(object):
-    designation = graphene.NonNull(DesignationGrapheneEnum)
-    first_name = graphene.String(required=True)
-    last_name = graphene.String(required=True)
-    gender = graphene.NonNull(GenderGrapheneEnum)
-    job_title = graphene.String(required=True)
-    country = graphene.ID()
-    countries_of_operation = graphene.List(graphene.NonNull(graphene.ID))
-    email = graphene.String()
-    skype = graphene.String()
-    phone = graphene.String()
-    comment = graphene.String()
+ContactCreateInputType = generate_input_type_for_serializer(
+    'ContactCreateInputType',
+    ContactSerializer
+)
 
 
-class ContactWithoutOrganizationInputType(ContactInputType, graphene.InputObjectType):
-    """
-    Contact InputType without Organization
-    """
-
-
-class ContactCreateInputType(ContactInputType, graphene.InputObjectType):
-    """
-    Contact Create InputType
-    """
-    organization = graphene.ID()
-
-
-class ContactUpdateInputType(graphene.InputObjectType):
-    """
-    Contact Update InputType
-    """
-    id = graphene.ID(required=True)
-    designation = graphene.Field(DesignationGrapheneEnum)
-    first_name = graphene.String()
-    last_name = graphene.String()
-    gender = graphene.Field(GenderGrapheneEnum)
-    job_title = graphene.String()
-    organization = graphene.ID()
-    country = graphene.ID()
-    countries_of_operation = graphene.List(graphene.NonNull(graphene.ID))
-    email = graphene.String()
-    skype = graphene.String()
-    phone = graphene.String()
-    comment = graphene.String()
+ContactUpdateInputType = generate_input_type_for_serializer(
+    'ContactUpdateInputType',
+    ContactUpdateSerializer
+)
 
 
 class CreateContact(graphene.Mutation):
@@ -121,32 +92,15 @@ class DeleteContact(graphene.Mutation):
 
 # Communication #
 
+CommunicationCreateInputType = generate_input_type_for_serializer(
+    'CommunicationCreateInputType',
+    CommunicationSerializer
+)
 
-class CommunicationCreateInputType(graphene.InputObjectType):
-    """
-    Communication Create InputType
-    """
-    contact = graphene.ID(required=True)
-    country = graphene.ID()
-    subject = graphene.String(required=True)
-    content = graphene.String(required=True)
-    date = graphene.Date()
-    medium = graphene.ID(required=True)
-    attachment = graphene.ID(required=False)
-
-
-class CommunicationUpdateInputType(graphene.InputObjectType):
-    """
-    Communication Update InputType
-    """
-    id = graphene.ID(required=True)
-    contact = graphene.ID()
-    country = graphene.ID()
-    subject = graphene.String()
-    content = graphene.String()
-    date = graphene.Date()
-    medium = graphene.ID()
-    attachment = graphene.ID(required=False)
+CommunicationUpdateInputType = generate_input_type_for_serializer(
+    'CommunicationUpdateInputType',
+    CommunicationUpdateSerializer
+)
 
 
 class CreateCommunication(graphene.Mutation):

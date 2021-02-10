@@ -2,35 +2,22 @@ from django.utils.translation import gettext
 import graphene
 
 from apps.extraction.models import ExtractionQuery
-from apps.extraction.serializers import ExtractionQuerySerializer
+from apps.extraction.serializers import ExtractionQuerySerializer, ExtractionQueryUpdateSerializer
 from apps.extraction.schema import (
     ExtractionQueryObjectType,
 )
-from apps.entry.enums import RoleGrapheneEnum
-from apps.crisis.enums import CrisisTypeGrapheneEnum
+from utils.mutation import generate_input_type_for_serializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 
+CreateExtractInputType = generate_input_type_for_serializer(
+    'CreateExtractInputType',
+    ExtractionQuerySerializer
+)
 
-class CommonExtractionInputMixin:
-    event_regions = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    event_countries = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    event_crises = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    figure_categories = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    figure_start_after = graphene.Date(required=False)
-    figure_end_before = graphene.Date(required=False)
-    figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum), required=False)
-    entry_tags = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    entry_article_title = graphene.String()
-    event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum), required=False)
-
-
-class CreateExtractInputType(CommonExtractionInputMixin, graphene.InputObjectType):
-    name = graphene.String(required=True)
-
-
-class UpdateExtractInputType(CommonExtractionInputMixin, graphene.InputObjectType):
-    name = graphene.String()
-    id = graphene.ID(required=True)
+UpdateExtractInputType = generate_input_type_for_serializer(
+    'UpdateExtractInputType',
+    ExtractionQueryUpdateSerializer
+)
 
 
 class CreateExtraction(graphene.Mutation):

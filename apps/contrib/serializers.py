@@ -54,3 +54,13 @@ class SourcePreviewSerializer(MetaInformationSerializerMixin,
 
     def update(self, instance, validated_data):
         return SourcePreview.get_pdf(**validated_data, instance=instance)
+
+
+class UpdateSerializerMixin:
+    """Makes all fields not required apart from the id field"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # all updates will be a patch update
+        for name in self.fields:
+            self.fields[name].required = False
+        self.fields['id'].required = True

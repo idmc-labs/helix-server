@@ -7,6 +7,7 @@ from rest_framework import serializers
 
 from apps.users.enums import USER_ROLE
 from apps.users.utils import get_user_from_activation_token
+from apps.contrib.serializers import UpdateSerializerMixin
 
 User = get_user_model()
 
@@ -88,8 +89,9 @@ class ActivateSerializer(serializers.Serializer):
         return attrs
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(UpdateSerializerMixin, serializers.ModelSerializer):
     role = EnumField(USER_ROLE, required=False)
+    id = serializers.IntegerField(required=True)
 
     class Meta:
         model = User

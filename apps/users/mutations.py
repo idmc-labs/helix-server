@@ -2,7 +2,6 @@ from django.contrib.auth import login, logout
 from django.utils.translation import gettext
 import graphene
 
-from apps.users.enums import PermissionRoleEnum
 from apps.users.schema import UserType
 from apps.users.models import User
 from apps.users.serializers import (
@@ -14,14 +13,13 @@ from apps.users.serializers import (
 )
 from utils.permissions import is_authenticated
 from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.mutation import generate_input_type_for_serializer
 
 
-class RegisterInputType(graphene.InputObjectType):
-    email = graphene.String(required=True)
-    first_name = graphene.String()
-    last_name = graphene.String()
-    password = graphene.String(required=True)
-    username = graphene.String(required=True)
+RegisterInputType = generate_input_type_for_serializer(
+    'RegisterInputType',
+    RegisterSerializer
+)
 
 
 class Register(graphene.Mutation):
@@ -46,9 +44,10 @@ class Register(graphene.Mutation):
         )
 
 
-class LoginInputType(graphene.InputObjectType):
-    email = graphene.String(required=True)
-    password = graphene.String(required=True)
+LoginInputType = generate_input_type_for_serializer(
+    'LoginInputType',
+    LoginSerializer
+)
 
 
 class Login(graphene.Mutation):
@@ -74,9 +73,10 @@ class Login(graphene.Mutation):
         )
 
 
-class ActivateInputType(graphene.InputObjectType):
-    uid = graphene.String(required=True)
-    token = graphene.String(required=True)
+ActivateInputType = generate_input_type_for_serializer(
+    'ActivateInputType',
+    ActivateSerializer
+)
 
 
 class Activate(graphene.Mutation):
@@ -104,9 +104,10 @@ class Logout(graphene.Mutation):
         return Logout(ok=True)
 
 
-class UserPasswordInputType(graphene.InputObjectType):
-    old_password = graphene.String(required=True)
-    new_password = graphene.String(required=True)
+UserPasswordInputType = generate_input_type_for_serializer(
+    'UserPasswordInputType',
+    UserPasswordSerializer
+)
 
 
 class ChangeUserPassword(graphene.Mutation):
@@ -130,13 +131,10 @@ class ChangeUserPassword(graphene.Mutation):
         return ChangeUserPassword(result=info.context.user, errors=None, ok=True)
 
 
-class UserUpdateInputType(graphene.InputObjectType):
-    id = graphene.ID(required=True)
-    first_name = graphene.String()
-    last_name = graphene.String()
-    username = graphene.String()
-    is_active = graphene.Boolean()
-    role = graphene.Field(PermissionRoleEnum)
+UserUpdateInputType = generate_input_type_for_serializer(
+    'UserUpdateInputType',
+    UserSerializer
+)
 
 
 class UpdateUser(graphene.Mutation):

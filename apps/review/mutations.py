@@ -7,23 +7,13 @@ from apps.review.schema import ReviewCommentType
 from apps.review.serializers import ReviewCommentSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
+from utils.mutation import generate_input_type_for_serializer
 
 
-class ReviewCreateInputType(graphene.InputObjectType):
-    # entry is filled from comment
-    entry = graphene.ID(required=True)
-    figure = graphene.ID(required=False)
-    geo_location = graphene.ID(required=False)
-    field = graphene.String(required=True)
-    value = graphene.NonNull(ReviewStatusEnum)
-    age_id = graphene.String(required=False)
-    strata_id = graphene.String(required=False)
-
-
-class ReviewCommentCreateInputType(graphene.InputObjectType):
-    body = graphene.String(required=False)
-    entry = graphene.ID(required=True)
-    reviews = graphene.List(ReviewCreateInputType)
+ReviewCommentCreateInputType = generate_input_type_for_serializer(
+    'ReviewCommentCreateInputType',
+    ReviewCommentSerializer
+)
 
 
 class CommentCreateInputType(graphene.InputObjectType):
