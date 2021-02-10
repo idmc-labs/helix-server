@@ -190,6 +190,7 @@ class TestCreateFigure(HelixGraphQLTestCase):
             self.mutation,
             input_data=self.input
         )
+        
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createFigure']['ok'], content)
