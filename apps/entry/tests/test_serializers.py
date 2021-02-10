@@ -223,6 +223,7 @@ class TestEntrySerializer(HelixTestCase):
         different_source = {
             'id': loc1.id,
         }
+
         figures = [dict(
             uuid=str(uuid4()),
             id=figure.id,
