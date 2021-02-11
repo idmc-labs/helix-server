@@ -9,6 +9,7 @@ from rest_framework import serializers
 from apps.contrib.serializers import (
     MetaInformationSerializerMixin,
     UpdateSerializerMixin,
+    IntegerIDField,
 )
 from apps.entry.models import (
     Entry,
@@ -58,7 +59,7 @@ class DisaggregatedStratumSerializer(serializers.Serializer):
 class OSMNameSerializer(serializers.ModelSerializer):
     # to allow updating
     uuid = serializers.UUIDField(required=False)
-    id = serializers.IntegerField(required=False)
+    id = IntegerIDField(required=False)
 
     class Meta:
         model = OSMName
@@ -240,7 +241,7 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
 
 
 class NestedFigureUpdateSerializer(NestedFigureCreateSerializer):
-    id = serializers.IntegerField(required=False)
+    id = IntegerIDField(required=False)
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -335,7 +336,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
 class EntryUpdateSerializer(UpdateSerializerMixin,
                             EntryCreateSerializer):
     """Created for update mutation input type"""
-    id = serializers.IntegerField(required=True)
+    id = IntegerIDField(required=True)
     figures = NestedFigureUpdateSerializer(many=True, required=False)
 
 
@@ -348,4 +349,4 @@ class FigureTagCreateSerializer(MetaInformationSerializerMixin,
 
 class FigureTagUpdateSerializer(UpdateSerializerMixin,
                                 FigureTagCreateSerializer):
-    id = serializers.IntegerField(required=True)
+    id = IntegerIDField(required=True)

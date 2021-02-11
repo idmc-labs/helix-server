@@ -3,7 +3,11 @@ from collections import OrderedDict
 from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
-from apps.contrib.serializers import MetaInformationSerializerMixin, UpdateSerializerMixin
+from apps.contrib.serializers import (
+    MetaInformationSerializerMixin,
+    UpdateSerializerMixin,
+    IntegerIDField,
+)
 from apps.crisis.models import Crisis
 from apps.event.models import Event, Actor
 from utils.validations import is_child_parent_inclusion_valid
@@ -19,7 +23,7 @@ class ActorSerializer(MetaInformationSerializerMixin,
 class ActorUpdateSerializer(UpdateSerializerMixin,
                             ActorSerializer):
     """Just to create input type"""
-    id = serializers.IntegerField(required=True)
+    id = IntegerIDField(required=True)
 
 
 class EventSerializer(MetaInformationSerializerMixin,
@@ -46,4 +50,4 @@ class EventSerializer(MetaInformationSerializerMixin,
 
 
 class EventUpdateSerializer(UpdateSerializerMixin, EventSerializer):
-    id = serializers.IntegerField(required=True)
+    id = IntegerIDField(required=True)

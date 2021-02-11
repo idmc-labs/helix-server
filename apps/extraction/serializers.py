@@ -1,6 +1,10 @@
 from rest_framework import serializers
 
-from apps.contrib.serializers import MetaInformationSerializerMixin, UpdateSerializerMixin
+from apps.contrib.serializers import (
+    MetaInformationSerializerMixin,
+    UpdateSerializerMixin,
+    IntegerIDField,
+)
 from .models import ExtractionQuery
 
 
@@ -11,4 +15,4 @@ class ExtractionQuerySerializer(MetaInformationSerializerMixin, serializers.Mode
 
 
 class ExtractionQueryUpdateSerializer(UpdateSerializerMixin, ExtractionQuerySerializer):
-    id = serializers.IntegerField(required=True)
+    id = IntegerIDField(required=True)

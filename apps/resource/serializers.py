@@ -5,7 +5,11 @@ from helix.settings import RESOURCE_NUMBER, RESOURCEGROUP_NUMBER
 
 from apps.resource.models import Resource, ResourceGroup
 
-from apps.contrib.serializers import MetaInformationSerializerMixin, UpdateSerializerMixin
+from apps.contrib.serializers import (
+    MetaInformationSerializerMixin,
+    UpdateSerializerMixin,
+    IntegerIDField,
+)
 
 
 class ResourceSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
@@ -27,7 +31,7 @@ class ResourceSerializer(MetaInformationSerializerMixin, serializers.ModelSerial
 
 
 class ResourceUpdateSerializer(UpdateSerializerMixin, ResourceSerializer):
-    id = serializers.IntegerField(required=True)
+    id = IntegerIDField(required=True)
 
 
 class ResourceGroupSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
@@ -44,4 +48,4 @@ class ResourceGroupSerializer(MetaInformationSerializerMixin, serializers.ModelS
 
 
 class ResourceGroupUpdateSerializer(UpdateSerializerMixin, ResourceGroupSerializer):
-    id = serializers.IntegerField(required=True)
+    id = IntegerIDField(required=True)

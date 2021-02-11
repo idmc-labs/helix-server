@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from apps.contact.models import Contact, Communication
-from apps.contrib.serializers import UpdateSerializerMixin
+from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
 
 
 class CommunicationSerializer(serializers.ModelSerializer):
@@ -11,7 +11,7 @@ class CommunicationSerializer(serializers.ModelSerializer):
 
 
 class CommunicationUpdateSerializer(UpdateSerializerMixin, CommunicationSerializer):
-    id = serializers.IntegerField(required=True)
+    id = IntegerIDField(required=True)
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -21,4 +21,4 @@ class ContactSerializer(serializers.ModelSerializer):
 
 
 class ContactUpdateSerializer(UpdateSerializerMixin, ContactSerializer):
-    id = serializers.IntegerField(required=True)
+    id = IntegerIDField(required=True)

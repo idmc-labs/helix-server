@@ -2,7 +2,7 @@ from rest_framework import serializers
 from django.utils.translation import gettext
 
 from apps.organization.models import Organization, OrganizationKind
-from apps.contrib.serializers import UpdateSerializerMixin
+from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
 
 
 class OrganizationKindSerializer(serializers.ModelSerializer):
@@ -12,7 +12,7 @@ class OrganizationKindSerializer(serializers.ModelSerializer):
 
 
 class OrganizationKindUpdateSerializer(UpdateSerializerMixin, OrganizationKindSerializer):
-    id = serializers.IntegerField(required=True)
+    id = IntegerIDField(required=True)
 
 
 class OrganizationSerializer(serializers.ModelSerializer):
@@ -22,4 +22,4 @@ class OrganizationSerializer(serializers.ModelSerializer):
 
 
 class OrganizationUpdateSerializer(UpdateSerializerMixin, OrganizationSerializer):
-    id = serializers.IntegerField(required=True)
+    id = IntegerIDField(required=True)
