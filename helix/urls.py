@@ -22,6 +22,7 @@ from django.views.decorators.csrf import csrf_exempt
 # from graphene_django.views import GraphQLView
 # from django.contrib.auth.mixins import LoginRequiredMixin
 from graphene_file_upload.django import FileUploadGraphQLView
+from apps.users.views import MeView
 
 
 class CustomGraphQLView(FileUploadGraphQLView):
@@ -48,6 +49,8 @@ urlpatterns = [
     path('admin', admin.site.urls),
     path('graphiql', csrf_exempt(CustomGraphQLView.as_view(graphiql=True))),
     path('graphql', csrf_exempt(CustomGraphQLView.as_view())),
+    path('webhooks', include('helix.webhooks')),
+    path('me', MeView.as_view())
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) \
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
