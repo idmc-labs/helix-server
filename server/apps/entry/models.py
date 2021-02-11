@@ -254,6 +254,19 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
                 errors['excerpt_idu'] = gettext('This field is required. ')
         return errors
 
+    @staticmethod
+    def clean_dates(values: dict, instance=None) -> OrderedDict:
+        errors = OrderedDict()
+        start_date = values.get('start_date', getattr(instance, 'start_date', None))
+        end_date = values.get('end_date', getattr(instance, 'end_date', None))
+        if start_date and end_date and end_date < start_date:
+            errors['end_date'] = gettext(f'Pick the end date later than start date. ')
+        event_start_date = values.get('entry', getattr(instance, 'entry', None)).event
+        if event_start_date:
+            if event_start_date.start_date and start_date > event_start_date.start_date:
+                errors['start_date'] = gettext(f'Start Date should be within event')
+        return errors
+
     # core
 
     def save(self, *args, **kwargs):
