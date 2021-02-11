@@ -3,10 +3,14 @@ import json
 from django.contrib.auth.tokens import default_token_generator
 from djoser.utils import encode_uid
 
-
 from apps.users.enums import USER_ROLE
-from utils.factories import EntryFactory
-from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from apps.users.models import User
+from utils.factories import EntryFactory, UserFactory
+from utils.tests import (
+    HelixGraphQLTestCase,
+    create_user_with_role,
+    HelixAPITestCase
+)
 
 
 class TestLogin(HelixGraphQLTestCase):
@@ -338,3 +342,17 @@ class TestUserListSchema(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertEqual(sorted([int(each['id']) for each in content['data']['users']['results']]),
                          sorted([ur.id, ue.id]))
+
+
+class TestAPIMe(HelixAPITestCase):
+
+    def test_me_api(self):
+        user = UserFactory.create(
+            email='ram@gmail.com'
+        )
+        self.authenticate(user)
+        url = f'/api/me/'
+        response = self.client.get(url)
+        assert response.status_code == 200
+        data = response.data
+        self.assertEqual(data['email'], user.email)

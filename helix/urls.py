@@ -57,7 +57,7 @@ urlpatterns = [
     path('graphiql', csrf_exempt(CustomGraphQLView.as_view(graphiql=True))),
     path('graphql', csrf_exempt(CustomGraphQLView.as_view())),
     path('webhooks', include('helix.webhooks')),
-    path('api/me', MeView.as_view()),
+    path('api/me/', MeView.as_view()),
     path('api/', include(router.urls))
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) \
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

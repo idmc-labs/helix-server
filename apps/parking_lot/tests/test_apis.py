@@ -2,7 +2,11 @@ import json
 
 from apps.users.enums import USER_ROLE
 from utils.factories import CountryFactory, ParkingLotFactory
-from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from utils.tests import (
+    HelixGraphQLTestCase,
+    create_user_with_role,
+    HelixAPITestCase
+)
 
 
 class TestCreateParkedItem(HelixGraphQLTestCase):
@@ -81,3 +85,29 @@ class TestUpdateParkedItem(HelixGraphQLTestCase):
         self.assertTrue(content['data']['updateParkedItem']['ok'], content)
         self.assertEqual(content['data']['updateParkedItem']['result']['title'],
                          self.input['title'])
+
+
+class ParkedItemAPITestCase(HelixAPITestCase):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.url = f'/api/parking-lot/'
+
+    def test_get_parked_item(self):
+        self.parking_lot = ParkingLotFactory.create()
+        self.authenticate()
+        response = self.client.get(self.url)
+        assert response.status_code == 200
+        data = response.data
+        self.assertEqual(data[0]['id'], self.parking_lot.id)
+
+    def test_post_parked_item(self):
+        self.country = CountryFactory.create()
+        data = {
+            "title": "test_parking",
+            "url": "http://google.com",
+            "country": self.country.id,
+        }
+        self.authenticate()
+        response = self.client.post(self.url, data)
+        assert response.status_code == 201
