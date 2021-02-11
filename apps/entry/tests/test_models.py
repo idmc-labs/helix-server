@@ -15,7 +15,8 @@ class TestFigureModel(HelixTestCase):
     def setUp(self) -> None:
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.entry = EntryFactory.create(created_by=self.editor)
+        self.event = EventFactory.create(start_date=(datetime.today() + timedelta(days=10)).strftime('%Y-%m-%d'))
+        self.entry = EntryFactory.create(created_by=self.editor, event=self.event)
         self.figure = FigureFactory.create(entry=self.entry, created_by=self.editor)
 
     def test_figure_can_be_updated_by(self):
@@ -53,10 +54,10 @@ class TestFigureModel(HelixTestCase):
             start_date=(datetime.today() + timedelta(days=12)).strftime('%Y-%m-%d'),
             end_date=(datetime.today()).strftime('%Y-%m-%d'),
         )
-        
         self.figure.save()
-        errors = Figure.clean_dates(data)
+        errors = Figure.clean_dates(data, self.figure)
         self.assertIn('end_date', errors)
+        self.assertIn('start_date', errors)
 
 
 class TestEntryModel(HelixTestCase):
