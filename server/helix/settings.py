@@ -235,7 +235,9 @@ CORS_ORIGIN_WHITELIST = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 # CORS_ORIGIN_ALLOW_ALL = True
-# CORS_ORIGIN_REGEX_WHITELIST = []
+# CORS_ORIGIN_REGEX_WHITELIST = [
+#     '^https://[\w\-]+\.idmcdb\.org$'
+# ]
 # CSRF_TRUSTED_ORIGINS = []
 
 #################
@@ -305,14 +307,10 @@ if SENTRY_DSN:
 RESOURCE_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
 RESOURCEGROUP_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
 
-
-REDIS_HOST = os.environ.get('REDIS_HOST', 'redis')
-REDIS_PORT = os.environ.get('REDIS_PORT', '6379')
-
 # https://dramatiq.io/reference.html#middleware
 DRAMATIQ_BROKER = {
     "BROKER": "dramatiq.brokers.redis.RedisBroker",
-    "OPTIONS": {"url": "redis://{}:{}/0".format(REDIS_HOST, REDIS_PORT)},
+    "OPTIONS": {"url": os.environ.get("DRAMATIQ_REDIS_URL", "redis://redis:6379/0")},
     "MIDDLEWARE": [
         "dramatiq.middleware.Prometheus",
         "dramatiq.middleware.AgeLimit",
