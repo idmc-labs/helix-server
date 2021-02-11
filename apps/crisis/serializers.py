@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from apps.crisis.models import Crisis
-from apps.contrib.serializers import UpdateSerializerMixin
+from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
 
 
 class CrisisSerializer(serializers.ModelSerializer):
@@ -12,4 +12,4 @@ class CrisisSerializer(serializers.ModelSerializer):
 
 class CrisisUpdateSerializer(UpdateSerializerMixin, CrisisSerializer):
     """Created simply to generate the input type for mutations"""
-    id = serializers.IntegerField(required=True)
+    id = IntegerIDField(required=True)
