@@ -8,6 +8,8 @@ from django.core import management
 from django.test import TestCase, override_settings
 from graphene_django.utils import GraphQLTestCase
 
+from rest_framework.test import APITestCase
+
 from helix.settings import BASE_DIR
 from utils.factories import UserFactory
 
@@ -104,3 +106,30 @@ class ImmediateOnCommitMixin(object):
 )
 class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     pass
+
+
+class HelixAPITestCase(APITestCase):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user_password = 'joHnDave!@#123'
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        # initialize roles
+        management.call_command('init_roles')
+
+    def setUp(self):
+        super().setUp()
+        self.user = User.objects.create_user(
+            username='jon@dave.com',
+            first_name='Jon',
+            last_name='Mon',
+            password=self.user_password,
+            email='jon@dave.com',
+        )
+
+    def authenticate(self, user=None):
+        user = user or self.user
+        self.client.force_login(user)
