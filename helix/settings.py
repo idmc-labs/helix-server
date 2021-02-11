@@ -71,6 +71,7 @@ THIRD_PARTY_APPS = [
     'graphene_graphiql_explorer',
     'graphiql_debug_toolbar',
     'django_dramatiq',
+    'rest_framework',
 ]
 
 INSTALLED_APPS = [

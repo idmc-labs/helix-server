@@ -96,3 +96,16 @@ class UserSerializer(serializers.ModelSerializer):
         if role is not None:
             instance.set_role(role)
         return instance
+
+
+class UserMeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = (
+            'id',
+            'email',
+            'username',
+            'first_name',
+            'last_name',
+            'is_active'
+        )
