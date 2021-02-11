@@ -1,3 +1,4 @@
 from django.contrib import admin
+from apps.contextualupdate.models import ContextualUpdate
 
-# Register your models here.
+admin.site.register(ContextualUpdate)
