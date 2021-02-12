@@ -33,17 +33,13 @@ class Crisis(MetaInformationAbstractModel, models.Model):
 
     @property
     def total_stock_figures(self) -> int:
-        return Figure.objects.filter(
-            entry__event__crisis_id=self.id,
-            category__type=STOCK
-        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
+        filters = dict(crisis=self.id)
+        return Figure.get_total_stock_figure(filters)
 
     @property
     def total_flow_figures(self) -> int:
-        return Figure.objects.filter(
-            entry__event__crisis_id=self.id,
-            category__type=FLOW
-        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
+        filters = dict(crisis=self.id)
+        return Figure.get_total_flow_figure(filters)
 
     # dunders
 

@@ -20,6 +20,9 @@ class FigureFilter(df.FilterSet):
     start_date = df.DateFilter(method='filter_time_frame_after')
     end_date = df.DateFilter(method='filter_time_frame_before')
     roles = StringListFilter(method='filter_figure_roles')
+    entry = df.NumberFilter(field_name='entry', lookup_expr='exact')
+    event = df.NumberFilter(field_name='entry__event', lookup_expr='exact')
+    crisis = df.NumberFilter(field_name='entry__event__crisis', lookup_expr='exact')
 
     class Meta:
         model = Figure

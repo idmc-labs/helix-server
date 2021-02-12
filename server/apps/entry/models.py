@@ -5,7 +5,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
 from django.db.models import Sum, Value
-from django.db.models.functions import Coalesce
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
@@ -238,6 +237,22 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
     # methods
 
     @classmethod
+    def get_total_stock_figure(cls, filters):
+        from apps.entry.filters import FigureFilter
+        return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
+            role=Figure.ROLE.RECOMMENDED,
+            category__type=STOCK
+        ).aggregate(total=Sum('total_figures'))['total']
+
+    @classmethod
+    def get_total_flow_figure(cls, filters):
+        from apps.entry.filters import FigureFilter
+        return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
+            role=Figure.ROLE.RECOMMENDED,
+            category__type=FLOW
+        ).aggregate(total=Sum('total_figures'))['total']
+
+    @classmethod
     def can_be_created_by(cls, user: User, entry: 'Entry') -> bool:
         return entry.can_be_updated_by(user)
 
@@ -356,16 +371,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     # Methods
 
     def total_stock_figures(self, filters) -> int:
-        from apps.entry.filters import FigureFilter
-        return FigureFilter(data=filters or dict(), queryset=self.figures.all()).qs.filter(
-            category__type=STOCK
-        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
+        filters.update(entry=self.id)
+        return Figure.get_total_stock_figure(filters)
 
     def total_flow_figures(self, filters) -> int:
-        from apps.entry.filters import FigureFilter
-        return FigureFilter(data=filters or dict(), queryset=self.figures.all()).qs.filter(
-            category__type=FLOW
-        ).aggregate(total=Coalesce(Sum('total_figures'), Value(0)))['total']
+        filters.update(entry=self.id)
+        return Figure.get_total_flow_figure(filters)
 
     def can_be_updated_by(self, user: User) -> bool:
         """
