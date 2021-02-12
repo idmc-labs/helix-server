@@ -8,4 +8,4 @@ from apps.parking_lot.serializers import ParkedItemSerializer
 class ParkedItemViewSet(viewsets.ModelViewSet):
     queryset = ParkedItem.objects.all()
     serializer_class = ParkedItemSerializer
-    permission_classes = [IsAuthenticated, ]
+    permission_classes = [IsAuthenticated]

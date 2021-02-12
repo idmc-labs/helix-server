@@ -109,3 +109,9 @@ class UserMeSerializer(serializers.ModelSerializer):
             'last_name',
             'is_active'
         )
+
+
+class UsersListSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        exclude = ('password',)

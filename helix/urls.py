@@ -25,7 +25,7 @@ from graphene_file_upload.django import FileUploadGraphQLView
 
 from rest_framework import routers
 
-from apps.users.views import MeView
+from apps.users.views import MeView, UserViewSet
 from apps.parking_lot.views import ParkedItemViewSet
 
 
@@ -51,6 +51,7 @@ CustomGraphQLView.graphiql_template = "graphene_graphiql_explorer/graphiql.html"
 
 router = routers.DefaultRouter()
 router.register(r'parking-lot', ParkedItemViewSet, basename='parking-lot')
+router.register(r'users', UserViewSet, basename='users')
 
 urlpatterns = [
     path('admin', admin.site.urls),

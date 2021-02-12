@@ -103,10 +103,12 @@ class ParkedItemAPITestCase(HelixAPITestCase):
 
     def test_post_parked_item(self):
         self.country = CountryFactory.create()
+        self.assigned_to = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         data = {
             "title": "test_parking",
             "url": "http://google.com",
             "country": self.country.id,
+            "assignedTo": self.assigned_to.id
         }
         self.authenticate()
         response = self.client.post(self.url, data)

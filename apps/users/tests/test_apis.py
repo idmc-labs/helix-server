@@ -351,8 +351,16 @@ class TestAPIMe(HelixAPITestCase):
             email='ram@gmail.com'
         )
         self.authenticate(user)
-        url = f'/api/me/'
+        url = '/api/me/'
         response = self.client.get(url)
         assert response.status_code == 200
         data = response.data
         self.assertEqual(data['email'], user.email)
+
+    def test_users_api(self):
+        user = UserFactory.create_batch(3)
+        self.authenticate()
+        url = '/api/users/'
+        response = self.client.get(url)
+        assert response.status_code == 200
+        data = response.data
