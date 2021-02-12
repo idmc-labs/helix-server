@@ -43,18 +43,27 @@ class TestEntryQuery(HelixGraphQLTestCase):
         figure1 = FigureFactory.create(entry=self.entry,
                                        category=self.fig_cat,
                                        reported=100,
+                                       role=Figure.ROLE.RECOMMENDED,
                                        unit=Figure.UNIT.PERSON)
+        FigureFactory.create(entry=self.entry,
+                             category=self.fig_cat,
+                             reported=100,
+                             role=Figure.ROLE.TRIANGULATION,
+                             unit=Figure.UNIT.PERSON)
         figure2 = FigureFactory.create(entry=self.entry,
                                        category=self.fig_cat,
                                        reported=100,
+                                       role=Figure.ROLE.RECOMMENDED,
                                        unit=Figure.UNIT.PERSON)
         figure3 = FigureFactory.create(entry=self.entry,
                                        category=self.fig_cat2,
                                        reported=50,
+                                       role=Figure.ROLE.RECOMMENDED,
                                        unit=Figure.UNIT.PERSON)
         figure4 = FigureFactory.create(entry=self.entry,
                                        category=self.fig_cat3,
                                        reported=70,
+                                       role=Figure.ROLE.RECOMMENDED,
                                        unit=Figure.UNIT.PERSON)
         response = self.query(
             self.entry_query,

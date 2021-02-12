@@ -4,7 +4,7 @@ import logging
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
-from django.db.models import Sum, Value
+from django.db.models import Sum
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
@@ -370,11 +370,13 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
     # Methods
 
-    def total_stock_figures(self, filters) -> int:
+    def total_stock_figures(self, filters=None) -> int:
+        filters = filters or dict()
         filters.update(entry=self.id)
         return Figure.get_total_stock_figure(filters)
 
-    def total_flow_figures(self, filters) -> int:
+    def total_flow_figures(self, filters=None) -> int:
+        filters = filters or dict()
         filters.update(entry=self.id)
         return Figure.get_total_flow_figure(filters)
 
