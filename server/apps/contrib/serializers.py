@@ -1,4 +1,3 @@
-import mimetypes
 import magic
 
 from rest_framework import serializers

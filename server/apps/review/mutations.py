@@ -2,9 +2,9 @@ import graphene
 from django.utils.translation import gettext
 
 from apps.review.enums import ReviewStatusEnum
-from apps.review.models import Review, ReviewComment
-from apps.review.schema import ReviewCommentType, ReviewType
-from apps.review.serializers import ReviewSerializer, ReviewCommentSerializer
+from apps.review.models import ReviewComment
+from apps.review.schema import ReviewCommentType
+from apps.review.serializers import ReviewCommentSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 
@@ -55,7 +55,6 @@ class CreateComment(graphene.Mutation):
             return CreateComment(errors=errors, ok=False)
         instance = serializer.save()
         return CreateComment(result=instance, errors=None, ok=True)
-
 
 
 class CreateReviewComment(graphene.Mutation):
@@ -144,4 +143,3 @@ class Mutation(object):
     create_review_comment = CreateReviewComment.Field()
     update_comment = UpdateComment.Field()
     delete_review_comment = DeleteReviewComment.Field()
-

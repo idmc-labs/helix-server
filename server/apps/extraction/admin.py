@@ -1,3 +1,5 @@
 from django.contrib import admin
 
-# Register your models here.
+from apps.extraction.models import ExtractionQuery
+
+admin.site.register(ExtractionQuery)

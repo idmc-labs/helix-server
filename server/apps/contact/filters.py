@@ -24,6 +24,7 @@ class ContactFilter(django_filters.FilterSet):
             return qs
         return qs.filter(countries_of_operation__in=value).distinct()
 
+
 class CommunicationFilter(django_filters.FilterSet):
     id = django_filters.CharFilter(field_name='id', lookup_expr='iexact')
     subject_contains = django_filters.CharFilter(field_name='subject', lookup_expr='icontains')

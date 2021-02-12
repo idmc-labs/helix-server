@@ -1,6 +1,5 @@
 from django.utils.translation import gettext
 import graphene
-from graphene_file_upload.scalars import Upload
 
 from apps.contact.enums import DesignationGrapheneEnum, GenderGrapheneEnum
 from apps.contact.models import Contact, Communication

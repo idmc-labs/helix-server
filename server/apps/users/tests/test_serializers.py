@@ -109,4 +109,3 @@ class TestUserSerializer(HelixTestCase):
                                     partial=True)
         self.assertFalse(serializer.is_valid())
         self.assertIn('is_active', serializer.errors)
-

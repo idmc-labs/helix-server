@@ -77,10 +77,10 @@ class Command(BaseCommand):
                     for dsubtype in DISASTERS[cat][subcat][dtype]:
                         if DisasterSubType.objects.filter(name__iexact=dsubtype,
                                                           type__name__iexact=disaster_type.name).exists():
-                            disaster_sub_type = DisasterSubType.objects.get(
+                            DisasterSubType.objects.get(
                                 name__iexact=dsubtype, type__name__iexact=disaster_type.name)
                         else:
-                            disaster_sub_type = DisasterSubType.objects.create(name=dsubtype, type=disaster_type)
+                            DisasterSubType.objects.create(name=dsubtype, type=disaster_type)
         self.stdout.write(self.style.SUCCESS('Saved {} disaster categories.'.format(
             DisasterCategory.objects.count(),
         )))

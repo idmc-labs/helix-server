@@ -37,7 +37,7 @@ class CustomGraphQLView(FileUploadGraphQLView):
             body = request.body.decode("utf-8")
             request_json = json.loads(body)
             self.batch = isinstance(request_json, list)
-        except:
+        except:  # noqa: E722
             self.batch = False
         return super().parse_body(request)
 

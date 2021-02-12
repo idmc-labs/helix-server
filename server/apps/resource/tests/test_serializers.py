@@ -2,7 +2,6 @@ from django.test import RequestFactory
 
 from helix.settings import RESOURCE_NUMBER
 from apps.users.enums import USER_ROLE
-from apps.resource.models import Resource
 from apps.resource.serializers import ResourceSerializer
 from utils.factories import ResourceFactory, ResourceGroupFactory, CountryFactory
 from utils.tests import HelixTestCase, create_user_with_role
@@ -21,7 +20,7 @@ class TestResourceSerializer(HelixTestCase):
             group=self.group
         )
         self.factory = RequestFactory()
-        self.request = self.factory.get('/graphql') 
+        self.request = self.factory.get('/graphql')
 
     def test_resource_limit_creation_by_user(self):
         self.request.user = self.user

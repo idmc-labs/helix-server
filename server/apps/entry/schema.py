@@ -203,9 +203,9 @@ class Query:
     figure_category_list = DjangoPaginatedListObjectField(FigureCategoryListType)
     figure_tag = DjangoObjectField(FigureTagType)
     figure_tag_list = DjangoPaginatedListObjectField(FigureTagListType,
-                                                pagination=PageGraphqlPagination(
-                                                    page_size_query_param='pageSize'
-                                                ))
+                                                     pagination=PageGraphqlPagination(
+                                                         page_size_query_param='pageSize'
+                                                     ))
 
     figure = DjangoObjectField(FigureType)
     figure_list = DjangoPaginatedListObjectField(FigureListType,

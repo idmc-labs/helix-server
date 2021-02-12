@@ -136,11 +136,11 @@ class TestQueryResource(HelixGraphQLTestCase):
     def test_resources_by_user(self):
         self.reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        resource1 = ResourceFactory.create(
+        ResourceFactory.create(
             name='test111',
             created_by=self.reviewer1,
         )
-        resource2 = ResourceFactory.create(
+        ResourceFactory.create(
             name='test222',
             created_by=self.reviewer2,
         )

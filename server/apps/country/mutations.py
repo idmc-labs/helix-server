@@ -57,7 +57,7 @@ class CreateContextualAnalysis(graphene.Mutation):
     @permission_checker(['country.add_contextualanalysis'])
     def mutate(root, info, data):
         serializer = ContextualAnalysisSerializer(data=data,
-                                                context={'request': info.context})
+                                                  context={'request': info.context})
         if errors := mutation_is_not_valid(serializer):
             return CreateContextualAnalysis(errors=errors, ok=False)
         instance = serializer.save()

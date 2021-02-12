@@ -9,18 +9,18 @@ from utils.tests import HelixGraphQLTestCase, create_user_with_role
 class TestCreateCrisis(HelixGraphQLTestCase):
     def setUp(self) -> None:
         countries = CountryFactory.create_batch(2)
-        self.mutation = f'''mutation MyMutation($input: CrisisCreateInputType!) {{
-            createCrisis(data: $input) {{
-                result {{
-                    countries {{
+        self.mutation = '''mutation MyMutation($input: CrisisCreateInputType!) {
+            createCrisis(data: $input) {
+                result {
+                    countries {
                         id
-                    }}
+                    }
                     name
-                }}
+                }
                 ok
                 errors
-            }}
-        }}'''
+            }
+        }'''
         self.input = {
             "name": "disss",
             "crisisType": "DISASTER",

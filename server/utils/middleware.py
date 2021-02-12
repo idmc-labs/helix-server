@@ -4,7 +4,6 @@ from debug_toolbar.middleware import DebugToolbarMiddleware as BaseMiddleware
 from debug_toolbar.middleware import get_show_toolbar
 from debug_toolbar.toolbar import DebugToolbar
 from django.template.loader import render_to_string
-from django.conf import settings
 from graphiql_debug_toolbar.middleware import get_payload, set_content_length
 from graphiql_debug_toolbar.serializers import CallableJSONEncoder
 

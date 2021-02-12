@@ -6,7 +6,6 @@ from apps.contrib.models import MetaInformationArchiveAbstractModel
 
 
 class Review(MetaInformationArchiveAbstractModel, models.Model):
-    # latest reviews are sent for distinct following fields
     UNIQUE_TOGETHER_FIELDS = {'entry', 'figure', 'field', 'age_id', 'strata_id'}
     UNIQUE_TOGETHER_WITHOUT_ENTRY_FIELDS = UNIQUE_TOGETHER_FIELDS - {'entry'}
 
