@@ -9,4 +9,4 @@ media-temp/
 
 static/
 schema.json
-server/response.json
+response.json

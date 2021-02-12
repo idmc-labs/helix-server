@@ -27,6 +27,7 @@ from apps.entry.models import (
     OSMName,
 )
 from apps.contrib.models import SourcePreview
+from apps.contrib.enums import PreviewStatusGrapheneEnum
 from apps.organization.schema import OrganizationListType
 from utils.fields import (
     DjangoPaginatedListObjectField,
@@ -167,8 +168,12 @@ class SourcePreviewType(DjangoObjectType):
         model = SourcePreview
         exclude_fields = ('entry', 'token')
 
+    status = graphene.Field(PreviewStatusGrapheneEnum)
+
     def resolve_pdf(root, info, **kwargs):
-        return root.pdf.url
+        if root.status == SourcePreview.PREVIEW_STATUS.COMPLETED:
+            return info.context.build_absolute_uri(root.pdf.url)
+        return None
 
 
 class EntryReviewerType(DjangoObjectType):

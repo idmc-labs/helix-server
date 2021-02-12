@@ -1,15 +1,12 @@
-import json
 import logging
 import uuid
 from uuid import uuid4
 
-import boto3
-from django.conf import settings
-
-from django.db import models
+from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
+from apps.entry.tasks import generate_pdf
 
 from utils.fields import CachedFileField
 
@@ -113,6 +110,19 @@ class SoftDeleteModel(models.Model):
 class SourcePreview(MetaInformationAbstractModel):
     PREVIEW_FOLDER = 'source/previews'
 
+    class PREVIEW_STATUS(enum.Enum):
+        PENDING = 0
+        COMPLETED = 1
+        FAILED = 2
+        IN_PROGRESS = 3
+
+        __labels__ = {
+            PENDING: _("Pending"),
+            COMPLETED: _("Completed"),
+            FAILED: _("Failed"),
+            IN_PROGRESS: _("In Progress"),
+        }
+
     url = models.URLField(verbose_name=_('Source URL'), max_length=2000)
     token = models.CharField(verbose_name=_('Token'),
                              max_length=64, db_index=True,
@@ -120,8 +130,8 @@ class SourcePreview(MetaInformationAbstractModel):
     pdf = CachedFileField(verbose_name=_('Rendered Pdf'),
                           blank=True, null=True,
                           upload_to=PREVIEW_FOLDER)
-    completed = models.BooleanField(default=False)
-    reason = models.TextField(verbose_name=_('Error Reason'),
+    status = enum.EnumField(enum=PREVIEW_STATUS, default=PREVIEW_STATUS.PENDING)
+    remark = models.TextField(verbose_name=_('Remark'),
                               blank=True, null=True)
 
     @classmethod
@@ -133,21 +143,11 @@ class SourcePreview(MetaInformationAbstractModel):
             token = str(uuid.uuid4())
             instance = cls(token=token)
         instance.url = url
-        # TODO: remove .pdf in production... this will happen after webhook
-        instance.pdf = cls.PREVIEW_FOLDER + '/' + instance.token + '.pdf'
-
         instance.save()
 
-        payload = dict(
-            url=url,
-            token=instance.token,
-            filename=f'{instance.token}.pdf',
-        )
-        logger.info(f'Invoking lambda function for preview {url} {instance.token}')
-        client = boto3.client('lambda')
-        client.invoke(
-            FunctionName=settings.LAMBDA_HTML_TO_PDF,
-            InvocationType='Event',
-            Payload=json.dumps(payload)
-        )
+        # TODO: remove .pdf in production... this will happen after webhook
+
+        transaction.on_commit(lambda: generate_pdf.send(
+            instance.pk
+        ))
         return instance

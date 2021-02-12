@@ -64,11 +64,12 @@ THIRD_PARTY_APPS = [
     'graphene_django',
     'rest_framework.authtoken',  # required by djoser
     'djoser',
-    'graphene_graphiql_explorer',
     'corsheaders',
     'django_filters',
     'debug_toolbar',
+    'graphene_graphiql_explorer',
     'graphiql_debug_toolbar',
+    'django_dramatiq',
 ]
 
 INSTALLED_APPS = [
@@ -187,6 +188,7 @@ AUTH_USER_MODEL = 'users.User'
 
 # https://docs.graphene-python.org/projects/django/en/latest/settings/
 GRAPHENE = {
+    'ATOMIC_MUTATIONS': True,
     'SCHEMA': 'helix.schema.schema',
     'SCHEMA_OUTPUT': 'schema.json',  # defaults to schema.json,
     'SCHEMA_INDENT': 2,  # Defaults to None (displays all data on a single line)
@@ -233,7 +235,9 @@ CORS_ORIGIN_WHITELIST = [
 ]
 CORS_ALLOW_CREDENTIALS = True
 # CORS_ORIGIN_ALLOW_ALL = True
-# CORS_ORIGIN_REGEX_WHITELIST = []
+# CORS_ORIGIN_REGEX_WHITELIST = [
+#     '^https://[\w\-]+\.idmcdb\.org$'
+# ]
 # CSRF_TRUSTED_ORIGINS = []
 
 #################
@@ -302,3 +306,23 @@ if SENTRY_DSN:
 
 RESOURCE_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
 RESOURCEGROUP_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
+
+# https://dramatiq.io/reference.html#middleware
+DRAMATIQ_BROKER = {
+    "BROKER": "dramatiq.brokers.redis.RedisBroker",
+    "OPTIONS": {"url": os.environ.get("DRAMATIQ_REDIS_URL", "redis://redis:6379/0")},
+    "MIDDLEWARE": [
+        "dramatiq.middleware.Prometheus",
+        "dramatiq.middleware.AgeLimit",
+        "dramatiq.middleware.TimeLimit",
+        "dramatiq.middleware.Callbacks",
+        "dramatiq.middleware.Retries",
+        "django_dramatiq.middleware.DbConnectionsMiddleware",
+        "django_dramatiq.middleware.AdminMiddleware",
+    ],
+}
+
+DRAMATIQ_TASKS_DATABASE = "default"
+
+# FIXME: We can also configure result backend. what does that mean?kjj/dra
+# TODO: Make tests work

@@ -1,8 +1,6 @@
 from collections import OrderedDict
 
 from django.db import models
-from django.db.models import Sum, Value
-from django.db.models.functions import Coalesce
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
@@ -12,7 +10,6 @@ from apps.contrib.models import (
 )
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
-from apps.entry.constants import STOCK, FLOW
 
 
 class NameAttributedModels(models.Model):
@@ -166,7 +163,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     def total_stock_figures(self) -> int:
         filters = dict(event=self.id)
         return Figure.get_total_stock_figure(filters)
-
 
     @property
     def total_flow_figures(self) -> int:
