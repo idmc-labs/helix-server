@@ -242,7 +242,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
         return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
             category__type=STOCK
-        ).aggregate(total=Sum('total_figures'))['total'] or 'N/A'
+        ).aggregate(total=Sum('total_figures'))['total']
 
     @classmethod
     def get_total_flow_figure(cls, filters):
@@ -250,7 +250,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
         return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
             category__type=FLOW
-        ).aggregate(total=Sum('total_figures'))['total'] or 'N/A'
+        ).aggregate(total=Sum('total_figures'))['total']
 
     @classmethod
     def can_be_created_by(cls, user: User, entry: 'Entry') -> bool:
