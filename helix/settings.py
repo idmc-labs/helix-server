@@ -99,6 +99,10 @@ MIDDLEWARE = [
 if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
     MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
 
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
+}
+
 ROOT_URLCONF = 'helix.urls'
 
 TEMPLATES = [
