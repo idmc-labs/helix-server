@@ -169,6 +169,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, models.Mode
 
     entry = models.ForeignKey('Entry', verbose_name=_('Entry'),
                               related_name='figures', on_delete=models.CASCADE)
+    # to keep track of the old sub facts
+    was_subfact = models.BooleanField(default=False)
     quantifier = enum.EnumField(enum=QUANTIFIER, verbose_name=_('Quantifier'))
     reported = models.PositiveIntegerField(verbose_name=_('Reported Figures'))
     unit = enum.EnumField(enum=UNIT, verbose_name=_('Unit of Figure'), default=UNIT.PERSON)
