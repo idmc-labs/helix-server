@@ -16,7 +16,7 @@ services:
   server:
     image: helix/helix-server:latest
     build:
-      context: ./server/
+      context: ./
       cache_from:
         - helix/helix-server:latest
     env_file:
@@ -24,7 +24,7 @@ services:
 
     command: bash -c '/code/deploy/scripts/run_dev.sh'
     volumes:
-      - ./server/:/code
+      - ./:/code
     ports:
       - '9000:9000'
     depends_on:
