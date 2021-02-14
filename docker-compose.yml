@@ -17,12 +17,12 @@ services:
     image: helix/helix-server:latest
     build:
       context: ./
+      target: server
       cache_from:
         - helix/helix-server:latest
     env_file:
       - .env
-
-    command: bash -c '/code/deploy/scripts/run_dev.sh'
+    command: python manage.py runserver 0.0.0.0:9000
     volumes:
       - ./:/code
     ports:
@@ -30,6 +30,19 @@ services:
     depends_on:
       - db
       - redis
+
+  dramatiq:
+    image: helix/helix-worker:latest
+    build:
+      context: ./
+      target: dramatiq
+    environment:
+      HELIX_ENVIRONMENT: development
+    command: python manage.py rundramatiq --reload
+    volumes:
+      - ./:/code
+    depends_on:
+      - server
 
 volumes:
   helix-db-data:

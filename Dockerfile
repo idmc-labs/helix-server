@@ -1,12 +1,10 @@
-FROM python:3.8.2-buster
+FROM python:3.8.2-buster AS server
 
 LABEL maintainer="dev@togglecorp.com"
 
 ENV PYTHONUNBUFFERED 1
 
 WORKDIR /code
-
-RUN apt update -y && apt install -y chromium chromium-driver
 
 COPY ./requirements.txt /code/requirements.txt
 RUN python3 -m pip install --upgrade pip \
@@ -15,3 +13,12 @@ RUN python3 -m pip install --upgrade pip \
 COPY . /code/
 
 CMD ./deploy/scripts/run_prod.sh
+
+
+FROM server AS dramatiq
+
+RUN apt update -y && apt install -y chromium chromium-driver
+
+COPY ./deploy/scripts/dramatiq-entrypoint.sh /docker-entrypoint.sh
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
