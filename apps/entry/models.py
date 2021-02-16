@@ -282,16 +282,23 @@ class Figure(MetaInformationArchiveAbstractModel,
         return errors
 
     @staticmethod
-    def clean_dates(values: dict, instance=None) -> OrderedDict:
+    def validate_dates(values: dict, instance=None) -> OrderedDict:
         errors = OrderedDict()
         start_date = values.get('start_date', getattr(instance, 'start_date', None))
         end_date = values.get('end_date', getattr(instance, 'end_date', None))
         if start_date and end_date and end_date < start_date:
-            errors['end_date'] = gettext(f'Pick the end date later than start date. ')
-        event_start_date = values.get('entry', getattr(instance, 'entry', None)).event
+            errors['end_date'] = gettext('End date should be later than start date. ')
+        event_start_date = values.get('entry', getattr(instance, 'entry', None)).event.start_date
+        event_end_date = values.get('entry', getattr(instance, 'entry', None)).event.end_date
         if event_start_date:
-            if event_start_date.start_date and start_date > event_start_date.start_date:
-                errors['start_date'] = gettext(f'Start Date should be within event')
+            if start_date and event_start_date and event_start_date >= start_date <= event_start_date:
+                errors['start_date'] = gettext('Start date should be after event start date: %(date)s.'
+                                               % {'date': event_start_date})
+        category_type = values.get('category', getattr(instance, 'category', None)).type
+        if category_type == 'FLOW' and event_end_date:
+            if event_end_date and end_date > event_end_date:
+                errors['end_date'] = gettext('End date should be before event end date: %(date)s.'
+                                             % {'date': event_end_date})
         return errors
 
     # core

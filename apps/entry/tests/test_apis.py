@@ -1,4 +1,3 @@
-from datetime import datetime, timedelta
 import json
 from uuid import uuid4
 
@@ -199,7 +198,7 @@ class TestCreateFigure(HelixGraphQLTestCase):
         self.assertIn('geoLocations', [item['field'] for item in content['data']['createFigure']['errors']], content)
 
     def test_invalid_country(self):
-        country3 = CountryFactory.create()
+        country3 = CountryFactory.create(country_code=2312)
         self.input['country'] = country3.id
         response = self.query(
             self.mutation,
@@ -208,20 +207,23 @@ class TestCreateFigure(HelixGraphQLTestCase):
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createFigure']['ok'], content)
-        self.assertIn('country', [item['field'] for item in content['data']['createFigure']['errors']], content )
+        self.assertIn('country', [item['field'] for item in content['data']['createFigure']['errors']], content)
 
 
 class TestFigureUpdate(HelixGraphQLTestCase):
     def setUp(self):
         self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        country1 = CountryFactory.create(country_code=123)
         self.event = EventFactory.create()
+        self.event.countries.set([country1])
         self.entry = EntryFactory.create(
             created_by=self.creator,
             event=self.event,
         )
         self.figure = FigureFactory.create(
             created_by=self.creator,
-            entry=self.entry
+            entry=self.entry,
+            country=country1
         )
         self.mutation = '''
             mutation UpdateFigure($input: FigureUpdateInputType!) {

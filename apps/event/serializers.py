@@ -23,11 +23,15 @@ class EventSerializer(MetaInformationSerializerMixin,
 
     def validate_within_crisis_countries(self, attrs: dict):
         errors = OrderedDict()
-        if not attrs.get('crisis') or not attrs.get('countries'):
-            return errors
-        if set(attrs['countries']).difference(attrs['crisis'].countries.all()):
+        crisis = attrs.get('crisis')
+        if not crisis and self.instance:
+            crisis = self.instance.crisis
+        countries = attrs.get('countries')
+        if not countries and self.instance:
+            countries = self.instance.countries.all()
+        if set(countries).difference(crisis.countries.all()):
             errors.update({
-                'countries': 'Outside countries of crisis'
+                'countries': 'Country should be one of the countries of the crisis'
             })
         return errors
 
