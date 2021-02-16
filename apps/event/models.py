@@ -178,12 +178,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         end_date = values.get('end_date', getattr(instance, 'end_date', None))
         if start_date and end_date and end_date < start_date:
             errors['end_date'] = gettext('Pick the end date later than start date. ')
-            return errors
         crisis = values.get('crisis', getattr(instance, 'crisis', None))
-        if crisis.start_date and crisis.start_date > start_date:
-            errors['start_date'] = gettext(f'Set start date after crisis start: {crisis.start_date}.')
-        if crisis.end_date and end_date > crisis.end_date:
-            errors['end_date'] = gettext(f'Set end date before crisis end: {crisis.end_date}.')
+        if start_date and crisis.start_date and crisis.start_date >= start_date <= crisis.end_date:
+            errors['start_date'] = gettext('Start date should be after crisis start date: %(date)s.'
+                                           % {'date': crisis.start_date})
+        if end_date and crisis.end_date and crisis.end_date <= end_date >= crisis.end_date:
+            errors['end_date'] = gettext('End date should be before crisis end date: %(date)s.'
+                                         % {'date': crisis.end_date})
         return errors
 
     @staticmethod

@@ -3,10 +3,16 @@ from uuid import uuid4
 
 from django.test import RequestFactory
 
-from apps.entry.serializers import EntrySerializer
+from apps.entry.serializers import EntrySerializer, FigureSerializer
 from apps.users.enums import USER_ROLE
 from apps.entry.models import EntryReviewer, OSMName, Figure
-from utils.factories import EventFactory, EntryFactory, OrganizationFactory
+from utils.factories import (
+    EventFactory,
+    EntryFactory,
+    OrganizationFactory,
+    CountryFactory,
+    FigureCategoryFactory
+)
 from utils.tests import HelixTestCase, create_user_with_role
 
 
@@ -239,3 +245,82 @@ class TestEntrySerializer(HelixTestCase):
         self.assertIn('geo_locations', serializer.errors['figures'][0].keys())
 
     # TODO: test entry serializer validation for figure household size
+
+
+class TestFigureSerializer(HelixTestCase):
+    def setUp(self):
+        self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.factory = RequestFactory()
+        country1 = CountryFactory.create(country_code=123)
+        country2 = CountryFactory.create(name='Nepal')
+        self.event = EventFactory.create(name="hahaha")
+        self.event.countries.set([country1, country2])
+        self.entry = EntryFactory.create(
+            created_by=self.creator,
+            event=self.event
+        )
+        self.fig_cat = FigureCategoryFactory.create()
+        self.data = {
+            "entry": self.entry.id,
+            "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
+            "reported": 10,
+            "unit": Figure.UNIT.PERSON.value,
+            "term": Figure.TERM.EVACUATED.value,
+            "category": self.fig_cat.id,
+            "role": Figure.ROLE.RECOMMENDED.value,
+            "start_date": "2020-10-10",
+            "include_idu": True,
+            "excerpt_idu": "excerpt abc",
+            "country": country1.id,
+        }
+        self.request = self.factory.get('/graphql')
+        self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+
+    def test_valid_figure_creation(self):
+        serializer = FigureSerializer(data=self.data,
+                                      context={'request': self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_invalid_contry(self):
+        country3 = CountryFactory.create(country_code=2312)
+        self.data['country'] = country3.id
+        serializer = FigureSerializer(data=self.data,
+                                      context={'request': self.request})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('country', serializer.errors)
+
+    def test_invalid_geo_locations(self):
+        self.data['geo_locations'] = [
+            {
+                "country": "Nepal",
+                "countryCode": "23",
+                "osmId": "tets1",
+                "osmType": "HA",
+                "identifier": OSMName.IDENTIFIER.ORIGIN.value,
+                "displayName": "testname",
+                "lon": 12.34,
+                "lat": 23.21,
+                "name": "testme",
+                "accuracy": OSMName.OSM_ACCURACY.COUNTRY.value,
+                "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                "boundingBox": [1.2],
+            },
+            {
+                "country": "Nepal",
+                "countryCode": "423",
+                "osmId": "tets1",
+                "osmType": "HA",
+                "identifier": OSMName.IDENTIFIER.ORIGIN.value,
+                "displayName": "testname",
+                "lon": 12.34,
+                "lat": 23.21,
+                "name": "testme",
+                "accuracy": OSMName.OSM_ACCURACY.COUNTRY.value,
+                "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                "boundingBox": [1.2],
+            },
+        ]
+        serializer = FigureSerializer(data=self.data,
+                                      context={'request': self.request})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('geo_locations', serializer.errors)

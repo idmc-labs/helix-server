@@ -7,7 +7,14 @@ from apps.users.enums import USER_ROLE
 from apps.contrib.models import SourcePreview
 from apps.review.models import Review
 from apps.entry.models import Figure
-from utils.factories import EntryFactory, FigureFactory, ReviewFactory, ReviewCommentFactory, EventFactory
+from utils.factories import (
+    EntryFactory,
+    FigureFactory,
+    ReviewFactory,
+    ReviewCommentFactory,
+    EventFactory,
+    FigureCategoryFactory
+)
 from utils.tests import HelixTestCase, create_user_with_role
 
 
@@ -15,9 +22,11 @@ class TestFigureModel(HelixTestCase):
     def setUp(self) -> None:
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.event = EventFactory.create(start_date=(datetime.today() + timedelta(days=10)).strftime('%Y-%m-%d'))
+        self.event = EventFactory.create(start_date=(datetime.today() + timedelta(days=10)).strftime('%Y-%m-%d'),
+                                         end_date=(datetime.today() + timedelta(days=25)).strftime('%Y-%m-%d'))
         self.entry = EntryFactory.create(created_by=self.editor, event=self.event)
-        self.figure = FigureFactory.create(entry=self.entry, created_by=self.editor)
+        self.figure_cat = FigureCategoryFactory.create(type='FLOW')
+        self.figure = FigureFactory.create(entry=self.entry, created_by=self.editor, category=self.figure_cat)
 
     def test_figure_can_be_updated_by(self):
         editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
@@ -51,11 +60,11 @@ class TestFigureModel(HelixTestCase):
 
     def test_figure_dates(self):
         data = dict(
-            start_date=(datetime.today() + timedelta(days=12)).strftime('%Y-%m-%d'),
-            end_date=(datetime.today()).strftime('%Y-%m-%d'),
+            start_date=(datetime.today() + timedelta(days=9)).strftime('%Y-%m-%d'),
+            end_date=(datetime.today() + + timedelta(days=26)).strftime('%Y-%m-%d'),
         )
         self.figure.save()
-        errors = Figure.clean_dates(data, self.figure)
+        errors = Figure.validate_dates(data, self.figure)
         self.assertIn('end_date', errors)
         self.assertIn('start_date', errors)
 
