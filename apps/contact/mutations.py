@@ -128,7 +128,6 @@ class CommunicationCreateInputType(graphene.InputObjectType):
     """
     contact = graphene.ID(required=True)
     country = graphene.ID()
-    title = graphene.String()
     subject = graphene.String(required=True)
     content = graphene.String(required=True)
     date = graphene.Date()
@@ -143,7 +142,6 @@ class CommunicationUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
     contact = graphene.ID()
     country = graphene.ID()
-    title = graphene.String()
     subject = graphene.String()
     content = graphene.String()
     date = graphene.Date()

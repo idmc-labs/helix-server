@@ -80,8 +80,6 @@ class Communication(MetaInformationArchiveAbstractModel, models.Model):
     country = models.ForeignKey('country.Country', verbose_name=_('Country'),
                                 blank=True, null=True,
                                 related_name='communications', on_delete=models.CASCADE)
-    title = models.CharField(verbose_name=_('Title'), max_length=256,
-                             blank=True, null=True)
     subject = models.CharField(verbose_name=_('Subject'), max_length=512)
     content = models.TextField(verbose_name=_('Content'))
     date = models.DateField(verbose_name=_('Conducted Date'),
