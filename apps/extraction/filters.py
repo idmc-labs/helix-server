@@ -17,7 +17,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     entry_tags = IDListFilter(method='filter_tags')
     # TODO: GRID filter
     entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
-    event_crisis_type = df.CharFilter(method='filter_crisis_type')
+    event_crisis_types = StringListFilter(method='filter_crisis_types')
 
     class Meta:
         model = Entry
@@ -71,12 +71,14 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs.filter(tags__in=value).distinct()
         return qs
 
-    def filter_crisis_type(self, qs, name, value):
+    def filter_crisis_types(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
                 # coming from saved query
-                return qs.filter(event__event_type=value).distinct()
+                return qs.filter(event__event_type__in=value).distinct()
             else:
                 # coming from client side
-                return qs.filter(event__event_type=Crisis.CRISIS_TYPE.get(value).value)
+                return qs.filter(event__event_type__in=[
+                    Crisis.CRISIS_TYPE.get(item).value for item in value
+                ])
         return qs

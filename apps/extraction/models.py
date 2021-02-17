@@ -28,8 +28,8 @@ class ExtractionQuery(MetaInformationAbstractModel):
                                         blank=True, related_name='+')
     entry_article_title = models.TextField(verbose_name=_('Article Title'),
                                            blank=True, null=True)
-    event_crisis_type = enum.EnumField(enum=Crisis.CRISIS_TYPE,
-                                       blank=True, null=True)
+    event_crisis_types = ArrayField(enum.EnumField(enum=Crisis.CRISIS_TYPE),
+                                    blank=True, null=True)
 
     @classmethod
     def get_entries(cls, data=None) -> ['Entry']:  # noqa
@@ -47,5 +47,5 @@ class ExtractionQuery(MetaInformationAbstractModel):
             figure_start_after=self.figure_start_after,
             figure_end_before=self.figure_end_before,
             entry_article_title=self.entry_article_title,
-            event_crisis_type=self.event_crisis_type,
+            event_crisis_types=self.event_crisis_types,
         ))

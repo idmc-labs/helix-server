@@ -10,6 +10,7 @@ from utils.factories import (
     FigureFactory,
 )
 from apps.extraction.filters import EntryExtractionFilterSet as f
+from apps.crisis.models import Crisis
 
 
 class TestExtractionFilter(HelixTestCase):
@@ -28,11 +29,14 @@ class TestExtractionFilter(HelixTestCase):
         self.crisis2 = CrisisFactory.create()
         self.crisis2.countries.set([self.country3reg3, self.country2reg2])
 
-        self.event1crisis1 = EventFactory.create(crisis=self.crisis1)
+        self.event1crisis1 = EventFactory.create(crisis=self.crisis1,
+                                                 event_type=Crisis.CRISIS_TYPE.CONFLICT)
         self.event1crisis1.countries.set([self.country2reg2])
-        self.event2crisis1 = EventFactory.create(crisis=self.crisis1)
+        self.event2crisis1 = EventFactory.create(crisis=self.crisis1,
+                                                 event_type=Crisis.CRISIS_TYPE.DISASTER)
         self.event2crisis1.countries.set([self.country1reg1])
-        self.event3crisis2 = EventFactory.create(crisis=self.crisis2)
+        self.event3crisis2 = EventFactory.create(crisis=self.crisis2,
+                                                 event_type=Crisis.CRISIS_TYPE.CONFLICT)
         self.event3crisis2.countries.set([self.country2reg2, self.country3reg3])
 
         self.tag1 = TagFactory.create()
@@ -65,6 +69,20 @@ class TestExtractionFilter(HelixTestCase):
         regions = [self.reg1.id]
         fqs = f(data=dict(event_regions=regions)).qs
         self.assertEqual(set(fqs), {self.entry3ev2})
+
+    def test_filter_by_event_crisis_types(self):
+        crisis_types = [Crisis.CRISIS_TYPE.DISASTER]
+        fqs = f(data=dict(event_crisis_types=crisis_types)).qs
+        self.assertEqual(set(fqs), {self.entry3ev2})
+
+        crisis_types = [Crisis.CRISIS_TYPE.CONFLICT]
+        fqs = f(data=dict(event_crisis_types=crisis_types)).qs
+        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
+
+        # now from client
+        crisis_types = ["CONFLICT", "DISASTER"]
+        fqs = f(data=dict(event_crisis_types=crisis_types)).qs
+        self.assertEqual(set(fqs), {self.entry3ev2, self.entry1ev1, self.entry2ev1})
 
     def test_filter_by_country(self):
         data = dict(
