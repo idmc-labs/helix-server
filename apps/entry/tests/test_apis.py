@@ -223,7 +223,8 @@ class TestFigureUpdate(HelixGraphQLTestCase):
         self.figure = FigureFactory.create(
             created_by=self.creator,
             entry=self.entry,
-            country=country1
+            country=country1,
+            reported=100,
         )
         self.mutation = '''
             mutation UpdateFigure($input: FigureUpdateInputType!) {

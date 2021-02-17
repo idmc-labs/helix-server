@@ -152,12 +152,87 @@ class FigureSerializer(MetaInformationSerializerMixin,
             })
         return errors
 
+    def validate_disaggregrated_displacement_type(self, attrs):
+        errors = OrderedDict()
+        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
+        displacement_urban = attrs.get('displacement_urban', getattr(self.instance, 'displacement_urban', 0)) or 0
+        displacement_rural = attrs.get('displacement_rural', getattr(self.instance, 'displacement_rural', 0)) or 0
+        if displacement_rural + displacement_urban >= reported:
+            errors.update({
+                'displacement_rural': 'Added displacement is greater than reported'
+            })
+        return errors
+
+    def validate_disaggregrated_sex(self, attrs):
+        errors = OrderedDict()
+        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
+        sex_female = attrs.get('sex_female', getattr(self.instance, 'sex_female', 0)) or 0
+        sex_male = attrs.get('sex_male', getattr(self.instance, 'sex_male', 0)) or 0
+        if sex_male + sex_female >= reported:
+            errors.update({
+                'sex_male': 'Added sex is greater than reported'
+            })
+        return errors
+
+    def validate_disaggregated_location_camp(self, attrs):
+        errors = OrderedDict()
+        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
+        location_camp = attrs.get('location_camp', getattr(self.instance, 'location_camp', 0)) or 0
+        location_non_camp = attrs.get('location_non_camp', getattr(self.instance, 'location_non_camp', 0)) or 0
+        if location_camp + location_non_camp >= reported:
+            errors.update({
+                'location_camp': 'Added location camp is greater than reported'
+            })
+        return errors
+
+    def validate_disaggregated_conflict(self, attrs):
+        errors = OrderedDict()
+        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
+        conflict = attrs.get('conflict', getattr(self.instance, 'conflict', 0)) or 0
+        conflict_political = attrs.get('conflict_political', getattr(self.instance, 'conflict_political', 0)) or 0
+        conflict_criminal = attrs.get('conflict_criminal', getattr(self.instance, 'conflict_criminal', 0)) or 0
+        conflict_communal = attrs.get('conflict_communal', getattr(self.instance, 'conflict_communal', 0)) or 0
+        conflict_other = attrs.get('conflict_other', getattr(self.instance, 'conflict_other', 0)) or 0
+        if conflict_communal + conflict_criminal + conflict_political + conflict_other + conflict >= reported:
+            errors.update({
+                'conflict': 'Added conflicts is greater than reported'
+            })
+        return errors
+
+    def validate_disaggregated_age(self, attrs):
+        errors = OrderedDict()
+        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
+        age_json = attrs.get('age_json', getattr(self.instance, 'age_json', [])) or []
+        ages = [age['value'] for age in age_json]
+        if sum(ages) >= reported:
+            errors.update({
+                'age_json': 'Added ages are greater than reported'
+            })
+        return errors
+
+    def validate_diaggregated_strata(self, attrs):
+        errors = OrderedDict()
+        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
+        strata_json = attrs.get('strata_json', getattr(self.instance, 'strata_json', [])) or []
+        stratas = [strata['value'] for strata in strata_json]
+        if sum(stratas) >= reported:
+            errors.update({
+                'strata_json': 'Added stratas are greater than reported'
+            })
+        return errors
+
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
         errors = OrderedDict()
         errors.update(Figure.validate_dates(attrs, self.instance))
         errors.update(self.validate_figure_geo_locations(attrs))
         errors.update(self.validate_figure_country(attrs))
+        errors.update(self.validate_disaggregated_location_camp(attrs))
+        errors.update(self.validate_disaggregrated_displacement_type(attrs))
+        errors.update(self.validate_disaggregrated_sex(attrs))
+        errors.update(self.validate_disaggregated_conflict(attrs))
+        errors.update(self.validate_disaggregated_age(attrs))
+        errors.update(self.validate_diaggregated_strata(attrs))
         if errors:
             raise ValidationError(errors)
         return attrs

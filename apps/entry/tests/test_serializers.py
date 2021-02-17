@@ -263,7 +263,7 @@ class TestFigureSerializer(HelixTestCase):
         self.data = {
             "entry": self.entry.id,
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
-            "reported": 10,
+            "reported": 100,
             "unit": Figure.UNIT.PERSON.value,
             "term": Figure.TERM.EVACUATED.value,
             "category": self.fig_cat.id,
@@ -324,3 +324,60 @@ class TestFigureSerializer(HelixTestCase):
                                       context={'request': self.request})
         self.assertFalse(serializer.is_valid())
         self.assertIn('geo_locations', serializer.errors)
+
+    def test_invalid_displacement(self):
+        self.data['displacement_urban'] = 10
+        self.data['displacement_rural'] = 120
+        serializer = FigureSerializer(data=self.data,
+                                      context={'request': self.request})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('displacement_rural', serializer.errors)
+
+    def test_invalid_gender(self):
+        self.data['sex_male'] = 10
+        self.data['sex_female'] = 120
+        serializer = FigureSerializer(data=self.data,
+                                      context={'request': self.request})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('sex_male', serializer.errors)
+
+    def test_invalid_conflict(self):
+        self.data['conflict'] = 12
+        self.data['conflict_communal'] = 23
+        self.data['conflict_criminal'] = 45
+        self.data['conflict_political'] = 50
+        self.data['conflict_other'] = 50
+        serializer = FigureSerializer(data=self.data,
+                                      context={'request': self.request})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('conflict', serializer.errors)
+
+    def test_invalid_age_json(self):
+        self.data['age_json'] = [
+            {
+                    "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                    "age_from": 10,
+                    "age_to": 30,
+                    "value": 1000
+            },
+            {
+                "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                "age_from": 40,
+                "age_to": 50,
+                "value": 23
+            }
+        ]
+        serializer = FigureSerializer(data=self.data,
+                                      context={'request': self.request})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('age_json', serializer.errors)
+
+    def test_invalid_strata_json(self):
+        self.data['strata_json'] = [
+            {"date": "2020-10-10", "value": 120, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
+            {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
+        ]
+        serializer = FigureSerializer(data=self.data,
+                                      context={'request': self.request})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('strata_json', serializer.errors)
