@@ -29,5 +29,4 @@ class MeView(APIView):
         users = User.objects.all()
         userProfileObj = users.filter(id=request.user.id)
         serializer = UserMeSerializer(userProfileObj, many=True)
-        serializer = UserMeSerializer(request.user)
         return response.Response(serializer.data)
