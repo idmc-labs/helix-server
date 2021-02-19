@@ -91,7 +91,7 @@ class ParkedItemAPITestCase(HelixAPITestCase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.url = f'/api/parking-lot/'
+        self.url = '/api/parking-lot/'
 
     def test_get_parked_item(self):
         self.parking_lot = ParkingLotFactory.create()

@@ -70,7 +70,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['first_name', 'last_name', 'username', 'is_active', 'role']
+        fields = ['id', 'email', 'first_name', 'last_name', 'username', 'is_active', 'role']
 
     def validate_role(self, role):
         if not self.context['request'].user.has_perm('users.change_user'):
@@ -96,22 +96,3 @@ class UserSerializer(serializers.ModelSerializer):
         if role is not None:
             instance.set_role(role)
         return instance
-
-
-class UserMeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        fields = (
-            'id',
-            'email',
-            'username',
-            'first_name',
-            'last_name',
-            'is_active'
-        )
-
-
-class UsersListSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = User
-        exclude = ('password',)
