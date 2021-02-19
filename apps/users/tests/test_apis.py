@@ -355,7 +355,7 @@ class TestAPIMe(HelixAPITestCase):
         response = self.client.get(url)
         assert response.status_code == 200
         data = response.data
-        self.assertEqual(data['email'], user.email)
+        self.assertEqual(data[0]['email'], user.email)
 
     def test_users_api(self):
         user = UserFactory.create_batch(3)
