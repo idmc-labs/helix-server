@@ -146,78 +146,38 @@ class FigureSerializer(MetaInformationSerializerMixin,
             location['country_code'] for location in attrs['geo_locations']
         ])
 
-        if locations_code != str([location_code]):
+        if len(locations_code) != 1:
             errors.update({
-                'geo_locations': 'Location should be inside the selected country'
+                'geo_locations': 'Geolocations only support a single country under a figure.'
+            })
+
+        if locations_code.pop() != location_code:
+            errors.update({
+                'geo_locations': 'Location should be inside the selected figure country'
             })
         return errors
 
-    def validate_disaggregrated_displacement_type(self, attrs):
+    def validate_disaggregated_sum_against_reported(self, attrs, fields, verbose_names):
         errors = OrderedDict()
-        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
-        displacement_urban = attrs.get('displacement_urban', getattr(self.instance, 'displacement_urban', 0)) or 0
-        displacement_rural = attrs.get('displacement_rural', getattr(self.instance, 'displacement_rural', 0)) or 0
-        if displacement_rural + displacement_urban >= reported:
+        reported = attrs.get('reported') or getattr(self.instance, 'reported', 0)
+        disaggregated_sum = 0
+        for field in fields:
+            disaggregated_sum += attrs.get(field) or getattr(self.instance, field, 0)
+        if disaggregated_sum > reported:
             errors.update({
-                'displacement_rural': 'Added displacement is greater than reported'
+                field: f'Sum of {verbose_names} figures is greater than reported.'
+                for field in fields
             })
         return errors
 
-    def validate_disaggregrated_sex(self, attrs):
+    def validate_disaggregated_json_sum_against_reported(self, attrs, field, verbose_name):
         errors = OrderedDict()
-        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
-        sex_female = attrs.get('sex_female', getattr(self.instance, 'sex_female', 0)) or 0
-        sex_male = attrs.get('sex_male', getattr(self.instance, 'sex_male', 0)) or 0
-        if sex_male + sex_female >= reported:
+        reported = attrs.get('reported') or getattr(self.instance, 'reported', 0)
+        json_field = attrs.get(field) or getattr(self.instance, field, [])
+        total = [item['value'] for item in json_field]
+        if sum(total) > reported:
             errors.update({
-                'sex_male': 'Added sex is greater than reported'
-            })
-        return errors
-
-    def validate_disaggregated_location_camp(self, attrs):
-        errors = OrderedDict()
-        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
-        location_camp = attrs.get('location_camp', getattr(self.instance, 'location_camp', 0)) or 0
-        location_non_camp = attrs.get('location_non_camp', getattr(self.instance, 'location_non_camp', 0)) or 0
-        if location_camp + location_non_camp >= reported:
-            errors.update({
-                'location_camp': 'Added location camp is greater than reported'
-            })
-        return errors
-
-    def validate_disaggregated_conflict(self, attrs):
-        errors = OrderedDict()
-        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
-        conflict = attrs.get('conflict', getattr(self.instance, 'conflict', 0)) or 0
-        conflict_political = attrs.get('conflict_political', getattr(self.instance, 'conflict_political', 0)) or 0
-        conflict_criminal = attrs.get('conflict_criminal', getattr(self.instance, 'conflict_criminal', 0)) or 0
-        conflict_communal = attrs.get('conflict_communal', getattr(self.instance, 'conflict_communal', 0)) or 0
-        conflict_other = attrs.get('conflict_other', getattr(self.instance, 'conflict_other', 0)) or 0
-        if conflict_communal + conflict_criminal + conflict_political + conflict_other + conflict >= reported:
-            errors.update({
-                'conflict': 'Added conflicts is greater than reported'
-            })
-        return errors
-
-    def validate_disaggregated_age(self, attrs):
-        errors = OrderedDict()
-        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
-        age_json = attrs.get('age_json', getattr(self.instance, 'age_json', [])) or []
-        ages = [age['value'] for age in age_json]
-        if sum(ages) >= reported:
-            errors.update({
-                'age_json': 'Added ages are greater than reported'
-            })
-        return errors
-
-    def validate_diaggregated_strata(self, attrs):
-        errors = OrderedDict()
-        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
-        strata_json = attrs.get('strata_json', getattr(self.instance, 'strata_json', [])) or []
-        stratas = [strata['value'] for strata in strata_json]
-        if sum(stratas) >= reported:
-            errors.update({
-                'strata_json': 'Added stratas are greater than reported'
+                field: f'Sum of {verbose_name} figures is greater than reported.'
             })
         return errors
 
@@ -227,12 +187,22 @@ class FigureSerializer(MetaInformationSerializerMixin,
         errors.update(Figure.validate_dates(attrs, self.instance))
         errors.update(self.validate_figure_geo_locations(attrs))
         errors.update(self.validate_figure_country(attrs))
-        errors.update(self.validate_disaggregated_location_camp(attrs))
-        errors.update(self.validate_disaggregrated_displacement_type(attrs))
-        errors.update(self.validate_disaggregrated_sex(attrs))
-        errors.update(self.validate_disaggregated_conflict(attrs))
-        errors.update(self.validate_disaggregated_age(attrs))
-        errors.update(self.validate_diaggregated_strata(attrs))
+        errors.update(self.validate_disaggregated_sum_against_reported(
+            attrs, ['location_camp', 'location_non_camp'], 'camp and non-camp'
+        ))
+        errors.update(self.validate_disaggregated_sum_against_reported(
+            attrs, ['displacement_urban', 'displacement_rural'], 'urban and rural'
+        ))
+        errors.update(self.validate_disaggregated_sum_against_reported(
+            attrs, ['sex_male', 'sex_female'], 'male and female'
+        ))
+        errors.update(self.validate_disaggregated_sum_against_reported(
+            attrs,
+            ['conflict', 'conflict_political', 'conflict_criminal', 'conflict_other', 'conflict_communal'],
+            'conflict'
+        ))
+        errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'age_json', 'age'))
+        errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'strata_json', 'strata'))
         if errors:
             raise ValidationError(errors)
         return attrs
