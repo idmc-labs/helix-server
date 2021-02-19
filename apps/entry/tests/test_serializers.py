@@ -355,10 +355,10 @@ class TestFigureSerializer(HelixTestCase):
     def test_invalid_age_json(self):
         self.data['age_json'] = [
             {
-                    "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                    "age_from": 10,
-                    "age_to": 30,
-                    "value": 1000
+                "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                "age_from": 10,
+                "age_to": 30,
+                "value": 1000
             },
             {
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
@@ -367,6 +367,7 @@ class TestFigureSerializer(HelixTestCase):
                 "value": 23
             }
         ]
+        self.data['reported'] = sum([item['value'] for item in self.data['age_json']]) - 1
         serializer = FigureSerializer(data=self.data,
                                       context={'request': self.request})
         self.assertFalse(serializer.is_valid())
@@ -377,6 +378,7 @@ class TestFigureSerializer(HelixTestCase):
             {"date": "2020-10-10", "value": 120, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
             {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
         ]
+        self.data['reported'] = sum([item['value'] for item in self.data['strata_json']]) - 1
         serializer = FigureSerializer(data=self.data,
                                       context={'request': self.request})
         self.assertFalse(serializer.is_valid())
