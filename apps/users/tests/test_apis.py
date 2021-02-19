@@ -345,7 +345,6 @@ class TestUserListSchema(HelixGraphQLTestCase):
 
 
 class TestAPIMe(HelixAPITestCase):
-
     def test_me_api(self):
         user = UserFactory.create(
             email='ram@gmail.com'
@@ -355,12 +354,15 @@ class TestAPIMe(HelixAPITestCase):
         response = self.client.get(url)
         assert response.status_code == 200
         data = response.data
-        self.assertEqual(data[0]['email'], user.email)
+        self.assertEqual(data['email'], user.email)
 
     def test_users_api(self):
-        user = UserFactory.create_batch(3)
-        self.authenticate()
+        count = 3
+        old_count = User.objects.count()
+        users = UserFactory.create_batch(count)
+        self.authenticate(users[0])
         url = '/api/users/'
         response = self.client.get(url)
         assert response.status_code == 200
-        data = response.data
+        print(response.data)
+        assert len(response.data) == count + old_count

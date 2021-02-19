@@ -17,16 +17,13 @@ import json
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.conf import settings
-from django.urls import path, include
+from django.urls import path, re_path, include
 from django.views.decorators.csrf import csrf_exempt
 # from graphene_django.views import GraphQLView
 # from django.contrib.auth.mixins import LoginRequiredMixin
 from graphene_file_upload.django import FileUploadGraphQLView
 
-from rest_framework import routers
-
-from apps.users.views import MeView, UserViewSet
-from apps.parking_lot.views import ParkedItemViewSet
+from . import api_urls as rest_urls
 
 
 class CustomGraphQLView(FileUploadGraphQLView):
@@ -49,16 +46,11 @@ class CustomGraphQLView(FileUploadGraphQLView):
 
 CustomGraphQLView.graphiql_template = "graphene_graphiql_explorer/graphiql.html"
 
-router = routers.DefaultRouter()
-router.register(r'parking-lot', ParkedItemViewSet, basename='parking-lot')
-router.register(r'users', UserViewSet, basename='users')
-
 urlpatterns = [
-    path('admin', admin.site.urls),
-    path('graphiql', csrf_exempt(CustomGraphQLView.as_view(graphiql=True))),
-    path('graphql', csrf_exempt(CustomGraphQLView.as_view())),
-    path('api/me/', MeView.as_view()),
-    path('api/', include(router.urls))
+    path('admin/', admin.site.urls),
+    re_path('^graphiql/?$', csrf_exempt(CustomGraphQLView.as_view(graphiql=True))),
+    re_path('^graphql/?$', csrf_exempt(CustomGraphQLView.as_view())),
+    path('api/', include(rest_urls))
 ] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) \
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

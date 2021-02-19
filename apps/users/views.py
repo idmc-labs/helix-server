@@ -2,17 +2,17 @@ from rest_framework.views import APIView
 from rest_framework.filters import (
     SearchFilter
 )
-
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import response, viewsets, mixins
+
 from apps.users.models import User
-from apps.users.serializers import UserMeSerializer, UsersListSerializer
+from apps.users.serializers import UserSerializer
 
 
 class UserViewSet(mixins.ListModelMixin,
                   viewsets.GenericViewSet):
 
-    serializer_class = UsersListSerializer
+    serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, ]
     filter_backends = [SearchFilter]
     search_fields = ['username', 'email']
@@ -22,11 +22,9 @@ class UserViewSet(mixins.ListModelMixin,
 
 
 class MeView(APIView):
-    serializer_class = UserMeSerializer
+    serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, ]
 
     def get(self, request):
-        users = User.objects.all()
-        userProfileObj = users.filter(id=request.user.id)
-        serializer = UserMeSerializer(userProfileObj, many=True)
+        serializer = UserSerializer(request.user)
         return response.Response(serializer.data)
