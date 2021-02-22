@@ -16,6 +16,7 @@ from apps.entry.models import (
 )
 from apps.users.models import User
 from apps.users.enums import USER_ROLE
+from utils.validations import is_child_parent_inclusion_valid
 
 
 class DisaggregatedAgeSerializer(serializers.Serializer):
@@ -120,20 +121,6 @@ class FigureSerializer(MetaInformationSerializerMixin,
         model = Figure
         fields = '__all__'
 
-    def validate_figure_country(self, attrs):
-        errors = OrderedDict()
-        country = attrs.get('country')
-        if not country and self.instance:
-            country = self.instance.country
-        entry = attrs.get('entry', getattr(self.instance, 'entry', None))
-        if country not in entry.event.countries.all():
-            errors.update(
-                {
-                    'country': 'Country should be one of the countries of the event'
-                }
-            )
-        return errors
-
     def validate_figure_geo_locations(self, attrs):
         errors = OrderedDict()
         country = attrs.get('country')
@@ -159,10 +146,10 @@ class FigureSerializer(MetaInformationSerializerMixin,
 
     def validate_disaggregated_sum_against_reported(self, attrs, fields, verbose_names):
         errors = OrderedDict()
-        reported = attrs.get('reported') or getattr(self.instance, 'reported', 0)
+        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
         disaggregated_sum = 0
         for field in fields:
-            disaggregated_sum += attrs.get(field) or getattr(self.instance, field, 0)
+            disaggregated_sum += attrs.get(field, getattr(self.instance, field, 0)) or 0
         if disaggregated_sum > reported:
             errors.update({
                 field: f'Sum of {verbose_names} figures is greater than reported.'
@@ -185,8 +172,13 @@ class FigureSerializer(MetaInformationSerializerMixin,
         attrs = super().validate(attrs)
         errors = OrderedDict()
         errors.update(Figure.validate_dates(attrs, self.instance))
+        errors.update(
+            is_child_parent_inclusion_valid(attrs, self.instance, 'country', 'entry.event.countries')
+        )
         errors.update(self.validate_figure_geo_locations(attrs))
-        errors.update(self.validate_figure_country(attrs))
+        errors.update(
+            is_child_parent_inclusion_valid(attrs, self.instance, 'country', 'entry.event.countries')
+        )
         errors.update(self.validate_disaggregated_sum_against_reported(
             attrs, ['location_camp', 'location_non_camp'], 'camp and non-camp'
         ))

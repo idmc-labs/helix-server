@@ -6,6 +6,7 @@ from rest_framework import serializers
 from apps.contrib.serializers import MetaInformationSerializerMixin
 from apps.crisis.models import Crisis
 from apps.event.models import Event, Actor
+from utils.validations import is_child_parent_inclusion_valid
 
 
 class ActorSerializer(MetaInformationSerializerMixin,
@@ -21,25 +22,13 @@ class EventSerializer(MetaInformationSerializerMixin,
         model = Event
         fields = '__all__'
 
-    def validate_within_crisis_countries(self, attrs: dict):
-        errors = OrderedDict()
-        crisis = attrs.get('crisis')
-        if not crisis and self.instance:
-            crisis = self.instance.crisis
-        countries = attrs.get('countries')
-        if not countries and self.instance:
-            countries = self.instance.countries.all()
-        if set(countries).difference(crisis.countries.all()):
-            errors.update({
-                'countries': 'Country should be one of the countries of the crisis'
-            })
-        return errors
-
     def validate(self, attrs: dict) -> dict:
         errors = OrderedDict()
         errors.update(Event.clean_dates(attrs, self.instance))
         errors.update(Event.clean_by_event_type(attrs, self.instance))
-        errors.update(self.validate_within_crisis_countries(attrs))
+        errors.update(
+            is_child_parent_inclusion_valid(attrs, self.instance, field='countries', parent_field='crisis.countries')
+        )
         if errors:
             raise ValidationError(errors)
         if attrs.get('event_type',

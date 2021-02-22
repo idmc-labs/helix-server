@@ -282,7 +282,7 @@ class TestFigureSerializer(HelixTestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_invalid_contry(self):
-        country3 = CountryFactory.create(country_code=2312)
+        country3 = CountryFactory.create(country_code=12312)
         self.data['country'] = country3.id
         serializer = FigureSerializer(data=self.data,
                                       context={'request': self.request})
