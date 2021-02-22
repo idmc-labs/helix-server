@@ -17,6 +17,7 @@ from apps.entry.constants import STOCK, FLOW
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
+from utils.validations import is_child_parent_dates_valid
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -283,23 +284,7 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     @staticmethod
     def validate_dates(values: dict, instance=None) -> OrderedDict:
-        errors = OrderedDict()
-        start_date = values.get('start_date', getattr(instance, 'start_date', None))
-        end_date = values.get('end_date', getattr(instance, 'end_date', None))
-        if start_date and end_date and end_date < start_date:
-            errors['end_date'] = gettext('End date should be later than start date. ')
-        event_start_date = values.get('entry', getattr(instance, 'entry', None)).event.start_date
-        event_end_date = values.get('entry', getattr(instance, 'entry', None)).event.end_date
-        if event_start_date:
-            if start_date and event_start_date and event_start_date >= start_date <= event_start_date:
-                errors['start_date'] = gettext('Start date should be after event start date: %(date)s.'
-                                               % {'date': event_start_date})
-        category_type = values.get('category', getattr(instance, 'category', None)).type
-        if category_type == 'FLOW' and event_end_date:
-            if event_end_date and end_date > event_end_date:
-                errors['end_date'] = gettext('End date should be before event end date: %(date)s.'
-                                             % {'date': event_end_date})
-        return errors
+        return is_child_parent_dates_valid(values, instance, 'entry.event')
 
     # core
 

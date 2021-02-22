@@ -10,6 +10,7 @@ from apps.contrib.models import (
 )
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
+from utils.validations import is_child_parent_dates_valid
 
 
 class NameAttributedModels(models.Model):
@@ -173,19 +174,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
 
     @staticmethod
     def clean_dates(values: dict, instance=None) -> OrderedDict:
-        errors = OrderedDict()
-        start_date = values.get('start_date', getattr(instance, 'start_date', None))
-        end_date = values.get('end_date', getattr(instance, 'end_date', None))
-        if start_date and end_date and end_date < start_date:
-            errors['end_date'] = gettext('Pick the end date later than start date. ')
-        crisis = values.get('crisis', getattr(instance, 'crisis', None))
-        if start_date and crisis.start_date and crisis.start_date >= start_date <= crisis.end_date:
-            errors['start_date'] = gettext('Start date should be after crisis start date: %(date)s.'
-                                           % {'date': crisis.start_date})
-        if end_date and crisis.end_date and crisis.end_date <= end_date >= crisis.end_date:
-            errors['end_date'] = gettext('End date should be before crisis end date: %(date)s.'
-                                         % {'date': crisis.end_date})
-        return errors
+        return is_child_parent_dates_valid(values, instance, 'crisis')
 
     @staticmethod
     def clean_by_event_type(values: dict, instance=None) -> OrderedDict:

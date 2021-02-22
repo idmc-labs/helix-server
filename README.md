@@ -1,6 +1,10 @@
 # Helix Server
 
-Get started with:
+## Initialize environment
+
+Create a `.env` file in the project folder. (For development, blank file is fine)
+
+## Get started with:
 
 ```bash
 docker-compose up
