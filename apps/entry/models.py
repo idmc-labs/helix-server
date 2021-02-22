@@ -222,7 +222,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                                  blank=False, null=True)
     role = enum.EnumField(enum=ROLE, verbose_name=_('Role'), default=ROLE.RECOMMENDED)
 
-    start_date = models.DateField(verbose_name=_('Start Date'))
+    start_date = models.DateField(verbose_name=_('Start Date'),
+                                  blank=False, null=True)
     end_date = models.DateField(verbose_name=_('End Date'),
                                 blank=True, null=True)
     include_idu = models.BooleanField(verbose_name=_('Include in IDU'))
