@@ -21,7 +21,7 @@ class CommonExtractionInputMixin:
     figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum), required=False)
     entry_tags = graphene.List(graphene.NonNull(graphene.ID), required=False)
     entry_article_title = graphene.String()
-    event_crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
+    event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum), required=False)
 
 
 class CreateExtractInputType(CommonExtractionInputMixin, graphene.InputObjectType):

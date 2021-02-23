@@ -9,6 +9,7 @@ from apps.extraction.models import (
 )
 from apps.entry.schema import EntryListType
 from apps.entry.enums import RoleGrapheneEnum
+from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.fields import (
     DjangoPaginatedListObjectField,
     CustomDjangoListObjectType,
@@ -26,6 +27,7 @@ class ExtractionQueryObjectType(DjangoObjectType):
                                                  page_size_query_param='pageSize'
                                              ), accessor='entries')
     figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
+    event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
 
 
 class ExtractionQueryListType(CustomDjangoListObjectType):
