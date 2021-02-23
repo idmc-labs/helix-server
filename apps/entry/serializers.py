@@ -140,7 +140,7 @@ class FigureSerializer(MetaInformationSerializerMixin,
 
         if locations_code.pop() != location_code:
             errors.update({
-                'geo_locations': 'Location should be inside the selected figure country'
+                'geo_locations': "Location should be inside the selected figure's country"
             })
         return errors
 
