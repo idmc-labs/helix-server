@@ -336,10 +336,15 @@ class TestFigureSerializer(HelixTestCase):
     def test_invalid_gender(self):
         self.data['sex_male'] = 10
         self.data['sex_female'] = 120
+        self.data['reported'] = self.data['sex_male'] + self.data['sex_female'] - 1
         serializer = FigureSerializer(data=self.data,
                                       context={'request': self.request})
         self.assertFalse(serializer.is_valid())
         self.assertIn('sex_male', serializer.errors)
+        self.data['reported'] = self.data['sex_male'] + self.data['sex_female']
+        serializer = FigureSerializer(data=self.data,
+                                      context={'request': self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_invalid_conflict(self):
         self.data['conflict'] = 12
