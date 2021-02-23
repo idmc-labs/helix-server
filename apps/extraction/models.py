@@ -28,7 +28,7 @@ class QueryAbstractModel(models.Model):
                                         blank=True, related_name='+')
     entry_article_title = models.TextField(verbose_name=_('Article Title'),
                                            blank=True, null=True)
-    event_crisis_types = ArrayField(enum.EnumField(enum=Crisis.CRISIS_TYPE),
+    event_crisis_types = ArrayField(base_field=enum.EnumField(enum=Crisis.CRISIS_TYPE),
                                     blank=True, null=True)
 
     class Meta:
