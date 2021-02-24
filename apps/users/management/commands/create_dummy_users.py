@@ -11,18 +11,18 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         User = get_user_model()
         raw_password = 'admin123'
-        roles = [('admin', USER_ROLE.ADMIN.name),
-                 ('editor', USER_ROLE.MONITORING_EXPERT_EDITOR.name),
-                 ('reviewer', USER_ROLE.MONITORING_EXPERT_REVIEWER.name),
-                 ('guest', USER_ROLE.GUEST.name)]
+        roles = [('admin', USER_ROLE.ADMIN.name, 'Eric', 'Lowe'),
+                 ('editor', USER_ROLE.MONITORING_EXPERT_EDITOR.name, 'Larissa', 'Stevens'),
+                 ('reviewer', USER_ROLE.MONITORING_EXPERT_REVIEWER.name, 'Herman', 'Garza'),
+                 ('guest', USER_ROLE.GUEST.name, 'Frederick', 'Gutierrez')]
 
-        for name, role in roles:
-            email = f'{name}@helix.com'
+        for username, role, first_name, last_name in roles:
+            email = f'{username}@idmcdb.org'
             user, _ = User.objects.get_or_create(
-                username=name,
+                username=username,
                 email=email,
-                first_name=f'f{name}',
-                last_name=f'l{name}',
+                first_name=first_name,
+                last_name=last_name,
             )
             user.set_password(raw_password)
             user.save()
