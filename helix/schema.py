@@ -10,13 +10,14 @@ from apps.crisis import schema as crisis_schema, mutations as crisis_mutations
 from apps.event import schema as event_schema, mutations as event_mutations
 from apps.entry import schema as entry_schema, mutations as entry_mutations
 from apps.extraction import schema as extraction_schema, mutations as extraction_mutations
+from apps.report import schema as report_schema
 from apps.resource import schema as resource_schema, mutations as resource_mutations
 from apps.review import schema as review_schema, mutations as review_mutations
-from apps.parking_lot import schema as parking_lot_schema, mutations as parking_lot_mutations
 from apps.contextualupdate import (
     schema as contextual_update_schema,
     mutations as contextual_update_mutations
 )
+from apps.parking_lot import schema as parking_lot_schema, mutations as parking_lot_mutations
 
 
 class Query(user_schema.Query,
@@ -32,6 +33,7 @@ class Query(user_schema.Query,
             review_schema.Query,
             parking_lot_schema.Query,
             contextual_update_schema.Query,
+            report_schema.Query,
             graphene.ObjectType):
     debug = graphene.Field(DjangoDebug, name='_debug')
 
