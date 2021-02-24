@@ -7,7 +7,12 @@ from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.entry.enums import RoleGrapheneEnum
 from apps.report.models import Report
 from apps.report.filters import ReportFilter
-from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
+from utils.fields import (
+    DjangoPaginatedListObjectField,
+    CustomDjangoListObjectType,
+    CustomListObjectType,
+    CustomPaginatedListObjectField,
+)
 
 
 class ReportCountryType(graphene.ObjectType):
@@ -21,6 +26,11 @@ class ReportCountryType(graphene.ObjectType):
         return Country.objects.get(id=root['country'])
 
 
+class ReportCountryListType(CustomListObjectType):
+    class Meta:
+        base_type = ReportCountryType
+
+
 class ReportType(DjangoObjectType):
     class Meta:
         model = Report
@@ -28,7 +38,11 @@ class ReportType(DjangoObjectType):
 
     figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
     event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
-    countries_report = graphene.List(ReportCountryType)
+    countries_report = CustomPaginatedListObjectField(ReportCountryListType,
+                                                      accessor='countries_report',
+                                                      pagination=PageGraphqlPagination(
+                                                          page_size_query_param='pageSize'
+                                                      ))
 
 
 class ReportListType(CustomDjangoListObjectType):

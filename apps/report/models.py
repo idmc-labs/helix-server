@@ -49,21 +49,25 @@ class Report(MetaInformationArchiveAbstractModel,
                 total_stock_conflict=Sum(
                     'total_figures',
                     filter=Q(category__type=STOCK,
+                             role=Figure.ROLE.RECOMMENDED,
                              entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
                 ),
                 total_flow_conflict=Sum(
                     'total_figures',
                     filter=Q(category__type=FLOW,
+                             role=Figure.ROLE.RECOMMENDED,
                              entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
                 ),
                 total_stock_disaster=Sum(
                     'total_figures',
                     filter=Q(category__type=STOCK,
+                             role=Figure.ROLE.RECOMMENDED,
                              entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
                 ),
                 total_flow_disaster=Sum(
                     'total_figures',
                     filter=Q(category__type=FLOW,
+                             role=Figure.ROLE.RECOMMENDED,
                              entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
                 ),
             )

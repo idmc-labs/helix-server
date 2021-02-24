@@ -1,10 +1,13 @@
 from collections import OrderedDict
+from functools import partial
 
 from django.conf import settings
 from django.core.cache import cache
 from django.db.models import QuerySet, FileField
 from django.db.models.fields.files import FieldFile
-from graphene import Field, Int
+from graphene import Field, Int, ObjectType, NonNull
+from graphene.types.base import BaseOptions
+from graphene.types.structures import Structure
 from graphene.utils.str_converters import to_snake_case
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django.utils import is_valid_django_model, maybe_queryset, DJANGO_FILTER_INSTALLED
@@ -21,6 +24,18 @@ from graphene_django_extras.types import DjangoObjectOptions
 from graphene_django_extras.utils import get_extra_filters
 
 from utils.pagination import OrderingOnlyArgumentPagination
+
+
+class CustomObjectTypeOptions(BaseOptions):
+    fields = None
+    interfaces = ()
+    base_type = None
+    registry = None
+    connection = None
+    create_container = None
+    results_field_name = None
+    input_for = None
+    filterset_class = None
 
 
 # Graphene related fields
@@ -48,17 +63,91 @@ class CustomDjangoListField(DjangoListField):
     """
     @staticmethod
     def list_resolver(
-            django_object_type, resolver, default_queryset, root, info, **args
+            django_object_type, resolver, root, info, **args
     ):
         queryset = maybe_queryset(resolver(root, info, **args))
         if queryset is None:
-            queryset = default_queryset
+            queryset = QuerySet.none()
 
         if isinstance(queryset, QuerySet):
             if hasattr(django_object_type, 'get_queryset'):
                 # Pass queryset to the DjangoObjectType get_queryset method
                 queryset = maybe_queryset(django_object_type.get_queryset(queryset, info))
         return queryset
+    
+    def get_resolver(self, parent_resolver):
+        _type = self.type
+        if isinstance(_type, NonNull):
+            _type = _type.of_type
+        object_type = _type.of_type.of_type
+        return partial(
+            self.list_resolver,
+            object_type,
+            parent_resolver,
+        )
+
+
+class CustomListObjectType(ObjectType):
+    class Meta:
+        abstract = True
+
+    @classmethod
+    def __init_subclass_with_meta__(
+        cls,
+        base_type=None,
+        results_field_name=None,
+        filterset_class=None,
+        **options,
+    ):
+
+        assert base_type is not None, (
+            'Base Type of the ListField should be defined in the Meta.'
+        )
+
+        if not DJANGO_FILTER_INSTALLED and filterset_class:
+            raise Exception("Can only set filterset_class if Django-Filter is installed")
+
+        results_field_name = results_field_name or "results"
+
+        result_container = CustomDjangoListField(base_type)
+
+        _meta = CustomObjectTypeOptions(cls)
+        _meta.base_type = base_type
+        _meta.results_field_name = results_field_name
+        _meta.filterset_class = filterset_class
+        _meta.fields = OrderedDict(
+            [
+                (results_field_name, result_container),
+                (
+                    "count",
+                    Field(
+                        Int,
+                        name="totalCount",
+                        description="Total count of matches elements",
+                    ),
+                ),
+                (
+                    "page",
+                    Field(
+                        Int,
+                        name="page",
+                        description="Page Number",
+                    ),
+                ),
+                (
+                    "pageSize",
+                    Field(
+                        Int,
+                        name="pageSize",
+                        description="Page Size",
+                    ),
+                )
+            ]
+        )
+
+        super(CustomListObjectType, cls).__init_subclass_with_meta__(
+            _meta=_meta, **options
+        )
 
 
 class CustomDjangoListObjectType(DjangoListObjectType):
@@ -176,6 +265,82 @@ class CustomDjangoListObjectType(DjangoListObjectType):
 
         super(DjangoListObjectType, cls).__init_subclass_with_meta__(
             _meta=_meta, **options
+        )
+
+
+class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
+    def __init__(
+        self,
+        _type,
+        pagination=None,
+        extra_filter_meta=None,
+        filterset_class=None,
+        *args,
+        **kwargs,
+    ):
+
+        kwargs.setdefault("args", {})
+
+        filterset_class = filterset_class or _type._meta.filterset_class
+        self.filterset_class = get_filterset_class(filterset_class) if filterset_class else None
+        self.filtering_args = {}
+        if filterset_class:
+            self.filtering_args = get_filtering_args_from_filterset(
+                self.filterset_class, _type
+            )
+            kwargs["args"].update(self.filtering_args)
+
+        pagination = pagination or OrderingOnlyArgumentPagination()
+
+        if pagination is not None:
+            assert isinstance(pagination, BaseDjangoGraphqlPagination), (
+                'You need to pass a valid DjangoGraphqlPagination in DjangoFilterPaginateListField, received "{}".'
+            ).format(pagination)
+
+            pagination_kwargs = pagination.to_graphql_fields()
+
+            self.pagination = pagination
+            kwargs.update(**pagination_kwargs)
+
+        self.accessor = kwargs.pop('accessor', None)
+        super(DjangoFilterPaginateListField, self).__init__(
+            _type, *args, **kwargs
+        )
+
+    def list_resolver(
+            self, filterset_class, filtering_args, root, info, **kwargs
+    ):
+
+        filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
+        qs = getattr(root, self.accessor)
+        if hasattr(qs, 'all'):
+            qs = qs.all()
+        qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context).qs
+        count = qs.count()
+
+        if getattr(self, "pagination", None):
+            ordering = kwargs.pop(self.pagination.ordering_param, None) or self.pagination.ordering
+            ordering = ','.join([to_snake_case(each) for each in ordering.strip(',').replace(' ', '').split(',')])
+            self.pagination.ordering = ordering
+            qs = self.pagination.paginate_queryset(qs, **kwargs)
+
+        return CustomDjangoListObjectBase(
+            count=count,
+            results=maybe_queryset(qs),
+            results_field_name=self.type._meta.results_field_name,
+            page=kwargs.get('page', 1) if hasattr(self.pagination, 'page') else None,
+            pageSize=kwargs.get('pageSize', graphql_api_settings.DEFAULT_PAGE_SIZE) if hasattr(
+                self.pagination, 'page') else None
+        )
+
+    def get_resolver(self, parent_resolver):
+        current_type = self.type
+        while isinstance(current_type, Structure):
+            current_type = current_type.of_type
+        return partial(
+            self.list_resolver,
+            self.filterset_class,
+            self.filtering_args,
         )
 
 
