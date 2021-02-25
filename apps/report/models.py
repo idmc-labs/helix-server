@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Sum, Q
+from django.db.models import Sum, Q, F
 from django.utils.translation import gettext_lazy as _
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel
@@ -87,8 +87,9 @@ class Report(MetaInformationArchiveAbstractModel,
                 id__in=(
                     Report.objects.filter(id=self.id) |
                     Report.objects.get(id=self.id).masterfact_reports.all()
-                ))
-            ).select_related('country').values('country').order_by().annotate(
+                ).values('figures'))
+            ).select_related('event__entry').values('entry__event').order_by().distinct().annotate(
+                event=F('entry__event'),
                 total_stock_conflict=Sum(
                     'total_figures',
                     filter=Q(category__type=STOCK,
@@ -114,6 +115,7 @@ class Report(MetaInformationArchiveAbstractModel,
                              entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
                 ),
             )
+        # TODO: Handle for generated reports
         return []
 
     class Meta:

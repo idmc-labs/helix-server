@@ -5,6 +5,7 @@ from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
 from apps.country.models import Country
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.entry.enums import RoleGrapheneEnum
+from apps.event.models import Event
 from apps.report.models import Report
 from apps.report.filters import ReportFilter, CountryReportFilter
 from utils.graphene.types import CustomListObjectType, CustomDjangoListObjectType
@@ -31,6 +32,25 @@ class ReportCountryListType(CustomListObjectType):
         filterset_class = CountryReportFilter
 
 
+class ReportEventType(graphene.ObjectType):
+    """
+    NOTE: These fields are pre-defined in the queryset annotation
+    """
+    event = graphene.Field('apps.event.schema.EventType', required=True)
+    total_stock_conflict = graphene.Int()
+    total_flow_conflict = graphene.Int()
+    total_stock_disaster = graphene.Int()
+    total_flow_disaster = graphene.Int()
+
+    def resolve_event(root, info, **kwargs):
+        return Event.objects.get(id=root['event'])
+
+
+class ReportEventListType(CustomListObjectType):
+    class Meta:
+        base_type = ReportEventType
+
+
 class ReportType(DjangoObjectType):
     class Meta:
         model = Report
@@ -43,6 +63,11 @@ class ReportType(DjangoObjectType):
                                                       pagination=PageGraphqlPagination(
                                                           page_size_query_param='pageSize'
                                                       ))
+    events_report = CustomPaginatedListObjectField(ReportEventListType,
+                                                   accessor='events_report',
+                                                   pagination=PageGraphqlPagination(
+                                                       page_size_query_param='pageSize'
+                                                   ))
 
 
 class ReportListType(CustomDjangoListObjectType):
