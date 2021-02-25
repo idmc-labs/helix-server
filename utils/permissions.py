@@ -1,9 +1,14 @@
+import hashlib
 from typing import List, Callable
+import logging
 
+from django.core.cache import cache
 from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext
 
 PERMISSION_DENIED_MESSAGE = 'You do not have permission to perform this action.'
+
+logger = logging.getLogger(__name__)
 
 
 def permission_checker(perms: List[str]) -> Callable[..., Callable]:
@@ -22,5 +27,31 @@ def is_authenticated() -> Callable[..., Callable]:
             if not info.context.user.is_authenticated:
                 raise PermissionDenied(gettext(PERMISSION_DENIED_MESSAGE))
             return func(root, info, *args, **kwargs)
+        return wrapped_func
+    return wrapped
+
+
+def cache_key_function(*args, **kwargs):
+    logger.error('cache key')
+    return hashlib.sha256((str(args) + str(kwargs)).encode()).hexdigest()
+
+
+def cache_me(timeout=None):
+    logger.warn('LOOOLL INSIDE')
+
+    def wrapped(func):
+        logger.warn('LOOOLL DEEPPP')
+
+        def wrapped_func(*args, **kwargs):
+            logger.error('I am caching...')
+            cache_key = cache_key_function(func.__name__, *args, **kwargs)
+            cached_value = cache.get(cache_key)
+            if cached_value:
+                logger.warn('I am found')
+                return cached_value
+            value = func(*args, **kwargs)
+            cache.set(cache_key, value, timeout)
+            logger.warn('I am cached')
+            return value
         return wrapped_func
     return wrapped

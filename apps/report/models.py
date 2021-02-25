@@ -7,6 +7,7 @@ from apps.crisis.models import Crisis
 from apps.entry.constants import STOCK, FLOW
 from apps.entry.models import FigureDisaggregationAbstractModel, Figure
 from apps.extraction.models import QueryAbstractModel
+from utils.permissions import cache_me
 
 
 class Report(MetaInformationArchiveAbstractModel,
@@ -42,15 +43,15 @@ class Report(MetaInformationArchiveAbstractModel,
                                            'Reliability, and Caveats'))
 
     @property
+    @cache_me(3000)
     def countries_report(self) -> list:
-        # TODO: cache me
         if not self.generated:
             return (Figure.objects.filter(
                 id__in=(
                     Report.objects.filter(id=self.id) |
                     Report.objects.get(id=self.id).masterfact_reports.all()
                 ).values('figures'))
-            ).select_related('country').values('country').order_by().annotate(
+            ).select_related('country').values('country').order_by().distinct().annotate(
                 total_stock_conflict=Sum(
                     'total_figures',
                     filter=Q(category__type=STOCK,
@@ -80,8 +81,8 @@ class Report(MetaInformationArchiveAbstractModel,
         return []
 
     @property
+    @cache_me(3000)
     def events_report(self) -> list:
-        # TODO: cache me
         if not self.generated:
             return (Figure.objects.filter(
                 id__in=(
