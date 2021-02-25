@@ -96,6 +96,51 @@ class TestLogin(HelixGraphQLTestCase):
         self.assertIn('nonFieldErrors', [each['field'] for each in content['data']['login']['errors']])
 
 
+class TestChangePassword(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.user = self.create_user()
+        self.change_query = '''
+            mutation MyMutation ($password: String!){
+                changePassword(data: {password: $password}) {
+                    errors
+                    result {
+                        email
+                    }
+                }
+            }
+        '''
+
+    def test_valid_password_change(self):
+        self.force_login(self.user)
+        password = 'someRandom123pass455151'
+        response = self.query(
+            self.change_query,
+            variables={'password': password},
+        )
+
+        content = response.json()
+
+        self.assertResponseNoErrors(response)
+        self.assertIsNone(content['data']['changePassword']['errors'])
+        self.assertIsNotNone(content['data']['changePassword']['result'])
+        self.assertIsNotNone(content['data']['changePassword']['result']['email'])
+
+        self.user.refresh_from_db()
+        assert self.user.check_password(password)
+
+    def test_invalid_password(self):
+        self.force_login(self.user)
+        response = self.query(
+            self.change_query,
+            variables={'password': 'abc'},
+        )
+
+        content = response.json()
+
+        self.assertResponseNoErrors(response)
+        self.assertIn('password', [each['field'] for each in content['data']['changePassword']['errors']])
+
+
 class TestRegister(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.register = '''
