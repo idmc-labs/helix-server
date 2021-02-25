@@ -38,6 +38,7 @@ class Report(MetaInformationArchiveAbstractModel,
                                            'Comment, Source Excerpt, IDU Excerpt, Breakdown & '
                                            'Reliability, and Caveats'))
 
+    @property
     def countries_report(self) -> list:
         if not self.generated:
             return (Figure.objects.filter(

@@ -1,3 +1,4 @@
+from django_filters import rest_framework as df
 import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
@@ -6,7 +7,7 @@ from apps.country.models import Country
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.entry.enums import RoleGrapheneEnum
 from apps.report.models import Report
-from apps.report.filters import ReportFilter
+from apps.report.filters import ReportFilter, CountryReportFilter
 from utils.fields import (
     DjangoPaginatedListObjectField,
     CustomDjangoListObjectType,
@@ -16,6 +17,9 @@ from utils.fields import (
 
 
 class ReportCountryType(graphene.ObjectType):
+    """
+    Note: These fields are pre-defined in the queryset annotation
+    """
     country = graphene.Field('apps.country.schema.CountryType', required=True)
     total_stock_conflict = graphene.Int()
     total_flow_conflict = graphene.Int()
@@ -29,6 +33,7 @@ class ReportCountryType(graphene.ObjectType):
 class ReportCountryListType(CustomListObjectType):
     class Meta:
         base_type = ReportCountryType
+        filterset_class = CountryReportFilter
 
 
 class ReportType(DjangoObjectType):

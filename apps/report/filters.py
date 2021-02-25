@@ -21,3 +21,10 @@ class ReportFilter(df.FilterSet):
     @property
     def qs(self):
         return super().qs.distinct()
+
+
+class CountryReportFilter(df.FilterSet):
+    """
+    NOTE: following fields are predefined and annotated into the queryset
+    """
+    country = df.CharFilter(field_name='country', lookup_expr='exact')

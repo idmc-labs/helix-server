@@ -107,6 +107,10 @@ class CustomListObjectType(ObjectType):
         if not DJANGO_FILTER_INSTALLED and filterset_class:
             raise Exception("Can only set filterset_class if Django-Filter is installed")
 
+        if not filterset_class:
+            from django_filters import rest_framework as df
+            filterset_class = df.FilterSet
+
         results_field_name = results_field_name or "results"
 
         result_container = CustomDjangoListField(base_type)
@@ -208,20 +212,6 @@ class CustomDjangoListObjectType(DjangoListObjectType):
 
         filter_fields = filter_fields or baseType._meta.filter_fields
 
-        """
-        if pagination:
-            result_container = pagination.get_pagination_field(baseType)
-        else:
-            global_paginator = graphql_api_settings.DEFAULT_PAGINATION_CLASS
-            if global_paginator:
-                assert issubclass(global_paginator, BaseDjangoGraphqlPagination), (
-                    'You need to pass a valid DjangoGraphqlPagination class in {}.Meta, received "{}".'
-                ).format(cls.__name__, global_paginator)
-
-                global_paginator = global_paginator()
-                result_container = global_paginator.get_pagination_field(baseType)
-            else:
-        """
         result_container = CustomDjangoListField(baseType)
 
         _meta = DjangoObjectOptions(cls)
@@ -268,6 +258,18 @@ class CustomDjangoListObjectType(DjangoListObjectType):
         )
 
 
+def get_filtering_args_from_non_model_filterset(filterset_class):
+    from graphene_django.forms.converter import convert_form_field
+
+    args = {}
+    for name, filter_field in filterset_class.declared_filters.items():
+        form_field = filter_field.field
+        field_type = convert_form_field(form_field).Argument()
+        field_type.description = filter_field.label
+        args[name] = field_type
+    return args
+
+
 class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
     def __init__(
         self,
@@ -282,13 +284,11 @@ class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
         kwargs.setdefault("args", {})
 
         filterset_class = filterset_class or _type._meta.filterset_class
-        self.filterset_class = get_filterset_class(filterset_class) if filterset_class else None
-        self.filtering_args = {}
-        if filterset_class:
-            self.filtering_args = get_filtering_args_from_filterset(
-                self.filterset_class, _type
-            )
-            kwargs["args"].update(self.filtering_args)
+        self.filterset_class = get_filterset_class(filterset_class)
+        self.filtering_args = get_filtering_args_from_non_model_filterset(
+            self.filterset_class
+        )
+        kwargs["args"].update(self.filtering_args)
 
         pagination = pagination or OrderingOnlyArgumentPagination()
 
@@ -371,25 +371,6 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
         )
         kwargs.setdefault("args", {})
         kwargs["args"].update(self.filtering_args)
-
-        """
-        # filtering by primary key or id seems unnecessary...
-        if "id" not in kwargs["args"].keys():
-            self.filtering_args.update(
-                {
-                    "id": Argument(
-                        ID, description="Django object unique identification field"
-                    )
-                }
-            )
-            kwargs["args"].update(
-                {
-                    "id": Argument(
-                        ID, description="Django object unique identification field"
-                    )
-                }
-            )
-        """
 
         pagination = pagination or OrderingOnlyArgumentPagination()
 
