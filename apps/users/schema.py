@@ -38,7 +38,7 @@ class UserType(DjangoObjectType):
                                                    ), accessor='created_entry')
     role = Field(PermissionRoleEnum)
     permissions = graphene.List(graphene.NonNull(PermissionsType))
-    full_name = Field(graphene.String)
+    full_name = Field(graphene.String, required=True)
 
 
 class UserListType(CustomDjangoListObjectType):
