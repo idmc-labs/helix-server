@@ -35,7 +35,7 @@ class ReportUpdateInputType(graphene.InputObjectType):
     event_crises = graphene.List(graphene.NonNull(graphene.ID), required=False)
     figure_start_after = graphene.Date(required=False)
     figure_end_before = graphene.Date(required=False)
-    event_crisis_types = graphene.Date(required=False)
+    event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum), required=False)
 
 
 class CreateReport(graphene.Mutation):
