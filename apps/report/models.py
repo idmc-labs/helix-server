@@ -43,81 +43,87 @@ class Report(MetaInformationArchiveAbstractModel,
                                            'Reliability, and Caveats'))
 
     @property
-    @cache_me(3000)
-    def countries_report(self) -> list:
+    def report_figures(self):
         if not self.generated:
-            return (Figure.objects.filter(
+            return Figure.objects.filter(
                 id__in=(
                     Report.objects.filter(id=self.id) |
                     Report.objects.get(id=self.id).masterfact_reports.all()
                 ).values('figures'))
-            ).select_related('country').values('country').order_by().distinct().annotate(
-                total_stock_conflict=Sum(
-                    'total_figures',
-                    filter=Q(category__type=STOCK,
-                             role=Figure.ROLE.RECOMMENDED,
-                             entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
-                ),
-                total_flow_conflict=Sum(
-                    'total_figures',
-                    filter=Q(category__type=FLOW,
-                             role=Figure.ROLE.RECOMMENDED,
-                             entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
-                ),
-                total_stock_disaster=Sum(
-                    'total_figures',
-                    filter=Q(category__type=STOCK,
-                             role=Figure.ROLE.RECOMMENDED,
-                             entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
-                ),
-                total_flow_disaster=Sum(
-                    'total_figures',
-                    filter=Q(category__type=FLOW,
-                             role=Figure.ROLE.RECOMMENDED,
-                             entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
-                ),
+        else:
+            return Figure.objects.filter(
+                start_date__gte=self.figure_start_after,
+                start_date__lt=self.figure_end_before,
             )
-        # TODO: Handle for generated reports
-        return []
 
     @property
-    @cache_me(3000)
+    # @cache_me(3000)
+    def countries_report(self) -> list:
+        return self.report_figures.select_related(
+            'country'
+        ).values('country').order_by().distinct().annotate(
+            id=F('country_id'),
+            name=F('country__name'),
+            total_stock_conflict=Sum(
+                'total_figures',
+                filter=Q(category__type=STOCK,
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+            ),
+            total_flow_conflict=Sum(
+                'total_figures',
+                filter=Q(category__type=FLOW,
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+            ),
+            total_stock_disaster=Sum(
+                'total_figures',
+                filter=Q(category__type=STOCK,
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+            ),
+            total_flow_disaster=Sum(
+                'total_figures',
+                filter=Q(category__type=FLOW,
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+            ),
+        )
+
+    @property
+    # @cache_me(3000)
     def events_report(self) -> list:
-        if not self.generated:
-            return (Figure.objects.filter(
-                id__in=(
-                    Report.objects.filter(id=self.id) |
-                    Report.objects.get(id=self.id).masterfact_reports.all()
-                ).values('figures'))
-            ).select_related('event__entry').values('entry__event').order_by().distinct().annotate(
-                event=F('entry__event'),
-                total_stock_conflict=Sum(
-                    'total_figures',
-                    filter=Q(category__type=STOCK,
-                             role=Figure.ROLE.RECOMMENDED,
-                             entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
-                ),
-                total_flow_conflict=Sum(
-                    'total_figures',
-                    filter=Q(category__type=FLOW,
-                             role=Figure.ROLE.RECOMMENDED,
-                             entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
-                ),
-                total_stock_disaster=Sum(
-                    'total_figures',
-                    filter=Q(category__type=STOCK,
-                             role=Figure.ROLE.RECOMMENDED,
-                             entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
-                ),
-                total_flow_disaster=Sum(
-                    'total_figures',
-                    filter=Q(category__type=FLOW,
-                             role=Figure.ROLE.RECOMMENDED,
-                             entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
-                ),
-            )
-        # TODO: Handle for generated reports
-        return []
+        return self.report_figures.select_related(
+            'event__entry'
+        ).values('entry__event').order_by().distinct().annotate(
+            event=F('entry__event'),
+            id=F('entry__event_id'),
+            name=F('entry__event__name'),
+            total_stock_conflict=Sum(
+                'total_figures',
+                filter=Q(category__type=STOCK,
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+            ),
+            total_flow_conflict=Sum(
+                'total_figures',
+                filter=Q(category__type=FLOW,
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+            ),
+            total_stock_disaster=Sum(
+                'total_figures',
+                filter=Q(category__type=STOCK,
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+            ),
+            total_flow_disaster=Sum(
+                'total_figures',
+                filter=Q(category__type=FLOW,
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+            ),
+        )
 
     class Meta:
         # TODO: implement the side effects of report sign off

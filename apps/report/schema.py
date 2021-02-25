@@ -17,13 +17,15 @@ class ReportCountryType(graphene.ObjectType):
     Note: These fields are pre-defined in the queryset annotation
     """
     country = graphene.Field('apps.country.schema.CountryType', required=True)
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
     total_stock_conflict = graphene.Int()
     total_flow_conflict = graphene.Int()
     total_stock_disaster = graphene.Int()
     total_flow_disaster = graphene.Int()
 
     def resolve_country(root, info, **kwargs):
-        return Country.objects.get(id=root['country'])
+        return Country.objects.get(id=root['id'])
 
 
 class ReportCountryListType(CustomListObjectType):
@@ -37,13 +39,15 @@ class ReportEventType(graphene.ObjectType):
     NOTE: These fields are pre-defined in the queryset annotation
     """
     event = graphene.Field('apps.event.schema.EventType', required=True)
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
     total_stock_conflict = graphene.Int()
     total_flow_conflict = graphene.Int()
     total_stock_disaster = graphene.Int()
     total_flow_disaster = graphene.Int()
 
     def resolve_event(root, info, **kwargs):
-        return Event.objects.get(id=root['event'])
+        return Event.objects.get(id=root['id'])
 
 
 class ReportEventListType(CustomListObjectType):
