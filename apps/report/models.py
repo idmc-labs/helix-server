@@ -21,6 +21,9 @@ class Report(MetaInformationArchiveAbstractModel,
                                      symmetrical=False)
     figures = models.ManyToManyField('entry.Figure',
                                      blank=True)
+    # query fields but modified
+    figure_start_after = models.DateField(verbose_name=_('From Date'), null=True)
+    figure_end_before = models.DateField(verbose_name=_('To Date'), null=True)
     # user entered fields
     analysis = models.TextField(verbose_name=_('Analysis'),
                                 blank=True, null=True)
@@ -29,7 +32,7 @@ class Report(MetaInformationArchiveAbstractModel,
                                            blank=True, null=True)
     challenges = models.TextField(verbose_name=_('Challenges'), blank=True, null=True)
 
-    reported = models.PositiveIntegerField(verbose_name=_('Reported Figures'))
+    reported = models.PositiveIntegerField(verbose_name=_('Reported Figures'), default=0, editable=False)
     total_figures = models.PositiveIntegerField(verbose_name=_('Total Figures'), default=0,
                                                 editable=False)
     # old fields will be migrated into summary
@@ -40,6 +43,45 @@ class Report(MetaInformationArchiveAbstractModel,
 
     @property
     def countries_report(self) -> list:
+        # TODO: cache me
+        if not self.generated:
+            return (Figure.objects.filter(
+                id__in=(
+                    Report.objects.filter(id=self.id) |
+                    Report.objects.get(id=self.id).masterfact_reports.all()
+                ).values('figures'))
+            ).select_related('country').values('country').order_by().annotate(
+                total_stock_conflict=Sum(
+                    'total_figures',
+                    filter=Q(category__type=STOCK,
+                             role=Figure.ROLE.RECOMMENDED,
+                             entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+                ),
+                total_flow_conflict=Sum(
+                    'total_figures',
+                    filter=Q(category__type=FLOW,
+                             role=Figure.ROLE.RECOMMENDED,
+                             entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+                ),
+                total_stock_disaster=Sum(
+                    'total_figures',
+                    filter=Q(category__type=STOCK,
+                             role=Figure.ROLE.RECOMMENDED,
+                             entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+                ),
+                total_flow_disaster=Sum(
+                    'total_figures',
+                    filter=Q(category__type=FLOW,
+                             role=Figure.ROLE.RECOMMENDED,
+                             entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+                ),
+            )
+        # TODO: Handle for generated reports
+        return []
+
+    @property
+    def events_report(self) -> list:
+        # TODO: cache me
         if not self.generated:
             return (Figure.objects.filter(
                 id__in=(
@@ -73,6 +115,10 @@ class Report(MetaInformationArchiveAbstractModel,
                 ),
             )
         return []
+
+    class Meta:
+        # TODO: implement the side effects of report sign off
+        permissions = (('sign_off_report', 'Can sign off the report'),)
 
     def __str__(self):
         return self.name

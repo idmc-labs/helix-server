@@ -1,6 +1,7 @@
 import graphene
 from django.utils.translation import gettext
 
+from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.report.models import Report
 from apps.report.schema import ReportType
 from apps.report.serializers import ReportSerializer
@@ -17,9 +18,9 @@ class ReportCreateInputType(graphene.InputObjectType):
     summary = graphene.String(required=False)
     event_countries = graphene.List(graphene.NonNull(graphene.ID), required=False)
     event_crises = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    figure_start_after = graphene.Date(required=False)
-    figure_end_before = graphene.Date(required=False)
-    event_crisis_types = graphene.Date(required=False)
+    figure_start_after = graphene.Date(required=True)
+    figure_end_before = graphene.Date(required=True)
+    event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum), required=False)
 
 
 class ReportUpdateInputType(graphene.InputObjectType):
@@ -72,7 +73,9 @@ class UpdateReport(graphene.Mutation):
             return UpdateReport(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
             ])
-        serializer = ReportSerializer(instance=instance, data=data, partial=True)
+        serializer = ReportSerializer(
+            instance=instance, data=data, partial=True, context=dict(request=info.context)
+        )
         if errors := mutation_is_not_valid(serializer):
             return UpdateReport(errors=errors, ok=False)
         instance = serializer.save()

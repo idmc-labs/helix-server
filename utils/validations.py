@@ -7,7 +7,7 @@ from django.db.models.query import QuerySet
 def is_child_parent_dates_valid(
     data,
     instance,
-    parent_field,
+    parent_field=None,
     c_start_field='start_date',
     c_end_field='end_date',
     p_start_field='start_date',
@@ -26,6 +26,8 @@ def is_child_parent_dates_valid(
     if c_start_date and c_end_date and c_start_date > c_end_date:
         errors[c_start_field] = gettext(f'Choose your {start_text} earlier than {end_text}')
         errors[c_end_field] = gettext(f'Choose your {start_text} earlier than {end_text}')
+    if not parent_field:
+        return errors
     parent = instance
     p_start_date = None
     p_end_date = None
