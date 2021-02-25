@@ -29,10 +29,8 @@ from apps.entry.models import (
 from apps.contrib.models import SourcePreview
 from apps.contrib.enums import PreviewStatusGrapheneEnum
 from apps.organization.schema import OrganizationListType
-from utils.fields import (
-    DjangoPaginatedListObjectField,
-    CustomDjangoListObjectType,
-)
+from utils.graphene.types import CustomDjangoListObjectType
+from utils.graphene.fields import DjangoPaginatedListObjectField
 
 logger = logging.getLogger(__name__)
 

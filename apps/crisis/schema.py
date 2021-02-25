@@ -6,7 +6,8 @@ from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.filters import CrisisFilter
 from apps.crisis.models import Crisis
 from apps.event.schema import EventListType
-from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
+from utils.graphene.types import CustomDjangoListObjectType
+from utils.graphene.fields import DjangoPaginatedListObjectField
 
 
 class CrisisType(DjangoObjectType):

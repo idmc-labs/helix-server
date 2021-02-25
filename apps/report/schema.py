@@ -8,12 +8,8 @@ from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.entry.enums import RoleGrapheneEnum
 from apps.report.models import Report
 from apps.report.filters import ReportFilter, CountryReportFilter
-from utils.fields import (
-    DjangoPaginatedListObjectField,
-    CustomDjangoListObjectType,
-    CustomListObjectType,
-    CustomPaginatedListObjectField,
-)
+from utils.graphene.types import CustomListObjectType, CustomDjangoListObjectType
+from utils.graphene.fields import CustomPaginatedListObjectField, DjangoPaginatedListObjectField
 
 
 class ReportCountryType(graphene.ObjectType):

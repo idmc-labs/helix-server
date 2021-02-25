@@ -10,10 +10,8 @@ from apps.extraction.models import (
 from apps.entry.schema import EntryListType
 from apps.entry.enums import RoleGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from utils.fields import (
-    DjangoPaginatedListObjectField,
-    CustomDjangoListObjectType,
-)
+from utils.graphene.types import CustomDjangoListObjectType
+from utils.graphene.fields import DjangoPaginatedListObjectField
 
 logger = logging.getLogger(__name__)
 

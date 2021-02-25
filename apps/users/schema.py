@@ -5,7 +5,8 @@ from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
 from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
 
-from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
+from utils.graphene.types import CustomDjangoListObjectType
+from utils.graphene.fields import DjangoPaginatedListObjectField
 from apps.users.filters import UserFilter, ReviewerUserFilter
 
 from .enums import PermissionActionEnum, PermissionModelEnum, PermissionRoleEnum

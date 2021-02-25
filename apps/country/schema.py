@@ -10,7 +10,8 @@ from apps.contact.schema import ContactListType
 from apps.country.models import Country, CountryRegion, ContextualAnalysis, Summary, HouseholdSize
 from apps.country.filters import CountryFilter
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
+from utils.graphene.types import CustomDjangoListObjectType
+from utils.graphene.fields import DjangoPaginatedListObjectField
 
 
 class CountryRegionType(DjangoObjectType):
