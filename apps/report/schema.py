@@ -1,4 +1,3 @@
-from django_filters import rest_framework as df
 import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
