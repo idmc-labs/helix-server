@@ -31,11 +31,6 @@ class QueryAbstractModel(models.Model):
     event_crisis_types = ArrayField(base_field=enum.EnumField(enum=Crisis.CRISIS_TYPE),
                                     blank=True, null=True)
 
-    class Meta:
-        abstract = True
-
-
-class ExtractionQuery(MetaInformationAbstractModel, QueryAbstractModel):
     @classmethod
     def get_entries(cls, data=None) -> ['Entry']:  # noqa
         return EntryExtractionFilterSet(data=data).qs
@@ -54,3 +49,10 @@ class ExtractionQuery(MetaInformationAbstractModel, QueryAbstractModel):
             entry_article_title=self.entry_article_title,
             event_crisis_types=self.event_crisis_types,
         ))
+
+    class Meta:
+        abstract = True
+
+
+class ExtractionQuery(MetaInformationAbstractModel, QueryAbstractModel):
+    pass

@@ -3,6 +3,7 @@ from graphene_django import DjangoObjectType
 from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
 
 from apps.country.models import Country
+from apps.country.schema import CountryType
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.entry.enums import RoleGrapheneEnum
 from apps.event.models import Event
@@ -41,6 +42,9 @@ class ReportEventType(graphene.ObjectType):
     event = graphene.Field('apps.event.schema.EventType', required=True)
     id = graphene.ID(required=True)
     name = graphene.String(required=True)
+    event_type = graphene.Field(CrisisTypeGrapheneEnum, required=True)
+    start_date = graphene.Date(required=True)
+    countries = graphene.List(graphene.NonNull(CountryType), required=False)
     total_stock_conflict = graphene.Int()
     total_flow_conflict = graphene.Int()
     total_stock_disaster = graphene.Int()
@@ -48,6 +52,15 @@ class ReportEventType(graphene.ObjectType):
 
     def resolve_event(root, info, **kwargs):
         return Event.objects.get(id=root['id'])
+
+    def resolve_event_type(root, info, **kwargs):
+        return Event.objects.get(id=root['id']).event_type
+
+    def resolve_start_date(root, info, **kwargs):
+        return Event.objects.get(id=root['id']).start_date
+
+    def resolve_countries(root, info, **kwargs):
+        return Event.objects.get(id=root['id']).countries.all()
 
 
 class ReportEventListType(CustomListObjectType):

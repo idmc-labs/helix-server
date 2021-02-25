@@ -45,16 +45,11 @@ class Report(MetaInformationArchiveAbstractModel,
     @property
     def report_figures(self):
         if not self.generated:
-            return Figure.objects.filter(
-                id__in=(
-                    Report.objects.filter(id=self.id) |
-                    Report.objects.get(id=self.id).masterfact_reports.all()
-                ).values('figures'))
+            figures_ids = (Report.objects.filter(id=self.id) |
+                           Report.objects.get(id=self.id).masterfact_reports.all()).values('figures')
         else:
-            return Figure.objects.filter(
-                start_date__gte=self.figure_start_after,
-                start_date__lt=self.figure_end_before,
-            )
+            figures_ids = self.entries.values('figures')
+        return Figure.objects.filter(id__in=figures_ids)
 
     @property
     # @cache_me(3000)
@@ -94,11 +89,14 @@ class Report(MetaInformationArchiveAbstractModel,
     # @cache_me(3000)
     def events_report(self) -> list:
         return self.report_figures.select_related(
-            'event__entry'
+            'entry__event'
+        ).prefetch_related(
+            'entry__event__countries'
         ).values('entry__event').order_by().distinct().annotate(
-            event=F('entry__event'),
             id=F('entry__event_id'),
             name=F('entry__event__name'),
+            event_type=F('entry__event__event_type'),
+            start_date=F('entry__event__start_date'),
             total_stock_conflict=Sum(
                 'total_figures',
                 filter=Q(category__type=STOCK,

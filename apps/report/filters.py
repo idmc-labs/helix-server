@@ -27,4 +27,4 @@ class CountryReportFilter(df.FilterSet):
     """
     NOTE: following fields are predefined and annotated into the queryset
     """
-    country = df.CharFilter(field_name='country', lookup_expr='exact')
+    country = df.CharFilter(field_name='id', lookup_expr='exact')
