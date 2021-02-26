@@ -350,6 +350,14 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     # Properties
 
     @property
+    def is_reviewed(self):
+        return EntryReviewer.objects.filter(entry=self, status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED).exists()
+
+    @property
+    def is_signed_off(self):
+        return EntryReviewer.objects.filter(entry=self, status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF).exists()
+
+    @property
     def latest_reviews(self):
         return self.reviews.order_by(
             *Review.UNIQUE_TOGETHER_WITHOUT_ENTRY_FIELDS, '-created_at'
