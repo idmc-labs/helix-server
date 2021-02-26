@@ -1,3 +1,4 @@
+from django.db.models import Exists, OuterRef
 from django_filters import rest_framework as df
 
 from apps.entry.models import (
@@ -62,7 +63,22 @@ class EntryFilter(df.FilterSet):
     def filter_countries(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(event__countries__in=value).distinct()
+        return qs.filter(event__countries__in=value)
+
+    @property
+    def qs(self):
+        reviewed = EntryReviewer.objects.filter(
+            entry=OuterRef('pk'),
+            status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
+        )
+        signed_off = EntryReviewer.objects.filter(
+            entry=OuterRef('pk'),
+            status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
+        )
+        return super().qs.annotate(
+            _is_reviewed=Exists(reviewed),
+            _is_signed_off=Exists(signed_off),
+        ).distinct()
 
 
 class EntryReviewerFilter(df.FilterSet):

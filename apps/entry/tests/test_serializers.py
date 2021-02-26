@@ -101,7 +101,7 @@ class TestEntrySerializer(HelixTestCase):
         serializer.save()
         entry = serializer.instance
         self.assertEqual(entry.reviewers.count(), len([reviewer1, reviewer2]))
-        self.assertEqual(sorted(list(entry.reviewers.through.objects.values_list('reviewer', flat=1))),
+        self.assertEqual(sorted(list(entry.reviewing.values_list('reviewer', flat=1))),
                          sorted([reviewer1.id, reviewer2.id]))
 
     def test_entry_update_entry_reviewers(self):
@@ -124,7 +124,7 @@ class TestEntrySerializer(HelixTestCase):
             ),
             sorted([each.id for each in [reviewer1, reviewer2, reviewer3]])
         )
-        entry.reviewers.through.objects.all().update(
+        entry.reviewing.all().update(
             status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
         )
 
@@ -134,9 +134,9 @@ class TestEntrySerializer(HelixTestCase):
         }, context={'request': self.request}, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
-        self.assertTrue(entry.reviewers.count(), 2)
-        self.assertTrue(entry.reviewers.through.objects.count(), 2)
-        self.assertEqual(set(entry.reviewers.through.objects.values_list('status', flat=1)),
+        self.assertEqual(entry.reviewers.count(), 2)
+        self.assertEqual(entry.reviewing.count(), 2)
+        self.assertEqual(set(entry.reviewing.values_list('status', flat=1)),
                          {EntryReviewer.REVIEW_STATUS.UNDER_REVIEW})
 
         self.assertEqual(old_count - 1, EntryReviewer.objects.count())
