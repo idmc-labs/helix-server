@@ -6,6 +6,7 @@ from apps.country.models import Country
 from apps.country.schema import CountryType
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.entry.enums import RoleGrapheneEnum
+from apps.entry.models import Entry
 from apps.event.models import Event
 from apps.report.models import Report
 from apps.report.filters import ReportFilter, CountryReportFilter
@@ -53,12 +54,6 @@ class ReportEventType(graphene.ObjectType):
     def resolve_event(root, info, **kwargs):
         return Event.objects.get(id=root['id'])
 
-    def resolve_event_type(root, info, **kwargs):
-        return Event.objects.get(id=root['id']).event_type
-
-    def resolve_start_date(root, info, **kwargs):
-        return Event.objects.get(id=root['id']).start_date
-
     def resolve_countries(root, info, **kwargs):
         return Event.objects.get(id=root['id']).countries.all()
 
@@ -66,6 +61,27 @@ class ReportEventType(graphene.ObjectType):
 class ReportEventListType(CustomListObjectType):
     class Meta:
         base_type = ReportEventType
+
+
+class ReportEntryType(graphene.ObjectType):
+    """
+    NOTE: These fields are pre-defined in the queryset annotation
+    """
+    entry = graphene.Field('apps.entry.schema.EntryType', required=True)
+    id = graphene.ID(required=True)
+    article_title = graphene.String(required=True)
+    total_stock_conflict = graphene.Int()
+    total_flow_conflict = graphene.Int()
+    total_stock_disaster = graphene.Int()
+    total_flow_disaster = graphene.Int()
+
+    def resolve_entry(root, info, **kwargs):
+        return Entry.objects.get(id=root['id'])
+
+
+class ReportEntryListType(CustomListObjectType):
+    class Meta:
+        base_type = ReportEntryType
 
 
 class ReportType(DjangoObjectType):
@@ -85,6 +101,11 @@ class ReportType(DjangoObjectType):
                                                    pagination=PageGraphqlPagination(
                                                        page_size_query_param='pageSize'
                                                    ))
+    entries_report = CustomPaginatedListObjectField(ReportEventListType,
+                                                    accessor='entries_report',
+                                                    pagination=PageGraphqlPagination(
+                                                        page_size_query_param='pageSize'
+                                                    ))
 
 
 class ReportListType(CustomDjangoListObjectType):

@@ -1,6 +1,7 @@
 from django.db import models
 from django.db.models import Sum, Q, F
 from django.utils.translation import gettext_lazy as _
+from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel
 from apps.crisis.models import Crisis
@@ -14,9 +15,12 @@ class Report(MetaInformationArchiveAbstractModel,
              QueryAbstractModel,
              FigureDisaggregationAbstractModel,
              models.Model):
-    # migrated or generated
-    generated = models.BooleanField(verbose_name=_('Generated'), default=True,
-                                    editable=False)
+    class REPORT_TYPE(enum.Enum):
+        GROUP = 0
+        MASTERFACT = 1
+
+    generated_from = enum.EnumField(REPORT_TYPE,
+                                    blank=True, null=True, editable=False)
     reports = models.ManyToManyField('self', verbose_name=_('Reports (old groups)'),
                                      blank=True, related_name='masterfact_reports',
                                      symmetrical=False)
