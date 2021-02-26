@@ -9,6 +9,15 @@ from apps.entry.models import (
 )
 from utils.filters import StringListFilter
 
+reviewed_subquery = EntryReviewer.objects.filter(
+    entry=OuterRef('pk'),
+    status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
+)
+signed_off_subquery = EntryReviewer.objects.filter(
+    entry=OuterRef('pk'),
+    status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
+)
+
 
 class OSMNameFilter(df.FilterSet):
     class Meta:
@@ -67,17 +76,9 @@ class EntryFilter(df.FilterSet):
 
     @property
     def qs(self):
-        reviewed = EntryReviewer.objects.filter(
-            entry=OuterRef('pk'),
-            status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
-        )
-        signed_off = EntryReviewer.objects.filter(
-            entry=OuterRef('pk'),
-            status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
-        )
         return super().qs.annotate(
-            _is_reviewed=Exists(reviewed),
-            _is_signed_off=Exists(signed_off),
+            _is_reviewed=Exists(reviewed_subquery),
+            _is_signed_off=Exists(signed_off_subquery),
         ).distinct()
 
 

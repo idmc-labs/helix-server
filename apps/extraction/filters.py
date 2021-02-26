@@ -91,7 +91,7 @@ class FigureExtractionFilterSet(df.FilterSet):
     event_crises = IDListFilter(method='filter_crises')
     figure_categories = IDListFilter(method='filter_figure_categories')
     figure_start_after = df.DateFilter(method='filter_time_frame_after')
-    figure_end_before = df.DateFilter(method='filter_time_frame_before')
+    # figure end before is applied with start after
     figure_roles = StringListFilter(method='filter_figure_roles')
     entry_tags = IDListFilter(method='filter_tags')
     # TODO: GRID filter
@@ -123,13 +123,13 @@ class FigureExtractionFilterSet(df.FilterSet):
         return qs
 
     def filter_time_frame_after(self, qs, name, value):
-        # Only check against start date <= figure.start date < end date
+        # NOTE: we are only checking if figure start time is between reporting dates
         if value:
             qs = qs.exclude(start_date__isnull=True)\
-                .filter(start_date__gte=value).distinct()
-            if 'end_date' in self.data:
-                qs = qs.filter(start_date__lt=self.data['end_date'])
-        return qs
+                .filter(start_date__gte=value)
+            if 'figure_end_before' in self.data:
+                qs = qs.filter(start_date__lt=self.data['figure_end_before'])
+        return qs.distinct()
 
     def filter_figure_roles(self, qs, name, value):
         if value:

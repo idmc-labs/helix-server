@@ -75,7 +75,7 @@ class TestExtractionFilter(HelixTestCase):
     def test_filter_by_region(self):
         regions = [self.reg3.id]
         fqs = f(data=dict(event_regions=regions)).qs
-        self.assertEqual(set(fqs), {self.entry3ev2})
+        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
 
     def test_filter_by_event_crisis_types(self):
         crisis_types = [Crisis.CRISIS_TYPE.DISASTER]
@@ -92,12 +92,6 @@ class TestExtractionFilter(HelixTestCase):
         self.assertEqual(set(fqs), {self.entry3ev2, self.entry1ev1, self.entry2ev1})
 
     def test_filter_by_country(self):
-        data = dict(
-            event_countries=[self.country2reg2.id]
-        )
-        fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
-
         data = dict(
             event_countries=[self.country3reg3.id]
         )

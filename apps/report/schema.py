@@ -14,17 +14,20 @@ from utils.graphene.types import CustomListObjectType, CustomDjangoListObjectTyp
 from utils.graphene.fields import CustomPaginatedListObjectField, DjangoPaginatedListObjectField
 
 
-class ReportCountryType(graphene.ObjectType):
+class ReportFigureMixin:
+    total_stock_conflict = graphene.Int()
+    total_flow_conflict = graphene.Int()
+    total_stock_disaster = graphene.Int()
+    total_flow_disaster = graphene.Int()
+
+
+class ReportCountryType(ReportFigureMixin, graphene.ObjectType):
     """
     Note: These fields are pre-defined in the queryset annotation
     """
     country = graphene.Field('apps.country.schema.CountryType', required=True)
     id = graphene.ID(required=True)
     name = graphene.String(required=True)
-    total_stock_conflict = graphene.Int()
-    total_flow_conflict = graphene.Int()
-    total_stock_disaster = graphene.Int()
-    total_flow_disaster = graphene.Int()
 
     def resolve_country(root, info, **kwargs):
         return Country.objects.get(id=root['id'])
@@ -36,7 +39,7 @@ class ReportCountryListType(CustomListObjectType):
         filterset_class = CountryReportFilter
 
 
-class ReportEventType(graphene.ObjectType):
+class ReportEventType(ReportFigureMixin, graphene.ObjectType):
     """
     NOTE: These fields are pre-defined in the queryset annotation
     """
@@ -46,10 +49,6 @@ class ReportEventType(graphene.ObjectType):
     event_type = graphene.Field(CrisisTypeGrapheneEnum, required=True)
     start_date = graphene.Date(required=True)
     countries = graphene.List(graphene.NonNull(CountryType), required=False)
-    total_stock_conflict = graphene.Int()
-    total_flow_conflict = graphene.Int()
-    total_stock_disaster = graphene.Int()
-    total_flow_disaster = graphene.Int()
 
     def resolve_event(root, info, **kwargs):
         return Event.objects.get(id=root['id'])
@@ -63,17 +62,15 @@ class ReportEventListType(CustomListObjectType):
         base_type = ReportEventType
 
 
-class ReportEntryType(graphene.ObjectType):
+class ReportEntryType(ReportFigureMixin, graphene.ObjectType):
     """
     NOTE: These fields are pre-defined in the queryset annotation
     """
     entry = graphene.Field('apps.entry.schema.EntryType', required=True)
     id = graphene.ID(required=True)
     article_title = graphene.String(required=True)
-    total_stock_conflict = graphene.Int()
-    total_flow_conflict = graphene.Int()
-    total_stock_disaster = graphene.Int()
-    total_flow_disaster = graphene.Int()
+    is_reviewed = graphene.Boolean(required=True)
+    is_signed_off = graphene.Boolean(required=True)
 
     def resolve_entry(root, info, **kwargs):
         return Entry.objects.get(id=root['id'])
@@ -82,6 +79,13 @@ class ReportEntryType(graphene.ObjectType):
 class ReportEntryListType(CustomListObjectType):
     class Meta:
         base_type = ReportEntryType
+
+
+class ReportTotalsType(graphene.ObjectType):
+    total_stock_conflict_sum = graphene.Int()
+    total_flow_conflict_sum = graphene.Int()
+    total_stock_disaster_sum = graphene.Int()
+    total_flow_disaster_sum = graphene.Int()
 
 
 class ReportType(DjangoObjectType):
@@ -106,6 +110,7 @@ class ReportType(DjangoObjectType):
                                                     pagination=PageGraphqlPagination(
                                                         page_size_query_param='pageSize'
                                                     ))
+    total_disaggregation = graphene.NonNull(ReportTotalsType)
 
 
 class ReportListType(CustomDjangoListObjectType):
