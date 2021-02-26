@@ -51,6 +51,7 @@ class Report(MetaInformationArchiveAbstractModel,
 
     @property
     def report_figures(self):
+        # TODO: use generated_from after next migration
         if not self.generated:
             figures_ids = (Report.objects.filter(id=self.id) |
                            Report.objects.get(id=self.id).masterfact_reports.all()).values('figures')

@@ -101,7 +101,7 @@ class ReportType(DjangoObjectType):
                                                    pagination=PageGraphqlPagination(
                                                        page_size_query_param='pageSize'
                                                    ))
-    entries_report = CustomPaginatedListObjectField(ReportEventListType,
+    entries_report = CustomPaginatedListObjectField(ReportEntryListType,
                                                     accessor='entries_report',
                                                     pagination=PageGraphqlPagination(
                                                         page_size_query_param='pageSize'
