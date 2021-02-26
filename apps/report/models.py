@@ -48,7 +48,7 @@ class Report(MetaInformationArchiveAbstractModel,
             figures_ids = (Report.objects.filter(id=self.id) |
                            Report.objects.get(id=self.id).masterfact_reports.all()).values('figures')
         else:
-            figures_ids = self.entries.values('figures')
+            figures_ids = self.extract_figures
         return Figure.objects.filter(id__in=figures_ids)
 
     @property
@@ -57,6 +57,7 @@ class Report(MetaInformationArchiveAbstractModel,
         return self.report_figures.select_related(
             'country'
         ).values('country').order_by().distinct().annotate(
+            # id is needed by apollo-client
             id=F('country_id'),
             name=F('country__name'),
             total_stock_conflict=Sum(
@@ -93,6 +94,7 @@ class Report(MetaInformationArchiveAbstractModel,
         ).prefetch_related(
             'entry__event__countries'
         ).values('entry__event').order_by().distinct().annotate(
+            # id is needed by apollo-client
             id=F('entry__event_id'),
             name=F('entry__event__name'),
             event_type=F('entry__event__event_type'),
@@ -122,6 +124,43 @@ class Report(MetaInformationArchiveAbstractModel,
                          entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
             ),
         )
+
+    @property
+    # @cache_me(3000)
+    def entries_report(self) -> list:
+        return self.report_figures.select_related(
+            'entry'
+        ).values('entry').order_by().distinct().annotate(
+            # id is needed by apollo-client
+            id=F('entry_id'),
+            article_title=F('entry__article_title'),
+            total_stock_conflict=Sum(
+                'total_figures',
+                filter=Q(category__type=STOCK,
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+            ),
+            total_flow_conflict=Sum(
+                'total_figures',
+                filter=Q(category__type=FLOW,
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+            ),
+            total_stock_disaster=Sum(
+                'total_figures',
+                filter=Q(category__type=STOCK,
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+            ),
+            total_flow_disaster=Sum(
+                'total_figures',
+                filter=Q(category__type=FLOW,
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+            ),
+        )
+
+
 
     class Meta:
         # TODO: implement the side effects of report sign off

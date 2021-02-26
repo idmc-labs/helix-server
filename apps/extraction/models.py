@@ -6,7 +6,10 @@ from django_enumfield import enum
 from apps.contrib.models import MetaInformationAbstractModel
 from apps.entry.models import Figure
 from apps.crisis.models import Crisis
-from apps.extraction.filters import EntryExtractionFilterSet
+from apps.extraction.filters import (
+    EntryExtractionFilterSet,
+    FigureExtractionFilterSet,
+)
 
 
 class QueryAbstractModel(models.Model):
@@ -30,6 +33,21 @@ class QueryAbstractModel(models.Model):
                                            blank=True, null=True)
     event_crisis_types = ArrayField(base_field=enum.EnumField(enum=Crisis.CRISIS_TYPE),
                                     blank=True, null=True)
+
+    @property
+    def extract_figures(self) -> ['Figure']:  # noqa
+        return FigureExtractionFilterSet(data=dict(
+            event_countries=self.event_countries.all(),
+            event_regions=self.event_regions.all(),
+            event_crises=self.event_crises.all(),
+            figure_categories=self.figure_categories.all(),
+            entry_tags=self.entry_tags.all(),
+            figure_roles=self.figure_roles,
+            figure_start_after=self.figure_start_after,
+            figure_end_before=self.figure_end_before,
+            entry_article_title=self.entry_article_title,
+            event_crisis_types=self.event_crisis_types,
+        )).qs
 
     @classmethod
     def get_entries(cls, data=None) -> ['Entry']:  # noqa
