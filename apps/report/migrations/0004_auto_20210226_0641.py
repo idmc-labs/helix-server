@@ -12,10 +12,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='report',
-            name='generated',
-        ),
         migrations.AddField(
             model_name='report',
             name='generated_from',

@@ -21,6 +21,9 @@ class Report(MetaInformationArchiveAbstractModel,
 
     generated_from = enum.EnumField(REPORT_TYPE,
                                     blank=True, null=True, editable=False)
+    # TODO: Remove me after next migration run
+    generated = models.BooleanField(verbose_name=_('Generated'), default=True,
+                                    editable=False)
     reports = models.ManyToManyField('self', verbose_name=_('Reports (old groups)'),
                                      blank=True, related_name='masterfact_reports',
                                      symmetrical=False)
