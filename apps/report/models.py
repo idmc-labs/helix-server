@@ -1,5 +1,6 @@
 import logging
 
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Sum, Q, F, Exists
 from django.utils.translation import gettext_lazy as _
@@ -13,6 +14,7 @@ from apps.extraction.models import QueryAbstractModel
 # from utils.permissions import cache_me
 
 logger = logging.getLogger(__name__)
+User = get_user_model()
 
 
 class Report(MetaInformationArchiveAbstractModel,
@@ -80,6 +82,11 @@ class Report(MetaInformationArchiveAbstractModel,
                                help_text=_('It will store master fact information:'
                                            'Comment, Source Excerpt, IDU Excerpt, Breakdown & '
                                            'Reliability, and Caveats'))
+    is_signed_off = models.BooleanField(default=False)
+    approvers = models.ManyToManyField(User, verbose_name=_('Approvers'),
+                                       through='ReportApproval',
+                                       through_fields=('report', 'created_by'),
+                                       related_name='approved_reports')
 
     @property
     def report_figures(self):
@@ -169,3 +176,26 @@ class Report(MetaInformationArchiveAbstractModel,
 
     def __str__(self):
         return self.name
+
+
+class ReportComment(MetaInformationArchiveAbstractModel, models.Model):
+    body = models.TextField(verbose_name=_('Body'))
+    report = models.ForeignKey('Report', verbose_name=_('Report'),
+                               related_name='comments', on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ('-created_at',)
+
+    def __str__(self):
+        return f'{self.body and self.body[:50]}'
+
+
+class ReportApproval(MetaInformationArchiveAbstractModel, models.Model):
+    report = models.ForeignKey('Report', verbose_name=_('Report'),
+                               related_name='approvals', on_delete=models.CASCADE)
+    created_by = models.ForeignKey(User, verbose_name=_('Approved By'),
+                                   related_name='approvals', on_delete=models.CASCADE)
+    is_approved = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f'{self.report} {not self.is_approved and "dis"}approved by {self.created_by}'
