@@ -1,5 +1,4 @@
 from rest_framework import serializers
-from django.utils.translation import gettext
 
 from apps.organization.models import Organization, OrganizationKind
 from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField

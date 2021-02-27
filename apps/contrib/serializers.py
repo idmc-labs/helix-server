@@ -13,12 +13,16 @@ class IntegerIDField(serializers.IntegerField):
     pass
 
 
-class MetaInformationSerializerMixin(object):
+class MetaInformationSerializerMixin(serializers.Serializer):
     """
     Responsible to add following fields into the validated data
     - created_by
     - last_modified_by
     """
+    created_at = serializers.DateTimeField(read_only=True)
+    modified_at = serializers.DateTimeField(read_only=True)
+    created_by = serializers.PrimaryKeyRelatedField(read_only=True)
+    last_modified_by = serializers.PrimaryKeyRelatedField(read_only=True)
 
     def validate(self, attrs) -> dict:
         attrs = super().validate(attrs)

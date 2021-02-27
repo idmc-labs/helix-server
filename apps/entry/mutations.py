@@ -10,8 +10,7 @@ from apps.entry.schema import (
     EntryType,
     SourcePreviewType,
     EntryReviewerType,
-    FigureTagType,
-)
+    FigureTagType,)
 from apps.entry.serializers import (
     EntryCreateSerializer,
     EntryUpdateSerializer,
@@ -78,7 +77,7 @@ class UpdateEntry(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('You cannot update this entry.'))
             ])
         serializer = EntryUpdateSerializer(instance=instance, data=data,
-                                     context={'request': info.context}, partial=True)
+                                           context={'request': info.context}, partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateEntry(errors=errors, ok=False)
         instance = serializer.save()
@@ -224,7 +223,7 @@ class CreateFigureTag(graphene.Mutation):
     @staticmethod
     @is_authenticated()
     def mutate(root, info, data):
-        serializer = FigureTagSerializer(data=data, context={'request': info.context})
+        serializer = FigureTagCreateSerializer(data=data, context={'request': info.context})
         if errors := mutation_is_not_valid(serializer):
             return CreateFigureTag(errors=errors, ok=False)
         instance = serializer.save()
@@ -248,8 +247,8 @@ class UpdateFigureTag(graphene.Mutation):
             return UpdateFigureTag(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Tag does not exist.'))
             ])
-        serializer = FigureTagSerializer(instance=instance, data=data,
-                                         context={'request': info.context}, partial=True)
+        serializer = FigureTagCreateSerializer(instance=instance, data=data,
+                                               context={'request': info.context}, partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateFigureTag(errors=errors, ok=False)
         instance = serializer.save()

@@ -37,7 +37,7 @@ class DisaggregatedAgeSerializer(serializers.Serializer):
         if attrs.get('age_from') > attrs.get('age_to'):
             raise serializers.ValidationError(
                 {'age_to': gettext('Pick an age higher than `from` %(age_from)s.') %
-                           {'age_from': attrs.get("age_from")}}
+                    {'age_from': attrs.get("age_from")}}
             )
         attrs['uuid'] = str(attrs['uuid'])
         return attrs
@@ -198,7 +198,7 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
 
     class Meta:
         model = Figure
-        exclude = ('entry',)
+        exclude = ('id', 'entry', 'total_figures')
 
     def create(self, validated_data: dict) -> Figure:
         geo_locations = validated_data.pop('geo_locations', [])
@@ -242,6 +242,10 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
 
 class NestedFigureUpdateSerializer(NestedFigureCreateSerializer):
     id = IntegerIDField(required=False)
+
+    class Meta:
+        model = Figure
+        exclude = ('entry', 'total_figures')
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -337,7 +341,7 @@ class EntryUpdateSerializer(UpdateSerializerMixin,
                             EntryCreateSerializer):
     """Created for update mutation input type"""
     id = IntegerIDField(required=True)
-    figures = NestedFigureUpdateSerializer(many=True, required=False)
+    figures = NestedFigureUpdateSerializer(many=True, required=True)
 
 
 class FigureTagCreateSerializer(MetaInformationSerializerMixin,
