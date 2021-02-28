@@ -1,6 +1,7 @@
+from collections import OrderedDict
+
 import graphene
 import graphene_django
-from graphene_django.rest_framework.mutation import fields_for_serializer
 from graphene_django.registry import get_global_registry
 from graphene_django.rest_framework.serializer_converter import (
     get_graphene_type_from_serializer_field,
@@ -115,9 +116,39 @@ def convert_serializer_to_input_type(serializer_class):
 
 convert_serializer_to_input_type.cache = {}
 
-# override the default implementation
-graphene_django.rest_framework.serializer_converter.convert_serializer_field = convert_serializer_field
-graphene_django.rest_framework.serializer_converter.convert_serializer_to_input_type = convert_serializer_to_input_type
+
+def fields_for_serializer(
+    serializer,
+    only_fields,
+    exclude_fields,
+    is_input=False,
+    convert_choices_to_enum=True,
+    lookup_field=None
+):
+    """
+    NOTE: Same as the original definition. Needs overriding to
+    handle relative import of convert_serializer_field
+    """
+    fields = OrderedDict()
+    for name, field in serializer.fields.items():
+        is_not_in_only = only_fields and name not in only_fields
+        is_excluded = any(
+            [
+                name in exclude_fields,
+                field.write_only
+                and not is_input,  # don't show write_only fields in Query
+                field.read_only and is_input \
+                and lookup_field != name,  # don't show read_only fields in Input
+            ]
+        )
+
+        if is_not_in_only or is_excluded:
+            continue
+
+        fields[name] = convert_serializer_field(
+            field, is_input=is_input, convert_choices_to_enum=convert_choices_to_enum
+        )
+    return fields
 
 
 def generate_input_type_for_serializer(
@@ -131,3 +162,8 @@ def generate_input_type_for_serializer(
         is_input=True
     )
     return type(name, (graphene.InputObjectType,), data_members)
+
+
+# override the default implementation
+graphene_django.rest_framework.serializer_converter.convert_serializer_field = convert_serializer_field
+graphene_django.rest_framework.serializer_converter.convert_serializer_to_input_type = convert_serializer_to_input_type
