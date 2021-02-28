@@ -41,8 +41,6 @@ services:
     command: python manage.py rundramatiq --reload
     volumes:
       - ./:/code
-    depends_on:
-      - server
 
 volumes:
   helix-db-data:

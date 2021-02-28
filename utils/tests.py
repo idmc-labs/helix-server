@@ -5,7 +5,8 @@ from unittest.mock import patch
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission, Group
 from django.core import management
-from django.test import TestCase, override_settings
+from django.test import override_settings
+from django_dramatiq.test import DramatiqTestCase
 from graphene_django.utils import GraphQLTestCase
 
 from rest_framework.test import APITestCase
@@ -17,6 +18,19 @@ User = get_user_model()
 TEST_MEDIA_ROOT = 'media-temp'
 TEST_EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 TEST_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+TEST_DRAMATIQ_BROKER = {
+    "BROKER": "dramatiq.brokers.stub.StubBroker",
+    "OPTIONS": {},
+    "MIDDLEWARE": [
+        "dramatiq.middleware.AgeLimit",
+        "dramatiq.middleware.TimeLimit",
+        "dramatiq.middleware.Callbacks",
+        "dramatiq.middleware.Pipelines",
+        "dramatiq.middleware.Retries",
+        "django_dramatiq.middleware.DbConnectionsMiddleware",
+        "django_dramatiq.middleware.AdminMiddleware",
+    ]
+}
 
 
 class CommonSetupClassMixin:
@@ -103,8 +117,9 @@ class ImmediateOnCommitMixin(object):
     EMAIL_BACKEND=TEST_EMAIL_BACKEND,
     DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
     MEDIA_ROOT=TEST_MEDIA_ROOT,
+    DRAMATIQ_BROKER=TEST_DRAMATIQ_BROKER,
 )
-class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
+class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, DramatiqTestCase):
     pass
 
 

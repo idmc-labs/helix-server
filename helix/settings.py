@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 import os
 import socket
 import logging
+from enum import Enum
 
 from . import sentry
 
@@ -340,5 +341,10 @@ DRAMATIQ_BROKER = {
 
 DRAMATIQ_TASKS_DATABASE = "default"
 
-# FIXME: We can also configure result backend. what does that mean?kjj/dra
-# TODO: Make tests work
+
+class QueuePriority(Enum):
+    DEFAULT = 'default'
+    HEAVY = 'heavy'
+    CRON = 'cron'
+
+# FIXME: We can also configure result backend. what does that mean?

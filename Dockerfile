@@ -2,6 +2,10 @@ FROM python:3.8.2-buster AS server
 
 LABEL maintainer="dev@togglecorp.com"
 
+# NOTE: A change in the requirements.txt will reinstall chromium as well,
+# so keeping this above it, rathe rthan below dramatiq
+RUN apt update -y && apt install -y chromium chromium-driver
+
 ENV PYTHONUNBUFFERED 1
 
 WORKDIR /code
@@ -17,8 +21,4 @@ CMD ./deploy/scripts/run_prod.sh
 
 FROM server AS dramatiq
 
-RUN apt update -y && apt install -y chromium chromium-driver
-
-COPY ./deploy/scripts/dramatiq-entrypoint.sh /docker-entrypoint.sh
-
-ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["python", "manage.py", "rundramatiq"]
