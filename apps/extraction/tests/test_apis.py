@@ -82,5 +82,5 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         self.assertEqual(
             set([each['id'] for each in
                  content['data']['createExtraction']['result']['entries']['results']]),
-            {str(self.entry1ev1.id)}
+            {str(self.entry1ev1.id), str(self.entry2ev1.id)}
         )
