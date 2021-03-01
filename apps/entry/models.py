@@ -351,14 +351,16 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
     @property
     def is_reviewed(self):
+        # User _is_reviewed from annotate if available
         if not hasattr(self, '_is_reviewed'):
-            self._is_reviewed = self.reviewing.filter(status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED).exists()
+            return self.reviewing.filter(status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED).exists()
         return self._is_reviewed
 
     @property
     def is_signed_off(self):
+        # User _is_signed_off from annotate if available
         if not hasattr(self, '_is_signed_off'):
-            self._is_signed_off = self.reviewing.filter(
+            return self.reviewing.filter(
                 status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
             ).exists()
         return self._is_signed_off
