@@ -8,7 +8,7 @@ from apps.crisis.models import Crisis
 from apps.entry.constants import STOCK, FLOW
 from apps.entry.models import FigureDisaggregationAbstractModel, Figure
 from apps.extraction.models import QueryAbstractModel
-from utils.permissions import cache_me
+# from utils.permissions import cache_me
 
 
 class Report(MetaInformationArchiveAbstractModel,
@@ -166,8 +166,6 @@ class Report(MetaInformationArchiveAbstractModel,
                          entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
             ),
         )
-
-
 
     class Meta:
         # TODO: implement the side effects of report sign off

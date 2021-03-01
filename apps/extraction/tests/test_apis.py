@@ -7,6 +7,7 @@ from utils.factories import (
     EventFactory,
     EntryFactory,
     TagFactory,
+    FigureFactory,
 )
 
 
@@ -35,6 +36,8 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         self.tag3 = TagFactory.create()
         self.entry1ev1 = EntryFactory.create(event=self.event1crisis1)
         self.entry1ev1.tags.set([self.tag1, self.tag2])
+        FigureFactory.create(entry=self.entry1ev1,
+                             country=self.country1reg1)
         self.entry2ev1 = EntryFactory.create(event=self.event1crisis1)
         self.entry2ev1.tags.set([self.tag3])
         self.entry3ev2 = EntryFactory.create(event=self.event2crisis1)
@@ -75,5 +78,5 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         self.assertEqual(
             set([each['id'] for each in
                  content['data']['createExtraction']['result']['entries']['results']]),
-            {str(self.entry3ev2.id)}
+            {str(self.entry1ev1.id)}
         )

@@ -5,7 +5,7 @@ from apps.crisis.models import Crisis
 from utils.filters import StringListFilter, IDListFilter
 
 
-class ExtractionFilterSetMixin(object):
+class EntryExtractionFilterSet(df.FilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
     event_regions = IDListFilter(method='filter_regions')
     event_countries = IDListFilter(method='filter_countries')
@@ -19,20 +19,18 @@ class ExtractionFilterSetMixin(object):
     entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
     event_crisis_types = StringListFilter(method='filter_crisis_types')
 
-
-class EntryExtractionFilterSet(ExtractionFilterSetMixin, df.FilterSet):
     class Meta:
         model = Entry
         fields = {}
 
     def filter_regions(self, qs, name, value):
         if value:
-            qs = qs.filter(event__countries__region__in=value).distinct()
+            qs = qs.filter(figures__country__region__in=value).distinct()
         return qs
 
     def filter_countries(self, qs, name, value):
         if value:
-            return qs.filter(event__countries__in=value).distinct()
+            return qs.filter(figures__country__in=value).distinct()
         return qs
 
     def filter_crises(self, qs, name, value):
@@ -86,7 +84,20 @@ class EntryExtractionFilterSet(ExtractionFilterSetMixin, df.FilterSet):
         return qs
 
 
-class FigureExtractionFilterSet(ExtractionFilterSetMixin, df.FilterSet):
+class FigureExtractionFilterSet(df.FilterSet):
+    # NOTE: these filter names exactly match the extraction query model field names
+    event_regions = IDListFilter(method='filter_regions')
+    event_countries = IDListFilter(method='filter_countries')
+    event_crises = IDListFilter(method='filter_crises')
+    figure_categories = IDListFilter(method='filter_figure_categories')
+    figure_start_after = df.DateFilter(method='filter_time_frame_after')
+    figure_end_before = df.DateFilter(method='filter_time_frame_before')
+    figure_roles = StringListFilter(method='filter_figure_roles')
+    entry_tags = IDListFilter(method='filter_tags')
+    # TODO: GRID filter
+    entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
+    event_crisis_types = StringListFilter(method='filter_crisis_types')
+
     class Meta:
         model = Figure
         fields = {}
@@ -112,15 +123,12 @@ class FigureExtractionFilterSet(ExtractionFilterSetMixin, df.FilterSet):
         return qs
 
     def filter_time_frame_after(self, qs, name, value):
+        # Only check against start date <= figure.start date < end date
         if value:
-            return qs.exclude(start_date__isnull=True)\
+            qs = qs.exclude(start_date__isnull=True)\
                 .filter(start_date__gte=value).distinct()
-        return qs
-
-    def filter_time_frame_before(self, qs, name, value):
-        if value:
-            return qs.exclude(end_date__isnull=True).\
-                filter(end_date__lt=value).distinct()
+            if 'end_date' in self.data:
+                qs = qs.filter(start_date__lt=self.data['end_date'])
         return qs
 
     def filter_figure_roles(self, qs, name, value):
