@@ -5,6 +5,7 @@ from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
 from apps.country.models import Country
 from apps.country.schema import CountryType
 from apps.crisis.enums import CrisisTypeGrapheneEnum
+from apps.crisis.models import Crisis
 from apps.entry.enums import RoleGrapheneEnum
 from apps.entry.models import Entry
 from apps.event.models import Event
@@ -69,6 +70,7 @@ class ReportEntryType(ReportFigureMixin, graphene.ObjectType):
     entry = graphene.Field('apps.entry.schema.EntryType', required=True)
     id = graphene.ID(required=True)
     article_title = graphene.String(required=True)
+    created_at = graphene.Date(required=True)
     is_reviewed = graphene.Boolean(required=True)
     is_signed_off = graphene.Boolean(required=True)
 
@@ -79,6 +81,24 @@ class ReportEntryType(ReportFigureMixin, graphene.ObjectType):
 class ReportEntryListType(CustomListObjectType):
     class Meta:
         base_type = ReportEntryType
+
+
+class ReportCrisisType(ReportFigureMixin, graphene.ObjectType):
+    """
+    NOTE: These fields are pre-defined in the queryset annotation
+    """
+    crisis = graphene.Field('apps.crisis.schema.CrisisType', required=True)
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+    crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
+
+    def resolve_crisis(root, info, **kwargs):
+        return Crisis.objects.get(id=root['id'])
+
+
+class ReportCrisisListType(CustomListObjectType):
+    class Meta:
+        base_type = ReportCrisisType
 
 
 class ReportTotalsType(graphene.ObjectType):
@@ -110,6 +130,11 @@ class ReportType(DjangoObjectType):
                                                     pagination=PageGraphqlPagination(
                                                         page_size_query_param='pageSize'
                                                     ))
+    crises_report = CustomPaginatedListObjectField(ReportCrisisListType,
+                                                   accessor='crises_report',
+                                                   pagination=PageGraphqlPagination(
+                                                       page_size_query_param='pageSize'
+                                                   ))
     total_disaggregation = graphene.NonNull(ReportTotalsType)
 
 

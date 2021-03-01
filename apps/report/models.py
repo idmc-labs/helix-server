@@ -130,8 +130,24 @@ class Report(MetaInformationArchiveAbstractModel,
             # id is needed by apollo-client
             id=F('entry_id'),
             article_title=F('entry__article_title'),
+            created_at=F('entry__created_at'),
             is_reviewed=Exists(reviewed_subquery),
             is_signed_off=Exists(signed_off_subquery),
+            **self.TOTAL_FIGURE_DISAGGREGATIONS,
+        )
+
+    @property
+    # @cache_me(3000)
+    def crises_report(self) -> list:
+        return self.report_figures.filter(
+            entry__event__crisis__isnull=False
+        ).select_related(
+            'entry__event__crisis'
+        ).values('entry__event__crisis').order_by().distinct().annotate(
+            # id is needed by apollo-client
+            id=F('entry__event__crisis_id'),
+            name=F('entry__event__crisis__name'),
+            crisis_type=F('entry__event__crisis__crisis_type'),
             **self.TOTAL_FIGURE_DISAGGREGATIONS,
         )
 
