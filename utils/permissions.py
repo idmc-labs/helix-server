@@ -37,21 +37,14 @@ def cache_key_function(*args, **kwargs):
 
 
 def cache_me(timeout=None):
-    logger.warn('LOOOLL INSIDE')
-
     def wrapped(func):
-        logger.warn('LOOOLL DEEPPP')
-
         def wrapped_func(*args, **kwargs):
-            logger.error('I am caching...')
             cache_key = cache_key_function(func.__name__, *args, **kwargs)
             cached_value = cache.get(cache_key)
             if cached_value:
-                logger.warn('I am found')
                 return cached_value
             value = func(*args, **kwargs)
             cache.set(cache_key, value, timeout)
-            logger.warn('I am cached')
             return value
         return wrapped_func
     return wrapped
