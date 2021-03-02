@@ -224,3 +224,10 @@ class ParkingLotFactory(DjangoModelFactory):
 class ReportFactory(DjangoModelFactory):
     class Meta:
         model = 'report.Report'
+
+
+class ReportCommentFactory(DjangoModelFactory):
+    class Meta:
+        model = 'report.ReportComment'
+
+    report = factory.SubFactory(ReportFactory)

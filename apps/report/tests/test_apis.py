@@ -3,6 +3,7 @@ from apps.report.models import ReportSignOff
 from utils.factories import (
     CountryFactory,
     ReportFactory,
+    ReportCommentFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -188,3 +189,79 @@ class TestReportApprove(HelixGraphQLTestCase):
         content = response.json()
 
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+
+
+class TestReportComment(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.mutation = '''
+        mutation MyMutation($input: ReportCommentCreateInputType!) {
+          createReportComment(data: $input) {
+            ok
+            result {
+              id
+              createdBy { email }
+            }
+          }
+        }
+        '''
+        self.update_mutation = '''
+        mutation MyMutation($input: ReportCommentUpdateInputType!) {
+          updateReportComment(data: $input) {
+            ok
+            result {
+              id
+              createdBy { email }
+            }
+          }
+        }
+        '''
+
+        self.report = ReportFactory.create()
+        self.input = dict(
+            report=str(self.report.id),
+            body='lol'
+        )
+
+    def test_valid_commenting(self):
+        user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.force_login(user)
+        response = self.query(
+            self.mutation,
+            input_data=self.input,
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['createReportComment']['ok'], content)
+        self.assertTrue(content['data']['createReportComment']['result']['createdBy']['email'],
+                        user.email)
+
+    def test_valid_comment_update(self):
+        user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        comment = ReportCommentFactory.create(
+            created_by=user
+        )
+        input_data = dict(
+            body='blaaa',
+            id=str(comment.id),
+        )
+        self.force_login(user)
+        response = self.query(
+            self.update_mutation,
+            input_data=input_data,
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['updateReportComment']['ok'], content)
+        self.assertTrue(content['data']['updateReportComment']['result']['createdBy']['email'],
+                        user.email)
+
+        # different user
+        user2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.force_login(user2)
+        response = self.query(
+            self.update_mutation,
+            input_data=input_data,
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['updateReportComment']['ok'], content)
