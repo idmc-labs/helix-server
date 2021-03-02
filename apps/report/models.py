@@ -1,10 +1,10 @@
-from datetime import datetime
 import logging
 
 from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Sum, Q, F, Exists
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel
@@ -166,15 +166,13 @@ class Report(MetaInformationArchiveAbstractModel,
             total_flow_disaster_sum=Sum('total_flow_disaster'),
         )
 
-    # methods
-
     def sign_off(self, done_by: 'User'):
         self.is_signed_off = True
         self.save()
         ReportSignOff.objects.create(
             report=self,
             created_by=done_by,
-            created_at=datetime.now(),
+            created_at=timezone.now(),
         )
 
     class Meta:
@@ -197,7 +195,7 @@ class ReportComment(MetaInformationArchiveAbstractModel, models.Model):
         ordering = ('-created_at',)
 
     def __str__(self):
-        return f'{self.body and self.body[:50]}'
+        return self.body and self.body[:50]
 
 
 class ReportApproval(MetaInformationArchiveAbstractModel, models.Model):
