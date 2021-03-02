@@ -10,7 +10,7 @@ class PERMISSION_ACTION(enum.Enum):
     change = 1
     delete = 2
     sign_off = 3
-    approve = 3
+    approve = 4
 
     __labels__ = {
         add: _('Add'),

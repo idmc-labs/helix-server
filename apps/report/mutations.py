@@ -194,19 +194,18 @@ class SignOffReport(graphene.Mutation):
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.Field(ReportCommentType)
+    result = graphene.Field(ReportType)
 
     @staticmethod
     @permission_checker(['report.sign_off_report'])
-    def mutate(root, info, id, approve):
+    def mutate(root, info, id):
         try:
             instance = Report.objects.get(id=id)
         except Report.DoesNotExist:
             return SignOffReport(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
             ])
-        instance.is_signed_off = True
-        instance.save()
+        instance.sign_off(info.context.user)
         return SignOffReport(result=instance, errors=None, ok=True)
 
 
@@ -217,7 +216,7 @@ class ApproveReport(graphene.Mutation):
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.Field(ReportCommentType)
+    result = graphene.Field(ReportType)
 
     @staticmethod
     @permission_checker(['report.approve_report'])
@@ -230,7 +229,7 @@ class ApproveReport(graphene.Mutation):
             ])
         ReportApproval.objects.create(
             report_id=id,
-            created_by=info.contextu.user,
+            created_by=info.context.user,
             is_approved=approve
         )
         return ApproveReport(result=instance, errors=None, ok=True)

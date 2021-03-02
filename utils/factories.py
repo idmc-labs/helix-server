@@ -167,6 +167,7 @@ class FigureFactory(DjangoModelFactory):
         model = 'entry.Figure'
 
     entry = factory.SubFactory(EntryFactory)
+    country = factory.SubFactory(CountryFactory)
     category = factory.SubFactory(FigureCategoryFactory)
     quantifier = factory.Iterator(Figure.QUANTIFIER)
     reported = factory.Sequence(lambda n: n + 2)

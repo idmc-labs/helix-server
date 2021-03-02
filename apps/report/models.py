@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 
 from django.contrib.auth import get_user_model
@@ -12,6 +13,7 @@ from apps.entry.constants import STOCK, FLOW
 from apps.entry.models import FigureDisaggregationAbstractModel, Figure
 from apps.extraction.models import QueryAbstractModel
 # from utils.permissions import cache_me
+from utils.fields import CachedFileField
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -106,7 +108,6 @@ class Report(MetaInformationArchiveAbstractModel,
         ).values('country').order_by().distinct().annotate(
             # id is needed by apollo-client
             id=F('country_id'),
-            name=F('country__name'),
             **self.TOTAL_FIGURE_DISAGGREGATIONS,
         )
 
@@ -120,9 +121,6 @@ class Report(MetaInformationArchiveAbstractModel,
         ).values('entry__event').order_by().distinct().annotate(
             # id is needed by apollo-client
             id=F('entry__event_id'),
-            name=F('entry__event__name'),
-            event_type=F('entry__event__event_type'),
-            start_date=F('entry__event__start_date'),
             **self.TOTAL_FIGURE_DISAGGREGATIONS,
         )
 
@@ -136,8 +134,6 @@ class Report(MetaInformationArchiveAbstractModel,
         ).values('entry').order_by().distinct().annotate(
             # id is needed by apollo-client
             id=F('entry_id'),
-            article_title=F('entry__article_title'),
-            created_at=F('entry__created_at'),
             is_reviewed=Exists(reviewed_subquery),
             is_signed_off=Exists(signed_off_subquery),
             **self.TOTAL_FIGURE_DISAGGREGATIONS,
@@ -168,6 +164,17 @@ class Report(MetaInformationArchiveAbstractModel,
             total_flow_conflict_sum=Sum('total_flow_conflict'),
             total_stock_disaster_sum=Sum('total_stock_disaster'),
             total_flow_disaster_sum=Sum('total_flow_disaster'),
+        )
+
+    # methods
+
+    def sign_off(self, done_by: 'User'):
+        self.is_signed_off = True
+        self.save()
+        ReportSignOff.objects.create(
+            report=self,
+            created_by=done_by,
+            created_at=datetime.now(),
         )
 
     class Meta:
@@ -202,3 +209,20 @@ class ReportApproval(MetaInformationArchiveAbstractModel, models.Model):
 
     def __str__(self):
         return f'{self.report} {not self.is_approved and "dis"}approved by {self.created_by}'
+
+
+class ReportSignOff(MetaInformationArchiveAbstractModel, models.Model):
+    FULL_REPORT_FOLDER = 'reports/full'
+    SNAPSHOT_REPORT_FOLDER = 'reports/snaps'
+    report = models.ForeignKey('Report', verbose_name=_('Report'),
+                               related_name='sign_offs', on_delete=models.CASCADE)
+    # TODO schedule a task on create to generate following files
+    full_report = CachedFileField(verbose_name=_('full report'),
+                                  blank=True, null=True,
+                                  upload_to=FULL_REPORT_FOLDER)
+    snapshot = CachedFileField(verbose_name=_('report snapshot'),
+                               blank=True, null=True,
+                               upload_to=SNAPSHOT_REPORT_FOLDER)
+
+    def __str__(self):
+        return f'{self.created_by} signed off {self.report} on {self.created_at}'
