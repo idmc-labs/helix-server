@@ -131,7 +131,7 @@ class CreateReportComment(graphene.Mutation):
     @staticmethod
     @permission_checker(['report.add_reportcomment'])
     def mutate(root, info, data):
-        serializer = ReportCommentSerializer(data=data)
+        serializer = ReportCommentSerializer(data=data, context=dict(request=info.context))
         if errors := mutation_is_not_valid(serializer):
             return CreateReportComment(errors=errors, ok=False)
         instance = serializer.save()
