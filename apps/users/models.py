@@ -17,6 +17,9 @@ class User(AbstractUser):
         max_length=150,
         help_text=_('Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.'),
     )
+    full_name = models.CharField(verbose_name=_('Full Name'), max_length=512,
+                                 null=True, blank=True,
+                                 help_text=_('Full name is auto generated.'))
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['username']
@@ -58,14 +61,11 @@ class User(AbstractUser):
             name for name in [self.first_name, self.last_name] if name
         ]) or self.email
 
-    @property
-    def full_name(self):
-        return self.get_full_name()
-
     def get_short_name(self):
         return self.first_name
 
     def save(self, *args, **kwargs):
+        self.full_name = self.get_full_name()
         super().save(*args, **kwargs)
         group_count = self.groups.count()
         if group_count == 0:  # Set default group/role is guest
