@@ -55,7 +55,7 @@ class CreateReport(graphene.Mutation):
     @staticmethod
     @permission_checker(['report.add_report'])
     def mutate(root, info, data):
-        serializer = ReportSerializer(data=data)
+        serializer = ReportSerializer(data=data, context=dict(request=info.context))
         if errors := mutation_is_not_valid(serializer):
             return CreateReport(errors=errors, ok=False)
         instance = serializer.save()
