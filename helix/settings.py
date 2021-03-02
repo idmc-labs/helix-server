@@ -99,6 +99,16 @@ MIDDLEWARE = [
 if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
     MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
 
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': os.environ.get('REDIS_CACHE_URL', 'redis://redis:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
 }

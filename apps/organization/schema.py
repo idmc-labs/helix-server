@@ -3,7 +3,8 @@ from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
 
 from apps.contact.schema import ContactListType
 from apps.organization.models import Organization, OrganizationKind
-from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
+from utils.graphene.types import CustomDjangoListObjectType
+from utils.graphene.fields import DjangoPaginatedListObjectField
 
 
 class OrganizationType(DjangoObjectType):

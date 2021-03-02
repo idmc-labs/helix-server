@@ -350,6 +350,20 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     # Properties
 
     @property
+    def is_reviewed(self):
+        if not hasattr(self, '_is_reviewed'):
+            self._is_reviewed = self.reviewing.filter(status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED).exists()
+        return self._is_reviewed
+
+    @property
+    def is_signed_off(self):
+        if not hasattr(self, '_is_signed_off'):
+            self._is_signed_off = self.reviewing.filter(
+                status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
+            ).exists()
+        return self._is_signed_off
+
+    @property
     def latest_reviews(self):
         return self.reviews.order_by(
             *Review.UNIQUE_TOGETHER_WITHOUT_ENTRY_FIELDS, '-created_at'
@@ -376,13 +390,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             errors['url'] = gettext('Please fill the URL or upload a document. ')
             errors['document'] = gettext('Please fill the URL or upload a document. ')
         return errors
-
-    @property
-    def locked(self):
-        return self.reviewers.through.objects.filter(
-            status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
-        ).exists()
-
     # Methods
 
     def total_stock_figures(self, filters=None) -> int:
@@ -400,7 +407,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         used to check before deleting as well
             i.e `can be DELETED by`
         """
-        if self.locked:
+        if self.is_signed_off:
             return False
         if USER_ROLE.ADMIN.name in user.groups.values_list('name', flat=True):
             return True
@@ -455,7 +462,8 @@ class EntryReviewer(MetaInformationAbstractModel, models.Model):
 
     @classmethod
     def assign_creator(cls, entry: 'Entry', user: 'User') -> None:
-        entry.reviewers.through.objects.filter(
+        cls.objects.filter(
+            entry=entry,
             created_by__isnull=True
         ).update(created_by=user)
 

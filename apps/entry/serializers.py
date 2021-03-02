@@ -342,8 +342,6 @@ class EntrySerializer(MetaInformationSerializerMixin,
                     fig_ser.save()
         else:
             entry = super().update(instance, validated_data)
-        EntryReviewer.assign_creator(entry=entry,
-                                     user=self.context['request'].user)
         return entry
 
 

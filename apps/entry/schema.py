@@ -29,10 +29,8 @@ from apps.entry.models import (
 from apps.contrib.models import SourcePreview
 from apps.contrib.enums import PreviewStatusGrapheneEnum
 from apps.organization.schema import OrganizationListType
-from utils.fields import (
-    DjangoPaginatedListObjectField,
-    CustomDjangoListObjectType,
-)
+from utils.graphene.types import CustomDjangoListObjectType
+from utils.graphene.fields import DjangoPaginatedListObjectField
 
 logger = logging.getLogger(__name__)
 
@@ -149,6 +147,8 @@ class EntryType(DjangoObjectType):
     total_flow_figures = graphene.Field(graphene.Int,
                                         data=TotalFigureFilterInputType())
     source_methodology = graphene.Field(graphene.String)
+    is_reviewed = graphene.NonNull(graphene.Boolean)
+    is_signed_off = graphene.NonNull(graphene.Boolean)
 
     def resolve_total_stock_figures(root, info, **kwargs):
         return root.total_stock_figures(kwargs.get('data'))

@@ -17,7 +17,8 @@ from apps.event.models import (
     DisasterType
 )
 from apps.event.filters import EventFilter
-from utils.fields import CustomDjangoListObjectType, DjangoPaginatedListObjectField
+from utils.graphene.types import CustomDjangoListObjectType
+from utils.graphene.fields import DjangoPaginatedListObjectField
 
 
 class TriggerSubObjectType(DjangoObjectType):

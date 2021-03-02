@@ -10,7 +10,8 @@ from apps.contact.schema import ContactListType
 from apps.country.models import Country, CountryRegion, ContextualAnalysis, Summary, HouseholdSize
 from apps.country.filters import CountryFilter
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from utils.fields import DjangoPaginatedListObjectField, CustomDjangoListObjectType
+from utils.graphene.types import CustomDjangoListObjectType
+from utils.graphene.fields import DjangoPaginatedListObjectField
 
 
 class CountryRegionType(DjangoObjectType):
@@ -89,11 +90,21 @@ class CountryType(DjangoObjectType):
         pagination=PageGraphqlPagination(
             page_size_query_param='pageSize'
         ), accessor='crises'))
+    events = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
+        get_type('apps.event.schema.EventListType'),
+        pagination=PageGraphqlPagination(
+            page_size_query_param='pageSize'
+        ), accessor='events'))
     entries = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
         get_type('apps.entry.schema.EntryListType'),
         pagination=PageGraphqlPagination(
             page_size_query_param='pageSize'
         ), accessor='entries'))
+    figures = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
+        get_type('apps.entry.schema.FigureListType'),
+        pagination=PageGraphqlPagination(
+            page_size_query_param='pageSize'
+        ), accessor='figures'))
 
     @staticmethod
     def get_queryset(queryset, info):
