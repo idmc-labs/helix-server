@@ -9,7 +9,7 @@ from apps.crisis.models import Crisis
 from apps.entry.enums import RoleGrapheneEnum
 from apps.entry.models import Entry
 from apps.event.models import Event
-from apps.report.models import Report
+from apps.report.models import Report, ReportComment, ReportApproval
 from apps.report.filters import ReportFilter, CountryReportFilter
 from utils.graphene.types import CustomListObjectType, CustomDjangoListObjectType
 from utils.graphene.fields import CustomPaginatedListObjectField, DjangoPaginatedListObjectField
@@ -108,11 +108,37 @@ class ReportTotalsType(graphene.ObjectType):
     total_flow_disaster_sum = graphene.Int()
 
 
+class ReportCommentType(DjangoObjectType):
+    class Meta:
+        model = ReportComment
+
+
+class ReportCommentListType(CustomDjangoListObjectType):
+    class Meta:
+        model = ReportComment
+        filter_fields = ()
+
+
+class ReportApprovalType(DjangoObjectType):
+    class Meta:
+        model = ReportApproval
+
+
+class ReportApprovalListType(CustomDjangoListObjectType):
+    class Meta:
+        model = ReportApproval
+        filter_fields = ()
+
+
 class ReportType(DjangoObjectType):
     class Meta:
         model = Report
-        exclude_fields = ('reports', 'figures')
+        exclude_fields = ('reports', 'figures', 'approvals', 'masterfactReports')
 
+    comments = DjangoPaginatedListObjectField(ReportCommentListType,
+                                              pagination=PageGraphqlPagination(
+                                                  page_size_query_param='pageSize'
+                                              ))
     figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
     event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
     countries_report = CustomPaginatedListObjectField(ReportCountryListType,
@@ -136,6 +162,13 @@ class ReportType(DjangoObjectType):
                                                        page_size_query_param='pageSize'
                                                    ))
     total_disaggregation = graphene.NonNull(ReportTotalsType)
+    approvers = DjangoPaginatedListObjectField(
+        ReportApprovalListType,
+        accessor='approvals',
+        pagination=PageGraphqlPagination(
+            page_size_query_param='pageSize'
+        )
+    )
 
 
 class ReportListType(CustomDjangoListObjectType):

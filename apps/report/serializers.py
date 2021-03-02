@@ -3,7 +3,10 @@ from collections import OrderedDict
 from rest_framework import serializers
 
 from apps.contrib.serializers import MetaInformationSerializerMixin
-from apps.report.models import Report
+from apps.report.models import (
+    Report,
+    ReportComment,
+)
 from utils.validations import is_child_parent_dates_valid
 
 
@@ -25,3 +28,15 @@ class ReportSerializer(MetaInformationSerializerMixin,
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
+
+
+class ReportCommentSerializer(MetaInformationSerializerMixin,
+                              serializers.ModelSerializer):
+    class Meta:
+        model = ReportComment
+        fields = '__all__'
+
+    def validate_body(self, body):
+        if not body.strip():
+            raise serializers.ValidationError('Comment body is missing.')
+        return body

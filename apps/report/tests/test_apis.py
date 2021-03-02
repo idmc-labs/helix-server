@@ -1,5 +1,8 @@
 from apps.users.enums import USER_ROLE
-from utils.factories import CountryFactory
+from utils.factories import (
+    CountryFactory,
+    ReportFactory,
+)
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
@@ -54,3 +57,10 @@ class TestCreateReport(HelixGraphQLTestCase):
 
         content = response.json()
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+
+
+class TestReportComment(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.report = ReportFactory.create()
+        self.report.create

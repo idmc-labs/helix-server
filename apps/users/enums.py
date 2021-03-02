@@ -10,12 +10,14 @@ class PERMISSION_ACTION(enum.Enum):
     change = 1
     delete = 2
     sign_off = 3
+    approve = 3
 
     __labels__ = {
         add: _('Add'),
         change: _('Change'),
         delete: _('Delete'),
-        sign_off: _('Sign Off')
+        sign_off: _('Sign Off'),
+        approve: _('Approve')
     }
 
 
@@ -38,6 +40,7 @@ class PERMISSION_ENTITY(enum.Enum):
     reviewcomment = 15
     contextualupdate = 16
     report = 17
+    reportcomment = 18
 
     __labels__ = {
         crisis: _('Crisis'),
@@ -58,6 +61,7 @@ class PERMISSION_ENTITY(enum.Enum):
         parkeditem: _('Parked Item'),
         contextualupdate: _('Contextual Update'),
         report: _('Report'),
+        reportcomment: _('Report Comment'),
     }
 
 

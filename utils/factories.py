@@ -218,3 +218,8 @@ class ParkingLotFactory(DjangoModelFactory):
         model = 'parking_lot.ParkedItem'
 
     country = factory.SubFactory(CountryFactory)
+
+
+class ReportFactory(DjangoModelFactory):
+    class Meta:
+        model = 'report.Report'
