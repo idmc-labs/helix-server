@@ -172,7 +172,10 @@ class Report(MetaInformationArchiveAbstractModel,
 
     class Meta:
         # TODO: implement the side effects of report sign off
-        permissions = (('sign_off_report', 'Can sign off the report'),)
+        permissions = (
+            ('sign_off_report', 'Can sign off the report'),
+            ('approve_report', 'Can approve the report'),
+        )
 
     def __str__(self):
         return self.name
