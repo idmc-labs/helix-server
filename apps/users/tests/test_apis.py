@@ -100,8 +100,8 @@ class TestChangePassword(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.user = self.create_user()
         self.change_query = '''
-            mutation MyMutation ($password: String!){
-                changePassword(data: {password: $password}) {
+            mutation MyMutation ($oldPassword: String!, $newPassword: String!){
+                changePassword(data: {oldPassword: $oldPassword, newPassword: $newPassword}) {
                     errors
                     result {
                         email
@@ -111,11 +111,12 @@ class TestChangePassword(HelixGraphQLTestCase):
         '''
 
     def test_valid_password_change(self):
+        newpass = 'sdfjsjjkqjek'
         self.force_login(self.user)
-        password = 'someRandom123pass455151'
         response = self.query(
             self.change_query,
-            variables={'password': password},
+            variables={'oldPassword': self.user.raw_password,
+                       'newPassword': newpass},
         )
 
         content = response.json()
@@ -126,19 +127,22 @@ class TestChangePassword(HelixGraphQLTestCase):
         self.assertIsNotNone(content['data']['changePassword']['result']['email'])
 
         self.user.refresh_from_db()
-        assert self.user.check_password(password)
+        assert self.user.check_password(newpass)
 
     def test_invalid_password(self):
         self.force_login(self.user)
         response = self.query(
             self.change_query,
-            variables={'password': 'abc'},
+            variables={
+                'oldPassword': self.user.raw_password,
+                'newPassword': 'abc',
+            },
         )
 
         content = response.json()
 
         self.assertResponseNoErrors(response)
-        self.assertIn('password', [each['field'] for each in content['data']['changePassword']['errors']])
+        self.assertIn('newPassword', [each['field'] for each in content['data']['changePassword']['errors']])
 
 
 class TestRegister(HelixGraphQLTestCase):

@@ -12,18 +12,24 @@ User = get_user_model()
 
 
 class UserPasswordSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(required=True, write_only=True)
+    old_password = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True)
 
     class Meta:
         model = User
-        fields = ['password']
+        fields = ['old_password', 'new_password']
 
-    def validate_password(self, password) -> str:
+    def validate_old_password(self, password) -> str:
+        if not self.instance.check_password(password):
+            raise serializers.ValidationError('Invalid Password')
+        return password
+
+    def validate_new_password(self, password) -> str:
         validate_password(password)
         return password
 
     def save(self, **kwargs):
-        self.instance.set_password(self.validated_data['password'])
+        self.instance.set_password(self.validated_data['new_password'])
         self.instance.save()
 
 

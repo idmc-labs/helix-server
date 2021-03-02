@@ -105,7 +105,8 @@ class Logout(graphene.Mutation):
 
 
 class UserPasswordInputType(graphene.InputObjectType):
-    password = graphene.String(required=True)
+    old_password = graphene.String(required=True)
+    new_password = graphene.String(required=True)
 
 
 class ChangeUserPassword(graphene.Mutation):
