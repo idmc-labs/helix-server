@@ -281,3 +281,68 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     @cached_property
     def is_approved(self):
         return self.approvals.filter(is_approved=True).exists()
+
+    @property
+    def stat_flow_country(self):
+        headers = {
+            'country__iso3': 'ISO3',
+            'country__name': 'Country',
+            'country__region__name': 'Region',
+            'conflict_total': f'Conflict FLOW {self.report.name}',
+            'disaster_total': f'Disaster FLOW {self.report.name}',
+            'total': f'Total FLOW {self.report.name}',
+        }
+        data = self.report.report_figures.values('country').order_by().annotate(
+            conflict_total=Sum('total_figures', filter=Q(
+                category__type=FLOW,
+                role=Figure.ROLE.RECOMMENDED,
+                entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT
+            )),
+            disaster_total=Sum('total_figures', filter=Q(
+                category__type=FLOW,
+                role=Figure.ROLE.RECOMMENDED,
+                entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER
+            )),
+        ).annotate(
+            total=F('conflict_total') + F('disaster_total')
+        ).values(
+            'country__iso3',
+            'country__name',
+            'country__region__name',
+            'conflict_total',
+            'disaster_total',
+            'total',
+        )
+        return headers, data
+
+    @property
+    def stat_flow_region(self):
+        headers = {
+            'country__region__name': 'Region',
+            'conflict_total': f'Conflict FLOW {self.report.name}',
+            'disaster_total': f'Disaster FLOW {self.report.name}',
+            'total': f'Total FLOW {self.report.name}',
+        }
+        data = self.report.report_figures.values('country__region').order_by().annotate(
+            conflict_total=Sum('total_figures', filter=Q(
+                category__type=FLOW,
+                role=Figure.ROLE.RECOMMENDED,
+                entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT
+            )),
+            disaster_total=Sum('total_figures', filter=Q(
+                category__type=FLOW,
+                role=Figure.ROLE.RECOMMENDED,
+                entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER
+            )),
+        ).annotate(
+            total=F('conflict_total') + F('disaster_total')
+        ).values(
+            'country__region__name',
+            'conflict_total',
+            'disaster_total',
+            'total',
+        )
+        return headers, data
+
+    def __str__(self):
+        return f'{self.created_by} signed off {self.report} on {self.created_at}'
