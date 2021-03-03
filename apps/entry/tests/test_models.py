@@ -1,10 +1,6 @@
-import os
 from datetime import datetime, timedelta
 
-from django.core.files.storage import default_storage
-
 from apps.users.enums import USER_ROLE
-from apps.contrib.models import SourcePreview
 from apps.review.models import Review
 from apps.entry.models import Figure
 from utils.factories import (
@@ -99,17 +95,4 @@ class TestEntryModel(HelixTestCase):
         expected = {r3, r2}  # not r1 because it should be replaced by r2
         self.assertEqual(obtained, expected)
 
-
-class TestSourcePreviewModel(HelixTestCase):
-    def test_get_pdf(self):
-        if os.environ.get('GITHUB_WORKFLOW'):
-            print('Skipping because wkhtmltopdf requires display...')
-            return
-        url = 'https://github.com/JazzCore/python-pdfkit/'
-        preview = SourcePreview.get_pdf(url)
-        self.assertIn('.pdf', preview.pdf.name)
-        self.assertTrue(default_storage.exists(preview.pdf.name))
-        # again
-        preview2 = SourcePreview.get_pdf(url, preview)
-        self.assertTrue(os.path.exists(preview2.pdf.name))
-        self.assertFalse(default_storage.exists(preview.pdf.name))
+    # TODO: Add test for pdf-generation task

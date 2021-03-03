@@ -1,14 +1,19 @@
+import base64
+import logging
+
 import dramatiq
 from django.core.files.base import ContentFile
-
-import base64
-
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 
+from helix.settings import QueuePriority
 
-def __get_pdf_from_html(path, timeout=60, print_options={}):
+logger = logging.getLogger(__name__)
+TIMEOUT = 60  # seconds
+
+
+def __get_pdf_from_html(path, timeout=TIMEOUT, print_options={}):
     browser_options = webdriver.ChromeOptions()
     browser_options.add_argument('headless')
     browser_options.add_argument('disable-gpu')
@@ -23,7 +28,7 @@ def __get_pdf_from_html(path, timeout=60, print_options={}):
         WebDriverWait(browser, timeout).until(lambda d: d.execute_script(
             'document.readyState == "complete"'))
     except TimeoutException:
-        pass
+        logger.error(f'Chromium timed out for {path}', exc_info=True)
 
     final_print_options = {
         'landscape': False,
@@ -38,7 +43,8 @@ def __get_pdf_from_html(path, timeout=60, print_options={}):
     return base64.b64decode(result['data'])
 
 
-@dramatiq.actor
+# https://dramatiq.io/guide.html#dead-letters
+@dramatiq.actor(queue_name=QueuePriority.DEFAULT.value, max_retries=3, time_limit=TIMEOUT * 1000)
 def generate_pdf(pk):
     from apps.contrib.models import SourcePreview
 
@@ -53,9 +59,9 @@ def generate_pdf(pk):
         pdf_content = __get_pdf_from_html(url)
         source_preview.pdf.save(path, ContentFile(pdf_content))
         source_preview.status = SourcePreview.PREVIEW_STATUS.COMPLETED
-    except Exception as e:
+        source_preview.save()
+    except Exception as e:  # noqa
+        logger.error('An exception occurred', exc_info=True)
         source_preview.status = SourcePreview.PREVIEW_STATUS.FAILED
-        source_preview.remark = 'Could not generate pdf'
+        source_preview.save()
         raise e
-
-    source_preview.save()
