@@ -1,18 +1,29 @@
+from collections import OrderedDict
 from functools import cached_property
 import logging
 
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models import Sum, Q, F, Exists, OuterRef
+from django.db.models import (
+    Sum,
+    Q,
+    F,
+    Exists,
+    Value,
+    # Subquery,
+    OuterRef,
+)
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel
+# from apps.country.models import CountryPopulation
 from apps.crisis.models import Crisis
 from apps.entry.constants import STOCK, FLOW
 from apps.entry.models import FigureDisaggregationAbstractModel, Figure
 from apps.extraction.models import QueryAbstractModel
+from apps.report.utils import excel_column_key
 # from utils.permissions import cache_me
 from utils.fields import CachedFileField
 
@@ -343,6 +354,50 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             'total',
         )
         return headers, data
+
+    @property
+    def stat_conflict_country(self):
+        headers = OrderedDict(dict(
+            iso3='ISO3',  # A
+            name='Country',  # B ... so on
+            country_population='Population',
+            flow_total=f'Flow {self.report.name}',
+            stock_total=f'Stock {self.report.name}',
+            # provisional and returns
+            # historical average for flow an stock NOTE: coming from different db
+        ))
+
+        def get_key(header):
+            return excel_column_key(headers, header)
+
+        # NOTE: {{ }} turns into { } after the first .format
+        formula = {
+            'Flow per 100k population': '={key1}{{row}}/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('country_population')
+            )
+        }
+        global_filter = dict(
+            role=Figure.ROLE.RECOMMENDED,
+            entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT
+        )
+        data = self.report.report_figures.values('country').order_by().annotate(
+            # country_population_=Subquery(
+            #     CountryPopulation.objects.filter(year=self.report.figure_start_after.year)
+            # ).values('population')
+            # ).annotate(
+            iso3=F('country__iso3'),
+            name=F('country__name'),
+            country_population=Value(1020, output_field=models.IntegerField()),
+            flow_total=Sum('total_figures', filter=Q(
+                category__type=FLOW,
+                **global_filter
+            )),
+            stock_total=Sum('total_figures', filter=Q(
+                category__type=STOCK,
+                **global_filter
+            )),
+        )
+        return headers, data, formula
 
     def __str__(self):
         return f'{self.created_by} signed off {self.report} on {self.created_at}'
