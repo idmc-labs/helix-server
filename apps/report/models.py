@@ -1,8 +1,10 @@
 import logging
 
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Sum, Q, F, Exists
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel
@@ -11,8 +13,10 @@ from apps.entry.constants import STOCK, FLOW
 from apps.entry.models import FigureDisaggregationAbstractModel, Figure
 from apps.extraction.models import QueryAbstractModel
 # from utils.permissions import cache_me
+from utils.fields import CachedFileField
 
 logger = logging.getLogger(__name__)
+User = get_user_model()
 
 
 class Report(MetaInformationArchiveAbstractModel,
@@ -80,6 +84,11 @@ class Report(MetaInformationArchiveAbstractModel,
                                help_text=_('It will store master fact information:'
                                            'Comment, Source Excerpt, IDU Excerpt, Breakdown & '
                                            'Reliability, and Caveats'))
+    is_signed_off = models.BooleanField(default=False)
+    approvers = models.ManyToManyField(User, verbose_name=_('Approvers'),
+                                       through='ReportApproval',
+                                       through_fields=('report', 'created_by'),
+                                       related_name='approved_reports')
 
     @property
     def report_figures(self):
@@ -99,7 +108,6 @@ class Report(MetaInformationArchiveAbstractModel,
         ).values('country').order_by().distinct().annotate(
             # id is needed by apollo-client
             id=F('country_id'),
-            name=F('country__name'),
             **self.TOTAL_FIGURE_DISAGGREGATIONS,
         )
 
@@ -113,9 +121,6 @@ class Report(MetaInformationArchiveAbstractModel,
         ).values('entry__event').order_by().distinct().annotate(
             # id is needed by apollo-client
             id=F('entry__event_id'),
-            name=F('entry__event__name'),
-            event_type=F('entry__event__event_type'),
-            start_date=F('entry__event__start_date'),
             **self.TOTAL_FIGURE_DISAGGREGATIONS,
         )
 
@@ -129,8 +134,6 @@ class Report(MetaInformationArchiveAbstractModel,
         ).values('entry').order_by().distinct().annotate(
             # id is needed by apollo-client
             id=F('entry_id'),
-            article_title=F('entry__article_title'),
-            created_at=F('entry__created_at'),
             is_reviewed=Exists(reviewed_subquery),
             is_signed_off=Exists(signed_off_subquery),
             **self.TOTAL_FIGURE_DISAGGREGATIONS,
@@ -163,9 +166,62 @@ class Report(MetaInformationArchiveAbstractModel,
             total_flow_disaster_sum=Sum('total_flow_disaster'),
         )
 
+    def sign_off(self, done_by: 'User'):
+        if not self.is_signed_off:
+            self.is_signed_off = True
+            self.save(update_fields=["is_signed_off"])
+        ReportSignOff.objects.create(
+            report=self,
+            created_by=done_by,
+            created_at=timezone.now(),
+        )
+
     class Meta:
         # TODO: implement the side effects of report sign off
-        permissions = (('sign_off_report', 'Can sign off the report'),)
+        permissions = (
+            ('sign_off_report', 'Can sign off the report'),
+            ('approve_report', 'Can approve the report'),
+        )
 
     def __str__(self):
         return self.name
+
+
+class ReportComment(MetaInformationArchiveAbstractModel, models.Model):
+    body = models.TextField(verbose_name=_('Body'))
+    report = models.ForeignKey('Report', verbose_name=_('Report'),
+                               related_name='comments', on_delete=models.CASCADE)
+
+    class Meta:
+        ordering = ('-created_at',)
+
+    def __str__(self):
+        return self.body and self.body[:50]
+
+
+class ReportApproval(MetaInformationArchiveAbstractModel, models.Model):
+    report = models.ForeignKey('Report', verbose_name=_('Report'),
+                               related_name='approvals', on_delete=models.CASCADE)
+    created_by = models.ForeignKey(User, verbose_name=_('Approved By'),
+                                   related_name='approvals', on_delete=models.CASCADE)
+    is_approved = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f'{self.report} {not self.is_approved and "dis"}approved by {self.created_by}'
+
+
+class ReportSignOff(MetaInformationArchiveAbstractModel, models.Model):
+    FULL_REPORT_FOLDER = 'reports/full'
+    SNAPSHOT_REPORT_FOLDER = 'reports/snaps'
+    report = models.ForeignKey('Report', verbose_name=_('Report'),
+                               related_name='sign_offs', on_delete=models.CASCADE)
+    # TODO schedule a task on create to generate following files
+    full_report = CachedFileField(verbose_name=_('full report'),
+                                  blank=True, null=True,
+                                  upload_to=FULL_REPORT_FOLDER)
+    snapshot = CachedFileField(verbose_name=_('report snapshot'),
+                               blank=True, null=True,
+                               upload_to=SNAPSHOT_REPORT_FOLDER)
+
+    def __str__(self):
+        return f'{self.created_by} signed off {self.report} on {self.created_at}'

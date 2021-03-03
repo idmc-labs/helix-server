@@ -31,6 +31,9 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
     designation = enum.EnumField(DESIGNATION)
     first_name = models.CharField(verbose_name=_('First Name'), max_length=256)
     last_name = models.CharField(verbose_name=_('Last Name'), max_length=256)
+    full_name = models.CharField(verbose_name=_('Full Name'), max_length=512,
+                                 blank=True, null=True,
+                                 help_text=_('Auto generated'))
     gender = enum.EnumField(GENDER, verbose_name=_('Gender'))
     job_title = models.CharField(verbose_name=_('Job Title'), max_length=256)
     organization = models.ForeignKey('organization.Organization', verbose_name=_('Organization'),
@@ -58,9 +61,14 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
     def __str__(self):
         return f'{self.designation.name} {self.first_name} {self.last_name}'
 
-    @property
-    def full_name(self):
-        return f'{self.designation.name} {self.first_name} {self.last_name}'
+    def get_full_name(self):
+        return ' '.join([
+            name for name in [self.first_name, self.last_name] if name
+        ]) or self.email
+
+    def save(self, *args, **kwargs):
+        self.full_name = self.get_full_name()
+        return super().save(*args, **kwargs)
 
 
 class CommunicationMedium(models.Model):

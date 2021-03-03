@@ -167,6 +167,7 @@ class FigureFactory(DjangoModelFactory):
         model = 'entry.Figure'
 
     entry = factory.SubFactory(EntryFactory)
+    country = factory.SubFactory(CountryFactory)
     category = factory.SubFactory(FigureCategoryFactory)
     quantifier = factory.Iterator(Figure.QUANTIFIER)
     reported = factory.Sequence(lambda n: n + 2)
@@ -218,3 +219,15 @@ class ParkingLotFactory(DjangoModelFactory):
         model = 'parking_lot.ParkedItem'
 
     country = factory.SubFactory(CountryFactory)
+
+
+class ReportFactory(DjangoModelFactory):
+    class Meta:
+        model = 'report.Report'
+
+
+class ReportCommentFactory(DjangoModelFactory):
+    class Meta:
+        model = 'report.ReportComment'
+
+    report = factory.SubFactory(ReportFactory)

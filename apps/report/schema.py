@@ -9,7 +9,12 @@ from apps.crisis.models import Crisis
 from apps.entry.enums import RoleGrapheneEnum
 from apps.entry.models import Entry
 from apps.event.models import Event
-from apps.report.models import Report
+from apps.report.models import (
+    Report,
+    ReportComment,
+    ReportApproval,
+    ReportSignOff,
+)
 from apps.report.filters import ReportFilter, CountryReportFilter
 from utils.graphene.types import CustomListObjectType, CustomDjangoListObjectType
 from utils.graphene.fields import CustomPaginatedListObjectField, DjangoPaginatedListObjectField
@@ -46,9 +51,6 @@ class ReportEventType(ReportFigureMixin, graphene.ObjectType):
     """
     event = graphene.Field('apps.event.schema.EventType', required=True)
     id = graphene.ID(required=True)
-    name = graphene.String(required=True)
-    event_type = graphene.Field(CrisisTypeGrapheneEnum, required=True)
-    start_date = graphene.Date(required=True)
     countries = graphene.List(graphene.NonNull(CountryType), required=False)
 
     def resolve_event(root, info, **kwargs):
@@ -69,8 +71,6 @@ class ReportEntryType(ReportFigureMixin, graphene.ObjectType):
     """
     entry = graphene.Field('apps.entry.schema.EntryType', required=True)
     id = graphene.ID(required=True)
-    article_title = graphene.String(required=True)
-    created_at = graphene.Date(required=True)
     is_reviewed = graphene.Boolean(required=True)
     is_signed_off = graphene.Boolean(required=True)
 
@@ -108,11 +108,48 @@ class ReportTotalsType(graphene.ObjectType):
     total_flow_disaster_sum = graphene.Int()
 
 
+class ReportCommentType(DjangoObjectType):
+    class Meta:
+        model = ReportComment
+
+
+class ReportCommentListType(CustomDjangoListObjectType):
+    class Meta:
+        model = ReportComment
+        filter_fields = ()
+
+
+class ReportSignOffType(DjangoObjectType):
+    class Meta:
+        model = ReportSignOff
+
+
+class ReportSignOffListType(CustomDjangoListObjectType):
+    class Meta:
+        model = ReportSignOff
+        filter_fields = ('report',)
+
+
+class ReportApprovalType(DjangoObjectType):
+    class Meta:
+        model = ReportApproval
+
+
+class ReportApprovalListType(CustomDjangoListObjectType):
+    class Meta:
+        model = ReportApproval
+        filter_fields = ('is_approved',)
+
+
 class ReportType(DjangoObjectType):
     class Meta:
         model = Report
-        exclude_fields = ('reports', 'figures')
+        exclude_fields = ('reports', 'figures', 'masterfact_reports')
 
+    comments = DjangoPaginatedListObjectField(ReportCommentListType,
+                                              pagination=PageGraphqlPagination(
+                                                  page_size_query_param='pageSize'
+                                              ))
     figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
     event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
     countries_report = CustomPaginatedListObjectField(ReportCountryListType,
@@ -136,6 +173,19 @@ class ReportType(DjangoObjectType):
                                                        page_size_query_param='pageSize'
                                                    ))
     total_disaggregation = graphene.NonNull(ReportTotalsType)
+    approvals = DjangoPaginatedListObjectField(
+        ReportApprovalListType,
+        accessor='approvals',
+        pagination=PageGraphqlPagination(
+            page_size_query_param='pageSize'
+        )
+    )
+    sign_offs = DjangoPaginatedListObjectField(
+        ReportSignOffListType,
+        pagination=PageGraphqlPagination(
+            page_size_query_param='pageSize'
+        )
+    )
 
 
 class ReportListType(CustomDjangoListObjectType):
