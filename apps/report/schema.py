@@ -144,7 +144,7 @@ class ReportApprovalListType(CustomDjangoListObjectType):
 class ReportType(DjangoObjectType):
     class Meta:
         model = Report
-        exclude_fields = ('reports', 'figures', 'masterfactReports')
+        exclude_fields = ('reports', 'figures', 'masterfact_reports')
 
     comments = DjangoPaginatedListObjectField(ReportCommentListType,
                                               pagination=PageGraphqlPagination(

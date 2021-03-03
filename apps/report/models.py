@@ -167,8 +167,9 @@ class Report(MetaInformationArchiveAbstractModel,
         )
 
     def sign_off(self, done_by: 'User'):
-        self.is_signed_off = True
-        self.save()
+        if not self.is_signed_off:
+            self.is_signed_off = True
+            self.save(update_fields=["is_signed_off"])
         ReportSignOff.objects.create(
             report=self,
             created_by=done_by,
