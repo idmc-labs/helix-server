@@ -147,7 +147,7 @@ class TestReportApprove(HelixGraphQLTestCase):
             ok
             errors
             result {
-            approvers {
+            approvals {
               results {
                   createdBy {
                     email
@@ -176,7 +176,7 @@ class TestReportApprove(HelixGraphQLTestCase):
         content = response.json()
 
         self.assertResponseNoErrors(response)
-        self.assertEqual(content['data']['approveReport']['result']['approvers']['results'][0]['createdBy']['email'],
+        self.assertEqual(content['data']['approveReport']['result']['approvals']['results'][0]['createdBy']['email'],
                          user.email)
 
     def test_invalid_report_approval_by_guest(self):
