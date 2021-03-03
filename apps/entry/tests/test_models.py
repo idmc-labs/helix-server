@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
-from apps.entry.models import Figure
+from apps.entry.models import Figure, EntryReviewer
 from utils.factories import (
     EntryFactory,
     FigureFactory,
@@ -94,5 +94,16 @@ class TestEntryModel(HelixTestCase):
         obtained = set(e.latest_reviews)
         expected = {r3, r2}  # not r1 because it should be replaced by r2
         self.assertEqual(obtained, expected)
+
+    def test_entry_reviewer_status_auto_updates_on_review_save(self):
+        e = EntryFactory.create(created_by=self.editor)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        e.reviewers.add(reviewer)
+        assert e.reviewing.count() == 1
+        assert e.reviewing.first().status == EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
+        Review.objects.create(entry=e, field='article_title',
+                              value=Review.ENTRY_REVIEW_STATUS.RED,
+                              created_by=reviewer)
+        assert e.reviewing.first().status == EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
 
     # TODO: Add test for pdf-generation task

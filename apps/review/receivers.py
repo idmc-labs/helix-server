@@ -12,5 +12,5 @@ def update_entry_reviewer_status(sender, instance, created, **kwargs):
         EntryReviewer.objects.filter(
             entry=instance.entry,
             reviewer=instance.created_by,
-            status__isnull=True,
+            status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED,
         ).update(status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW)
