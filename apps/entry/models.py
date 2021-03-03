@@ -350,6 +350,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     # Properties
 
     @property
+    def is_under_review(self):
+        if not hasattr(self, '_is_under_review'):
+            return self.reviewing.filter(status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW).exists()
+        return self._is_under_review
+
+    @property
     def is_reviewed(self):
         # User _is_reviewed from annotate if available
         if not hasattr(self, '_is_reviewed'):

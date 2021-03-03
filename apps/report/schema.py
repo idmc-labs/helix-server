@@ -72,6 +72,7 @@ class ReportEntryType(ReportFigureMixin, graphene.ObjectType):
     entry = graphene.Field('apps.entry.schema.EntryType', required=True)
     id = graphene.ID(required=True)
     is_reviewed = graphene.Boolean(required=True)
+    is_under_review = graphene.Boolean(required=True)
     is_signed_off = graphene.Boolean(required=True)
 
     def resolve_entry(root, info, **kwargs):

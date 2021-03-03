@@ -9,6 +9,10 @@ from apps.entry.models import (
 )
 from utils.filters import StringListFilter
 
+under_review_subquery = EntryReviewer.objects.filter(
+    entry=OuterRef('pk'),
+    status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
+)
 reviewed_subquery = EntryReviewer.objects.filter(
     entry=OuterRef('pk'),
     status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
@@ -78,6 +82,7 @@ class EntryFilter(df.FilterSet):
     def qs(self):
         return super().qs.annotate(
             _is_reviewed=Exists(reviewed_subquery),
+            _is_under_review=Exists(under_review_subquery),
             _is_signed_off=Exists(signed_off_subquery),
         ).distinct()
 
