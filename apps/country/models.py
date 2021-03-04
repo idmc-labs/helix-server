@@ -1,4 +1,4 @@
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
@@ -59,6 +59,20 @@ class Country(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class CountryPopulation(models.Model):
+    country = models.ForeignKey('Country', verbose_name=_('Country'),
+                                related_name='populations', on_delete=models.CASCADE)
+    population = models.PositiveIntegerField('Population')
+    year = models.PositiveIntegerField('Year',
+                                       validators=[
+                                           MinValueValidator(1800, 'Invalid date'),
+                                           MaxValueValidator(9999, 'Invalid date'),
+                                       ])
+
+    class Meta:
+        unique_together = (('country', 'year'),)
 
 
 class ContextualAnalysis(MetaInformationArchiveAbstractModel, models.Model):
