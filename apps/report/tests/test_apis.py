@@ -1,5 +1,5 @@
 from apps.users.enums import USER_ROLE
-from apps.report.models import ReportSignOff
+from apps.report.models import ReportGeneration
 from utils.factories import (
     CountryFactory,
     ReportFactory,
@@ -75,8 +75,10 @@ class TestReportSignOff(HelixGraphQLTestCase):
             result {
               isSignedOff
               id
-              signOffs {
+              generations {
                 results {
+                  isSignedOff
+                  isSignedOffBy { email }
                   createdBy {
                     email
                   }
@@ -92,6 +94,59 @@ class TestReportSignOff(HelixGraphQLTestCase):
             'id': str(self.report.id),
         }
 
+        self.generate_mutation = '''
+        mutation GenerateReport($id: ID!) {
+          startReportGeneration(id: $id) {
+            errors
+            ok
+            result {
+              isSignedOff
+              isApproved
+              id
+              generations {
+                results {
+                  createdBy {
+                    email
+                  }
+                  snapshot
+                  fullReport
+                }
+              }
+            }
+          }
+        }
+        '''
+
+    def test_valid_report_generation_for_sign_off(self):
+        assert self.report.is_approved is None
+        assert self.report.is_signed_off is False
+        user = create_user_with_role(USER_ROLE.IT_HEAD.name)
+        self.force_login(user)
+        response = self.query(
+            self.generate_mutation,
+            variables=self.variables
+        )
+
+        content = response.json()
+
+        self.assertResponseNoErrors(response)
+        self.assertIsNone(content['data']['startReportGeneration']['errors'], content)
+        self.assertEqual(content['data']['startReportGeneration']['result']['isSignedOff'], False)
+        self.assertEqual(content['data']['startReportGeneration']['result']['isApproved'], False)
+        self.assertEqual(len(content['data']['startReportGeneration']['result']['generations']['results']), 1)
+
+        # retry generate should fail
+        response = self.query(
+            self.generate_mutation,
+            variables=self.variables
+        )
+
+        content = response.json()
+
+        print(content)
+        self.assertResponseNoErrors(response)
+        self.assertIn('report', [item['field'] for item in content['data']['startReportGeneration']['errors']])
+
     def test_valid_report_sign_off_and_retrieval(self):
         user = create_user_with_role(USER_ROLE.IT_HEAD.name)
         self.force_login(user)
@@ -103,17 +158,26 @@ class TestReportSignOff(HelixGraphQLTestCase):
         content = response.json()
 
         self.assertResponseNoErrors(response)
-        self.assertEqual(content['data']['signOffReport']['result']['isSignedOff'], True)
-        self.assertEqual(content['data']['signOffReport']['result']['id'], str(self.report.id))
-        self.assertEqual(len(content['data']['signOffReport']['result']['signOffs']['results']), 1)
-        # resign-off should create another signedoff report instance
+        # we need to generate first
+        self.assertIn(
+            'report',
+            [i['field'] for i in content['data']['signOffReport']['errors']]
+        )
+
+        gen = ReportGeneration.objects.create(report=self.report)
+        assert gen.is_signed_off is False
+
         response = self.query(
             self.mutation,
             variables=self.variables
         )
         content = response.json()
-        assert ReportSignOff.objects.count() == 2
-        self.assertEqual(len(content['data']['signOffReport']['result']['signOffs']['results']), 2, content['data'])
+        print(content)
+
+        self.assertResponseNoErrors(response)
+        self.assertEqual(content['data']['signOffReport']['result']['isSignedOff'], True)
+        self.assertEqual(content['data']['signOffReport']['result']['id'], str(self.report.id))
+        self.assertEqual(len(content['data']['signOffReport']['result']['generations']['results']), 1)
 
     def test_invalid_report_signoff(self):
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
@@ -141,19 +205,22 @@ class TestReportApprove(HelixGraphQLTestCase):
         self.report = ReportFactory.create(
             created_by=self.admin
         )
+        self.generation = ReportGeneration.objects.create(
+            report=self.report
+        )
         self.mutation = '''
         mutation ApproveReport($id: ID!, $approve: Boolean!) {
           approveReport(id: $id, approve: $approve) {
             ok
             errors
             result {
-            approvals {
-              results {
+              isApproved
+              approvals {
+                results {
                   createdBy {
                     email
                     id
                   }
-                  isApproved
                 }
               }
             }

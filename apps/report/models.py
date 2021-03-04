@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Sum, Q, F, Exists
 from django.utils.translation import gettext_lazy as _
-from django.utils import timezone
+from django.db import transaction
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel
@@ -76,6 +76,7 @@ class Report(MetaInformationArchiveAbstractModel,
                                            blank=True, null=True)
     challenges = models.TextField(verbose_name=_('Challenges'), blank=True, null=True)
 
+    # TODO: remove reported?
     reported = models.PositiveIntegerField(verbose_name=_('Reported Figures'), default=0, editable=False)
     total_figures = models.PositiveIntegerField(verbose_name=_('Total Figures'), default=0,
                                                 editable=False)
@@ -85,15 +86,11 @@ class Report(MetaInformationArchiveAbstractModel,
                                            'Comment, Source Excerpt, IDU Excerpt, Breakdown & '
                                            'Reliability, and Caveats'))
     is_signed_off = models.BooleanField(default=False)
-    approvers = models.ManyToManyField(User, verbose_name=_('Approvers'),
-                                       through='ReportApproval',
-                                       through_fields=('report', 'created_by'),
-                                       related_name='approved_reports')
 
     @property
     def report_figures(self):
         # TODO: use generated_from after next migration
-        if not self.generated:
+        if self.generated_from or not self.generated:
             figures_ids = (Report.objects.filter(id=self.id) |
                            Report.objects.get(id=self.id).masterfact_reports.all()).values('figures')
         else:
@@ -172,18 +169,37 @@ class Report(MetaInformationArchiveAbstractModel,
         )
 
     @property
-    def is_approved(self) -> bool:
-        return self.approvers.exists()
+    def is_approved(self):
+        if self.last_generation:
+            return self.last_generation.approvals.filter(is_approved=True).exists()
+        return None
+
+    @property
+    def approvals(self):
+        return self.generations.order_by('-created_by').first().approvals.all()
+
+    @property
+    def active_generation(self):
+        if self.generations.filter(is_signed_off=False).exists():
+            return self.generations.filter(is_signed_off=False).get()
+        return None
+
+    @property
+    def last_generation(self):
+        return self.generations.order_by('-created_by').first()
 
     def sign_off(self, done_by: 'User'):
-        if not self.is_signed_off:
-            self.is_signed_off = True
-            self.save(update_fields=["is_signed_off"])
-        ReportSignOff.objects.create(
-            report=self,
-            created_by=done_by,
-            created_at=timezone.now(),
-        )
+        with transaction.atomic():
+            if not self.is_signed_off:
+                self.is_signed_off = True
+                self.save(update_fields=["is_signed_off"])
+            current_gen = ReportGeneration.objects.get(
+                report=self,
+                is_signed_off=False,
+            )
+            current_gen.is_signed_off = True
+            current_gen.is_signed_off_by = done_by
+            current_gen.save(update_fields=['is_signed_off', 'is_signed_off_by'])
 
     class Meta:
         # TODO: implement the side effects of report sign off
@@ -209,8 +225,8 @@ class ReportComment(MetaInformationArchiveAbstractModel, models.Model):
 
 
 class ReportApproval(MetaInformationArchiveAbstractModel, models.Model):
-    report = models.ForeignKey('Report', verbose_name=_('Report'),
-                               related_name='approvals', on_delete=models.CASCADE)
+    generation = models.ForeignKey('ReportGeneration', verbose_name=_('Report'),
+                                   related_name='approvals', on_delete=models.CASCADE)
     created_by = models.ForeignKey(User, verbose_name=_('Approved By'),
                                    related_name='approvals', on_delete=models.CASCADE)
     is_approved = models.BooleanField(default=True)
@@ -219,11 +235,23 @@ class ReportApproval(MetaInformationArchiveAbstractModel, models.Model):
         return f'{self.report} {not self.is_approved and "dis"}approved by {self.created_by}'
 
 
-class ReportSignOff(MetaInformationArchiveAbstractModel, models.Model):
+class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
+    '''
+    A report can be generated multiple times, each called a generation
+    '''
     FULL_REPORT_FOLDER = 'reports/full'
     SNAPSHOT_REPORT_FOLDER = 'reports/snaps'
+
     report = models.ForeignKey('Report', verbose_name=_('Report'),
-                               related_name='sign_offs', on_delete=models.CASCADE)
+                               related_name='generations', on_delete=models.CASCADE)
+    is_signed_off = models.BooleanField(default=False)
+    is_signed_off_by = models.ForeignKey(User, verbose_name=_('Is Signed Off By'),
+                                         blank=True, null=True,
+                                         related_name='signed_off_generations', on_delete=models.CASCADE)
+    approvers = models.ManyToManyField(User, verbose_name=_('Approvers'),
+                                       through='ReportApproval',
+                                       through_fields=('generation', 'created_by'),
+                                       related_name='approved_generations')
     # TODO schedule a task on create to generate following files
     full_report = CachedFileField(verbose_name=_('full report'),
                                   blank=True, null=True,
@@ -231,6 +259,3 @@ class ReportSignOff(MetaInformationArchiveAbstractModel, models.Model):
     snapshot = CachedFileField(verbose_name=_('report snapshot'),
                                blank=True, null=True,
                                upload_to=SNAPSHOT_REPORT_FOLDER)
-
-    def __str__(self):
-        return f'{self.created_by} signed off {self.report} on {self.created_at}'
