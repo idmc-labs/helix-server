@@ -171,6 +171,10 @@ class Report(MetaInformationArchiveAbstractModel,
             total_flow_disaster_sum=Sum('total_flow_disaster'),
         )
 
+    @property
+    def is_approved(self) -> bool:
+        return self.approvers.exists()
+
     def sign_off(self, done_by: 'User'):
         if not self.is_signed_off:
             self.is_signed_off = True

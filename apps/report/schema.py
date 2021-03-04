@@ -147,6 +147,7 @@ class ReportType(DjangoObjectType):
         model = Report
         exclude_fields = ('reports', 'figures', 'masterfact_reports')
 
+    is_approved = graphene.Boolean(required=True)
     comments = DjangoPaginatedListObjectField(ReportCommentListType,
                                               pagination=PageGraphqlPagination(
                                                   page_size_query_param='pageSize'
