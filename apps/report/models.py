@@ -4,13 +4,16 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models.functions import Extract
 from django.db.models import (
     Sum,
     Q,
     F,
     Exists,
     Value,
-    # Subquery,
+    Subquery,
+    Min,
+    Max,
     OuterRef,
 )
 from django.utils.translation import gettext_lazy as _
@@ -358,11 +361,13 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     @property
     def stat_conflict_country(self):
         headers = OrderedDict(dict(
-            iso3='ISO3',  # A
-            name='Country',  # B ... so on
+            iso3='ISO3',
+            name='Country',
             country_population='Population',
             flow_total=f'Flow {self.report.name}',
             stock_total=f'Stock {self.report.name}',
+            flow_total_last_year='Flow Last Year',
+            flow_historical_average='Flow Historical Average',
             # provisional and returns
             # historical average for flow an stock NOTE: coming from different db
         ))
@@ -372,9 +377,15 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
 
         # NOTE: {{ }} turns into { } after the first .format
         formula = {
-            'Flow per 100k population': '={key1}{{row}}/{key2}{{row}}'.format(
+            'Flow per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
                 key1=get_key('flow_total'), key2=get_key('country_population')
-            )
+            ),
+            'Flow percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
+            ),
+            'Flow percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_historical_average')
+            ),
         }
         global_filter = dict(
             role=Figure.ROLE.RECOMMENDED,
@@ -392,6 +403,21 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 category__type=FLOW,
                 **global_filter
             )),
+            flow_total_last_year=Subquery(
+                # TODO: year should come from report
+                Figure.objects.filter(start_date__year=2019, country=OuterRef('country'), **global_filter).annotate(
+                    _total=Sum('total_figures')
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
+            flow_historical_average=Subquery(
+                # TODO: year should come from report
+                Figure.objects.filter(start_date__year__lte=2019, country=OuterRef('country'), **global_filter).annotate(
+                    min_year=Min(Extract('start_date', 'year')),
+                    max_year=Max(Extract('start_date', 'year')),
+                ).annotate(
+                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
             stock_total=Sum('total_figures', filter=Q(
                 category__type=STOCK,
                 **global_filter

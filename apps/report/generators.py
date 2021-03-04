@@ -1,7 +1,7 @@
 from openpyxl import Workbook
 
 
-def generate_report_excel(self):
+def generate_report_excel():
     from apps.report.models import Report
     r = Report.objects.get(id=2).sign_offs.first()
 
