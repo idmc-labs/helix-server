@@ -127,7 +127,11 @@ class Report(MetaInformationArchiveAbstractModel,
     @property
     # @cache_me(3000)
     def entries_report(self) -> list:
-        from apps.entry.filters import reviewed_subquery, signed_off_subquery
+        from apps.entry.filters import (
+            reviewed_subquery,
+            signed_off_subquery,
+            under_review_subquery,
+        )
 
         return self.report_figures.select_related(
             'entry'
@@ -135,6 +139,7 @@ class Report(MetaInformationArchiveAbstractModel,
             # id is needed by apollo-client
             id=F('entry_id'),
             is_reviewed=Exists(reviewed_subquery),
+            is_under_review=Exists(under_review_subquery),
             is_signed_off=Exists(signed_off_subquery),
             **self.TOTAL_FIGURE_DISAGGREGATIONS,
         )
@@ -165,6 +170,10 @@ class Report(MetaInformationArchiveAbstractModel,
             total_stock_disaster_sum=Sum('total_stock_disaster'),
             total_flow_disaster_sum=Sum('total_flow_disaster'),
         )
+
+    @property
+    def is_approved(self) -> bool:
+        return self.approvers.exists()
 
     def sign_off(self, done_by: 'User'):
         if not self.is_signed_off:

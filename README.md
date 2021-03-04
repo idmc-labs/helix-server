@@ -17,6 +17,9 @@ docker-compose up
 ```
 ## Initialize database (seed)
 ```bash
+# Fix the full_name constraint
+docker-compose exec server python manage.py save_users_dummy
+
 docker-compose exec server python manage.py create_dummy_users
 docker-compose exec server python manage.py loadtestdata <case sensitive model_names> --count 2
 # eg.

@@ -6,4 +6,4 @@ class ReviewConfig(AppConfig):
 
     def ready(self):
         # registering receiver
-        pass
+        from apps.review import receivers  # noqa :f401

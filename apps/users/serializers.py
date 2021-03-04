@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model, authenticate
+from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from django.utils.translation import gettext
 from django_enumfield.contrib.drf import EnumField
@@ -8,6 +9,28 @@ from apps.users.enums import USER_ROLE
 from apps.users.utils import get_user_from_activation_token
 
 User = get_user_model()
+
+
+class UserPasswordSerializer(serializers.ModelSerializer):
+    old_password = serializers.CharField(required=True, write_only=True)
+    new_password = serializers.CharField(required=True, write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['old_password', 'new_password']
+
+    def validate_old_password(self, password) -> str:
+        if not self.instance.check_password(password):
+            raise serializers.ValidationError('Invalid Password')
+        return password
+
+    def validate_new_password(self, password) -> str:
+        validate_password(password)
+        return password
+
+    def save(self, **kwargs):
+        self.instance.set_password(self.validated_data['new_password'])
+        self.instance.save()
 
 
 class RegisterSerializer(serializers.ModelSerializer):

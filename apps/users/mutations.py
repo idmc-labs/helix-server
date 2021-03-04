@@ -10,6 +10,7 @@ from apps.users.serializers import (
     RegisterSerializer,
     ActivateSerializer,
     UserSerializer,
+    UserPasswordSerializer,
 )
 from utils.permissions import is_authenticated
 from utils.error_types import CustomErrorType, mutation_is_not_valid
@@ -103,6 +104,32 @@ class Logout(graphene.Mutation):
         return Logout(ok=True)
 
 
+class UserPasswordInputType(graphene.InputObjectType):
+    old_password = graphene.String(required=True)
+    new_password = graphene.String(required=True)
+
+
+class ChangeUserPassword(graphene.Mutation):
+    class Arguments:
+        data = UserPasswordInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(UserType)
+
+    @staticmethod
+    @is_authenticated()
+    def mutate(root, info, data):
+        serializer = UserPasswordSerializer(instance=info.context.user,
+                                            data=data,
+                                            context={'request': info.context},
+                                            partial=True)
+        if errors := mutation_is_not_valid(serializer):
+            return ChangeUserPassword(errors=errors, ok=False)
+        serializer.save()
+        return ChangeUserPassword(result=info.context.user, errors=None, ok=True)
+
+
 class UserUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
     first_name = graphene.String()
@@ -147,3 +174,4 @@ class Mutation(object):
     activate = Activate.Field()
     logout = Logout.Field()
     update_user = UpdateUser.Field()
+    change_password = ChangeUserPassword.Field()

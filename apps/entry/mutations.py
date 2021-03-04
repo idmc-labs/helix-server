@@ -25,6 +25,7 @@ from apps.entry.serializers import (
     FigureTagSerializer,
 )
 from apps.contrib.serializers import SourcePreviewSerializer
+from apps.users.roles import USER_ROLE
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker, is_authenticated
 
@@ -436,9 +437,13 @@ class UpdateEntryReview(graphene.Mutation):
             entry_review.status = data['status']
             entry_review.save()
         except EntryReviewer.DoesNotExist:
-            return UpdateEntryReview(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Review not found.'))
-            ])
+            signed_off_status = EntryReviewer.REVIEW_STATUS.SIGNED_OFF
+            if reviewer.role == USER_ROLE.IT_HEAD.value and data['status'] == signed_off_status:
+                entry_review = EntryReviewer.objects.create(entry=entry, reviewer=reviewer, status=signed_off_status)
+            else:
+                return UpdateEntryReview(errors=[
+                    dict(field='nonFieldErrors', messages=gettext('Review not found.'))
+                ])
         except EntryReviewer.CannotUpdateStatusException as e:
             return UpdateEntryReview(errors=[
                 dict(field='nonFieldErrors', messages=gettext(e.message))
