@@ -42,6 +42,10 @@ class TestGenerationSerializer(HelixTestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
+        serializer = ReportGenerationSerializer(
+            data=self.data,
+            context=self.context
+        )
         self.assertFalse(serializer.is_valid())
         self.assertIn('report', serializer.errors)
 
