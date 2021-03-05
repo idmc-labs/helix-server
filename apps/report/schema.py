@@ -122,6 +122,7 @@ class ReportCommentListType(CustomDjangoListObjectType):
 class ReportGenerationType(DjangoObjectType):
     class Meta:
         model = ReportGeneration
+        exclude_fields = ('reports', 'figures', 'masterfact_reports')
 
 
 class ReportGenerationListType(CustomDjangoListObjectType):
@@ -151,8 +152,8 @@ class ReportType(DjangoObjectType):
                                               pagination=PageGraphqlPagination(
                                                   page_size_query_param='pageSize'
                                               ))
-    figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
-    event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
+    filter_figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
+    filter_event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
     countries_report = CustomPaginatedListObjectField(ReportCountryListType,
                                                       accessor='countries_report',
                                                       pagination=PageGraphqlPagination(
@@ -174,7 +175,7 @@ class ReportType(DjangoObjectType):
                                                        page_size_query_param='pageSize'
                                                    ))
     total_disaggregation = graphene.NonNull(ReportTotalsType)
-    approvals = DjangoPaginatedListObjectField(
+    last_approvals = DjangoPaginatedListObjectField(
         ReportApprovalListType,
         accessor='approvals',
     )

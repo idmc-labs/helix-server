@@ -48,8 +48,8 @@ class TestReportModel(HelixTestCase):
                                   end_date=f1.start_date + timedelta(days=16))
         f2.category.type = STOCK
         f2.category.save()
-        r = Report(figure_start_after=f1.start_date,
-                   figure_end_before=f1.end_date - timedelta(days=1))
+        r = Report(filter_figure_start_after=f1.start_date,
+                   filter_figure_end_before=f1.end_date - timedelta(days=1))
         r.save()
         assert r.report_figures.count() == 1
 

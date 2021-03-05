@@ -66,8 +66,8 @@ class Report(MetaInformationArchiveAbstractModel,
     figures = models.ManyToManyField('entry.Figure',
                                      blank=True)
     # query fields but modified
-    figure_start_after = models.DateField(verbose_name=_('From Date'), null=True)
-    figure_end_before = models.DateField(verbose_name=_('To Date'), null=True)
+    filter_figure_start_after = models.DateField(verbose_name=_('From Date'), null=True)
+    filter_figure_end_before = models.DateField(verbose_name=_('To Date'), null=True)
     # user entered fields
     analysis = models.TextField(verbose_name=_('Analysis'),
                                 blank=True, null=True)

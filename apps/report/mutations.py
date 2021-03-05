@@ -25,12 +25,12 @@ class ReportCreateInputType(graphene.InputObjectType):
     significant_updates = graphene.String(required=False)
     challenges = graphene.String(required=False)
     summary = graphene.String(required=False)
-    event_countries = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    event_crises = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    figure_categories = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    figure_start_after = graphene.Date(required=True)
-    figure_end_before = graphene.Date(required=True)
-    event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum), required=False)
+    filter_figure_countries = graphene.List(graphene.NonNull(graphene.ID), required=False)
+    filter_event_crises = graphene.List(graphene.NonNull(graphene.ID), required=False)
+    filter_figure_categories = graphene.List(graphene.NonNull(graphene.ID), required=False)
+    filter_figure_start_after = graphene.Date(required=True)
+    filter_figure_end_before = graphene.Date(required=True)
+    filter_event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum), required=False)
 
 
 class ReportUpdateInputType(graphene.InputObjectType):
@@ -41,12 +41,12 @@ class ReportUpdateInputType(graphene.InputObjectType):
     significant_updates = graphene.String(required=False)
     challenges = graphene.String(required=False)
     summary = graphene.String(required=False)
-    event_countries = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    event_crises = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    figure_categories = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    figure_start_after = graphene.Date(required=False)
-    figure_end_before = graphene.Date(required=False)
-    event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum), required=False)
+    filter_figure_countries = graphene.List(graphene.NonNull(graphene.ID), required=False)
+    filter_event_crises = graphene.List(graphene.NonNull(graphene.ID), required=False)
+    filter_figure_categories = graphene.List(graphene.NonNull(graphene.ID), required=False)
+    filter_figure_start_after = graphene.Date(required=False)
+    filter_figure_end_before = graphene.Date(required=False)
+    filter_event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum), required=False)
 
 
 class CreateReport(graphene.Mutation):

@@ -16,9 +16,9 @@ class TestCreateReport(HelixGraphQLTestCase):
             createReport(data: $input) {
                 result {
                     name
-                    figureStartAfter
-                    figureEndBefore
-                    eventCountries {
+                    filterFigureStartAfter
+                    filterFigureEndBefore
+                    filterFigureCountries {
                         id
                     }
                 }
@@ -28,9 +28,9 @@ class TestCreateReport(HelixGraphQLTestCase):
         }'''
         self.input = {
             "name": "disss",
-            "figureStartAfter": "2020-01-01",
-            "figureEndBefore": "2020-07-01",
-            "eventCountries": [str(each.id) for each in countries],
+            "filterFigureStartAfter": "2020-01-01",
+            "filterFigureEndBefore": "2020-07-01",
+            "filterFigureCountries": [str(each.id) for each in countries],
         }
 
     def test_valid_report_creation(self) -> None:
@@ -46,8 +46,8 @@ class TestCreateReport(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createReport']['ok'], content)
         self.assertEqual(content['data']['createReport']['result']['name'], self.input['name'])
-        self.assertEqual(len(content['data']['createReport']['result']['eventCountries']),
-                         len(self.input['eventCountries']))
+        self.assertEqual(len(content['data']['createReport']['result']['filterFigureCountries']),
+                         len(self.input['filterFigureCountries']))
 
     def test_invalid_report_creation_by_guest(self) -> None:
         reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
@@ -217,7 +217,7 @@ class TestReportApprove(HelixGraphQLTestCase):
             errors
             result {
               isApproved
-              approvals {
+              lastApprovals {
                 results {
                   createdBy {
                     email
@@ -248,7 +248,7 @@ class TestReportApprove(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertIsNone(content['data']['approveReport']['errors'], content)
         assert self.report.approvals.count() == self.report.last_generation.approvers.count()
-        self.assertEqual(content['data']['approveReport']['result']['approvals']['results'][0]['createdBy']['email'],
+        self.assertEqual(content['data']['approveReport']['result']['lastApprovals']['results'][0]['createdBy']['email'],
                          user.email, content)
 
     def test_invalid_report_approval_by_guest(self):
