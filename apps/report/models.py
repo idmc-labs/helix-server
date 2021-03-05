@@ -2,7 +2,7 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.db import models
-from django.db.models import Sum, Q, F, Exists
+from django.db.models import Sum, Q, F, Exists, OuterRef
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
@@ -173,7 +173,7 @@ class Report(MetaInformationArchiveAbstractModel,
     @property
     def is_approved(self):
         if self.last_generation:
-            return self.last_generation.approvals.filter(is_approved=True).exists()
+            return self.last_generation.is_approved
         return None
 
     @property
@@ -182,13 +182,17 @@ class Report(MetaInformationArchiveAbstractModel,
 
     @property
     def active_generation(self):
-        if self.generations.filter(is_signed_off=False).exists():
-            return self.generations.filter(is_signed_off=False).get()
-        return None
+        # NOTE: There should be at most one active generation
+        return self.generations.filter(is_signed_off=False).get()
 
     @property
     def last_generation(self):
-        return self.generations.order_by('-created_by').first()
+        return self.generations.annotate(
+            is_approved=Exists(ReportApproval.objects.filter(
+                generation=OuterRef('pk'),
+                is_approved=True,
+            ))
+        ).order_by('-created_at').first()
 
     def sign_off(self, done_by: 'User'):
         current_gen = ReportGeneration.objects.get(
