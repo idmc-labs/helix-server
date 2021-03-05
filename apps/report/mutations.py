@@ -244,6 +244,7 @@ class SignOffReport(graphene.Mutation):
         if errors := mutation_is_not_valid(serializer):
             return SignOffReport(errors=errors, ok=False)
         instance = serializer.save()
+        instance.refresh_from_db()
         return SignOffReport(result=instance, errors=None, ok=True)
 
 

@@ -4,7 +4,6 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Sum, Q, F, Exists
 from django.utils.translation import gettext_lazy as _
-from django.db import transaction
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel
@@ -86,6 +85,9 @@ class Report(MetaInformationArchiveAbstractModel,
                                            'Comment, Source Excerpt, IDU Excerpt, Breakdown & '
                                            'Reliability, and Caveats'))
     is_signed_off = models.BooleanField(default=False)
+    is_signed_off_by = models.ForeignKey(User, verbose_name=_('Last signed off by'),
+                                         blank=True, null=True,
+                                         related_name='signed_off_reports', on_delete=models.CASCADE)
 
     @property
     def report_figures(self):
@@ -176,7 +178,7 @@ class Report(MetaInformationArchiveAbstractModel,
 
     @property
     def approvals(self):
-        return self.generations.order_by('-created_by').first().approvals.all()
+        return self.last_generation.approvals.all()
 
     @property
     def active_generation(self):
@@ -189,17 +191,13 @@ class Report(MetaInformationArchiveAbstractModel,
         return self.generations.order_by('-created_by').first()
 
     def sign_off(self, done_by: 'User'):
-        with transaction.atomic():
-            if not self.is_signed_off:
-                self.is_signed_off = True
-                self.save(update_fields=["is_signed_off"])
-            current_gen = ReportGeneration.objects.get(
-                report=self,
-                is_signed_off=False,
-            )
-            current_gen.is_signed_off = True
-            current_gen.is_signed_off_by = done_by
-            current_gen.save(update_fields=['is_signed_off', 'is_signed_off_by'])
+        current_gen = ReportGeneration.objects.get(
+            report=self,
+            is_signed_off=False,
+        )
+        current_gen.is_signed_off = True
+        current_gen.is_signed_off_by = done_by
+        current_gen.save(update_fields=['is_signed_off', 'is_signed_off_by'])
 
     class Meta:
         # TODO: implement the side effects of report sign off
@@ -231,8 +229,11 @@ class ReportApproval(MetaInformationArchiveAbstractModel, models.Model):
                                    related_name='approvals', on_delete=models.CASCADE)
     is_approved = models.BooleanField(default=True)
 
+    class Meta:
+        unique_together = (('generation', 'created_by'),)
+
     def __str__(self):
-        return f'{self.report} {not self.is_approved and "dis"}approved by {self.created_by}'
+        return f'{self.generation.report} {not self.is_approved and "dis"}approved by {self.created_by}'
 
 
 class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):

@@ -172,10 +172,12 @@ class TestReportSignOff(HelixGraphQLTestCase):
             variables=self.variables
         )
         content = response.json()
-        print(content)
 
         self.assertResponseNoErrors(response)
-        self.assertEqual(content['data']['signOffReport']['result']['isSignedOff'], True)
+        self.assertIsNone(content['data']['signOffReport']['errors'], content)
+        self.report.refresh_from_db()
+        assert self.report.is_signed_off is True
+        self.assertEqual(content['data']['signOffReport']['result']['isSignedOff'], True, content)
         self.assertEqual(content['data']['signOffReport']['result']['id'], str(self.report.id))
         self.assertEqual(len(content['data']['signOffReport']['result']['generations']['results']), 1)
 
@@ -234,6 +236,7 @@ class TestReportApprove(HelixGraphQLTestCase):
 
     def test_valid_report_approval(self):
         user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.report.approvals.count() == 0
         self.force_login(user)
         response = self.query(
             self.mutation,
@@ -243,8 +246,10 @@ class TestReportApprove(HelixGraphQLTestCase):
         content = response.json()
 
         self.assertResponseNoErrors(response)
+        self.assertIsNone(content['data']['approveReport']['errors'], content)
+        assert self.report.approvals.count() == self.report.last_generation.approvers.count()
         self.assertEqual(content['data']['approveReport']['result']['approvals']['results'][0]['createdBy']['email'],
-                         user.email)
+                         user.email, content)
 
     def test_invalid_report_approval_by_guest(self):
         guest = create_user_with_role(USER_ROLE.GUEST.name)

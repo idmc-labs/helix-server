@@ -46,7 +46,7 @@ class ReportCommentSerializer(MetaInformationSerializerMixin,
 
 
 class ReportSignoffSerializer(serializers.Serializer):
-    report = serializers.IntegerField()
+    report = serializers.IntegerField(required=True)
 
     def validate_report(self, report):
         if not ReportGeneration.objects.filter(
@@ -77,16 +77,10 @@ class ReportGenerationSerializer(MetaInformationSerializerMixin,
             raise serializers.ValidationError(gettext('Cannot start another while previous is not signed off.'))
         return report
 
-    def save(self):
-        report = self.validated_data['report']
-        report.is_signed_off = False
-        report.save()
-        return super().save()
-
 
 class ReportApproveSerializer(serializers.Serializer):
-    report = serializers.IntegerField()
-    is_approved = serializers.BooleanField()
+    report = serializers.IntegerField(required=True)
+    is_approved = serializers.BooleanField(required=False)
 
     def validate_report(self, report):
         if not ReportGeneration.objects.filter(
@@ -102,8 +96,10 @@ class ReportApproveSerializer(serializers.Serializer):
             report_id=report,
             is_signed_off=False,
         )
-        ReportApproval.objects.create(
+        ReportApproval.objects.update_or_create(
             generation=generation,
             created_by=self.context['request'].user,
-            is_approved=self.validated_data['is_approved']
+            defaults=dict(
+                is_approved=self.validated_data.get('is_approved', True),
+            ),
         )
