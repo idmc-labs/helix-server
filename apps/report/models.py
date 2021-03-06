@@ -179,7 +179,9 @@ class Report(MetaInformationArchiveAbstractModel,
 
     @cached_property
     def approvals(self):
-        return self.last_generation.approvals.all()
+        if self.last_generation:
+            return self.last_generation.approvals.all()
+        return ReportApproval.objects.none()
 
     @cached_property
     def active_generation(self):
