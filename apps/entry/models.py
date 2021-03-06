@@ -49,22 +49,28 @@ class OSMName(UUIDAbstractModel, models.Model):
 
     # external API fields
     wikipedia = models.TextField(verbose_name=_('Wikipedia'),
-                                 blank=True, null=True)
+                                 blank=True,
+                                 null=True)
     rank = models.IntegerField(verbose_name=_('Rank'),
-                               blank=True, null=True)
+                               blank=True,
+                               null=True)
     country = models.TextField(verbose_name=_('Country'))
     country_code = models.CharField(verbose_name=_('Country Code'), max_length=8)
     street = models.TextField(verbose_name=_('Street'),
-                              blank=True, null=True)
+                              blank=True,
+                              null=True)
     wiki_data = models.TextField(verbose_name=_('Wiki data'),
-                                 blank=True, null=True)
+                                 blank=True,
+                                 null=True)
     osm_id = models.CharField(verbose_name=_('OSM Id'), max_length=256)
     osm_type = models.CharField(verbose_name=_('OSM Type'), max_length=256)
     house_numbers = models.TextField(verbose_name=_('House numbers'),
-                                     blank=True, null=True)
+                                     blank=True,
+                                     null=True)
     identifier = enum.EnumField(verbose_name=_('Identifier'), enum=IDENTIFIER)
     city = models.CharField(verbose_name=_('City'), max_length=256,
-                            blank=True, null=True)
+                            blank=True,
+                            null=True)
     display_name = models.CharField(verbose_name=_('Display name'), max_length=512)
     lon = models.FloatField(verbose_name=_('Longitude'))
     lat = models.FloatField(verbose_name=_('Latitude'))
@@ -103,35 +109,73 @@ class FigureCategory(models.Model):
 
 class FigureDisaggregationAbstractModel(models.Model):
     # disaggregation information
-    displacement_urban = models.PositiveIntegerField(verbose_name=_('Displacement/Urban'),
-                                                     blank=True, null=True)
-    displacement_rural = models.PositiveIntegerField(verbose_name=_('Displacement/Rural'),
-                                                     blank=True, null=True)
-    location_camp = models.PositiveIntegerField(verbose_name=_('Location/Camp'),
-                                                blank=True, null=True)
-    location_non_camp = models.PositiveIntegerField(verbose_name=_('Location/Non-Camp'),
-                                                    blank=True, null=True)
-    sex_male = models.PositiveIntegerField(verbose_name=_('Sex/Male'),
-                                           blank=True, null=True)
-    sex_female = models.PositiveIntegerField(verbose_name=_('Sex/Female'),
-                                             blank=True, null=True)
-    age_json = ArrayField(base_field=JSONField(verbose_name=_('Age')),
-                          verbose_name=_('Age Disaggregation'),
-                          blank=True, null=True)
-    strata_json = ArrayField(base_field=JSONField(verbose_name=_('Stratum')),
-                             verbose_name=_('Strata Disaggregation'),
-                             blank=True, null=True)
+    disaggregation_displacement_urban = models.PositiveIntegerField(
+        verbose_name=_('Displacement/Urban'),
+        blank=True,
+        null=True
+    )
+    disaggregation_displacement_rural = models.PositiveIntegerField(
+        verbose_name=_('Displacement/Rural'),
+        blank=True,
+        null=True
+    )
+    disaggregation_location_camp = models.PositiveIntegerField(
+        verbose_name=_('Location/Camp'),
+        blank=True,
+        null=True
+    )
+    disaggregation_location_non_camp = models.PositiveIntegerField(
+        verbose_name=_('Location/Non-Camp'),
+        blank=True,
+        null=True
+    )
+    disaggregation_sex_male = models.PositiveIntegerField(
+        verbose_name=_('Sex/Male'),
+        blank=True,
+        null=True
+    )
+    disaggregation_sex_female = models.PositiveIntegerField(
+        verbose_name=_('Sex/Female'),
+        blank=True,
+        null=True
+    )
+    disaggregation_age_json = ArrayField(
+        base_field=JSONField(verbose_name=_('Age')),
+        verbose_name=_('Age Disaggregation'),
+        blank=True,
+        null=True
+    )
+    disaggregation_strata_json = ArrayField(
+        base_field=JSONField(verbose_name=_('Stratum')),
+        verbose_name=_('Strata Disaggregation'),
+        blank=True,
+        null=True)
     # conflict based disaggregation
-    conflict = models.PositiveIntegerField(verbose_name=_('Conflict/Conflict'),
-                                           blank=True, null=True)
-    conflict_political = models.PositiveIntegerField(verbose_name=_('Conflict/Violence-Political'),
-                                                     blank=True, null=True)
-    conflict_criminal = models.PositiveIntegerField(verbose_name=_('Conflict/Violence-Criminal'),
-                                                    blank=True, null=True)
-    conflict_communal = models.PositiveIntegerField(verbose_name=_('Conflict/Violence-Communal'),
-                                                    blank=True, null=True)
-    conflict_other = models.PositiveIntegerField(verbose_name=_('Other'),
-                                                 blank=True, null=True)
+    disaggregation_conflict = models.PositiveIntegerField(
+        verbose_name=_('Conflict/Conflict'),
+        blank=True,
+        null=True
+    )
+    disaggregation_conflict_political = models.PositiveIntegerField(
+        verbose_name=_('Conflict/Violence-Political'),
+        blank=True,
+        null=True
+    )
+    disaggregation_conflict_criminal = models.PositiveIntegerField(
+        verbose_name=_('Conflict/Violence-Criminal'),
+        blank=True,
+        null=True
+    )
+    disaggregation_conflict_communal = models.PositiveIntegerField(
+        verbose_name=_('Conflict/Violence-Communal'),
+        blank=True,
+        null=True
+    )
+    disaggregation_conflict_other = models.PositiveIntegerField(
+        verbose_name=_('Other'),
+        blank=True,
+        null=True
+    )
 
     class Meta:
         abstract = True

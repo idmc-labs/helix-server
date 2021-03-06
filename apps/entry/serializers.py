@@ -90,7 +90,7 @@ class CommonFigureValidationMixin:
                 self.event_id = self.event.id
         return self.event
 
-    def validate_age_json(self, age_groups):
+    def validate_disaggregation_age_json(self, age_groups):
         values = []
         for each in age_groups:
             values.extend(range(each['age_from'], each['age_to']))
@@ -98,7 +98,7 @@ class CommonFigureValidationMixin:
             raise serializers.ValidationError(gettext('Please do not mix up age ranges. '))
         return age_groups
 
-    def validate_strata_json(self, strata):
+    def validate_disaggregation_strata_json(self, strata):
         values = [each['date'] for each in strata]
         if len(values) != len(set(values)):
             raise serializers.ValidationError(
@@ -207,21 +207,27 @@ class CommonFigureValidationMixin:
         errors.update(self.validate_figure_country(attrs))
         errors.update(self.validate_figure_geo_locations(attrs))
         errors.update(self.validate_disaggregated_sum_against_reported(
-            attrs, ['location_camp', 'location_non_camp'], 'camp and non-camp'
+            attrs, ['disaggregation_location_camp', 'disaggregation_location_non_camp'], 'camp and non-camp'
         ))
         errors.update(self.validate_disaggregated_sum_against_reported(
-            attrs, ['displacement_urban', 'displacement_rural'], 'urban and rural'
+            attrs, ['disaggregation_displacement_urban', 'disaggregation_displacement_rural'], 'urban and rural'
         ))
         errors.update(self.validate_disaggregated_sum_against_reported(
-            attrs, ['sex_male', 'sex_female'], 'male and female'
+            attrs, ['disaggregation_sex_male', 'disaggregation_sex_female'], 'male and female'
         ))
         errors.update(self.validate_disaggregated_sum_against_reported(
             attrs,
-            ['conflict', 'conflict_political', 'conflict_criminal', 'conflict_other', 'conflict_communal'],
+            [
+                'disaggregation_conflict',
+                'disaggregation_conflict_political',
+                'disaggregation_conflict_criminal',
+                'disaggregation_conflict_other',
+                'disaggregation_conflict_communal'
+            ],
             'conflict'
         ))
-        errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'age_json', 'age'))
-        errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'strata_json', 'strata'))
+        errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'disaggregation_age_json', 'age'))
+        errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'disaggregation_strata_json', 'strata'))
         if errors:
             raise ValidationError(errors)
         return attrs
@@ -230,8 +236,8 @@ class CommonFigureValidationMixin:
 class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
                                    CommonFigureValidationMixin,
                                    serializers.ModelSerializer):
-    age_json = DisaggregatedAgeSerializer(many=True, required=False)
-    strata_json = DisaggregatedStratumSerializer(many=True, required=False)
+    disaggregation_age_json = DisaggregatedAgeSerializer(many=True, required=False)
+    disaggregation_strata_json = DisaggregatedStratumSerializer(many=True, required=False)
     geo_locations = OSMNameSerializer(many=True, required=False)
 
     class Meta:
