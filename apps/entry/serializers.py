@@ -1,7 +1,8 @@
-from django.core.validators import MinValueValidator
 from collections import OrderedDict
+from copy import copy
 
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import transaction
 from django.utils.translation import gettext, gettext_lazy as _
 from rest_framework import serializers
@@ -18,6 +19,7 @@ from apps.entry.models import (
     EntryReviewer,
     FigureTag,
 )
+from apps.event.models import Event
 from apps.users.models import User
 from apps.users.enums import USER_ROLE
 from utils.validations import is_child_parent_inclusion_valid
@@ -67,6 +69,22 @@ class OSMNameSerializer(serializers.ModelSerializer):
 
 
 class CommonFigureValidationMixin:
+    def get_event(self):
+        if not self.parent:
+            # this will be the case when we will be using this serializer directly,
+            # which will not be the case when in use in the application.
+            # this if block currently only is for directly testing this serializer which does not use event
+            return None
+
+        if not hasattr(self, 'event_id'):
+            self.event_id = self.parent.parent.initial_data.get('event', None)
+            if self.event_id:
+                self.event = Event.objects.filter(id=self.event_id).first()
+            else:
+                self.event = self.parent.parent.instance.event
+                self.event_id = self.event.id
+        return self.event
+
     def validate_age_json(self, age_groups):
         values = []
         for each in age_groups:
@@ -102,16 +120,16 @@ class CommonFigureValidationMixin:
         if not attrs.get('geo_locations'):
             return errors
         location_code = country.country_code
-        locations_code = set([
+        geo_locations_code = set([
             location['country_code'] for location in attrs['geo_locations']
         ])
 
-        if len(locations_code) != 1:
+        if len(geo_locations_code) != 1:
             errors.update({
                 'geo_locations': 'Geolocations only support a single country under a figure.'
             })
 
-        if locations_code.pop() != location_code:
+        if int(geo_locations_code.pop()) != int(location_code):
             errors.update({
                 'geo_locations': "Location should be inside the selected figure's country"
             })
@@ -132,8 +150,8 @@ class CommonFigureValidationMixin:
 
     def validate_disaggregated_json_sum_against_reported(self, attrs, field, verbose_name):
         errors = OrderedDict()
-        reported = attrs.get('reported') or getattr(self.instance, 'reported', 0)
-        json_field = attrs.get(field) or getattr(self.instance, field, [])
+        reported = attrs.get('reported') or getattr(self.instance, 'reported', None) or 0
+        json_field = attrs.get(field) or getattr(self.instance, field, None) or []
         total = [item['value'] for item in json_field]
         if sum(total) > reported:
             errors.update({
@@ -151,6 +169,27 @@ class CommonFigureValidationMixin:
                 )
         return geo_locations
 
+    def validate_figure_country(self, attrs):
+        _attrs = copy(attrs)
+        errors = OrderedDict()
+        if self.get_event():
+            _attrs.update({'entry': {'event': self.event}})
+            errors.update(is_child_parent_inclusion_valid(
+                _attrs,
+                self.instance,
+                'country',
+                'entry.event.countries',
+            ))
+        return errors
+
+    def validate_dates(self, attrs):
+        errors = OrderedDict()
+        _attrs = copy(attrs)
+        if self.get_event():
+            _attrs.update({'entry': {'event': self.event}})
+            errors.update(Figure.validate_dates(attrs, self.instance))
+        return errors
+
     def validate(self, attrs: dict) -> dict:
         if not self.instance and attrs.get('id'):
             self.instance = Figure.objects.get(id=attrs['id'])
@@ -159,14 +198,9 @@ class CommonFigureValidationMixin:
         errors = OrderedDict()
         errors.update(Figure.clean_idu(attrs, self.instance))
         errors.update(self.validate_unit_and_household_size(attrs))
-        errors.update(Figure.validate_dates(attrs, self.instance))
-        errors.update(
-            is_child_parent_inclusion_valid(attrs, self.instance, 'country', 'entry.event.countries')
-        )
+        errors.update(self.validate_dates(attrs))
+        errors.update(self.validate_figure_country(attrs))
         errors.update(self.validate_figure_geo_locations(attrs))
-        errors.update(
-            is_child_parent_inclusion_valid(attrs, self.instance, 'country', 'entry.event.countries')
-        )
         errors.update(self.validate_disaggregated_sum_against_reported(
             attrs, ['location_camp', 'location_non_camp'], 'camp and non-camp'
         ))

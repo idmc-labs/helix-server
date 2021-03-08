@@ -114,6 +114,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.fig_cat_id = str(self.fig_cat.id)
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.event = EventFactory.create()
+        self.event.countries.add(self.country)
         self.mutation = """
             mutation CreateEntry($input: EntryCreateInputType!) {
                 createEntry(data: $input) {
@@ -241,10 +242,11 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createEntry']['ok'], content)
         self.assertIsNotNone(content['data']['createEntry']['errors'], content)
+        self.assertEqual(uuid_error,
+                         content['data']['createEntry']['errors'][0]['arrayErrors'][0]['key'],
+                         content['data']['createEntry'])
         self.assertEqual('reported',
                          content['data']['createEntry']['errors'][0]['arrayErrors'][0]['objectErrors'][0]['field'])
-        self.assertEqual(uuid_error,
-                         content['data']['createEntry']['errors'][0]['arrayErrors'][0]['key'])
 
     def test_invalid_entry_created_by_reviewer(self):
         reviewer = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
@@ -359,8 +361,11 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.fig_cat = FigureCategoryFactory.create()
         self.fig_cat_id = str(self.fig_cat.id)
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.event = EventFactory.create(name='myevent')
+        self.event.countries.add(self.country)
         self.entry = EntryFactory.create(
-            created_by=self.editor
+            created_by=self.editor,
+            event=self.event,
         )
         self.mutation = """
         mutation MyMutation($input: EntryUpdateInputType!) {
@@ -437,7 +442,11 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.assertTrue(content['data']['updateEntry']['ok'], content)
 
     def test_valid_update_entry_with_figures(self):
-        figure = FigureFactory.create(entry=self.entry)
+        figure = FigureFactory.create(
+            entry=self.entry,
+            country=self.country
+        )
+        # this figure will be deleted
         deleted_figure = FigureFactory.create(entry=self.entry)
         figures = [
             {
@@ -466,8 +475,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                     }
                 ],
                 "strataJson": [
-                    {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
-                    {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
+                    {"date": "2020-10-10", "value": 2, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
+                    {"date": "2020-10-12", "value": 2, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
                 ]
             },
             {
@@ -497,8 +506,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                     }
                 ],
                 "strataJson": [
-                    {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
-                    {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
+                    {"date": "2020-10-10", "value": 2, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
+                    {"date": "2020-10-12", "value": 2, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
                 ]
             },
         ]

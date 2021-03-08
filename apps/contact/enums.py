@@ -12,7 +12,7 @@ CommunicationMediumGrapheneEnum = graphene.Enum.from_enum(Communication.COMMUNIC
                                                           description=enum_description)
 
 enum_map = dict(
-    DESGINATION=DesignationGrapheneEnum,
+    DESIGNATION=DesignationGrapheneEnum,
     GENDER=GenderGrapheneEnum,
     COMMUNICATION_MEDIUM=CommunicationMediumGrapheneEnum
 )

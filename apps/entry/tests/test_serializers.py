@@ -25,7 +25,9 @@ class TestEntrySerializer(HelixTestCase):
         r1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.factory = RequestFactory()
+        self.country = CountryFactory.create(country_code=123)
         self.event = EventFactory.create()
+        self.event.countries.add(self.country)
         self.publisher = OrganizationFactory.create()
         self.data = {
             "url": "https://yoko-onos-blog.com",
@@ -151,8 +153,8 @@ class TestEntrySerializer(HelixTestCase):
     def test_entry_serializer_with_figures_source(self):
         source1 = dict(
             rank=101,
-            country='abc',
-            country_code='xyz',
+            country=str(self.country.name),
+            country_code=str(self.country.country_code),
             osm_id='ted',
             osm_type='okay',
             display_name='okay',
@@ -170,6 +172,7 @@ class TestEntrySerializer(HelixTestCase):
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
+            "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
             "term": Figure.TERM.EVACUATED.value,
             "role": Figure.ROLE.RECOMMENDED.value,
@@ -197,9 +200,10 @@ class TestEntrySerializer(HelixTestCase):
             'identifier': OSMName.IDENTIFIER.ORIGIN.value,
         })
         existing = figure.geo_locations.first()
-        old_source = {
+        old_source = copy(source2)
+        old_source.update({
             'id': existing.id,
-        }
+        })
         figures = [{
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
             "id": figure.id,
@@ -268,6 +272,7 @@ class TestFigureSerializer(HelixTestCase):
         )
         self.fig_cat = FigureCategoryFactory.create()
         self.data = {
+            "uuid": str(uuid4()),
             "entry": self.entry.id,
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 100,
@@ -282,19 +287,6 @@ class TestFigureSerializer(HelixTestCase):
         }
         self.request = self.factory.get('/graphql')
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-
-    def test_valid_figure_creation(self):
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-
-    def test_invalid_contry(self):
-        country3 = CountryFactory.create(country_code=12312)
-        self.data['country'] = country3.id
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('country', serializer.errors)
 
     def test_invalid_geo_locations(self):
         self.data['geo_locations'] = [

@@ -36,7 +36,7 @@ class TestCreateContact(HelixGraphQLTestCase):
         }
         '''
         self.input = {
-            "designation": "MR",
+            "designation": "MS",
             "firstName": "first",
             "lastName": "last",
             "gender": "MALE",
