@@ -238,7 +238,7 @@ class ReportApproval(MetaInformationArchiveAbstractModel, models.Model):
         unique_together = (('generation', 'created_by'),)
 
     def __str__(self):
-        return f'{self.generation.report} {not self.is_approved and "dis"}approved by {self.created_by}'
+        return f'{self.generation.report} {"approved" if self.is_approved else "disapproved"} by {self.created_by}'
 
 
 class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
