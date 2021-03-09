@@ -152,6 +152,7 @@ class TestEntrySerializer(HelixTestCase):
 
     def test_entry_serializer_with_figures_source(self):
         source1 = dict(
+            uuid=str(uuid4()),
             rank=101,
             country=str(self.country.name),
             country_code=str(self.country.country_code),
@@ -166,8 +167,10 @@ class TestEntrySerializer(HelixTestCase):
         )
         source2 = copy(source1)
         source2['lat'] = 67.5
+        source2['uuid'] = str(uuid4())
         source3 = copy(source1)
         source3['lon'] = 45.9
+        source3['uuid'] = str(uuid4())
         figures = [{
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
@@ -199,6 +202,15 @@ class TestEntrySerializer(HelixTestCase):
             'lon': 33.8,
             'identifier': OSMName.IDENTIFIER.ORIGIN.value,
         })
+        new_source['uuid'] = str(uuid4())
+
+        new_source2 = copy(source1)
+        new_source2.update({
+            'lat': 33.8,
+            'lon': 33.8,
+            'identifier': OSMName.IDENTIFIER.ORIGIN.value,
+        })
+        new_source2['uuid'] = str(uuid4())
         existing = figure.geo_locations.first()
         old_source = copy(source2)
         old_source.update({
@@ -217,7 +229,8 @@ class TestEntrySerializer(HelixTestCase):
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
-            "geo_locations": [new_source],
+            "country": str(self.country.id),
+            "geo_locations": [new_source2],
         }]
         self.data['figures'] = figures
         serializer = EntryUpdateSerializer(instance=entry,

@@ -60,12 +60,17 @@ class DisaggregatedStratumSerializer(serializers.Serializer):
 
 class OSMNameSerializer(serializers.ModelSerializer):
     # to allow updating
-    uuid = serializers.UUIDField(required=True)
     id = IntegerIDField(required=False)
 
     class Meta:
         model = OSMName
         fields = '__all__'
+        extra_kwargs = {
+            'uuid': {
+                'validators': [],
+                'required': True
+            },
+        }
 
 
 class CommonFigureValidationMixin:
@@ -228,11 +233,16 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
     age_json = DisaggregatedAgeSerializer(many=True, required=False)
     strata_json = DisaggregatedStratumSerializer(many=True, required=False)
     geo_locations = OSMNameSerializer(many=True, required=False)
-    uuid = serializers.UUIDField(required=True)
 
     class Meta:
         model = Figure
         exclude = ('id', 'entry', 'total_figures')
+        extra_kwargs = {
+            'uuid': {
+                'validators': [],
+                'required': True
+            },
+        }
 
     def create(self, validated_data: dict) -> Figure:
         geo_locations = validated_data.pop('geo_locations', [])
@@ -247,8 +257,9 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
     def _update_locations(self, instance, attr: str, data: list):
         osms = []
         if data:
-            getattr(instance, attr).exclude(id__in=[each['id'] for each in data if 'id'
-                                                    in each]).delete()
+            getattr(instance, attr).exclude(
+                id__in=[each['id'] for each in data if 'id' in each]
+            ).delete()
             for each in data:
                 if not each.get('id'):
                     osm_serializer = OSMNameSerializer()
@@ -280,6 +291,12 @@ class NestedFigureUpdateSerializer(NestedFigureCreateSerializer):
     class Meta:
         model = Figure
         exclude = ('entry', 'total_figures')
+        extra_kwargs = {
+            'uuid': {
+                'validators': [],
+                'required': True
+            },
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
