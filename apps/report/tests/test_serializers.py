@@ -1,6 +1,6 @@
 from django.test import RequestFactory
 
-from apps.report.models import ReportGeneration
+from apps.report.models import ReportGeneration, Report
 from apps.report.serializers import (
     ReportSignoffSerializer,
     ReportGenerationSerializer,
@@ -55,6 +55,7 @@ class TestReportApprovalSerializer(HelixTestCase):
         self.it_head = create_user_with_role(USER_ROLE.IT_HEAD.name)
         self.request = RequestFactory().post('/graphql')
         self.report = ReportFactory.create()
+        self.report_id = self.report.id
         self.data = dict(report=self.report.id)
 
     def test_valid_approval(self):
@@ -74,12 +75,14 @@ class TestReportApprovalSerializer(HelixTestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
         # check report approved flag should be true
-        assert self.report.is_approved is True
+        report = Report.objects.get(id=self.report_id)
+        assert report.is_approved is True
         # re approve
         serializer.save()
         # approval count should remain same
-        assert self.report.is_approved is True
-        self.report.last_generation.approvers.count() == 1
+        report = Report.objects.get(id=self.report_id)
+        assert report.is_approved is True
+        report.last_generation.approvers.count() == 1
 
     def test_invalid_approval_report_signed_off(self):
         # report not yet started generation

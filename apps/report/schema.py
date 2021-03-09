@@ -33,7 +33,6 @@ class ReportCountryType(ReportFigureMixin, graphene.ObjectType):
     """
     country = graphene.Field('apps.country.schema.CountryType', required=True)
     id = graphene.ID(required=True)
-    name = graphene.String(required=True)
 
     def resolve_country(root, info, **kwargs):
         return Country.objects.get(id=root['id'])
@@ -145,7 +144,7 @@ class ReportApprovalListType(CustomDjangoListObjectType):
 class ReportType(DjangoObjectType):
     class Meta:
         model = Report
-        exclude_fields = ('reports', 'figures', 'masterfact_reports')
+        exclude_fields = ('reports', 'figures', 'masterfact_reports', 'approvers')
 
     is_approved = graphene.Boolean()
     comments = DjangoPaginatedListObjectField(ReportCommentListType,

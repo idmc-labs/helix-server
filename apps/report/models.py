@@ -1,3 +1,4 @@
+from functools import cached_property
 import logging
 
 from django.contrib.auth import get_user_model
@@ -170,22 +171,22 @@ class Report(MetaInformationArchiveAbstractModel,
             total_flow_disaster_sum=Sum('total_flow_disaster'),
         )
 
-    @property
+    @cached_property
     def is_approved(self):
         if self.last_generation:
             return self.last_generation.is_approved
         return None
 
-    @property
+    @cached_property
     def approvals(self):
         return self.last_generation.approvals.all()
 
-    @property
+    @cached_property
     def active_generation(self):
         # NOTE: There should be at most one active generation
-        return self.generations.filter(is_signed_off=False).get()
+        return self.generations.filter(is_signed_off=False).first()
 
-    @property
+    @cached_property
     def last_generation(self):
         return self.generations.annotate(
             is_approved=Exists(ReportApproval.objects.filter(
