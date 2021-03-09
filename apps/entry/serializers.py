@@ -26,7 +26,7 @@ from utils.validations import is_child_parent_inclusion_valid
 
 
 class DisaggregatedAgeSerializer(serializers.Serializer):
-    uuid = serializers.UUIDField(required=False)
+    uuid = serializers.UUIDField(required=True)
     age_from = serializers.IntegerField(
         validators=[MinValueValidator(0, _("Minimum value is 1. "))],
         required=True)
@@ -46,7 +46,7 @@ class DisaggregatedAgeSerializer(serializers.Serializer):
 
 
 class DisaggregatedStratumSerializer(serializers.Serializer):
-    uuid = serializers.UUIDField(required=False)
+    uuid = serializers.UUIDField(required=True)
     date = serializers.DateField(required=True)
     value = serializers.IntegerField(validators=[MinValueValidator(0, _("Minimum value is 1. "))],
                                      required=True)
@@ -60,7 +60,7 @@ class DisaggregatedStratumSerializer(serializers.Serializer):
 
 class OSMNameSerializer(serializers.ModelSerializer):
     # to allow updating
-    uuid = serializers.UUIDField(required=False)
+    uuid = serializers.UUIDField(required=True)
     id = IntegerIDField(required=False)
 
     class Meta:
@@ -228,7 +228,7 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
     age_json = DisaggregatedAgeSerializer(many=True, required=False)
     strata_json = DisaggregatedStratumSerializer(many=True, required=False)
     geo_locations = OSMNameSerializer(many=True, required=False)
-    uuid = serializers.CharField(required=True)
+    uuid = serializers.UUIDField(required=True)
 
     class Meta:
         model = Figure

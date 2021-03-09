@@ -1,6 +1,5 @@
 from django.test import RequestFactory
 
-from apps.contact.models import Contact
 from apps.organization.serializers import OrganizationSerializer
 from utils.tests import HelixTestCase
 

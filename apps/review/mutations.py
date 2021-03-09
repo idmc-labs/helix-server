@@ -1,7 +1,6 @@
 import graphene
 from django.utils.translation import gettext
 
-from apps.review.enums import ReviewStatusEnum
 from apps.review.models import ReviewComment
 from apps.review.schema import ReviewCommentType
 from apps.review.serializers import ReviewCommentSerializer

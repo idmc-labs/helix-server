@@ -1,7 +1,6 @@
 import graphene
 from django.utils.translation import gettext
 
-from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.models import Event, Actor
 from apps.event.schema import EventType, ActorType
 from apps.event.serializers import (
@@ -10,7 +9,6 @@ from apps.event.serializers import (
     ActorSerializer,
     ActorUpdateSerializer
 )
-from apps.event.enums import EventOtherSubTypeEnum
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 from utils.mutation import generate_input_type_for_serializer

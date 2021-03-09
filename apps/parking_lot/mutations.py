@@ -4,7 +4,6 @@ from django.utils.translation import gettext
 from apps.parking_lot.models import ParkedItem
 from apps.parking_lot.schema import ParkedItemType
 from apps.parking_lot.serializers import ParkedItemSerializer, ParkedItemUpdateSerializer
-from apps.parking_lot.enums import ParkedItemGrapheneEnum
 from utils.mutation import generate_input_type_for_serializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
