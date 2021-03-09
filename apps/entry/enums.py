@@ -1,3 +1,7 @@
+__all__ = ['QuantifierGrapheneEnum', 'UnitGrapheneEnum', 'TermGrapheneEnum',
+           'RoleGrapheneEnum', 'EntryReviewerGrapheneEnum', 'OSMAccuracyGrapheneEnum',
+           'IdentifierGrapheneEnum']
+
 import graphene
 
 from apps.entry.models import Figure, EntryReviewer, OSMName
@@ -13,3 +17,13 @@ EntryReviewerGrapheneEnum = graphene.Enum.from_enum(EntryReviewer.REVIEW_STATUS,
 OSMAccuracyGrapheneEnum = graphene.Enum.from_enum(OSMName.OSM_ACCURACY,
                                                   description=enum_description)
 IdentifierGrapheneEnum = graphene.Enum.from_enum(OSMName.IDENTIFIER, description=enum_description)
+
+enum_map = dict(
+    QUANTIFIER=QuantifierGrapheneEnum,
+    UNIT=UnitGrapheneEnum,
+    TERM=TermGrapheneEnum,
+    ROLE=RoleGrapheneEnum,
+    REVIEW_STATUS=EntryReviewerGrapheneEnum,
+    OSM_ACCURACY=OSMAccuracyGrapheneEnum,
+    IDENTIFIER=IdentifierGrapheneEnum
+)

@@ -3,26 +3,26 @@ import graphene
 
 from apps.resource.models import Resource, ResourceGroup
 from apps.resource.schema import ResourceType, ResourceGroupType
-from apps.resource.serializers import ResourceSerializer, ResourceGroupSerializer
+from apps.resource.serializers import (
+    ResourceSerializer,
+    ResourceGroupSerializer,
+    ResourceUpdateSerializer,
+    ResourceGroupUpdateSerializer
+)
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
+from utils.mutation import generate_input_type_for_serializer
 
 
-class ResourceCreateInputType(graphene.InputObjectType):
-    name = graphene.String(required=True)
-    url = graphene.String(required=True)
-    group = graphene.ID()
-    countries = graphene.NonNull(graphene.List(graphene.NonNull(graphene.ID)))
-    last_accessed_on = graphene.DateTime(required=False)
+ResourceCreateInputType = generate_input_type_for_serializer(
+    'ResourceCreateInputType',
+    ResourceSerializer
+)
 
-
-class ResourceUpdateInputType(graphene.InputObjectType):
-    id = graphene.ID(required=True)
-    name = graphene.String()
-    url = graphene.String()
-    group = graphene.ID()
-    countries = graphene.List(graphene.NonNull(graphene.ID))
-    last_accessed_on = graphene.DateTime()
+ResourceUpdateInputType = generate_input_type_for_serializer(
+    'ResourceUpdateInputType',
+    ResourceUpdateSerializer
+)
 
 
 class CreateResource(graphene.Mutation):
@@ -93,13 +93,15 @@ class DeleteResource(graphene.Mutation):
         return DeleteResource(result=instance, errors=None, ok=True)
 
 
-class ResourceGroupCreateInputType(graphene.InputObjectType):
-    name = graphene.String(required=True)
+ResourceGroupCreateInputType = generate_input_type_for_serializer(
+    'ResourceGroupCreateInputType',
+    ResourceGroupSerializer
+)
 
-
-class ResourceGroupUpdateInputType(graphene.InputObjectType):
-    id = graphene.ID(required=True)
-    name = graphene.String()
+ResourceGroupUpdateInputType = generate_input_type_for_serializer(
+    'ResourceGroupUpdateInputType',
+    ResourceGroupUpdateSerializer
+)
 
 
 class CreateResourceGroup(graphene.Mutation):

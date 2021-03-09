@@ -3,7 +3,11 @@ from uuid import uuid4
 
 from django.test import RequestFactory
 
-from apps.entry.serializers import EntrySerializer, FigureSerializer
+from apps.entry.serializers import (
+    EntryCreateSerializer,
+    EntryUpdateSerializer,
+    NestedFigureCreateSerializer as FigureSerializer,
+)
 from apps.users.enums import USER_ROLE
 from apps.entry.models import EntryReviewer, OSMName, Figure
 from utils.factories import (
@@ -21,7 +25,9 @@ class TestEntrySerializer(HelixTestCase):
         r1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.factory = RequestFactory()
+        self.country = CountryFactory.create(country_code=123)
         self.event = EventFactory.create()
+        self.event.countries.add(self.country)
         self.publisher = OrganizationFactory.create()
         self.data = {
             "url": "https://yoko-onos-blog.com",
@@ -38,13 +44,14 @@ class TestEntrySerializer(HelixTestCase):
             "reviewers": [r1.id, r2.id]
         }
         self.request = self.factory.get('/graphql')
-        self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.request.user = self.user = create_user_with_role(
+            USER_ROLE.MONITORING_EXPERT_EDITOR.name)
 
     def test_create_entry_requires_document_or_url(self):
         self.data['url'] = None
         self.data['document'] = None
-        serializer = EntrySerializer(data=self.data,
-                                     context={'request': self.request})
+        serializer = EntryCreateSerializer(data=self.data,
+                                           context={'request': self.request})
         self.assertFalse(serializer.is_valid())
         self.assertIn('url', serializer.errors)
         self.assertIn('document', serializer.errors)
@@ -57,34 +64,34 @@ class TestEntrySerializer(HelixTestCase):
         data = {
             'source_methodology': 'method'
         }
-        serializer = EntrySerializer(instance=entry,
-                                     data=data,
-                                     context={'request': self.request},
-                                     partial=True)
+        serializer = EntryCreateSerializer(instance=entry,
+                                           data=data,
+                                           context={'request': self.request},
+                                           partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         data = {
             'url': 'http://abc.com/new-url/',
             'document': None
         }
-        serializer = EntrySerializer(instance=entry,
-                                     data=data,
-                                     context={'request': self.request},
-                                     partial=True)
+        serializer = EntryCreateSerializer(instance=entry,
+                                           data=data,
+                                           context={'request': self.request},
+                                           partial=True)
         self.assertTrue(serializer.is_valid())
         self.assertEqual(OLD, entry.url)
 
     def test_create_entry_populates_created_by(self):
-        serializer = EntrySerializer(data=self.data,
-                                     context={'request': self.request})
+        serializer = EntryCreateSerializer(data=self.data,
+                                           context={'request': self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         instance = serializer.save()
         self.assertEqual(instance.created_by, self.user)
 
     def test_update_entry_populates_last_modified_by(self):
         entry = EntryFactory.create()
-        serializer = EntrySerializer(instance=entry,
-                                     data=self.data,
-                                     context={'request': self.request})
+        serializer = EntryCreateSerializer(instance=entry,
+                                           data=self.data,
+                                           context={'request': self.request})
         self.assertTrue(serializer.is_valid())
         instance = serializer.save()
         self.assertEqual(instance.last_modified_by, self.user)
@@ -95,14 +102,16 @@ class TestEntrySerializer(HelixTestCase):
         reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.data['reviewers'] = [reviewer1.id, reviewer2.id]
-        serializer = EntrySerializer(data=self.data,
-                                     context={'request': self.request})
+        serializer = EntryCreateSerializer(data=self.data,
+                                           context={'request': self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
         entry = serializer.instance
         self.assertEqual(entry.reviewers.count(), len([reviewer1, reviewer2]))
-        self.assertEqual(sorted(list(entry.reviewing.values_list('reviewer', flat=1))),
-                         sorted([reviewer1.id, reviewer2.id]))
+        self.assertEqual(
+            sorted(list(entry.reviewers.through.objects.values_list('reviewer', flat=1))),
+            sorted([reviewer1.id, reviewer2.id])
+        )
 
     def test_entry_update_entry_reviewers(self):
         x = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
@@ -129,7 +138,7 @@ class TestEntrySerializer(HelixTestCase):
         )
 
         old_count = EntryReviewer.objects.count()
-        serializer = EntrySerializer(instance=entry, data={
+        serializer = EntryCreateSerializer(instance=entry, data={
             'reviewers': [reviewer1.id, reviewer2.id]
         }, context={'request': self.request}, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -143,9 +152,10 @@ class TestEntrySerializer(HelixTestCase):
 
     def test_entry_serializer_with_figures_source(self):
         source1 = dict(
+            uuid=str(uuid4()),
             rank=101,
-            country='abc',
-            country_code='xyz',
+            country=str(self.country.name),
+            country_code=str(self.country.country_code),
             osm_id='ted',
             osm_type='okay',
             display_name='okay',
@@ -157,12 +167,15 @@ class TestEntrySerializer(HelixTestCase):
         )
         source2 = copy(source1)
         source2['lat'] = 67.5
+        source2['uuid'] = str(uuid4())
         source3 = copy(source1)
         source3['lon'] = 45.9
+        source3['uuid'] = str(uuid4())
         figures = [{
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
+            "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
             "term": Figure.TERM.EVACUATED.value,
             "role": Figure.ROLE.RECOMMENDED.value,
@@ -172,9 +185,9 @@ class TestEntrySerializer(HelixTestCase):
         }]
         self.data['figures'] = figures
 
-        serializer = EntrySerializer(instance=None,
-                                     data=self.data,
-                                     context={'request': self.request})
+        serializer = EntryCreateSerializer(instance=None,
+                                           data=self.data,
+                                           context={'request': self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         entry = serializer.save()
         self.assertEqual(entry.figures.count(), len(figures))
@@ -189,10 +202,20 @@ class TestEntrySerializer(HelixTestCase):
             'lon': 33.8,
             'identifier': OSMName.IDENTIFIER.ORIGIN.value,
         })
+        new_source['uuid'] = str(uuid4())
+
+        new_source2 = copy(source1)
+        new_source2.update({
+            'lat': 33.8,
+            'lon': 33.8,
+            'identifier': OSMName.IDENTIFIER.ORIGIN.value,
+        })
+        new_source2['uuid'] = str(uuid4())
         existing = figure.geo_locations.first()
-        old_source = {
+        old_source = copy(source2)
+        old_source.update({
             'id': existing.id,
-        }
+        })
         figures = [{
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
             "id": figure.id,
@@ -206,13 +229,14 @@ class TestEntrySerializer(HelixTestCase):
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
-            "geo_locations": [new_source],
+            "country": str(self.country.id),
+            "geo_locations": [new_source2],
         }]
         self.data['figures'] = figures
-        serializer = EntrySerializer(instance=entry,
-                                     data=self.data,
-                                     context={'request': self.request},
-                                     partial=True)
+        serializer = EntryUpdateSerializer(instance=entry,
+                                           data=self.data,
+                                           context={'request': self.request},
+                                           partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         entry = serializer.save()
         entry.refresh_from_db()
@@ -236,10 +260,10 @@ class TestEntrySerializer(HelixTestCase):
             geo_locations=[different_source]  # I do not belong to above entry figures
         )]
         self.data['figures'] = figures
-        serializer = EntrySerializer(instance=entry,
-                                     data=self.data,
-                                     context={'request': self.request},
-                                     partial=True)
+        serializer = EntryUpdateSerializer(instance=entry,
+                                           data=self.data,
+                                           context={'request': self.request},
+                                           partial=True)
         self.assertFalse(serializer.is_valid())
         self.assertIn('figures', serializer.errors)
         self.assertIn('geo_locations', serializer.errors['figures'][0].keys())
@@ -261,6 +285,7 @@ class TestFigureSerializer(HelixTestCase):
         )
         self.fig_cat = FigureCategoryFactory.create()
         self.data = {
+            "uuid": str(uuid4()),
             "entry": self.entry.id,
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 100,
@@ -275,19 +300,6 @@ class TestFigureSerializer(HelixTestCase):
         }
         self.request = self.factory.get('/graphql')
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-
-    def test_valid_figure_creation(self):
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-
-    def test_invalid_contry(self):
-        country3 = CountryFactory.create(country_code=12312)
-        self.data['country'] = country3.id
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('country', serializer.errors)
 
     def test_invalid_geo_locations(self):
         self.data['geo_locations'] = [

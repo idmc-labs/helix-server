@@ -1,26 +1,29 @@
 import graphene
 from django.utils.translation import gettext
 
-from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.models import Event, Actor
 from apps.event.schema import EventType, ActorType
-from apps.event.serializers import EventSerializer, ActorSerializer
-from apps.event.enums import EventOtherSubTypeEnum
+from apps.event.serializers import (
+    EventSerializer,
+    EventUpdateSerializer,
+    ActorSerializer,
+    ActorUpdateSerializer
+)
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
+from utils.mutation import generate_input_type_for_serializer
 
 
-class ActorCreateInputType(graphene.InputObjectType):
-    name = graphene.String(required=True)
-    country = graphene.ID(required=True)
-    torg = graphene.String()
+ActorCreateInputType = generate_input_type_for_serializer(
+    'ActorCreateInputType',
+    ActorSerializer
+)
 
 
-class ActorUpdateInputType(graphene.InputObjectType):
-    id = graphene.ID(required=True)
-    name = graphene.String(required=True)
-    country = graphene.ID()
-    torg = graphene.String()
+ActorUpdateInputType = generate_input_type_for_serializer(
+    'ActorUpdateInputType',
+    ActorUpdateSerializer
+)
 
 
 class CreateActor(graphene.Mutation):
@@ -88,39 +91,16 @@ class DeleteActor(graphene.Mutation):
         return DeleteActor(result=instance, errors=None, ok=True)
 
 
-class EventCreateInputType(graphene.InputObjectType):
-    crisis = graphene.ID(required=False)
-    name = graphene.String(required=True)
-    event_type = graphene.NonNull(CrisisTypeGrapheneEnum)
-    other_sub_type = graphene.Field(EventOtherSubTypeEnum)
-    glide_number = graphene.String()
-    trigger = graphene.ID()
-    trigger_sub_type = graphene.ID()
-    violence_sub_type = graphene.ID()
-    actor = graphene.ID()
-    disaster_sub_type = graphene.ID()
-    countries = graphene.List(graphene.NonNull(graphene.ID))
-    start_date = graphene.Date()
-    end_date = graphene.Date()
-    event_narrative = graphene.String()
+EventCreateInputType = generate_input_type_for_serializer(
+    'EventCreateInputType',
+    EventSerializer
+)
 
 
-class EventUpdateInputType(graphene.InputObjectType):
-    id = graphene.ID(required=True)
-    crisis = graphene.ID()
-    name = graphene.String()
-    event_type = graphene.Field(CrisisTypeGrapheneEnum)
-    other_sub_type = graphene.Field(EventOtherSubTypeEnum)
-    glide_number = graphene.String()
-    trigger = graphene.ID()
-    trigger_sub_type = graphene.ID()
-    violence_sub_type = graphene.ID()
-    actor = graphene.ID()
-    disaster_sub_type = graphene.ID()
-    countries = graphene.List(graphene.NonNull(graphene.ID))
-    start_date = graphene.Date()
-    end_date = graphene.Date()
-    event_narrative = graphene.String()
+EventUpdateInputType = generate_input_type_for_serializer(
+    'EventUpdateInputType',
+    EventUpdateSerializer
+)
 
 
 class CreateEvent(graphene.Mutation):

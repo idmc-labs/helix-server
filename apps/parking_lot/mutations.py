@@ -3,29 +3,21 @@ from django.utils.translation import gettext
 
 from apps.parking_lot.models import ParkedItem
 from apps.parking_lot.schema import ParkedItemType
-from apps.parking_lot.serializers import ParkedItemSerializer
-from apps.parking_lot.enums import ParkedItemGrapheneEnum
+from apps.parking_lot.serializers import ParkedItemSerializer, ParkedItemUpdateSerializer
+from utils.mutation import generate_input_type_for_serializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 
 
-class ParkedItemCreateInputType(graphene.InputObjectType):
-    country = graphene.ID(required=True)
-    title = graphene.String(required=True)
-    url = graphene.String(required=True)
-    assigned_to = graphene.ID(required=False)
-    status = graphene.NonNull(ParkedItemGrapheneEnum)
-    comments = graphene.String(required=False)
+ParkedItemCreateInputType = generate_input_type_for_serializer(
+    'ParkedItemCreateInputType',
+    ParkedItemSerializer
+)
 
-
-class ParkedItemUpdateInputType(graphene.InputObjectType):
-    id = graphene.ID(required=True)
-    country = graphene.ID()
-    title = graphene.String()
-    url = graphene.String()
-    assigned_to = graphene.ID()
-    status = graphene.Field(ParkedItemGrapheneEnum)
-    comments = graphene.String()
+ParkedItemUpdateInputType = generate_input_type_for_serializer(
+    'ParkedItemUpdateInputType',
+    ParkedItemUpdateSerializer
+)
 
 
 class CreateParkedItem(graphene.Mutation):

@@ -1,37 +1,22 @@
-import graphene
 from django.utils.translation import gettext
+import graphene
 
-from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.models import Crisis
 from apps.crisis.schema import CrisisType
-from apps.crisis.serializers import CrisisSerializer
+from apps.crisis.serializers import CrisisSerializer, CrisisUpdateSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
+from utils.mutation import generate_input_type_for_serializer
 
+CrisisCreateInputType = generate_input_type_for_serializer(
+    'CrisisCreateInputType',
+    CrisisSerializer
+)
 
-class CrisisCreateInputType(graphene.InputObjectType):
-    """
-    Crisis Create InputType
-    """
-    name = graphene.String(required=True)
-    crisis_type = graphene.NonNull(CrisisTypeGrapheneEnum)
-    crisis_narrative = graphene.String()
-    countries = graphene.List(graphene.NonNull(graphene.ID), required=True)
-    start_date = graphene.Date()
-    end_date = graphene.Date()
-
-
-class CrisisUpdateInputType(graphene.InputObjectType):
-    """
-    Crisis Update InputType
-    """
-    id = graphene.ID(required=True)
-    name = graphene.String()
-    crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
-    crisis_narrative = graphene.String()
-    countries = graphene.List(graphene.NonNull(graphene.ID))
-    start_date = graphene.Date()
-    end_date = graphene.Date()
+CrisisUpdateInputType = generate_input_type_for_serializer(
+    'CrisisUpdateInputType',
+    CrisisUpdateSerializer,
+)
 
 
 class CreateCrisis(graphene.Mutation):

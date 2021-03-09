@@ -106,134 +106,6 @@ class TestEntryQuery(HelixGraphQLTestCase):
         )
 
 
-class TestFigureUpdate(HelixGraphQLTestCase):
-    def setUp(self):
-        self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-        country1 = CountryFactory.create(country_code=123)
-        self.event = EventFactory.create()
-        self.event.countries.set([country1])
-        self.entry = EntryFactory.create(
-            created_by=self.creator,
-            event=self.event,
-        )
-        self.figure = FigureFactory.create(
-            created_by=self.creator,
-            entry=self.entry,
-            country=country1,
-            reported=100,
-        )
-        self.mutation = '''
-            mutation UpdateFigure($input: FigureUpdateInputType!) {
-                updateFigure(data: $input) {
-                    ok
-                    result {
-                        id
-                        ageJson{
-                            ageFrom
-                            uuid
-                            ageTo
-                            value
-                        }
-                        strataJson{
-                            date
-                            value
-                            uuid
-                        }
-                    }
-                    errors
-                }
-            }
-        '''
-        self.input = {
-            "id": self.figure.id,
-            "ageJson": [
-                {
-                    "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
-                    "ageFrom": 1,
-                    "ageTo": 3,
-                    "value": 13
-                },
-                {
-                    "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                    "ageFrom": 3,
-                    "ageTo": 5,
-                    "value": 23
-                }
-            ],
-            "strataJson": [
-                {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
-                {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
-            ]
-        }
-        self.force_login(self.creator)
-
-    def test_valid_figure_update(self):
-        self.assertIsNone(self.figure.age_json)
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
-        content = json.loads(response.content)
-        self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['updateFigure']['ok'], content)
-        self.assertIsNotNone(content['data']['updateFigure']['result']['id'], content)
-        self.figure.refresh_from_db()
-        self.assertEqual(len(self.figure.age_json), len(self.input['ageJson']))
-        self.assertEqual(len(self.figure.strata_json), len(self.input['strataJson']))
-
-    def test_invalid_age_groups_data(self):
-        input1 = {
-            "id": self.figure.id,
-            "ageJson": [
-                {
-                    "uuid": str(uuid4()),
-                    "ageFrom": 30,
-                    "ageTo": 1,
-                    "value": 13
-                },
-            ]
-        }
-        response = self.query(
-            self.mutation,
-            input_data=input1
-        )
-        content = json.loads(response.content)
-
-        self.assertResponseNoErrors(response)
-        self.assertFalse(content['data']['updateFigure']['ok'], content)
-        self.assertEqual('ageTo', content['data']['updateFigure']['errors'][0]['arrayErrors'][0]['objectErrors'][0]['field'])
-
-        input2 = {
-            "id": self.figure.id,
-            "ageJson": [
-                {
-                    "uuid": str(uuid4()),
-                    "ageFrom": 10,
-                    "ageTo": 30,
-                    "value": 13
-                },
-                {
-                    "uuid": str(uuid4()),
-                    "ageFrom": 20,
-                    "ageTo": 40,
-                    "value": 23
-                }
-            ]
-        }
-        response = self.query(
-            self.mutation,
-            input_data=input2
-        )
-        content = json.loads(response.content)
-
-        self.assertResponseNoErrors(response)
-        self.assertFalse(content['data']['updateFigure']['ok'], content)
-        self.assertEqual('ageJson',
-                         content['data']['updateFigure']['errors'][0]['field'],
-                         content)
-        self.assertIsNotNone(content['data']['updateFigure']['errors'][0]['arrayErrors'][0]['messages'], content)
-
-
 class TestEntryCreation(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.country = CountryFactory.create()
@@ -242,6 +114,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.fig_cat_id = str(self.fig_cat.id)
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.event = EventFactory.create()
+        self.event.countries.add(self.country)
         self.mutation = """
             mutation CreateEntry($input: EntryCreateInputType!) {
                 createEntry(data: $input) {
@@ -369,10 +242,11 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createEntry']['ok'], content)
         self.assertIsNotNone(content['data']['createEntry']['errors'], content)
+        self.assertEqual(uuid_error,
+                         content['data']['createEntry']['errors'][0]['arrayErrors'][0]['key'],
+                         content['data']['createEntry'])
         self.assertEqual('reported',
                          content['data']['createEntry']['errors'][0]['arrayErrors'][0]['objectErrors'][0]['field'])
-        self.assertEqual(uuid_error,
-                         content['data']['createEntry']['errors'][0]['arrayErrors'][0]['key'])
 
     def test_invalid_entry_created_by_reviewer(self):
         reviewer = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
@@ -487,8 +361,11 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.fig_cat = FigureCategoryFactory.create()
         self.fig_cat_id = str(self.fig_cat.id)
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.event = EventFactory.create(name='myevent')
+        self.event.countries.add(self.country)
         self.entry = EntryFactory.create(
-            created_by=self.editor
+            created_by=self.editor,
+            event=self.event,
         )
         self.mutation = """
         mutation MyMutation($input: EntryUpdateInputType!) {
@@ -565,7 +442,11 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.assertTrue(content['data']['updateEntry']['ok'], content)
 
     def test_valid_update_entry_with_figures(self):
-        figure = FigureFactory.create(entry=self.entry)
+        figure = FigureFactory.create(
+            entry=self.entry,
+            country=self.country
+        )
+        # this figure will be deleted
         deleted_figure = FigureFactory.create(entry=self.entry)
         figures = [
             {
@@ -594,8 +475,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                     }
                 ],
                 "strataJson": [
-                    {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
-                    {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
+                    {"date": "2020-10-10", "value": 2, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
+                    {"date": "2020-10-12", "value": 2, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
                 ]
             },
             {
@@ -625,8 +506,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                     }
                 ],
                 "strataJson": [
-                    {"date": "2020-10-10", "value": 12, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
-                    {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
+                    {"date": "2020-10-10", "value": 2, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
+                    {"date": "2020-10-12", "value": 2, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
                 ]
             },
         ]

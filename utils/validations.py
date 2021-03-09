@@ -61,13 +61,12 @@ def is_child_parent_inclusion_valid(data, instance, field, parent_field) -> bool
         value = []
     parent_value = data.get(parent_field.split('.')[0], getattr(instance, parent_field.split('.')[0], None))
     for pf in parent_field.split('.')[1:]:
-        parent_value = getattr(parent_value, pf, None)
+        parent_value = parent_value.get(pf, None) if hasattr(parent_value, 'get') else getattr(parent_value, pf, None)
     if parent_value:
         if hasattr(parent_value, 'all'):
             parent_value = parent_value.all()
     if parent_value is None:
         parent_value = []
-    print(value, parent_value)
     if set(value).difference(parent_value):
         errors.update({
             field: gettext(

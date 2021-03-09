@@ -6,12 +6,23 @@ from apps.contrib.models import Attachment
 from apps.contrib.models import SourcePreview
 
 
-class MetaInformationSerializerMixin(object):
+class IntegerIDField(serializers.IntegerField):
+    """
+    This field is created to override the graphene conversion of the integerfield
+    """
+    pass
+
+
+class MetaInformationSerializerMixin(serializers.Serializer):
     """
     Responsible to add following fields into the validated data
     - created_by
     - last_modified_by
     """
+    created_at = serializers.DateTimeField(read_only=True)
+    modified_at = serializers.DateTimeField(read_only=True)
+    created_by = serializers.PrimaryKeyRelatedField(read_only=True)
+    last_modified_by = serializers.PrimaryKeyRelatedField(read_only=True)
 
     def validate(self, attrs) -> dict:
         attrs = super().validate(attrs)
@@ -54,3 +65,13 @@ class SourcePreviewSerializer(MetaInformationSerializerMixin,
 
     def update(self, instance, validated_data):
         return SourcePreview.get_pdf(**validated_data, instance=instance)
+
+
+class UpdateSerializerMixin:
+    """Makes all fields not required apart from the id field"""
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # all updates will be a patch update
+        for name in self.fields:
+            self.fields[name].required = False
+        self.fields['id'].required = True

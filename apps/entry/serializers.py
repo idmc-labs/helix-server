@@ -1,12 +1,17 @@
-from django.core.validators import MinValueValidator
 from collections import OrderedDict
+from copy import copy
 
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator
 from django.db import transaction
 from django.utils.translation import gettext, gettext_lazy as _
 from rest_framework import serializers
 
-from apps.contrib.serializers import MetaInformationSerializerMixin
+from apps.contrib.serializers import (
+    MetaInformationSerializerMixin,
+    UpdateSerializerMixin,
+    IntegerIDField,
+)
 from apps.entry.models import (
     Entry,
     Figure,
@@ -14,13 +19,14 @@ from apps.entry.models import (
     EntryReviewer,
     FigureTag,
 )
+from apps.event.models import Event
 from apps.users.models import User
 from apps.users.enums import USER_ROLE
 from utils.validations import is_child_parent_inclusion_valid
 
 
 class DisaggregatedAgeSerializer(serializers.Serializer):
-    uuid = serializers.UUIDField(required=False)
+    uuid = serializers.UUIDField(required=True)
     age_from = serializers.IntegerField(
         validators=[MinValueValidator(0, _("Minimum value is 1. "))],
         required=True)
@@ -33,14 +39,14 @@ class DisaggregatedAgeSerializer(serializers.Serializer):
         if attrs.get('age_from') > attrs.get('age_to'):
             raise serializers.ValidationError(
                 {'age_to': gettext('Pick an age higher than `from` %(age_from)s.') %
-                 {'age_from': attrs.get("age_from")}}
+                    {'age_from': attrs.get("age_from")}}
             )
         attrs['uuid'] = str(attrs['uuid'])
         return attrs
 
 
 class DisaggregatedStratumSerializer(serializers.Serializer):
-    uuid = serializers.UUIDField(required=False)
+    uuid = serializers.UUIDField(required=True)
     date = serializers.DateField(required=True)
     value = serializers.IntegerField(validators=[MinValueValidator(0, _("Minimum value is 1. "))],
                                      required=True)
@@ -54,15 +60,36 @@ class DisaggregatedStratumSerializer(serializers.Serializer):
 
 class OSMNameSerializer(serializers.ModelSerializer):
     # to allow updating
-    uuid = serializers.UUIDField(required=False)
-    id = serializers.IntegerField(required=False)
+    id = IntegerIDField(required=False)
 
     class Meta:
         model = OSMName
         fields = '__all__'
+        extra_kwargs = {
+            'uuid': {
+                'validators': [],
+                'required': True
+            },
+        }
 
 
 class CommonFigureValidationMixin:
+    def get_event(self):
+        if not self.parent:
+            # this will be the case when we will be using this serializer directly,
+            # which will not be the case when in use in the application.
+            # this if block currently only is for directly testing this serializer which does not use event
+            return None
+
+        if not hasattr(self, 'event_id'):
+            self.event_id = self.parent.parent.initial_data.get('event', None)
+            if self.event_id:
+                self.event = Event.objects.filter(id=self.event_id).first()
+            else:
+                self.event = self.parent.parent.instance.event
+                self.event_id = self.event.id
+        return self.event
+
     def validate_age_json(self, age_groups):
         values = []
         for each in age_groups:
@@ -90,37 +117,6 @@ class CommonFigureValidationMixin:
             )
         return errors
 
-    def validate(self, attrs: dict) -> dict:
-        attrs = super().validate(attrs)
-        errors = OrderedDict()
-        errors.update(Figure.clean_idu(attrs, self.instance))
-        errors.update(self.validate_unit_and_household_size(attrs))
-        if errors:
-            raise ValidationError(errors)
-        return attrs
-
-    def create(self, validated_data: dict) -> Figure:
-        geo_locations = validated_data.pop('geo_locations', [])
-        if geo_locations:
-            geo_locations = OSMName.objects.bulk_create(
-                [OSMName(**each) for each in geo_locations]
-            )
-        instance = Figure.objects.create(**validated_data)
-        instance.geo_locations.set(geo_locations)
-        return instance
-
-
-class FigureSerializer(MetaInformationSerializerMixin,
-                       CommonFigureValidationMixin,
-                       serializers.ModelSerializer):
-    age_json = DisaggregatedAgeSerializer(many=True, required=False)
-    strata_json = DisaggregatedStratumSerializer(many=True, required=False)
-    geo_locations = OSMNameSerializer(many=True, required=False)
-
-    class Meta:
-        model = Figure
-        fields = '__all__'
-
     def validate_figure_geo_locations(self, attrs):
         errors = OrderedDict()
         country = attrs.get('country')
@@ -129,16 +125,16 @@ class FigureSerializer(MetaInformationSerializerMixin,
         if not attrs.get('geo_locations'):
             return errors
         location_code = country.country_code
-        locations_code = set([
+        geo_locations_code = set([
             location['country_code'] for location in attrs['geo_locations']
         ])
 
-        if len(locations_code) != 1:
+        if len(geo_locations_code) != 1:
             errors.update({
                 'geo_locations': 'Geolocations only support a single country under a figure.'
             })
 
-        if locations_code.pop() != location_code:
+        if int(geo_locations_code.pop()) != int(location_code):
             errors.update({
                 'geo_locations': "Location should be inside the selected figure's country"
             })
@@ -159,8 +155,8 @@ class FigureSerializer(MetaInformationSerializerMixin,
 
     def validate_disaggregated_json_sum_against_reported(self, attrs, field, verbose_name):
         errors = OrderedDict()
-        reported = attrs.get('reported') or getattr(self.instance, 'reported', 0)
-        json_field = attrs.get(field) or getattr(self.instance, field, [])
+        reported = attrs.get('reported') or getattr(self.instance, 'reported', None) or 0
+        json_field = attrs.get(field) or getattr(self.instance, field, None) or []
         total = [item['value'] for item in json_field]
         if sum(total) > reported:
             errors.update({
@@ -168,17 +164,48 @@ class FigureSerializer(MetaInformationSerializerMixin,
             })
         return errors
 
+    def _validate_geo_locations(self, geo_locations) -> list:
+        if self.instance:
+            if {each['id'] for each in geo_locations if 'id' in each}.difference(
+                    list(self.instance.geo_locations.values_list('id', flat=True))
+            ):
+                raise serializers.ValidationError(
+                    dict(geo_locations='Some geo locations not found.')
+                )
+        return geo_locations
+
+    def validate_figure_country(self, attrs):
+        _attrs = copy(attrs)
+        errors = OrderedDict()
+        if self.get_event():
+            _attrs.update({'entry': {'event': self.event}})
+            errors.update(is_child_parent_inclusion_valid(
+                _attrs,
+                self.instance,
+                'country',
+                'entry.event.countries',
+            ))
+        return errors
+
+    def validate_dates(self, attrs):
+        errors = OrderedDict()
+        _attrs = copy(attrs)
+        if self.get_event():
+            _attrs.update({'entry': {'event': self.event}})
+            errors.update(Figure.validate_dates(attrs, self.instance))
+        return errors
+
     def validate(self, attrs: dict) -> dict:
+        if not self.instance and attrs.get('id'):
+            self.instance = Figure.objects.get(id=attrs['id'])
+        self._validate_geo_locations(attrs.get('geo_locations', []))
         attrs = super().validate(attrs)
         errors = OrderedDict()
-        errors.update(Figure.validate_dates(attrs, self.instance))
-        errors.update(
-            is_child_parent_inclusion_valid(attrs, self.instance, 'country', 'entry.event.countries')
-        )
+        errors.update(Figure.clean_idu(attrs, self.instance))
+        errors.update(self.validate_unit_and_household_size(attrs))
+        errors.update(self.validate_dates(attrs))
+        errors.update(self.validate_figure_country(attrs))
         errors.update(self.validate_figure_geo_locations(attrs))
-        errors.update(
-            is_child_parent_inclusion_valid(attrs, self.instance, 'country', 'entry.event.countries')
-        )
         errors.update(self.validate_disaggregated_sum_against_reported(
             attrs, ['location_camp', 'location_non_camp'], 'camp and non-camp'
         ))
@@ -200,43 +227,39 @@ class FigureSerializer(MetaInformationSerializerMixin,
         return attrs
 
 
-class NestedFigureSerializer(MetaInformationSerializerMixin,
-                             CommonFigureValidationMixin,
-                             serializers.ModelSerializer):
+class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
+                                   CommonFigureValidationMixin,
+                                   serializers.ModelSerializer):
     age_json = DisaggregatedAgeSerializer(many=True, required=False)
     strata_json = DisaggregatedStratumSerializer(many=True, required=False)
     geo_locations = OSMNameSerializer(many=True, required=False)
-    # to allow updating
-    id = serializers.IntegerField(required=False)
-    uuid = serializers.CharField(required=False)
 
     class Meta:
         model = Figure
-        exclude = ('entry',)
+        exclude = ('id', 'entry', 'total_figures')
+        extra_kwargs = {
+            'uuid': {
+                'validators': [],
+                'required': True
+            },
+        }
 
-    def _validate_geo_locations(self, geo_locations) -> list:
-        if self.instance:
-            if {each['id'] for each in geo_locations if 'id' in each}.difference(
-                    list(self.instance.geo_locations.values_list('id', flat=True))
-            ):
-                raise serializers.ValidationError(
-                    dict(geo_locations='Some geo locations not found.')
-                )
-        return geo_locations
-
-    def validate(self, attrs) -> dict:
-        # manually call validate by setting the instance
-        if not self.instance and attrs.get('id'):
-            self.instance = Figure.objects.get(id=attrs['id'])
-        self._validate_geo_locations(attrs.get('geo_locations', []))
-        super().validate(attrs)
-        return attrs
+    def create(self, validated_data: dict) -> Figure:
+        geo_locations = validated_data.pop('geo_locations', [])
+        if geo_locations:
+            geo_locations = OSMName.objects.bulk_create(
+                [OSMName(**each) for each in geo_locations]
+            )
+        instance = Figure.objects.create(**validated_data)
+        instance.geo_locations.set(geo_locations)
+        return instance
 
     def _update_locations(self, instance, attr: str, data: list):
         osms = []
         if data:
-            getattr(instance, attr).exclude(id__in=[each['id'] for each in data if 'id'
-                                                    in each]).delete()
+            getattr(instance, attr).exclude(
+                id__in=[each['id'] for each in data if 'id' in each]
+            ).delete()
             for each in data:
                 if not each.get('id'):
                     osm_serializer = OSMNameSerializer()
@@ -262,9 +285,29 @@ class NestedFigureSerializer(MetaInformationSerializerMixin,
         return instance
 
 
-class EntrySerializer(MetaInformationSerializerMixin,
-                      serializers.ModelSerializer):
-    figures = NestedFigureSerializer(many=True, required=False)
+class NestedFigureUpdateSerializer(NestedFigureCreateSerializer):
+    id = IntegerIDField(required=False)
+
+    class Meta:
+        model = Figure
+        exclude = ('entry', 'total_figures')
+        extra_kwargs = {
+            'uuid': {
+                'validators': [],
+                'required': True
+            },
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # all updates will be a patch update
+        for name in self.fields:
+            self.fields[name].required = False
+
+
+class EntryCreateSerializer(MetaInformationSerializerMixin,
+                            serializers.ModelSerializer):
+    figures = NestedFigureCreateSerializer(many=True, required=False)
     reviewers = serializers.PrimaryKeyRelatedField(
         many=True,
         queryset=User.objects.filter(
@@ -309,7 +352,7 @@ class EntrySerializer(MetaInformationSerializerMixin,
                 entry = super().create(validated_data)
                 for each in figures:
                     # each figure contains further nested objects
-                    fig_ser = NestedFigureSerializer()
+                    fig_ser = NestedFigureCreateSerializer()
                     fig_ser._validated_data = {**each, 'entry': entry}
                     fig_ser._errors = {}
                     fig_ser.save()
@@ -330,10 +373,10 @@ class EntrySerializer(MetaInformationSerializerMixin,
                 # create if has no ids
                 for each in figures:
                     if not each.get('id'):
-                        fig_ser = NestedFigureSerializer()
+                        fig_ser = NestedFigureCreateSerializer()
                         fig_ser._validated_data = {**each, 'entry': entry}
                     else:
-                        fig_ser = NestedFigureSerializer(
+                        fig_ser = NestedFigureUpdateSerializer(
                             instance=entry.figures.get(id=each['id']),
                             partial=True
                         )
@@ -345,8 +388,20 @@ class EntrySerializer(MetaInformationSerializerMixin,
         return entry
 
 
-class FigureTagSerializer(MetaInformationSerializerMixin,
-                          serializers.ModelSerializer):
+class EntryUpdateSerializer(UpdateSerializerMixin,
+                            EntryCreateSerializer):
+    """Created for update mutation input type"""
+    id = IntegerIDField(required=True)
+    figures = NestedFigureUpdateSerializer(many=True, required=True)
+
+
+class FigureTagCreateSerializer(MetaInformationSerializerMixin,
+                                serializers.ModelSerializer):
     class Meta:
         model = FigureTag
         fields = '__all__'
+
+
+class FigureTagUpdateSerializer(UpdateSerializerMixin,
+                                FigureTagCreateSerializer):
+    id = IntegerIDField(required=True)

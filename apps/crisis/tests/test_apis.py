@@ -116,7 +116,7 @@ class TestCrisisUpdate(HelixGraphQLTestCase):
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
 
-class TestEntryDelete(HelixGraphQLTestCase):
+class TestCrisisDelete(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.crisis = CrisisFactory.create(
