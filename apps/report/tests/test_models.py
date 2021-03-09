@@ -1,14 +1,22 @@
 from datetime import datetime, timedelta
 
-from apps.report.models import Report
+from django.db import IntegrityError
+
+from apps.report.models import (
+    Report,
+    ReportGeneration,
+    ReportApproval,
+)
 from apps.crisis.models import Crisis
 from apps.entry.constants import STOCK
 from apps.entry.models import Figure
-from utils.tests import HelixTestCase
+from apps.users.enums import USER_ROLE
+from utils.tests import HelixTestCase, create_user_with_role
 from utils.factories import (
     FigureFactory,
     EntryFactory,
     CountryFactory,
+    ReportFactory,
 )
 
 
@@ -48,3 +56,31 @@ class TestReportModel(HelixTestCase):
         self.assertEqual(r.countries_report[0]['total_stock_conflict'],
                          f1.total_figures,
                          r.countries_report)
+
+
+class TestReportGenerationApproval(HelixTestCase):
+    def setUp(self) -> None:
+        pass
+
+    def test_report_generation_approval_is_created_only_once(self):
+        r = ReportFactory.create()
+        gen = ReportGeneration(report=r)
+        gen.save()
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        ReportApproval.objects.create(
+            generation=gen,
+            created_by=reviewer,
+            is_approved=True
+        )
+        assert gen.approvers.count() == 1
+
+        try:
+            # user disapproves the generation again
+            ReportApproval.objects.create(
+                generation=gen,
+                created_by=reviewer,
+                is_approved=False
+            )
+            assert 1 == 2, 'This should have failed'
+        except IntegrityError:
+            pass

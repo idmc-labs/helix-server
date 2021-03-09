@@ -1,11 +1,14 @@
 from collections import OrderedDict
 
+from django.utils.translation import gettext
 from rest_framework import serializers
 
 from apps.contrib.serializers import MetaInformationSerializerMixin
 from apps.report.models import (
     Report,
     ReportComment,
+    ReportGeneration,
+    ReportApproval,
 )
 from utils.validations import is_child_parent_dates_valid
 
@@ -40,3 +43,63 @@ class ReportCommentSerializer(MetaInformationSerializerMixin,
         if not body.strip():
             raise serializers.ValidationError('Comment body is missing.')
         return body
+
+
+class ReportSignoffSerializer(serializers.Serializer):
+    report = serializers.IntegerField(required=True)
+
+    def validate_report(self, report):
+        if not ReportGeneration.objects.filter(
+            report=report,
+            is_signed_off=False
+        ).exists():
+            raise serializers.ValidationError(gettext('Nothing to sign off.'))
+        return report
+
+    def save(self):
+        report_id = self.validated_data['report']
+        report = Report.objects.get(id=report_id)
+        report.sign_off(self.context['request'].user)
+        return report
+
+
+class ReportGenerationSerializer(MetaInformationSerializerMixin,
+                                 serializers.ModelSerializer):
+    class Meta:
+        model = ReportGeneration
+        fields = ['report']
+
+    def validate_report(self, report):
+        if ReportGeneration.objects.filter(
+            report=report,
+            is_signed_off=False
+        ).exists():
+            raise serializers.ValidationError(gettext('Cannot start another while previous is not signed off.'))
+        return report
+
+
+class ReportApproveSerializer(serializers.Serializer):
+    report = serializers.IntegerField(required=True)
+    is_approved = serializers.BooleanField(required=False)
+
+    def validate_report(self, report):
+        if not ReportGeneration.objects.filter(
+            report_id=report,
+            is_signed_off=False
+        ).exists():
+            raise serializers.ValidationError(gettext('Nothing to approve.'))
+        return report
+
+    def save(self):
+        report = self.validated_data['report']
+        generation = ReportGeneration.objects.get(
+            report_id=report,
+            is_signed_off=False,
+        )
+        ReportApproval.objects.update_or_create(
+            generation=generation,
+            created_by=self.context['request'].user,
+            defaults=dict(
+                is_approved=self.validated_data.get('is_approved', True),
+            ),
+        )

@@ -13,7 +13,7 @@ from apps.report.models import (
     Report,
     ReportComment,
     ReportApproval,
-    ReportSignOff,
+    ReportGeneration,
 )
 from apps.report.filters import ReportFilter, CountryReportFilter
 from utils.graphene.types import CustomListObjectType, CustomDjangoListObjectType
@@ -33,7 +33,6 @@ class ReportCountryType(ReportFigureMixin, graphene.ObjectType):
     """
     country = graphene.Field('apps.country.schema.CountryType', required=True)
     id = graphene.ID(required=True)
-    name = graphene.String(required=True)
 
     def resolve_country(root, info, **kwargs):
         return Country.objects.get(id=root['id'])
@@ -120,14 +119,14 @@ class ReportCommentListType(CustomDjangoListObjectType):
         filter_fields = ()
 
 
-class ReportSignOffType(DjangoObjectType):
+class ReportGenerationType(DjangoObjectType):
     class Meta:
-        model = ReportSignOff
+        model = ReportGeneration
 
 
-class ReportSignOffListType(CustomDjangoListObjectType):
+class ReportGenerationListType(CustomDjangoListObjectType):
     class Meta:
-        model = ReportSignOff
+        model = ReportGeneration
         filter_fields = ('report',)
 
 
@@ -145,9 +144,9 @@ class ReportApprovalListType(CustomDjangoListObjectType):
 class ReportType(DjangoObjectType):
     class Meta:
         model = Report
-        exclude_fields = ('reports', 'figures', 'masterfact_reports')
+        exclude_fields = ('reports', 'figures', 'masterfact_reports', 'approvers')
 
-    is_approved = graphene.Boolean(required=True)
+    is_approved = graphene.Boolean()
     comments = DjangoPaginatedListObjectField(ReportCommentListType,
                                               pagination=PageGraphqlPagination(
                                                   page_size_query_param='pageSize'
@@ -178,15 +177,9 @@ class ReportType(DjangoObjectType):
     approvals = DjangoPaginatedListObjectField(
         ReportApprovalListType,
         accessor='approvals',
-        pagination=PageGraphqlPagination(
-            page_size_query_param='pageSize'
-        )
     )
-    sign_offs = DjangoPaginatedListObjectField(
-        ReportSignOffListType,
-        pagination=PageGraphqlPagination(
-            page_size_query_param='pageSize'
-        )
+    generations = DjangoPaginatedListObjectField(
+        ReportGenerationListType,
     )
 
 

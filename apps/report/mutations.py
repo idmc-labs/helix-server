@@ -5,10 +5,15 @@ from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.report.models import (
     Report,
     ReportComment,
-    ReportApproval,
 )
 from apps.report.schema import ReportType, ReportCommentType
-from apps.report.serializers import ReportSerializer, ReportCommentSerializer
+from apps.report.serializers import (
+    ReportSerializer,
+    ReportCommentSerializer,
+    ReportGenerationSerializer,
+    ReportApproveSerializer,
+    ReportSignoffSerializer,
+)
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 
@@ -188,6 +193,33 @@ class DeleteReportComment(graphene.Mutation):
         return DeleteReportComment(result=instance, errors=None, ok=True)
 
 
+class GenerateReport(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(ReportType)
+
+    @staticmethod
+    @permission_checker(['report.sign_off_report'])
+    def mutate(root, info, id):
+        try:
+            instance = Report.objects.get(id=id)
+        except Report.DoesNotExist:
+            return GenerateReport(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
+            ])
+        serializer = ReportGenerationSerializer(
+            data=dict(report=instance.id),
+            context=dict(request=info.context),
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return GenerateReport(errors=errors, ok=False)
+        serializer.save()
+        return GenerateReport(result=instance, errors=None, ok=True)
+
+
 class SignOffReport(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
@@ -205,7 +237,14 @@ class SignOffReport(graphene.Mutation):
             return SignOffReport(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
             ])
-        instance.sign_off(info.context.user)
+        serializer = ReportSignoffSerializer(
+            data=dict(report=id),
+            context=dict(request=info.context),
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return SignOffReport(errors=errors, ok=False)
+        instance = serializer.save()
+        instance.refresh_from_db()
         return SignOffReport(result=instance, errors=None, ok=True)
 
 
@@ -227,11 +266,16 @@ class ApproveReport(graphene.Mutation):
             return ApproveReport(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
             ])
-        ReportApproval.objects.create(
-            report_id=id,
-            created_by=info.context.user,
-            is_approved=approve
+        serializer = ReportApproveSerializer(
+            data=dict(
+                report=id,
+                is_approved=approve,
+            ),
+            context=dict(request=info.context),
         )
+        if errors := mutation_is_not_valid(serializer):
+            return ApproveReport(errors=errors, ok=False)
+        serializer.save()
         return ApproveReport(result=instance, errors=None, ok=True)
 
 
@@ -245,4 +289,5 @@ class Mutation(object):
     delete_report_comment = DeleteReportComment.Field()
 
     approve_report = ApproveReport.Field()
+    start_report_generation = GenerateReport.Field()
     sign_off_report = SignOffReport.Field()

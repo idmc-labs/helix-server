@@ -1,4 +1,5 @@
 import graphene
+from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
 from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
 
@@ -13,7 +14,17 @@ class ContextualUpdateType(DjangoObjectType):
     class Meta:
         model = ContextualUpdate
 
-    crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
+    crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
+    sources = graphene.Dynamic(
+        lambda: DjangoPaginatedListObjectField(
+            get_type('apps.organization.schema.OrganizationListType'),
+            accessor='sources'
+        ))
+    publishers = graphene.Dynamic(
+        lambda: DjangoPaginatedListObjectField(
+            get_type('apps.organization.schema.OrganizationListType'),
+            accessor='publishers'
+        ))
 
 
 class ContextualUpdateListType(CustomDjangoListObjectType):

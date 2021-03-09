@@ -149,7 +149,11 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
         *args,
         **kwargs,
     ):
-
+        '''
+        If pagination is None, then we will only allow Ordering fields.
+            - The page size will respect the settings.
+            - Client will not be able to add pagination params
+        '''
         _fields = _type._meta.filter_fields
         _model = _type._meta.model
 
