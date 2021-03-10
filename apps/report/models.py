@@ -10,7 +10,6 @@ from django.db.models import (
     Q,
     F,
     Exists,
-    # Value,
     Subquery,
     Min,
     Max,
@@ -478,7 +477,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             stock_total=f'Stock {self.report.name}',
             flow_total_last_year='Flow Last Year',
             flow_historical_average='Flow Historical Average',
-            stock_total_last_year='Stoc Last Year',
+            stock_total_last_year='Stock Last Year',
             stock_historical_average='Stock Historical Average',
             # provisional and returns
         ))
@@ -581,15 +580,127 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         )
         return headers, data, formula
 
+    @cached_property
+    def stat_conflict_typology(self):
+        headers = OrderedDict(dict(
+            iso3='ISO3',
+            name='IDMC Short Name',
+            typology='Conflict Typology',
+            total='Figure',
+        ))
+        formula = dict()
+        filtered_report_figures = self.report.report_figures.filter(
+            role=Figure.ROLE.RECOMMENDED,
+            entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+            category__type=FLOW,
+        ).values('country').order_by()
+
+        data = filtered_report_figures.filter(disaggregation_conflict__gt=0).annotate(
+            name=models.F('country__name'),
+            iso3=models.F('country__iso3'),
+            total=models.Sum('disaggregation_conflict', filter=models.Q(disaggregation_conflict__gt=0)),
+            typology=models.Value('Armed Conflict', output_field=models.CharField())
+        ).values('name', 'iso3', 'total', 'typology').union(
+            filtered_report_figures.filter(disaggregation_conflict_political__gt=0).annotate(
+                name=models.F('country__name'),
+                iso3=models.F('country__iso3'),
+                total=models.Sum('disaggregation_conflict_political',
+                                 filter=models.Q(disaggregation_conflict_political__gt=0)),
+                typology=models.Value('Violence - Political', output_field=models.CharField())
+            ).values('name', 'iso3', 'total', 'typology'),
+            filtered_report_figures.filter(disaggregation_conflict_criminal__gt=0).annotate(
+                name=models.F('country__name'),
+                iso3=models.F('country__iso3'),
+                total=models.Sum('disaggregation_conflict_criminal',
+                                 filter=models.Q(disaggregation_conflict_criminal__gt=0)),
+                typology=models.Value('Violence - Criminal', output_field=models.CharField())
+            ).values('name', 'iso3', 'total', 'typology'),
+            filtered_report_figures.filter(disaggregation_conflict_communal__gt=0).annotate(
+                name=models.F('country__name'),
+                iso3=models.F('country__iso3'),
+                total=models.Sum('disaggregation_conflict_communal',
+                                 filter=models.Q(disaggregation_conflict_communal__gt=0)),
+                typology=models.Value('Violence - Communal', output_field=models.CharField())
+            ).values('name', 'iso3', 'total', 'typology'),
+            filtered_report_figures.filter(disaggregation_conflict_other__gt=0).annotate(
+                name=models.F('country__name'),
+                iso3=models.F('country__iso3'),
+                total=models.Sum('disaggregation_conflict_other', filter=models.Q(disaggregation_conflict_other__gt=0)),
+                typology=models.Value('Other', output_field=models.CharField())
+            ).values('name', 'iso3', 'total', 'typology')
+        ).values('name', 'iso3', 'typology', 'total').order_by('typology')
+
+        # further aggregation
+        aggregation_headers = OrderedDict(dict(
+            typology='Conflict Typology',
+            total='Sum of Figure',
+        ))
+        aggregation_formula = dict()
+
+        filtered_report_figures = self.report.report_figures.filter(
+            role=Figure.ROLE.RECOMMENDED,
+            entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+            category__type=FLOW,
+        )
+
+        aggregation_data = filtered_report_figures.aggregate(
+            total_conflict=Sum('disaggregation_conflict'),
+            total_conflict_political=Sum('disaggregation_conflict_political'),
+            total_conflict_other=Sum('disaggregation_conflict_other'),
+            total_conflict_criminal=Sum('disaggregation_conflict_criminal'),
+            total_conflict_communal=Sum('disaggregation_conflict_communal'),
+        )
+        aggregation_data = [
+            dict(
+                typology='Armed Conflict',
+                total=aggregation_data['total_conflict'],
+            ),
+            dict(
+                typology='Violence - Political',
+                total=aggregation_data['total_conflict_political'],
+            ),
+            dict(
+                typology='Violence - Criminal',
+                total=aggregation_data['total_conflict_criminal'],
+            ),
+            dict(
+                typology='Violence - Communal',
+                total=aggregation_data['total_conflict_communal'],
+            ),
+            dict(
+                typology='Other',
+                total=aggregation_data['total_conflict_other'],
+            ),
+        ]
+
+        return headers, data, formula, dict(
+            headers=aggregation_headers,
+            formulae=aggregation_formula,
+            data=aggregation_data,
+        )
+
+    @cached_property
+    def global_numbers(self):
+        ...
+
+    @cached_property
+    def disaster_event(self):
+        ...
+
+    @cached_property
+    def disaster_country(self):
+        ...
+
     def get_excel_sheets_data(self):
         '''
         Returns title and corresponding computed property
         '''
         return {
-            'Flow Country': self.stat_flow_country,
-            'Flow Region': self.stat_flow_region,
-            'Conflict Country': self.stat_conflict_country,
-            'Conflict Region': self.stat_conflict_region,
+            # 'Flow Country': self.stat_flow_country,
+            # 'Flow Region': self.stat_flow_region,
+            # 'Conflict Country': self.stat_conflict_country,
+            # 'Conflict Region': self.stat_conflict_region,
+            'Conflict Typology': self.stat_conflict_typology,
         }
 
     def __str__(self):
