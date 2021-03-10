@@ -135,6 +135,7 @@ class ReportGenerationType(DjangoObjectType):
         model = ReportGeneration
         exclude_fields = ('approvers', )
 
+    is_approved = graphene.Boolean()
     approvals = DjangoPaginatedListObjectField(
         ReportApprovalListType,
     )
@@ -151,7 +152,6 @@ class ReportType(DjangoObjectType):
         model = Report
         exclude_fields = ('reports', 'figures', 'masterfact_reports', 'approvers')
 
-    is_approved = graphene.Boolean()
     comments = DjangoPaginatedListObjectField(ReportCommentListType,
                                               pagination=PageGraphqlPagination(
                                                   page_size_query_param='pageSize'
@@ -180,10 +180,6 @@ class ReportType(DjangoObjectType):
                                                    ))
     total_disaggregation = graphene.NonNull(ReportTotalsType)
     last_generation = graphene.Field(ReportGenerationType)
-    last_approvals = DjangoPaginatedListObjectField(
-        ReportApprovalListType,
-        accessor='approvals',
-    )
     generations = DjangoPaginatedListObjectField(
         ReportGenerationListType,
     )

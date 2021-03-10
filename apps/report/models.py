@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.db import models
 from django.db.models import Sum, Q, F, Exists, OuterRef
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel
@@ -204,7 +205,12 @@ class Report(MetaInformationArchiveAbstractModel,
         )
         current_gen.is_signed_off = True
         current_gen.is_signed_off_by = done_by
-        current_gen.save(update_fields=['is_signed_off', 'is_signed_off_by'])
+        current_gen.is_signed_off_on = timezone.now()
+        current_gen.save(
+            update_fields=[
+                'is_signed_off', 'is_signed_off_by', 'is_signed_off_on'
+            ]
+        )
 
     class Meta:
         # TODO: implement the side effects of report sign off
@@ -253,6 +259,10 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     report = models.ForeignKey('Report', verbose_name=_('Report'),
                                related_name='generations', on_delete=models.CASCADE)
     is_signed_off = models.BooleanField(default=False)
+    is_signed_off_on = models.DateTimeField(
+        verbose_name=_('Is signed off on'),
+        null=True
+    )
     is_signed_off_by = models.ForeignKey(User, verbose_name=_('Is Signed Off By'),
                                          blank=True, null=True,
                                          related_name='signed_off_generations', on_delete=models.CASCADE)
@@ -267,3 +277,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     snapshot = CachedFileField(verbose_name=_('report snapshot'),
                                blank=True, null=True,
                                upload_to=SNAPSHOT_REPORT_FOLDER)
+
+    @cached_property
+    def is_approved(self):
+        return self.approvals.filter(is_approved=True).exists()
