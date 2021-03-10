@@ -119,18 +119,6 @@ class ReportCommentListType(CustomDjangoListObjectType):
         filter_fields = ()
 
 
-class ReportGenerationType(DjangoObjectType):
-    class Meta:
-        model = ReportGeneration
-        exclude_fields = ('reports', 'figures', 'masterfact_reports')
-
-
-class ReportGenerationListType(CustomDjangoListObjectType):
-    class Meta:
-        model = ReportGeneration
-        filter_fields = ('report',)
-
-
 class ReportApprovalType(DjangoObjectType):
     class Meta:
         model = ReportApproval
@@ -140,6 +128,22 @@ class ReportApprovalListType(CustomDjangoListObjectType):
     class Meta:
         model = ReportApproval
         filter_fields = ('is_approved',)
+
+
+class ReportGenerationType(DjangoObjectType):
+    class Meta:
+        model = ReportGeneration
+        exclude_fields = ('approvers', )
+
+    approvals = DjangoPaginatedListObjectField(
+        ReportApprovalListType,
+    )
+
+
+class ReportGenerationListType(CustomDjangoListObjectType):
+    class Meta:
+        model = ReportGeneration
+        filter_fields = ('report',)
 
 
 class ReportType(DjangoObjectType):
@@ -175,6 +179,7 @@ class ReportType(DjangoObjectType):
                                                        page_size_query_param='pageSize'
                                                    ))
     total_disaggregation = graphene.NonNull(ReportTotalsType)
+    last_generation = graphene.Field(ReportGenerationType)
     last_approvals = DjangoPaginatedListObjectField(
         ReportApprovalListType,
         accessor='approvals',
