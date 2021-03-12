@@ -10,7 +10,7 @@ from helix.settings import QueuePriority
 REPORT_TIMEOUT = 25 * 60 * 1000  # 25 minutes
 
 
-@dramatiq.actor(queue_name=QueuePriority.HEAVY.value, max_retries=3, time_limit=REPORT_TIMEOUT)
+# @dramatiq.actor(queue_name=QueuePriority.HEAVY.value, max_retries=3, time_limit=REPORT_TIMEOUT)
 def generate_report_excel(generation_id):
     from apps.report.models import ReportGeneration
     generation = ReportGeneration.objects.get(id=generation_id)

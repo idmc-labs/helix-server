@@ -3,7 +3,7 @@ from functools import cached_property
 import logging
 
 from django.contrib.auth import get_user_model
-from django.db import models
+from django.db import models, transaction
 from django.contrib.postgres.aggregates import StringAgg
 from django.db.models.functions import Extract
 from django.db.models import (
@@ -28,6 +28,7 @@ from apps.entry.constants import STOCK, FLOW
 from apps.entry.models import FigureDisaggregationAbstractModel, Figure
 from apps.extraction.models import QueryAbstractModel
 from apps.report.utils import excel_column_key
+from apps.report.tasks import generate_report_excel
 # from utils.permissions import cache_me
 from utils.fields import CachedFileField
 
@@ -226,6 +227,9 @@ class Report(MetaInformationArchiveAbstractModel,
                 'is_signed_off', 'is_signed_off_by', 'is_signed_off_on'
             ]
         )
+        transaction.on_commit(lambda: generate_report_excel.send(
+            current_gen.pk
+        ))
 
     class Meta:
         # TODO: implement the side effects of report sign off
@@ -271,6 +275,12 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     FULL_REPORT_FOLDER = 'reports/full'
     SNAPSHOT_REPORT_FOLDER = 'reports/snaps'
 
+    class REPORT_GENERATION_STATUS(enum.Enum):
+        PENDING = 0
+        IN_PROGRESS = 1
+        COMPLETED = 2
+        FAILED = 3
+
     report = models.ForeignKey('Report', verbose_name=_('Report'),
                                related_name='generations', on_delete=models.CASCADE)
     is_signed_off = models.BooleanField(default=False)
@@ -292,6 +302,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     snapshot = CachedFileField(verbose_name=_('report snapshot'),
                                blank=True, null=True,
                                upload_to=SNAPSHOT_REPORT_FOLDER)
+    status = enum.EnumField(REPORT_GENERATION_STATUS, null=True)
 
     @cached_property
     def is_approved(self):
@@ -306,6 +317,15 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             'conflict_total': f'Conflict FLOW {self.report.name}',
             'disaster_total': f'Disaster FLOW {self.report.name}',
             'total': f'Total FLOW {self.report.name}',
+        }
+
+        def get_key(header):
+            return excel_column_key(headers, header)
+
+        formulae = {
+            f'Total Flow {self.report.name}': '={key1}{{row}})+{key2}{{row}}'.format(
+                key1=get_key('conflict_total'), key2=get_key('disaster_total')
+            ),
         }
         data = self.report.report_figures.values('country').order_by().annotate(
             conflict_total=Sum('total_figures', filter=Q(
@@ -328,7 +348,11 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             'disaster_total',
             'total',
         )
-        return headers, data, dict()
+        return {
+            'headers': headers,
+            'data': data,
+            'formulae': formulae,
+        }
 
     @cached_property
     def stat_flow_region(self):
@@ -336,7 +360,16 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             'country__region__name': 'Region',
             'conflict_total': f'Conflict FLOW {self.report.name}',
             'disaster_total': f'Disaster FLOW {self.report.name}',
-            'total': f'Total FLOW {self.report.name}',
+        }
+
+        def get_key(header):
+            return excel_column_key(headers, header)
+
+        # NOTE: {{ }} turns into { } after the first .format
+        formulae = {
+            f'Total Flow {self.report.name}': '={key1}{{row}})+{key2}{{row}}'.format(
+                key1=get_key('conflict_total'), key2=get_key('disaster_total')
+            ),
         }
         data = self.report.report_figures.values('country__region').order_by().annotate(
             conflict_total=Sum('total_figures', filter=Q(
@@ -357,7 +390,11 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             'disaster_total',
             'total',
         )
-        return headers, data, dict()
+        return {
+            'headers': headers,
+            'data': data,
+            'formulae': formulae,
+        }
 
     @cached_property
     def stat_conflict_country(self):
@@ -379,7 +416,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             return excel_column_key(headers, header)
 
         # NOTE: {{ }} turns into { } after the first .format
-        formula = {
+        formulae = {
             'Flow per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
                 key1=get_key('flow_total'), key2=get_key('country_population')
             ),
@@ -468,7 +505,12 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 ).values('_total').annotate(total=F('_total')).values('total')
             ),
         )
-        return headers, data, formula
+        return {
+            'headers': headers,
+            'data': data,
+            'formulae': formulae,
+            'aggregation': None,
+        }
 
     @cached_property
     def stat_conflict_region(self):
@@ -488,7 +530,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             return excel_column_key(headers, header)
 
         # NOTE: {{ }} turns into { } after the first .format
-        formula = {
+        formulae = {
             'Flow per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
                 key1=get_key('flow_total'), key2=get_key('region_population')
             ),
@@ -517,12 +559,12 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             region=F('country__region')
         ).values('region').order_by().annotate(
             region_population=Subquery(
-                CountryPopulation.objects.values('country__region').order_by().annotate(
-                    total_population=Sum('population', filter=Q(
-                        year=int(self.report.filter_figure_start_after.year),
-                        country__region=OuterRef('region'),
-                    ))
-                ).values('total_population')
+                CountryPopulation.objects.filter(
+                    year=int(self.report.filter_figure_start_after.year),
+                    country__region=OuterRef('region'),
+                ).annotate(
+                    total_population=Sum('population')
+                ).values('total_population')[:1]
             ),
             name=F('country__region__name'),
             flow_total=Sum('total_figures', filter=Q(
@@ -568,7 +610,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             ),
             stock_historical_average=Subquery(
                 Figure.objects.filter(
-                    start_date__lt=int(self.report.filter_figure_start_after.year) - 1,
+                    start_date__lt=self.report.filter_figure_start_after,
                     country__region=OuterRef('region'),
                     category__type=STOCK,
                     **global_filter
@@ -580,7 +622,12 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 ).values('_total').annotate(total=F('_total')).values('total')
             ),
         )
-        return headers, data, formula
+        return {
+            'headers': headers,
+            'data': data,
+            'formulae': formulae,
+            'aggregation': None,
+        }
 
     @cached_property
     def stat_conflict_typology(self):
@@ -590,7 +637,6 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             typology='Conflict Typology',
             total='Figure',
         ))
-        formula = dict()
         filtered_report_figures = self.report.report_figures.filter(
             role=Figure.ROLE.RECOMMENDED,
             entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
@@ -675,11 +721,16 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             ),
         ]
 
-        return headers, data, formula, dict(
-            headers=aggregation_headers,
-            formulae=aggregation_formula,
-            data=aggregation_data,
-        )
+        return {
+            'headers': headers,
+            'data': data,
+            'formulae': dict(),
+            'aggregation': dict(
+                headers=aggregation_headers,
+                formulae=aggregation_formula,
+                data=aggregation_data,
+            )
+        }
 
     @cached_property
     def global_numbers(self):
@@ -707,8 +758,6 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             return excel_column_key(headers, header)
 
         # NOTE: {{ }} turns into { } after the first .format
-        formula = {
-        }
         global_filter = dict(
             role=Figure.ROLE.RECOMMENDED,
             entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER
@@ -732,7 +781,11 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             affected_iso3=StringAgg('country__iso3', delimiter=', ', distinct=True),
             affected_names=StringAgg('country__name', delimiter=' | ', distinct=True),
         )
-        return headers, data, formula, None
+        return {
+            'headers': headers,
+            'data': data,
+            'formulae': dict(),
+        }
 
     @cached_property
     def disaster_region(self):
@@ -765,17 +818,19 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         )
         data = self.report.report_figures.filter(
             **global_filter
+        ).annotate(
+            region=F('country__region')
         ).values('country__region').order_by().annotate(
             region_name=F('country__region__name'),
             country_region=F('country__region__name'),
             events_count=Count('entry__event', distinct=True),
             region_population=Subquery(
-                CountryPopulation.objects.values('country__region').order_by().annotate(
-                    total_population=Sum('population', filter=Q(
-                        year=int(self.report.filter_figure_start_after.year),
-                        country__region=OuterRef('country__region'),
-                    ))
-                ).values('total_population')
+                CountryPopulation.objects.filter(
+                    country__region=OuterRef('region'),
+                    year=int(self.report.filter_figure_start_after.year),
+                ).annotate(
+                    total_population=Sum('population')
+                ).values('total_population')[:1]
             ),
             flow_total=Sum('total_figures', filter=Q(
                 # FIXME
@@ -809,7 +864,11 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             ),
         )
 
-        return headers, data, formulae, None
+        return {
+            'headers': headers,
+            'data': data,
+            'formulae': formulae,
+        }
 
     @cached_property
     def disaster_country(self):
@@ -884,20 +943,25 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             ),
         )
 
-        return headers, data, formulae, None
+        return {
+            'headers': headers,
+            'data': data,
+            'formulae': formulae,
+            'aggregation': None,
+        }
 
     def get_excel_sheets_data(self):
         '''
         Returns title and corresponding computed property
         '''
         return {
-            # 'Flow Country': self.stat_flow_country,
-            # 'Flow Region': self.stat_flow_region,
-            # 'Conflict Country': self.stat_conflict_country,
-            # 'Conflict Region': self.stat_conflict_region,
-            # 'Conflict Typology': self.stat_conflict_typology,
-            # 'Disaster Event': self.disaster_event,
-            # 'Disaster Country': self.disaster_country,
+            'Flow Country': self.stat_flow_country,
+            'Flow Region': self.stat_flow_region,
+            'Conflict Country': self.stat_conflict_country,
+            'Conflict Region': self.stat_conflict_region,
+            'Conflict Typology': self.stat_conflict_typology,
+            'Disaster Event': self.disaster_event,
+            'Disaster Country': self.disaster_country,
             'Disaster Region': self.disaster_region,
         }
 
