@@ -419,7 +419,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             )),
             flow_total_last_year=Subquery(
                 Figure.objects.filter(
-                    start_date__lt=self.report.filter_figure_start_after,
+                    start_date__year=int(self.report.filter_figure_start_after.year) - 1,
                     country=OuterRef('country'),
                     category__type=FLOW,
                     **global_filter
@@ -531,7 +531,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             )),
             flow_total_last_year=Subquery(
                 Figure.objects.filter(
-                    start_date__lt=self.report.filter_figure_start_after,
+                    start_date__year=int(self.report.filter_figure_start_after.year) - 1,
                     country__region=OuterRef('region'),
                     category__type=FLOW,
                     **global_filter
@@ -735,8 +735,156 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         return headers, data, formula, None
 
     @cached_property
+    def disaster_region(self):
+        headers = OrderedDict(dict(
+            region_name='Region',
+            events_count='Number of Events',
+            region_population='Region Population',
+            flow_total=f'ND {self.report.name}',
+            flow_total_last_year='ND Flow Last Year',
+            flow_historical_average='ND Flow Historical Average',
+        ))
+
+        def get_key(header):
+            return excel_column_key(headers, header)
+
+        formulae = {
+            'Flow per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('region_population')
+            ),
+            'Flow percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
+            ),
+            'Flow percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_historical_average')
+            ),
+        }
+        global_filter = dict(
+            role=Figure.ROLE.RECOMMENDED,
+            entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+        )
+        data = self.report.report_figures.filter(
+            **global_filter
+        ).values('country__region').order_by().annotate(
+            region_name=F('country__region__name'),
+            country_region=F('country__region__name'),
+            events_count=Count('entry__event', distinct=True),
+            region_population=Subquery(
+                CountryPopulation.objects.values('country__region').order_by().annotate(
+                    total_population=Sum('population', filter=Q(
+                        year=int(self.report.filter_figure_start_after.year),
+                        country__region=OuterRef('country__region'),
+                    ))
+                ).values('total_population')
+            ),
+            flow_total=Sum('total_figures', filter=Q(
+                # FIXME
+                category__type=FLOW,
+                **global_filter
+            )),
+            flow_total_last_year=Subquery(
+                Figure.objects.filter(
+                    start_date__year=int(self.report.filter_figure_start_after.year) - 1,
+                    country__region=OuterRef('country__region'),
+                    # FIXME
+                    category__type=FLOW,
+                    **global_filter
+                ).annotate(
+                    _total=Sum('total_figures')
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
+            flow_historical_average=Subquery(
+                Figure.objects.filter(
+                    start_date__lt=self.report.filter_figure_start_after,
+                    country__region=OuterRef('country__region'),
+                    # FIXME
+                    category__type=FLOW,
+                    **global_filter
+                ).annotate(
+                    min_year=Min(Extract('start_date', 'year')),
+                    max_year=Max(Extract('start_date', 'year')),
+                ).annotate(
+                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
+        )
+
+        return headers, data, formulae, None
+
+    @cached_property
     def disaster_country(self):
-        ...
+        headers = OrderedDict(dict(
+            country_iso3='ISO3',
+            country_name='Name',
+            country_region='Region',
+            events_count='Number of Events',
+            country_population='Country Population',
+            flow_total=f'ND {self.report.name}',
+            flow_total_last_year='ND Flow Last Year',
+            flow_historical_average='ND Flow Historical Average',
+        ))
+
+        def get_key(header):
+            return excel_column_key(headers, header)
+
+        formulae = {
+            'Flow per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('country_population')
+            ),
+            'Flow percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
+            ),
+            'Flow percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_historical_average')
+            ),
+        }
+        global_filter = dict(
+            role=Figure.ROLE.RECOMMENDED,
+            entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+        )
+        data = self.report.report_figures.filter(
+            **global_filter
+        ).values('country').order_by().annotate(
+            country_iso3=F('country__iso3'),
+            country_name=F('country__name'),
+            country_region=F('country__region__name'),
+            events_count=Count('entry__event', distinct=True),
+            country_population=Subquery(
+                CountryPopulation.objects.filter(
+                    year=int(self.report.filter_figure_start_after.year),
+                    country=OuterRef('country'),
+                ).values('population')
+            ),
+            flow_total=Sum('total_figures', filter=Q(
+                category__type=FLOW,
+                **global_filter
+            )),
+            flow_total_last_year=Subquery(
+                Figure.objects.filter(
+                    start_date__year=int(self.report.filter_figure_start_after.year) - 1,
+                    country=OuterRef('country'),
+                    category__type=FLOW,
+                    **global_filter
+                ).annotate(
+                    _total=Sum('total_figures')
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
+            flow_historical_average=Subquery(
+                Figure.objects.filter(
+                    start_date__lt=self.report.filter_figure_start_after,
+                    country=OuterRef('country'),
+                    category__type=FLOW,
+                    **global_filter
+                ).annotate(
+                    min_year=Min(Extract('start_date', 'year')),
+                    max_year=Max(Extract('start_date', 'year')),
+                ).annotate(
+                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
+        )
+
+        return headers, data, formulae, None
 
     def get_excel_sheets_data(self):
         '''
@@ -748,7 +896,9 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             # 'Conflict Country': self.stat_conflict_country,
             # 'Conflict Region': self.stat_conflict_region,
             # 'Conflict Typology': self.stat_conflict_typology,
-            'Disaster Event': self.disaster_event,
+            # 'Disaster Event': self.disaster_event,
+            # 'Disaster Country': self.disaster_country,
+            'Disaster Region': self.disaster_region,
         }
 
     def __str__(self):
