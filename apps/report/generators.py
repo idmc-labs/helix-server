@@ -30,6 +30,8 @@ def generate_report_excel():
         column_at = idx + idx2 + 2
         ws.cell(column=column_at, row=1, value='')
 
+        if not aggregation:
+            continue
         agg_headers = aggregation['headers']
         agg_data = aggregation['data']
         agg_formulae = aggregation['formulae']

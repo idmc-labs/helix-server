@@ -4,9 +4,11 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.db import models
+from django.contrib.postgres.aggregates import StringAgg
 from django.db.models.functions import Extract
 from django.db.models import (
     Sum,
+    Count,
     Q,
     F,
     Exists,
@@ -685,7 +687,52 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
 
     @cached_property
     def disaster_event(self):
-        ...
+        headers = OrderedDict(dict(
+            event_id='Event ID',
+            event_name='Event Name',
+            event_year='Event Year',
+            event_start_date='Start Date',
+            event_end_date='End Date',
+            event_category='Category',
+            event_sub_category='Sub-Category',
+            dtype='Hazard Type',
+            dsub_type='Hazard Sub-Type',
+            affected_iso3='Affected ISO3',
+            affected_names='Affected Countries',
+            affected_countries='Number of Affected Countries',
+            flow_total='ND' + self.report.name,
+        ))
+
+        def get_key(header):
+            return excel_column_key(headers, header)
+
+        # NOTE: {{ }} turns into { } after the first .format
+        formula = {
+        }
+        global_filter = dict(
+            role=Figure.ROLE.RECOMMENDED,
+            entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER
+        )
+
+        data = self.report.report_figures.filter(
+            **global_filter
+        ).values('entry__event').order_by().annotate(
+            event_id=F('entry__event_id'),
+            event_name=F('entry__event__name'),
+            event_year=Extract('entry__event__start_date', 'year'),
+            event_start_date=F('entry__event__start_date'),
+            event_end_date=F('entry__event__end_date'),
+            event_category=F('entry__event__disaster_category__name'),
+            event_sub_category=F('entry__event__disaster_sub_category__name'),
+            dtype=F('entry__event__disaster_type__name'),
+            dsub_type=F('entry__event__disaster_sub_type__name'),
+            # # FIXME: this is not FLOW but should be category = New Displacement
+            flow_total=Sum('total_figures', filter=Q(category__type=FLOW)),
+            affected_countries=Count('country', distinct=True),
+            affected_iso3=StringAgg('country__iso3', delimiter=', ', distinct=True),
+            affected_names=StringAgg('country__name', delimiter=' | ', distinct=True),
+        )
+        return headers, data, formula, None
 
     @cached_property
     def disaster_country(self):
@@ -700,7 +747,8 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             # 'Flow Region': self.stat_flow_region,
             # 'Conflict Country': self.stat_conflict_country,
             # 'Conflict Region': self.stat_conflict_region,
-            'Conflict Typology': self.stat_conflict_typology,
+            # 'Conflict Typology': self.stat_conflict_typology,
+            'Disaster Event': self.disaster_event,
         }
 
     def __str__(self):

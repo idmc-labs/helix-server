@@ -158,8 +158,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     event_narrative = models.TextField(verbose_name=_('Event Narrative'),
                                        null=True, blank=True)
 
-    # property
-
     @property
     def total_stock_figures(self) -> int:
         filters = dict(event=self.id)
@@ -169,8 +167,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     def total_flow_figures(self) -> int:
         filters = dict(event=self.id)
         return Figure.get_total_flow_figure(filters)
-
-    # methods
 
     @staticmethod
     def clean_dates(values: dict, instance=None) -> OrderedDict:
