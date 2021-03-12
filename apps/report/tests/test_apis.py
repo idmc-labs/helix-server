@@ -101,7 +101,9 @@ class TestReportSignOff(HelixGraphQLTestCase):
             ok
             result {
               isSignedOff
-              isApproved
+              lastGeneration {
+                isApproved
+              }
               id
               generations {
                 results {
@@ -132,7 +134,7 @@ class TestReportSignOff(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertIsNone(content['data']['startReportGeneration']['errors'], content)
         self.assertEqual(content['data']['startReportGeneration']['result']['isSignedOff'], False)
-        self.assertEqual(content['data']['startReportGeneration']['result']['isApproved'], False)
+        self.assertEqual(content['data']['startReportGeneration']['result']['lastGeneration']['isApproved'], False)
         self.assertEqual(len(content['data']['startReportGeneration']['result']['generations']['results']), 1)
 
         # retry generate should fail
@@ -216,12 +218,14 @@ class TestReportApprove(HelixGraphQLTestCase):
             ok
             errors
             result {
-              isApproved
-              lastApprovals {
-                results {
-                  createdBy {
-                    email
-                    id
+              lastGeneration {
+                isApproved
+                approvals {
+                  results {
+                    createdBy {
+                      email
+                      id
+                    }
                   }
                 }
               }
@@ -248,8 +252,10 @@ class TestReportApprove(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertIsNone(content['data']['approveReport']['errors'], content)
         assert self.report.approvals.count() == self.report.last_generation.approvers.count()
-        self.assertEqual(content['data']['approveReport']['result']['lastApprovals']['results'][0]['createdBy']['email'],
-                         user.email, content)
+        self.assertEqual(
+            content['data']['approveReport']['result']['lastGeneration']['approvals']['results'][0]['createdBy']['email'],
+            user.email, content
+        )
 
     def test_invalid_report_approval_by_guest(self):
         guest = create_user_with_role(USER_ROLE.GUEST.name)
