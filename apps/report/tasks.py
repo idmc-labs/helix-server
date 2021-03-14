@@ -9,8 +9,11 @@ from helix.settings import QueuePriority
 
 REPORT_TIMEOUT = 25 * 60 * 1000  # 25 minutes
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# @dramatiq.actor(queue_name=QueuePriority.HEAVY.value, max_retries=3, time_limit=REPORT_TIMEOUT)
+
+@dramatiq.actor(queue_name=QueuePriority.HEAVY.value, max_retries=3, time_limit=REPORT_TIMEOUT)
 def generate_report_excel(generation_id):
     from apps.report.models import ReportGeneration
     generation = ReportGeneration.objects.get(id=generation_id)
@@ -70,10 +73,11 @@ def generate_report_excel(generation_id):
             wb.save(tmp.name)
             tmp.seek(0)
             content = tmp.read()
-            path = f'{ReportGeneration.FULL_REPORT_FOLDER}/{generation.report.name}.xlsx'
+            path = f'{generation.report.name}.xlsx'
             generation.full_report.save(path, ContentFile(content))
         generation.status = ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED
-    except:  # NOQA E722
+    except Exception as e:  # NOQA E722
+        logger.error('Report Generation Failed', exc_info=True)
         generation.status = ReportGeneration.REPORT_GENERATION_STATUS.FAILED
 
     generation.save(update_fields=['status'])
