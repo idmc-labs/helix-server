@@ -26,7 +26,8 @@ from apps.contrib.models import MetaInformationArchiveAbstractModel
 from apps.country.models import CountryPopulation
 from apps.crisis.models import Crisis
 from apps.entry.constants import STOCK, FLOW
-from apps.entry.models import FigureDisaggregationAbstractModel, Figure
+from apps.entry.models import FigureDisaggregationAbstractModel, Figure, Entry
+from apps.event.models import Event
 from apps.extraction.models import QueryAbstractModel
 from apps.report.utils import excel_column_key
 from apps.report.tasks import generate_report_excel
@@ -786,6 +787,53 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             'Disaster Country': self.disaster_country,
             'Disaster Region': self.disaster_region,
         }
+
+    def get_snapshot(self):
+        '''
+        Create a snapshot of all the relevant data for the report
+        '''
+        return dict(
+            figures=self.report.report_figures.select_related(
+                'created_by', 'last_modified_by', 'country', 'category', 'country__region',
+            ).values(
+                'id', 'uuid', 'old_id', 'created_at', 'modified_at', 'created_by__email',
+                'last_modified_by__email', 'disaggregation_displacement_urban',
+                'disaggregation_displacement_rural', 'disaggregation_location_camp',
+                'disaggregation_location_non_camp', 'disaggregation_sex_male',
+                'disaggregation_sex_female', 'disaggregation_age_json',
+                'disaggregation_strata_json', 'disaggregation_conflict',
+                'disaggregation_conflict_political', 'disaggregation_conflict_criminal',
+                'disaggregation_conflict_communal', 'disaggregation_conflict_other',
+                'entry', 'was_subfact', 'quantifier', 'reported', 'unit',
+                'household_size', 'total_figures', 'term', 'category__name', 'role',
+                'start_date', 'end_date', 'include_idu', 'excerpt_idu', 'country__name',
+                'country__region__name', 'is_disaggregated', 'is_housing_destruction',
+            ),
+            entries=Entry.objects.filter(
+                id=self.report.report_figures.values('entry')
+            ).select_related(
+                'created_by', 'last_modified_by'
+            ).values(
+                'id', 'old_id', 'created_at', 'modified_at', 'created_by__email',
+                'last_modified_by__email', 'version_id', 'url',
+                'article_title', 'publish_date', 'source_excerpt',
+                'event', 'idmc_analysis', 'calculation_logic', 'is_confidential', 'caveats',
+            ),
+            events=Event.objects.filter(
+                id=self.report.report_figures.values('entry__event')
+            ).select_related(
+                'created_by', 'last_modified_by', 'trigger', 'trigger_sub_type', 'violence',
+                'violence_sub_type', 'actor', 'disaster_category', 'disaster_sub_category',
+                'disaster_type', 'disaster_sub_type'
+            ).values(
+                'id', 'old_id', 'created_at', 'modified_at', 'created_by__email',
+                'last_modified_by__email', 'crisis', 'name', 'event_type',
+                'other_sub_type', 'trigger__name', 'trigger_sub_type__name', 'violence__name',
+                'violence_sub_type__name', 'actor__name', 'disaster_category__name',
+                'disaster_sub_category__name', 'disaster_type__name', 'disaster_sub_type__name',
+                'start_date', 'end_date', 'event_narrative',
+            ),
+        )
 
     def __str__(self):
         return f'{self.created_by} signed off {self.report} on {self.created_at}'
