@@ -13,10 +13,7 @@ from django.db.models import (
     F,
     Exists,
     Subquery,
-    Min,
-    Max,
     OuterRef,
-    Value,
 )
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -30,7 +27,7 @@ from apps.entry.models import FigureDisaggregationAbstractModel, Figure, Entry
 from apps.event.models import Event
 from apps.extraction.models import QueryAbstractModel
 from apps.report.utils import excel_column_key
-from apps.report.tasks import generate_report_excel
+from apps.report.tasks import trigger_report_generation
 # from utils.permissions import cache_me
 from utils.fields import CachedFileField
 
@@ -229,7 +226,7 @@ class Report(MetaInformationArchiveAbstractModel,
                 'is_signed_off', 'is_signed_off_by', 'is_signed_off_on'
             ]
         )
-        transaction.on_commit(lambda: generate_report_excel.send(
+        transaction.on_commit(lambda: trigger_report_generation.send(
             current_gen.pk
         ))
 
@@ -796,7 +793,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             figures=self.report.report_figures.select_related(
                 'created_by', 'last_modified_by', 'country', 'category', 'country__region',
             ).values(
-                'id', 'uuid', 'old_id', 'created_at', 'modified_at', 'created_by__email',
+                'id', 'old_id', 'created_at', 'modified_at', 'created_by__email',
                 'last_modified_by__email', 'disaggregation_displacement_urban',
                 'disaggregation_displacement_rural', 'disaggregation_location_camp',
                 'disaggregation_location_non_camp', 'disaggregation_sex_male',
@@ -810,7 +807,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'country__region__name', 'is_disaggregated', 'is_housing_destruction',
             ),
             entries=Entry.objects.filter(
-                id=self.report.report_figures.values('entry')
+                id__in=self.report.report_figures.values('entry')
             ).select_related(
                 'created_by', 'last_modified_by'
             ).values(
@@ -820,7 +817,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'event', 'idmc_analysis', 'calculation_logic', 'is_confidential', 'caveats',
             ),
             events=Event.objects.filter(
-                id=self.report.report_figures.values('entry__event')
+                id__in=self.report.report_figures.values('entry__event')
             ).select_related(
                 'created_by', 'last_modified_by', 'trigger', 'trigger_sub_type', 'violence',
                 'violence_sub_type', 'actor', 'disaster_category', 'disaster_sub_category',
