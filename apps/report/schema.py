@@ -197,3 +197,8 @@ class Query:
                                                  pagination=PageGraphqlPagination(
                                                      page_size_query_param='pageSize'
                                                  ))
+    report_comment = DjangoObjectField(ReportCommentType)
+    report_comment_list = DjangoPaginatedListObjectField(ReportCommentListType,
+                                                         pagination=PageGraphqlPagination(
+                                                             page_size_query_param='pageSize'
+                                                         ))
