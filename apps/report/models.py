@@ -22,8 +22,12 @@ from django_enumfield import enum
 from apps.contrib.models import MetaInformationArchiveAbstractModel
 from apps.country.models import CountryPopulation
 from apps.crisis.models import Crisis
-from apps.entry.constants import STOCK, FLOW
-from apps.entry.models import FigureDisaggregationAbstractModel, Figure, Entry
+from apps.entry.models import (
+    FigureDisaggregationAbstractModel,
+    Figure,
+    Entry,
+    FigureCategory,
+)
 from apps.event.models import Event
 from apps.extraction.models import QueryAbstractModel
 from apps.report.utils import excel_column_key
@@ -46,25 +50,25 @@ class Report(MetaInformationArchiveAbstractModel,
     TOTAL_FIGURE_DISAGGREGATIONS = dict(
         total_stock_conflict=Sum(
             'total_figures',
-            filter=Q(category__type=STOCK,
+            filter=Q(category=FigureCategory.stock_idp_id,
                      role=Figure.ROLE.RECOMMENDED,
                      entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
         ),
         total_flow_conflict=Sum(
             'total_figures',
-            filter=Q(category__type=FLOW,
+            filter=Q(category=FigureCategory.flow_new_displacement_id,
                      role=Figure.ROLE.RECOMMENDED,
                      entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
         ),
         total_stock_disaster=Sum(
             'total_figures',
-            filter=Q(category__type=STOCK,
+            filter=Q(category=FigureCategory.stock_idp_id,
                      role=Figure.ROLE.RECOMMENDED,
                      entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
         ),
         total_flow_disaster=Sum(
             'total_figures',
-            filter=Q(category__type=FLOW,
+            filter=Q(category=FigureCategory.flow_new_displacement_id,
                      role=Figure.ROLE.RECOMMENDED,
                      entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
         ),
@@ -328,12 +332,12 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         }
         data = self.report.report_figures.values('country').order_by().annotate(
             conflict_total=Sum('total_figures', filter=Q(
-                category__type=FLOW,
+                category=FigureCategory.flow_new_displacement_id,
                 role=Figure.ROLE.RECOMMENDED,
                 entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT
             )),
             disaster_total=Sum('total_figures', filter=Q(
-                category__type=FLOW,
+                category=FigureCategory.flow_new_displacement_id,
                 role=Figure.ROLE.RECOMMENDED,
                 entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER
             )),
@@ -372,12 +376,12 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         }
         data = self.report.report_figures.values('country__region').order_by().annotate(
             conflict_total=Sum('total_figures', filter=Q(
-                category__type=FLOW,
+                category=FigureCategory.flow_new_displacement_id,
                 role=Figure.ROLE.RECOMMENDED,
                 entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT
             )),
             disaster_total=Sum('total_figures', filter=Q(
-                category__type=FLOW,
+                category=FigureCategory.flow_new_displacement_id,
                 role=Figure.ROLE.RECOMMENDED,
                 entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER
             )),
@@ -434,11 +438,11 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             iso3=F('country__iso3'),
             name=F('country__name'),
             flow_total=Sum('total_figures', filter=Q(
-                category__type=FLOW,
+                category=FigureCategory.flow_new_displacement_id,
                 **global_filter
             )),
             stock_total=Sum('total_figures', filter=Q(
-                category__type=STOCK,
+                category=FigureCategory.stock_idp_id,
                 **global_filter
             )),
         )
@@ -489,11 +493,11 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             ),
             name=F('country__region__name'),
             flow_total=Sum('total_figures', filter=Q(
-                category__type=FLOW,
+                category=FigureCategory.flow_new_displacement_id,
                 **global_filter
             )),
             stock_total=Sum('total_figures', filter=Q(
-                category__type=STOCK,
+                category=FigureCategory.stock_idp_id,
                 **global_filter
             )),
         )
@@ -515,7 +519,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         filtered_report_figures = self.report.report_figures.filter(
             role=Figure.ROLE.RECOMMENDED,
             entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
-            category__type=FLOW,
+            category=FigureCategory.flow_new_displacement_id,
         ).values('country').order_by()
 
         data = filtered_report_figures.filter(disaggregation_conflict__gt=0).annotate(
@@ -572,7 +576,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         filtered_report_figures = self.report.report_figures.filter(
             role=Figure.ROLE.RECOMMENDED,
             entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
-            category__type=FLOW,
+            category=FigureCategory.flow_new_displacement_id,
         )
 
         aggregation_data = filtered_report_figures.aggregate(
@@ -659,8 +663,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             event_sub_category=F('entry__event__disaster_sub_category__name'),
             dtype=F('entry__event__disaster_type__name'),
             dsub_type=F('entry__event__disaster_sub_type__name'),
-            # # FIXME: this is not FLOW but should be category = New Displacement
-            flow_total=Sum('total_figures', filter=Q(category__type=FLOW)),
+            flow_total=Sum('total_figures', filter=Q(category=FigureCategory.flow_new_displacement_id)),
             affected_countries=Count('country', distinct=True),
             affected_iso3=StringAgg('country__iso3', delimiter=', ', distinct=True),
             affected_names=StringAgg('country__name', delimiter=' | ', distinct=True),
@@ -709,8 +712,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 ).values('total_population')[:1]
             ),
             flow_total=Sum('total_figures', filter=Q(
-                # FIXME
-                category__type=FLOW,
+                category=FigureCategory.flow_new_displacement_id,
                 **global_filter
             )),
         )
@@ -758,7 +760,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 ).values('population')
             ),
             flow_total=Sum('total_figures', filter=Q(
-                category__type=FLOW,
+                category=FigureCategory.flow_new_displacement_id,
                 **global_filter
             )),
         )

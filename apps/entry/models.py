@@ -106,6 +106,20 @@ class FigureCategory(models.Model):
         (FLOW, FLOW),
     ), default=STOCK)
 
+    @classmethod
+    def stock_idp_id(cls):
+        return cls.objects.get(
+            type=STOCK,
+            name__iexact='idps'
+        )
+
+    @classmethod
+    def flow_new_displacement_id(cls):
+        return cls.objects.get(
+            type=FLOW,
+            name__iexact='new displacement'
+        )
+
 
 class FigureDisaggregationAbstractModel(models.Model):
     # disaggregation information
@@ -296,7 +310,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         from apps.entry.filters import FigureFilter
         return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
-            category__type=STOCK
+            category=FigureCategory.stock_idp_id
         ).aggregate(total=Sum('total_figures'))['total']
 
     @classmethod
@@ -304,7 +318,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         from apps.entry.filters import FigureFilter
         return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
-            category__type=FLOW
+            category=FigureCategory.flow_new_displacement_id
         ).aggregate(total=Sum('total_figures'))['total']
 
     @classmethod
