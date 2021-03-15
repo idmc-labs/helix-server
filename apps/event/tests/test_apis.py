@@ -111,7 +111,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         self.assertNotEqual(content['data']['createEvent']['result']['otherSubType'],
                             None)
 
-    def test_invalid_event_countries_beyond_crisis(self) -> None:
+    def test_invalid_filter_figure_countries_beyond_crisis(self) -> None:
         self.input['countries'] = [each.id for each in CountryFactory.create_batch(2)]
         response = self.query(
             self.mutation,

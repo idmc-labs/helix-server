@@ -304,7 +304,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "startDate": "2020-10-10",
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
-                "ageJson": [
+                "disaggregationAgeJson": [
                     # from is greater than to
                     {"uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9", "ageFrom": 3, "ageTo": 2, "value": 3},
                     {"uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce", "ageFrom": 3, "ageTo": 5, "value": 3}
@@ -460,7 +460,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-09-09",
                 "includeIdu": False,
-                "ageJson": [
+                "disaggregationAgeJson": [
                     {
                         "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
                         "ageFrom": 1,
@@ -474,7 +474,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                         "value": 3
                     }
                 ],
-                "strataJson": [
+                "disaggregationStrataJson": [
                     {"date": "2020-10-10", "value": 2, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
                     {"date": "2020-10-12", "value": 2, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
                 ]
@@ -491,7 +491,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-09-09",
                 "includeIdu": False,
-                "ageJson": [
+                "disaggregationAgeJson": [
                     {
                         "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
                         "ageFrom": 1,
@@ -505,7 +505,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                         "value": 3
                     }
                 ],
-                "strataJson": [
+                "disaggregationStrataJson": [
                     {"date": "2020-10-10", "value": 2, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
                     {"date": "2020-10-12", "value": 2, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
                 ]

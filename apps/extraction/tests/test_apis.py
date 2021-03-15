@@ -69,7 +69,7 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         self.force_login(reviewer)
         _input = dict(
             name='LOl',
-            eventRegions=[str(self.reg1.id)]
+            filterFigureRegions=[str(self.reg1.id)]
         )
         response = self.query(
             self.mutation,

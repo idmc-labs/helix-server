@@ -24,8 +24,8 @@ class ExtractionQueryObjectType(DjangoObjectType):
                                              pagination=PageGraphqlPagination(
                                                  page_size_query_param='pageSize'
                                              ), accessor='entries')
-    figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
-    event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
+    filter_figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
+    filter_event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
 
 
 class ExtractionQueryListType(CustomDjangoListObjectType):

@@ -25,7 +25,6 @@ from utils.mutation import generate_input_type_for_serializer
 
 # entry
 
-
 EntryCreateInputType = generate_input_type_for_serializer(
     'EntryCreateInputType',
     serializer_class=EntryCreateSerializer

@@ -12,6 +12,7 @@ class Command(BaseCommand):
         User = get_user_model()
         raw_password = 'admin123'
         roles = [('admin', USER_ROLE.ADMIN.name, 'Eric', 'Lowe'),
+                 ('head', USER_ROLE.IT_HEAD.name, 'Kenzo', 'Mcmillian'),
                  ('editor', USER_ROLE.MONITORING_EXPERT_EDITOR.name, 'Larissa', 'Stevens'),
                  ('reviewer', USER_ROLE.MONITORING_EXPERT_REVIEWER.name, 'Herman', 'Garza'),
                  ('guest', USER_ROLE.GUEST.name, 'Frederick', 'Gutierrez')]

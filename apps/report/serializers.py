@@ -20,13 +20,14 @@ class ReportSerializer(MetaInformationSerializerMixin,
         fields = '__all__'
 
     def validate(self, attrs) -> dict:
+        attrs = super().validate(attrs)
         errors = OrderedDict()
         errors.update(is_child_parent_dates_valid(
             attrs,
             self.instance,
             parent_field=None,
-            c_start_field='figure_start_after',
-            c_end_field='figure_end_before',
+            c_start_field='filter_figure_start_after',
+            c_end_field='filter_figure_end_before',
         ))
         if errors:
             raise serializers.ValidationError(errors)

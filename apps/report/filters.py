@@ -5,7 +5,7 @@ from utils.filters import IDListFilter
 
 
 class ReportFilter(df.FilterSet):
-    event_countries = IDListFilter(method='filter_countries')
+    filter_figure_countries = IDListFilter(method='filter_countries')
 
     class Meta:
         model = Report

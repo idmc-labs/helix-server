@@ -74,49 +74,49 @@ class TestExtractionFilter(HelixTestCase):
 
     def test_filter_by_region(self):
         regions = [self.reg3.id]
-        fqs = f(data=dict(event_regions=regions)).qs
+        fqs = f(data=dict(filter_figure_regions=regions)).qs
         self.assertEqual(set(fqs), {self.entry3ev2})
 
-    def test_filter_by_event_crisis_types(self):
+    def test_filter_by_filter_event_crisis_types(self):
         crisis_types = [Crisis.CRISIS_TYPE.DISASTER]
-        fqs = f(data=dict(event_crisis_types=crisis_types)).qs
+        fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
         self.assertEqual(set(fqs), {self.entry3ev2})
 
         crisis_types = [Crisis.CRISIS_TYPE.CONFLICT]
-        fqs = f(data=dict(event_crisis_types=crisis_types)).qs
+        fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
         self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
 
         # now from client
         crisis_types = ["CONFLICT", "DISASTER"]
-        fqs = f(data=dict(event_crisis_types=crisis_types)).qs
+        fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
         self.assertEqual(set(fqs), {self.entry3ev2, self.entry1ev1, self.entry2ev1})
 
     def test_filter_by_country(self):
         data = dict(
-            event_countries=[self.country3reg3.id]
+            filter_figure_countries=[self.country3reg3.id]
         )
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry3ev2})
 
     def test_filter_by_crises(self):
         data = dict(
-            event_crises=[self.crisis1.id]
+            filter_event_crises=[self.crisis1.id]
         )
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1, self.entry3ev2})
 
-        data['event_crises'] = [self.crisis2.id]
+        data['filter_event_crises'] = [self.crisis2.id]
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), set())
 
     def test_filter_by_categories(self):
         data = dict(
-            figure_categories=[self.fig_cat2.id]
+            filter_figure_categories=[self.fig_cat2.id]
         )
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
         data = dict(
-            figure_categories=[self.fig_cat1.id, self.fig_cat3.id]
+            filter_figure_categories=[self.fig_cat1.id, self.fig_cat3.id]
         )
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1ev1, self.entry3ev2})
@@ -134,11 +134,11 @@ class TestExtractionFilter(HelixTestCase):
         self.fig5cat3entry3 = FigureFactory.create(entry=self.entry3ev2, category=self.fig_cat3,
                                                    start_date=self.mid_nov, end_date=self.end_nov)
         data = dict(
-            figure_start_after=self.mid_oct,
+            filter_figure_start_after=self.mid_oct,
             figure_end_befor=self.mid_nov,
         )
 
-        data['figure_end_before'] = self.mid_nov
+        data['filter_figure_end_before'] = self.mid_nov
         eqs = {self.entry1ev1}
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), eqs)

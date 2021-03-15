@@ -30,10 +30,10 @@ class OSMNameFilter(df.FilterSet):
 
 
 class FigureFilter(df.FilterSet):
-    categories = StringListFilter(method='filter_figure_categories')
+    categories = StringListFilter(method='filter_filter_figure_categories')
     start_date = df.DateFilter(method='filter_time_frame_after')
     end_date = df.DateFilter(method='filter_time_frame_before')
-    roles = StringListFilter(method='filter_figure_roles')
+    roles = StringListFilter(method='filter_filter_figure_roles')
     entry = df.NumberFilter(field_name='entry', lookup_expr='exact')
     event = df.NumberFilter(field_name='entry__event', lookup_expr='exact')
     crisis = df.NumberFilter(field_name='entry__event__crisis', lookup_expr='exact')
@@ -42,7 +42,7 @@ class FigureFilter(df.FilterSet):
         model = Figure
         fields = []
 
-    def filter_figure_categories(self, qs, name, value):
+    def filter_filter_figure_categories(self, qs, name, value):
         if value:
             return qs.filter(category__in=value)
         return qs
@@ -59,7 +59,7 @@ class FigureFilter(df.FilterSet):
                 filter(end_date__lt=value)
         return qs
 
-    def filter_figure_roles(self, qs, name, value):
+    def filter_filter_figure_roles(self, qs, name, value):
         if value:
             return qs.filter(role__in=[Figure.ROLE.get(item) for item in value]).distinct()
         return qs

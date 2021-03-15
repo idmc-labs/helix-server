@@ -89,8 +89,8 @@ class FigureType(DjangoObjectType):
     unit = graphene.Field(UnitGrapheneEnum)
     term = graphene.Field(TermGrapheneEnum)
     role = graphene.Field(RoleGrapheneEnum)
-    age_json = graphene.List(graphene.NonNull(DisaggregatedAgeType))
-    strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
+    disaggregation_age_json = graphene.List(graphene.NonNull(DisaggregatedAgeType))
+    disaggregation_strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
     geo_locations = DjangoPaginatedListObjectField(OSMNameListType, accessor='geo_locations')
 
 

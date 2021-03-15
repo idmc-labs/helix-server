@@ -13,40 +13,79 @@ from apps.extraction.filters import (
 
 
 class QueryAbstractModel(models.Model):
-    name = models.CharField(verbose_name=_('Name'), max_length=128)
-    event_regions = models.ManyToManyField('country.CountryRegion', verbose_name=_('Regions'),
-                                           blank=True, related_name='+')
-    event_countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
-                                             blank=True, related_name='+')
-    event_crises = models.ManyToManyField('crisis.Crisis', verbose_name=_('Crises'),
-                                          blank=True, related_name='+')
-    figure_categories = models.ManyToManyField('entry.FigureCategory',
-                                               verbose_name=_('figure categories'),
-                                               related_name='+', blank=True)
-    figure_start_after = models.DateField(verbose_name=_('From Date'), blank=True, null=True)
-    figure_end_before = models.DateField(verbose_name=_('To Date'), blank=True, null=True)
-    figure_roles = ArrayField(base_field=enum.EnumField(enum=Figure.ROLE),
-                              blank=True, null=True)
-    entry_tags = models.ManyToManyField('entry.FigureTag', verbose_name=_('Figure Tags'),
-                                        blank=True, related_name='+')
-    entry_article_title = models.TextField(verbose_name=_('Article Title'),
-                                           blank=True, null=True)
-    event_crisis_types = ArrayField(base_field=enum.EnumField(enum=Crisis.CRISIS_TYPE),
-                                    blank=True, null=True)
+    name = models.CharField(
+        verbose_name=_('Name'),
+        max_length=128
+    )
+    filter_figure_regions = models.ManyToManyField(
+        'country.CountryRegion',
+        verbose_name=_('Regions'),
+        blank=True,
+        related_name='+'
+    )
+    filter_figure_countries = models.ManyToManyField(
+        'country.Country',
+        verbose_name=_('Countries'),
+        blank=True,
+        related_name='+'
+    )
+    filter_event_crises = models.ManyToManyField(
+        'crisis.Crisis',
+        verbose_name=_('Crises'),
+        blank=True,
+        related_name='+'
+    )
+    filter_figure_categories = models.ManyToManyField(
+        'entry.FigureCategory',
+        verbose_name=_('figure categories'),
+        related_name='+',
+        blank=True
+    )
+    filter_figure_start_after = models.DateField(
+        verbose_name=_('From Date'),
+        blank=True,
+        null=True
+    )
+    filter_figure_end_before = models.DateField(
+        verbose_name=_('To Date'),
+        blank=True,
+        null=True
+    )
+    filter_figure_roles = ArrayField(
+        base_field=enum.EnumField(enum=Figure.ROLE),
+        blank=True,
+        null=True
+    )
+    filter_entry_tags = models.ManyToManyField(
+        'entry.FigureTag',
+        verbose_name=_('Figure Tags'),
+        blank=True,
+        related_name='+'
+    )
+    filter_entry_article_title = models.TextField(
+        verbose_name=_('Article Title'),
+        blank=True,
+        null=True
+    )
+    filter_event_crisis_types = ArrayField(
+        base_field=enum.EnumField(enum=Crisis.CRISIS_TYPE),
+        blank=True,
+        null=True
+    )
 
     @property
     def extract_figures(self) -> ['Figure']:  # noqa
         return FigureExtractionFilterSet(data=dict(
-            event_countries=self.event_countries.all(),
-            event_regions=self.event_regions.all(),
-            event_crises=self.event_crises.all(),
-            figure_categories=self.figure_categories.all(),
-            entry_tags=self.entry_tags.all(),
-            figure_roles=self.figure_roles,
-            figure_start_after=self.figure_start_after,
-            figure_end_before=self.figure_end_before,
-            entry_article_title=self.entry_article_title,
-            event_crisis_types=self.event_crisis_types,
+            filter_figure_countries=self.filter_figure_countries.all(),
+            filter_figure_regions=self.filter_figure_regions.all(),
+            filter_event_crises=self.filter_event_crises.all(),
+            filter_figure_categories=self.filter_figure_categories.all(),
+            filter_entry_tags=self.filter_entry_tags.all(),
+            filter_figure_roles=self.filter_figure_roles,
+            filter_figure_start_after=self.filter_figure_start_after,
+            filter_figure_end_before=self.filter_figure_end_before,
+            filter_entry_article_title=self.filter_entry_article_title,
+            filter_event_crisis_types=self.filter_event_crisis_types,
         )).qs
 
     @classmethod
@@ -56,16 +95,16 @@ class QueryAbstractModel(models.Model):
     @property
     def entries(self) -> ['Entry']:  # noqa
         return self.get_entries(data=dict(
-            event_countries=self.event_countries.all(),
-            event_regions=self.event_regions.all(),
-            event_crises=self.event_crises.all(),
-            figure_categories=self.figure_categories.all(),
-            entry_tags=self.entry_tags.all(),
-            figure_roles=self.figure_roles,
-            figure_start_after=self.figure_start_after,
-            figure_end_before=self.figure_end_before,
-            entry_article_title=self.entry_article_title,
-            event_crisis_types=self.event_crisis_types,
+            filter_figure_countries=self.filter_figure_countries.all(),
+            filter_figure_regions=self.filter_figure_regions.all(),
+            filter_event_crises=self.filter_event_crises.all(),
+            filter_figure_categories=self.filter_figure_categories.all(),
+            filter_entry_tags=self.filter_entry_tags.all(),
+            filter_figure_roles=self.filter_figure_roles,
+            filter_figure_start_after=self.filter_figure_start_after,
+            filter_figure_end_before=self.filter_figure_end_before,
+            filter_entry_article_title=self.filter_entry_article_title,
+            filter_event_crisis_types=self.filter_event_crisis_types,
         ))
 
     class Meta:
