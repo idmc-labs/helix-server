@@ -16,6 +16,7 @@ from apps.report.models import (
     ReportGeneration,
 )
 from apps.report.filters import ReportFilter, CountryReportFilter
+from apps.report.enums import ReportGenerationStatusEnum
 from utils.graphene.types import CustomListObjectType, CustomDjangoListObjectType
 from utils.graphene.fields import CustomPaginatedListObjectField, DjangoPaginatedListObjectField
 
@@ -135,6 +136,7 @@ class ReportGenerationType(DjangoObjectType):
         model = ReportGeneration
         exclude_fields = ('approvers', )
 
+    status = graphene.Field(ReportGenerationStatusEnum)
     is_approved = graphene.Boolean()
     approvals = DjangoPaginatedListObjectField(
         ReportApprovalListType,

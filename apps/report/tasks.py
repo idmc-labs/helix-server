@@ -8,7 +8,7 @@ from openpyxl import Workbook
 
 from helix.settings import QueuePriority
 
-REPORT_TIMEOUT = 4 * 60 * 1000  # 4 minutes
+REPORT_TIMEOUT = 20 * 60 * 1000
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -107,7 +107,7 @@ def generate_report_snapshot(generation_id):
 def trigger_report_generation(generation_id):
     from django.db import transaction
     with transaction.atomic():
-        logger.warn('Starting...')
+        logger.warn('Starting report generation...')
         generate_report_excel(generation_id)
         logger.warn('Completed report generation')
         generate_report_snapshot(generation_id)

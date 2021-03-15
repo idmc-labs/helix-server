@@ -14,6 +14,8 @@ from django.db.models import (
     Exists,
     Subquery,
     OuterRef,
+    Min,
+    Max,
 )
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -50,25 +52,25 @@ class Report(MetaInformationArchiveAbstractModel,
     TOTAL_FIGURE_DISAGGREGATIONS = dict(
         total_stock_conflict=Sum(
             'total_figures',
-            filter=Q(category=FigureCategory.stock_idp_id,
+            filter=Q(category=FigureCategory.stock_idp_id(),
                      role=Figure.ROLE.RECOMMENDED,
                      entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
         ),
         total_flow_conflict=Sum(
             'total_figures',
-            filter=Q(category=FigureCategory.flow_new_displacement_id,
+            filter=Q(category=FigureCategory.flow_new_displacement_id(),
                      role=Figure.ROLE.RECOMMENDED,
                      entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
         ),
         total_stock_disaster=Sum(
             'total_figures',
-            filter=Q(category=FigureCategory.stock_idp_id,
+            filter=Q(category=FigureCategory.stock_idp_id(),
                      role=Figure.ROLE.RECOMMENDED,
                      entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
         ),
         total_flow_disaster=Sum(
             'total_figures',
-            filter=Q(category=FigureCategory.flow_new_displacement_id,
+            filter=Q(category=FigureCategory.flow_new_displacement_id(),
                      role=Figure.ROLE.RECOMMENDED,
                      entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
         ),
@@ -326,18 +328,18 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             return excel_column_key(headers, header)
 
         formulae = {
-            f'Total Flow {self.report.name}': '={key1}{{row}})+{key2}{{row}}'.format(
+            f'Total Flow {self.report.name}': '={key1}{{row}}+{key2}{{row}}'.format(
                 key1=get_key('conflict_total'), key2=get_key('disaster_total')
             ),
         }
         data = self.report.report_figures.values('country').order_by().annotate(
             conflict_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.flow_new_displacement_id,
+                category=FigureCategory.flow_new_displacement_id(),
                 role=Figure.ROLE.RECOMMENDED,
                 entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT
             )),
             disaster_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.flow_new_displacement_id,
+                category=FigureCategory.flow_new_displacement_id(),
                 role=Figure.ROLE.RECOMMENDED,
                 entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER
             )),
@@ -370,18 +372,18 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
 
         # NOTE: {{ }} turns into { } after the first .format
         formulae = {
-            f'Total Flow {self.report.name}': '={key1}{{row}})+{key2}{{row}}'.format(
+            f'Total Flow {self.report.name}': '={key1}{{row}}+{key2}{{row}}'.format(
                 key1=get_key('conflict_total'), key2=get_key('disaster_total')
             ),
         }
         data = self.report.report_figures.values('country__region').order_by().annotate(
             conflict_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.flow_new_displacement_id,
+                category=FigureCategory.flow_new_displacement_id(),
                 role=Figure.ROLE.RECOMMENDED,
                 entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT
             )),
             disaster_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.flow_new_displacement_id,
+                category=FigureCategory.flow_new_displacement_id(),
                 role=Figure.ROLE.RECOMMENDED,
                 entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER
             )),
@@ -407,6 +409,10 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             country_population='Population',
             flow_total=f'Flow {self.report.name}',
             stock_total=f'Stock {self.report.name}',
+            flow_total_last_year='Flow Last Year',
+            stock_total_last_year='Stock Last Year',
+            flow_historical_average='Flow Historical Average',
+            stock_historical_average='Stock Historical Average',
             # provisional and returns
             # historical average for flow an stock NOTE: coming from different db
         ))
@@ -419,8 +425,20 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             'Flow per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
                 key1=get_key('flow_total'), key2=get_key('country_population')
             ),
+            'Flow percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
+            ),
+            'Flow percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_historical_average')
+            ),
             'Stock per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
                 key1=get_key('stock_total'), key2=get_key('country_population')
+            ),
+            'Stock percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('stock_total'), key2=get_key('stock_total_last_year')
+            ),
+            'Stock percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('stock_total'), key2=get_key('stock_historical_average')
             ),
         }
         global_filter = dict(
@@ -438,13 +456,59 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             iso3=F('country__iso3'),
             name=F('country__name'),
             flow_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.flow_new_displacement_id,
+                category=FigureCategory.flow_new_displacement_id(),
                 **global_filter
             )),
             stock_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.stock_idp_id,
+                category=FigureCategory.stock_idp_id(),
                 **global_filter
             )),
+            flow_total_last_year=Subquery(
+                Figure.objects.filter(
+                    start_date__year=int(self.report.filter_figure_start_after.year),
+                    country=OuterRef('country'),
+                    category=FigureCategory.flow_new_displacement_id(),
+                    **global_filter
+                ).annotate(
+                    _total=Sum('total_figures')
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
+            flow_historical_average=Subquery(
+                Figure.objects.filter(
+                    start_date__lt=self.report.filter_figure_start_after,
+                    country=OuterRef('country'),
+                    category=FigureCategory.flow_new_displacement_id(),
+                    **global_filter
+                ).annotate(
+                    min_year=Min(Extract('start_date', 'year')),
+                    max_year=Max(Extract('start_date', 'year')),
+                ).annotate(
+                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
+            stock_total_last_year=Subquery(
+                Figure.objects.filter(
+                    start_date__year=int(self.report.filter_figure_start_after.year),
+                    country=OuterRef('country'),
+                    category=FigureCategory.stock_idp_id(),
+                    **global_filter
+                ).annotate(
+                    _total=Sum('total_figures')
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
+            stock_historical_average=Subquery(
+                Figure.objects.filter(
+                    start_date__lt=self.report.filter_figure_start_after,
+                    country=OuterRef('country'),
+                    category=FigureCategory.stock_idp_id(),
+                    **global_filter
+                ).annotate(
+                    min_year=Min(Extract('start_date', 'year')),
+                    max_year=Max(Extract('start_date', 'year')),
+                ).annotate(
+                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
         )
         return {
             'headers': headers,
@@ -460,6 +524,10 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             region_population='Population',
             flow_total=f'Flow {self.report.name}',
             stock_total=f'Stock {self.report.name}',
+            flow_total_last_year='Flow Last Year',
+            stock_total_last_year='Stock Last Year',
+            flow_historical_average='Flow Historical Average',
+            stock_historical_average='Stock Historical Average',
             # provisional and returns
         ))
 
@@ -471,8 +539,20 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             'Flow per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
                 key1=get_key('flow_total'), key2=get_key('region_population')
             ),
+            'Flow percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
+            ),
+            'Flow percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_historical_average')
+            ),
             'Stock per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
                 key1=get_key('stock_total'), key2=get_key('region_population')
+            ),
+            'Stock percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('stock_total'), key2=get_key('stock_total_last_year')
+            ),
+            'Stock percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('stock_total'), key2=get_key('stock_historical_average')
             ),
         }
         global_filter = dict(
@@ -493,13 +573,59 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             ),
             name=F('country__region__name'),
             flow_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.flow_new_displacement_id,
+                category=FigureCategory.flow_new_displacement_id(),
                 **global_filter
             )),
             stock_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.stock_idp_id,
+                category=FigureCategory.stock_idp_id(),
                 **global_filter
             )),
+            flow_total_last_year=Subquery(
+                Figure.objects.filter(
+                    start_date__year=int(self.report.filter_figure_start_after.year),
+                    country__region=OuterRef('region'),
+                    category=FigureCategory.flow_new_displacement_id(),
+                    **global_filter
+                ).annotate(
+                    _total=Sum('total_figures')
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
+            flow_historical_average=Subquery(
+                Figure.objects.filter(
+                    start_date__lt=self.report.filter_figure_start_after,
+                    country__region=OuterRef('region'),
+                    category=FigureCategory.flow_new_displacement_id(),
+                    **global_filter
+                ).annotate(
+                    min_year=Min(Extract('start_date', 'year')),
+                    max_year=Max(Extract('start_date', 'year')),
+                ).annotate(
+                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
+            stock_total_last_year=Subquery(
+                Figure.objects.filter(
+                    start_date__year=int(self.report.filter_figure_start_after.year),
+                    country__region=OuterRef('region'),
+                    category=FigureCategory.stock_idp_id(),
+                    **global_filter
+                ).annotate(
+                    _total=Sum('total_figures')
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
+            stock_historical_average=Subquery(
+                Figure.objects.filter(
+                    start_date__lt=self.report.filter_figure_start_after,
+                    country__region=OuterRef('region'),
+                    category=FigureCategory.stock_idp_id(),
+                    **global_filter
+                ).annotate(
+                    min_year=Min(Extract('start_date', 'year')),
+                    max_year=Max(Extract('start_date', 'year')),
+                ).annotate(
+                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
         )
         return {
             'headers': headers,
@@ -519,7 +645,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         filtered_report_figures = self.report.report_figures.filter(
             role=Figure.ROLE.RECOMMENDED,
             entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
-            category=FigureCategory.flow_new_displacement_id,
+            category=FigureCategory.flow_new_displacement_id(),
         ).values('country').order_by()
 
         data = filtered_report_figures.filter(disaggregation_conflict__gt=0).annotate(
@@ -576,7 +702,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         filtered_report_figures = self.report.report_figures.filter(
             role=Figure.ROLE.RECOMMENDED,
             entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
-            category=FigureCategory.flow_new_displacement_id,
+            category=FigureCategory.flow_new_displacement_id(),
         )
 
         aggregation_data = filtered_report_figures.aggregate(
@@ -663,7 +789,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             event_sub_category=F('entry__event__disaster_sub_category__name'),
             dtype=F('entry__event__disaster_type__name'),
             dsub_type=F('entry__event__disaster_sub_type__name'),
-            flow_total=Sum('total_figures', filter=Q(category=FigureCategory.flow_new_displacement_id)),
+            flow_total=Sum('total_figures', filter=Q(category=FigureCategory.flow_new_displacement_id())),
             affected_countries=Count('country', distinct=True),
             affected_iso3=StringAgg('country__iso3', delimiter=', ', distinct=True),
             affected_names=StringAgg('country__name', delimiter=' | ', distinct=True),
@@ -681,6 +807,8 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             events_count='Number of Events',
             region_population='Region Population',
             flow_total=f'ND {self.report.name}',
+            flow_total_last_year='Flow Last Year',
+            flow_historical_average='Flow Historical Average',
         ))
 
         def get_key(header):
@@ -689,6 +817,12 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         formulae = {
             'Flow per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
                 key1=get_key('flow_total'), key2=get_key('region_population')
+            ),
+            'Flow percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
+            ),
+            'Flow percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_historical_average')
             ),
         }
         global_filter = dict(
@@ -712,9 +846,32 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 ).values('total_population')[:1]
             ),
             flow_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.flow_new_displacement_id,
+                category=FigureCategory.flow_new_displacement_id(),
                 **global_filter
             )),
+            flow_total_last_year=Subquery(
+                Figure.objects.filter(
+                    start_date__year=int(self.report.filter_figure_start_after.year),
+                    country__region=OuterRef('country__region'),
+                    category=FigureCategory.flow_new_displacement_id(),
+                    **global_filter
+                ).annotate(
+                    _total=Sum('total_figures')
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
+            flow_historical_average=Subquery(
+                Figure.objects.filter(
+                    start_date__lt=self.report.filter_figure_start_after,
+                    country__region=OuterRef('country__region'),
+                    category=FigureCategory.flow_new_displacement_id(),
+                    **global_filter
+                ).annotate(
+                    min_year=Min(Extract('start_date', 'year')),
+                    max_year=Max(Extract('start_date', 'year')),
+                ).annotate(
+                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
         )
 
         return {
@@ -732,6 +889,8 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             events_count='Number of Events',
             country_population='Country Population',
             flow_total=f'ND {self.report.name}',
+            flow_total_last_year='Flow Last Year',
+            flow_historical_average='Flow Historical Average',
         ))
 
         def get_key(header):
@@ -740,6 +899,12 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         formulae = {
             'Flow per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
                 key1=get_key('flow_total'), key2=get_key('country_population')
+            ),
+            'Flow percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
+            ),
+            'Flow percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+                key1=get_key('flow_total'), key2=get_key('flow_historical_average')
             ),
         }
         global_filter = dict(
@@ -760,9 +925,32 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 ).values('population')
             ),
             flow_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.flow_new_displacement_id,
+                category=FigureCategory.flow_new_displacement_id(),
                 **global_filter
             )),
+            flow_total_last_year=Subquery(
+                Figure.objects.filter(
+                    start_date__year=int(self.report.filter_figure_start_after.year),
+                    country=OuterRef('country'),
+                    category=FigureCategory.flow_new_displacement_id(),
+                    **global_filter
+                ).annotate(
+                    _total=Sum('total_figures')
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
+            flow_historical_average=Subquery(
+                Figure.objects.filter(
+                    start_date__lt=self.report.filter_figure_start_after,
+                    country=OuterRef('country'),
+                    category=FigureCategory.flow_new_displacement_id(),
+                    **global_filter
+                ).annotate(
+                    min_year=Min(Extract('start_date', 'year')),
+                    max_year=Max(Extract('start_date', 'year')),
+                ).annotate(
+                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                ).values('_total').annotate(total=F('_total')).values('total')
+            ),
         )
 
         return {

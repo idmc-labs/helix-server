@@ -310,7 +310,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         from apps.entry.filters import FigureFilter
         return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
-            category=FigureCategory.stock_idp_id
+            category=FigureCategory.stock_idp_id()
         ).aggregate(total=Sum('total_figures'))['total']
 
     @classmethod
@@ -318,7 +318,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         from apps.entry.filters import FigureFilter
         return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
-            category=FigureCategory.flow_new_displacement_id
+            category=FigureCategory.flow_new_displacement_id()
         ).aggregate(total=Sum('total_figures'))['total']
 
     @classmethod
