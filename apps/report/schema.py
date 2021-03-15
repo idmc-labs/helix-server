@@ -140,6 +140,16 @@ class ReportGenerationType(DjangoObjectType):
         ReportApprovalListType,
     )
 
+    def resolve_full_report(root, info, **kwargs):
+        if root.status == ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED:
+            return info.context.build_absolute_uri(root.full_report.url)
+        return None
+
+    def resolve_snapshot(root, info, **kwargs):
+        if root.status == ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED:
+            return info.context.build_absolute_uri(root.snapshot.url)
+        return None
+
 
 class ReportGenerationListType(CustomDjangoListObjectType):
     class Meta:
