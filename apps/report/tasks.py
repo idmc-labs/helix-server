@@ -34,7 +34,7 @@ def generate_report_excel(generation_id):
         for idx, (header_key, header_val) in enumerate(headers.items()):
             ws.cell(column=idx + 1, row=1, value=header_val)
             for idy, datum in enumerate(data):
-                ws.cell(column=idx + 1, row=idy + 2, value=datum[header_key])
+                ws.cell(column=idx + 1, row=idy + 2, value=datum.get(header_key, ''))
         # secondary headers and data
         idx2 = 0
         for idx2, (header_key, formula) in enumerate(formulae.items()):
@@ -59,7 +59,7 @@ def generate_report_excel(generation_id):
         for idx, (header_key, header_val) in enumerate(agg_headers.items()):
             ws.cell(column=column_at + idx + 1, row=1, value=header_val)
             for idy, datum in enumerate(agg_data):
-                ws.cell(column=column_at + idx + 1, row=idy + 2, value=datum[header_key])
+                ws.cell(column=column_at + idx + 1, row=idy + 2, value=datum.get(header_key, ''))
         # secondary headers and data
         for idx2, (header_key, formula) in enumerate(agg_formulae.items()):
             # column starts at 1, hence idx+idx2+2

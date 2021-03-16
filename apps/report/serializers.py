@@ -60,7 +60,10 @@ class ReportSignoffSerializer(serializers.Serializer):
     def save(self):
         report_id = self.validated_data['report']
         report = Report.objects.get(id=report_id)
-        report.sign_off(self.context['request'].user)
+        report.sign_off(
+            self.context['request'].user,
+            include_history=self.validated_data.get('include_history', False)
+        )
         return report
 
 

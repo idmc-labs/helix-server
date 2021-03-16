@@ -226,6 +226,7 @@ class GenerateReport(graphene.Mutation):
 class SignOffReport(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
+        include_history = graphene.Boolean(required=False)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
@@ -233,7 +234,7 @@ class SignOffReport(graphene.Mutation):
 
     @staticmethod
     @permission_checker(['report.sign_off_report'])
-    def mutate(root, info, id):
+    def mutate(root, info, id, include_history):
         try:
             instance = Report.objects.get(id=id)
         except Report.DoesNotExist:
@@ -241,7 +242,10 @@ class SignOffReport(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
             ])
         serializer = ReportSignoffSerializer(
-            data=dict(report=id),
+            data=dict(
+                report=id,
+                include_history=include_history or False
+            ),
             context=dict(request=info.context),
         )
         if errors := mutation_is_not_valid(serializer):

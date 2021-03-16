@@ -221,17 +221,19 @@ class Report(MetaInformationArchiveAbstractModel,
             ))
         ).order_by('-created_at').first()
 
-    def sign_off(self, done_by: 'User'):
+    def sign_off(self, done_by: 'User', include_history: bool = False):
         current_gen = ReportGeneration.objects.get(
             report=self,
             is_signed_off=False,
         )
+        current_gen.include_history = include_history
         current_gen.is_signed_off = True
         current_gen.is_signed_off_by = done_by
         current_gen.is_signed_off_on = timezone.now()
         current_gen.save(
             update_fields=[
-                'is_signed_off', 'is_signed_off_by', 'is_signed_off_on'
+                'is_signed_off', 'is_signed_off_by',
+                'is_signed_off_on', 'include_history',
             ]
         )
         transaction.on_commit(lambda: trigger_report_generation.send(
@@ -310,6 +312,11 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                                blank=True, null=True,
                                upload_to=SNAPSHOT_REPORT_FOLDER)
     status = enum.EnumField(REPORT_GENERATION_STATUS, null=True)
+    include_history = models.BooleanField(
+        verbose_name=_('Include History'),
+        help_text=_('Including history will take good amount of time.'),
+        default=False,
+    )
 
     class Meta:
         ordering = ('-created_at',)
@@ -468,53 +475,56 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 category=FigureCategory.stock_idp_id(),
                 **global_filter
             )),
-            flow_total_last_year=Subquery(
-                Figure.objects.filter(
-                    start_date__year=int(self.report.filter_figure_start_after.year),
-                    country=OuterRef('country'),
-                    category=FigureCategory.flow_new_displacement_id(),
-                    **global_filter
-                ).annotate(
-                    _total=Sum('total_figures')
-                ).values('_total').annotate(total=F('_total')).values('total')
-            ),
-            flow_historical_average=Subquery(
-                Figure.objects.filter(
-                    start_date__lt=self.report.filter_figure_start_after,
-                    country=OuterRef('country'),
-                    category=FigureCategory.flow_new_displacement_id(),
-                    **global_filter
-                ).annotate(
-                    min_year=Min(Extract('start_date', 'year')),
-                    max_year=Max(Extract('start_date', 'year')),
-                ).annotate(
-                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
-                ).values('_total').annotate(total=F('_total')).values('total')
-            ),
-            stock_total_last_year=Subquery(
-                Figure.objects.filter(
-                    start_date__year=int(self.report.filter_figure_start_after.year),
-                    country=OuterRef('country'),
-                    category=FigureCategory.stock_idp_id(),
-                    **global_filter
-                ).annotate(
-                    _total=Sum('total_figures')
-                ).values('_total').annotate(total=F('_total')).values('total')
-            ),
-            stock_historical_average=Subquery(
-                Figure.objects.filter(
-                    start_date__lt=self.report.filter_figure_start_after,
-                    country=OuterRef('country'),
-                    category=FigureCategory.stock_idp_id(),
-                    **global_filter
-                ).annotate(
-                    min_year=Min(Extract('start_date', 'year')),
-                    max_year=Max(Extract('start_date', 'year')),
-                ).annotate(
-                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
-                ).values('_total').annotate(total=F('_total')).values('total')
-            ),
         )
+        if self.include_history:
+            data = data.annotate(
+                flow_total_last_year=Subquery(
+                    Figure.objects.filter(
+                        start_date__year=int(self.report.filter_figure_start_after.year),
+                        country=OuterRef('country'),
+                        category=FigureCategory.flow_new_displacement_id(),
+                        **global_filter
+                    ).annotate(
+                        _total=Sum('total_figures')
+                    ).values('_total').annotate(total=F('_total')).values('total')
+                ),
+                flow_historical_average=Subquery(
+                    Figure.objects.filter(
+                        start_date__lt=self.report.filter_figure_start_after,
+                        country=OuterRef('country'),
+                        category=FigureCategory.flow_new_displacement_id(),
+                        **global_filter
+                    ).annotate(
+                        min_year=Min(Extract('start_date', 'year')),
+                        max_year=Max(Extract('start_date', 'year')),
+                    ).annotate(
+                        _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                    ).values('_total').annotate(total=F('_total')).values('total')
+                ),
+                stock_total_last_year=Subquery(
+                    Figure.objects.filter(
+                        start_date__year=int(self.report.filter_figure_start_after.year),
+                        country=OuterRef('country'),
+                        category=FigureCategory.stock_idp_id(),
+                        **global_filter
+                    ).annotate(
+                        _total=Sum('total_figures')
+                    ).values('_total').annotate(total=F('_total')).values('total')
+                ),
+                stock_historical_average=Subquery(
+                    Figure.objects.filter(
+                        start_date__lt=self.report.filter_figure_start_after,
+                        country=OuterRef('country'),
+                        category=FigureCategory.stock_idp_id(),
+                        **global_filter
+                    ).annotate(
+                        min_year=Min(Extract('start_date', 'year')),
+                        max_year=Max(Extract('start_date', 'year')),
+                    ).annotate(
+                        _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                    ).values('_total').annotate(total=F('_total')).values('total')
+                ),
+            )
         return {
             'headers': headers,
             'data': data,
@@ -585,53 +595,56 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 category=FigureCategory.stock_idp_id(),
                 **global_filter
             )),
-            flow_total_last_year=Subquery(
-                Figure.objects.filter(
-                    start_date__year=int(self.report.filter_figure_start_after.year),
-                    country__region=OuterRef('region'),
-                    category=FigureCategory.flow_new_displacement_id(),
-                    **global_filter
-                ).annotate(
-                    _total=Sum('total_figures')
-                ).values('_total').annotate(total=F('_total')).values('total')
-            ),
-            flow_historical_average=Subquery(
-                Figure.objects.filter(
-                    start_date__lt=self.report.filter_figure_start_after,
-                    country__region=OuterRef('region'),
-                    category=FigureCategory.flow_new_displacement_id(),
-                    **global_filter
-                ).annotate(
-                    min_year=Min(Extract('start_date', 'year')),
-                    max_year=Max(Extract('start_date', 'year')),
-                ).annotate(
-                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
-                ).values('_total').annotate(total=F('_total')).values('total')
-            ),
-            stock_total_last_year=Subquery(
-                Figure.objects.filter(
-                    start_date__year=int(self.report.filter_figure_start_after.year),
-                    country__region=OuterRef('region'),
-                    category=FigureCategory.stock_idp_id(),
-                    **global_filter
-                ).annotate(
-                    _total=Sum('total_figures')
-                ).values('_total').annotate(total=F('_total')).values('total')
-            ),
-            stock_historical_average=Subquery(
-                Figure.objects.filter(
-                    start_date__lt=self.report.filter_figure_start_after,
-                    country__region=OuterRef('region'),
-                    category=FigureCategory.stock_idp_id(),
-                    **global_filter
-                ).annotate(
-                    min_year=Min(Extract('start_date', 'year')),
-                    max_year=Max(Extract('start_date', 'year')),
-                ).annotate(
-                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
-                ).values('_total').annotate(total=F('_total')).values('total')
-            ),
         )
+        if self.include_history:
+            data = data.annotate(
+                flow_total_last_year=Subquery(
+                    Figure.objects.filter(
+                        start_date__year=int(self.report.filter_figure_start_after.year),
+                        country__region=OuterRef('region'),
+                        category=FigureCategory.flow_new_displacement_id(),
+                        **global_filter
+                    ).annotate(
+                        _total=Sum('total_figures')
+                    ).values('_total').annotate(total=F('_total')).values('total')
+                ),
+                flow_historical_average=Subquery(
+                    Figure.objects.filter(
+                        start_date__lt=self.report.filter_figure_start_after,
+                        country__region=OuterRef('region'),
+                        category=FigureCategory.flow_new_displacement_id(),
+                        **global_filter
+                    ).annotate(
+                        min_year=Min(Extract('start_date', 'year')),
+                        max_year=Max(Extract('start_date', 'year')),
+                    ).annotate(
+                        _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                    ).values('_total').annotate(total=F('_total')).values('total')
+                ),
+                stock_total_last_year=Subquery(
+                    Figure.objects.filter(
+                        start_date__year=int(self.report.filter_figure_start_after.year),
+                        country__region=OuterRef('region'),
+                        category=FigureCategory.stock_idp_id(),
+                        **global_filter
+                    ).annotate(
+                        _total=Sum('total_figures')
+                    ).values('_total').annotate(total=F('_total')).values('total')
+                ),
+                stock_historical_average=Subquery(
+                    Figure.objects.filter(
+                        start_date__lt=self.report.filter_figure_start_after,
+                        country__region=OuterRef('region'),
+                        category=FigureCategory.stock_idp_id(),
+                        **global_filter
+                    ).annotate(
+                        min_year=Min(Extract('start_date', 'year')),
+                        max_year=Max(Extract('start_date', 'year')),
+                    ).annotate(
+                        _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                    ).values('_total').annotate(total=F('_total')).values('total')
+                ),
+            )
         return {
             'headers': headers,
             'data': data,
@@ -854,30 +867,33 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 category=FigureCategory.flow_new_displacement_id(),
                 **global_filter
             )),
-            flow_total_last_year=Subquery(
-                Figure.objects.filter(
-                    start_date__year=int(self.report.filter_figure_start_after.year),
-                    country__region=OuterRef('country__region'),
-                    category=FigureCategory.flow_new_displacement_id(),
-                    **global_filter
-                ).annotate(
-                    _total=Sum('total_figures')
-                ).values('_total').annotate(total=F('_total')).values('total')
-            ),
-            flow_historical_average=Subquery(
-                Figure.objects.filter(
-                    start_date__lt=self.report.filter_figure_start_after,
-                    country__region=OuterRef('country__region'),
-                    category=FigureCategory.flow_new_displacement_id(),
-                    **global_filter
-                ).annotate(
-                    min_year=Min(Extract('start_date', 'year')),
-                    max_year=Max(Extract('start_date', 'year')),
-                ).annotate(
-                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
-                ).values('_total').annotate(total=F('_total')).values('total')
-            ),
         )
+        if self.include_history:
+            data = data.annotate(
+                flow_total_last_year=Subquery(
+                    Figure.objects.filter(
+                        start_date__year=int(self.report.filter_figure_start_after.year),
+                        country__region=OuterRef('country__region'),
+                        category=FigureCategory.flow_new_displacement_id(),
+                        **global_filter
+                    ).annotate(
+                        _total=Sum('total_figures')
+                    ).values('_total').annotate(total=F('_total')).values('total')
+                ),
+                flow_historical_average=Subquery(
+                    Figure.objects.filter(
+                        start_date__lt=self.report.filter_figure_start_after,
+                        country__region=OuterRef('country__region'),
+                        category=FigureCategory.flow_new_displacement_id(),
+                        **global_filter
+                    ).annotate(
+                        min_year=Min(Extract('start_date', 'year')),
+                        max_year=Max(Extract('start_date', 'year')),
+                    ).annotate(
+                        _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                    ).values('_total').annotate(total=F('_total')).values('total')
+                ),
+            )
 
         return {
             'headers': headers,
@@ -933,30 +949,33 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 category=FigureCategory.flow_new_displacement_id(),
                 **global_filter
             )),
-            flow_total_last_year=Subquery(
-                Figure.objects.filter(
-                    start_date__year=int(self.report.filter_figure_start_after.year),
-                    country=OuterRef('country'),
-                    category=FigureCategory.flow_new_displacement_id(),
-                    **global_filter
-                ).annotate(
-                    _total=Sum('total_figures')
-                ).values('_total').annotate(total=F('_total')).values('total')
-            ),
-            flow_historical_average=Subquery(
-                Figure.objects.filter(
-                    start_date__lt=self.report.filter_figure_start_after,
-                    country=OuterRef('country'),
-                    category=FigureCategory.flow_new_displacement_id(),
-                    **global_filter
-                ).annotate(
-                    min_year=Min(Extract('start_date', 'year')),
-                    max_year=Max(Extract('start_date', 'year')),
-                ).annotate(
-                    _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
-                ).values('_total').annotate(total=F('_total')).values('total')
-            ),
         )
+        if self.include_history:
+            data = data.annotate(
+                flow_total_last_year=Subquery(
+                    Figure.objects.filter(
+                        start_date__year=int(self.report.filter_figure_start_after.year),
+                        country=OuterRef('country'),
+                        category=FigureCategory.flow_new_displacement_id(),
+                        **global_filter
+                    ).annotate(
+                        _total=Sum('total_figures')
+                    ).values('_total').annotate(total=F('_total')).values('total')
+                ),
+                flow_historical_average=Subquery(
+                    Figure.objects.filter(
+                        start_date__lt=self.report.filter_figure_start_after,
+                        country=OuterRef('country'),
+                        category=FigureCategory.flow_new_displacement_id(),
+                        **global_filter
+                    ).annotate(
+                        min_year=Min(Extract('start_date', 'year')),
+                        max_year=Max(Extract('start_date', 'year')),
+                    ).annotate(
+                        _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
+                    ).values('_total').annotate(total=F('_total')).values('total')
+                ),
+            )
 
         return {
             'headers': headers,
