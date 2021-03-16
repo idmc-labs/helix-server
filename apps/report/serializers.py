@@ -74,7 +74,13 @@ class ReportGenerationSerializer(MetaInformationSerializerMixin,
         fields = ['report']
 
     def validate_report(self, report):
-        if report.generated_from != Report.REPORT_TYPE.GROUP:
+        if (
+            report.generated_from == Report.REPORT_TYPE.MASTERFACT or
+            (report.filter_figure_start_after and report.filter_figure_start_after.month != 1) or
+            (report.filter_figure_start_after and report.filter_figure_start_after.day != 1) or
+            (report.filter_figure_end_before and report.filter_figure_end_before.month != 12) or
+            (report.filter_figure_end_before and report.filter_figure_start_after.day != 31)
+        ):
             raise serializers.ValidationError(gettext('Cannot start generation for non-grid reports'))
         if ReportGeneration.objects.filter(
             report=report,
