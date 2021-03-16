@@ -218,9 +218,6 @@ class Figure(MetaInformationArchiveAbstractModel,
              UUIDAbstractModel,
              FigureDisaggregationAbstractModel,
              models.Model):
-    class TYPE(enum.Enum):  # temp filler for migration file
-        pass
-
     class QUANTIFIER(enum.Enum):
         MORE_THAN = 0
         LESS_THAN = 1
@@ -242,10 +239,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             PERSON: _("Person"),
             HOUSEHOLD: _("Household"),
         }
-
-    class TERM(enum.Enum):
-        # legacy
-        pass
 
     class ROLE(enum.Enum):
         RECOMMENDED = 0
