@@ -309,6 +309,9 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                                upload_to=SNAPSHOT_REPORT_FOLDER)
     status = enum.EnumField(REPORT_GENERATION_STATUS, null=True)
 
+    class Meta:
+        ordering = ('-created_at',)
+
     @cached_property
     def is_approved(self):
         return self.approvals.filter(is_approved=True).exists()
