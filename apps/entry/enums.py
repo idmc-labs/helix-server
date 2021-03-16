@@ -1,6 +1,6 @@
-__all__ = ['QuantifierGrapheneEnum', 'UnitGrapheneEnum', 'TermGrapheneEnum',
-           'RoleGrapheneEnum', 'EntryReviewerGrapheneEnum', 'OSMAccuracyGrapheneEnum',
-           'IdentifierGrapheneEnum']
+__all__ = ['QuantifierGrapheneEnum', 'UnitGrapheneEnum',
+           'RoleGrapheneEnum', 'EntryReviewerGrapheneEnum',
+           'OSMAccuracyGrapheneEnum', 'IdentifierGrapheneEnum']
 
 import graphene
 
@@ -10,7 +10,6 @@ from utils.enums import enum_description
 
 QuantifierGrapheneEnum = graphene.Enum.from_enum(Figure.QUANTIFIER, description=enum_description)
 UnitGrapheneEnum = graphene.Enum.from_enum(Figure.UNIT, description=enum_description)
-TermGrapheneEnum = graphene.Enum.from_enum(Figure.TERM, description=enum_description)
 RoleGrapheneEnum = graphene.Enum.from_enum(Figure.ROLE, description=enum_description)
 EntryReviewerGrapheneEnum = graphene.Enum.from_enum(EntryReviewer.REVIEW_STATUS,
                                                     description=enum_description)
@@ -21,7 +20,6 @@ IdentifierGrapheneEnum = graphene.Enum.from_enum(OSMName.IDENTIFIER, description
 enum_map = dict(
     QUANTIFIER=QuantifierGrapheneEnum,
     UNIT=UnitGrapheneEnum,
-    TERM=TermGrapheneEnum,
     ROLE=RoleGrapheneEnum,
     REVIEW_STATUS=EntryReviewerGrapheneEnum,
     OSM_ACCURACY=OSMAccuracyGrapheneEnum,

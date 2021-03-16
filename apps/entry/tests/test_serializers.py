@@ -9,7 +9,12 @@ from apps.entry.serializers import (
     NestedFigureCreateSerializer as FigureSerializer,
 )
 from apps.users.enums import USER_ROLE
-from apps.entry.models import EntryReviewer, OSMName, Figure
+from apps.entry.models import (
+    EntryReviewer,
+    OSMName,
+    Figure,
+    FigureTerm,
+)
 from utils.factories import (
     EventFactory,
     EntryFactory,
@@ -177,7 +182,7 @@ class TestEntrySerializer(HelixTestCase):
             "reported": 10,
             "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
-            "term": Figure.TERM.EVACUATED.value,
+            "term": FigureTerm.objects.first().id,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
@@ -225,7 +230,7 @@ class TestEntrySerializer(HelixTestCase):
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
             "unit": Figure.UNIT.PERSON.value,
-            "term": Figure.TERM.EVACUATED.value,
+            "term": FigureTerm.objects.first().id,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
@@ -290,7 +295,7 @@ class TestFigureSerializer(HelixTestCase):
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 100,
             "unit": Figure.UNIT.PERSON.value,
-            "term": Figure.TERM.EVACUATED.value,
+            "term": FigureTerm.objects.first().id,
             "category": self.fig_cat.id,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-10-10",

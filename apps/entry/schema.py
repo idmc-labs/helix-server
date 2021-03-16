@@ -11,7 +11,6 @@ import logging
 from apps.entry.enums import (
     QuantifierGrapheneEnum,
     UnitGrapheneEnum,
-    TermGrapheneEnum,
     RoleGrapheneEnum,
     EntryReviewerGrapheneEnum,
     OSMAccuracyGrapheneEnum,
@@ -21,6 +20,7 @@ from apps.entry.filters import EntryFilter, EntryReviewerFilter, OSMNameFilter
 from apps.entry.models import (
     Figure,
     FigureTag,
+    FigureTerm,
     Entry,
     EntryReviewer,
     FigureCategory,
@@ -82,13 +82,25 @@ class FigureCategoryListType(CustomDjangoListObjectType):
         }
 
 
+class FigureTermType(DjangoObjectType):
+    class Meta:
+        model = FigureTerm
+
+
+class FigureTermListType(CustomDjangoListObjectType):
+    class Meta:
+        model = FigureTerm
+        filter_fields = (
+            'is_housing_related',
+        )
+
+
 class FigureType(DjangoObjectType):
     class Meta:
         model = Figure
 
     quantifier = graphene.Field(QuantifierGrapheneEnum)
     unit = graphene.Field(UnitGrapheneEnum)
-    term = graphene.Field(TermGrapheneEnum)
     role = graphene.Field(RoleGrapheneEnum)
     disaggregation_age_json = graphene.List(graphene.NonNull(DisaggregatedAgeType))
     disaggregation_strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
@@ -210,6 +222,8 @@ class FigureTagListType(CustomDjangoListObjectType):
 class Query:
     figure_category = DjangoObjectField(FigureCategoryObjectType)
     figure_category_list = DjangoPaginatedListObjectField(FigureCategoryListType)
+    figure_term = DjangoObjectField(FigureTermType)
+    figure_term_list = DjangoPaginatedListObjectField(FigureTermListType)
     figure_tag = DjangoObjectField(FigureTagType)
     figure_tag_list = DjangoPaginatedListObjectField(FigureTagListType,
                                                      pagination=PageGraphqlPagination(
