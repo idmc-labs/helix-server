@@ -15,7 +15,10 @@ class TestGenerationSerializer(HelixTestCase):
     def setUp(self) -> None:
         self.it_head = create_user_with_role(USER_ROLE.IT_HEAD.name)
         self.request = RequestFactory().post('/graphql')
-        self.report = ReportFactory.create()
+        self.report = ReportFactory.create(
+            # only grid based report can be generated
+            generated_from=Report.REPORT_TYPE.GROUP
+        )
         self.data = dict(report=self.report.id)
         self.context = dict(
             request=self.request

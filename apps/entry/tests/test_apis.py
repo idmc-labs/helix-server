@@ -6,8 +6,9 @@ from apps.entry.models import (
     Entry,
     EntryReviewer,
     CANNOT_UPDATE_MESSAGE,
+    FigureCategory,
 )
-from apps.entry.constants import STOCK, FLOW
+from apps.entry.constants import STOCK
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     EventFactory,
@@ -39,11 +40,11 @@ class TestEntryQuery(HelixGraphQLTestCase):
         '''
 
     def test_figure_count_filtered_resolvers(self):
-        self.fig_cat = FigureCategoryFactory.create(type=STOCK)
+        self.fig_cat = FigureCategory.stock_idp_id()
         self.fig_cat_id = str(self.fig_cat.id)
         self.fig_cat2 = FigureCategoryFactory.create(type=STOCK)
         self.fig_cat_id2 = str(self.fig_cat2.id)
-        self.fig_cat3 = FigureCategoryFactory.create(type=FLOW)
+        self.fig_cat3 = FigureCategory.flow_new_displacement_id()
         self.fig_cat_id3 = str(self.fig_cat3.id)
         figure1 = FigureFactory.create(entry=self.entry,
                                        category=self.fig_cat,
@@ -60,11 +61,11 @@ class TestEntryQuery(HelixGraphQLTestCase):
                                        reported=100,
                                        role=Figure.ROLE.RECOMMENDED,
                                        unit=Figure.UNIT.PERSON)
-        figure3 = FigureFactory.create(entry=self.entry,
-                                       category=self.fig_cat2,
-                                       reported=50,
-                                       role=Figure.ROLE.RECOMMENDED,
-                                       unit=Figure.UNIT.PERSON)
+        FigureFactory.create(entry=self.entry,
+                             category=self.fig_cat2,
+                             reported=50,
+                             role=Figure.ROLE.RECOMMENDED,
+                             unit=Figure.UNIT.PERSON)
         figure4 = FigureFactory.create(entry=self.entry,
                                        category=self.fig_cat3,
                                        reported=70,
@@ -84,26 +85,11 @@ class TestEntryQuery(HelixGraphQLTestCase):
             figure1.total_figures + figure2.total_figures
         )
         self.assertEqual(
-            content['data']['entry']['totalStockFigures'],
-            figure1.total_figures + figure2.total_figures
-        )
-        self.assertEqual(
             content['data']['entry']['totalFlowFigures'],
             figure4.total_figures
         )
-        response = self.query(
-            self.entry_query,
-            variables=dict(
-                id=str(self.entry.id),
-                data=dict(categories=[self.fig_cat_id2])
-            )
-        )
-        content = json.loads(response.content)
-        self.assertResponseNoErrors(response)
-        self.assertEqual(
-            content['data']['entry']['totalStockFigures'],
-            figure3.total_figures
-        )
+        # category based filter for entry stock/flow figures will not be used,
+        # since it is directly filtered by IDP or NEW DISPLACEMENT
 
 
 class TestEntryCreation(HelixGraphQLTestCase):

@@ -9,7 +9,6 @@ from apps.report.models import (
     ReportApproval,
 )
 from apps.crisis.models import Crisis
-from apps.entry.constants import STOCK, FLOW
 from apps.entry.models import (
     Figure,
     FigureCategory,
@@ -28,7 +27,7 @@ class TestReportModel(HelixTestCase):
     def setUp(self) -> None:
         pass
 
-    def test_appropriate_figures_are_summed_up(self):
+    def test_002_appropriate_figures_are_summed_up(self):
         c = CountryFactory.create()
         # we are checking if the methods considers figures beyond the given dates during aggregation
         entry = EntryFactory.create()
@@ -41,8 +40,8 @@ class TestReportModel(HelixTestCase):
                                   unit=Figure.UNIT.PERSON,
                                   start_date=datetime.today(),
                                   end_date=datetime.today() + timedelta(days=3))
-        f1.category.type = STOCK
-        f1.category.save()
+        f1.category = FigureCategory.stock_idp_id()
+        f1.save()
         f2 = FigureFactory.create(entry=entry,
                                   country=c,
                                   role=Figure.ROLE.RECOMMENDED,
@@ -50,8 +49,8 @@ class TestReportModel(HelixTestCase):
                                   unit=Figure.UNIT.PERSON,
                                   start_date=f1.start_date + timedelta(days=10),
                                   end_date=f1.start_date + timedelta(days=16))
-        f2.category.type = STOCK
-        f2.category.save()
+        f2.category = FigureCategory.stock_idp_id()
+        f2.save()
         r = Report(filter_figure_start_after=f1.start_date,
                    filter_figure_end_before=f1.end_date - timedelta(days=1))
         r.save()
@@ -61,8 +60,8 @@ class TestReportModel(HelixTestCase):
                          f1.total_figures,
                          r.countries_report)
 
-    def test_appropriate_typology_checks(self):
-        cat = FigureCategory.objects.create(type=FLOW)
+    def test_001_appropriate_typology_checks(self):
+        cat = FigureCategory.flow_new_displacement_id()
         figure = FigureFactory.create(
             reported=200,
             category=cat,
@@ -114,7 +113,9 @@ class TestReportModel(HelixTestCase):
         ).values('name', 'iso3', 'typology', 'total').order_by('typology')
         assert report.report_figures.count() == 1
         assert len(data) == 2
-        assert len(gen.stat_conflict_typology[1]) == 2, gen.stat_conflict_typology[1]
+        print(gen.stat_conflict_typology)
+        print(data)
+        assert len(gen.stat_conflict_typology['data']) == 2, gen.stat_conflict_typology['data']
 
 
 class TestReportGenerationApproval(HelixTestCase):
