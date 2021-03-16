@@ -159,14 +159,14 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                                        null=True, blank=True)
 
     @property
-    def total_stock_figures(self) -> int:
+    def total_stock_idp_figures(self) -> int:
         filters = dict(event=self.id)
-        return Figure.get_total_stock_figure(filters)
+        return Figure.get_total_stock_idp_figure(filters)
 
     @property
-    def total_flow_figures(self) -> int:
+    def total_flow_nd_figures(self) -> int:
         filters = dict(event=self.id)
-        return Figure.get_total_flow_figure(filters)
+        return Figure.get_total_flow_nd_figure(filters)
 
     @staticmethod
     def clean_dates(values: dict, instance=None) -> OrderedDict:

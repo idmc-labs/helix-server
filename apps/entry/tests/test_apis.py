@@ -33,8 +33,8 @@ class TestEntryQuery(HelixGraphQLTestCase):
         self.entry_query = '''
         query MyQuery($id: ID!, $data: TotalFigureFilterInputType) {
           entry(id: $id) {
-            totalStockFigures(data: $data)
-            totalFlowFigures
+            totalStockIdpFigures(data: $data)
+            totalFlowNdFigures
           }
         }
         '''
@@ -81,11 +81,11 @@ class TestEntryQuery(HelixGraphQLTestCase):
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
         self.assertEqual(
-            content['data']['entry']['totalStockFigures'],
+            content['data']['entry']['totalStockIdpFigures'],
             figure1.total_figures + figure2.total_figures
         )
         self.assertEqual(
-            content['data']['entry']['totalFlowFigures'],
+            content['data']['entry']['totalFlowNdFigures'],
             figure4.total_figures
         )
         # category based filter for entry stock/flow figures will not be used,

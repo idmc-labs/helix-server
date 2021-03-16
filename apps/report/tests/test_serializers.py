@@ -16,8 +16,9 @@ class TestGenerationSerializer(HelixTestCase):
         self.it_head = create_user_with_role(USER_ROLE.IT_HEAD.name)
         self.request = RequestFactory().post('/graphql')
         self.report = ReportFactory.create(
-            # only grid based report can be generated
-            generated_from=Report.REPORT_TYPE.GROUP
+            # only grid based report or null can be generated
+            filter_figure_start_after='2019-01-01',
+            filter_figure_end_before='2019-12-31',
         )
         self.data = dict(report=self.report.id)
         self.context = dict(

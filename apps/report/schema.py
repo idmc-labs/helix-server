@@ -137,7 +137,7 @@ class ReportGenerationType(DjangoObjectType):
         model = ReportGeneration
         exclude_fields = ('approvers', )
 
-    status = graphene.Field(ReportGenerationStatusEnum)
+    status = graphene.NonNull(ReportGenerationStatusEnum)
     is_approved = graphene.Boolean()
     approvals = DjangoPaginatedListObjectField(
         ReportApprovalListType,
@@ -163,7 +163,7 @@ class ReportGenerationListType(CustomDjangoListObjectType):
 class ReportType(DjangoObjectType):
     class Meta:
         model = Report
-        exclude_fields = ('reports', 'figures', 'masterfact_reports', 'approvers')
+        exclude_fields = ('reports', 'figures', 'masterfact_reports')
 
     comments = DjangoPaginatedListObjectField(ReportCommentListType,
                                               pagination=PageGraphqlPagination(
@@ -207,7 +207,6 @@ class ReportListType(CustomDjangoListObjectType):
 
 class Query:
     report = DjangoObjectField(ReportType)
-    reportComment = DjangoObjectField(ReportCommentType)
     report_list = DjangoPaginatedListObjectField(ReportListType,
                                                  pagination=PageGraphqlPagination(
                                                      page_size_query_param='pageSize'
@@ -217,3 +216,8 @@ class Query:
                                                          pagination=PageGraphqlPagination(
                                                              page_size_query_param='pageSize'
                                                          ))
+    report_generation = DjangoObjectField(ReportGenerationType)
+    report_generation_list = DjangoPaginatedListObjectField(ReportGenerationListType,
+                                                            pagination=PageGraphqlPagination(
+                                                                page_size_query_param='pageSize'
+                                                            ))

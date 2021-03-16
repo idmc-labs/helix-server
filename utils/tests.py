@@ -9,7 +9,6 @@ from django.test import TestCase, override_settings
 # dramatiq test case: setupclass is not properly called
 # from django_dramatiq.test import DramatiqTestCase
 from graphene_django.utils import GraphQLTestCase
-
 from rest_framework.test import APITestCase
 
 from apps.entry.models import FigureCategory
@@ -142,7 +141,6 @@ class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     CACHES=TEST_CACHES,
 )
 class HelixAPITestCase(APITestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.user_password = 'joHnDave!@#123'

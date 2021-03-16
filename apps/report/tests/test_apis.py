@@ -66,7 +66,9 @@ class TestReportSignOff(HelixGraphQLTestCase):
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.report = ReportFactory.create(
             created_by=self.admin,
-            generated_from=Report.REPORT_TYPE.GROUP
+            generated_from=Report.REPORT_TYPE.GROUP,
+            filter_figure_start_after='2019-01-01',
+            filter_figure_end_before='2019-12-31',
         )
         self.mutation = '''
         mutation SignOffReport($id: ID!, $includeHistory: Boolean) {

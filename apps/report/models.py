@@ -311,7 +311,10 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     snapshot = CachedFileField(verbose_name=_('report snapshot'),
                                blank=True, null=True,
                                upload_to=SNAPSHOT_REPORT_FOLDER)
-    status = enum.EnumField(REPORT_GENERATION_STATUS, null=True)
+    status = enum.EnumField(
+        REPORT_GENERATION_STATUS,
+        default=REPORT_GENERATION_STATUS.PENDING,
+    )
     include_history = models.BooleanField(
         verbose_name=_('Include History'),
         help_text=_('Including history will take good amount of time.'),
@@ -331,16 +334,16 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             'country__iso3': 'ISO3',
             'country__name': 'Country',
             'country__region__name': 'Region',
-            'conflict_total': f'Conflict FLOW {self.report.name}',
-            'disaster_total': f'Disaster FLOW {self.report.name}',
-            'total': f'Total FLOW {self.report.name}',
+            'conflict_total': f'Conflict ND {self.report.name}',
+            'disaster_total': f'Disaster ND {self.report.name}',
+            'total': f'Total ND {self.report.name}',
         }
 
         def get_key(header):
             return excel_column_key(headers, header)
 
         formulae = {
-            f'Total Flow {self.report.name}': '={key1}{{row}}+{key2}{{row}}'.format(
+            f'Total ND {self.report.name}': '={key1}{{row}}+{key2}{{row}}'.format(
                 key1=get_key('conflict_total'), key2=get_key('disaster_total')
             ),
         }
@@ -375,8 +378,8 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     def stat_flow_region(self):
         headers = {
             'country__region__name': 'Region',
-            'conflict_total': f'Conflict FLOW {self.report.name}',
-            'disaster_total': f'Disaster FLOW {self.report.name}',
+            'conflict_total': f'Conflict ND {self.report.name}',
+            'disaster_total': f'Disaster ND {self.report.name}',
         }
 
         def get_key(header):
@@ -384,7 +387,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
 
         # NOTE: {{ }} turns into { } after the first .format
         formulae = {
-            f'Total Flow {self.report.name}': '={key1}{{row}}+{key2}{{row}}'.format(
+            f'Total ND {self.report.name}': '={key1}{{row}}+{key2}{{row}}'.format(
                 key1=get_key('conflict_total'), key2=get_key('disaster_total')
             ),
         }
@@ -419,12 +422,12 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             iso3='ISO3',
             name='Country',
             country_population='Population',
-            flow_total=f'Flow {self.report.name}',
-            stock_total=f'Stock {self.report.name}',
-            flow_total_last_year='Flow Last Year',
-            stock_total_last_year='Stock Last Year',
-            flow_historical_average='Flow Historical Average',
-            stock_historical_average='Stock Historical Average',
+            flow_total=f'ND {self.report.name}',
+            stock_total=f'IDPs {self.report.name}',
+            flow_total_last_year='ND Last Year',
+            stock_total_last_year='IDPs Last Year',
+            flow_historical_average='ND Historical Average',
+            stock_historical_average='IDPs Historical Average',
             # provisional and returns
             # historical average for flow an stock NOTE: coming from different db
         ))
@@ -434,22 +437,26 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
 
         # NOTE: {{ }} turns into { } after the first .format
         formulae = {
-            'Flow per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
+            'ND per 100k population': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('flow_total'), key2=get_key('country_population')
             ),
-            'Flow percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+            'ND percent variation wrt last year':
+                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
             ),
-            'Flow percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+            'ND percent variation wrt average':
+                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('flow_total'), key2=get_key('flow_historical_average')
             ),
-            'Stock per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
+            'IDPs per 100k population': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('stock_total'), key2=get_key('country_population')
             ),
-            'Stock percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+            'IDPs percent variation wrt last year':
+                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('stock_total'), key2=get_key('stock_total_last_year')
             ),
-            'Stock percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+            'IDPs percent variation wrt average':
+                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('stock_total'), key2=get_key('stock_historical_average')
             ),
         }
@@ -537,12 +544,12 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         headers = OrderedDict(dict(
             name='Region',
             region_population='Population',
-            flow_total=f'Flow {self.report.name}',
-            stock_total=f'Stock {self.report.name}',
-            flow_total_last_year='Flow Last Year',
-            stock_total_last_year='Stock Last Year',
-            flow_historical_average='Flow Historical Average',
-            stock_historical_average='Stock Historical Average',
+            flow_total=f'ND {self.report.name}',
+            stock_total=f'IDPs {self.report.name}',
+            flow_total_last_year='ND Last Year',
+            stock_total_last_year='IDPs Last Year',
+            flow_historical_average='ND Historical Average',
+            stock_historical_average='IDPs Historical Average',
             # provisional and returns
         ))
 
@@ -551,22 +558,26 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
 
         # NOTE: {{ }} turns into { } after the first .format
         formulae = {
-            'Flow per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
+            'ND per 100k population': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('flow_total'), key2=get_key('region_population')
             ),
-            'Flow percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+            'ND percent variation wrt last year':
+                '=IF({key2}{{row}}, 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
             ),
-            'Flow percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+            'ND percent variation wrt average':
+                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('flow_total'), key2=get_key('flow_historical_average')
             ),
-            'Stock per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
+            'IDPs per 100k population': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('stock_total'), key2=get_key('region_population')
             ),
-            'Stock percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+            'IDPs percent variation wrt last year':
+                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('stock_total'), key2=get_key('stock_total_last_year')
             ),
-            'Stock percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+            'IDPs percent variation wrt average':
+                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('stock_total'), key2=get_key('stock_historical_average')
             ),
         }
@@ -825,21 +836,23 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             events_count='Number of Events',
             region_population='Region Population',
             flow_total=f'ND {self.report.name}',
-            flow_total_last_year='Flow Last Year',
-            flow_historical_average='Flow Historical Average',
+            flow_total_last_year='ND Last Year',
+            flow_historical_average='ND Historical Average',
         ))
 
         def get_key(header):
             return excel_column_key(headers, header)
 
         formulae = {
-            'Flow per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
+            'ND per 100k population': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('flow_total'), key2=get_key('region_population')
             ),
-            'Flow percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+            'ND percent variation wrt last year':
+                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
             ),
-            'Flow percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+            'ND percent variation wrt average':
+                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('flow_total'), key2=get_key('flow_historical_average')
             ),
         }
@@ -910,21 +923,23 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             events_count='Number of Events',
             country_population='Country Population',
             flow_total=f'ND {self.report.name}',
-            flow_total_last_year='Flow Last Year',
-            flow_historical_average='Flow Historical Average',
+            flow_total_last_year='ND Last Year',
+            flow_historical_average='ND Historical Average',
         ))
 
         def get_key(header):
             return excel_column_key(headers, header)
 
         formulae = {
-            'Flow per 100k population': '=(100000 * {key1}{{row}})/{key2}{{row}}'.format(
+            'ND per 100k population': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('flow_total'), key2=get_key('country_population')
             ),
-            'Flow percent variation wrt last year': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+            'ND percent variation wrt last year':
+                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
             ),
-            'Flow percent variation wrt average': '=100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}'.format(
+            'ND percent variation wrt average':
+                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
                 key1=get_key('flow_total'), key2=get_key('flow_historical_average')
             ),
         }
@@ -989,8 +1004,8 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         Returns title and corresponding computed property
         '''
         return {
-            'Flow Country': self.stat_flow_country,
-            'Flow Region': self.stat_flow_region,
+            'ND Country': self.stat_flow_country,
+            'ND Region': self.stat_flow_region,
             'Conflict Country': self.stat_conflict_country,
             'Conflict Region': self.stat_conflict_region,
             'Conflict Typology': self.stat_conflict_typology,

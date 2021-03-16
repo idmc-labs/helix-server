@@ -306,7 +306,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     # methods
 
     @classmethod
-    def get_total_stock_figure(cls, filters):
+    def get_total_stock_idp_figure(cls, filters):
         from apps.entry.filters import FigureFilter
         return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
@@ -314,7 +314,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         ).aggregate(total=Sum('total_figures'))['total']
 
     @classmethod
-    def get_total_flow_figure(cls, filters):
+    def get_total_flow_nd_figure(cls, filters):
         from apps.entry.filters import FigureFilter
         return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
@@ -458,15 +458,15 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         return errors
     # Methods
 
-    def total_stock_figures(self, filters=None) -> int:
+    def total_stock_idp_figures(self, filters=None) -> int:
         filters = filters or dict()
         filters.update(entry=self.id)
-        return Figure.get_total_stock_figure(filters)
+        return Figure.get_total_stock_idp_figure(filters)
 
-    def total_flow_figures(self, filters=None) -> int:
+    def total_flow_nd_figures(self, filters=None) -> int:
         filters = filters or dict()
         filters.update(entry=self.id)
-        return Figure.get_total_flow_figure(filters)
+        return Figure.get_total_flow_nd_figure(filters)
 
     def can_be_updated_by(self, user: User) -> bool:
         """

@@ -48,6 +48,7 @@ class ReportCommentSerializer(MetaInformationSerializerMixin,
 
 class ReportSignoffSerializer(serializers.Serializer):
     report = serializers.IntegerField(required=True)
+    include_history = serializers.BooleanField(required=False)
 
     def validate_report(self, report):
         if not ReportGeneration.objects.filter(
