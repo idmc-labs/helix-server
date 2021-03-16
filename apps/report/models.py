@@ -49,35 +49,37 @@ class Report(MetaInformationArchiveAbstractModel,
         GROUP = 0
         MASTERFACT = 1
 
-    TOTAL_FIGURE_DISAGGREGATIONS = dict(
-        total_stock_conflict=Sum(
-            'total_figures',
-            filter=Q(category=FigureCategory.stock_idp_id(),
-                     role=Figure.ROLE.RECOMMENDED,
-                     entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
-        ),
-        total_flow_conflict=Sum(
-            'total_figures',
-            filter=Q(category=FigureCategory.flow_new_displacement_id(),
-                     role=Figure.ROLE.RECOMMENDED,
-                     entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
-        ),
-        total_stock_disaster=Sum(
-            'total_figures',
-            filter=Q(category=FigureCategory.stock_idp_id(),
-                     role=Figure.ROLE.RECOMMENDED,
-                     entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
-        ),
-        total_flow_disaster=Sum(
-            'total_figures',
-            filter=Q(category=FigureCategory.flow_new_displacement_id(),
-                     role=Figure.ROLE.RECOMMENDED,
-                     entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
-        ),
-    )
+    @cached_property
+    def TOTAL_FIGURE_DISAGGREGATIONS(self):
+        return dict(
+            total_stock_conflict=Sum(
+                'total_figures',
+                filter=Q(category=FigureCategory.stock_idp_id(),
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+            ),
+            total_flow_conflict=Sum(
+                'total_figures',
+                filter=Q(category=FigureCategory.flow_new_displacement_id(),
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+            ),
+            total_stock_disaster=Sum(
+                'total_figures',
+                filter=Q(category=FigureCategory.stock_idp_id(),
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+            ),
+            total_flow_disaster=Sum(
+                'total_figures',
+                filter=Q(category=FigureCategory.flow_new_displacement_id(),
+                         role=Figure.ROLE.RECOMMENDED,
+                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+            ),
+        )
 
     generated_from = enum.EnumField(REPORT_TYPE,
-                                    blank=True, null=True, editable=False)
+                                    blank=True, null=True)
     # TODO: Remove me after next migration run
     generated = models.BooleanField(verbose_name=_('Generated'), default=True,
                                     editable=False)

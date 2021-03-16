@@ -71,6 +71,8 @@ class ReportGenerationSerializer(MetaInformationSerializerMixin,
         fields = ['report']
 
     def validate_report(self, report):
+        if report.generated_from != Report.REPORT_TYPE.GROUP:
+            raise serializers.ValidationError(gettext('Cannot start generation for non-grid reports'))
         if ReportGeneration.objects.filter(
             report=report,
             is_signed_off=False

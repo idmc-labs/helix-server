@@ -7,6 +7,7 @@ from apps.report.models import (
     ReportComment,
 )
 from apps.report.schema import ReportType, ReportCommentType
+from apps.report.enums import ReportTypeEnum
 from apps.report.serializers import (
     ReportSerializer,
     ReportCommentSerializer,
@@ -20,6 +21,7 @@ from utils.permissions import permission_checker
 
 class ReportCreateInputType(graphene.InputObjectType):
     name = graphene.String(required=True)
+    generated_from = graphene.Field(ReportTypeEnum)
     analysis = graphene.String(required=False)
     methodology = graphene.String(required=False)
     significant_updates = graphene.String(required=False)
@@ -36,6 +38,7 @@ class ReportCreateInputType(graphene.InputObjectType):
 class ReportUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
     name = graphene.String()
+    generated_from = graphene.Field(ReportTypeEnum)
     analysis = graphene.String(required=False)
     methodology = graphene.String(required=False)
     significant_updates = graphene.String(required=False)

@@ -34,6 +34,20 @@ class TestGenerationSerializer(HelixTestCase):
         assert self.report.generations.count() == 1
         assert self.report.is_signed_off is False
 
+    def test_generation_creation_fails_for_non_grid_report(self):
+        self.request.user = self.it_head
+        report = ReportFactory.create(
+            # we are now generating a masterfact report
+            generated_from=Report.REPORT_TYPE.MASTERFACT
+        )
+        data = dict(report=report.id)
+        serializer = ReportGenerationSerializer(
+            data=data,
+            context=self.context
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('report', serializer.errors)
+
     def test_generation_creation_is_invalid_because_unsigned_exists(self):
         self.request.user = self.it_head
         serializer = ReportGenerationSerializer(

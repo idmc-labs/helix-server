@@ -15,6 +15,7 @@ from apps.report.models import (
     ReportApproval,
     ReportGeneration,
 )
+from apps.report.enums import ReportTypeEnum
 from apps.report.filters import ReportFilter, CountryReportFilter
 from apps.report.enums import ReportGenerationStatusEnum
 from utils.graphene.types import CustomListObjectType, CustomDjangoListObjectType
@@ -195,6 +196,7 @@ class ReportType(DjangoObjectType):
     generations = DjangoPaginatedListObjectField(
         ReportGenerationListType,
     )
+    generated_from = graphene.Field(ReportTypeEnum)
 
 
 class ReportListType(CustomDjangoListObjectType):
