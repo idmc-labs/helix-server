@@ -786,53 +786,65 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
         )
         data = self.report.report_figures.aggregate(
-            flow_disaster_total=Sum(
-                'total_figures',
-                filter=Q(
-                    **disaster_filter,
-                    category=FigureCategory.flow_new_displacement_id(),
-                )
+            flow_disaster_total=Coalesce(
+                Sum(
+                    'total_figures',
+                    filter=Q(
+                        **disaster_filter,
+                        category=FigureCategory.flow_new_displacement_id(),
+                    )
+                ), 0
             ),
-            flow_conflict_total=Sum(
-                'total_figures',
-                filter=Q(
-                    **conflict_filter,
-                    category=FigureCategory.flow_new_displacement_id(),
-                )
+            flow_conflict_total=Coalesce(
+                Sum(
+                    'total_figures',
+                    filter=Q(
+                        **conflict_filter,
+                        category=FigureCategory.flow_new_displacement_id(),
+                    )
+                ), 0
             ),
-            stock_conflict_total=Sum(
-                'total_figures',
-                filter=Q(
-                    **conflict_filter,
-                    category=FigureCategory.stock_idp_id(),
-                )
+            stock_conflict_total=Coalesce(
+                Sum(
+                    'total_figures',
+                    filter=Q(
+                        **conflict_filter,
+                        category=FigureCategory.stock_idp_id(),
+                    )
+                ), 0
             ),
-            event_disaster_count=Count(
-                'entry__event',
-                filter=Q(
-                    **disaster_filter,
-                ),
-                distinct=True
+            event_disaster_count=Coalesce(
+                Count(
+                    'entry__event',
+                    filter=Q(
+                        **disaster_filter,
+                    ),
+                    distinct=True
+                ), 0
             ),
-            conflict_countries_count=Count(
-                'country',
-                filter=Q(
-                    **conflict_filter,
-                ),
-                distinct=True
+            conflict_countries_count=Coalesce(
+                Count(
+                    'country',
+                    filter=Q(
+                        **conflict_filter,
+                    ),
+                    distinct=True
+                ), 0
             ),
-            disaster_countries_count=Count(
-                'country',
-                filter=Q(
-                    **disaster_filter,
-                ),
-                distinct=True
+            disaster_countries_count=Coalesce(
+                Count(
+                    'country',
+                    filter=Q(
+                        **disaster_filter,
+                    ),
+                    distinct=True
+                ), 0
             ),
         )
         data['countries_count'] = data['conflict_countries_count'] + data['disaster_countries_count']
         data['flow_total'] = data['flow_disaster_total'] + data['flow_conflict_total']
-        data['flow_conflict_percent'] = 100 * data['flow_conflict_total'] / data['flow_total']
-        data['flow_disaster_percent'] = 100 * data['flow_disaster_total'] / data['flow_total']
+        data['flow_conflict_percent'] = 100 * data['flow_conflict_total'] / data['flow_total'] if data['flow_total'] else 0
+        data['flow_disaster_percent'] = 100 * data['flow_disaster_total'] / data['flow_total'] if data['flow_total'] else 0
         # this is simply for placeholder
         formatted_headers = {
             'one': '',

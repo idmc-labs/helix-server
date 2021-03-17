@@ -77,17 +77,13 @@ def generate_report_excel(generation_id):
         wb.save(tmp.name)
         tmp.seek(0)
         content = tmp.read()
-        path = f'{generation.report.name}.xlsx'
-        generation.full_report.save(path, ContentFile(content))
-    generation.status = ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED
-    generation.save(update_fields=['status'])
+        return content
 
 
 def generate_report_snapshot(generation_id):
     from apps.report.models import ReportGeneration
     generation = ReportGeneration.objects.get(id=generation_id)
     snapshot = generation.get_snapshot()
-    path = f'{generation.report.name}.xlsx'
     wb = Workbook(write_only=True)
     for sheet_name, sheet_data in snapshot.items():
         ws = wb.create_sheet(sheet_name)
@@ -99,8 +95,7 @@ def generate_report_snapshot(generation_id):
         wb.save(tmp.name)
         tmp.seek(0)
         content = tmp.read()
-        generation.snapshot.save(path, ContentFile(content))
-        generation.save()
+        return content
 
 
 @dramatiq.actor(queue_name=QueuePriority.HEAVY.value, max_retries=3, time_limit=REPORT_TIMEOUT)
@@ -113,16 +108,22 @@ def trigger_report_generation(generation_id):
     try:
         with transaction.atomic():
             then = time.time()
+            path = f'{generation.report.name}.xlsx'
+
             logger.warn('Starting report generation...')
-            generate_report_excel(generation_id)
+            content = generate_report_excel(generation_id)
+            generation.full_report.save(path, ContentFile(content))
             logger.warn(f'Completed report generation in {time.time() - then}')
             then = time.time()
-            generate_report_snapshot(generation_id)
+
+            content = generate_report_snapshot(generation_id)
+            generation.snapshot.save(path, ContentFile(content))
             logger.warn(f'Completed snapshot generation {time.time() - then}')
+
+            generation.status = ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED
+            generation.completed_at = timezone.now()
+            generation.save()
     except Exception as e:  # NOQA E722
         logger.error('Report Generation Failed', exc_info=True)
         generation.status = ReportGeneration.REPORT_GENERATION_STATUS.FAILED
         generation.save(update_fields=['status'])
-    generation.status = ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED
-    generation.completed_at = timezone.now()
-    generation.save()
