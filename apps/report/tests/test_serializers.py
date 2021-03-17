@@ -1,4 +1,5 @@
 from django.test import RequestFactory
+import mock
 
 from apps.report.models import ReportGeneration, Report
 from apps.report.serializers import (
@@ -102,7 +103,8 @@ class TestReportApprovalSerializer(HelixTestCase):
         assert report.is_approved is True
         report.last_generation.approvers.count() == 1
 
-    def test_invalid_approval_report_signed_off(self):
+    @mock.patch('apps.report.tasks.trigger_report_generation.send')
+    def test_invalid_approval_report_signed_off(self, trigger_send):
         # report not yet started generation
         assert self.report.generations.count() == 0
         # try approving fails
@@ -129,6 +131,9 @@ class TestReportApprovalSerializer(HelixTestCase):
         serializer.save()
         # generation is signed off
         self.report.sign_off(self.it_head)
+        trigger_send.assert_called()
+        self.report.last_generation.status = ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED
+        self.report.last_generation.save()
         # report is signed off check
         self.report.refresh_from_db()
         assert self.report.is_signed_off is True
@@ -152,7 +157,8 @@ class TestReportSignOffSerializer(HelixTestCase):
         self.report = ReportFactory.create()
         self.data = dict(report=self.report.id)
 
-    def test_valid_sign_off_flow(self):
+    @mock.patch('apps.report.tasks.trigger_report_generation.send')
+    def test_valid_sign_off_flow(self, trigger_send):
         # check report approved flag
         assert self.report.is_signed_off is False
         serializer = ReportSignoffSerializer(
@@ -173,6 +179,9 @@ class TestReportSignOffSerializer(HelixTestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
+        trigger_send.assert_called()
+        self.report.last_generation.status = ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED
+        self.report.last_generation.save()
         # check report sign flag should be true
         self.report.refresh_from_db()
         assert self.report.is_signed_off is True
