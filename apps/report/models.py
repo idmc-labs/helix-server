@@ -40,6 +40,11 @@ from utils.fields import CachedFileField
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+EXCEL_FORMULAE = {
+    'per_100k': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")',
+    'percent_variation': '=IF({key2}{{row}}, 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")',
+}
+
 
 class Report(MetaInformationArchiveAbstractModel,
              QueryAbstractModel,
@@ -79,7 +84,7 @@ class Report(MetaInformationArchiveAbstractModel,
         )
 
     generated_from = enum.EnumField(REPORT_TYPE,
-                                    blank=True, null=True)
+                                    blank=True, null=True, editable=False)
     # TODO: Remove me after next migration run
     generated = models.BooleanField(verbose_name=_('Generated'), default=True,
                                     editable=False)
@@ -315,6 +320,8 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         REPORT_GENERATION_STATUS,
         default=REPORT_GENERATION_STATUS.PENDING,
     )
+    started_at = models.DateTimeField(null=True)
+    completed_at = models.DateTimeField(null=True)
     include_history = models.BooleanField(
         verbose_name=_('Include History'),
         help_text=_('Including history will take good amount of time.'),
@@ -342,11 +349,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         def get_key(header):
             return excel_column_key(headers, header)
 
-        formulae = {
-            f'Total ND {self.report.name}': '={key1}{{row}}+{key2}{{row}}'.format(
-                key1=get_key('conflict_total'), key2=get_key('disaster_total')
-            ),
-        }
+        formulae = {}
         data = self.report.report_figures.values('country').order_by().annotate(
             conflict_total=Sum('total_figures', filter=Q(
                 category=FigureCategory.flow_new_displacement_id(),
@@ -380,17 +383,14 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             'country__region__name': 'Region',
             'conflict_total': f'Conflict ND {self.report.name}',
             'disaster_total': f'Disaster ND {self.report.name}',
+            'total': f'Total ND {self.report.name}',
         }
 
         def get_key(header):
             return excel_column_key(headers, header)
 
         # NOTE: {{ }} turns into { } after the first .format
-        formulae = {
-            f'Total ND {self.report.name}': '={key1}{{row}}+{key2}{{row}}'.format(
-                key1=get_key('conflict_total'), key2=get_key('disaster_total')
-            ),
-        }
+        formulae = {}
         data = self.report.report_figures.values('country__region').order_by().annotate(
             conflict_total=Sum('total_figures', filter=Q(
                 category=FigureCategory.flow_new_displacement_id(),
@@ -437,26 +437,26 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
 
         # NOTE: {{ }} turns into { } after the first .format
         formulae = {
-            'ND per 100k population': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")'.format(
+            'ND per 100k population': EXCEL_FORMULAE['per_100k'].format(
                 key1=get_key('flow_total'), key2=get_key('country_population')
             ),
             'ND percent variation wrt last year':
-                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
+                EXCEL_FORMULAE['percent_variation'].format(
                 key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
             ),
             'ND percent variation wrt average':
-                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
+                EXCEL_FORMULAE['percent_variation'].format(
                 key1=get_key('flow_total'), key2=get_key('flow_historical_average')
             ),
-            'IDPs per 100k population': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")'.format(
+            'IDPs per 100k population': EXCEL_FORMULAE['per_100k'].format(
                 key1=get_key('stock_total'), key2=get_key('country_population')
             ),
             'IDPs percent variation wrt last year':
-                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
+                EXCEL_FORMULAE['percent_variation'].format(
                 key1=get_key('stock_total'), key2=get_key('stock_total_last_year')
             ),
             'IDPs percent variation wrt average':
-                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
+                EXCEL_FORMULAE['percent_variation'].format(
                 key1=get_key('stock_total'), key2=get_key('stock_historical_average')
             ),
         }
@@ -487,7 +487,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             data = data.annotate(
                 flow_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__year=int(self.report.filter_figure_start_after.year),
+                        start_date__year=int(self.report.filter_figure_start_after.year) - 1,
                         country=OuterRef('country'),
                         category=FigureCategory.flow_new_displacement_id(),
                         **global_filter
@@ -510,7 +510,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 ),
                 stock_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__year=int(self.report.filter_figure_start_after.year),
+                        start_date__year=int(self.report.filter_figure_start_after.year) - 1,
                         country=OuterRef('country'),
                         category=FigureCategory.stock_idp_id(),
                         **global_filter
@@ -557,30 +557,30 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             return excel_column_key(headers, header)
 
         # NOTE: {{ }} turns into { } after the first .format
-        formulae = {
-            'ND per 100k population': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")'.format(
+        formulae = OrderedDict({
+            'ND per 100k population': EXCEL_FORMULAE['per_100k'].format(
                 key1=get_key('flow_total'), key2=get_key('region_population')
             ),
             'ND percent variation wrt last year':
-                '=IF({key2}{{row}}, 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
+                EXCEL_FORMULAE['percent_variation'].format(
                 key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
             ),
             'ND percent variation wrt average':
-                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
+                EXCEL_FORMULAE['percent_variation'].format(
                 key1=get_key('flow_total'), key2=get_key('flow_historical_average')
             ),
-            'IDPs per 100k population': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")'.format(
+            'IDPs per 100k population': EXCEL_FORMULAE['per_100k'].format(
                 key1=get_key('stock_total'), key2=get_key('region_population')
             ),
             'IDPs percent variation wrt last year':
-                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
+                EXCEL_FORMULAE['percent_variation'].format(
                 key1=get_key('stock_total'), key2=get_key('stock_total_last_year')
             ),
             'IDPs percent variation wrt average':
-                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
+                EXCEL_FORMULAE['percent_variation'].format(
                 key1=get_key('stock_total'), key2=get_key('stock_historical_average')
             ),
-        }
+        })
         global_filter = dict(
             role=Figure.ROLE.RECOMMENDED,
             entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT
@@ -611,7 +611,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             data = data.annotate(
                 flow_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__year=int(self.report.filter_figure_start_after.year),
+                        start_date__year=int(self.report.filter_figure_start_after.year) - 1,
                         country__region=OuterRef('region'),
                         category=FigureCategory.flow_new_displacement_id(),
                         **global_filter
@@ -634,7 +634,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 ),
                 stock_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__year=int(self.report.filter_figure_start_after.year),
+                        start_date__year=int(self.report.filter_figure_start_after.year) - 1,
                         country__region=OuterRef('region'),
                         category=FigureCategory.stock_idp_id(),
                         **global_filter
@@ -777,7 +777,137 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
 
     @cached_property
     def global_numbers(self):
-        ...
+        conflict_filter = dict(
+            role=Figure.ROLE.RECOMMENDED,
+            entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+        )
+        disaster_filter = dict(
+            role=Figure.ROLE.RECOMMENDED,
+            entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+        )
+        data = self.report.report_figures.aggregate(
+            flow_disaster_total=Sum(
+                'total_figures',
+                filter=Q(
+                    **disaster_filter,
+                    category=FigureCategory.flow_new_displacement_id(),
+                )
+            ),
+            flow_conflict_total=Sum(
+                'total_figures',
+                filter=Q(
+                    **conflict_filter,
+                    category=FigureCategory.flow_new_displacement_id(),
+                )
+            ),
+            stock_conflict_total=Sum(
+                'total_figures',
+                filter=Q(
+                    **conflict_filter,
+                    category=FigureCategory.stock_idp_id(),
+                )
+            ),
+            event_disaster_count=Count(
+                'entry__event',
+                filter=Q(
+                    **disaster_filter,
+                ),
+                distinct=True
+            ),
+            conflict_countries_count=Count(
+                'country',
+                filter=Q(
+                    **conflict_filter,
+                ),
+                distinct=True
+            ),
+            disaster_countries_count=Count(
+                'country',
+                filter=Q(
+                    **disaster_filter,
+                ),
+                distinct=True
+            ),
+        )
+        data['countries_count'] = data['conflict_countries_count'] + data['disaster_countries_count']
+        data['flow_total'] = data['flow_disaster_total'] + data['flow_conflict_total']
+        data['flow_conflict_percent'] = 100 * data['flow_conflict_total'] / data['flow_total']
+        data['flow_disaster_percent'] = 100 * data['flow_disaster_total'] / data['flow_total']
+        # this is simply for placeholder
+        formatted_headers = {
+            'one': '',
+            'two': '',
+            'three': '',
+        }
+        formatted_data = [
+            dict(
+                one='Conflict',
+            ),
+            dict(
+                one='Data',
+            ),
+            dict(
+                one=f'Sum of ND {self.report.name}',
+                two=f'Sum of IDPs {self.report.name}',
+            ),
+            dict(
+                one=data['flow_conflict_total'],
+                two=data['stock_conflict_total'],
+            ),
+            dict(
+                one='',
+            ),
+            dict(
+                one='Disaster',
+            ),
+            dict(
+                one='Data',
+            ),
+            dict(
+                one=f'Sum of ND {self.report.name}',
+                two=f'Number of Events of {self.report.name}',
+            ),
+            dict(
+                one=data['flow_disaster_total'],
+                two=data['event_disaster_count'],
+            ),
+            dict(
+                one='',
+            ),
+            dict(
+                one='Total New Displacement (Conflict + Disaster)',
+                two=data['flow_total']
+            ),
+            dict(
+                one='Conflict',
+                two=f"{data['flow_conflict_percent']}%",
+            ),
+            dict(
+                one='Disaster',
+                two=f"{data['flow_disaster_percent']}%",
+            ),
+            dict(
+                one='',
+            ),
+            dict(
+                one='Number of countries with figures',
+                two=data['countries_count']
+            ),
+            dict(
+                one='Conflict',
+                two=data['conflict_countries_count'],
+            ),
+            dict(
+                one='Disaster',
+                two=data['disaster_countries_count'],
+            ),
+        ]
+
+        return dict(
+            headers=formatted_headers,
+            data=formatted_data,
+            formulae=dict(),
+        )
 
     @cached_property
     def disaster_event(self):
@@ -844,15 +974,15 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             return excel_column_key(headers, header)
 
         formulae = {
-            'ND per 100k population': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")'.format(
+            'ND per 100k population': EXCEL_FORMULAE['per_100k'].format(
                 key1=get_key('flow_total'), key2=get_key('region_population')
             ),
             'ND percent variation wrt last year':
-                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
+                EXCEL_FORMULAE['percent_variation'].format(
                 key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
             ),
             'ND percent variation wrt average':
-                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
+                EXCEL_FORMULAE['percent_variation'].format(
                 key1=get_key('flow_total'), key2=get_key('flow_historical_average')
             ),
         }
@@ -885,7 +1015,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             data = data.annotate(
                 flow_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__year=int(self.report.filter_figure_start_after.year),
+                        start_date__year=int(self.report.filter_figure_start_after.year) - 1,
                         country__region=OuterRef('country__region'),
                         category=FigureCategory.flow_new_displacement_id(),
                         **global_filter
@@ -931,15 +1061,15 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             return excel_column_key(headers, header)
 
         formulae = {
-            'ND per 100k population': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")'.format(
+            'ND per 100k population': EXCEL_FORMULAE['per_100k'].format(
                 key1=get_key('flow_total'), key2=get_key('country_population')
             ),
             'ND percent variation wrt last year':
-                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
+                EXCEL_FORMULAE['percent_variation'].format(
                 key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
             ),
             'ND percent variation wrt average':
-                '=IF({key2}{{row}} <> "", 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")'.format(
+                EXCEL_FORMULAE['percent_variation'].format(
                 key1=get_key('flow_total'), key2=get_key('flow_historical_average')
             ),
         }
@@ -969,7 +1099,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             data = data.annotate(
                 flow_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__year=int(self.report.filter_figure_start_after.year),
+                        start_date__year=int(self.report.filter_figure_start_after.year) - 1,
                         country=OuterRef('country'),
                         category=FigureCategory.flow_new_displacement_id(),
                         **global_filter
@@ -1004,6 +1134,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         Returns title and corresponding computed property
         '''
         return {
+            'Global Numbers': self.global_numbers,
             'ND Country': self.stat_flow_country,
             'ND Region': self.stat_flow_region,
             'Conflict Country': self.stat_conflict_country,

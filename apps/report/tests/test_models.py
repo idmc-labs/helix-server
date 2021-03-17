@@ -113,8 +113,6 @@ class TestReportModel(HelixTestCase):
         ).values('name', 'iso3', 'typology', 'total').order_by('typology')
         assert report.report_figures.count() == 1
         assert len(data) == 2
-        print(gen.stat_conflict_typology)
-        print(data)
         assert len(gen.stat_conflict_typology['data']) == 2, gen.stat_conflict_typology['data']
 
 

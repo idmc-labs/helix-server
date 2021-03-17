@@ -6,6 +6,7 @@ from tempfile import NamedTemporaryFile
 
 from django.core.files.base import ContentFile
 from django.db import transaction
+from django.utils import timezone
 import dramatiq
 from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
@@ -22,6 +23,8 @@ def generate_report_excel(generation_id):
     from apps.report.models import ReportGeneration
     generation = ReportGeneration.objects.get(id=generation_id)
     wb = Workbook()
+    active = wb.active.title
+    del wb[active]
 
     for sheet_name, sheet_data in generation.get_excel_sheets_data().items():
         headers = sheet_data['headers']
@@ -46,7 +49,7 @@ def generate_report_excel(generation_id):
                     continue
                 cell.value = formula.format(row=row)
         # add a gap
-        column_at = idx + idx2 + 2
+        column_at = idx + idx2 + 3
         ws.cell(column=column_at, row=1, value='')
 
         if not aggregation:
@@ -104,8 +107,9 @@ def generate_report_snapshot(generation_id):
 def trigger_report_generation(generation_id):
     from apps.report.models import ReportGeneration
     generation = ReportGeneration.objects.get(id=generation_id)
+    generation.started_at = timezone.now()
     generation.status = ReportGeneration.REPORT_GENERATION_STATUS.IN_PROGRESS
-    generation.save(update_fields=['status'])
+    generation.save()
     try:
         with transaction.atomic():
             then = time.time()
@@ -119,3 +123,6 @@ def trigger_report_generation(generation_id):
         logger.error('Report Generation Failed', exc_info=True)
         generation.status = ReportGeneration.REPORT_GENERATION_STATUS.FAILED
         generation.save(update_fields=['status'])
+    generation.status = ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED
+    generation.completed_at = timezone.now()
+    generation.save()
