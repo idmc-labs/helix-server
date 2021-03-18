@@ -206,6 +206,8 @@ class ReportListType(CustomDjangoListObjectType):
 
 
 class Query:
+    generation = DjangoObjectField(ReportGenerationType)
+
     report = DjangoObjectField(ReportType)
     report_list = DjangoPaginatedListObjectField(ReportListType,
                                                  pagination=PageGraphqlPagination(
