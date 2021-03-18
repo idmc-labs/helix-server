@@ -34,11 +34,12 @@ class EventSerializer(MetaInformationSerializerMixin,
 
     def validate(self, attrs: dict) -> dict:
         errors = OrderedDict()
-        errors.update(Event.clean_dates(attrs, self.instance))
         errors.update(Event.clean_by_event_type(attrs, self.instance))
-        errors.update(
-            is_child_parent_inclusion_valid(attrs, self.instance, field='countries', parent_field='crisis.countries')
-        )
+        if attrs.get('crisis') or getattr(self.instance, 'crisis', None):
+            errors.update(Event.clean_dates(attrs, self.instance))
+            errors.update(
+                is_child_parent_inclusion_valid(attrs, self.instance, field='countries', parent_field='crisis.countries')
+            )
         if errors:
             raise ValidationError(errors)
         if attrs.get('event_type',
