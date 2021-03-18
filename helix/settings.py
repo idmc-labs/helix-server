@@ -349,13 +349,13 @@ class QueuePriority(Enum):
     CRON = 'cron'
 
 
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
+
 # WHITELIST following nodes from authentication checks
 GRAPHENE_NODES_WHITELIST = (
     'login',
     'activate',
     'me',
 )
-
-LOCALE_PATHS = [
-    os.path.join(BASE_DIR, 'locale'),
-]
