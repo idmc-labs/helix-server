@@ -1,5 +1,5 @@
 from apps.users.enums import USER_ROLE
-from apps.report.models import ReportGeneration
+from apps.report.models import ReportGeneration, Report
 from utils.factories import (
     CountryFactory,
     ReportFactory,
@@ -65,11 +65,14 @@ class TestReportSignOff(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.report = ReportFactory.create(
-            created_by=self.admin
+            created_by=self.admin,
+            generated_from=Report.REPORT_TYPE.GROUP,
+            filter_figure_start_after='2019-01-01',
+            filter_figure_end_before='2019-12-31',
         )
         self.mutation = '''
-        mutation SignOffReport($id: ID!) {
-          signOffReport(id: $id) {
+        mutation SignOffReport($id: ID!, $includeHistory: Boolean) {
+          signOffReport(id: $id, includeHistory: $includeHistory) {
             errors
             ok
             result {
@@ -92,6 +95,7 @@ class TestReportSignOff(HelixGraphQLTestCase):
         '''
         self.variables = {
             'id': str(self.report.id),
+            'includeHistory': False,
         }
 
         self.generate_mutation = '''

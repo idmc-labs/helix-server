@@ -142,20 +142,20 @@ class EntryType(DjangoObjectType):
         )
     )
     # TODO: data loader
-    total_stock_figures = graphene.Field(graphene.Int,
-                                         data=TotalFigureFilterInputType())
-    total_flow_figures = graphene.Field(graphene.Int,
-                                        data=TotalFigureFilterInputType())
+    total_stock_idp_figures = graphene.Field(graphene.Int,
+                                             data=TotalFigureFilterInputType())
+    total_flow_nd_figures = graphene.Field(graphene.Int,
+                                           data=TotalFigureFilterInputType())
     source_methodology = graphene.Field(graphene.String)
     is_reviewed = graphene.NonNull(graphene.Boolean)
     is_under_review = graphene.NonNull(graphene.Boolean)
     is_signed_off = graphene.NonNull(graphene.Boolean)
 
-    def resolve_total_stock_figures(root, info, **kwargs):
-        return root.total_stock_figures(kwargs.get('data'))
+    def resolve_total_stock_idp_figures(root, info, **kwargs):
+        return root.total_stock_idp_figures(kwargs.get('data'))
 
-    def resolve_total_flow_figures(root, info, **kwargs):
-        return root.total_flow_figures(kwargs.get('data'))
+    def resolve_total_flow_nd_figures(root, info, **kwargs):
+        return root.total_flow_nd_figures(kwargs.get('data'))
 
 
 class EntryListType(CustomDjangoListObjectType):

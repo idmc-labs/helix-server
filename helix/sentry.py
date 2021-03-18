@@ -1,8 +1,12 @@
+import logging
 import os
 import sentry_sdk
 
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import ignore_logger
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class InvalidGitRepository(Exception):
@@ -93,6 +97,8 @@ class SentryMiddleware(object):
                     scope.set_extra('is_superuser', user.is_superuser)
                 scope.set_tag('kind', info.operation.operation)
             sentry_sdk.capture_exception(error)
+            # log to console
+            logger.error(error, exc_info=True)
             raise error
         return _on_error
 

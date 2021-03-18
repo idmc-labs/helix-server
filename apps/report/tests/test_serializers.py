@@ -1,4 +1,5 @@
 from django.test import RequestFactory
+import mock
 
 from apps.report.models import ReportGeneration, Report
 from apps.report.serializers import (
@@ -15,7 +16,11 @@ class TestGenerationSerializer(HelixTestCase):
     def setUp(self) -> None:
         self.it_head = create_user_with_role(USER_ROLE.IT_HEAD.name)
         self.request = RequestFactory().post('/graphql')
-        self.report = ReportFactory.create()
+        self.report = ReportFactory.create(
+            # only grid based report or null can be generated
+            filter_figure_start_after='2019-01-01',
+            filter_figure_end_before='2019-12-31',
+        )
         self.data = dict(report=self.report.id)
         self.context = dict(
             request=self.request
@@ -33,6 +38,20 @@ class TestGenerationSerializer(HelixTestCase):
         serializer.save()
         assert self.report.generations.count() == 1
         assert self.report.is_signed_off is False
+
+    def test_generation_creation_fails_for_non_grid_report(self):
+        self.request.user = self.it_head
+        report = ReportFactory.create(
+            # we are now generating a masterfact report
+            generated_from=Report.REPORT_TYPE.MASTERFACT
+        )
+        data = dict(report=report.id)
+        serializer = ReportGenerationSerializer(
+            data=data,
+            context=self.context
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('report', serializer.errors)
 
     def test_generation_creation_is_invalid_because_unsigned_exists(self):
         self.request.user = self.it_head
@@ -84,7 +103,8 @@ class TestReportApprovalSerializer(HelixTestCase):
         assert report.is_approved is True
         report.last_generation.approvers.count() == 1
 
-    def test_invalid_approval_report_signed_off(self):
+    @mock.patch('apps.report.tasks.trigger_report_generation.send')
+    def test_invalid_approval_report_signed_off(self, trigger_send):
         # report not yet started generation
         assert self.report.generations.count() == 0
         # try approving fails
@@ -111,6 +131,9 @@ class TestReportApprovalSerializer(HelixTestCase):
         serializer.save()
         # generation is signed off
         self.report.sign_off(self.it_head)
+        trigger_send.assert_called()
+        self.report.last_generation.status = ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED
+        self.report.last_generation.save()
         # report is signed off check
         self.report.refresh_from_db()
         assert self.report.is_signed_off is True
@@ -134,7 +157,8 @@ class TestReportSignOffSerializer(HelixTestCase):
         self.report = ReportFactory.create()
         self.data = dict(report=self.report.id)
 
-    def test_valid_sign_off_flow(self):
+    @mock.patch('apps.report.tasks.trigger_report_generation.send')
+    def test_valid_sign_off_flow(self, trigger_send):
         # check report approved flag
         assert self.report.is_signed_off is False
         serializer = ReportSignoffSerializer(
@@ -155,6 +179,9 @@ class TestReportSignOffSerializer(HelixTestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
+        trigger_send.assert_called()
+        self.report.last_generation.status = ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED
+        self.report.last_generation.save()
         # check report sign flag should be true
         self.report.refresh_from_db()
         assert self.report.is_signed_off is True

@@ -1,6 +1,8 @@
 from django_filters import rest_framework as df
+from django.db.models import Q
 
 from apps.entry.models import Entry, Figure
+from apps.entry.constants import STOCK, FLOW
 from apps.crisis.models import Crisis
 from utils.filters import StringListFilter, IDListFilter
 
@@ -90,8 +92,9 @@ class FigureExtractionFilterSet(df.FilterSet):
     filter_figure_countries = IDListFilter(method='filter_countries')
     filter_event_crises = IDListFilter(method='filter_crises')
     filter_figure_categories = IDListFilter(method='filter_filter_figure_categories')
-    filter_figure_start_after = df.DateFilter(method='filter_time_frame_after')
-    # figure end before is applied with start after
+    filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
+    # according to the new recommendations we will be using end date over start date to check
+    # which grid report a figure belongs to
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
     filter_entry_tags = IDListFilter(method='filter_tags')
     # TODO: GRID filter
@@ -122,13 +125,22 @@ class FigureExtractionFilterSet(df.FilterSet):
             return qs.filter(category__in=value).distinct()
         return qs
 
-    def filter_time_frame_after(self, qs, name, value):
+    def filter_time_frame_before(self, qs, name, value):
         # NOTE: we are only checking if figure start time is between reporting dates
         if value:
-            qs = qs.exclude(start_date__isnull=True)\
-                .filter(start_date__gte=value)
-            if 'filter_figure_end_before' in self.data:
-                qs = qs.filter(start_date__lt=self.data['filter_figure_end_before'])
+            qs = qs.exclude(start_date__isnull=True).filter(
+                Q(
+                    # for stock, we only have start date
+                    category__type=STOCK,
+                    start_date__gte=self.data['filter_figure_start_after'],
+                    start_date__lt=self.data['filter_figure_end_before'],
+                ) | Q(
+                    # for flow, we will look into end dates
+                    category__type=FLOW,
+                    end_date__gte=self.data['filter_figure_start_after'],
+                    end_date__lt=self.data['filter_figure_end_before'],
+                )
+            )
         return qs.distinct()
 
     def filter_filter_figure_roles(self, qs, name, value):

@@ -9,9 +9,10 @@ from django.test import TestCase, override_settings
 # dramatiq test case: setupclass is not properly called
 # from django_dramatiq.test import DramatiqTestCase
 from graphene_django.utils import GraphQLTestCase
-
 from rest_framework.test import APITestCase
 
+from apps.entry.models import FigureCategory
+from apps.entry.constants import STOCK, FLOW
 from helix.settings import BASE_DIR
 from utils.factories import UserFactory
 
@@ -41,6 +42,11 @@ class CommonSetupClassMixin:
         super().setUpClass()
         # initialize roles
         management.call_command('init_roles')
+        # add necessary figure categories
+        FigureCategory.objects.bulk_create([
+            FigureCategory(type=STOCK, name='IDPs'),
+            FigureCategory(type=FLOW, name='New Displacement'),
+        ])
 
     @classmethod
     def tearDownClass(cls):
@@ -60,6 +66,7 @@ class CommonSetupClassMixin:
     EMAIL_BACKEND=TEST_EMAIL_BACKEND,
     MEDIA_ROOT=TEST_MEDIA_ROOT,
     DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
+    DRAMATIQ_BROKER=TEST_DRAMATIQ_BROKER,
     CACHES=TEST_CACHES,
 )
 class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
@@ -135,7 +142,6 @@ class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     CACHES=TEST_CACHES,
 )
 class HelixAPITestCase(APITestCase):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.user_password = 'joHnDave!@#123'

@@ -48,6 +48,7 @@ class ReportCommentSerializer(MetaInformationSerializerMixin,
 
 class ReportSignoffSerializer(serializers.Serializer):
     report = serializers.IntegerField(required=True)
+    include_history = serializers.BooleanField(required=False)
 
     def validate_report(self, report):
         if not ReportGeneration.objects.filter(
@@ -60,8 +61,31 @@ class ReportSignoffSerializer(serializers.Serializer):
     def save(self):
         report_id = self.validated_data['report']
         report = Report.objects.get(id=report_id)
-        report.sign_off(self.context['request'].user)
+        report.sign_off(
+            self.context['request'].user,
+            include_history=self.validated_data.get('include_history', False)
+        )
         return report
+
+
+def is_first_day(date):
+    if not date:
+        return False
+    return date.month == 1 and date.day == 1
+
+
+def is_last_day(date):
+    if not date:
+        return False
+    return date.month == 12 and date.day == 31
+
+
+def is_year_equal(foo, bar):
+    if not foo:
+        return False
+    if not bar:
+        return False
+    return foo.year == bar.year
 
 
 class ReportGenerationSerializer(MetaInformationSerializerMixin,
@@ -71,6 +95,13 @@ class ReportGenerationSerializer(MetaInformationSerializerMixin,
         fields = ['report']
 
     def validate_report(self, report):
+        if (
+            report.generated_from == Report.REPORT_TYPE.MASTERFACT or
+            not is_first_day(report.filter_figure_start_after) or
+            not is_last_day(report.filter_figure_end_before) or
+            not is_year_equal(report.filter_figure_start_after, report.filter_figure_end_before)
+        ):
+            raise serializers.ValidationError(gettext('Cannot start generation for non-grid reports'))
         if ReportGeneration.objects.filter(
             report=report,
             is_signed_off=False

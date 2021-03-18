@@ -7,6 +7,7 @@ from apps.report.models import (
     ReportComment,
 )
 from apps.report.schema import ReportType, ReportCommentType
+from apps.report.enums import ReportTypeEnum
 from apps.report.serializers import (
     ReportSerializer,
     ReportCommentSerializer,
@@ -20,6 +21,7 @@ from utils.permissions import permission_checker
 
 class ReportCreateInputType(graphene.InputObjectType):
     name = graphene.String(required=True)
+    generated_from = graphene.Field(ReportTypeEnum)
     analysis = graphene.String(required=False)
     methodology = graphene.String(required=False)
     significant_updates = graphene.String(required=False)
@@ -36,6 +38,7 @@ class ReportCreateInputType(graphene.InputObjectType):
 class ReportUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
     name = graphene.String()
+    generated_from = graphene.Field(ReportTypeEnum)
     analysis = graphene.String(required=False)
     methodology = graphene.String(required=False)
     significant_updates = graphene.String(required=False)
@@ -223,6 +226,7 @@ class GenerateReport(graphene.Mutation):
 class SignOffReport(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
+        include_history = graphene.Boolean(required=False)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
@@ -230,7 +234,7 @@ class SignOffReport(graphene.Mutation):
 
     @staticmethod
     @permission_checker(['report.sign_off_report'])
-    def mutate(root, info, id):
+    def mutate(root, info, id, include_history):
         try:
             instance = Report.objects.get(id=id)
         except Report.DoesNotExist:
@@ -238,7 +242,10 @@ class SignOffReport(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
             ])
         serializer = ReportSignoffSerializer(
-            data=dict(report=id),
+            data=dict(
+                report=id,
+                include_history=include_history or False
+            ),
             context=dict(request=info.context),
         )
         if errors := mutation_is_not_valid(serializer):

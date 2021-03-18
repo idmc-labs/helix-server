@@ -24,7 +24,7 @@ from utils.graphene.fields import DjangoPaginatedListObjectField
 class TriggerSubObjectType(DjangoObjectType):
     class Meta:
         model = TriggerSubType
-        exclude_fields = ('events', 'trigger')
+        exclude_fields = ('events',)
         filter_fields = {}
 
 
@@ -168,8 +168,8 @@ class EventType(DjangoObjectType):
     violence = graphene.Field(ViolenceType)
     violence_sub_type = graphene.Field(ViolenceSubObjectType)
     actor = graphene.Field(ActorType)
-    total_stock_figures = graphene.Field(graphene.Int)
-    total_flow_figures = graphene.Field(graphene.Int)
+    total_stock_idp_figures = graphene.Field(graphene.Int)
+    total_flow_nd_figures = graphene.Field(graphene.Int)
 
 
 class EventListType(CustomDjangoListObjectType):

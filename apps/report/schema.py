@@ -15,7 +15,9 @@ from apps.report.models import (
     ReportApproval,
     ReportGeneration,
 )
+from apps.report.enums import ReportTypeEnum
 from apps.report.filters import ReportFilter, CountryReportFilter
+from apps.report.enums import ReportGenerationStatusEnum
 from utils.graphene.types import CustomListObjectType, CustomDjangoListObjectType
 from utils.graphene.fields import CustomPaginatedListObjectField, DjangoPaginatedListObjectField
 
@@ -135,10 +137,21 @@ class ReportGenerationType(DjangoObjectType):
         model = ReportGeneration
         exclude_fields = ('approvers', )
 
+    status = graphene.NonNull(ReportGenerationStatusEnum)
     is_approved = graphene.Boolean()
     approvals = DjangoPaginatedListObjectField(
         ReportApprovalListType,
     )
+
+    def resolve_full_report(root, info, **kwargs):
+        if root.status == ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED:
+            return info.context.build_absolute_uri(root.full_report.url)
+        return None
+
+    def resolve_snapshot(root, info, **kwargs):
+        if root.status == ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED:
+            return info.context.build_absolute_uri(root.snapshot.url)
+        return None
 
 
 class ReportGenerationListType(CustomDjangoListObjectType):
@@ -150,7 +163,7 @@ class ReportGenerationListType(CustomDjangoListObjectType):
 class ReportType(DjangoObjectType):
     class Meta:
         model = Report
-        exclude_fields = ('reports', 'figures', 'masterfact_reports', 'approvers')
+        exclude_fields = ('reports', 'figures', 'masterfact_reports')
 
     comments = DjangoPaginatedListObjectField(ReportCommentListType,
                                               pagination=PageGraphqlPagination(
@@ -183,6 +196,7 @@ class ReportType(DjangoObjectType):
     generations = DjangoPaginatedListObjectField(
         ReportGenerationListType,
     )
+    generated_from = graphene.Field(ReportTypeEnum)
 
 
 class ReportListType(CustomDjangoListObjectType):
@@ -192,8 +206,20 @@ class ReportListType(CustomDjangoListObjectType):
 
 
 class Query:
+    generation = DjangoObjectField(ReportGenerationType)
+
     report = DjangoObjectField(ReportType)
     report_list = DjangoPaginatedListObjectField(ReportListType,
                                                  pagination=PageGraphqlPagination(
                                                      page_size_query_param='pageSize'
                                                  ))
+    report_comment = DjangoObjectField(ReportCommentType)
+    report_comment_list = DjangoPaginatedListObjectField(ReportCommentListType,
+                                                         pagination=PageGraphqlPagination(
+                                                             page_size_query_param='pageSize'
+                                                         ))
+    report_generation = DjangoObjectField(ReportGenerationType)
+    report_generation_list = DjangoPaginatedListObjectField(ReportGenerationListType,
+                                                            pagination=PageGraphqlPagination(
+                                                                page_size_query_param='pageSize'
+                                                            ))

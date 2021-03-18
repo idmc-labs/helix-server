@@ -106,6 +106,20 @@ class FigureCategory(models.Model):
         (FLOW, FLOW),
     ), default=STOCK)
 
+    @classmethod
+    def stock_idp_id(cls):
+        return cls.objects.get(
+            type=STOCK,
+            name__iexact='idps'
+        )
+
+    @classmethod
+    def flow_new_displacement_id(cls):
+        return cls.objects.get(
+            type=FLOW,
+            name__iexact='new displacement'
+        )
+
 
 class FigureDisaggregationAbstractModel(models.Model):
     # disaggregation information
@@ -292,19 +306,19 @@ class Figure(MetaInformationArchiveAbstractModel,
     # methods
 
     @classmethod
-    def get_total_stock_figure(cls, filters):
+    def get_total_stock_idp_figure(cls, filters):
         from apps.entry.filters import FigureFilter
         return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
-            category__type=STOCK
+            category=FigureCategory.stock_idp_id()
         ).aggregate(total=Sum('total_figures'))['total']
 
     @classmethod
-    def get_total_flow_figure(cls, filters):
+    def get_total_flow_nd_figure(cls, filters):
         from apps.entry.filters import FigureFilter
         return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
-            category__type=FLOW
+            category=FigureCategory.flow_new_displacement_id()
         ).aggregate(total=Sum('total_figures'))['total']
 
     @classmethod
@@ -444,15 +458,15 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         return errors
     # Methods
 
-    def total_stock_figures(self, filters=None) -> int:
+    def total_stock_idp_figures(self, filters=None) -> int:
         filters = filters or dict()
         filters.update(entry=self.id)
-        return Figure.get_total_stock_figure(filters)
+        return Figure.get_total_stock_idp_figure(filters)
 
-    def total_flow_figures(self, filters=None) -> int:
+    def total_flow_nd_figures(self, filters=None) -> int:
         filters = filters or dict()
         filters.update(entry=self.id)
-        return Figure.get_total_flow_figure(filters)
+        return Figure.get_total_flow_nd_figure(filters)
 
     def can_be_updated_by(self, user: User) -> bool:
         """
