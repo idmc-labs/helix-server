@@ -211,6 +211,7 @@ GRAPHENE = {
     'SCHEMA_INDENT': 2,  # Defaults to None (displays all data on a single line)
     'MIDDLEWARE': [
         'helix.sentry.SentryMiddleware',
+        'helix.auth.WhiteListMiddleware',
     ],
 }
 
@@ -347,4 +348,10 @@ class QueuePriority(Enum):
     HEAVY = 'heavy'
     CRON = 'cron'
 
-# FIXME: We can also configure result backend. what does that mean?
+
+# WHITELIST following nodes from authentication checks
+GRAPHENE_NODES_WHITELIST = (
+    'login',
+    'activate',
+    'me',
+)
