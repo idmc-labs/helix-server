@@ -95,14 +95,14 @@ class CommonFigureValidationMixin:
         for each in age_groups:
             values.extend(range(each['age_from'], each['age_to']))
         if len(values) != len(set(values)):
-            raise serializers.ValidationError(gettext('Please do not mix up age ranges. '))
+            raise serializers.ValidationError(gettext('Please do not mix up age ranges.'))
         return age_groups
 
     def validate_disaggregation_strata_json(self, strata):
         values = [each['date'] for each in strata]
         if len(values) != len(set(values)):
             raise serializers.ValidationError(
-                gettext('Make sure the dates are unique in a figure. '))
+                gettext('Make sure the dates are unique in a figure.'))
         return strata
 
     def validate_unit_and_household_size(self, attrs):

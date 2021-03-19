@@ -38,6 +38,8 @@ class TestEntryQuery(HelixGraphQLTestCase):
           }
         }
         '''
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
+        self.force_login(guest)
 
     def test_figure_count_filtered_resolvers(self):
         self.fig_cat = FigureCategory.stock_idp_id()

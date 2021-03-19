@@ -337,7 +337,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         if values.get('include_idu', getattr(instance, 'include_idu', None)):
             excerpt_idu = values.get('excerpt_idu', getattr(instance, 'excerpt_idu', None))
             if excerpt_idu is None or not excerpt_idu.strip():
-                errors['excerpt_idu'] = gettext('This field is required. ')
+                errors['excerpt_idu'] = gettext('This field is required.')
         return errors
 
     @staticmethod
@@ -453,8 +453,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         url = values.get('url', getattr(instance, 'url', None))
         document = values.get('document', getattr(instance, 'document', None))
         if not url and not document:
-            errors['url'] = gettext('Please fill the URL or upload a document. ')
-            errors['document'] = gettext('Please fill the URL or upload a document. ')
+            errors['url'] = gettext('Please fill the URL or upload a document.')
+            errors['document'] = gettext('Please fill the URL or upload a document.')
         return errors
     # Methods
 

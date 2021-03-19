@@ -24,7 +24,9 @@ def is_child_parent_dates_valid(
     c_start_date = data.get(c_start_field, getattr(instance, c_start_field, None))
     c_end_date = data.get(c_end_field, getattr(instance, c_end_field, None))
     if c_start_date and c_end_date and c_start_date > c_end_date:
+        # FIXME: this is problematic
         errors[c_start_field] = gettext(f'Choose your {start_text} earlier than {end_text}')
+        # FIXME: this is problematic
         errors[c_end_field] = gettext(f'Choose your {start_text} earlier than {end_text}')
     if not parent_field:
         return errors
@@ -39,13 +41,15 @@ def is_child_parent_dates_valid(
         p_start_date = getattr(parent, p_start_field, None)
         p_end_date = getattr(parent, p_end_field, None)
     if c_start_date and p_start_date and p_start_date > c_start_date:
+        # FIXME: this is problematic
         errors[c_start_field] = gettext(f'Choose your {start_text} between {p_start_date} & {p_end_date}.')
     if c_end_date and p_end_date and c_end_date > p_end_date:
+        # FIXME: this is problematic
         errors[c_end_field] = gettext(f'Choose your {end_text} between {p_start_field} & {p_end_field}.')
     return errors
 
 
-def is_child_parent_inclusion_valid(data, instance, field, parent_field) -> bool:
+def is_child_parent_inclusion_valid(data, instance, field, parent_field) -> OrderedDict:
     '''
     parent_field= '.' separated field, so that nested fields can be extracted
     '''
@@ -69,6 +73,7 @@ def is_child_parent_inclusion_valid(data, instance, field, parent_field) -> bool
         parent_value = []
     if set(value).difference(parent_value):
         errors.update({
+            # FIXME: this is problematic
             field: gettext(
                 f'{field.title()} should be one of the {field}(s) of the {", ".join([str(i) for i in parent_value])}.'
             )

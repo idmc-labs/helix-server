@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from django.utils.translation import gettext
+from django.conf import settings
 from rest_framework import serializers
 
 from apps.contrib.serializers import MetaInformationSerializerMixin
@@ -103,6 +104,16 @@ class ReportGenerationSerializer(MetaInformationSerializerMixin,
         ):
             raise serializers.ValidationError(gettext('Cannot start generation for non-grid reports'))
         if ReportGeneration.objects.filter(
+            report=report
+        ).count() == settings.GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']:
+            raise serializers.ValidationError(
+                # FIXME: this is problematic
+                gettext(
+                    'Report Generation is limited to %(size)s only.'
+                    % {'size': settings.GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']}
+                )
+            )
+        if ReportGeneration.objects.filter(
             report=report,
             is_signed_off=False
         ).exists():
@@ -120,6 +131,20 @@ class ReportApproveSerializer(serializers.Serializer):
             is_signed_off=False
         ).exists():
             raise serializers.ValidationError(gettext('Nothing to approve.'))
+
+        # only one unsigned report can exist, this limit is ensured in ReportGenerationSerializer
+        # during generation start...
+        if ReportGeneration.objects.get(
+            report=report,
+            is_signed_off=False,
+        ).approvers.count() == settings.GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']:
+            raise serializers.ValidationError(
+                # FIXME: this is problematic
+                gettext(
+                    'Report Approvals is limited to %(size)s only.'
+                    % {'size': settings.GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']}
+                )
+            )
         return report
 
     def save(self):

@@ -305,6 +305,8 @@ class TestQueryResourceGroup(HelixGraphQLTestCase):
               }
             }
         '''
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
+        self.force_login(guest)
 
     def test_organizations_ordering(self):
         org1 = OrganizationFactory.create(

@@ -15,9 +15,10 @@ class ResourceGroup(MetaInformationArchiveAbstractModel):
 
     def is_deletable(self) -> bool:
         if res := self.resources.count():
-            raise ProtectedError(gettext(f'There are {res} resource(s) '
-                                         f'associated to this group. '
-                                         f'Please delete them first'), [])
+            # FIXME: this is problematic
+            raise ProtectedError(gettext(f'There are {res} resource(s)'
+                                         f' associated to this group.'
+                                         f' Please delete them first'), [])
         return True
 
     def can_delete(self, *args, **kwargs) -> Tuple[bool, str]:
@@ -32,6 +33,7 @@ class ResourceGroup(MetaInformationArchiveAbstractModel):
 
     def save(self, *args, **kwargs):
         if self.pk is None and ResourceGroup.objects.filter(created_by=self.created_by).count() >= RESOURCEGROUP_NUMBER:
+            # FIXME: this is problematic
             raise ValidationError(gettext(f"Can only create {RESOURCEGROUP_NUMBER} resource groups"))
         return super(ResourceGroup, self).save(*args, **kwargs)
 
@@ -52,5 +54,6 @@ class Resource(MetaInformationArchiveAbstractModel):
 
     def save(self, *args, **kwargs):
         if self.pk is None and Resource.objects.filter(created_by=self.created_by).count() >= RESOURCE_NUMBER:
+            # FIXME: this is problematic
             raise ValidationError(gettext(f"Can only create {RESOURCE_NUMBER} Resource"))
         return super(Resource, self).save(*args, **kwargs)

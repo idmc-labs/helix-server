@@ -35,6 +35,8 @@ class TestLogin(HelixGraphQLTestCase):
                 }
             }
         '''
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
+        self.force_login(guest)
 
     def test_valid_login(self):
         response = self.query(
@@ -363,6 +365,8 @@ class TestUserListSchema(HelixGraphQLTestCase):
               }
             }
         '''
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
+        self.force_login(guest)
 
     def test_filter_users(self):
         ue = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
