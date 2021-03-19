@@ -355,3 +355,7 @@ GRAPHENE_NODES_WHITELIST = (
     'activate',
     'me',
 )
+
+LOCALE_PATHS = [
+    os.path.join(BASE_DIR, 'locale'),
+]
