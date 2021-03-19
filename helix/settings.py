@@ -360,4 +360,6 @@ GRAPHENE_NODES_WHITELIST = (
     'activate',
     'register',
     'me',
+    # __ double undrescore nodes
+    '__schema',
 )
