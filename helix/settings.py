@@ -356,6 +356,8 @@ LOCALE_PATHS = [
 # WHITELIST following nodes from authentication checks
 GRAPHENE_NODES_WHITELIST = (
     'login',
+    'logout',
     'activate',
+    'register',
     'me',
 )

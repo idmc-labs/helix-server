@@ -277,6 +277,8 @@ class TestEventListQuery(HelixGraphQLTestCase):
               }
             }
         '''
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
+        self.force_login(guest)
 
     def test_event_list_filter(self):
         variables = {

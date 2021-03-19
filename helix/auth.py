@@ -8,8 +8,11 @@ PERMISSION_DENIED_MESSAGE = 'You do not have permission to perform this action.'
 class WhiteListMiddleware:
     def resolve(self, next, root, info, **args):
         # if user is not authenticated and user is not accessing
-        # whitelisted nodes, then return none
-        if not info.context.user.is_authenticated:
-            if info.field_name not in settings.GRAPHENE_NODES_WHITELIST:
+        # whitelisted nodes, then raise permission denied error
+
+        # furthermore, this check must only happen in the root node, and not in deeper nodes
+        if not hasattr(self, '_skip_white_list_check'):
+            if not info.context.user.is_authenticated and info.field_name not in settings.GRAPHENE_NODES_WHITELIST:
                 raise PermissionDenied(gettext(PERMISSION_DENIED_MESSAGE))
+        self._skip_white_list_check = True
         return next(root, info, **args)

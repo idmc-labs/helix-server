@@ -18,7 +18,9 @@ class TestQueryResourceGroup(HelixGraphQLTestCase):
             }
         '''
 
-    def test_unauthenticated_user_list_resource_groups(self):
+    def test_guest_user_list_resource_groups(self):
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
+        self.force_login(guest)
         response = self.query(
             self.list_resource_groups
         )
