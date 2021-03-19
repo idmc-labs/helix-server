@@ -33,6 +33,7 @@ services:
 
   dramatiq:
     image: helix/helix-worker:latest
+    restart: 'on-failure'
     build:
       context: ./
       target: dramatiq
