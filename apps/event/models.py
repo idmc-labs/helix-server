@@ -182,7 +182,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                                                       ' the reason for violence.')
         elif event_type == Crisis.CRISIS_TYPE.DISASTER:
             if not values.get('disaster_sub_type', getattr(instance, 'disaster_sub_type', None)):
-                errors['disaster_sub_type'] = gettext('Please mention the sub-type of disaster. ')
+                errors['disaster_sub_type'] = gettext('Please mention the sub-type of disaster.')
         return errors
 
     def save(self, *args, **kwargs):

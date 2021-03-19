@@ -17,8 +17,8 @@ class ContextualUpdateSerializer(MetaInformationSerializerMixin,
         if not self.instance:
             errors = OrderedDict()
             if not attrs.get('url') and not attrs.get('document'):
-                errors['url'] = gettext('Please fill the URL or upload a document. ')
-                errors['document'] = gettext('Please fill the URL or upload a document. ')
+                errors['url'] = gettext('Please fill the URL or upload a document.')
+                errors['document'] = gettext('Please fill the URL or upload a document.')
                 raise serializers.ValidationError(errors)
 
     def validate(self, attrs) -> dict:

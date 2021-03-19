@@ -107,6 +107,7 @@ class ReportGenerationSerializer(MetaInformationSerializerMixin,
             report=report
         ).count() == settings.GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']:
             raise serializers.ValidationError(
+                # FIXME: this is problematic
                 gettext(
                     'Report Generation is limited to %(size)s only.'
                     % {'size': settings.GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']}
@@ -138,6 +139,7 @@ class ReportApproveSerializer(serializers.Serializer):
             is_signed_off=False,
         ).approvers.count() == settings.GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']:
             raise serializers.ValidationError(
+                # FIXME: this is problematic
                 gettext(
                     'Report Approvals is limited to %(size)s only.'
                     % {'size': settings.GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']}
