@@ -29,3 +29,11 @@ docker-compose exec server python manage.py loadtestdata <case sensitive model_n
 
 And navigate to `localhost:9000/graphiql` to view available graphs.
 Use `localhost:9000/graphql` to interact with the server from the client.
+
+## Setup S3 buckets
+
+This will create appropriate buckets with required policies based on the `.env`.
+
+```bash
+sh deploy/scripts/s3_bucket_setup.sh
+```
