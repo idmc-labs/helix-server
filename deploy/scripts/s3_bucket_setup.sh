@@ -8,12 +8,13 @@
 export $(cat .env | xargs)
 
 # make bucket
-s3cmd mb --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY s3://$S3_BUCKET_NAME
+s3cmd mb --access_key="$AWS_ACCESS_KEY_ID" --secret_key="$AWS_SECRET_ACCESS_KEY" "s3://$S3_BUCKET_NAME"
 echo "Created bucket $S3_BUCKET_NAME"
 
 # setup bucket policy
-touch temp.json
-cat <<EOL > temp.json
+POLICY_FILENAME = "/tmpbucket-policy.json"
+touch "$POLICY_FILENAME"
+cat <<EOL > "$POLICY_FILENAME"
 {
   "Version": "2012-10-17",
   "Id": "$S3_BUCKET_NAME-read-only",
@@ -38,8 +39,8 @@ cat <<EOL > temp.json
 EOL
 
 # write the bucket policy
-s3cmd setpolicy --access_key=$AWS_ACCESS_KEY_ID --secret_key=$AWS_SECRET_ACCESS_KEY temp.json s3://$S3_BUCKET_NAME
+s3cmd setpolicy --access_key="$AWS_ACCESS_KEY_ID" --secret_key="$AWS_SECRET_ACCESS_KEY" "$POLICY_FILENAME" "s3://$S3_BUCKET_NAME"
 echo "Done setting the policy"
 
 # remove the temp.json
-rm temp.json
+rm "$POLICY_FILENAME"

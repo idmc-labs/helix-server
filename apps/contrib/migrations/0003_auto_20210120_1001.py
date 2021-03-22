@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='attachment',
             name='attachment',
-            field=utils.fields.CachedFileField(upload_to=apps.contrib.models.attachment_upload_to, verbose_name='Attachment'),
+            field=utils.fields.CachedFileField(verbose_name='Attachment'),
         ),
     ]

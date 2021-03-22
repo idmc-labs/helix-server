@@ -13,6 +13,10 @@ from utils.fields import CachedFileField
 logger = logging.getLogger(__name__)
 
 
+def global_upload_to(instance, filename: str) -> str:
+    return f'{uuid4()}/{instance.__class__.__name__.lower()}/{uuid4()}/{filename}'
+
+
 class UUIDAbstractModel(models.Model):
     uuid = models.UUIDField(verbose_name='UUID', unique=True,
                             blank=True, default=uuid4)
@@ -50,12 +54,6 @@ class MetaInformationArchiveAbstractModel(ArchiveAbstractModel, MetaInformationA
         abstract = True
 
 
-def attachment_upload_to(instance: 'Attachment', filename: str) -> 'str':
-    return (f'attachments'
-            f'/{Attachment.FOR_CHOICES.get(getattr(instance, "attachment_for", "unknowns")).name}'
-            f'/{filename}')
-
-
 class Attachment(MetaInformationAbstractModel):
     class FOR_CHOICES(enum.Enum):
         ENTRY = 0
@@ -64,7 +62,7 @@ class Attachment(MetaInformationAbstractModel):
 
     attachment = CachedFileField(verbose_name=_('Attachment'),
                                  blank=False, null=False,
-                                 upload_to=attachment_upload_to)
+                                 upload_to=global_upload_to)
     attachment_for = enum.EnumField(enum=FOR_CHOICES, verbose_name=_('Attachment for'),
                                     null=True, blank=True,
                                     help_text=_('The type of instance for which attachment was'
@@ -108,8 +106,6 @@ class SoftDeleteModel(models.Model):
 
 
 class SourcePreview(MetaInformationAbstractModel):
-    PREVIEW_FOLDER = 'source/previews'
-
     class PREVIEW_STATUS(enum.Enum):
         PENDING = 0
         COMPLETED = 1
@@ -129,7 +125,7 @@ class SourcePreview(MetaInformationAbstractModel):
                              blank=True, null=True)
     pdf = CachedFileField(verbose_name=_('Rendered Pdf'),
                           blank=True, null=True,
-                          upload_to=PREVIEW_FOLDER)
+                          upload_to=global_upload_to)
     status = enum.EnumField(enum=PREVIEW_STATUS, default=PREVIEW_STATUS.PENDING)
     remark = models.TextField(verbose_name=_('Remark'),
                               blank=True, null=True)

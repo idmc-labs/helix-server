@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from functools import cached_property
 import logging
+from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.db import models, transaction
@@ -282,13 +283,18 @@ class ReportApproval(MetaInformationArchiveAbstractModel, models.Model):
         return f'{self.generation.report} {"approved" if self.is_approved else "disapproved"} by {self.created_by}'
 
 
+def full_report_upload_to(instance, filename: str) -> str:
+    return f'{uuid4()}/{instance.__class__.__name__.lower()}/full/{uuid4()}/{filename}'
+
+
+def snapshot_report_upload_to(instance, filename: str) -> str:
+    return f'{uuid4()}/{instance.__class__.__name__.lower()}/snapshot/{uuid4()}/{filename}'
+
+
 class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     '''
     A report can be generated multiple times, each called a generation
     '''
-    FULL_REPORT_FOLDER = 'reports/full'
-    SNAPSHOT_REPORT_FOLDER = 'reports/snaps'
-
     class REPORT_GENERATION_STATUS(enum.Enum):
         PENDING = 0
         IN_PROGRESS = 1
@@ -312,10 +318,10 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     # TODO schedule a task on create to generate following files
     full_report = CachedFileField(verbose_name=_('full report'),
                                   blank=True, null=True,
-                                  upload_to=FULL_REPORT_FOLDER)
+                                  upload_to=full_report_upload_to)
     snapshot = CachedFileField(verbose_name=_('report snapshot'),
                                blank=True, null=True,
-                               upload_to=SNAPSHOT_REPORT_FOLDER)
+                               upload_to=snapshot_report_upload_to)
     status = enum.EnumField(
         REPORT_GENERATION_STATUS,
         default=REPORT_GENERATION_STATUS.PENDING,
