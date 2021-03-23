@@ -28,9 +28,10 @@ class ContextualUpdate(MetaInformationArchiveAbstractModel, models.Model):
                                         blank=True, null=True)
     source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
                                       blank=True, null=True)
-
+    excerpt_idu = models.TextField(verbose_name=_('Excerpt for IDU'), blank=True, null=True)
     idmc_analysis = models.TextField(verbose_name=_('IDMC Analysis'),
                                      blank=False, null=True)
+    caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
     is_confidential = models.BooleanField(
         verbose_name=_('Confidential Source'),
         default=False,
