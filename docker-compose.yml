@@ -36,8 +36,8 @@ services:
     build:
       context: ./
       target: dramatiq
-    environment:
-      HELIX_ENVIRONMENT: development
+    env_file:
+      - .env
     command: python manage.py rundramatiq --reload
     volumes:
       - ./:/code
