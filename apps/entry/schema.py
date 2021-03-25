@@ -25,6 +25,7 @@ from apps.entry.models import (
     EntryReviewer,
     FigureCategory,
     OSMName,
+    DisaggregatedAgeCategory,
 )
 from apps.contrib.models import SourcePreview
 from apps.contrib.enums import PreviewStatusGrapheneEnum
@@ -219,6 +220,19 @@ class FigureTagListType(CustomDjangoListObjectType):
         }
 
 
+class DisaggregatedAgeCategoryType(DjangoObjectType):
+    class Meta:
+        model = DisaggregatedAgeCategory
+
+
+class DisaggregatedAgeCategoryListType(CustomDjangoListObjectType):
+    class Meta:
+        model = DisaggregatedAgeCategory
+        filter_fields = {
+            'name': ('icontains',),
+        }
+
+
 class Query:
     figure_category = DjangoObjectField(FigureCategoryObjectType)
     figure_category_list = DjangoPaginatedListObjectField(FigureCategoryListType)
@@ -241,3 +255,5 @@ class Query:
                                                 pagination=PageGraphqlPagination(
                                                     page_size_query_param='pageSize'
                                                 ))
+    disaggregated_age_category = DjangoObjectField(DisaggregatedAgeCategoryType)
+    disaggregated_age_category_list = DjangoPaginatedListObjectField(DisaggregatedAgeCategoryListType)
