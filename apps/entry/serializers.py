@@ -43,6 +43,9 @@ class DisaggregatedAgeSerializer(serializers.Serializer):
                                      required=True)
 
     def validate(self, attrs):
+        # because they are stored inside json
+        attrs['uuid'] = str(attrs['uuid'])
+        attrs['category'] = getattr(attrs.get('category'), 'id', None)
         return attrs
 
 
@@ -94,9 +97,9 @@ class CommonFigureValidationMixin:
     def validate_disaggregation_age_json(self, age_groups):
         values = []
         for each in age_groups:
-            values.extend(range(each['age_from'], each['age_to']))
+            values.append((each.get('category'), each.get('sex')))
         if len(values) != len(set(values)):
-            raise serializers.ValidationError(gettext('Please do not mix up age ranges.'))
+            raise serializers.ValidationError('Please provide unique categories and sex values.')
         return age_groups
 
     def validate_disaggregation_strata_json(self, strata):
