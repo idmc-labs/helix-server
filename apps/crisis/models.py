@@ -4,6 +4,7 @@ from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
 from apps.entry.models import Figure
+from apps.contrib.commons import DATE_ACCURACY
 
 
 class Crisis(MetaInformationAbstractModel, models.Model):
@@ -24,7 +25,17 @@ class Crisis(MetaInformationAbstractModel, models.Model):
     countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
                                        related_name='crises')
     start_date = models.DateField(verbose_name=_('Start Date'), blank=True, null=True)
+    start_date_accuracy = enum.EnumField(
+        DATE_ACCURACY,
+        verbose_name=_('Start Date Accuracy'),
+        default=DATE_ACCURACY.DAY,
+    )
     end_date = models.DateField(verbose_name=_('End Date'), blank=True, null=True)
+    end_date_accuracy = enum.EnumField(
+        DATE_ACCURACY,
+        verbose_name=_('End date accuracy'),
+        default=DATE_ACCURACY.DAY,
+    )
 
     # property
 

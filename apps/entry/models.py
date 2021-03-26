@@ -13,6 +13,7 @@ from apps.contrib.models import (
     UUIDAbstractModel,
     MetaInformationArchiveAbstractModel,
 )
+from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.constants import STOCK, FLOW
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
@@ -283,8 +284,18 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     start_date = models.DateField(verbose_name=_('Start Date'),
                                   blank=False, null=True)
+    start_date_accuracy = enum.EnumField(
+        DATE_ACCURACY,
+        verbose_name=_('Start Date Accuracy'),
+        default=DATE_ACCURACY.DAY,
+    )
     end_date = models.DateField(verbose_name=_('End Date'),
                                 blank=True, null=True)
+    end_date_accuracy = enum.EnumField(
+        DATE_ACCURACY,
+        verbose_name=_('End date accuracy'),
+        null=True,
+    )
     include_idu = models.BooleanField(verbose_name=_('Include in IDU'))
     excerpt_idu = models.TextField(verbose_name=_('Excerpt for IDU'),
                                    blank=True, null=True)

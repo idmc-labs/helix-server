@@ -9,6 +9,7 @@ from apps.contrib.models import (
     MetaInformationArchiveAbstractModel,
 )
 from apps.crisis.models import Crisis
+from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
 from utils.validations import is_child_parent_dates_valid
 
@@ -153,8 +154,18 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                                        related_name='events', blank=True)
     start_date = models.DateField(verbose_name=_('Start Date'),
                                   blank=True, null=True)
+    start_date_accuracy = enum.EnumField(
+        DATE_ACCURACY,
+        verbose_name=_('Start Date Accuracy'),
+        default=DATE_ACCURACY.DAY,
+    )
     end_date = models.DateField(verbose_name=_('End Date'),
                                 blank=True, null=True)
+    end_date_accuracy = enum.EnumField(
+        DATE_ACCURACY,
+        verbose_name=_('End date accuracy'),
+        default=DATE_ACCURACY.DAY,
+    )
     event_narrative = models.TextField(verbose_name=_('Event Narrative'),
                                        null=True, blank=True)
 
