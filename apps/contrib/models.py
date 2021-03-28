@@ -125,7 +125,8 @@ class SourcePreview(MetaInformationAbstractModel):
                              blank=True, null=True)
     pdf = CachedFileField(verbose_name=_('Rendered Pdf'),
                           blank=True, null=True,
-                          upload_to=global_upload_to)
+                          upload_to=global_upload_to,
+                          max_length=256)
     status = enum.EnumField(enum=PREVIEW_STATUS, default=PREVIEW_STATUS.PENDING)
     remark = models.TextField(verbose_name=_('Remark'),
                               blank=True, null=True)

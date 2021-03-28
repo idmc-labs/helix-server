@@ -12,7 +12,7 @@ s3cmd mb --access_key="$AWS_ACCESS_KEY_ID" --secret_key="$AWS_SECRET_ACCESS_KEY"
 echo "Created bucket $S3_BUCKET_NAME"
 
 # setup bucket policy
-POLICY_FILENAME = "/tmpbucket-policy.json"
+POLICY_FILENAME = "/tmp/bucket-policy.json"
 touch "$POLICY_FILENAME"
 cat <<EOL > "$POLICY_FILENAME"
 {
