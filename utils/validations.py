@@ -24,8 +24,12 @@ def is_child_parent_dates_valid(
     c_start_date = data.get(c_start_field, getattr(instance, c_start_field, None))
     c_end_date = data.get(c_end_field, getattr(instance, c_end_field, None))
     if c_start_date and c_end_date and c_start_date > c_end_date:
-        errors[c_start_field] = gettext(f'Choose your start date earlier than {c_end_date}')
-        errors[c_end_field] = gettext(f'Choose your start date earlier than {c_end_date}')
+        errors[c_start_field] = gettext('Choose your start date earlier than %(c_end_date)s') % dict(
+            c_end_date=c_end_date
+        )
+        errors[c_end_field] = gettext('Choose your start date earlier than %(c_end_date)s') % dict(
+            c_end_date=c_end_date
+        )
     if not parent_field:
         return errors
     parent = instance
@@ -39,9 +43,15 @@ def is_child_parent_dates_valid(
         p_start_date = getattr(parent, p_start_field, None)
         p_end_date = getattr(parent, p_end_field, None)
     if c_start_date and p_start_date and p_start_date > c_start_date:
-        errors[c_start_field] = gettext(f'Choose your start date between {p_start_date} & {p_end_date}.')
+        errors[c_start_field] = gettext('Choose your start date between %(p_start_date)s & %(p_end_date)s.') % dict(
+            p_start_date=p_start_date,
+            p_end_date=p_end_date,
+        )
     if c_end_date and p_end_date and c_end_date > p_end_date:
-        errors[c_end_field] = gettext(f'Choose your end date between {p_start_date} & {p_end_date}.')
+        errors[c_end_field] = gettext('Choose your end date between %(p_start_date)s & %(p_end_date)s.') % dict(
+            p_start_date=p_start_date,
+            p_end_date=p_end_date,
+        )
     return errors
 
 
@@ -69,8 +79,9 @@ def is_child_parent_inclusion_valid(data, instance, field, parent_field) -> Orde
         parent_value = []
     if set(value).difference(parent_value):
         errors.update({
-            field: gettext(
-                f'{field.title()} should be one of the following: {", ".join([str(i) for i in parent_value])}.'
+            field: gettext('%(field_name)s should be one of the following: %(parents)s.') % dict(
+                field_name=field.title(),
+                parents={", ".join([str(i) for i in parent_value])}
             )
         })
     return errors

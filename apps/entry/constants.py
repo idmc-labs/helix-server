@@ -64,6 +64,7 @@ FIGURE_TERMS = dict(
     MULTIPLE_OR_OTHER=dict(name="Multiple/Other", housing=False),
 )
 
+
 class DISAGGREGATED_AGE_SEX_CHOICES(enum.Enum):
     MALE = 0
     FEMALE = 1

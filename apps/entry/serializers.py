@@ -36,7 +36,7 @@ class DisaggregatedAgeSerializer(serializers.Serializer):
         required=False
     )
     sex = serializers.ChoiceField(
-        choices=DISAGGREGATED_AGE_SEX_CHOICES,
+        choices=DISAGGREGATED_AGE_SEX_CHOICES.choices(),
         required=False
     )
     value = serializers.IntegerField(validators=[MinValueValidator(0, _("Minimum value is 1. "))],
