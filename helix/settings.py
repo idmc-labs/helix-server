@@ -278,26 +278,21 @@ if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
 
 AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'togglecorp-helix')
+AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'idmc-helix')
 AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
-AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12 * 60 * 60))
+# NOTE: s3 bucket is now public
+# AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12 * 60 * 60))
 AWS_S3_FILE_OVERWRITE = False
 AWS_IS_GZIPPED = True
 GZIP_CONTENT_TYPES = [
-    'text/css', 'text/javascript', 'application/javascript', 'application/x-javascript', 'image/svg+xml',
+    'text/css',
+    'text/javascript',
+    'application/javascript',
+    'application/x-javascript',
+    'image/svg+xml',
     'application/json',
+    'application/pdf',
 ]
-
-SLS_SERVICE_NAME = os.environ.get('SLS_SERVICE_NAME', 'helix-serverless')
-PDF_GENERATOR = os.environ.get('PDF_GENERATOR', 'generatePdf')
-SLS_STAGES = {
-    DEVELOPMENT: 'dev',
-    PRODUCTION: 'prod',
-    ALPHA: 'nightly',
-    NIGHTLY: 'nightly'
-}
-sls_stage = SLS_STAGES[HELIX_ENVIRONMENT.lower()]
-LAMBDA_HTML_TO_PDF = os.environ.get('LAMBDA_HTML_TO_PDF', f'{SLS_SERVICE_NAME}-{sls_stage}-{PDF_GENERATOR}')
 
 # sign off admin emails
 ENTRY_SIGNER_EMAILS = ','.split(os.environ.get('ENTRY_SIGNER_EMAILS', 'admin@helix.com'))
