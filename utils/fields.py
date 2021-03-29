@@ -16,7 +16,7 @@ class CachedFieldFile(FieldFile):
         if url:
             return url
         url = super().url
-        cache.set(key, url, settings.AWS_QUERYSTRING_EXPIRE)
+        cache.set(key, url, getattr(settings, 'AWS_QUERYSTRING_EXPIRE', 3600))
         return url
 
 
