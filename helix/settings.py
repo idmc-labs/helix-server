@@ -280,8 +280,11 @@ AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'idmc-helix')
 AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
+
 # NOTE: s3 bucket is now public
-# AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12 * 60 * 60))
+#  AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12 * 60 * 60))
+AWS_QUERYSTRING_AUTH = False
+
 AWS_S3_FILE_OVERWRITE = False
 AWS_IS_GZIPPED = True
 GZIP_CONTENT_TYPES = [
@@ -357,4 +360,5 @@ GRAPHENE_NODES_WHITELIST = (
     'me',
     # __ double undrescore nodes
     '__schema',
+    '__type',
 )
