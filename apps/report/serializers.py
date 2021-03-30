@@ -4,7 +4,11 @@ from django.utils.translation import gettext
 from django.conf import settings
 from rest_framework import serializers
 
-from apps.contrib.serializers import MetaInformationSerializerMixin
+from apps.contrib.serializers import (
+    MetaInformationSerializerMixin,
+    UpdateSerializerMixin,
+    IntegerIDField,
+)
 from apps.report.models import (
     Report,
     ReportComment,
@@ -18,7 +22,14 @@ class ReportSerializer(MetaInformationSerializerMixin,
                        serializers.ModelSerializer):
     class Meta:
         model = Report
-        fields = '__all__'
+        fields = [
+            'name', 'generated_from', 'analysis', 'methodology',
+            'significant_updates', 'challenges', 'summary',
+            'filter_figure_regions', 'filter_figure_countries',
+            'filter_event_crises', 'filter_figure_categories',
+            'filter_figure_start_after', 'filter_figure_end_before',
+            'filter_event_crisis_types', 'filter_figure_geographical_groups',
+        ]
 
     def validate(self, attrs) -> dict:
         attrs = super().validate(attrs)
@@ -33,6 +44,21 @@ class ReportSerializer(MetaInformationSerializerMixin,
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
+
+
+class ReportUpdateSerializer(UpdateSerializerMixin, ReportSerializer):
+    id = IntegerIDField(required=True)
+
+    class Meta:
+        model = Report
+        fields = [
+            'id', 'name', 'generated_from', 'analysis', 'methodology',
+            'significant_updates', 'challenges', 'summary',
+            'filter_figure_regions', 'filter_figure_countries',
+            'filter_event_crises', 'filter_figure_categories',
+            'filter_figure_start_after', 'filter_figure_end_before',
+            'filter_event_crisis_types', 'filter_figure_geographical_groups',
+        ]
 
 
 class ReportCommentSerializer(MetaInformationSerializerMixin,

@@ -1,57 +1,33 @@
 import graphene
 from django.utils.translation import gettext
 
-from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.report.models import (
     Report,
     ReportComment,
 )
 from apps.report.schema import ReportType, ReportCommentType
-from apps.report.enums import ReportTypeEnum
 from apps.report.serializers import (
     ReportSerializer,
+    ReportUpdateSerializer,
     ReportCommentSerializer,
     ReportGenerationSerializer,
     ReportApproveSerializer,
     ReportSignoffSerializer,
 )
+from utils.mutation import generate_input_type_for_serializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 
 
-class ReportCreateInputType(graphene.InputObjectType):
-    name = graphene.String(required=True)
-    generated_from = graphene.Field(ReportTypeEnum)
-    analysis = graphene.String(required=False)
-    methodology = graphene.String(required=False)
-    significant_updates = graphene.String(required=False)
-    challenges = graphene.String(required=False)
-    summary = graphene.String(required=False)
-    filter_figure_regions = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    filter_figure_countries = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    filter_event_crises = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    filter_figure_categories = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    filter_figure_start_after = graphene.Date(required=True)
-    filter_figure_end_before = graphene.Date(required=True)
-    filter_event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum), required=False)
+ReportCreateInputType = generate_input_type_for_serializer(
+    'ReportCreateInputType',
+    ReportSerializer
+)
 
-
-class ReportUpdateInputType(graphene.InputObjectType):
-    id = graphene.ID(required=True)
-    name = graphene.String()
-    generated_from = graphene.Field(ReportTypeEnum)
-    analysis = graphene.String(required=False)
-    methodology = graphene.String(required=False)
-    significant_updates = graphene.String(required=False)
-    challenges = graphene.String(required=False)
-    summary = graphene.String(required=False)
-    filter_figure_regions = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    filter_figure_countries = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    filter_event_crises = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    filter_figure_categories = graphene.List(graphene.NonNull(graphene.ID), required=False)
-    filter_figure_start_after = graphene.Date(required=False)
-    filter_figure_end_before = graphene.Date(required=False)
-    filter_event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum), required=False)
+ReportUpdateInputType = generate_input_type_for_serializer(
+    'ReportUpdateInputType',
+    ReportUpdateSerializer
+)
 
 
 class CreateReport(graphene.Mutation):
