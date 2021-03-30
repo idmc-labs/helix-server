@@ -25,7 +25,7 @@ class TestEntrySerializer(HelixTestCase):
         r1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.factory = RequestFactory()
-        self.country = CountryFactory.create(country_code=123)
+        self.country = CountryFactory.create(country_code=123, iso2='ak')
         self.event = EventFactory.create()
         self.event.countries.add(self.country)
         self.publisher = OrganizationFactory.create()
@@ -155,7 +155,7 @@ class TestEntrySerializer(HelixTestCase):
             uuid=str(uuid4()),
             rank=101,
             country=str(self.country.name),
-            country_code=str(self.country.country_code),
+            country_code=self.country.iso2,
             osm_id='ted',
             osm_type='okay',
             display_name='okay',

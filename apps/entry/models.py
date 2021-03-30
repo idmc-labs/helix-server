@@ -56,6 +56,7 @@ class OSMName(UUIDAbstractModel, models.Model):
                                blank=True,
                                null=True)
     country = models.TextField(verbose_name=_('Country'))
+    # NOTE: country-code here actually stores iso2
     country_code = models.CharField(verbose_name=_('Country Code'), max_length=8)
     street = models.TextField(verbose_name=_('Street'),
                               blank=True,

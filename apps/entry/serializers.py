@@ -124,7 +124,12 @@ class CommonFigureValidationMixin:
             country = self.instance.country
         if not attrs.get('geo_locations'):
             return errors
-        location_code = country.country_code
+        location_code = country.iso2
+        if not location_code:
+            errors.update({
+                'geo_locations': 'Invalid country for figure: Please contact administrator'
+            })
+            return errors
         geo_locations_code = set([
             location['country_code'] for location in attrs['geo_locations']
         ])
@@ -134,7 +139,7 @@ class CommonFigureValidationMixin:
                 'geo_locations': 'Geolocations only support a single country under a figure.'
             })
 
-        if int(geo_locations_code.pop()) != int(location_code):
+        if geo_locations_code.pop() != location_code:
             errors.update({
                 'geo_locations': "Location should be inside the selected figure's country"
             })
