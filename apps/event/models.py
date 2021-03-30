@@ -158,6 +158,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         DATE_ACCURACY,
         verbose_name=_('Start Date Accuracy'),
         default=DATE_ACCURACY.DAY,
+        blank=True,
+        null=True,
     )
     end_date = models.DateField(verbose_name=_('End Date'),
                                 blank=True, null=True)
@@ -165,6 +167,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         DATE_ACCURACY,
         verbose_name=_('End date accuracy'),
         default=DATE_ACCURACY.DAY,
+        blank=True,
+        null=True,
     )
     event_narrative = models.TextField(verbose_name=_('Event Narrative'),
                                        null=True, blank=True)
