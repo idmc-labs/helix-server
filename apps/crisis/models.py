@@ -29,12 +29,16 @@ class Crisis(MetaInformationAbstractModel, models.Model):
         DATE_ACCURACY,
         verbose_name=_('Start Date Accuracy'),
         default=DATE_ACCURACY.DAY,
+        blank=True,
+        null=True,
     )
     end_date = models.DateField(verbose_name=_('End Date'), blank=True, null=True)
     end_date_accuracy = enum.EnumField(
         DATE_ACCURACY,
         verbose_name=_('End date accuracy'),
         default=DATE_ACCURACY.DAY,
+        blank=True,
+        null=True,
     )
 
     # property

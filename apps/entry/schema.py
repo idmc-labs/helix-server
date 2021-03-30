@@ -28,6 +28,7 @@ from apps.entry.models import (
 )
 from apps.contrib.models import SourcePreview
 from apps.contrib.enums import PreviewStatusGrapheneEnum
+from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.organization.schema import OrganizationListType
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
@@ -92,6 +93,8 @@ class FigureType(DjangoObjectType):
     disaggregation_age_json = graphene.List(graphene.NonNull(DisaggregatedAgeType))
     disaggregation_strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
     geo_locations = DjangoPaginatedListObjectField(OSMNameListType, accessor='geo_locations')
+    start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
+    end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
 
 
 class FigureListType(CustomDjangoListObjectType):

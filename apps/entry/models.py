@@ -56,6 +56,7 @@ class OSMName(UUIDAbstractModel, models.Model):
                                blank=True,
                                null=True)
     country = models.TextField(verbose_name=_('Country'))
+    # NOTE: country-code here actually stores iso2
     country_code = models.CharField(verbose_name=_('Country Code'), max_length=8)
     street = models.TextField(verbose_name=_('Street'),
                               blank=True,
@@ -288,12 +289,15 @@ class Figure(MetaInformationArchiveAbstractModel,
         DATE_ACCURACY,
         verbose_name=_('Start Date Accuracy'),
         default=DATE_ACCURACY.DAY,
+        blank=True,
+        null=True,
     )
     end_date = models.DateField(verbose_name=_('End Date'),
                                 blank=True, null=True)
     end_date_accuracy = enum.EnumField(
         DATE_ACCURACY,
         verbose_name=_('End date accuracy'),
+        blank=True,
         null=True,
     )
     include_idu = models.BooleanField(verbose_name=_('Include in IDU'))
