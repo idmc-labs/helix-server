@@ -139,7 +139,7 @@ class CommonFigureValidationMixin:
                 'geo_locations': 'Geolocations only support a single country under a figure.'
             })
 
-        if geo_locations_code.pop() != location_code:
+        if geo_locations_code.pop().lower() != location_code.lower():
             errors.update({
                 'geo_locations': "Location should be inside the selected figure's country"
             })
