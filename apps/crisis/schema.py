@@ -5,6 +5,7 @@ from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.filters import CrisisFilter
 from apps.crisis.models import Crisis
+from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.event.schema import EventListType
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
@@ -21,6 +22,8 @@ class CrisisType(DjangoObjectType):
                                             ))
     total_stock_idp_figures = graphene.Field(graphene.Int)
     total_flow_nd_figures = graphene.Field(graphene.Int)
+    start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
+    end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
 
 
 class CrisisListType(CustomDjangoListObjectType):

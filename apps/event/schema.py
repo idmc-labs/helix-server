@@ -2,6 +2,7 @@ import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField, PageGraphqlPagination
 
+from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.enums import EventOtherSubTypeEnum
 from apps.event.models import (
@@ -170,6 +171,8 @@ class EventType(DjangoObjectType):
     actor = graphene.Field(ActorType)
     total_stock_idp_figures = graphene.Field(graphene.Int)
     total_flow_nd_figures = graphene.Field(graphene.Int)
+    start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
+    end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
 
 
 class EventListType(CustomDjangoListObjectType):
