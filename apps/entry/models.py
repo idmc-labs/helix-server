@@ -297,7 +297,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                                            default=False)
     is_housing_destruction = models.BooleanField(
         verbose_name=_('Housing destruction (recommended estimate for this entry)'),
-        default=False
+        null=True,
+        blank=True,
     )
 
     # locations
