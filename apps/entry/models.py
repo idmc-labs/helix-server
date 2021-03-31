@@ -197,13 +197,27 @@ class FigureDisaggregationAbstractModel(models.Model):
         abstract = True
 
 
+class FigureTerm(models.Model):
+    is_housing_related = models.BooleanField(
+        verbose_name=_('Is housing related'),
+        default=False,
+    )
+    # NOTE: We are using identifier as searchable candidate over name
+    # primarily during migration
+    identifier = models.CharField(
+        verbose_name=_('Identifier'),
+        max_length=32,
+    )
+    name = models.CharField(
+        verbose_name=_('Name'),
+        max_length=32,
+    )
+
+
 class Figure(MetaInformationArchiveAbstractModel,
              UUIDAbstractModel,
              FigureDisaggregationAbstractModel,
              models.Model):
-    class TYPE(enum.Enum):  # temp filler for migration file
-        pass
-
     class QUANTIFIER(enum.Enum):
         MORE_THAN = 0
         LESS_THAN = 1
@@ -226,37 +240,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             HOUSEHOLD: _("Household"),
         }
 
-    class TERM(enum.Enum):
-        EVACUATED = 0
-        DISPLACED = 1
-        DESTROYED_HOUSING = 2
-        PARTIALLY_DESTROYED_HOUSING = 3
-        UNINHABITABLE_HOUSING = 4
-        FORCED_TO_FLEE = 5
-        HOMELESS = 6
-        IN_RELIEF_CAMP = 7
-        SHELTERED = 8
-        RELOCATED = 9
-        AFFECTED = 10
-        RETURNS = 11
-        MULTIPLE_OR_OTHER = 12
-
-        __labels__ = {
-            EVACUATED: _("Evacuated"),
-            DISPLACED: _("Displaced"),
-            DESTROYED_HOUSING: _("Destroyed housing"),
-            PARTIALLY_DESTROYED_HOUSING: _("Partially destroyed housing"),
-            UNINHABITABLE_HOUSING: _("Uninhabitable housing"),
-            FORCED_TO_FLEE: _("Forced to flee"),
-            HOMELESS: _("Homeless"),
-            IN_RELIEF_CAMP: _("In relief camp"),
-            SHELTERED: _("Sheltered"),
-            RELOCATED: _("Relocated"),
-            AFFECTED: _("Affected"),
-            RETURNS: _("Returns"),
-            MULTIPLE_OR_OTHER: _("Multiple/Other"),
-        }
-
     class ROLE(enum.Enum):
         RECOMMENDED = 0
         TRIANGULATION = 1
@@ -277,10 +260,12 @@ class Figure(MetaInformationArchiveAbstractModel,
                                                       blank=True, null=True)
     total_figures = models.PositiveIntegerField(verbose_name=_('Total Figures'), default=0,
                                                 editable=False)
-    term = enum.EnumField(enum=TERM, verbose_name=_('Term'), default=TERM.EVACUATED)
     category = models.ForeignKey('FigureCategory', verbose_name=_('Figure category'),
                                  related_name='figures', on_delete=models.PROTECT,
                                  blank=False, null=True)
+    term = models.ForeignKey('FigureTerm', verbose_name=_('Figure term'),
+                             related_name='+', on_delete=models.SET_NULL,
+                             blank=False, null=True)
     role = enum.EnumField(enum=ROLE, verbose_name=_('Role'), default=ROLE.RECOMMENDED)
 
     start_date = models.DateField(verbose_name=_('Start Date'),
@@ -312,7 +297,9 @@ class Figure(MetaInformationArchiveAbstractModel,
                                            default=False)
     is_housing_destruction = models.BooleanField(
         verbose_name=_('Housing destruction (recommended estimate for this entry)'),
-        default=False)
+        null=True,
+        blank=True,
+    )
 
     # locations
     geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
