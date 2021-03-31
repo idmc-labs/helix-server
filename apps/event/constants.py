@@ -1,7 +1,7 @@
 VIOLENCES = {
     # TYPE: SUB_TYPE
-    "Military occupation": ["N/A"],
-    "International state-based armed conflict": ["N/A"],
+    "Military occupation": ["Military Occupation"],
+    "International state-based armed conflict": ["International state-based armed conflict"],
     "Inter-communal violence": ["Agricultural/pastoralist", "Inter-religious violence",
                                 "Inter-ethnic violence", "Other inter-communal conflict"],
     "Political and electoral violence ": ["Electoral violence", "Clashes between political groups", "Voter intimidation"],
