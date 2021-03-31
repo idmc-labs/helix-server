@@ -1,4 +1,5 @@
 from apps.users.enums import USER_ROLE
+from apps.extraction.models import ExtractionQuery
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 from utils.factories import (
     CountryFactory,
@@ -63,6 +64,15 @@ class TestCreateExtraction(HelixGraphQLTestCase):
           }
         }
         '''
+        self.get_extractions = '''
+        query MyQuery {
+          extractionQueryList {
+            results {
+              id
+            }
+          }
+        }
+        '''
 
     def test_valid_extract_create_and_filter(self):
         reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
@@ -83,4 +93,30 @@ class TestCreateExtraction(HelixGraphQLTestCase):
             set([each['id'] for each in
                  content['data']['createExtraction']['result']['entries']['results']]),
             {str(self.entry1ev1.id), str(self.entry2ev1.id)}
+        )
+
+    def test_extraction_query_list_filtered_by_user(self):
+        reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        ExtractionQuery.objects.create(name='one', created_by=reviewer1)
+        ExtractionQuery.objects.create(name='one', created_by=reviewer2)
+        self.force_login(reviewer1)
+        response = self.query(
+            self.get_extractions,
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertEqual(
+            len(content['data']['extractionQueryList']['results']),
+            ExtractionQuery.objects.filter(created_by=reviewer1).count()
+        )
+        self.force_login(reviewer2)
+        response = self.query(
+            self.get_extractions,
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertEqual(
+            len(content['data']['extractionQueryList']['results']),
+            ExtractionQuery.objects.filter(created_by=reviewer2).count()
         )

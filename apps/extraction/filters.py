@@ -2,6 +2,7 @@ from django_filters import rest_framework as df
 from django.db.models import Q
 
 from apps.entry.models import Entry, Figure
+from apps.extraction.models import ExtractionQuery
 from apps.entry.constants import STOCK, FLOW
 from apps.crisis.models import Crisis
 from utils.filters import StringListFilter, IDListFilter
@@ -171,3 +172,18 @@ class FigureExtractionFilterSet(df.FilterSet):
                     Crisis.CRISIS_TYPE.get(item).value for item in value
                 ])
         return qs
+
+
+class ExtractionQueryFilter(df.FilterSet):
+    class Meta:
+        model = ExtractionQuery
+        fields = {
+            'id': ('exact',),
+            'name': ('icontains',),
+        }
+
+    @property
+    def qs(self):
+        if self.request.user.is_authenticated:
+            return super().qs.filter(created_by=self.request.user)
+        return ExtractionQuery.objects.none()

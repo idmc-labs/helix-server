@@ -6,10 +6,6 @@ from django_enumfield import enum
 from apps.contrib.models import MetaInformationAbstractModel
 from apps.entry.models import Figure
 from apps.crisis.models import Crisis
-from apps.extraction.filters import (
-    EntryExtractionFilterSet,
-    FigureExtractionFilterSet,
-)
 
 
 class QueryAbstractModel(models.Model):
@@ -75,6 +71,7 @@ class QueryAbstractModel(models.Model):
 
     @property
     def extract_figures(self) -> ['Figure']:  # noqa
+        from apps.extraction.filters import FigureExtractionFilterSet
         return FigureExtractionFilterSet(data=dict(
             filter_figure_countries=self.filter_figure_countries.all(),
             filter_figure_regions=self.filter_figure_regions.all(),
@@ -90,6 +87,7 @@ class QueryAbstractModel(models.Model):
 
     @classmethod
     def get_entries(cls, data=None) -> ['Entry']:  # noqa
+        from apps.extraction.filters import EntryExtractionFilterSet
         return EntryExtractionFilterSet(data=data).qs
 
     @property

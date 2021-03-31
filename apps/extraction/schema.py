@@ -3,7 +3,7 @@ from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField, PageGraphqlPagination
 import logging
 
-from apps.extraction.filters import EntryExtractionFilterSet
+from apps.extraction.filters import EntryExtractionFilterSet, ExtractionQueryFilter
 from apps.extraction.models import (
     ExtractionQuery,
 )
@@ -31,10 +31,7 @@ class ExtractionQueryObjectType(DjangoObjectType):
 class ExtractionQueryListType(CustomDjangoListObjectType):
     class Meta:
         model = ExtractionQuery
-        filter_fields = {
-            'id': ('exact',),
-            'name': ('icontains',),
-        }
+        filterset_class = ExtractionQueryFilter
 
 
 class Query:
