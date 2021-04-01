@@ -7,7 +7,14 @@ from graphene_django_extras import (
 )
 
 from apps.contact.schema import ContactListType
-from apps.country.models import Country, CountryRegion, ContextualAnalysis, Summary, HouseholdSize
+from apps.country.models import (
+    Country,
+    CountryRegion,
+    ContextualAnalysis,
+    Summary,
+    HouseholdSize,
+    GeographicalGroup,
+)
 from apps.country.filters import CountryFilter
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.graphene.types import CustomDjangoListObjectType
@@ -22,6 +29,19 @@ class CountryRegionType(DjangoObjectType):
 class CountryRegionListType(CustomDjangoListObjectType):
     class Meta:
         model = CountryRegion
+        filter_fields = {
+            'name': ('icontains',),
+        }
+
+
+class GeographicalGroupType(DjangoObjectType):
+    class Meta:
+        model = GeographicalGroup
+
+
+class GeographicalGroupListType(CustomDjangoListObjectType):
+    class Meta:
+        model = GeographicalGroup
         filter_fields = {
             'name': ('icontains',),
         }
@@ -131,6 +151,7 @@ class Query:
                                                       page_size_query_param='pageSize'
                                                   ))
     country_region_list = DjangoPaginatedListObjectField(CountryRegionListType)
+    geographical_group_list = DjangoPaginatedListObjectField(GeographicalGroupListType)
     household_size = graphene.Field(CountryHouseholdSizeType,
                                     country=graphene.ID(required=True),
                                     year=graphene.Int(required=True))
