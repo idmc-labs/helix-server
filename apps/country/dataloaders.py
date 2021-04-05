@@ -31,6 +31,12 @@ def get_related_name(model1, model2):
         return relations[0]
 
 
+class DataLoaderException(Exception):
+    '''
+    Unable to batch load
+    '''
+
+
 class CountLoader(DataLoader):
     def load(
         self,
@@ -125,8 +131,8 @@ class OneToManyLoader(DataLoader):
         related_name = self.related_name or get_related_name(self.parent, self.child)
         reverse_related_name = self.reverse_related_name or get_related_name(self.child, self.parent)
 
-        # queryset by custom accessor
-        # accessor = self.accessor
+        if not (related_name or reverse_related_name):
+            raise DataLoaderException('Missing dataloader!')
 
         # pre-ready the filtered and paginated queryset
         filtered_qs = self.filterset_class(

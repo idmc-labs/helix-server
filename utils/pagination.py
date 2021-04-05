@@ -54,7 +54,7 @@ class OrderingOnlyArgumentPagination(BaseDjangoGraphqlPagination):
 class PageGraphqlPaginationWithoutCount(PageGraphqlPagination):
     '''
     Default implementation applies qs.count()
-    which is not possible for
+    which is not possible with dataloading
     '''
     def paginate_queryset(self, qs, **kwargs):
         page = kwargs.pop(self.page_query_param, 1) or 1
