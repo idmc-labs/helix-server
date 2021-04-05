@@ -17,6 +17,15 @@ from graphene_django_extras.utils import get_extra_filters
 from utils.pagination import OrderingOnlyArgumentPagination
 
 
+def path_has_list(info):
+    '''
+    Checks if the parent path contains list
+
+    e.g: ['countryList', 'results', 1, 'region']
+    '''
+    return bool([each for each in info.path if str(each).isdigit()])
+
+
 class CustomDjangoListObjectBase(DjangoListObjectBase):
     def __init__(self, results, count, page, pageSize, results_field_name="results"):
         self.results = results
@@ -213,7 +222,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             ordering = ','.join([to_snake_case(each) for each in ordering.strip(',').replace(' ', '').split(',')])
             self.pagination.ordering = ordering
 
-        if root:
+        if root and path_has_list(info):
             parent_class = root._meta.model
             child_class = manager.model
             qs = info.context.get_dataloader(
@@ -246,7 +255,12 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                 **kwargs,
             )
         else:
-            qs = self.get_queryset(manager, info, **kwargs)
+            if self.accessor:
+                qs = self.accessor
+                if hasattr(qs, 'all'):
+                    qs = qs.all()
+            else:
+                qs = self.get_queryset(manager, info, **kwargs)
             qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context).qs
             if root and is_valid_django_model(root._meta.model):
                 extra_filters = get_extra_filters(root, manager.model)
