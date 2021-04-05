@@ -20,7 +20,6 @@ from django.conf import settings
 from django.urls import path, re_path, include
 from django.views.decorators.csrf import csrf_exempt
 # from graphene_django.views import GraphQLView
-# from django.contrib.auth.mixins import LoginRequiredMixin
 from graphene_file_upload.django import FileUploadGraphQLView
 
 from . import api_urls as rest_urls

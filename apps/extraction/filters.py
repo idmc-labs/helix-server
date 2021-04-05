@@ -11,6 +11,7 @@ from utils.filters import StringListFilter, IDListFilter
 class EntryExtractionFilterSet(df.FilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
     filter_figure_regions = IDListFilter(method='filter_regions')
+    filter_figure_geographical_groups = IDListFilter(method='filter_geographical_groups')
     filter_figure_countries = IDListFilter(method='filter_countries')
     filter_event_crises = IDListFilter(method='filter_crises')
     filter_figure_categories = IDListFilter(method='filter_filter_figure_categories')
@@ -25,6 +26,11 @@ class EntryExtractionFilterSet(df.FilterSet):
     class Meta:
         model = Entry
         fields = {}
+
+    def filter_geographical_groups(self, qs, name, value):
+        if value:
+            qs = qs.filter(figures__country__geographical_group__in=value).distinct()
+        return qs
 
     def filter_regions(self, qs, name, value):
         if value:
@@ -90,6 +96,7 @@ class EntryExtractionFilterSet(df.FilterSet):
 class FigureExtractionFilterSet(df.FilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
     filter_figure_regions = IDListFilter(method='filter_regions')
+    filter_figure_geographical_groups = IDListFilter(method='filter_geographical_groups')
     filter_figure_countries = IDListFilter(method='filter_countries')
     filter_event_crises = IDListFilter(method='filter_crises')
     filter_figure_categories = IDListFilter(method='filter_filter_figure_categories')
@@ -105,6 +112,11 @@ class FigureExtractionFilterSet(df.FilterSet):
     class Meta:
         model = Figure
         fields = {}
+
+    def filter_geographical_groups(self, qs, name, value):
+        if value:
+            qs = qs.filter(country__geographical_group__in=value).distinct()
+        return qs
 
     def filter_regions(self, qs, name, value):
         if value:

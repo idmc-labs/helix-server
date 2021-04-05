@@ -13,6 +13,12 @@ class QueryAbstractModel(models.Model):
         verbose_name=_('Name'),
         max_length=128
     )
+    filter_figure_geographical_groups = models.ManyToManyField(
+        'country.GeographicalGroup',
+        verbose_name=_('Geographical Group'),
+        blank=True,
+        related_name='+'
+    )
     filter_figure_regions = models.ManyToManyField(
         'country.CountryRegion',
         verbose_name=_('Regions'),
@@ -75,6 +81,7 @@ class QueryAbstractModel(models.Model):
         return FigureExtractionFilterSet(data=dict(
             filter_figure_countries=self.filter_figure_countries.all(),
             filter_figure_regions=self.filter_figure_regions.all(),
+            filter_figure_geographical_groups=self.filter_figure_geographical_groups.all(),
             filter_event_crises=self.filter_event_crises.all(),
             filter_figure_categories=self.filter_figure_categories.all(),
             filter_entry_tags=self.filter_entry_tags.all(),
@@ -95,6 +102,7 @@ class QueryAbstractModel(models.Model):
         return self.get_entries(data=dict(
             filter_figure_countries=self.filter_figure_countries.all(),
             filter_figure_regions=self.filter_figure_regions.all(),
+            filter_figure_geographical_groups=self.filter_figure_geographical_groups.all(),
             filter_event_crises=self.filter_event_crises.all(),
             filter_figure_categories=self.filter_figure_categories.all(),
             filter_entry_tags=self.filter_entry_tags.all(),
