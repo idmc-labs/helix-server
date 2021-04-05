@@ -44,7 +44,7 @@ class GQLContext:
             self.dataloaders[ref] = OneToManyLoader()
         return self.dataloaders[ref]
 
-    @property
+    @cached_property
     def get_count_loader(self):
         return CountLoader()
 
