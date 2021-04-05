@@ -30,7 +30,8 @@ from . import api_urls as rest_urls
 class GQLContext:
     def __init__(self, request):
         self.request = request
-        self.dataloaders = {}
+        self.one_to_many_dataloaders = {}
+        self.count_dataloaders = {}
 
     @cached_property
     def user(self):
@@ -40,13 +41,15 @@ class GQLContext:
         # TODO: rename to get OneToManyLoader?
         # return a different dataloader for each ref
         ref = f'{parent}_{child}'
-        if ref not in self.dataloaders:
-            self.dataloaders[ref] = OneToManyLoader()
-        return self.dataloaders[ref]
+        if ref not in self.one_to_many_dataloaders:
+            self.one_to_many_dataloaders[ref] = OneToManyLoader()
+        return self.one_to_many_dataloaders[ref]
 
-    @cached_property
-    def get_count_loader(self):
-        return CountLoader()
+    def get_count_loader(self, parent: str, child: str):
+        ref = f'{parent}_{child}'
+        if ref not in self.count_dataloaders:
+            self.count_dataloaders[ref] = CountLoader()
+        return self.count_dataloaders[ref]
 
 
 class CustomGraphQLView(FileUploadGraphQLView):
