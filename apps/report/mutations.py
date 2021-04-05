@@ -41,7 +41,7 @@ class CreateReport(graphene.Mutation):
     @staticmethod
     @permission_checker(['report.add_report'])
     def mutate(root, info, data):
-        serializer = ReportSerializer(data=data, context=dict(request=info.context))
+        serializer = ReportSerializer(data=data, context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
             return CreateReport(errors=errors, ok=False)
         instance = serializer.save()
@@ -66,7 +66,7 @@ class UpdateReport(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
             ])
         serializer = ReportSerializer(
-            instance=instance, data=data, partial=True, context=dict(request=info.context)
+            instance=instance, data=data, partial=True, context=dict(request=info.context.request)
         )
         if errors := mutation_is_not_valid(serializer):
             return UpdateReport(errors=errors, ok=False)
@@ -117,7 +117,7 @@ class CreateReportComment(graphene.Mutation):
     @staticmethod
     @permission_checker(['report.add_reportcomment'])
     def mutate(root, info, data):
-        serializer = ReportCommentSerializer(data=data, context=dict(request=info.context))
+        serializer = ReportCommentSerializer(data=data, context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
             return CreateReportComment(errors=errors, ok=False)
         instance = serializer.save()
@@ -143,7 +143,7 @@ class UpdateReportComment(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('Comment does not exist.'))
             ])
         serializer = ReportCommentSerializer(
-            instance=instance, data=data, partial=True, context=dict(request=info.context)
+            instance=instance, data=data, partial=True, context=dict(request=info.context.request)
         )
         if errors := mutation_is_not_valid(serializer):
             return UpdateReportComment(errors=errors, ok=False)
@@ -193,7 +193,7 @@ class GenerateReport(graphene.Mutation):
             ])
         serializer = ReportGenerationSerializer(
             data=dict(report=instance.id),
-            context=dict(request=info.context),
+            context=dict(request=info.context.request),
         )
         if errors := mutation_is_not_valid(serializer):
             return GenerateReport(errors=errors, ok=False)
@@ -224,7 +224,7 @@ class SignOffReport(graphene.Mutation):
                 report=id,
                 include_history=include_history or False
             ),
-            context=dict(request=info.context),
+            context=dict(request=info.context.request),
         )
         if errors := mutation_is_not_valid(serializer):
             return SignOffReport(errors=errors, ok=False)
@@ -256,7 +256,7 @@ class ApproveReport(graphene.Mutation):
                 report=id,
                 is_approved=approve,
             ),
-            context=dict(request=info.context),
+            context=dict(request=info.context.request),
         )
         if errors := mutation_is_not_valid(serializer):
             return ApproveReport(errors=errors, ok=False)

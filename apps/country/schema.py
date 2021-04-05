@@ -89,27 +89,40 @@ class CountryType(DjangoObjectType):
 
     last_summary = graphene.Field(SummaryType)
     last_contextual_analysis = graphene.Field(ContextualAnalysisType)
-    contacts = DjangoPaginatedListObjectField(ContactListType,
-                                              pagination=PageGraphqlPaginationWithoutCount(
-                                                  page_size_query_param='pageSize'
-                                              ), accessor='contacts')
-    operating_contacts = DjangoPaginatedListObjectField(ContactListType,
-                                                        pagination=PageGraphqlPaginationWithoutCount(
-                                                            page_size_query_param='pageSize'
-                                                        ), accessor='operating_contacts')
-    contextual_analyses = DjangoPaginatedListObjectField(ContextualAnalysisListType,
-                                                         pagination=PageGraphqlPaginationWithoutCount(
-                                                             page_size_query_param='pageSize'
-                                                         ), accessor='contextual_analyses')
-    summaries = DjangoPaginatedListObjectField(SummaryListType,
-                                               pagination=PageGraphqlPaginationWithoutCount(
-                                                   page_size_query_param='pageSize'
-                                               ), accessor='summaries')
+    contacts = DjangoPaginatedListObjectField(
+        ContactListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        ),
+        related_name='contacts',
+        reverse_related_name='country',
+    )
+    operating_contacts = DjangoPaginatedListObjectField(
+        ContactListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        ),
+        related_name='operating_contacts',
+        reverse_related_name='countries_of_operation',
+    )
+    contextual_analyses = DjangoPaginatedListObjectField(
+        ContextualAnalysisListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        ),
+    )
+    summaries = DjangoPaginatedListObjectField(
+        SummaryListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        ),
+    )
     crises = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
         get_type('apps.crisis.schema.CrisisListType'),
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
-        )))
+        ))
+    )
     events = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
         get_type('apps.event.schema.EventListType'),
         pagination=PageGraphqlPaginationWithoutCount(

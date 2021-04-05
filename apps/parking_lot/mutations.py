@@ -31,7 +31,7 @@ class CreateParkedItem(graphene.Mutation):
     @staticmethod
     @permission_checker(['parking_lot.add_parkeditem'])
     def mutate(root, info, data):
-        serializer = ParkedItemSerializer(data=data, context=dict(request=info.context))
+        serializer = ParkedItemSerializer(data=data, context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
             return CreateParkedItem(errors=errors, ok=False)
         instance = serializer.save()
@@ -56,7 +56,7 @@ class UpdateParkedItem(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('Parked item does not exist.'))
             ])
         serializer = ParkedItemSerializer(instance=instance, data=data, partial=True,
-                                          context=dict(request=info.context))
+                                          context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
             return UpdateParkedItem(errors=errors, ok=False)
         instance = serializer.save()

@@ -121,7 +121,7 @@ class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
         qs = getattr(root, self.accessor)
         if hasattr(qs, 'all'):
             qs = qs.all()
-        qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context).qs
+        qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context.request).qs
         count = qs.count()
 
         if getattr(self, "pagination", None):
@@ -264,7 +264,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                     qs = qs.all()
             else:
                 qs = self.get_queryset(manager, info, **kwargs)
-            qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context).qs
+            qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context.request).qs
             if root and is_valid_django_model(root._meta.model):
                 extra_filters = get_extra_filters(root, manager.model)
                 qs = qs.filter(**extra_filters)

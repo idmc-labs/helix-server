@@ -15,7 +15,7 @@ class AttachmentType(DjangoObjectType):
     attachment_for = graphene.Field(AttachmentForGrapheneEnum)
 
     def resolve_attachment(root, info, **kwargs):
-        return info.context.build_absolute_uri(root.attachment.url)
+        return info.context.request.build_absolute_uri(root.attachment.url)
 
 
 class Query:

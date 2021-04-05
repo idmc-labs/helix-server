@@ -24,7 +24,7 @@ class CreateAttachment(graphene.Mutation):
     @is_authenticated()
     def mutate(root, info, data):
         serializer = AttachmentSerializer(data=data,
-                                          context={'request': info.context})
+                                          context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateAttachment(errors=errors, ok=False)
         instance = serializer.save()

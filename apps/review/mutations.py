@@ -38,7 +38,7 @@ class CreateComment(graphene.Mutation):
     def mutate(root, info, data):
         serializer = ReviewCommentSerializer(
             data=data,
-            context={'request': info.context}, partial=True
+            context={'request': info.context.request}, partial=True
         )
         if errors := mutation_is_not_valid(serializer):
             return CreateComment(errors=errors, ok=False)
@@ -59,7 +59,7 @@ class CreateReviewComment(graphene.Mutation):
     def mutate(root, info, data):
         serializer = ReviewCommentSerializer(
             data=data,
-            context={'request': info.context}, partial=True
+            context={'request': info.context.request}, partial=True
         )
         if errors := mutation_is_not_valid(serializer):
             return CreateReviewComment(errors=errors, ok=False)
@@ -92,7 +92,7 @@ class UpdateComment(graphene.Mutation):
         serializer = ReviewCommentSerializer(
             instance=instance,
             data=data,
-            context={'request': info.context}, partial=True
+            context={'request': info.context.request}, partial=True
         )
         if errors := mutation_is_not_valid(serializer):
             return UpdateComment(errors=errors, ok=False)
