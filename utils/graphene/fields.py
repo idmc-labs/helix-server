@@ -241,7 +241,10 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                 request=info.context,
                 **kwargs,
             )
-            count = info.context.get_count_loader.load(
+            count = info.context.get_count_loader(
+                parent_class.__name__,
+                child_class.__name__,
+            ).load(
                 root.id,
                 parent=parent_class,
                 child=child_class,
