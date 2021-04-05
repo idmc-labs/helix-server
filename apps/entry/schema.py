@@ -5,7 +5,7 @@ from graphene import ObjectType
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType
 from graphene_django_extras.converter import convert_django_field
-from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
+from graphene_django_extras import DjangoObjectField
 import logging
 
 from apps.entry.enums import (
@@ -32,6 +32,7 @@ from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.organization.schema import OrganizationListType
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.pagination import PageGraphqlPaginationWithoutCount
 
 logger = logging.getLogger(__name__)
 
@@ -104,7 +105,9 @@ class FigureType(DjangoObjectType):
     role = graphene.Field(RoleGrapheneEnum)
     disaggregation_age_json = graphene.List(graphene.NonNull(DisaggregatedAgeType))
     disaggregation_strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
-    geo_locations = DjangoPaginatedListObjectField(OSMNameListType, accessor='geo_locations')
+    geo_locations = DjangoPaginatedListObjectField(
+        OSMNameListType,
+    )
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
 
@@ -134,12 +137,14 @@ class EntryType(DjangoObjectType):
     created_by = graphene.Field('apps.users.schema.UserType')
     last_modified_by = graphene.Field('apps.users.schema.UserType')
     sources = DjangoPaginatedListObjectField(OrganizationListType,
-                                             accessor='sources')
+                                             related_name='sources',
+                                             reverse_related_name='sourced_entries')
     publishers = DjangoPaginatedListObjectField(OrganizationListType,
-                                                accessor='publishers')
+                                                related_name='publishers',
+                                                reverse_related_name='published_entries')
     figures = DjangoPaginatedListObjectField(FigureListType,
-                                             pagination=PageGraphqlPagination(
-                                                 page_size_query_param='perPage'
+                                             pagination=PageGraphqlPaginationWithoutCount(
+                                                 page_size_query_param='pageSize'
                                              ))
     latest_reviews = graphene.List('apps.review.schema.ReviewType')
     reviewers = graphene.Dynamic(
@@ -151,12 +156,11 @@ class EntryType(DjangoObjectType):
         lambda: DjangoPaginatedListObjectField(
             get_type('apps.review.schema.ReviewCommentListType'),
             accessor='review_comments',
-            pagination=PageGraphqlPagination(
+            pagination=PageGraphqlPaginationWithoutCount(
                 page_size_query_param='pageSize'
             )
         )
     )
-    # TODO: data loader
     total_stock_idp_figures = graphene.Field(graphene.Int,
                                              data=TotalFigureFilterInputType())
     total_flow_nd_figures = graphene.Field(graphene.Int,
@@ -226,18 +230,18 @@ class Query:
     figure_term_list = DjangoPaginatedListObjectField(FigureTermListType)
     figure_tag = DjangoObjectField(FigureTagType)
     figure_tag_list = DjangoPaginatedListObjectField(FigureTagListType,
-                                                     pagination=PageGraphqlPagination(
+                                                     pagination=PageGraphqlPaginationWithoutCount(
                                                          page_size_query_param='pageSize'
                                                      ))
 
     figure = DjangoObjectField(FigureType)
     figure_list = DjangoPaginatedListObjectField(FigureListType,
-                                                 pagination=PageGraphqlPagination(
+                                                 pagination=PageGraphqlPaginationWithoutCount(
                                                      page_size_query_param='pageSize'
                                                  ))
     source_preview = DjangoObjectField(SourcePreviewType)
     entry = DjangoObjectField(EntryType)
     entry_list = DjangoPaginatedListObjectField(EntryListType,
-                                                pagination=PageGraphqlPagination(
+                                                pagination=PageGraphqlPaginationWithoutCount(
                                                     page_size_query_param='pageSize'
                                                 ))

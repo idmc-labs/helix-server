@@ -1,6 +1,6 @@
 import graphene
 from graphene_django import DjangoObjectType
-from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
+from graphene_django_extras import DjangoObjectField
 
 from apps.country.models import Country
 from apps.country.schema import CountryType
@@ -20,6 +20,7 @@ from apps.report.filters import ReportFilter, CountryReportFilter
 from apps.report.enums import ReportGenerationStatusEnum
 from utils.graphene.types import CustomListObjectType, CustomDjangoListObjectType
 from utils.graphene.fields import CustomPaginatedListObjectField, DjangoPaginatedListObjectField
+from utils.pagination import PageGraphqlPaginationWithoutCount
 
 
 class ReportFigureMixin:
@@ -166,29 +167,29 @@ class ReportType(DjangoObjectType):
         exclude_fields = ('reports', 'figures', 'masterfact_reports')
 
     comments = DjangoPaginatedListObjectField(ReportCommentListType,
-                                              pagination=PageGraphqlPagination(
+                                              pagination=PageGraphqlPaginationWithoutCount(
                                                   page_size_query_param='pageSize'
                                               ))
     filter_figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
     filter_event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
     countries_report = CustomPaginatedListObjectField(ReportCountryListType,
                                                       accessor='countries_report',
-                                                      pagination=PageGraphqlPagination(
+                                                      pagination=PageGraphqlPaginationWithoutCount(
                                                           page_size_query_param='pageSize'
                                                       ))
     events_report = CustomPaginatedListObjectField(ReportEventListType,
                                                    accessor='events_report',
-                                                   pagination=PageGraphqlPagination(
+                                                   pagination=PageGraphqlPaginationWithoutCount(
                                                        page_size_query_param='pageSize'
                                                    ))
     entries_report = CustomPaginatedListObjectField(ReportEntryListType,
                                                     accessor='entries_report',
-                                                    pagination=PageGraphqlPagination(
+                                                    pagination=PageGraphqlPaginationWithoutCount(
                                                         page_size_query_param='pageSize'
                                                     ))
     crises_report = CustomPaginatedListObjectField(ReportCrisisListType,
                                                    accessor='crises_report',
-                                                   pagination=PageGraphqlPagination(
+                                                   pagination=PageGraphqlPaginationWithoutCount(
                                                        page_size_query_param='pageSize'
                                                    ))
     total_disaggregation = graphene.NonNull(ReportTotalsType)
@@ -210,16 +211,16 @@ class Query:
 
     report = DjangoObjectField(ReportType)
     report_list = DjangoPaginatedListObjectField(ReportListType,
-                                                 pagination=PageGraphqlPagination(
+                                                 pagination=PageGraphqlPaginationWithoutCount(
                                                      page_size_query_param='pageSize'
                                                  ))
     report_comment = DjangoObjectField(ReportCommentType)
     report_comment_list = DjangoPaginatedListObjectField(ReportCommentListType,
-                                                         pagination=PageGraphqlPagination(
+                                                         pagination=PageGraphqlPaginationWithoutCount(
                                                              page_size_query_param='pageSize'
                                                          ))
     report_generation = DjangoObjectField(ReportGenerationType)
     report_generation_list = DjangoPaginatedListObjectField(ReportGenerationListType,
-                                                            pagination=PageGraphqlPagination(
+                                                            pagination=PageGraphqlPaginationWithoutCount(
                                                                 page_size_query_param='pageSize'
                                                             ))

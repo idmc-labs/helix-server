@@ -3,10 +3,11 @@ import graphene
 from graphene import Field, ObjectType
 from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
-from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
+from graphene_django_extras import DjangoObjectField
 
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.pagination import PageGraphqlPaginationWithoutCount
 from apps.users.filters import UserFilter, ReviewerUserFilter
 
 from .enums import PermissionActionEnum, PermissionModelEnum, PermissionRoleEnum
@@ -30,11 +31,11 @@ class UserType(DjangoObjectType):
                   'permissions', 'reviewing', 'role', 'username')
 
     reviewing = DjangoPaginatedListObjectField(EntryReviewerListType,
-                                               pagination=PageGraphqlPagination(
+                                               pagination=PageGraphqlPaginationWithoutCount(
                                                    page_size_query_param='pageSize'
                                                ), accessor='reviewing')
     created_entry = DjangoPaginatedListObjectField(EntryListType,
-                                                   pagination=PageGraphqlPagination(
+                                                   pagination=PageGraphqlPaginationWithoutCount(
                                                        page_size_query_param='pageSize'
                                                    ), accessor='created_entry')
     role = Field(PermissionRoleEnum)
@@ -52,11 +53,11 @@ class Query(object):
     me = Field(UserType)
     user = DjangoObjectField(UserType)
     users = DjangoPaginatedListObjectField(UserListType,
-                                           pagination=PageGraphqlPagination(
+                                           pagination=PageGraphqlPaginationWithoutCount(
                                                page_size_query_param='pageSize'
                                            ))
     reviewer_user_list = DjangoPaginatedListObjectField(UserListType,
-                                                        pagination=PageGraphqlPagination(
+                                                        pagination=PageGraphqlPaginationWithoutCount(
                                                             page_size_query_param='pageSize'
                                                         ), filterset_class=ReviewerUserFilter)
 

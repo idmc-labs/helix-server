@@ -2,7 +2,6 @@ import graphene
 from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
 from graphene_django_extras import (
-    PageGraphqlPagination,
     DjangoObjectField,
 )
 
@@ -19,6 +18,7 @@ from apps.country.filters import CountryFilter
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.pagination import PageGraphqlPaginationWithoutCount
 
 
 class CountryRegionType(DjangoObjectType):
@@ -90,41 +90,48 @@ class CountryType(DjangoObjectType):
     last_summary = graphene.Field(SummaryType)
     last_contextual_analysis = graphene.Field(ContextualAnalysisType)
     contacts = DjangoPaginatedListObjectField(ContactListType,
-                                              pagination=PageGraphqlPagination(
+                                              pagination=PageGraphqlPaginationWithoutCount(
                                                   page_size_query_param='pageSize'
                                               ), accessor='contacts')
     operating_contacts = DjangoPaginatedListObjectField(ContactListType,
-                                                        pagination=PageGraphqlPagination(
+                                                        pagination=PageGraphqlPaginationWithoutCount(
                                                             page_size_query_param='pageSize'
                                                         ), accessor='operating_contacts')
     contextual_analyses = DjangoPaginatedListObjectField(ContextualAnalysisListType,
-                                                         pagination=PageGraphqlPagination(
+                                                         pagination=PageGraphqlPaginationWithoutCount(
                                                              page_size_query_param='pageSize'
                                                          ), accessor='contextual_analyses')
     summaries = DjangoPaginatedListObjectField(SummaryListType,
-                                               pagination=PageGraphqlPagination(
+                                               pagination=PageGraphqlPaginationWithoutCount(
                                                    page_size_query_param='pageSize'
                                                ), accessor='summaries')
     crises = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
         get_type('apps.crisis.schema.CrisisListType'),
-        pagination=PageGraphqlPagination(
+        pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
-        ), accessor='crises'))
+        )))
     events = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
         get_type('apps.event.schema.EventListType'),
-        pagination=PageGraphqlPagination(
+        pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
-        ), accessor='events'))
+        )))
     entries = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
         get_type('apps.entry.schema.EntryListType'),
-        pagination=PageGraphqlPagination(
+        pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
-        ), accessor='entries'))
+        ),
+        accessor='entries',
+    ))
+    """
+    related_name='events__entries',
+    reverse_related_name='event__countries',
+    """
     figures = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
         get_type('apps.entry.schema.FigureListType'),
-        pagination=PageGraphqlPagination(
+        pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
-        ), accessor='figures'))
+        ),
+    ))
 
     @staticmethod
     def get_queryset(queryset, info):
@@ -147,7 +154,7 @@ class CountryHouseholdSizeType(DjangoObjectType):
 class Query:
     country = DjangoObjectField(CountryType)
     country_list = DjangoPaginatedListObjectField(CountryListType,
-                                                  pagination=PageGraphqlPagination(
+                                                  pagination=PageGraphqlPaginationWithoutCount(
                                                       page_size_query_param='pageSize'
                                                   ))
     country_region_list = DjangoPaginatedListObjectField(CountryRegionListType)

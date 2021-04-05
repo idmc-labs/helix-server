@@ -92,7 +92,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'utils.middleware.DebugToolbarMiddleware',
+    'utils.middleware.DebugToolbarMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -216,7 +216,7 @@ GRAPHENE = {
 }
 
 GRAPHENE_DJANGO_EXTRAS = {
-    'DEFAULT_PAGINATION_CLASS': 'graphene_django_extras.paginations.PageGraphqlPagination',
+    'DEFAULT_PAGINATION_CLASS': 'utils.pagination.PageGraphqlPaginationWithoutCount',
     'DEFAULT_PAGE_SIZE': 20,
     'MAX_PAGE_SIZE': 50,
     # 'CACHE_ACTIVE': True,
@@ -252,7 +252,7 @@ CORS_ORIGIN_WHITELIST = [
     "http://127.0.0.1:3080"
 ]
 CORS_ALLOW_CREDENTIALS = True
-# CORS_ORIGIN_ALLOW_ALL = True
+CORS_ORIGIN_ALLOW_ALL = True
 # CORS_ORIGIN_REGEX_WHITELIST = [
 #     '^https://[\w\-]+\.idmcdb\.org$'
 # ]
