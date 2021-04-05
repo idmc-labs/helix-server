@@ -1,13 +1,14 @@
 import graphene
 from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
-from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
+from graphene_django_extras import DjangoObjectField
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.contextualupdate.models import ContextualUpdate
 from apps.contextualupdate.filters import ContextualUpdateFilter
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.pagination import PageGraphqlPaginationWithoutCount
 
 
 class ContextualUpdateType(DjangoObjectType):
@@ -36,6 +37,6 @@ class ContextualUpdateListType(CustomDjangoListObjectType):
 class Query:
     contextual_update = DjangoObjectField(ContextualUpdateType)
     contextual_update_list = DjangoPaginatedListObjectField(ContextualUpdateListType,
-                                                            pagination=PageGraphqlPagination(
+                                                            pagination=PageGraphqlPaginationWithoutCount(
                                                                 page_size_query_param='pageSize'
                                                             ))

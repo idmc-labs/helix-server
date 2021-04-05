@@ -19,14 +19,41 @@ from django.contrib import admin
 from django.conf import settings
 from django.urls import path, re_path, include
 from django.views.decorators.csrf import csrf_exempt
+from django.utils.functional import cached_property
 # from graphene_django.views import GraphQLView
 from graphene_file_upload.django import FileUploadGraphQLView
+from apps.country.dataloaders import OneToManyLoader, CountLoader
 
 from . import api_urls as rest_urls
 
 
+class GQLContext:
+    def __init__(self, request):
+        self.request = request
+        self.dataloaders = {}
+
+    @cached_property
+    def user(self):
+        return self.request.user
+
+    def get_dataloader(self, parent: str, child: str):
+        # TODO: rename to get OneToManyLoader?
+        # return a different dataloader for each ref
+        ref = f'{parent}_{child}'
+        if ref not in self.dataloaders:
+            self.dataloaders[ref] = OneToManyLoader()
+        return self.dataloaders[ref]
+
+    @property
+    def get_count_loader(self):
+        return CountLoader()
+
+
 class CustomGraphQLView(FileUploadGraphQLView):
     """Handles multipart/form-data content type in django views"""
+    def get_context(self, request):
+        return GQLContext(request)
+
     def parse_body(self, request):
         """
         Allow for variable batch

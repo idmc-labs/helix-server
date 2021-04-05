@@ -1,12 +1,13 @@
 import graphene
 from graphene_django import DjangoObjectType
-from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
+from graphene_django_extras import DjangoObjectField
 
 from apps.parking_lot.models import ParkedItem
 from apps.parking_lot.enums import ParkedItemGrapheneEnum
 from apps.parking_lot.filters import ParkingLotFilter
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.pagination import PageGraphqlPaginationWithoutCount
 
 
 class ParkedItemType(DjangoObjectType):
@@ -26,6 +27,6 @@ class ParkedItemListType(CustomDjangoListObjectType):
 class Query:
     parked_item = DjangoObjectField(ParkedItemType)
     parked_item_list = DjangoPaginatedListObjectField(ParkedItemListType,
-                                                      pagination=PageGraphqlPagination(
+                                                      pagination=PageGraphqlPaginationWithoutCount(
                                                           page_size_query_param='pageSize'
                                                       ))

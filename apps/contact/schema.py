@@ -1,12 +1,13 @@
 import graphene
 from graphene_django import DjangoObjectType
-from graphene_django_extras import DjangoObjectField, PageGraphqlPagination
+from graphene_django_extras import DjangoObjectField
 
 from apps.contact.enums import DesignationGrapheneEnum, GenderGrapheneEnum
 from apps.contact.filters import ContactFilter, CommunicationFilter
 from apps.contact.models import Contact, Communication, CommunicationMedium
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.pagination import PageGraphqlPaginationWithoutCount
 
 
 class CommunicationMediumType(DjangoObjectType):
@@ -40,7 +41,7 @@ class ContactType(DjangoObjectType):
     designation = graphene.Field(DesignationGrapheneEnum)
     gender = graphene.Field(GenderGrapheneEnum)
     communications = DjangoPaginatedListObjectField(CommunicationListType,
-                                                    pagination=PageGraphqlPagination(
+                                                    pagination=PageGraphqlPaginationWithoutCount(
                                                         page_size_query_param='pageSize'
                                                     ))
 
@@ -55,11 +56,11 @@ class Query:
     contact = DjangoObjectField(ContactType)
     communication = DjangoObjectField(CommunicationType)
     contact_list = DjangoPaginatedListObjectField(ContactListType,
-                                                  pagination=PageGraphqlPagination(
+                                                  pagination=PageGraphqlPaginationWithoutCount(
                                                       page_size_query_param='pageSize'
                                                   ))
     communication_medium_list = DjangoPaginatedListObjectField(CommunicationMediumListType)
     communication_list = DjangoPaginatedListObjectField(CommunicationListType,
-                                                        pagination=PageGraphqlPagination(
+                                                        pagination=PageGraphqlPaginationWithoutCount(
                                                             page_size_query_param='pageSize'
                                                         ))

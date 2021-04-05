@@ -65,7 +65,7 @@ class Login(graphene.Mutation):
         if errors := mutation_is_not_valid(serializer):
             return Login(errors=errors, ok=False)
         if user := serializer.validated_data.get('user'):
-            login(info.context, user)
+            login(info.context.request, user)
         return Login(
             result=user,
             errors=None,

@@ -1,6 +1,6 @@
 import graphene
 from graphene_django import DjangoObjectType
-from graphene_django_extras import DjangoObjectField, PageGraphqlPagination
+from graphene_django_extras import DjangoObjectField
 
 from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -20,6 +20,7 @@ from apps.event.models import (
 from apps.event.filters import EventFilter
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.pagination import PageGraphqlPaginationWithoutCount
 
 
 class TriggerSubObjectType(DjangoObjectType):
@@ -187,7 +188,7 @@ class Query:
     violence_list = DjangoPaginatedListObjectField(ViolenceListType)
     actor = DjangoObjectField(ActorType)
     actor_list = DjangoPaginatedListObjectField(ActorListType,
-                                                pagination=PageGraphqlPagination(
+                                                pagination=PageGraphqlPaginationWithoutCount(
                                                     page_size_query_param='pageSize'
                                                 ))
     disaster_category_list = DjangoPaginatedListObjectField(DisasterCategoryListType)
@@ -197,6 +198,6 @@ class Query:
 
     event = DjangoObjectField(EventType)
     event_list = DjangoPaginatedListObjectField(EventListType,
-                                                pagination=PageGraphqlPagination(
+                                                pagination=PageGraphqlPaginationWithoutCount(
                                                     page_size_query_param='pageSize'
                                                 ))

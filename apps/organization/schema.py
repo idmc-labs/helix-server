@@ -1,10 +1,11 @@
 from graphene_django import DjangoObjectType
-from graphene_django_extras import PageGraphqlPagination, DjangoObjectField
+from graphene_django_extras import DjangoObjectField
 
 from apps.contact.schema import ContactListType
 from apps.organization.models import Organization, OrganizationKind
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.pagination import PageGraphqlPaginationWithoutCount
 
 
 class OrganizationType(DjangoObjectType):
@@ -12,7 +13,9 @@ class OrganizationType(DjangoObjectType):
         model = Organization
 
     contacts = DjangoPaginatedListObjectField(ContactListType,
-                                              pagination=PageGraphqlPagination(page_size_query_param='pageSize'))
+                                              pagination=PageGraphqlPaginationWithoutCount(
+                                                  page_size_query_param='pageSize'
+                                              ))
 
 
 class OrganizationListType(CustomDjangoListObjectType):
@@ -28,7 +31,9 @@ class OrganizationKindObjectType(DjangoObjectType):
         model = OrganizationKind
 
     organizations = DjangoPaginatedListObjectField(OrganizationListType,
-                                                   pagination=PageGraphqlPagination(page_size_query_param='pageSize'))
+                                                   pagination=PageGraphqlPaginationWithoutCount(
+                                                       page_size_query_param='pageSize'
+                                                   ))
 
 
 class OrganizationKindListType(CustomDjangoListObjectType):
@@ -39,11 +44,11 @@ class OrganizationKindListType(CustomDjangoListObjectType):
 class Query:
     organization = DjangoObjectField(OrganizationType)
     organization_list = DjangoPaginatedListObjectField(OrganizationListType,
-                                                       pagination=PageGraphqlPagination(
+                                                       pagination=PageGraphqlPaginationWithoutCount(
                                                            page_size_query_param='pageSize'
                                                        ))
     organization_kind = DjangoObjectField(OrganizationKindObjectType)
     organization_kind_list = DjangoPaginatedListObjectField(OrganizationKindListType,
-                                                            pagination=PageGraphqlPagination(
+                                                            pagination=PageGraphqlPaginationWithoutCount(
                                                                 page_size_query_param='pageSize'
                                                             ))

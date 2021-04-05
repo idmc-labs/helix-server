@@ -45,7 +45,10 @@ class DebugToolbarMiddleware(BaseMiddleware):
             toolbar.enabled_panels,
         )
 
-        payload = get_payload(request, response, toolbar)
+        try:
+            payload = get_payload(request, response, toolbar)
+        except:  # NOQA
+            return self.get_response(request)
         response.content = json.dumps(payload, cls=CallableJSONEncoder)
         set_content_length(response)
         return response
