@@ -170,12 +170,12 @@ class EntryType(DjangoObjectType):
     reviewers = graphene.Dynamic(
         lambda: DjangoPaginatedListObjectField(
             get_type('apps.users.schema.UserListType'),
-            accessor='reviewers'
+            related_name='reviewers',
+            reverse_related_name='review_entries',
         ))
     review_comments = graphene.Dynamic(
         lambda: DjangoPaginatedListObjectField(
             get_type('apps.review.schema.ReviewCommentListType'),
-            accessor='review_comments',
             pagination=PageGraphqlPaginationWithoutCount(
                 page_size_query_param='pageSize'
             )
@@ -212,7 +212,7 @@ class SourcePreviewType(DjangoObjectType):
 
     def resolve_pdf(root, info, **kwargs):
         if root.status == SourcePreview.PREVIEW_STATUS.COMPLETED:
-            return info.context.build_absolute_uri(root.pdf.url)
+            return info.context.request.build_absolute_uri(root.pdf.url)
         return None
 
 

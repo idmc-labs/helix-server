@@ -30,14 +30,22 @@ class UserType(DjangoObjectType):
                   'full_name', 'id', 'is_active', 'last_login',
                   'permissions', 'reviewing', 'role', 'username')
 
-    reviewing = DjangoPaginatedListObjectField(EntryReviewerListType,
-                                               pagination=PageGraphqlPaginationWithoutCount(
-                                                   page_size_query_param='pageSize'
-                                               ), accessor='reviewing')
-    created_entry = DjangoPaginatedListObjectField(EntryListType,
-                                                   pagination=PageGraphqlPaginationWithoutCount(
-                                                       page_size_query_param='pageSize'
-                                                   ), accessor='created_entry')
+    reviewing = DjangoPaginatedListObjectField(
+        EntryReviewerListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        ),
+        related_name='reviewing',
+        reverse_related_name='reviewer',
+    )
+    created_entry = DjangoPaginatedListObjectField(
+        EntryListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        ),
+        related_name='created_entry',
+        reverse_related_name='created_by',
+    )
     role = Field(PermissionRoleEnum)
     permissions = graphene.List(graphene.NonNull(PermissionsType))
     full_name = Field(graphene.String, required=True)

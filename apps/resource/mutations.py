@@ -37,7 +37,7 @@ class CreateResource(graphene.Mutation):
     @permission_checker(['resource.add_resource'])
     def mutate(root, info, data):
         serializer = ResourceSerializer(data=data,
-                                        context={'request': info.context})
+                                        context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateResource(errors=errors, ok=False)
         instance = serializer.save()
@@ -63,7 +63,7 @@ class UpdateResource(graphene.Mutation):
             ])
         serializer = ResourceSerializer(instance=instance,
                                         data=data,
-                                        context={'request': info.context},
+                                        context={'request': info.context.request},
                                         partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateResource(errors=errors, ok=False)
@@ -116,7 +116,7 @@ class CreateResourceGroup(graphene.Mutation):
     @permission_checker(['resource.add_resource'])
     def mutate(root, info, data):
         serializer = ResourceGroupSerializer(data=data,
-                                             context={'request': info.context})
+                                             context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateResourceGroup(errors=errors, ok=False)
         instance = serializer.save()
@@ -142,7 +142,7 @@ class UpdateResourceGroup(graphene.Mutation):
             ])
         serializer = ResourceGroupSerializer(instance=instance,
                                              data=data,
-                                             context={'request': info.context},
+                                             context={'request': info.context.request},
                                              partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateResourceGroup(errors=errors, ok=False)

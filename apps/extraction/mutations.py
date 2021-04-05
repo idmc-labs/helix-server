@@ -31,7 +31,7 @@ class CreateExtraction(graphene.Mutation):
     @staticmethod
     def mutate(root, info, data):  # noqa
         serializer = ExtractionQuerySerializer(data=data,
-                                               context={'request': info.context})
+                                               context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):  # noqa
             return CreateExtraction(errors=errors, ok=False)
         instance = serializer.save()
@@ -57,7 +57,7 @@ class UpdateExtraction(graphene.Mutation):
             ])
         serializer = ExtractionQuerySerializer(instance=instance,
                                                data=data,
-                                               context={'request': info.context})
+                                               context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):  # noqa
             return CreateExtraction(errors=errors, ok=False)
         instance = serializer.save()
