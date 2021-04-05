@@ -19,6 +19,18 @@ def get_relations(model1, model2):
     return relations
 
 
+def get_related_name(model1, model2):
+    '''
+    To be used with models with single relationship in between
+    Returns the first relation found
+
+    If multiple relations exists, pass related_name and reverse_related_name explicitly
+    '''
+    relations = get_relations(model1, model2)
+    if relations:
+        return relations[0]
+
+
 class CountLoader(DataLoader):
     def load(
         self,
@@ -47,82 +59,31 @@ class CountLoader(DataLoader):
         self.kwargs = kwargs
         return super().load(key)
 
-    def get_related_name(self, model1, model2):
-        '''
-        To be used with models with single relationship in between
-        Returns the first relation found
-
-        If multiple relations exists, pass related_name and reverse_related_name explicitly
-        '''
-        relations = get_relations(model1, model2)
-        if relations:
-            return relations[0]
-
     def batch_load_fn(self, keys):
-        related_objects_by_parent = defaultdict(list)
-
         # queryset by related names
-        related_name = self.related_name or self.get_related_name(self.parent, self.child)
-        reverse_related_name = self.reverse_related_name or self.get_related_name(self.child, self.parent)
+        reverse_related_name = self.reverse_related_name or get_related_name(self.child, self.parent)
 
-        # queryset by custom accessor
-        # accessor = self.accessor
-
-        # pre-ready the filtered queryset
-        '''
         filtered_qs = self.filterset_class(
             data=self.filter_kwargs,
-            request=self.request,
-        ).qs.filter(**{
-            reverse_related_name: OuterRef(reverse_related_name)
-        }).values('id')
+            request=self.request
+        ).qs
 
-        prefetch = Prefetch(
-            related_name,
-            queryset=self.child.objects.filter(
-                id__in=Subquery(
-                    filtered_qs
-                )
-            ).distinct(),
-            to_attr='output'
-        )
-
-        qs = self.parent.objects.filter(id__in=keys).prefetch_related(
-            prefetch
+        qs = self.parent.objects.filter(
+            id__in=keys
         ).annotate(
             count=Subquery(
-                self.child.objects.filter(
-                    id__in=Subquery(
-                    )
-                ),
+                filtered_qs.filter(**{
+                    reverse_related_name: OuterRef('pk')
+                }).order_by().values(
+                    reverse_related_name
+                ).annotate(
+                    c=Count('*')
+                ).values('c'),
                 output_field=IntegerField()
             )
-        )
-        '''
-        from apps.entry.models import Entry, Figure
-        filtered_qs = Figure.objects.filter()
-        prefetch = Prefetch(
-            'figures',
-            queryset=Figure.objects.filter(
-                id__in=Subquery(
-                    filtered_qs.filter(**{
-                        'entry': OuterRef('entry')
-                    }).values('id'),
-                )
-            ).distinct(),
-            to_attr='out'
-        )
+        ).values_list('id', 'count')
 
-        class SQCount(Subquery):
-            template = "(SELECT count(*) FROM (%(subquery)s) _count)"
-            output_field = IntegerField()
-
-        qs = Entry.objects.filter(id__in=keys).prefetch_related(
-            prefetch
-        )
-
-        for each in qs:
-            related_objects_by_parent[each.id] = len(each.out)
+        related_objects_by_parent = {id_: count for id_, count in qs}
 
         return Promise.resolve([
             related_objects_by_parent.get(key, 0) for key in keys
@@ -157,23 +118,12 @@ class OneToManyLoader(DataLoader):
         self.kwargs = kwargs
         return super().load(key)
 
-    def get_related_name(self, model1, model2):
-        '''
-        To be used with models with single relationship in between
-        Returns the first relation found
-
-        If multiple relations exists, pass related_name and reverse_related_name explicitly
-        '''
-        relations = get_relations(model1, model2)
-        if relations:
-            return relations[0]
-
     def batch_load_fn(self, keys):
         related_objects_by_parent = defaultdict(list)
 
         # queryset by related names
-        related_name = self.related_name or self.get_related_name(self.parent, self.child)
-        reverse_related_name = self.reverse_related_name or self.get_related_name(self.child, self.parent)
+        related_name = self.related_name or get_related_name(self.parent, self.child)
+        reverse_related_name = self.reverse_related_name or get_related_name(self.child, self.parent)
 
         # queryset by custom accessor
         # accessor = self.accessor
