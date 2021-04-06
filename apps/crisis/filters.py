@@ -1,17 +1,19 @@
 import django_filters
 
 from apps.crisis.models import Crisis
-from utils.filters import StringListFilter
+from utils.filters import StringListFilter, NameFilterMixin
 
 
-class CrisisFilter(django_filters.FilterSet):
+class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
     countries = StringListFilter(method='filter_countries')
-    filter_crisis_types = StringListFilter(method='filter_crisis_types')
+    crisis_types = StringListFilter(method='filter_crisis_types')
 
     class Meta:
         model = Crisis
         fields = {
-            'name': ['icontains']
+            'created_at': ['lt', 'lte', 'gt', 'gte'],
+            'start_date': ['lt', 'lte', 'gt', 'gte'],
+            'end_date': ['lt', 'lte', 'gt', 'gte'],
         }
 
     def filter_countries(self, qs, name, value):
@@ -24,9 +26,8 @@ class CrisisFilter(django_filters.FilterSet):
             if isinstance(value[0], int):
                 # internal filtering
                 return qs.filter(crisis_type__in=value).distinct()
-            else:
-                # client side filtering
-                return qs.filter(crisis_type__in=[
-                    Crisis.CRISIS_TYPE.get(item).value for item in value
-                ])
+            # client side filtering
+            return qs.filter(crisis_type__in=[
+                Crisis.CRISIS_TYPE.get(item).value for item in value
+            ]).distinct()
         return qs
