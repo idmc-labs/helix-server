@@ -1,4 +1,6 @@
 import django
+from django.db.models import Value
+from django.db.models.functions import Lower, StrIndex
 import django_filters
 import graphene
 from graphene_django.forms.converter import convert_form_field
@@ -59,3 +61,16 @@ class AllowInitialFilterSetMixin:
                     data[name] = initial
 
         super().__init__(data, *args, **kwargs)
+
+
+class NameFilterMixin:
+    name = django_filters.CharFilter(method='_filter_name')
+
+    def _filter_name(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.annotate(
+            lname=Lower('name')
+        ).annotate(
+            idx=StrIndex('lname', Value(value.lower()))
+        ).filter(idx__gt=0).order_by('idx', 'name')
