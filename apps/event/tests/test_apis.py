@@ -269,8 +269,8 @@ class TestEventListQuery(HelixGraphQLTestCase):
         self.event1 = EventFactory.create(name=self.event1_name)
         self.event2 = EventFactory.create(name='blatwo')
         self.q = '''
-            query EventList($crisis: ID, $name: String){
-              eventList(crisis: $crisis, nameContains: $name) {
+            query EventList($crisisByIds: [ID!], $name: String){
+              eventList(crisisByIds: $crisisByIds, name: $name) {
                 results {
                   id
                 }
@@ -282,7 +282,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
 
     def test_event_list_filter(self):
         variables = {
-            "crisis": self.event1.crisis.id,
+            "crisisByIds": [str(self.event1.crisis.id)]
         }
         response = self.query(self.q,
                               variables=variables)
