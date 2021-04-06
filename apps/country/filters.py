@@ -12,6 +12,8 @@ from utils.filters import StringListFilter, NameFilterMixin
 
 class GeographicalGroupFilter(NameFilterMixin,
                               django_filters.FilterSet):
+    name = django_filters.CharFilter(method='_filter_name')
+
     class Meta:
         model = GeographicalGroup
         fields = {
@@ -21,6 +23,8 @@ class GeographicalGroupFilter(NameFilterMixin,
 
 class CountryRegionFilter(NameFilterMixin,
                           django_filters.FilterSet):
+    name = django_filters.CharFilter(method='_filter_name')
+
     class Meta:
         model = CountryRegion
         fields = {
@@ -28,8 +32,9 @@ class CountryRegionFilter(NameFilterMixin,
         }
 
 
-class CountryFilter(NameFilterMixin,
-                    django_filters.FilterSet):
+class CountryFilter(django_filters.FilterSet,
+                    NameFilterMixin):
+    name = django_filters.CharFilter(method='_filter_name')
     region_name = django_filters.CharFilter(method='filter_region_name')
     geographical_group_name = django_filters.CharFilter(method='filter_geo_group_name')
     region_by_ids = StringListFilter(method='filter_regions')
