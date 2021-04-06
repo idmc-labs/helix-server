@@ -9,8 +9,8 @@ from apps.entry.models import (
     CANNOT_UPDATE_MESSAGE,
     FigureCategory,
 )
-from apps.entry.constants import STOCK
 from apps.entry.models import DisaggregatedAgeCategory
+from apps.entry.constants import FLOW
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     EventFactory,
@@ -44,34 +44,37 @@ class TestEntryQuery(HelixGraphQLTestCase):
         self.force_login(guest)
 
     def test_figure_count_filtered_resolvers(self):
-        self.fig_cat = FigureCategory.stock_idp_id()
-        self.fig_cat_id = str(self.fig_cat.id)
-        self.fig_cat2 = FigureCategoryFactory.create(type=STOCK)
-        self.fig_cat_id2 = str(self.fig_cat2.id)
-        self.fig_cat3 = FigureCategory.flow_new_displacement_id()
-        self.fig_cat_id3 = str(self.fig_cat3.id)
+        self.stock_fig_cat = FigureCategory.stock_idp_id()
+        self.stock_fig_cat_id = str(self.stock_fig_cat.id)
+        self.random_fig_cat2 = FigureCategoryFactory.create(
+            type=FLOW,
+            name='lool',
+        )
+        self.random_fig_cat_id2 = str(self.random_fig_cat2.id)
+        self.flow_fig_cat3 = FigureCategory.flow_new_displacement_id()
+        self.flow_fig_cat_id3 = str(self.flow_fig_cat3.id)
         figure1 = FigureFactory.create(entry=self.entry,
-                                       category=self.fig_cat,
-                                       reported=100,
+                                       category=self.stock_fig_cat,
+                                       reported=101,
                                        role=Figure.ROLE.RECOMMENDED,
                                        unit=Figure.UNIT.PERSON)
         FigureFactory.create(entry=self.entry,
-                             category=self.fig_cat,
-                             reported=100,
+                             category=self.stock_fig_cat,
+                             reported=102,
                              role=Figure.ROLE.TRIANGULATION,
                              unit=Figure.UNIT.PERSON)
-        figure2 = FigureFactory.create(entry=self.entry,
-                                       category=self.fig_cat,
-                                       reported=100,
+        figure3 = FigureFactory.create(entry=self.entry,
+                                       category=self.stock_fig_cat,
+                                       reported=103,
                                        role=Figure.ROLE.RECOMMENDED,
                                        unit=Figure.UNIT.PERSON)
         FigureFactory.create(entry=self.entry,
-                             category=self.fig_cat2,
+                             category=self.random_fig_cat2,
                              reported=50,
                              role=Figure.ROLE.RECOMMENDED,
                              unit=Figure.UNIT.PERSON)
-        figure4 = FigureFactory.create(entry=self.entry,
-                                       category=self.fig_cat3,
+        figure5 = FigureFactory.create(entry=self.entry,
+                                       category=self.flow_fig_cat3,
                                        reported=70,
                                        role=Figure.ROLE.RECOMMENDED,
                                        unit=Figure.UNIT.PERSON)
@@ -79,18 +82,18 @@ class TestEntryQuery(HelixGraphQLTestCase):
             self.entry_query,
             variables=dict(
                 id=str(self.entry.id),
-                data=dict(categories=[self.fig_cat_id])
+                data=dict(categories=[self.stock_fig_cat_id])
             )
         )
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
         self.assertEqual(
             content['data']['entry']['totalStockIdpFigures'],
-            figure1.total_figures + figure2.total_figures
+            figure1.total_figures + figure3.total_figures
         )
         self.assertEqual(
             content['data']['entry']['totalFlowNdFigures'],
-            figure4.total_figures
+            figure5.total_figures
         )
         # category based filter for entry stock/flow figures will not be used,
         # since it is directly filtered by IDP or NEW DISPLACEMENT
