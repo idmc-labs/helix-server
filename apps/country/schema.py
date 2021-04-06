@@ -15,7 +15,11 @@ from apps.country.models import (
     HouseholdSize,
     GeographicalGroup,
 )
-from apps.country.filters import CountryFilter
+from apps.country.filters import (
+    CountryFilter,
+    CountryRegionFilter,
+    GeographicalGroupFilter,
+)
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
@@ -29,9 +33,7 @@ class CountryRegionType(DjangoObjectType):
 class CountryRegionListType(CustomDjangoListObjectType):
     class Meta:
         model = CountryRegion
-        filter_fields = {
-            'name': ('icontains',),
-        }
+        filterset_class = CountryRegionFilter
 
 
 class GeographicalGroupType(DjangoObjectType):
@@ -42,9 +44,7 @@ class GeographicalGroupType(DjangoObjectType):
 class GeographicalGroupListType(CustomDjangoListObjectType):
     class Meta:
         model = GeographicalGroup
-        filter_fields = {
-            'name': ('icontains',),
-        }
+        filterset_class = GeographicalGroupFilter
 
 
 class ContextualAnalysisType(DjangoObjectType):
