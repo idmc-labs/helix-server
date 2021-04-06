@@ -37,5 +37,5 @@ class EventFilter(NameFilterMixin,
                 return qs.filter(event_type__in=value).distinct()
             return qs.filter(event_type__in=[
                 Crisis.CRISIS_TYPE.get(item).value for item in value
-            ])
+            ]).distinct()
         return qs
