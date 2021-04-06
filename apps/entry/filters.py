@@ -7,7 +7,7 @@ from apps.entry.models import (
     OSMName,
     Figure,
 )
-from utils.filters import StringListFilter
+from utils.filters import StringListFilter, IDListFilter
 
 under_review_subquery = EntryReviewer.objects.filter(
     entry=OuterRef('pk'),
@@ -67,11 +67,33 @@ class FigureFilter(df.FilterSet):
 
 class EntryFilter(df.FilterSet):
     article_title_contains = df.CharFilter(field_name='article_title', lookup_expr='icontains')
-    countries = StringListFilter(method='filter_countries')
+    countries = IDListFilter(method='filter_countries')
+    sources_by_ids = IDListFilter(method='filter_sources')
+    publishers_by_ids = IDListFilter(method='filter_publishers')
+    created_by_ids = IDListFilter(method='filter_created_by')
 
     class Meta:
         model = Entry
-        fields = ['event', 'created_by', 'reviewers']
+        fields = {
+            'event': ['exact'],
+            'is_confidential': ['exact'],
+            'publish_date': ['lt', 'lte', 'gt', 'gte'],
+        }
+
+    def filter_created_by(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(created_by__in=value)
+
+    def filter_publishers(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(publishers__in=value).distinct()
+
+    def filter_sources(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(sources__in=value).distinct()
 
     def filter_countries(self, qs, name, value):
         if not value:
