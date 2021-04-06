@@ -64,7 +64,8 @@ class AllowInitialFilterSetMixin:
 
 
 class NameFilterMixin:
-    name = django_filters.CharFilter(method='_filter_name')
+    # NOTE: add a `name` django_filter as follows in the child filters
+    # name = django_filters.CharFilter(method='_filter_name')
 
     def _filter_name(self, queryset, name, value):
         if not value:

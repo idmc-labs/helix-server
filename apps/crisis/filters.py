@@ -5,6 +5,7 @@ from utils.filters import StringListFilter, NameFilterMixin
 
 
 class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
+    name = django_filters.CharFilter(method='_filter_name')
     countries = StringListFilter(method='filter_countries')
     crisis_types = StringListFilter(method='filter_crisis_types')
 
