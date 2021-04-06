@@ -16,6 +16,13 @@ class UserFactory(DjangoModelFactory):
     username = factory.Sequence(lambda n: f'username{n}')
 
 
+class GeographicalGroupFactory(DjangoModelFactory):
+    class Meta:
+        model = 'country.GeographicalGroup'
+
+    name = factory.Faker('first_name')
+
+
 class CountryRegionFactory(DjangoModelFactory):
     class Meta:
         model = 'country.CountryRegion'

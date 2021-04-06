@@ -34,7 +34,7 @@ class CountryRegionFilter(NameFilterMixin,
 
 class CountryFilter(django_filters.FilterSet,
                     NameFilterMixin):
-    name = django_filters.CharFilter(method='_filter_name')
+    country_name = django_filters.CharFilter(method='_filter_name')
     region_name = django_filters.CharFilter(method='filter_region_name')
     geographical_group_name = django_filters.CharFilter(method='filter_geo_group_name')
     region_by_ids = StringListFilter(method='filter_regions')
