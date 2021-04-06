@@ -131,7 +131,6 @@ class Report(MetaInformationArchiveAbstractModel,
         return Figure.objects.filter(id__in=figures_ids)
 
     @property
-    # @cache_me(3000)
     def countries_report(self) -> list:
         return self.report_figures.select_related(
             'country'
@@ -142,7 +141,6 @@ class Report(MetaInformationArchiveAbstractModel,
         )
 
     @property
-    # @cache_me(3000)
     def events_report(self) -> list:
         return self.report_figures.select_related(
             'entry__event'
@@ -155,7 +153,6 @@ class Report(MetaInformationArchiveAbstractModel,
         )
 
     @property
-    # @cache_me(3000)
     def entries_report(self) -> list:
         from apps.entry.filters import (
             reviewed_subquery,
@@ -175,7 +172,6 @@ class Report(MetaInformationArchiveAbstractModel,
         )
 
     @property
-    # @cache_me(3000)
     def crises_report(self) -> list:
         return self.report_figures.filter(
             entry__event__crisis__isnull=False
@@ -190,7 +186,6 @@ class Report(MetaInformationArchiveAbstractModel,
         )
 
     @property
-    # @cache_me(3000)
     def total_disaggregation(self) -> dict:
         return self.report_figures.annotate(
             **self.TOTAL_FIGURE_DISAGGREGATIONS,

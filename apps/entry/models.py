@@ -110,17 +110,21 @@ class FigureCategory(models.Model):
 
     @classmethod
     def stock_idp_id(cls):
-        return cls.objects.get(
-            type=STOCK,
-            name__iexact='idps'
-        )
+        if not hasattr(cls, '_stock_idp_id'):
+            cls._stock_idp_id = cls.objects.get(
+                type=STOCK,
+                name__iexact='idps'
+            )
+        return cls._stock_idp_id
 
     @classmethod
     def flow_new_displacement_id(cls):
-        return cls.objects.get(
-            type=FLOW,
-            name__iexact='new displacement'
-        )
+        if not hasattr(cls, '_flow_new_displacement_id'):
+            cls._flow_new_displacement_id = cls.objects.get(
+                type=FLOW,
+                name__iexact='new displacement'
+            )
+        return cls._flow_new_displacement_id
 
 
 class FigureDisaggregationAbstractModel(models.Model):
