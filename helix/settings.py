@@ -93,7 +93,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     # NOTE: DebugToolbarMiddleware will cause mutation to execute twice for the client, works find with graphiql
-    # 'utils.middleware.DebugToolbarMiddleware',
+    'utils.middleware.DebugToolbarMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',

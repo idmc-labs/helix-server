@@ -144,12 +144,12 @@ class FigureExtractionFilterSet(df.FilterSet):
                     # for stock, we only have start date
                     category__type=STOCK,
                     start_date__gte=self.data['filter_figure_start_after'],
-                    start_date__lt=self.data['filter_figure_end_before'],
+                    start_date__lte=self.data['filter_figure_end_before'],
                 ) | Q(
                     # for flow, we will look into end dates
                     category__type=FLOW,
                     end_date__gte=self.data['filter_figure_start_after'],
-                    end_date__lt=self.data['filter_figure_end_before'],
+                    end_date__lte=self.data['filter_figure_end_before'],
                 )
             )
         return qs.distinct()

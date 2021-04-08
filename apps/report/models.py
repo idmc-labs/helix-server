@@ -17,6 +17,7 @@ from django.db.models import (
     OuterRef,
     Min,
     Max,
+    Value,
 )
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -45,6 +46,64 @@ EXCEL_FORMULAE = {
     'per_100k': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")',
     'percent_variation': '=IF({key2}{{row}}, 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")',
 }
+
+
+class AnnotationReportQuerySet(models.QuerySet):
+    '''
+    This is to enable ordering and filtering in the report list page
+    also to prevent extra queries.
+    The fields mentioned below are linked to the QueryModel and are
+    also reflected in the respective report filters
+    '''
+    def with_total_stock_conflict(self):
+        secondary_filters = {
+            k: Coalesce(
+                OuterRef(ref),
+                F(k),
+            ) for k, ref in [
+                ('country', 'filter_figure_countries'),
+                ('country__region', 'filter_figure_regions'),
+                ('country__geographical_group', 'filter_figure_geographical_groups'),
+                # ('entry__event__crisis', 'filter_event_crises'),
+                ('entry__tags', 'filter_entry_tags'),
+                # ('category', 'filter_figure_categories'),
+                # ('role', 'filter_figure_roles'),
+                # ('entry__event__event_type', 'filter_event_crisis_types'),
+            ]
+        }
+        qs = self.annotate(
+            total_stock_conflict_sum=Subquery(
+                Figure.objects.filter(
+                    # main filters
+                    category=FigureCategory.stock_idp_id(),
+                    role=Figure.ROLE.RECOMMENDED,
+                    entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                    # secondary filters
+                    **secondary_filters,
+                    start_date__gte=Coalesce(
+                        OuterRef('filter_figure_start_after'),
+                        F('start_date')
+                    ),
+                    start_date__lte=Coalesce(
+                        OuterRef('filter_figure_end_before'),
+                        F('start_date')
+                    ),
+                ).annotate(
+                    __temp=Value(1)
+                ).order_by().values(
+                    '__temp'
+                ).annotate(
+                    sum=Sum('total_figures', distinct=True)
+                ).values('sum'),
+                output_field=models.IntegerField()
+            )
+        )
+        # print(qs.query)
+        return qs
+
+
+class AnnotationReportManager(models.Manager):
+    pass
 
 
 class Report(MetaInformationArchiveAbstractModel,
@@ -119,6 +178,8 @@ class Report(MetaInformationArchiveAbstractModel,
     is_signed_off_by = models.ForeignKey(User, verbose_name=_('Last signed off by'),
                                          blank=True, null=True,
                                          related_name='signed_off_reports', on_delete=models.CASCADE)
+
+    objects = AnnotationReportManager.from_queryset(AnnotationReportQuerySet)()
 
     @property
     def report_figures(self):

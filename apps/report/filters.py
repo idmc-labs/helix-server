@@ -20,7 +20,7 @@ class ReportFilter(df.FilterSet):
 
     @property
     def qs(self):
-        return super().qs.distinct()
+        return super().qs.with_total_stock_conflict().distinct()
 
 
 class CountryReportFilter(df.FilterSet):

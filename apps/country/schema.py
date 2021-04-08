@@ -128,6 +128,8 @@ class CountryType(DjangoObjectType):
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
         )))
+    crises_count = graphene.Int()
+    events_count = graphene.Int()
     entries = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
         get_type('apps.entry.schema.EntryListType'),
         pagination=PageGraphqlPaginationWithoutCount(

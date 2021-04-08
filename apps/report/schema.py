@@ -192,7 +192,11 @@ class ReportType(DjangoObjectType):
                                                    pagination=PageGraphqlPaginationWithoutCount(
                                                        page_size_query_param='pageSize'
                                                    ))
+    # to be removed
     total_disaggregation = graphene.NonNull(ReportTotalsType)
+    # top level
+    total_stock_conflict_sum = graphene.Int()
+
     last_generation = graphene.Field(ReportGenerationType)
     generations = DjangoPaginatedListObjectField(
         ReportGenerationListType,
