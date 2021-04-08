@@ -1,5 +1,6 @@
 import json
 
+from apps.parking_lot.models import ParkedItem
 from apps.users.enums import USER_ROLE
 from utils.factories import CountryFactory, ParkingLotFactory
 from utils.tests import (
@@ -27,7 +28,7 @@ class TestCreateParkedItem(HelixGraphQLTestCase):
 
         self.assigned_to = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.input = dict(
-            country=self.country_id,
+            # country=self.country_id,
             assignedTo=str(self.assigned_to.id),
             status='TO_BE_REVIEWED',
             title='title',
@@ -113,3 +114,49 @@ class ParkedItemAPITestCase(HelixAPITestCase):
         self.authenticate()
         response = self.client.post(self.url, data)
         assert response.status_code == 201
+
+    def test_post_multiple_parked_item(self):
+        old_count = ParkedItem.objects.count()
+        self.country1 = CountryFactory.create()
+        self.country2 = CountryFactory.create()
+        self.assigned_to1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.assigned_to2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        data = [
+            {
+                "title": "test_parking",
+                "url": "http://google.com",
+                "country": self.country1.id,
+                "assignedTo": self.assigned_to1.id
+            },
+            {
+                "title": "test_parking1",
+                "url": "http://hello.com",
+                "country": self.country2.id,
+                "assignedTo": self.assigned_to2.id
+            }
+        ]
+        self.authenticate()
+        response = self.client.post(self.url, json.dumps(data), content_type='application/json')
+        assert response.status_code == 201
+        self.assertEqual(ParkedItem.objects.count(), old_count + 2)
+
+    def test_validate_iso3_for_country(self):
+        self.country1 = CountryFactory.create(iso3='npl')
+        self.country2 = CountryFactory.create(iso3='ind')
+        self.assigned_to1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        data = {
+            "title": "test_parking",
+            "url": "http://google.com",
+            "country_iso3": 'abc',
+            "assignedTo": self.assigned_to1.id
+        }
+        self.authenticate()
+        response = self.client.post(self.url, data)
+        assert response.status_code == 400
+
+        # try to post with the iso3 that country has
+        data['country_iso3'] = 'npl'
+        self.authenticate()
+        response = self.client.post(self.url, data)
+        assert response.status_code == 201
+        self.assertEqual(response.data['country'], self.country1.id)  # should set the country of iso3 posted

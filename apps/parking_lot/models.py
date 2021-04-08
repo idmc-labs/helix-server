@@ -17,8 +17,20 @@ class ParkedItem(MetaInformationAbstractModel):
             ON_GOING: _('On going'),
         }
 
+    class PARKING_LOT_SOURCE(enum.Enum):
+        IDETECT = 0
+        HAZARD_MONITORING = 1
+        ACLED = 2
+
+        __labels__ = {
+            IDETECT: _('Idetect'),
+            HAZARD_MONITORING: _('Hazard Monitoring'),
+            ACLED: _('Acled')
+        }
+
     country = models.ForeignKey('country.Country', verbose_name=_('Country'),
-                                related_name='parked_items', on_delete=models.CASCADE)
+                                related_name='parked_items', on_delete=models.SET_NULL,
+                                blank=True, null=True)
     title = models.TextField(verbose_name=_('Title'))
     url = models.URLField(verbose_name=_('URL'))
     assigned_to = models.ForeignKey('users.User', verbose_name=_('Assigned To'),
@@ -29,6 +41,10 @@ class ParkedItem(MetaInformationAbstractModel):
                             default=PARKING_LOT_STATUS.TO_BE_REVIEWED)
     comments = models.TextField(verbose_name=_('Comments'),
                                 blank=True, null=True)
+    source = enum.EnumField(PARKING_LOT_SOURCE, verbose_name=_('Source'),
+                            blank=True, null=True)
+    source_uuid = models.CharField(verbose_name=_('Source Uuid'),
+                                   max_length=255, blank=True, null=True)
 
     def move_to_entry(self):
         ...  # TODO?
