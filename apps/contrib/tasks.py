@@ -11,7 +11,7 @@ from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 
 from helix.settings import QueuePriority
 
-TIMEOUT = 1 * 30 * 1000  # 1 minute
+TIMEOUT = 2 * 60 * 1000  # 2 minutes
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -53,6 +53,7 @@ def generate_excel_file(download_id, user_id):
         content = get_excel_sheet_content(**sheet_data)
         download.file.save(path, ContentFile(content))
         download.status = ExcelDownload.EXCEL_GENERATION_STATUS.COMPLETED
+        download.completed_at = timezone.now()
         download.save()
 
         logger.warn(f'Completed sheet generation for ExcelDownload={download_id} in {time.time() - then}')

@@ -1,5 +1,6 @@
 from collections import OrderedDict
 
+from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
@@ -60,19 +61,30 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             end_date='End Date',
             end_date_accuracy='End Date Accuracy',
             crisis_type='Crisis Type',
-            countries='Countries',
+            countries_iso3='ISO3',
+            countries_name='Countries',
+            regions_name='Regions',
+            events_count='Events Count',
         )
         values = CrisisFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
-        ).qs.values(*[header for header in headers.keys()])
+        ).qs.annotate(
+            countries_iso3=ArrayAgg('countries__iso3', distinct=True),
+            countries_name=ArrayAgg('countries__name', distinct=True),
+            regions_name=ArrayAgg('countries__region__name', distinct=True),
+            events_count=models.Count('events', distinct=True),
+        ).order_by('-created_at').select_related(
+        ).prefetch_related(
+            'countries'
+        ).values(*[header for header in headers.keys()])
         data = [
             {
                 **datum,
                 **dict(
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
-                    crisis_type=getattr(Crisis.CRISIS_TYPE.get(datum['event_type']), 'name', ''),
+                    crisis_type=getattr(Crisis.CRISIS_TYPE.get(datum['crisis_type']), 'name', ''),
                 )
             }
             for datum in values

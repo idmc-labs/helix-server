@@ -78,6 +78,7 @@ class QueryAbstractModel(models.Model):
     @property
     def extract_figures(self) -> ['Figure']:  # noqa
         from apps.extraction.filters import FigureExtractionFilterSet
+
         return FigureExtractionFilterSet(data=dict(
             filter_figure_countries=self.filter_figure_countries.all(),
             filter_figure_regions=self.filter_figure_regions.all(),

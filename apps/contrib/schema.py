@@ -6,6 +6,7 @@ from graphene_django_extras import (
 )
 
 from apps.contrib.models import Attachment, ExcelDownload
+from apps.contrib.filters import ExcelExportFilter
 from apps.contrib.enums import (
     AttachmentForGrapheneEnum,
     DownloadTypeGrapheneEnum,
@@ -31,9 +32,7 @@ class ExcelExportType(DjangoObjectType):
 class ExcelExportsListType(CustomDjangoListObjectType):
     class Meta:
         model = ExcelDownload
-        filter_fields = {
-            'started_at': ['lt', 'gt', 'gte', 'lte']
-        }
+        filterset_class = ExcelExportFilter
 
 
 class AttachmentType(DjangoObjectType):

@@ -106,10 +106,12 @@ class FigureExtractionFilterSet(df.FilterSet):
     # TODO: GRID filter
     filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
     filter_event_crisis_types = StringListFilter(method='filter_crisis_types')
+    # NOTE: report filter is an exclusive filter
+    report = df.CharFilter()
 
     class Meta:
         model = Figure
-        fields = {}
+        fields = ['entry']
 
     def filter_geographical_groups(self, qs, name, value):
         if value:
@@ -182,6 +184,16 @@ class FigureExtractionFilterSet(df.FilterSet):
                     Crisis.CRISIS_TYPE.get(item).value for item in value
                 ])
         return qs
+
+    @property
+    def qs(self):
+        from apps.report.models import Report
+
+        # if report is in the filter params, will ignore everything else
+        if 'report' in self.data:
+            report = Report.objects.get(id=self.data['report'])
+            return report.report_figures
+        return super().qs
 
 
 class ExtractionQueryFilter(df.FilterSet):

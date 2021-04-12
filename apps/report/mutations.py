@@ -1,6 +1,7 @@
 import graphene
 from django.utils.translation import gettext
 
+from apps.contrib.serializers import ExcelDownloadSerializer
 from apps.report.models import (
     Report,
     ReportComment,
@@ -264,6 +265,30 @@ class ApproveReport(graphene.Mutation):
         return ApproveReport(result=instance, errors=None, ok=True)
 
 
+class ExportReportFigures(graphene.Mutation):
+    class Arguments:
+        report = graphene.ID(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **kwargs):
+        from apps.contrib.models import ExcelDownload
+
+        serializer = ExcelDownloadSerializer(
+            data=dict(
+                download_type=int(ExcelDownload.DOWNLOAD_TYPES.FIGURE),
+                filters=kwargs,
+            ),
+            context=dict(request=info.context)
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return ExportReportFigures(errors=errors, ok=False)
+        serializer.save()
+        return ExportReportFigures(errors=None, ok=True)
+
+
 class Mutation(object):
     create_report = CreateReport.Field()
     update_report = UpdateReport.Field()
@@ -276,3 +301,5 @@ class Mutation(object):
     approve_report = ApproveReport.Field()
     start_report_generation = GenerateReport.Field()
     sign_off_report = SignOffReport.Field()
+    # export
+    export_report_figures = ExportReportFigures.Field()

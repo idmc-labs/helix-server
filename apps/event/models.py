@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from django.db import models
+from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
@@ -10,7 +11,7 @@ from apps.contrib.models import (
 )
 from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
-from apps.entry.models import Figure
+from apps.entry.models import Figure, FigureCategory
 from apps.users.models import User
 from utils.validations import is_child_parent_dates_valid
 
@@ -213,12 +214,19 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         headers = OrderedDict(
             id='Id',
             name='Name',
-            crisis__name='Crisis',
             crisis='Crisis Id',
+            crisis__name='Crisis',
             start_date='Start Date',
             start_date_accuracy='Start Date Accuracy',
             end_date='End Date',
             end_date_accuracy='End Date Accuracy',
+            countries_iso3='ISO3',
+            countries_name='Geo Names',
+            regions_name='Geo Regions',
+            figures_count='Figures Count',
+            figures_sum='Reocmmended figures',
+            created_at='Created At',
+            created_by__full_name='Created By',
             event_type='Event Type',
             other_sub_type='Other Sub Type',
             trigger__name='Trigger',
@@ -235,7 +243,32 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         values = EventFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
-        ).qs.values(*[header for header in headers.keys()])
+        ).qs.annotate(
+            countries_iso3=ArrayAgg('countries__iso3', distinct=True),
+            countries_name=ArrayAgg('countries__name', distinct=True),
+            regions_name=ArrayAgg('countries__region__name', distinct=True),
+            figures_sum=models.Sum(
+                'entries__figures__total_figures',
+                filter=models.Q(
+                    entries__figures__category=FigureCategory.flow_new_displacement_id(),
+                    entries__figures__role=Figure.ROLE.RECOMMENDED,
+                ),
+            ),
+            figures_count=models.Count('entries__figures', distinct=True),
+        ).order_by('-created_at').select_related(
+            'trigger',
+            'trigger_sub_type',
+            'violence',
+            'violence_sub_type',
+            'actor',
+            'disaster_category',
+            'disaster_sub_category',
+            'disaster_type',
+            'disaster_sub_type',
+            'created_at',
+        ).prefetch_related(
+            'countries',
+        ).values(*[header for header in headers.keys()])
         data = [
             {
                 **datum,

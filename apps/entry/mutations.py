@@ -1,5 +1,6 @@
 from django.utils.translation import gettext
 import graphene
+from graphene_django.filter.utils import get_filtering_args_from_filterset
 
 from apps.contrib.models import SourcePreview
 from apps.entry.enums import (
@@ -8,6 +9,7 @@ from apps.entry.enums import (
 from apps.entry.models import Entry, EntryReviewer, FigureTag
 from apps.entry.schema import (
     EntryType,
+    FigureType,
     SourcePreviewType,
     EntryReviewerType,
     FigureTagType,)
@@ -17,7 +19,8 @@ from apps.entry.serializers import (
     FigureTagCreateSerializer,
     FigureTagUpdateSerializer,
 )
-from apps.contrib.serializers import SourcePreviewSerializer
+from apps.extraction.filters import FigureExtractionFilterSet, EntryExtractionFilterSet
+from apps.contrib.serializers import SourcePreviewSerializer, ExcelDownloadSerializer
 from apps.users.roles import USER_ROLE
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker, is_authenticated
@@ -276,6 +279,60 @@ class DeleteFigureTag(graphene.Mutation):
         return DeleteFigureTag(result=instance, errors=None, ok=True)
 
 
+class ExportEntries(graphene.Mutation):
+    class Meta:
+        arguments = get_filtering_args_from_filterset(
+            EntryExtractionFilterSet,
+            EntryType
+        )
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **kwargs):
+        from apps.contrib.models import ExcelDownload
+
+        serializer = ExcelDownloadSerializer(
+            data=dict(
+                download_type=int(ExcelDownload.DOWNLOAD_TYPES.ENTRY),
+                filters=kwargs,
+            ),
+            context=dict(request=info.context)
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return ExportEntries(errors=errors, ok=False)
+        serializer.save()
+        return ExportEntries(errors=None, ok=True)
+
+
+class ExportFigures(graphene.Mutation):
+    class Meta:
+        arguments = get_filtering_args_from_filterset(
+            FigureExtractionFilterSet,
+            FigureType
+        )
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **kwargs):
+        from apps.contrib.models import ExcelDownload
+
+        serializer = ExcelDownloadSerializer(
+            data=dict(
+                download_type=int(ExcelDownload.DOWNLOAD_TYPES.FIGURE),
+                filters=kwargs,
+            ),
+            context=dict(request=info.context)
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return ExportFigures(errors=errors, ok=False)
+        serializer.save()
+        return ExportFigures(errors=None, ok=True)
+
+
 class Mutation(object):
     create_entry = CreateEntry.Field()
     update_entry = UpdateEntry.Field()
@@ -287,3 +344,6 @@ class Mutation(object):
     create_figure_tag = CreateFigureTag.Field()
     update_figure_tag = UpdateFigureTag.Field()
     delete_figure_tag = DeleteFigureTag.Field()
+    # exports
+    export_entries = ExportEntries.Field()
+    export_figures = ExportFigures.Field()
