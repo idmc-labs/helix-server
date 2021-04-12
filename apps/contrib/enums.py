@@ -1,6 +1,10 @@
 import graphene
 
-from apps.contrib.models import Attachment, SourcePreview
+from apps.contrib.models import (
+    Attachment,
+    ExcelDownload,
+    SourcePreview,
+)
 from apps.contact.enums import enum_map as contact_enums
 from apps.crisis.enums import enum_map as crisis_enums
 from apps.entry.enums import enum_map as entry_enums
@@ -19,10 +23,16 @@ AttachmentForGrapheneEnum = graphene.Enum.from_enum(Attachment.FOR_CHOICES,
 PreviewStatusGrapheneEnum = graphene.Enum.from_enum(SourcePreview.PREVIEW_STATUS,
                                                     description=enum_description)
 
+DownloadTypeGrapheneEnum = graphene.Enum.from_enum(ExcelDownload.DOWNLOAD_TYPES,
+                                                   description=enum_description)
+ExcelGenerationStatusGrapheneEnum = graphene.Enum.from_enum(ExcelDownload.EXCEL_GENERATION_STATUS,
+                                                            description=enum_description)
 enum_map = dict(
     FOR_CHOICES=AttachmentForGrapheneEnum,
     PREVIEW_STATUS=PreviewStatusGrapheneEnum,
     DATE_ACCURACY=DateAccuracyGrapheneEnum,
+    DOWNLOAD_TYPES=DownloadTypeGrapheneEnum,
+    EXCEL_GENERATION_STATUS=ExcelGenerationStatusGrapheneEnum,
 )
 
 ENUM_TO_GRAPHENE_ENUM_MAP = {

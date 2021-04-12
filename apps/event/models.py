@@ -11,6 +11,7 @@ from apps.contrib.models import (
 from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
+from apps.users.models import User
 from utils.validations import is_child_parent_dates_valid
 
 
@@ -185,6 +186,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
 
     @staticmethod
     def clean_dates(values: dict, instance=None) -> OrderedDict:
+        # NOTE: There is nothing wrong with moving this to serializers
         return is_child_parent_dates_valid(values, instance, 'crisis')
 
     @staticmethod
@@ -199,6 +201,59 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             if not values.get('disaster_sub_type', getattr(instance, 'disaster_sub_type', None)):
                 errors['disaster_sub_type'] = gettext('Please mention the sub-type of disaster.')
         return errors
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.event.filters import EventFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='Id',
+            name='Name',
+            crisis__name='Crisis',
+            crisis='Crisis Id',
+            start_date='Start Date',
+            start_date_accuracy='Start Date Accuracy',
+            end_date='End Date',
+            end_date_accuracy='End Date Accuracy',
+            event_type='Event Type',
+            other_sub_type='Other Sub Type',
+            trigger__name='Trigger',
+            trigger_sub_type__name='Trigger Subtype',
+            violence__name='Violence',
+            violence_sub_type__name='Violence Subtype',
+            actor_id='Actor Id',
+            actor__name='Actor',
+            disaster_category__name='Disaster Category',
+            disaster_sub_category__name='Disaster Subcategory',
+            disaster_type__name='Disaster Type',
+            disaster_sub_type__name='Disaster Sub Type',
+        )
+        values = EventFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.values(*[header for header in headers.keys()])
+        data = [
+            {
+                **datum,
+                **dict(
+                    start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
+                    end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
+                    event_type=getattr(Crisis.CRISIS_TYPE.get(datum['event_type']), 'name', ''),
+                    other_sub_type=getattr(Event.EVENT_OTHER_SUB_TYPE.get(datum['other_sub_type']), 'name', ''),
+                )
+            }
+            for datum in values
+        ]
+
+        return {
+            'headers': headers,
+            'data': data,
+            'formulae': None,
+        }
 
     def save(self, *args, **kwargs):
         if self.disaster_sub_type:

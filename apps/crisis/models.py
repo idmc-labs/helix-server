@@ -1,3 +1,5 @@
+from collections import OrderedDict
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
@@ -5,6 +7,7 @@ from django_enumfield import enum
 from apps.contrib.models import MetaInformationAbstractModel
 from apps.entry.models import Figure
 from apps.contrib.commons import DATE_ACCURACY
+from apps.users.models import User
 
 
 class Crisis(MetaInformationAbstractModel, models.Model):
@@ -40,6 +43,46 @@ class Crisis(MetaInformationAbstractModel, models.Model):
         blank=True,
         null=True,
     )
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.crisis.filters import CrisisFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='Id',
+            name='Name',
+            start_date='Start Date',
+            start_date_accuracy='Start Date Accuracy',
+            end_date='End Date',
+            end_date_accuracy='End Date Accuracy',
+            crisis_type='Crisis Type',
+            countries='Countries',
+        )
+        values = CrisisFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.values(*[header for header in headers.keys()])
+        data = [
+            {
+                **datum,
+                **dict(
+                    start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
+                    end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
+                    crisis_type=getattr(Crisis.CRISIS_TYPE.get(datum['event_type']), 'name', ''),
+                )
+            }
+            for datum in values
+        ]
+
+        return {
+            'headers': headers,
+            'data': data,
+            'formulae': None,
+        }
 
     # property
 
