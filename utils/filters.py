@@ -37,7 +37,7 @@ def _generate_list_filter_class(inner_type):
         },
     )
     convert_form_field.register(form_field)(
-        lambda x: graphene.List(inner_type, required=x.required)
+        lambda x: graphene.List(graphene.NonNull(inner_type))
     )
 
     return filter_class
