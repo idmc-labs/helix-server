@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
+from django.contrib.postgres.fields import JSONField
 
 from apps.contrib.models import MetaInformationAbstractModel
 
@@ -29,8 +30,7 @@ class ParkedItem(MetaInformationAbstractModel):
         }
 
     country = models.ForeignKey('country.Country', verbose_name=_('Country'),
-                                related_name='parked_items', on_delete=models.SET_NULL,
-                                blank=True, null=True)
+                                related_name='parked_items', on_delete=models.CASCADE)
     title = models.TextField(verbose_name=_('Title'))
     url = models.URLField(verbose_name=_('URL'))
     assigned_to = models.ForeignKey('users.User', verbose_name=_('Assigned To'),
@@ -45,6 +45,7 @@ class ParkedItem(MetaInformationAbstractModel):
                             blank=True, null=True)
     source_uuid = models.CharField(verbose_name=_('Source Uuid'),
                                    max_length=255, blank=True, null=True)
+    meta_data = JSONField(blank=True, null=True, default=None)
 
     def move_to_entry(self):
         ...  # TODO?

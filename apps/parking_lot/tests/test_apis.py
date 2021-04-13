@@ -28,7 +28,6 @@ class TestCreateParkedItem(HelixGraphQLTestCase):
 
         self.assigned_to = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.input = dict(
-            # country=self.country_id,
             assignedTo=str(self.assigned_to.id),
             status='TO_BE_REVIEWED',
             title='title',
@@ -103,12 +102,12 @@ class ParkedItemAPITestCase(HelixAPITestCase):
         self.assertEqual(data[0]['id'], self.parking_lot.id)
 
     def test_post_parked_item(self):
-        self.country = CountryFactory.create()
+        self.country = CountryFactory.create(iso3='NPL')
         self.assigned_to = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         data = {
             "title": "test_parking",
             "url": "http://google.com",
-            "country": self.country.id,
+            "country_iso3": self.country.iso3,
             "assignedTo": self.assigned_to.id
         }
         self.authenticate()
@@ -117,21 +116,21 @@ class ParkedItemAPITestCase(HelixAPITestCase):
 
     def test_post_multiple_parked_item(self):
         old_count = ParkedItem.objects.count()
-        self.country1 = CountryFactory.create()
-        self.country2 = CountryFactory.create()
+        self.country1 = CountryFactory.create(iso3='NPL')
+        self.country2 = CountryFactory.create(iso3='USA')
         self.assigned_to1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         self.assigned_to2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         data = [
             {
                 "title": "test_parking",
                 "url": "http://google.com",
-                "country": self.country1.id,
+                "country_iso3": self.country1.iso3,
                 "assignedTo": self.assigned_to1.id
             },
             {
                 "title": "test_parking1",
                 "url": "http://hello.com",
-                "country": self.country2.id,
+                "country_iso3": self.country2.iso3,
                 "assignedTo": self.assigned_to2.id
             }
         ]
