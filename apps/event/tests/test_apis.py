@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import json
 
+from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     CountryFactory,
@@ -16,7 +17,9 @@ from utils.tests import HelixGraphQLTestCase, create_user_with_role
 class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
     def setUp(self) -> None:
         countries = CountryFactory.create_batch(2)
-        crisis = CrisisFactory.create()
+        self.crisis = crisis = CrisisFactory.create()
+        crisis.crisis_type = Crisis.CRISIS_TYPE.DISASTER
+        crisis.save()
         crisis.countries.set(countries)
         self.mutation = '''mutation CreateEvent($input: EventCreateInputType!) {
             createEvent(data: $input) {
@@ -96,6 +99,9 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         self.assertEqual(content['data']['createEvent']['result']['otherSubType'],
                          None)
 
+        self.crisis.crisis_type = Crisis.CRISIS_TYPE.OTHER
+        self.crisis.save()
+
         self.input['eventType'] = "OTHER"
         response = self.query(
             self.mutation,
@@ -149,7 +155,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
                 ok
                 }
             }'''
-        self.event = EventFactory.create()
+        self.event = EventFactory.create(crisis=None)
         self.input = {
             "id": self.event.id,
             "endDate": "2020-10-29",
@@ -163,7 +169,10 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.force_login(editor)
 
     def test_invalid_event_dates_beyond_crisis(self):
-        crisis = self.event.crisis
+        crisis = CrisisFactory.create()
+        self.event.crisis = crisis
+        self.event.save()
+
         crisis.start_date = datetime.today()
         crisis.end_date = datetime.today() + timedelta(days=10)
         crisis.save()

@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from django.core.exceptions import ValidationError
+from django.utils.translation import gettext
 from rest_framework import serializers
 
 from apps.contrib.serializers import (
@@ -32,6 +33,11 @@ class EventSerializer(MetaInformationSerializerMixin,
         model = Event
         fields = '__all__'
 
+    def validate_event_type_against_crisis_type(self, event_type, attrs):
+        crisis = attrs.get('crisis', getattr(self.instance, 'crisis', None))
+        if crisis and event_type != crisis.crisis_type.value:
+            raise serializers.ValidationError({'event_type': gettext('Event type and crisis type do not match.')})
+
     def validate(self, attrs: dict) -> dict:
         errors = OrderedDict()
         errors.update(Event.clean_by_event_type(attrs, self.instance))
@@ -42,11 +48,14 @@ class EventSerializer(MetaInformationSerializerMixin,
             )
         if errors:
             raise ValidationError(errors)
-        if attrs.get('event_type',
-                     getattr(self.instance, 'event_type', None)
-                     ) is not Crisis.CRISIS_TYPE.OTHER.value:
-            # only let following field if the event type is other
+
+        # only set other_sub_type if event_type is not OTHER
+        event_type = attrs.get('event_type', getattr(self.instance, 'event_type', None))
+        if event_type != Crisis.CRISIS_TYPE.OTHER.value:
             attrs['other_sub_type'] = None
+
+        self.validate_event_type_against_crisis_type(event_type, attrs)
+
         return attrs
 
 
