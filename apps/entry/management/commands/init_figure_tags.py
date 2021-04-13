@@ -20,7 +20,8 @@ class Command(BaseCommand):
         ))
         for identifier, item in FIGURE_TERMS.items():
             ft, _ = FigureTerm.objects.get_or_create(identifier=identifier, name=item['name'])
-            ft.is_housing_related = item['housing']
+            ft.is_housing_related = item.get('housing', False)
+            ft.displacement_occur = item.get('displacement_occur', False)
             ft.save()
         self.stdout.write(self.style.SUCCESS(
             'Saved {} figure terms.'.format(

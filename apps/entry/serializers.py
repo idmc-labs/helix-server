@@ -204,6 +204,13 @@ class CommonFigureValidationMixin:
             errors.update(Figure.validate_dates(attrs, self.instance))
         return errors
 
+    def clean_term_with_displacement_occur(self, attrs):
+        _attrs = copy(attrs)
+        term = attrs.get('term')
+        if not term or (term and not term.displacement_occur):
+            _attrs['displacement_occured'] = None
+        return _attrs
+
     def validate(self, attrs: dict) -> dict:
         if not self.instance and attrs.get('id'):
             self.instance = Figure.objects.get(id=attrs['id'])
@@ -239,6 +246,9 @@ class CommonFigureValidationMixin:
         errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'disaggregation_strata_json', 'strata'))
         if errors:
             raise ValidationError(errors)
+
+        # update attrs
+        attrs = self.clean_term_with_displacement_occur(attrs)
         return attrs
 
 
