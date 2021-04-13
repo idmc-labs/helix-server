@@ -37,11 +37,11 @@ class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
         return queryset.annotate(
             full=Coalesce(
                 Lower('full_name'),
-                Concat(Lower('first_name'), Lower('last_name')),
+                Concat(Lower('first_name'), Value(' '), Lower('last_name')),
             )
         ).annotate(
             idx=StrIndex('full', Value(value.lower()))
-        ).filter(idx__gt=0).order_by('idx', 'full')
+        ).filter(idx__gt=0).order_by('idx')
 
     def filter_include_inactive(self, queryset, name, value):
         if value is False:

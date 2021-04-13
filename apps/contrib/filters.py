@@ -19,7 +19,7 @@ class ExcelExportFilter(django_filters.FilterSet):
                 # internal filtering
                 return qs.filter(status__in=value).distinct()
             # client side filtering
-            return qs.filter(crisis_type__in=[
+            return qs.filter(status__in=[
                 ExcelDownload.EXCEL_GENERATION_STATUS.get(item).value for item in value
             ]).distinct()
         return qs

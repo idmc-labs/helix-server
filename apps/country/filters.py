@@ -53,7 +53,7 @@ class CountryFilter(django_filters.FilterSet):
             lname=Lower('idmc_short_name')
         ).annotate(
             idx=StrIndex('lname', Value(value.lower()))
-        ).filter(idx__gt=0).order_by('idx', 'name')
+        ).filter(idx__gt=0).order_by('idx', 'idmc_short_name')
 
     def filter_geo_group_name(self, queryset, name, value):
         if not value:
