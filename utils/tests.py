@@ -33,7 +33,12 @@ TEST_DRAMATIQ_BROKER = {
         "django_dramatiq.middleware.AdminMiddleware",
     ]
 }
-TEST_CACHES = None
+TEST_CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
 
 
 class CommonSetupClassMixin:

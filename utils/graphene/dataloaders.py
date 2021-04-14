@@ -131,9 +131,6 @@ class OneToManyLoader(DataLoader):
         related_name = self.related_name or get_related_name(self.parent, self.child)
         reverse_related_name = self.reverse_related_name or get_related_name(self.child, self.parent)
 
-        if not (related_name or reverse_related_name):
-            raise DataLoaderException('Missing dataloader!')
-
         # pre-ready the filtered and paginated queryset
         filtered_qs = self.filterset_class(
             data=self.filter_kwargs,

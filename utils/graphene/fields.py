@@ -213,7 +213,6 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
     def list_resolver(
             self, manager, filterset_class, filtering_args, root, info, **kwargs
     ):
-
         filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
 
         # setup pagination
@@ -223,6 +222,8 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             self.pagination.ordering = ordering
 
         if root and path_has_list(info):
+            if not getattr(self, 'related_name', None):
+                raise NotImplementedError('Dataloader error: fetching without dataloader.')
             parent_class = root._meta.model
             child_class = manager.model
             qs = info.context.get_dataloader(
@@ -258,8 +259,9 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                 **kwargs,
             )
         else:
-            if self.accessor:
-                qs = self.accessor
+            accessor = self.accessor or self.related_name
+            if accessor:
+                qs = getattr(root, accessor, None)
                 if hasattr(qs, 'all'):
                     qs = qs.all()
             else:
@@ -267,7 +269,10 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context.request).qs
             if root and is_valid_django_model(root._meta.model):
                 extra_filters = get_extra_filters(root, manager.model)
-                qs = qs.filter(**extra_filters)
+                if len(list(extra_filters.keys())) == 1:
+                    # NOTE: multiple field filters are returned when
+                    # root and child are related in multiple ways
+                    qs = qs.filter(**extra_filters)
             count = qs.count()
             qs = self.pagination.paginate_queryset(
                 qs,

@@ -24,8 +24,8 @@ from utils.factories import (
 
 
 class TestReportModel(HelixTestCase):
-    def setUp(self) -> None:
-        pass
+    def setUp(self):
+        FigureCategory._invalidate_category_ids_cache()
 
     def test_002_appropriate_figures_are_summed_up(self):
         c = CountryFactory.create()
