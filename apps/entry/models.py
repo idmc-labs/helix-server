@@ -25,6 +25,17 @@ User = get_user_model()
 CANNOT_UPDATE_MESSAGE = _('You cannot sign off the entry.')
 
 
+class DisaggregatedAgeCategory(models.Model):
+    '''
+    Used by disaggregated age data by figure disaggregated_age_json field
+    '''
+    name = models.CharField(
+        verbose_name=_('Name'),
+        max_length=256,
+        unique=True,
+    )
+
+
 class OSMName(UUIDAbstractModel, models.Model):
     class OSM_ACCURACY(enum.Enum):
         COUNTRY = 0

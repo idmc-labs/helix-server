@@ -378,14 +378,14 @@ class TestFigureSerializer(HelixTestCase):
         self.data['disaggregation_age_json'] = [
             {
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                "age_from": 10,
-                "age_to": 30,
+                "category": 1,
+                "sex": 0,
                 "value": 1000
             },
             {
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                "age_from": 40,
-                "age_to": 50,
+                "category": 4,
+                "sex": 1,
                 "value": 23
             }
         ]

@@ -10,6 +10,7 @@ from apps.entry.models import (
     FigureCategory,
 )
 from apps.entry.constants import STOCK
+from apps.entry.models import DisaggregatedAgeCategory
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     EventFactory,
@@ -97,6 +98,9 @@ class TestEntryQuery(HelixGraphQLTestCase):
 
 class TestEntryCreation(HelixGraphQLTestCase):
     def setUp(self) -> None:
+        DisaggregatedAgeCategory.objects.create(name='one')
+        DisaggregatedAgeCategory.objects.create(name='two')
+        DisaggregatedAgeCategory.objects.create(name='three')
         self.country = CountryFactory.create()
         self.country_id = str(self.country.id)
         self.fig_cat = FigureCategoryFactory.create()
@@ -294,9 +298,19 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
                 "disaggregationAgeJson": [
-                    # from is greater than to
-                    {"uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9", "ageFrom": 3, "ageTo": 2, "value": 3},
-                    {"uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce", "ageFrom": 3, "ageTo": 5, "value": 3}
+                    # invalid: category and sex is duplicated
+                    {
+                        "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
+                        "category": DisaggregatedAgeCategory.objects.first().id,
+                        "sex": 'MALE',
+                        "value": 5
+                    },
+                    {
+                        "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
+                        "category": DisaggregatedAgeCategory.objects.first().id,
+                        "sex": 'MALE',
+                        "value": 3
+                    }
                 ]
             }
         ]
@@ -311,7 +325,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createEntry']['ok'], content)
-        self.assertIn('ageTo', json.dumps(content['data']['createEntry']['errors']))
+        self.assertIn('sex', json.dumps(content['data']['createEntry']['errors']))
 
     def test_invalid_figures_household_size(self):
         figures = [
@@ -352,6 +366,9 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.event = EventFactory.create(name='myevent')
         self.event.countries.add(self.country)
+        DisaggregatedAgeCategory.objects.create(name='one')
+        DisaggregatedAgeCategory.objects.create(name='two')
+        DisaggregatedAgeCategory.objects.create(name='three')
         self.entry = EntryFactory.create(
             created_by=self.editor,
             event=self.event,
@@ -367,6 +384,13 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 results {
                   id
                   createdAt
+                  disaggregationAgeJson {
+                    uuid
+                    category {
+                      id
+                      name
+                    }
+                  }
                 }
               }
               createdAt
@@ -431,6 +455,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.assertTrue(content['data']['updateEntry']['ok'], content)
 
     def test_valid_update_entry_with_figures(self):
+        assert DisaggregatedAgeCategory.objects.count() > 1
         figure = FigureFactory.create(
             entry=self.entry,
             country=self.country
@@ -452,14 +477,12 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "disaggregationAgeJson": [
                     {
                         "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
-                        "ageFrom": 1,
-                        "ageTo": 3,
+                        "category": DisaggregatedAgeCategory.objects.first().id,
                         "value": 3
                     },
                     {
                         "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                        "ageFrom": 3,
-                        "ageTo": 5,
+                        "category": DisaggregatedAgeCategory.objects.last().id,
                         "value": 3
                     }
                 ],
@@ -483,14 +506,12 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "disaggregationAgeJson": [
                     {
                         "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
-                        "ageFrom": 1,
-                        "ageTo": 3,
+                        "category": DisaggregatedAgeCategory.objects.first().id,
                         "value": 3
                     },
                     {
                         "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                        "ageFrom": 3,
-                        "ageTo": 5,
+                        "category": DisaggregatedAgeCategory.objects.last().id,
                         "value": 3
                     }
                 ],

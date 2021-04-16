@@ -15,6 +15,7 @@ from apps.entry.enums import (
     EntryReviewerGrapheneEnum,
     OSMAccuracyGrapheneEnum,
     IdentifierGrapheneEnum,
+    DisaggregatedAgeSexGrapheneEnum,
 )
 from apps.entry.filters import EntryFilter, EntryReviewerFilter, OSMNameFilter
 from apps.entry.models import (
@@ -25,6 +26,7 @@ from apps.entry.models import (
     EntryReviewer,
     FigureCategory,
     OSMName,
+    DisaggregatedAgeCategory,
 )
 from apps.contrib.models import SourcePreview
 from apps.contrib.enums import PreviewStatusGrapheneEnum
@@ -42,11 +44,27 @@ def convert_json_field_to_scalar(field, registry=None):
     return GenericScalar()
 
 
+class DisaggregatedAgeCategoryType(DjangoObjectType):
+    class Meta:
+        model = DisaggregatedAgeCategory
+
+
+class DisaggregatedAgeCategoryListType(CustomDjangoListObjectType):
+    class Meta:
+        model = DisaggregatedAgeCategory
+        filter_fields = {
+            'name': ('icontains',),
+        }
+
+
 class DisaggregatedAgeType(ObjectType):
     uuid = graphene.String(required=True)
-    age_from = graphene.Int()
-    age_to = graphene.Int()
+    category = graphene.Field(DisaggregatedAgeCategoryType)
+    sex = graphene.Field(DisaggregatedAgeSexGrapheneEnum)
     value = graphene.Int()
+
+    def resolve_category(root, info):
+        return DisaggregatedAgeCategory.objects.filter(id=root['category']).first()
 
 
 class DisaggregatedStratumType(ObjectType):
@@ -241,3 +259,5 @@ class Query:
                                                 pagination=PageGraphqlPagination(
                                                     page_size_query_param='pageSize'
                                                 ))
+    disaggregated_age_category = DjangoObjectField(DisaggregatedAgeCategoryType)
+    disaggregated_age_category_list = DjangoPaginatedListObjectField(DisaggregatedAgeCategoryListType)

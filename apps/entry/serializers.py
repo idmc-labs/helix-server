@@ -18,6 +18,10 @@ from apps.entry.models import (
     OSMName,
     EntryReviewer,
     FigureTag,
+    DisaggregatedAgeCategory,
+)
+from apps.entry.constants import (
+    DISAGGREGATED_AGE_SEX_CHOICES,
 )
 from apps.event.models import Event
 from apps.users.models import User
@@ -27,21 +31,21 @@ from utils.validations import is_child_parent_inclusion_valid
 
 class DisaggregatedAgeSerializer(serializers.Serializer):
     uuid = serializers.UUIDField(required=True)
-    age_from = serializers.IntegerField(
-        validators=[MinValueValidator(0, _("Minimum value is 1. "))],
-        required=True)
-    age_to = serializers.IntegerField(validators=[MinValueValidator(0, _("Minimum value is 1. "))],
-                                      required=True)
+    category = serializers.PrimaryKeyRelatedField(
+        queryset=DisaggregatedAgeCategory.objects.all(),
+        required=False
+    )
+    sex = serializers.ChoiceField(
+        choices=DISAGGREGATED_AGE_SEX_CHOICES.choices(),
+        required=False
+    )
     value = serializers.IntegerField(validators=[MinValueValidator(0, _("Minimum value is 1. "))],
                                      required=True)
 
     def validate(self, attrs):
-        if attrs.get('age_from') > attrs.get('age_to'):
-            raise serializers.ValidationError(
-                {'age_to': gettext('Pick an age higher than `from` %(age_from)s.') %
-                    {'age_from': attrs.get("age_from")}}
-            )
+        # because they are stored inside json
         attrs['uuid'] = str(attrs['uuid'])
+        attrs['category'] = getattr(attrs.get('category'), 'id', None)
         return attrs
 
 
@@ -93,9 +97,9 @@ class CommonFigureValidationMixin:
     def validate_disaggregation_age_json(self, age_groups):
         values = []
         for each in age_groups:
-            values.extend(range(each['age_from'], each['age_to']))
+            values.append((each.get('category'), each.get('sex')))
         if len(values) != len(set(values)):
-            raise serializers.ValidationError(gettext('Please do not mix up age ranges.'))
+            raise serializers.ValidationError('Please provide unique categories and sex values.')
         return age_groups
 
     def validate_disaggregation_strata_json(self, strata):

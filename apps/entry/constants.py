@@ -1,3 +1,6 @@
+from django_enumfield import enum
+
+
 # These will initialize the figure types and sub types
 STOCK = 'Stock'
 FLOW = 'Flow'
@@ -60,3 +63,13 @@ FIGURE_TERMS = dict(
     RETURNS=dict(name="Returns", housing=False),
     MULTIPLE_OR_OTHER=dict(name="Multiple/Other", housing=False),
 )
+
+
+class DISAGGREGATED_AGE_SEX_CHOICES(enum.Enum):
+    MALE = 0
+    FEMALE = 1
+
+    __labels__ = {
+        MALE: 'Male',
+        FEMALE: 'Female',
+    }
