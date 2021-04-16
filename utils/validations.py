@@ -24,21 +24,24 @@ def is_child_parent_dates_valid(
     c_start_date = data.get(c_start_field, getattr(instance, c_start_field, None))
     c_end_date = data.get(c_end_field, getattr(instance, c_end_field, None))
     if c_start_date and c_end_date and c_start_date > c_end_date:
-        errors[c_start_field] = gettext('Choose your start date earlier than %(c_end_date)s') % dict(
-            c_end_date=c_end_date
-        )
-        errors[c_end_field] = gettext('Choose your start date earlier than %(c_end_date)s') % dict(
-            c_end_date=c_end_date
-        )
+        errors[c_start_field] = gettext('Choose your %s earlier than %s') % (start_text, c_end_date)
+        errors[c_end_field] = gettext('Choose your %s earlier than %s') % (start_text, c_end_date)
     if not parent_field:
         return errors
     parent = instance
     p_start_date = None
     p_end_date = None
     parent_data = deepcopy(data)
+    __first = True
     for pf in parent_field.split('.'):
-        parent_data = getattr(parent_data, pf, dict())
-        parent = parent_data.get(pf, getattr(parent, pf, None))
+        if __first:
+            # only look into parent_data once
+            parent = parent_data.get(pf) or getattr(parent, pf, None)
+        else:
+            if hasattr(parent, 'get'):
+                parent = parent.get(pf)
+            else:
+                parent = getattr(parent, pf, None)
     if parent:
         p_start_date = getattr(parent, p_start_field, None)
         p_end_date = getattr(parent, p_end_field, None)
