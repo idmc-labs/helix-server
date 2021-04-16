@@ -6,7 +6,10 @@ from apps.contrib.models import MetaInformationArchiveAbstractModel
 
 
 class Review(MetaInformationArchiveAbstractModel, models.Model):
-    UNIQUE_TOGETHER_FIELDS = {'entry', 'figure', 'field', 'age_id', 'strata_id'}
+    '''
+    NOTE: Add to UNIQUE_TOGETHER_FIELDS if you add a new field to this model, if required
+    '''
+    UNIQUE_TOGETHER_FIELDS = {'entry', 'figure', 'field', 'age_id', 'strata_id', 'geo_location'}
     UNIQUE_TOGETHER_WITHOUT_ENTRY_FIELDS = UNIQUE_TOGETHER_FIELDS - {'entry'}
 
     class ENTRY_REVIEW_STATUS(enum.Enum):
