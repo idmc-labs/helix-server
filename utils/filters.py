@@ -1,4 +1,6 @@
 import django
+from django.db.models import Value
+from django.db.models.functions import Lower, StrIndex
 import django_filters
 import graphene
 from graphene_django.forms.converter import convert_form_field
@@ -35,7 +37,7 @@ def _generate_list_filter_class(inner_type):
         },
     )
     convert_form_field.register(form_field)(
-        lambda x: graphene.List(inner_type, required=x.required)
+        lambda x: graphene.List(graphene.NonNull(inner_type))
     )
 
     return filter_class
@@ -59,3 +61,17 @@ class AllowInitialFilterSetMixin:
                     data[name] = initial
 
         super().__init__(data, *args, **kwargs)
+
+
+class NameFilterMixin:
+    # NOTE: add a `name` django_filter as follows in the child filters
+    # name = django_filters.CharFilter(method='_filter_name')
+
+    def _filter_name(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.annotate(
+            lname=Lower('name')
+        ).annotate(
+            idx=StrIndex('lname', Value(value.lower()))
+        ).filter(idx__gt=0).order_by('idx', 'name')

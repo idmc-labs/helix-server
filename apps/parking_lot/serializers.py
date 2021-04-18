@@ -18,7 +18,6 @@ class ParkedItemSerializer(MetaInformationSerializerMixin,
     class Meta:
         model = ParkedItem
         fields = '__all__'
-        read_only_fields = ['country']
 
     def validate(self, data):
         iso3 = data.get('country_iso3')

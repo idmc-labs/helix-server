@@ -68,6 +68,8 @@ class TestGenerationSerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('report', serializer.errors)
 
+    # TODO: report generation is valid for MYU as well
+
 
 class TestReportApprovalSerializer(HelixTestCase):
     def setUp(self):

@@ -29,8 +29,14 @@ class ParkedItem(MetaInformationAbstractModel):
             ACLED: _('Acled')
         }
 
-    country = models.ForeignKey('country.Country', verbose_name=_('Country'),
-                                related_name='parked_items', on_delete=models.CASCADE)
+    country = models.ForeignKey(
+        'country.Country',
+        verbose_name=_('Country'),
+        related_name='parked_items',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
     title = models.TextField(verbose_name=_('Title'))
     url = models.URLField(verbose_name=_('URL'))
     assigned_to = models.ForeignKey('users.User', verbose_name=_('Assigned To'),

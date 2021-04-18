@@ -15,7 +15,7 @@ class ReportFilter(df.FilterSet):
 
     def filter_countries(self, qs, name, value):
         if value:
-            return qs.filter(event__countries__in=value).distinct()
+            return qs.filter(filter_figure_countries__in=value).distinct()
         return qs
 
     @property

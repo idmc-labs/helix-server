@@ -61,21 +61,27 @@ class TestReportModel(HelixTestCase):
                          r.countries_report)
 
     def test_001_appropriate_typology_checks(self):
-        cat = FigureCategory.flow_new_displacement_id()
         figure = FigureFactory.create(
             reported=200,
-            category=cat,
+            category=FigureCategory.flow_new_displacement_id(),
             role=Figure.ROLE.RECOMMENDED,
             country=CountryFactory.create(),
             disaggregation_conflict=100,
             disaggregation_conflict_political=100,
         )
         figure.entry.event.event_type = Crisis.CRISIS_TYPE.CONFLICT
+        figure.entry.event.save()
         report = ReportFactory.create(generated=False)
         report.figures.add(figure)
         gen = ReportGeneration.objects.create(report=report)
 
-        filtered_report_figures = report.report_figures.all().values('country').order_by()
+        assert report.report_figures.count() == 1
+
+        filtered_report_figures = report.report_figures.filter(
+            role=Figure.ROLE.RECOMMENDED,
+            entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+            category=FigureCategory.flow_new_displacement_id().id,
+        ).values('country').order_by()
 
         data = filtered_report_figures.filter(disaggregation_conflict__gt=0).annotate(
             name=models.F('country__name'),
@@ -111,7 +117,6 @@ class TestReportModel(HelixTestCase):
                 typology=models.Value('Other', output_field=models.CharField())
             ).values('name', 'iso3', 'total', 'typology')
         ).values('name', 'iso3', 'typology', 'total').order_by('typology')
-        assert report.report_figures.count() == 1
         assert len(data) == 2
         assert len(gen.stat_conflict_typology['data']) == 2, gen.stat_conflict_typology['data']
 
