@@ -2,7 +2,7 @@ from django.test import RequestFactory
 
 from apps.review.models import Review
 from apps.users.enums import USER_ROLE
-from apps.review.serializers import ReviewCommentSerializer, NOT_ALLOWED_TO_REVIEW
+from apps.review.serializers import ReviewCommentSerializer
 from utils.factories import EntryFactory
 from utils.tests import HelixTestCase, create_user_with_role
 
@@ -50,15 +50,22 @@ class TestReviewCommentSerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('reviews', serializer.errors)
 
-    def test_invalid_user_not_in_reviewers(self):
-        self.entry.reviewers.clear()
+    def test_valid_user_not_in_reviewers_can_still_review(self):
+        self.entry.reviewers.add(self.request.user)
+        # user is already in the reviewers, he is allowed
         serializer = ReviewCommentSerializer(data=self.data,
                                              context={'request': self.request})
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('non_field_errors', serializer.errors)
-        self.assertIn(NOT_ALLOWED_TO_REVIEW, serializer.errors['non_field_errors'])
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
 
-        # however if user is only trying to comment, he is allowed
+        self.entry.reviewers.clear()
+        # if user is trying to review is not in the reviewers, he is still allowed
+        serializer = ReviewCommentSerializer(data=self.data,
+                                             context={'request': self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+
+        # if user is only trying to comment, he is allowed
         data = dict(
             body='a new body',
             entry=self.entry.id

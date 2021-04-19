@@ -42,10 +42,6 @@ class ReviewCommentSerializer(MetaInformationSerializerMixin,
             raise serializers.ValidationError(dict(body='Comment is empty.'))
 
     def validate(self, attrs) -> dict:
-        if not self.instance \
-                and attrs.get('reviews') \
-                and not attrs['entry'].reviewers.filter(id=self.context['request'].user.id).exists():
-            raise serializers.ValidationError(NOT_ALLOWED_TO_REVIEW)
         self.validate_body_without_reviews(attrs)
         return super().validate(attrs)
 
