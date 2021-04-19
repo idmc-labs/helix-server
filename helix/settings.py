@@ -43,6 +43,13 @@ logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 # FIXME:
 ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST', '*')]
 
+# https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-CSRF_USE_SESSIONS
+CSRF_USE_SESSIONS = eval(os.environ.get('CSRF_TRUSTED_ORIGINS', 'False'))
+# https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-SESSION_COOKIE_DOMAIN
+SESSION_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
+# https://docs.djangoproject.com/en/3.2/ref/settings/#csrf-cookie-domain
+CSRF_COOKIE_DOMAIN = os.environ.get('CSRF_COOKIE_DOMAIN', None)
+
 # Application definition
 
 LOCAL_APPS = [
