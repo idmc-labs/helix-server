@@ -159,3 +159,15 @@ class ParkedItemAPITestCase(HelixAPITestCase):
         response = self.client.post(self.url, data)
         assert response.status_code == 201
         self.assertEqual(response.data['country'], self.country1.id)  # should set the country of iso3 posted
+
+        # try to post without iso3
+        del data['country_iso3']
+        self.authenticate()
+        response = self.client.post(self.url, data)
+        assert response.status_code == 201
+
+        # try to post without iso3
+        data['country_iso3'] = []
+        self.authenticate()
+        response = self.client.post(self.url, data)
+        assert response.status_code == 201
