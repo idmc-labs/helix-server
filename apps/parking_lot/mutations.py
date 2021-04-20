@@ -78,7 +78,10 @@ class DeleteParkedItem(graphene.Mutation):
             instance = ParkedItem.objects.get(id=id, created_by=info.context.user)
         except ParkedItem.DoesNotExist:
             return DeleteParkedItem(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Parked item does not exist.'))
+                dict(
+                    field='nonFieldErrors',
+                    messages=gettext('Only creator is allowed to delete the parked item.')
+                )
             ])
         instance.delete()
         instance.id = id

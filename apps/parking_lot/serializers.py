@@ -20,6 +20,7 @@ class ParkedItemSerializer(MetaInformationSerializerMixin,
         fields = '__all__'
 
     def validate(self, data):
+        data = super().validate(data)
         iso3 = data.get('country_iso3')
         if iso3 and not Country.objects.filter(iso3=iso3).exists():
             raise serializers.ValidationError({'iso3': 'No any iso3 found for the country'})
