@@ -11,7 +11,7 @@ from selenium.common.exceptions import TimeoutException
 from helix.settings import QueuePriority
 
 logger = logging.getLogger(__name__)
-DRAMATIQ_TIMEOUT = 60  # seconds
+DRAMATIQ_TIMEOUT = 30  # seconds
 SELENIUM_TIMEOUT = math.floor(DRAMATIQ_TIMEOUT * 0.8)
 
 
