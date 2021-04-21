@@ -1,9 +1,11 @@
+from datetime import datetime, timedelta
 import magic
 
 from rest_framework import serializers
 
 from apps.contrib.models import Attachment
 from apps.contrib.models import SourcePreview
+from apps.entry.tasks import DRAMATIQ_TIMEOUT
 
 
 class IntegerIDField(serializers.IntegerField):
@@ -61,10 +63,23 @@ class SourcePreviewSerializer(MetaInformationSerializerMixin,
         fields = '__all__'
 
     def create(self, validated_data):
-        return SourcePreview.get_pdf(**validated_data)
+        filter_params = dict(
+            url=validated_data['url'],
+            created_by=validated_data['created_by'],
+            status=SourcePreview.PREVIEW_STATUS.IN_PROGRESS,
+            created_at__gte=datetime.now() - timedelta(seconds=DRAMATIQ_TIMEOUT)
+        )
+
+        if SourcePreview.objects.filter(
+            **filter_params
+        ).exists():
+            return SourcePreview.objects.filter(
+                **filter_params
+            ).first()
+        return SourcePreview.get_pdf(validated_data)
 
     def update(self, instance, validated_data):
-        return SourcePreview.get_pdf(**validated_data, instance=instance)
+        return SourcePreview.get_pdf(validated_data, instance=instance)
 
 
 class UpdateSerializerMixin:
