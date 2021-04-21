@@ -175,6 +175,12 @@ class EventType(DjangoObjectType):
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
 
+    def resolve_total_stock_idp_figures(root, info, **kwargs):
+        return info.context.event_event_total_stock_idp_figures.load(root.id)
+
+    def resolve_total_flow_nd_figures(root, info, **kwargs):
+        return info.context.event_event_total_flow_nd_figures.load(root.id)
+
 
 class EventListType(CustomDjangoListObjectType):
     class Meta:

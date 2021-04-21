@@ -2,6 +2,7 @@ from django.utils.functional import cached_property
 
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 from apps.entry.dataloaders import TotalIDPFigureByEntryLoader, TotalNDFigureByEntryLoader
+from apps.event.dataloaders import TotalIDPFigureByEventLoader, TotalNDFigureByEventLoader
 
 
 class GQLContext:
@@ -40,3 +41,11 @@ class GQLContext:
     @cached_property
     def entry_entry_total_flow_nd_figures(self):
         return TotalNDFigureByEntryLoader()
+
+    @cached_property
+    def event_event_total_stock_idp_figures(self):
+        return TotalIDPFigureByEventLoader()
+
+    @cached_property
+    def event_event_total_flow_nd_figures(self):
+        return TotalNDFigureByEventLoader()

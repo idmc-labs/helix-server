@@ -23,10 +23,13 @@ class ResourceGroupType(DjangoObjectType):
     class Meta:
         model = ResourceGroup
 
-    resources = DjangoPaginatedListObjectField(ResourceListType,
-                                               pagination=PageGraphqlPaginationWithoutCount(
-                                                   page_size_query_param='pageSize'
-                                               ))
+    resources = DjangoPaginatedListObjectField(
+        ResourceListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        ),
+        related_name='resources'
+    )
 
 
 class ResourceGroupListType(CustomDjangoListObjectType):
