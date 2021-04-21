@@ -1,8 +1,8 @@
 from django.utils.functional import cached_property
 
-from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 from apps.entry.dataloaders import TotalIDPFigureByEntryLoader, TotalNDFigureByEntryLoader
 from apps.event.dataloaders import TotalIDPFigureByEventLoader, TotalNDFigureByEventLoader
+from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 
 
 class GQLContext:
