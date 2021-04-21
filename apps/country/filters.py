@@ -32,8 +32,7 @@ class CountryRegionFilter(NameFilterMixin,
         }
 
 
-class CountryFilter(django_filters.FilterSet,
-                    NameFilterMixin):
+class CountryFilter(django_filters.FilterSet):
     country_name = django_filters.CharFilter(method='_filter_name')
     region_name = django_filters.CharFilter(method='filter_region_name')
     geographical_group_name = django_filters.CharFilter(method='filter_geo_group_name')
@@ -46,6 +45,15 @@ class CountryFilter(django_filters.FilterSet,
             'iso3': ['icontains'],
             'id': ['iexact'],
         }
+
+    def _filter_name(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.annotate(
+            lname=Lower('idmc_short_name')
+        ).annotate(
+            idx=StrIndex('lname', Value(value.lower()))
+        ).filter(idx__gt=0).order_by('idx', 'name')
 
     def filter_geo_group_name(self, queryset, name, value):
         if not value:
