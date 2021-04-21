@@ -127,6 +127,7 @@ class FigureType(DjangoObjectType):
     disaggregation_strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
     geo_locations = DjangoPaginatedListObjectField(
         OSMNameListType,
+        related_name='geo_locations',
     )
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
@@ -191,10 +192,10 @@ class EntryType(DjangoObjectType):
     is_signed_off = graphene.NonNull(graphene.Boolean)
 
     def resolve_total_stock_idp_figures(root, info, **kwargs):
-        return root.total_stock_idp_figures(kwargs.get('data'))
+        return info.context.entry_entry_total_stock_idp_figures.load(root.id)
 
     def resolve_total_flow_nd_figures(root, info, **kwargs):
-        return root.total_flow_nd_figures(kwargs.get('data'))
+        return info.context.entry_entry_total_flow_nd_figures.load(root.id)
 
 
 class EntryListType(CustomDjangoListObjectType):

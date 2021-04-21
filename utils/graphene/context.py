@@ -1,6 +1,7 @@
 from django.utils.functional import cached_property
 
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
+from apps.entry.dataloaders import TotalIDPFigureByEntryLoader, TotalNDFigureByEntryLoader
 
 
 class GQLContext:
@@ -26,3 +27,16 @@ class GQLContext:
         if ref not in self.count_dataloaders:
             self.count_dataloaders[ref] = CountLoader()
         return self.count_dataloaders[ref]
+
+    '''
+    NOTE: As a convention, data loader should have the name as:
+    AppName_NodeType_FieldName
+    '''
+
+    @cached_property
+    def entry_entry_total_stock_idp_figures(self):
+        return TotalIDPFigureByEntryLoader()
+
+    @cached_property
+    def entry_entry_total_flow_nd_figures(self):
+        return TotalNDFigureByEntryLoader()

@@ -357,7 +357,7 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     # locations
     geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
-                                           related_name='+')
+                                           related_name='figures')
 
     # methods
 

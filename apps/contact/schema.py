@@ -40,10 +40,13 @@ class ContactType(DjangoObjectType):
     full_name = graphene.Field(graphene.String)
     designation = graphene.Field(DesignationGrapheneEnum)
     gender = graphene.Field(GenderGrapheneEnum)
-    communications = DjangoPaginatedListObjectField(CommunicationListType,
-                                                    pagination=PageGraphqlPaginationWithoutCount(
-                                                        page_size_query_param='pageSize'
-                                                    ))
+    communications = DjangoPaginatedListObjectField(
+        CommunicationListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        ),
+        related_name='communications'
+    )
 
 
 class ContactListType(CustomDjangoListObjectType):

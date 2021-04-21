@@ -223,7 +223,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
 
         if root and path_has_list(info):
             if not getattr(self, 'related_name', None):
-                raise NotImplementedError('Dataloader error: fetching without dataloader.')
+                raise NotImplementedError(f'Dataloader error: fetching without dataloader. {info.path}')
             parent_class = root._meta.model
             child_class = manager.model
             qs = info.context.get_dataloader(
