@@ -49,16 +49,42 @@ FIGURE_TAGS = [
 ]
 
 FIGURE_TERMS = dict(
-    EVACUATED=dict(name="Evacuated", housing=False),
-    DISPLACED=dict(name="Displaced", housing=False),
+    # With displacement occurred option
+    EVACUATED=dict(
+        name="Evacuated",
+        housing=False,
+        displacement_occur=True,
+    ),
+    DISPLACED=dict(
+        name="Displaced",
+        housing=False,
+        displacement_occur=True,
+    ),
+    FORCED_TO_FLEE=dict(
+        name="Forced to flee",
+        housing=False,
+        displacement_occur=True,
+    ),
+    RELOCATED=dict(
+        name="Relocated",
+        housing=False,
+        displacement_occur=True,
+    ),
+    SHELTERED=dict(
+        name="Sheltered",
+        housing=False,
+        displacement_occur=True,
+    ),
+    IN_RELIEF_CAMP=dict(
+        name="In relief camp",
+        housing=False,
+        displacement_occur=True,
+    ),
+    # END
     DESTROYED_HOUSING=dict(name="Destroyed housing", housing=True),
     PARTIALLY_DESTROYED_HOUSING=dict(name="Partially destroyed housing", housing=True),
     UNINHABITABLE_HOUSING=dict(name="Uninhabitable housing", housing=True),
-    FORCED_TO_FLEE=dict(name="Forced to flee", housing=False),
     HOMELESS=dict(name="Homeless", housing=False),
-    IN_RELIEF_CAMP=dict(name="In relief camp", housing=False),
-    SHELTERED=dict(name="Sheltered", housing=False),
-    RELOCATED=dict(name="Relocated", housing=False),
     AFFECTED=dict(name="Affected", housing=False),
     RETURNS=dict(name="Returns", housing=False),
     MULTIPLE_OR_OTHER=dict(name="Multiple/Other", housing=False),

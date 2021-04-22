@@ -213,6 +213,10 @@ class FigureTerm(models.Model):
         verbose_name=_('Is housing related'),
         default=False,
     )
+    displacement_occur = models.BooleanField(
+        verbose_name=_('Displacement can occur?'),
+        default=False,
+    )
     # NOTE: We are using identifier as searchable candidate over name
     # primarily during migration
     identifier = models.CharField(
@@ -260,6 +264,19 @@ class Figure(MetaInformationArchiveAbstractModel,
             TRIANGULATION: _("Triangulation"),
         }
 
+    class DISPLACEMENT_OCCURRED(enum.Enum):
+        BEFORE = 0
+        DURING = 1
+        AFTER = 2
+        UNKNOWN = 3
+
+        __labels__ = {
+            BEFORE: _('Before'),
+            AFTER: _('After'),
+            DURING: _('During'),
+            UNKNOWN: _('Unknown'),
+        }
+
     entry = models.ForeignKey('Entry', verbose_name=_('Entry'),
                               related_name='figures', on_delete=models.CASCADE)
     # to keep track of the old sub facts
@@ -277,6 +294,12 @@ class Figure(MetaInformationArchiveAbstractModel,
     term = models.ForeignKey('FigureTerm', verbose_name=_('Figure term'),
                              related_name='+', on_delete=models.SET_NULL,
                              blank=False, null=True)
+    displacement_occurred = enum.EnumField(
+        enum=DISPLACEMENT_OCCURRED,
+        verbose_name=_('Displacement Occurred'),
+        null=True,
+        blank=True,
+    )
     role = enum.EnumField(enum=ROLE, verbose_name=_('Role'), default=ROLE.RECOMMENDED)
 
     start_date = models.DateField(verbose_name=_('Start Date'),

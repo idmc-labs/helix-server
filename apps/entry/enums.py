@@ -14,6 +14,10 @@ from utils.enums import enum_description
 QuantifierGrapheneEnum = graphene.Enum.from_enum(Figure.QUANTIFIER, description=enum_description)
 UnitGrapheneEnum = graphene.Enum.from_enum(Figure.UNIT, description=enum_description)
 RoleGrapheneEnum = graphene.Enum.from_enum(Figure.ROLE, description=enum_description)
+DisplacementOccurredGrapheneEnum = graphene.Enum.from_enum(
+    Figure.DISPLACEMENT_OCCURRED,
+    description=enum_description
+)
 EntryReviewerGrapheneEnum = graphene.Enum.from_enum(EntryReviewer.REVIEW_STATUS,
                                                     description=enum_description)
 OSMAccuracyGrapheneEnum = graphene.Enum.from_enum(OSMName.OSM_ACCURACY,
@@ -25,6 +29,7 @@ enum_map = dict(
     QUANTIFIER=QuantifierGrapheneEnum,
     UNIT=UnitGrapheneEnum,
     ROLE=RoleGrapheneEnum,
+    DISPLACEMENT_OCCURRED=DisplacementOccurredGrapheneEnum,
     REVIEW_STATUS=EntryReviewerGrapheneEnum,
     OSM_ACCURACY=OSMAccuracyGrapheneEnum,
     IDENTIFIER=IdentifierGrapheneEnum,

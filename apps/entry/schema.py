@@ -12,6 +12,7 @@ from apps.entry.enums import (
     QuantifierGrapheneEnum,
     UnitGrapheneEnum,
     RoleGrapheneEnum,
+    DisplacementOccurredGrapheneEnum,
     EntryReviewerGrapheneEnum,
     OSMAccuracyGrapheneEnum,
     IdentifierGrapheneEnum,
@@ -120,6 +121,7 @@ class FigureType(DjangoObjectType):
     quantifier = graphene.Field(QuantifierGrapheneEnum)
     unit = graphene.Field(UnitGrapheneEnum)
     role = graphene.Field(RoleGrapheneEnum)
+    displacement_occurred = graphene.Field(DisplacementOccurredGrapheneEnum)
     disaggregation_age_json = graphene.List(graphene.NonNull(DisaggregatedAgeType))
     disaggregation_strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
     geo_locations = DjangoPaginatedListObjectField(OSMNameListType, accessor='geo_locations')

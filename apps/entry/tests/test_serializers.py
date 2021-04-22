@@ -306,6 +306,30 @@ class TestFigureSerializer(HelixTestCase):
         self.request = self.factory.get('/graphql')
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
 
+    def test_displacement_occur_only_allowed_for_specific_terms(self):
+        term = FigureTerm.objects.first()
+        term.displacement_occur = True
+        term.save()
+        self.data['term'] = term.id
+        self.data['displacement_occurred'] = 0
+
+        serializer = FigureSerializer(data=self.data,
+                                      context={'request': self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertEqual(
+            serializer.data['displacement_occurred'],
+            self.data['displacement_occurred']
+        )
+
+        term.displacement_occur = False
+        term.save()
+        term.refresh_from_db()
+
+        serializer = FigureSerializer(data=self.data,
+                                      context={'request': self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        self.assertIsNone(serializer.data['displacement_occurred'])
+
     def test_invalid_geo_locations(self):
         self.data['geo_locations'] = [
             {
