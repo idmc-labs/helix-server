@@ -208,7 +208,7 @@ class CommonFigureValidationMixin:
         _attrs = copy(attrs)
         term = attrs.get('term')
         if not term or (term and not term.displacement_occur):
-            _attrs['displacement_occured'] = None
+            _attrs['displacement_occurred'] = None
         return _attrs
 
     def validate(self, attrs: dict) -> dict:

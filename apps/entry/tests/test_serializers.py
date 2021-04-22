@@ -311,14 +311,14 @@ class TestFigureSerializer(HelixTestCase):
         term.displacement_occur = True
         term.save()
         self.data['term'] = term.id
-        self.data['displacement_occured'] = 0
+        self.data['displacement_occurred'] = 0
 
         serializer = FigureSerializer(data=self.data,
                                       context={'request': self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertEqual(
-            serializer.data['displacement_occured'],
-            self.data['displacement_occured']
+            serializer.data['displacement_occurred'],
+            self.data['displacement_occurred']
         )
 
         term.displacement_occur = False
@@ -328,7 +328,7 @@ class TestFigureSerializer(HelixTestCase):
         serializer = FigureSerializer(data=self.data,
                                       context={'request': self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        self.assertIsNone(serializer.data['displacement_occured'])
+        self.assertIsNone(serializer.data['displacement_occurred'])
 
     def test_invalid_geo_locations(self):
         self.data['geo_locations'] = [

@@ -14,7 +14,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name='figure',
-            name='displacement_occured',
+            name='displacement_occurred',
             field=django_enumfield.db.fields.EnumField(blank=True, enum=apps.entry.models.Figure.DISPLACEMENT_OCCURRED, null=True),
         ),
         migrations.AddField(

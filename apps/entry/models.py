@@ -294,7 +294,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     term = models.ForeignKey('FigureTerm', verbose_name=_('Figure term'),
                              related_name='+', on_delete=models.SET_NULL,
                              blank=False, null=True)
-    displacement_occured = enum.EnumField(
+    displacement_occurred = enum.EnumField(
         enum=DISPLACEMENT_OCCURRED,
         verbose_name=_('Displacement Occurred'),
         null=True,
