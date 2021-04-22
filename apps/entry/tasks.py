@@ -4,6 +4,7 @@ import logging
 
 import dramatiq
 from django.core.files.base import ContentFile
+from dramatiq.middleware import TimeLimitExceeded
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
@@ -34,6 +35,8 @@ def __get_pdf_from_html(path, timeout=SELENIUM_TIMEOUT, print_options={}):
         )
     except TimeoutException:
         logger.error(f'Chromium timed out for {path}', exc_info=True)
+    except TimeLimitExceeded:
+        logger.error(f'Dramatiq timed out for {path}', exc_info=True)
 
     final_print_options = {
         'landscape': False,

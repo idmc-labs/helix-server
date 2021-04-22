@@ -132,17 +132,20 @@ class SourcePreview(MetaInformationAbstractModel):
                               blank=True, null=True)
 
     @classmethod
-    def get_pdf(cls, url: str, instance: 'SourcePreview' = None, **kwargs) -> 'SourcePreview':
+    def get_pdf(cls, data: dict, instance: 'SourcePreview' = None) -> 'SourcePreview':
         """
         Based on the url, generate a pdf and store it.
         """
+        url = data['url']
+        created_by = data.get('created_by')
+        last_modified_by = data.get('last_modified_by')
         if not instance:
             token = str(uuid.uuid4())
             instance = cls(token=token)
         instance.url = url
+        instance.created_by = created_by
+        instance.last_modified_by = last_modified_by
         instance.save()
-
-        # TODO: remove .pdf in production... this will happen after webhook
 
         transaction.on_commit(lambda: generate_pdf.send(
             instance.pk
