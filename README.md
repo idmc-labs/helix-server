@@ -15,6 +15,7 @@ docker-compose up
 ```bash
 ./init.sh
 ```
+
 ## Initialize database (seed)
 ```bash
 # Fix the full_name constraint
@@ -29,6 +30,12 @@ docker-compose exec server python manage.py loadtestdata <case sensitive model_n
 
 And navigate to `localhost:9000/graphiql` to view available graphs.
 Use `localhost:9000/graphql` to interact with the server from the client.
+
+## One time commands
+
+### Save geojson for each country
+
+docker-compose exec server python manage.py split_geojson
 
 ## Setup S3 buckets
 
