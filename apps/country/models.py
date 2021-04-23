@@ -38,7 +38,11 @@ class Country(models.Model):
     iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5,
                             null=True, blank=True)
     country_code = models.PositiveSmallIntegerField(verbose_name=_('Country Code'), null=True, blank=False)
-    idmc_short_name = models.CharField(verbose_name=_('IDMC Short Name'), max_length=256, null=True, blank=False)
+    idmc_short_name = models.CharField(
+        verbose_name=_('IDMC Short Name'),
+        max_length=256,
+        blank=False
+    )
     idmc_full_name = models.CharField(verbose_name=_('IDMC Full Name'), max_length=256, null=True, blank=False)
     centroid = ArrayField(verbose_name=_('Centroid'), base_field=models.FloatField(blank=False), null=True)
     bounding_box = ArrayField(verbose_name=_('Bounding Box'),
