@@ -1,6 +1,6 @@
 from django.contrib.auth.models import Permission
 from django.db.models import Value
-from django.db.models.functions import Lower, StrIndex, Concat
+from django.db.models.functions import Lower, StrIndex, Concat, Coalesce
 import django_filters
 
 from apps.users.models import User
@@ -19,7 +19,7 @@ class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
 
     class Meta:
         model = User
-        fields = ['email']
+        fields = ['email', 'is_active']
 
     def filter_role_in(self, queryset, name, value):
         if not value:
@@ -35,10 +35,13 @@ class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
         if not value:
             return queryset
         return queryset.annotate(
-            full=Concat(Lower('first_name'), Lower('last_name'))
+            full=Coalesce(
+                Lower('full_name'),
+                Concat(Lower('first_name'), Value(' '), Lower('last_name')),
+            )
         ).annotate(
             idx=StrIndex('full', Value(value.lower()))
-        ).filter(idx__gt=0).order_by('idx', 'full')
+        ).filter(idx__gt=0).order_by('idx')
 
     def filter_include_inactive(self, queryset, name, value):
         if value is False:

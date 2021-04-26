@@ -2,12 +2,15 @@ import logging
 import uuid
 from uuid import uuid4
 
+from django.apps import apps
+from django.contrib.postgres.fields import JSONField
 from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
-from apps.entry.tasks import generate_pdf
 
+from apps.contrib.tasks import generate_excel_file
+from apps.entry.tasks import generate_pdf
 from utils.fields import CachedFileField
 
 logger = logging.getLogger(__name__)
@@ -151,3 +154,79 @@ class SourcePreview(MetaInformationAbstractModel):
             instance.pk
         ))
         return instance
+
+
+def excel_upload_to(instance, filename: str) -> str:
+    return f'{uuid4()}/{instance.download_type}/{filename}'
+
+
+class ExcelDownload(MetaInformationAbstractModel):
+    class EXCEL_GENERATION_STATUS(enum.Enum):
+        PENDING = 0
+        IN_PROGRESS = 1
+        COMPLETED = 2
+        FAILED = 3
+
+    class DOWNLOAD_TYPES(enum.Enum):
+        CRISIS = 0
+        EVENT = 1
+        COUNTRY = 2
+        ENTRY = 3
+        FIGURE = 4
+
+    started_at = models.DateTimeField(
+        verbose_name=_('Started at'),
+        blank=True,
+        null=True,
+    )
+    completed_at = models.DateTimeField(
+        verbose_name=_('Completed at'),
+        blank=True,
+        null=True,
+    )
+    download_type = enum.EnumField(
+        DOWNLOAD_TYPES,
+        null=False,
+        blank=False,
+    )
+    status = enum.EnumField(
+        EXCEL_GENERATION_STATUS,
+        default=EXCEL_GENERATION_STATUS.PENDING,
+    )
+    file = CachedFileField(
+        verbose_name=_('Excel File'),
+        blank=True,
+        null=True,
+        upload_to=excel_upload_to
+    )
+    filters = JSONField(
+        verbose_name=_('Filters'),
+        blank=True,
+        null=True,
+    )
+
+    def get_model_sheet_data_getter(self):
+        mapper = {
+            self.DOWNLOAD_TYPES.CRISIS: apps.get_model('crisis', 'Crisis'),
+            self.DOWNLOAD_TYPES.EVENT: apps.get_model('event', 'Event'),
+            self.DOWNLOAD_TYPES.COUNTRY: apps.get_model('country', 'Country'),
+            self.DOWNLOAD_TYPES.ENTRY: apps.get_model('entry', 'Entry'),
+            self.DOWNLOAD_TYPES.FIGURE: apps.get_model('entry', 'Figure'),
+        }
+        model = mapper.get(self.download_type)
+        if not model:
+            raise AttributeError(f'Excel mapper cannot find model={model.name} in mapping.')
+        if not hasattr(model, 'get_excel_sheets_data'):
+            raise AttributeError(f'Excel sheet data getter missing for {model.name}')
+        return model.get_excel_sheets_data
+
+    def trigger_excel_generation(self, request):
+        '''
+        This should trigger the excel file generation based on the
+        given request. Filters are preserved within the instance.
+
+        Is called by serializer.create method
+        '''
+        transaction.on_commit(lambda: generate_excel_file.send(
+            self.pk, request.user.id
+        ))

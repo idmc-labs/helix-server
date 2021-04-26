@@ -8,6 +8,7 @@ from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.models import Crisis
 from apps.entry.enums import RoleGrapheneEnum
 from apps.entry.models import Entry
+from apps.entry.schema import FigureListType
 from apps.event.models import Event
 from apps.report.models import (
     Report,
@@ -183,6 +184,11 @@ class ReportType(DjangoObjectType):
                                                    ))
     entries_report = CustomPaginatedListObjectField(ReportEntryListType,
                                                     accessor='entries_report',
+                                                    pagination=PageGraphqlPagination(
+                                                        page_size_query_param='pageSize'
+                                                    ))
+    figures_report = DjangoPaginatedListObjectField(FigureListType,
+                                                    accessor='report_figures',
                                                     pagination=PageGraphqlPagination(
                                                         page_size_query_param='pageSize'
                                                     ))

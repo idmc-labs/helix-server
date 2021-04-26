@@ -10,7 +10,6 @@ from django.utils import timezone
 import dramatiq
 from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
-
 from helix.settings import QueuePriority
 
 REPORT_TIMEOUT = 20 * 60 * 1000

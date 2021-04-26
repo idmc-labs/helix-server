@@ -121,14 +121,21 @@ class Report(MetaInformationArchiveAbstractModel,
                                          related_name='signed_off_reports', on_delete=models.CASCADE)
 
     @property
-    def report_figures(self):
+    def is_legacy(self):
         # TODO: use generated_from after next migration
-        if self.generated_from or not self.generated:
-            figures_ids = (Report.objects.filter(id=self.id) |
-                           Report.objects.get(id=self.id).masterfact_reports.all()).values('figures')
-        else:
-            figures_ids = self.extract_figures
+        return self.generated_from or not self.generated
+
+    @property
+    def attached_figures(self):
+        figures_ids = (Report.objects.filter(id=self.id) |
+                       Report.objects.get(id=self.id).masterfact_reports.all()).values('figures')
         return Figure.objects.filter(id__in=figures_ids)
+
+    @property
+    def report_figures(self):
+        if self.is_legacy:
+            return self.attached_figures
+        return self.extract_figures
 
     @property
     # @cache_me(3000)

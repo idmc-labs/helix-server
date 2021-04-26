@@ -9,16 +9,16 @@ class TestUserFilter(HelixTestCase):
 
     def test_filter_by_full_name(self):
         u1 = UserFactory.create(first_name='abc', last_name='def')
-        u2 = UserFactory.create(first_name='bcd', last_name='efa')
+        UserFactory.create(first_name='bcd', last_name='efa')
         u3 = UserFactory.create(first_name='abc', last_name='dzy')
 
-        data = dict(full_name='abcd')
+        data = dict(full_name='abc d')
         filtered = UserFilter(data).qs
         self.assertEqual([each for each in filtered], [u1, u3])
 
         data = dict(full_name='def')
         filtered = UserFilter(data).qs
-        self.assertEqual([each for each in filtered], [u2, u1])
+        self.assertEqual([each for each in filtered], [u1])
 
         data = dict(full_name='zy')
         filtered = UserFilter(data).qs

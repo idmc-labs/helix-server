@@ -3,9 +3,12 @@ import magic
 
 from rest_framework import serializers
 
-from apps.contrib.models import Attachment
-from apps.contrib.models import SourcePreview
 from apps.entry.tasks import DRAMATIQ_TIMEOUT
+from apps.contrib.models import (
+    Attachment,
+    SourcePreview,
+    ExcelDownload,
+)
 
 
 class IntegerIDField(serializers.IntegerField):
@@ -80,6 +83,18 @@ class SourcePreviewSerializer(MetaInformationSerializerMixin,
 
     def update(self, instance, validated_data):
         return SourcePreview.get_pdf(validated_data, instance=instance)
+
+
+class ExcelDownloadSerializer(MetaInformationSerializerMixin,
+                              serializers.ModelSerializer):
+    class Meta:
+        model = ExcelDownload
+        fields = '__all__'
+
+    def create(self, validated_data):
+        instance = super().create(validated_data)
+        instance.trigger_excel_generation(self.context['request'])
+        return instance
 
 
 class UpdateSerializerMixin:

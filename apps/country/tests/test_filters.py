@@ -13,10 +13,10 @@ from utils.tests import HelixTestCase
 class TestCountryFilter(HelixTestCase):
     def setUp(self) -> None:
         self.filter_class = CountryFilter
-        self.c1 = CountryFactory.create(name='Newal')
-        self.c2 = CountryFactory.create(name='Nepal')
-        self.c3 = CountryFactory.create(name='Wanel')
-        self.c4 = CountryFactory.create(name='Palne')
+        self.c1 = CountryFactory.create(idmc_short_name='Newal')
+        self.c2 = CountryFactory.create(idmc_short_name='Nepal')
+        self.c3 = CountryFactory.create(idmc_short_name='Wanel')
+        self.c4 = CountryFactory.create(idmc_short_name='Palne')
 
     def test_country_name_filter(self):
         QUERY = 'ne'

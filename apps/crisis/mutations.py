@@ -1,7 +1,10 @@
 from django.utils.translation import gettext
 import graphene
+from graphene_django.filter.utils import get_filtering_args_from_filterset
 
+from apps.contrib.serializers import ExcelDownloadSerializer
 from apps.crisis.models import Crisis
+from apps.crisis.filters import CrisisFilter
 from apps.crisis.schema import CrisisType
 from apps.crisis.serializers import CrisisSerializer, CrisisUpdateSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
@@ -83,7 +86,35 @@ class DeleteCrisis(graphene.Mutation):
         return DeleteCrisis(result=instance, errors=None, ok=True)
 
 
+class ExportCrises(graphene.Mutation):
+    class Meta:
+        arguments = get_filtering_args_from_filterset(
+            CrisisFilter,
+            CrisisType
+        )
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **kwargs):
+        from apps.contrib.models import ExcelDownload
+
+        serializer = ExcelDownloadSerializer(
+            data=dict(
+                download_type=int(ExcelDownload.DOWNLOAD_TYPES.CRISIS),
+                filters=kwargs,
+            ),
+            context=dict(request=info.context)
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return ExportCrises(errors=errors, ok=False)
+        serializer.save()
+        return ExportCrises(errors=None, ok=True)
+
+
 class Mutation(object):
     create_crisis = CreateCrisis.Field()
     update_crisis = UpdateCrisis.Field()
     delete_crisis = DeleteCrisis.Field()
+    export_crises = ExportCrises.Field()

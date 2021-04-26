@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.contrib.postgres.fields import ArrayField
@@ -7,6 +8,7 @@ from django_enumfield import enum
 from apps.contrib.models import MetaInformationArchiveAbstractModel, ArchiveAbstractModel
 from apps.entry.models import Entry
 from apps.crisis.models import Crisis
+from apps.users.models import User
 
 
 class GeographicalGroup(models.Model):
@@ -36,7 +38,11 @@ class Country(models.Model):
     iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5,
                             null=True, blank=True)
     country_code = models.PositiveSmallIntegerField(verbose_name=_('Country Code'), null=True, blank=False)
-    idmc_short_name = models.CharField(verbose_name=_('IDMC Short Name'), max_length=256, null=True, blank=False)
+    idmc_short_name = models.CharField(
+        verbose_name=_('IDMC Short Name'),
+        max_length=256,
+        blank=False
+    )
     idmc_full_name = models.CharField(verbose_name=_('IDMC Full Name'), max_length=256, null=True, blank=False)
     centroid = ArrayField(verbose_name=_('Centroid'), base_field=models.FloatField(blank=False), null=True)
     bounding_box = ArrayField(verbose_name=_('Bounding Box'),
@@ -44,6 +50,41 @@ class Country(models.Model):
     idmc_short_name_es = models.CharField(verbose_name=_('IDMC Short Name Es'), max_length=256, null=True)
     idmc_short_name_fr = models.CharField(verbose_name=_('IDMC Short Name Fr'), max_length=256, null=True)
     idmc_short_name_ar = models.CharField(verbose_name=_('IDMC Short Name Ar'), max_length=256, null=True)
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.country.filters import CountryFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='Id',
+            name='Name',
+            geographical_group__name='Geographical Group',
+            region__name='Region',
+            sub_region='Sub Region',
+            iso2='ISO2',
+            iso3='ISO3',
+            country_code='Country Code',
+            idmc_short_name='IDMC Short Name',
+            idmc_full_name='IDMC Full Name',
+            # TODO: crisis, event, entries counts
+        )
+        values = CountryFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.select_related(
+            'geographical_group', 'region',
+        ).values(*[header for header in headers.keys()])
+        data = values
+
+        return {
+            'headers': headers,
+            'data': data,
+            'formulae': None,
+        }
 
     @property
     def entries(self):

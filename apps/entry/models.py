@@ -2,6 +2,7 @@ from collections import OrderedDict
 import logging
 
 from django.contrib.auth import get_user_model
+from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
 from django.db.models import Sum
@@ -342,6 +343,93 @@ class Figure(MetaInformationArchiveAbstractModel,
     # methods
 
     @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.extraction.filters import FigureExtractionFilterSet
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='Id',
+            entry_id='Entry ID',
+            quantifier='Quantifier',
+            reported='Reported',
+            unit='Unit',
+            household_size='Household Size',
+            total_figures='Total Figures',
+            category__name='Category',
+            category__type='Category Type',
+            term__name='Term',
+            role='Role',
+            start_date='Start Date',
+            start_date_accuracy='Start Date Accuracy',
+            end_date='End Date',
+            end_date_accuracy='End Date Accuracy',
+            country__iso3='ISO3 Country',
+            country__name='Country',
+            geolocations='Geolocations (City)',
+            created_at='Created at',
+            created_by__full_name='Created by',
+            include_idu='Include in IDU',
+            excerpt_idu='Excerpt IDU',
+            entry__event_id='Event ID',
+            entry__event__name='Event Name',
+            entry__event__event_type='Event Type',
+            entry__event__other_sub_type='Event Subtype',
+            entry__event__start_date='Event Start Date',
+            is_housing_destruction='Is housing destruction',
+            disaggregation_displacement_urban='Displacement: Urban',
+            disaggregation_displacement_rural='Displacement: Rural',
+            disaggregation_location_camp='Location: Camp',
+            disaggregation_location_non_camp='Location: Non-Camp',
+            disaggregation_sex_male='Sex: Male',
+            disaggregation_sex_female='Sex: Female',
+            disaggregation_age_json='Displacement: Age',
+            disaggregation_strata_json='Displacement: Strata',
+            disaggregation_conflict='Conflict: Conflict',
+            disaggregation_conflict_political='Conflict: Political',
+            disaggregation_conflict_criminal='Conflict: Criminal',
+            disaggregation_conflict_communal='Conflict: Communal',
+            disaggregation_conflict_other='Conflict: Other',
+        )
+        values = FigureExtractionFilterSet(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.order_by(
+            '-created_at'
+        ).annotate(
+            geolocations=ArrayAgg('geo_locations__city', distinct=True)
+        ).select_related(
+            'entry',
+            'entry__event',
+            'category',
+            'term',
+            'created_by',
+        ).prefetch_related(
+            'geo_locations'
+        ).values(*[header for header in headers.keys()])
+        data = [
+            {
+                **datum,
+                **dict(
+                    start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
+                    end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
+                    quantifier=getattr(Figure.QUANTIFIER.get(datum['quantifier']), 'name', ''),
+                    unit=getattr(Figure.UNIT.get(datum['unit']), 'name', ''),
+                    role=getattr(Figure.ROLE.get(datum['role']), 'name', ''),
+                )
+            }
+            for datum in values
+        ]
+
+        return {
+            'headers': headers,
+            'data': data,
+            'formulae': None,
+        }
+
+    @classmethod
     def get_total_stock_idp_figure(cls, filters):
         from apps.entry.filters import FigureFilter
         return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
@@ -440,6 +528,66 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                                        related_name='review_entries',
                                        through='EntryReviewer',
                                        through_fields=('entry', 'reviewer'))
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.entry.filters import EntryFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='Id',
+            article_title='Article Title',
+            is_confidential='Confidential?',
+            publish_date='Publish Date',
+            url='URL',
+            document__attachment='Document',
+            document__mimetype='Filetype',
+            document__filetype_detail='Filetype Detail',
+            event_id='Event ID',
+            event__name='Event Name',
+            event__crisis_id='Crisis ID',
+            event__crisis__name='Crisis Name',
+            figures_count='Figure Count',
+            figures_sum='Recommended Figure',
+            sources_name='Sources',
+            publishers_name='Publishers',
+            created_at='Created at',
+            created_by__full_name='Created by',
+            idmc_analysis='IDMC Anlysis',
+        )
+        values = EntryFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.annotate(
+            sources_name=ArrayAgg('sources__name', distinct=True),
+            publishers_name=ArrayAgg('publishers__name', distinct=True),
+            figures_sum=models.Sum(
+                'figures__total_figures',
+                filter=models.Q(
+                    figures__category=FigureCategory.flow_new_displacement_id(),
+                    figures__role=Figure.ROLE.RECOMMENDED,
+                ),
+            ),
+            figures_count=models.Count('figures', distinct=True),
+        ).order_by('-created_at').select_related(
+            'event',
+            'event__crisis',
+            'created_by',
+        ).prefetch_related(
+            'figures',
+            'sources',
+            'publishers',
+        ).values(*[header for header in headers.keys()])
+        data = values
+
+        return {
+            'headers': headers,
+            'data': data,
+            'formulae': None,
+        }
 
     # Properties
 
