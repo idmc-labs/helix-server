@@ -19,8 +19,8 @@ class TestCrisisUpdateSerializer(HelixTestCase):
     def test_invalid_crisis_date_beyond_children_event_dates(self):
         from datetime import datetime, timedelta
 
-        start = datetime.today()
-        end = datetime.today() + timedelta(days=100)
+        start = datetime.today().date()
+        end = (datetime.today() + timedelta(days=100)).date()
 
         crisis = CrisisFactory.create(
             start_date=start,
@@ -30,6 +30,18 @@ class TestCrisisUpdateSerializer(HelixTestCase):
             crisis=crisis,
             start_date=start + timedelta(days=1),
         )
+
+        # default should be valid
+        data = dict(
+            start_date=crisis.start_date
+        )
+        serializer = CrisisUpdateSerializer(
+            instance=crisis,
+            data=data,
+            partial=True,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
         # increase crisis start date more than event start date
         data = dict(
             start_date=event.start_date + timedelta(days=1)

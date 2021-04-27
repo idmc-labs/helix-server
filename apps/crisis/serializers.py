@@ -1,11 +1,13 @@
 from collections import OrderedDict
 
-from django.db.models import Min, Max
+from django.db.models import Min, Max, Q
 from django.utils.translation import gettext
 from rest_framework import serializers
 
 from apps.crisis.models import Crisis
 from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
+from apps.country.models import Country
+from apps.event.models import Event
 
 
 class CrisisSerializer(serializers.ModelSerializer):
@@ -32,31 +34,29 @@ class CrisisSerializer(serializers.ModelSerializer):
         start_date = attrs.get('start_date', getattr(self.instance, 'start_date', None))
         end_date = attrs.get('end_date', getattr(self.instance, 'end_date', None))
 
-        min_event_start_date = self.instance.events.aggregate(
-            _date=Min('start_date')
-        )['_date']
-        max_event_start_date = self.instance.events.aggregate(
-            _date=Max('start_date')
-        )['_date']
-        min_event_end_date = self.instance.events.aggregate(
-            _date=Min('end_date')
-        )['_date']
-        max_event_end_date = self.instance.events.aggregate(
-            _date=Max('end_date')
-        )['_date']
+        _ = Event.objects.filter(
+            crisis=self.instance,
+        ).aggregate(
+            min_date=Min(
+                'start_date',
+                filter=Q(
+                    start_date__isnull=False,
+                )
+            ),
+            max_date=Max(
+                'end_date',
+                filter=Q(
+                    end_date__isnull=False,
+                )
+            ),
+        )
+        min_event_start_date = _['min_date']
+        max_event_end_date = _['max_date']
 
-        if start_date:
-            if (
-                (max_event_start_date and not start_date <= max_event_start_date) or
-                (min_event_start_date and not start_date <= min_event_start_date)
-            ):
-                errors['start_date'] = gettext('Start date of one of the events is out of range.')
-        if end_date:
-            if (
-                (max_event_end_date and not end_date >= max_event_end_date) or
-                (min_event_end_date and not end_date >= min_event_end_date)
-            ):
-                errors['end_date'] = gettext('End date of one of the events is out of range.')
+        if start_date and (min_event_start_date and min_event_start_date < start_date):
+            errors['start_date'] = gettext('Earliest start date of one of the events is %s.') % min_event_start_date
+        if end_date and (max_event_end_date and end_date < max_event_end_date):
+            errors['end_date'] = gettext('Farthest end date of one of the events is %s.') % max_event_end_date
         return errors
 
     def validate_event_countries(self, attrs):
@@ -71,10 +71,10 @@ class CrisisSerializer(serializers.ModelSerializer):
 
         if not event_countries:
             return errors
-        if set(event_countries).difference(countries):
+        if diffs := set(event_countries).difference(countries):
             errors['countries'] = gettext(
-                'The included events have more countries than mentioned in this crisis.'
-            )
+                'The included events have following countries not mentioned in this crisis: %s'
+            ) % ', '.join([item for item in Country.objects.filter(id__in=diffs).values_list('name', flat=True)])
         return errors
 
     def validate_event_types(self, attrs):
@@ -90,13 +90,23 @@ class CrisisSerializer(serializers.ModelSerializer):
         event_type = self.instance.events.first().event_type.value
         if event_type and crisis_type != event_type:
             errors['crisis_type'] = gettext(
-                'There are events with different crisis types'
-            )
+                'There are events with different event type: %s'
+            ) % event_type
+        return errors
+
+    def validate_empty_countries(self, attrs):
+        errors = OrderedDict()
+        countries = attrs.get('countries', [])
+        if not countries and not (self.instance and self.instance.countries.exists()):
+            errors.update(dict(
+                countries='This field is required.'
+            ))
         return errors
 
     def validate(self, attrs):
         errors = OrderedDict()
         errors.update(self.validate_dates(attrs))
+        errors.update(self.validate_empty_countries(attrs))
         if self.instance:
             errors.update(self.validate_event_dates(attrs))
             errors.update(self.validate_event_countries(attrs))
