@@ -25,9 +25,9 @@ class CrisisSerializer(serializers.ModelSerializer):
         return errors
 
     def validate_event_dates(self, attrs):
-        if not self.instance:
-            return
         errors = OrderedDict()
+        if not self.instance:
+            return errors
 
         start_date = attrs.get('start_date', getattr(self.instance, 'start_date', None))
         end_date = attrs.get('end_date', getattr(self.instance, 'end_date', None))
@@ -60,18 +60,37 @@ class CrisisSerializer(serializers.ModelSerializer):
         return errors
 
     def validate_event_countries(self, attrs):
-        if not self.instance:
-            return
-
         errors = OrderedDict()
+        if not self.instance:
+            return errors
+
         countries = attrs.get('countries')
-        if not countries:
-            return
+        if countries is None:
+            return errors
         event_countries = self.instance.events.filter(countries__isnull=False).values_list('countries', flat=True)
 
+        if not event_countries:
+            return errors
         if set(event_countries).difference(countries):
             errors['countries'] = gettext(
                 'The included events have more countries than mentioned in this crisis.'
+            )
+        return errors
+
+    def validate_event_types(self, attrs):
+        errors = OrderedDict()
+        if not self.instance:
+            return errors
+        crisis_type = attrs.get('crisis_type')
+        if crisis_type is None:
+            return errors
+        if not self.instance.events.exists():
+            return errors
+        # all events are bound to be the same as crisis type
+        event_type = self.instance.events.first().event_type.value
+        if event_type and crisis_type != event_type:
+            errors['crisis_type'] = gettext(
+                'There are events with different crisis types'
             )
         return errors
 
@@ -81,6 +100,7 @@ class CrisisSerializer(serializers.ModelSerializer):
         if self.instance:
             errors.update(self.validate_event_dates(attrs))
             errors.update(self.validate_event_countries(attrs))
+            errors.update(self.validate_event_types(attrs))
         if errors:
             raise serializers.ValidationError(errors)
         return attrs

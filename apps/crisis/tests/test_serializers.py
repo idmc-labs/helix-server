@@ -1,6 +1,7 @@
 from django.test import RequestFactory
 
 from apps.crisis.serializers import CrisisUpdateSerializer
+from apps.crisis.models import Crisis
 from utils.tests import HelixTestCase
 from utils.factories import (
     CrisisFactory,
@@ -62,3 +63,33 @@ class TestCrisisUpdateSerializer(HelixTestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertIn('countries', serializer.errors)
+
+    def test_invalid_crisis_type_different_from_event_type(self):
+        crisis = CrisisFactory.create(
+            crisis_type=Crisis.CRISIS_TYPE.DISASTER.value
+        )
+        event = EventFactory.create(
+            crisis=crisis,
+            event_type=crisis.crisis_type,
+        )
+        # now try to put in a different crisis type
+        data = dict(
+            crisis_type=Crisis.CRISIS_TYPE.CONFLICT.value
+        )
+        serializer = CrisisUpdateSerializer(
+            instance=crisis,
+            data=data,
+            partial=True
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('crisis_type', serializer.errors)
+
+        # crisis has no events
+        event.delete()
+        # serializer should be valid now
+        serializer = CrisisUpdateSerializer(
+            instance=crisis,
+            data=data,
+            partial=True
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
