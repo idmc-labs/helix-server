@@ -280,8 +280,8 @@ class TestFigureSerializer(HelixTestCase):
     def setUp(self):
         self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.factory = RequestFactory()
-        country1 = CountryFactory.create(country_code=123)
-        country2 = CountryFactory.create(name='Nepal')
+        country1 = CountryFactory.create(country_code=123, iso2='lo')
+        country2 = CountryFactory.create(name='Nepal', iso2='bo')
         self.event = EventFactory.create(name="hahaha")
         self.event.countries.set([country1, country2])
         self.entry = EntryFactory.create(
@@ -334,31 +334,31 @@ class TestFigureSerializer(HelixTestCase):
         self.data['geo_locations'] = [
             {
                 "country": "Nepal",
-                "countryCode": "23",
-                "osmId": "tets1",
-                "osmType": "HA",
+                "country_code": "23",
+                "osm_id": "tets1",
+                "osm_type": "HA",
                 "identifier": OSMName.IDENTIFIER.ORIGIN.value,
-                "displayName": "testname",
+                "display_name": "testname",
                 "lon": 12.34,
                 "lat": 23.21,
                 "name": "testme",
                 "accuracy": OSMName.OSM_ACCURACY.COUNTRY.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                "boundingBox": [1.2],
+                "bounding_box": [1.2],
             },
             {
                 "country": "Nepal",
-                "countryCode": "423",
-                "osmId": "tets1",
-                "osmType": "HA",
+                "country_code": "423",
+                "osm_id": "tets1",
+                "osm_type": "HA",
                 "identifier": OSMName.IDENTIFIER.ORIGIN.value,
-                "displayName": "testname",
+                "display_name": "testname",
                 "lon": 12.34,
                 "lat": 23.21,
                 "name": "testme",
                 "accuracy": OSMName.OSM_ACCURACY.COUNTRY.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                "boundingBox": [1.2],
+                "bounding_box": [1.2],
             },
         ]
         serializer = FigureSerializer(data=self.data,

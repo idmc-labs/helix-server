@@ -77,9 +77,16 @@ class TestUpdateEventSerializer(HelixTestCase):
         start = datetime.today().date()
         end = (datetime.today() + timedelta(days=100)).date()
 
+        crisis = CrisisFactory.create(
+            crisis_type=Crisis.CRISIS_TYPE.CONFLICT,
+        )
         event = EventFactory.create(
+            crisis=crisis,
+            event_type=crisis.crisis_type,
             start_date=start,
             end_date=end,
+            violence_sub_type=ViolenceSubTypeFactory.create(),
+            disaster_sub_type=DisasterSubTypeFactory.create(),
         )
         entry = EntryFactory.create(
             event=event

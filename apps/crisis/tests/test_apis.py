@@ -79,9 +79,11 @@ class TestCrisisUpdate(HelixGraphQLTestCase):
               }
             }
         """
+        country = CountryFactory.create()
         self.input = {
             "id": self.crisis.id,
-            "name": "New Name"
+            "name": "New Name",
+            "countries": [country.id],
         }
 
     def test_valid_update_crisis(self):

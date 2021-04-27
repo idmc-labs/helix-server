@@ -42,11 +42,14 @@ class EventSerializer(MetaInformationSerializerMixin,
             raise serializers.ValidationError({'event_type': gettext('Event type and crisis type do not match.')})
 
     def validate_figures_countries(self, attrs):
+        '''
+        downward validation by considering children during event update
+        '''
         errors = OrderedDict()
         if not self.instance:
             return errors
 
-        countries = [each.id for each in attrs.get('countries')]
+        countries = [each.id for each in attrs.get('countries', [])]
         if not countries:
             return errors
         figures_countries = Figure.objects.filter(
