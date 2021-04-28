@@ -3,12 +3,14 @@ import json
 
 from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
+from apps.review.models import Review
 from utils.factories import (
     CountryFactory,
     DisasterSubTypeFactory,
     CrisisFactory,
     ViolenceSubTypeFactory,
     EventFactory,
+    EntryFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -275,13 +277,17 @@ class TestDeleteEvent(HelixGraphQLTestCase):
 class TestEventListQuery(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.event1_name = 'blaone'
-        self.event1 = EventFactory.create(name=self.event1_name)
-        self.event2 = EventFactory.create(name='blatwo')
         self.q = '''
             query EventList($crisisByIds: [ID!], $name: String){
               eventList(crisisByIds: $crisisByIds, name: $name) {
                 results {
                   id
+                  reviewCount {
+                    reviewCompleteCount
+                    signedOffCount
+                    toBeReviewedCount
+                    underReviewCount
+                  }
                 }
               }
             }
@@ -290,8 +296,10 @@ class TestEventListQuery(HelixGraphQLTestCase):
         self.force_login(guest)
 
     def test_event_list_filter(self):
+        event1 = EventFactory.create(name=self.event1_name)
+        EventFactory.create(name='blatwo')
         variables = {
-            "crisisByIds": [str(self.event1.crisis.id)]
+            "crisisByIds": [str(event1.crisis.id)]
         }
         response = self.query(self.q,
                               variables=variables)
@@ -311,5 +319,65 @@ class TestEventListQuery(HelixGraphQLTestCase):
 
         expected = [self.event1.id]
         self.assertResponseNoErrors(response)
-        self.assertEqual([int(each['id']) for each in content['data']['eventList']['results']],
-                         expected)
+        self.assertEqual(
+            [int(each['id']) for each in content['data']['eventList']['results']],
+            expected
+        )
+
+    def test_event_review_count_with_dataloader(self):
+        event = EventFactory.create()
+        r1 = create_user_with_role(
+            USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+        )
+        r2 = create_user_with_role(
+            USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+        )
+        entry = EntryFactory.create(
+            event=event,
+        )
+        entry.reviewers.set([r1, r2])
+
+        response = self.query(
+            self.q,
+        )
+        content = response.json()
+        # check the counts
+        data = content['data']
+        self.assertEqual(
+            data['eventList']['results'][0]['reviewCount']['toBeReviewedCount'],
+            2
+        )
+        self.assertEqual(
+            data['eventList']['results'][0]['reviewCount']['underReviewCount'],
+            None
+        )
+
+        # one reviewer starts reviewing
+        Review.objects.create(
+            entry=entry,
+            created_by=r1,
+            field='field',
+            value=0,
+        )
+        response = self.query(
+            self.q,
+        )
+        content = response.json()
+        # check the counts
+        data = content['data']
+        self.assertEqual(
+            data['eventList']['results'][0]['reviewCount']['toBeReviewedCount'],
+            1
+        )
+        self.assertEqual(
+            data['eventList']['results'][0]['reviewCount']['underReviewCount'],
+            1
+        )
+        self.assertEqual(
+            data['eventList']['results'][0]['reviewCount']['signedOffCount'],
+            None
+        )
+        self.assertEqual(
+            data['eventList']['results'][0]['reviewCount']['reviewCompleteCount'],
+            None
+        )
