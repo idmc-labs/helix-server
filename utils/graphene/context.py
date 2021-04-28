@@ -1,5 +1,6 @@
 from django.utils.functional import cached_property
 
+from apps.country.dataloaders import TotalFigureByCountryCategoryLoader
 from apps.entry.dataloaders import TotalIDPFigureByEntryLoader, TotalNDFigureByEntryLoader
 from apps.event.dataloaders import TotalIDPFigureByEventLoader, TotalNDFigureByEventLoader
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
@@ -18,7 +19,7 @@ class GQLContext:
 
     def get_dataloader(self, parent: str, related_name: str):
         # TODO: rename to get OneToManyLoader?
-        # return a different dataloader for each ref
+        # returns a different dataloader for each ref
         ref = f'{parent}_{related_name}'
         if ref not in self.one_to_many_dataloaders:
             self.one_to_many_dataloaders[ref] = OneToManyLoader()
@@ -50,3 +51,17 @@ class GQLContext:
     @cached_property
     def event_event_total_flow_nd_figures(self):
         return TotalNDFigureByEventLoader()
+
+    @cached_property
+    def country_idp_figure_dataloader(self):
+        from apps.entry.models import FigureCategory
+        return TotalFigureByCountryCategoryLoader(
+            category=FigureCategory.stock_idp_id()
+        )
+
+    @cached_property
+    def country_nd_figure_dataloader(self):
+        from apps.entry.models import FigureCategory
+        return TotalFigureByCountryCategoryLoader(
+            category=FigureCategory.flow_new_displacement_id()
+        )
