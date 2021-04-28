@@ -8,6 +8,7 @@ from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 class GQLContext:
     def __init__(self, request):
         self.request = request
+        # global dataloaders
         self.one_to_many_dataloaders = {}
         self.count_dataloaders = {}
 
