@@ -12,6 +12,13 @@ from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
 
 
+class CrisisReviewCountType(graphene.ObjectType):
+    under_review_count = graphene.Int(required=False)
+    signed_off_count = graphene.Int(required=False)
+    review_complete_count = graphene.Int(required=False)
+    to_be_reviewed_count = graphene.Int(required=False)
+
+
 class CrisisType(DjangoObjectType):
     class Meta:
         model = Crisis
@@ -29,6 +36,10 @@ class CrisisType(DjangoObjectType):
     total_flow_nd_figures = graphene.Field(graphene.Int)
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
+    review_count = graphene.Field(CrisisReviewCountType)
+
+    def resolve_review_count(root, info, **kwargs):
+        return info.context.crisis_crisis_review_count_dataloader.load(root.id)
 
 
 class CrisisListType(CustomDjangoListObjectType):

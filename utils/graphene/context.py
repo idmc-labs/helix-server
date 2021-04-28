@@ -7,6 +7,7 @@ from apps.event.dataloaders import (
     TotalNDFigureByEventLoader,
     EventReviewCountLoader
 )
+from apps.crisis.dataloaders import CrisisReviewCountLoader
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 
 
@@ -95,3 +96,7 @@ class GQLContext:
     @cached_property
     def event_event_review_count_dataloader(self):
         return EventReviewCountLoader()
+
+    @cached_property
+    def crisis_crisis_review_count_dataloader(self):
+        return CrisisReviewCountLoader()
