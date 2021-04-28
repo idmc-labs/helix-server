@@ -1,4 +1,7 @@
-from django.db.models import Exists, OuterRef
+from django.db.models import (
+    Exists,
+    OuterRef,
+)
 from django_filters import rest_framework as df
 
 from apps.entry.models import (
@@ -20,6 +23,10 @@ reviewed_subquery = EntryReviewer.objects.filter(
 signed_off_subquery = EntryReviewer.objects.filter(
     entry=OuterRef('pk'),
     status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
+)
+to_be_reviewed_subquery = EntryReviewer.objects.filter(
+    entry=OuterRef('pk'),
+    status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
 )
 
 
@@ -73,6 +80,7 @@ class EntryFilter(df.FilterSet):
     sources_by_ids = IDListFilter(method='filter_sources')
     publishers_by_ids = IDListFilter(method='filter_publishers')
     created_by_ids = IDListFilter(method='filter_created_by')
+    review_status = StringListFilter(method='filter_by_review_status')
 
     class Meta:
         model = Entry
@@ -101,6 +109,30 @@ class EntryFilter(df.FilterSet):
         if not value:
             return qs
         return qs.filter(event__countries__in=value)
+
+    def filter_by_review_status(self, qs, name, value):
+        if not value:
+            return qs
+        qs = qs.annotate(
+            _is_reviewed=Exists(reviewed_subquery),
+            _is_under_review=Exists(under_review_subquery),
+            _is_signed_off=Exists(signed_off_subquery),
+            _to_be_reviewed=Exists(to_be_reviewed_subquery),
+        )
+        _temp = qs.none()
+        if EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED.name in value:
+            reviewed = qs.filter(_is_reviewed=True)
+            _temp = _temp | reviewed
+        if EntryReviewer.REVIEW_STATUS.UNDER_REVIEW.name in value:
+            under_review = qs.filter(_is_under_review=True)
+            _temp = _temp | under_review
+        if EntryReviewer.REVIEW_STATUS.SIGNED_OFF.name in value:
+            signed_off = qs.filter(_is_signed_off=True)
+            _temp = _temp | signed_off
+        if EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.name in value:
+            to_be_reviewed = qs.filter(_to_be_reviewed=True)
+            _temp = _temp | to_be_reviewed
+        return _temp
 
     @property
     def qs(self):
