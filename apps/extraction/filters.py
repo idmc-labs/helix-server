@@ -22,7 +22,10 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_regions = IDListFilter(method='filter_regions')
     filter_figure_geographical_groups = IDListFilter(method='filter_geographical_groups')
     filter_figure_countries = IDListFilter(method='filter_countries')
+    filter_events = IDListFilter(method='filter_events_')
     filter_event_crises = IDListFilter(method='filter_crises')
+    filter_entry_sources = IDListFilter(method='filter_sources')
+    filter_entry_publishers = IDListFilter(method='filter_publishers')
     filter_figure_categories = IDListFilter(method='filter_filter_figure_categories')
     filter_figure_start_after = df.DateFilter(method='filter_time_frame_after')
     filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
@@ -52,9 +55,26 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs.filter(figures__country__in=value).distinct()
         return qs
 
+    def filter_events_(self, qs, name, value):
+        if value:
+            return qs.filter(event__in=value).distinct()
+        return qs
+
     def filter_crises(self, qs, name, value):
         if value:
             return qs.filter(event__crisis__in=value).distinct()
+        return qs
+
+    def filter_sources(self, qs, name, value):
+        if value:
+            return qs.filter(sources__in=value).distinct()
+        return qs
+
+    def filter_publishers(self, qs, name, value):
+        print(value)
+        if value:
+            t = qs.filter(publishers__in=value).distinct()
+            return t
         return qs
 
     def filter_filter_figure_categories(self, qs, name, value):
@@ -130,6 +150,7 @@ class FigureExtractionFilterSet(df.FilterSet):
     filter_figure_regions = IDListFilter(method='filter_regions')
     filter_figure_geographical_groups = IDListFilter(method='filter_geographical_groups')
     filter_figure_countries = IDListFilter(method='filter_countries')
+    filter_events = IDListFilter(method='filter_events_')
     filter_event_crises = IDListFilter(method='filter_crises')
     filter_figure_categories = IDListFilter(method='filter_filter_figure_categories')
     filter_figure_start_after = df.DateFilter(method='noop')
@@ -161,6 +182,11 @@ class FigureExtractionFilterSet(df.FilterSet):
     def filter_countries(self, qs, name, value):
         if value:
             return qs.filter(country__in=value).distinct()
+        return qs
+
+    def filter_events_(self, qs, name, value):
+        if value:
+            return qs.filter(entry__event__in=value).distinct()
         return qs
 
     def filter_crises(self, qs, name, value):

@@ -1,4 +1,6 @@
 import django_filters
+from django.db.models import Value
+from django.db.models.functions import Lower, StrIndex
 
 from apps.contextualupdate.models import ContextualUpdate
 from apps.crisis.models import Crisis
@@ -6,6 +8,7 @@ from utils.filters import StringListFilter
 
 
 class ContextualUpdateFilter(django_filters.FilterSet):
+    article_title = django_filters.CharFilter(method='filter_article_title')
     countries = StringListFilter(method='filter_countries')
     sources = StringListFilter(method='filter_sources')
     publishers = StringListFilter(method='filter_publishers')
@@ -14,11 +17,19 @@ class ContextualUpdateFilter(django_filters.FilterSet):
     class Meta:
         model = ContextualUpdate
         fields = {
-            'article_title': ['icontains'],
             'publish_date': ['lte', 'gte'],
         }
 
-    def fitler_m2m(self, qs, field_name, value):
+    def filter_article_title(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.annotate(
+            lname=Lower('article_title')
+        ).annotate(
+            idx=StrIndex('lname', Value(value.lower()))
+        ).filter(idx__gt=0).order_by('idx', 'name')
+
+    def filter_m2m(self, qs, field_name, value):
         if not value:
             return qs
         filter_param = {
@@ -27,13 +38,13 @@ class ContextualUpdateFilter(django_filters.FilterSet):
         return qs.filter(**filter_param).distinct()
 
     def filter_countries(self, qs, name, value):
-        return self.fitler_m2m(qs, 'countries', value)
+        return self.filter_m2m(qs, 'countries', value)
 
     def filter_sources(self, qs, name, value):
-        return self.fitler_m2m(qs, 'sources', value)
+        return self.filter_m2m(qs, 'sources', value)
 
     def filter_publishers(self, qs, name, value):
-        return self.fitler_m2m(qs, 'publishers', value)
+        return self.filter_m2m(qs, 'publishers', value)
 
     def filter_crisis_types(self, qs, name, value):
         if value:
