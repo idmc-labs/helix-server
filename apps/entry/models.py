@@ -1,11 +1,14 @@
 from collections import OrderedDict
+from datetime import date
 import logging
+from typing import Optional
 
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
-from django.db.models import Sum
+from django.db.models import Sum, Q
+from django.db.models.query import QuerySet
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
@@ -303,6 +306,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     )
     role = enum.EnumField(enum=ROLE, verbose_name=_('Role'), default=ROLE.RECOMMENDED)
 
+    # start date is stock reporting date for stock figures
     start_date = models.DateField(verbose_name=_('Start Date'),
                                   blank=False, null=True)
     start_date_accuracy = enum.EnumField(
@@ -312,6 +316,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         blank=True,
         null=True,
     )
+    # end date is expiry date for stock figures
     end_date = models.DateField(verbose_name=_('End Date'),
                                 blank=True, null=True)
     end_date_accuracy = enum.EnumField(
@@ -341,6 +346,51 @@ class Figure(MetaInformationArchiveAbstractModel,
                                            related_name='+')
 
     # methods
+
+    @classmethod
+    def filtered_nd_figures(
+        cls,
+        qs: QuerySet,
+        start_date: Optional[date],
+        end_date: Optional[date],
+    ):
+        qs = qs.filter(
+            category=FigureCategory.flow_new_displacement_id(),
+        )
+        if end_date:
+            qs = qs.filter(
+                end_date__lte=end_date,
+            )
+        if start_date:
+            qs = qs.filter(
+                start_date__gte=start_date,
+            )
+        return qs
+
+    @classmethod
+    def filtered_idp_figures(
+        cls,
+        qs: QuerySet,
+        end_date: Optional[date],
+    ):
+        qs = qs.filter(
+            category=FigureCategory.stock_idp_id()
+        )
+        if end_date:
+            qs = qs.filter(
+                Q(
+                    # if end date exists (=expired), we must make sure that expiry date before the given end date,
+                    # also figure started before the end date
+                    end_date__isnull=False,
+                    start_date__lte=end_date,
+                    end_date__lte=end_date,
+                ) | Q(
+                    # if end date does not exist, we must make sure that that figure started before given start date
+                    end_date__isnull=True,
+                    start_date__lte=end_date,
+                )
+            )
+        return qs
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
