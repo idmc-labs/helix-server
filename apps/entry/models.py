@@ -382,7 +382,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             )
         if start_date:
             qs = qs.filter(
-                start_date__gte=start_date,
+                end_date__gte=start_date,
             )
         return qs
 
@@ -398,11 +398,11 @@ class Figure(MetaInformationArchiveAbstractModel,
         if end_date:
             qs = qs.filter(
                 Q(
-                    # if end date exists (=expired), we must make sure that expiry date before the given end date,
+                    # if end date exists (=expired), we must make sure that expiry date is after the given end date,
                     # also figure started before the end date
                     end_date__isnull=False,
                     start_date__lte=end_date,
-                    end_date__lte=end_date,
+                    end_date__gte=end_date,
                 ) | Q(
                     # if end date does not exist, we must make sure that that figure started before given start date
                     end_date__isnull=True,

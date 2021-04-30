@@ -2,7 +2,11 @@ from datetime import datetime, timedelta
 
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
-from apps.entry.models import Figure, EntryReviewer
+from apps.entry.models import (
+    Figure,
+    EntryReviewer,
+    FigureCategory,
+)
 from utils.factories import (
     EntryFactory,
     FigureFactory,
@@ -64,6 +68,117 @@ class TestFigureModel(HelixTestCase):
         errors = Figure.validate_dates(data, self.figure)
         self.assertIn('end_date', errors)
         self.assertIn('start_date', errors)
+
+    def test_figure_nd_filtering(self):
+        ref = datetime.today()
+        nd_cat = FigureCategory.flow_new_displacement_id()
+        idp_cat = FigureCategory.stock_idp_id()
+        f1 = FigureFactory.create(
+            start_date=ref - timedelta(days=30),
+            end_date=ref,
+            category=nd_cat,
+            role=Figure.ROLE.RECOMMENDED,
+        )
+        FigureFactory.create(
+            start_date=ref,
+            end_date=ref + timedelta(days=30),
+            category=nd_cat,
+            role=Figure.ROLE.RECOMMENDED,
+        )
+        f3 = FigureFactory.create(
+            start_date=ref + timedelta(days=30),
+            end_date=ref + timedelta(days=60),
+            category=nd_cat,
+            role=Figure.ROLE.RECOMMENDED,
+        )
+        f4 = FigureFactory.create(
+            start_date=ref + timedelta(days=30),
+            end_date=ref + timedelta(days=60),
+            category=idp_cat,
+            role=Figure.ROLE.RECOMMENDED,
+        )
+
+        nd = Figure.filtered_nd_figures(
+            qs=Figure.objects.all(),
+            start_date=None,
+            end_date=None,
+        )
+        self.assertEqual(nd.count(), 3)
+        self.assertNotIn(f4, nd)
+
+        nd = Figure.filtered_nd_figures(
+            qs=Figure.objects.all(),
+            start_date=ref - timedelta(days=15),
+            end_date=ref + timedelta(days=45),
+        )
+        self.assertEqual(nd.count(), 2)
+        self.assertNotIn(f3, nd)
+        self.assertNotIn(f4, nd)
+
+        nd = Figure.filtered_nd_figures(
+            qs=Figure.objects.all(),
+            start_date=ref - timedelta(days=15),
+            end_date=ref + timedelta(days=15),
+        )
+        self.assertEqual(nd.count(), 1)
+        self.assertEqual(nd.first(), f1)
+
+    def test_figure_idp_filtering(self):
+        ref = datetime.today()
+        nd_cat = FigureCategory.flow_new_displacement_id()
+        idp_cat = FigureCategory.stock_idp_id()
+        f1 = FigureFactory.create(
+            start_date=ref - timedelta(days=30),
+            end_date=ref,
+            category=idp_cat,
+            role=Figure.ROLE.RECOMMENDED,
+        )
+        FigureFactory.create(
+            start_date=ref,
+            category=idp_cat,
+            role=Figure.ROLE.RECOMMENDED,
+        )
+        f3 = FigureFactory.create(
+            start_date=ref + timedelta(days=30),
+            end_date=ref + timedelta(days=60),
+            category=idp_cat,
+            role=Figure.ROLE.RECOMMENDED,
+        )
+        f4 = FigureFactory.create(
+            start_date=ref + timedelta(days=1),
+            end_date=ref + timedelta(days=2),
+            category=nd_cat,  # THIS IS nd
+            role=Figure.ROLE.RECOMMENDED,
+        )
+
+        idp = Figure.filtered_idp_figures(
+            qs=Figure.objects.all(),
+            end_date=None,
+        )
+        self.assertEqual(idp.count(), 3)
+        self.assertNotIn(f4, idp)
+
+        idp = Figure.filtered_idp_figures(
+            qs=Figure.objects.all(),
+            end_date=ref,
+        )
+        self.assertEqual(idp.count(), 2)
+        self.assertNotIn(f3, idp)
+
+        idp = Figure.filtered_idp_figures(
+            qs=Figure.objects.all(),
+            end_date=ref - timedelta(days=1),
+        )
+        self.assertEqual(idp.count(), 1)
+        self.assertIn(f1, idp)
+
+        idp = Figure.filtered_idp_figures(
+            qs=Figure.objects.all(),
+            end_date=ref + timedelta(days=30),
+        )
+        self.assertEqual(idp.count(), 2)
+        self.assertNotIn(f1, idp)
+        self.assertNotIn(f4, idp)
 
 
 class TestEntryModel(HelixTestCase):
