@@ -5,7 +5,7 @@ from promise import Promise
 from promise.dataloader import DataLoader
 
 
-class TotalFigureByCountryCategoryLoader(DataLoader):
+class TotalFigureThisYearByCountryCategoryLoader(DataLoader):
     def __init__(
         self,
         *args,
@@ -18,14 +18,39 @@ class TotalFigureByCountryCategoryLoader(DataLoader):
         '''
         keys: [countryId]
         '''
-        from apps.entry.models import Figure
+        from apps.entry.models import Figure, FigureCategory
 
-        qs = Figure.objects.filter(
+        queryset = Figure.objects.fitler(
             country__in=keys,
             role=Figure.ROLE.RECOMMENDED,
-            category=self.category,
-            end_date__year=datetime.today().year,
-        ).order_by().values(
+        )
+        this_year = datetime.today().year
+
+        if self.category == FigureCategory.flow_new_displacement_id():
+            qs = Figure.filtered_nd_figures(
+                queryset,
+                start_date=datetime(
+                    year=this_year,
+                    month=1,
+                    day=1
+                ),
+                end_date=datetime(
+                    year=this_year,
+                    month=12,
+                    day=31
+                )
+            )
+        elif self.category == FigureCategory.stock_idp_id():
+            qs = Figure.filtered_idp_figures(
+                queryset,
+                end_date=datetime(
+                    year=this_year,
+                    month=12,
+                    day=31
+                )
+            )
+
+        qs = qs.order_by().values(
             'country'
         ).annotate(
             _total=Sum('total_figures')
