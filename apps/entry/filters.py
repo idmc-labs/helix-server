@@ -62,7 +62,7 @@ class FigureFilter(df.FilterSet):
             queryset, start_date, end_date
         )
         stock_qs = Figure.filtered_idp_figures(
-            queryset, start_date, end_date
+            queryset, end_date
         )
         return flow_qs | stock_qs
 

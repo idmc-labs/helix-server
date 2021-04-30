@@ -96,8 +96,8 @@ class FigureExtractionFilterSet(df.FilterSet):
     filter_figure_countries = IDListFilter(method='filter_countries')
     filter_event_crises = IDListFilter(method='filter_crises')
     filter_figure_categories = IDListFilter(method='filter_filter_figure_categories')
-    filter_figure_start_after = df.DateFilter(method='filter_time_frame_after')
-    filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
+    filter_figure_start_after = df.DateFilter(method='noop')
+    filter_figure_end_before = df.DateFilter(method='noop')
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
     filter_entry_tags = IDListFilter(method='filter_tags')
     filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
@@ -108,6 +108,9 @@ class FigureExtractionFilterSet(df.FilterSet):
     class Meta:
         model = Figure
         fields = ['entry']
+
+    def noop(self, qs, *args):
+        return qs
 
     def filter_geographical_groups(self, qs, name, value):
         if value:
@@ -179,7 +182,7 @@ class FigureExtractionFilterSet(df.FilterSet):
             queryset, start_date, end_date
         )
         stock_qs = Figure.filtered_idp_figures(
-            queryset, start_date, end_date
+            queryset, end_date
         )
         return flow_qs | stock_qs
 
