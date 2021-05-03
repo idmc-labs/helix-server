@@ -406,7 +406,6 @@ class Figure(MetaInformationArchiveAbstractModel,
                 # if end date does not exist, we must make sure that that figure started before given start date
                 end_date__isnull=True,
                 start_date__lte=end_date,
-            )
         )
         return qs
 
