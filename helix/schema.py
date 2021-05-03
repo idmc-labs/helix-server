@@ -10,7 +10,7 @@ from apps.crisis import schema as crisis_schema, mutations as crisis_mutations
 from apps.event import schema as event_schema, mutations as event_mutations
 from apps.entry import schema as entry_schema, mutations as entry_mutations
 from apps.extraction import schema as extraction_schema, mutations as extraction_mutations
-from apps.report import schema as report_schema, mutations as report_mutations
+from apps.report import schema as report_schema, mutations as report_mutations, enums as report_enums
 from apps.resource import schema as resource_schema, mutations as resource_mutations
 from apps.review import schema as review_schema, mutations as review_mutations
 from apps.contextualupdate import (
@@ -56,4 +56,9 @@ class Mutation(user_mutations.Mutation,
     pass
 
 
-schema = graphene.Schema(query=Query, mutation=Mutation)
+class Enum(report_enums.ReportEnumType,
+           graphene.ObjectType):
+    pass
+
+
+schema = graphene.Schema(query=Query, mutation=Mutation, types=[Enum])

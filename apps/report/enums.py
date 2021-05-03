@@ -15,3 +15,7 @@ enum_map = dict(
     REPORT_TYPE=ReportTypeEnum,
     REPORT_REVIEW_FILTER=ReportReviewFilterEnum,
 )
+
+
+class ReportEnumType(graphene.ObjectType):
+    review_filter = graphene.Field(ReportReviewFilterEnum)
