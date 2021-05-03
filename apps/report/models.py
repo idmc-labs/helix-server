@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from datetime import datetime
 from functools import cached_property
 import logging
 from uuid import uuid4
@@ -17,6 +18,7 @@ from django.db.models import (
     OuterRef,
     Min,
     Max,
+    Value,
 )
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -60,9 +62,17 @@ class Report(MetaInformationArchiveAbstractModel,
         return dict(
             total_stock_conflict=Sum(
                 'total_figures',
-                filter=Q(category=FigureCategory.stock_idp_id(),
-                         role=Figure.ROLE.RECOMMENDED,
-                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+                filter=Q(
+                    Q(
+                        end_date__isnull=True,
+                    ) | Q(
+                        end_date__isnull=False,
+                        end_date__gte=self.filter_figure_end_before or datetime.today(),
+                    ),
+                    category=FigureCategory.stock_idp_id(),
+                    role=Figure.ROLE.RECOMMENDED,
+                    entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                )
             ),
             total_flow_conflict=Sum(
                 'total_figures',
@@ -72,9 +82,17 @@ class Report(MetaInformationArchiveAbstractModel,
             ),
             total_stock_disaster=Sum(
                 'total_figures',
-                filter=Q(category=FigureCategory.stock_idp_id(),
-                         role=Figure.ROLE.RECOMMENDED,
-                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+                filter=Q(
+                    Q(
+                        end_date__isnull=True,
+                    ) | Q(
+                        end_date__isnull=False,
+                        end_date__gte=self.filter_figure_end_before or datetime.today(),
+                    ),
+                    category=FigureCategory.stock_idp_id(),
+                    role=Figure.ROLE.RECOMMENDED,
+                    entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                )
             ),
             total_flow_disaster=Sum(
                 'total_figures',
@@ -492,6 +510,12 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 **global_filter
             )),
             stock_total=Sum('total_figures', filter=Q(
+                Q(
+                    end_date__isnull=True,
+                ) | Q(
+                    end_date__isnull=False,
+                    end_date__gte=self.report.filter_figure_end_before or datetime.today(),
+                ),
                 category=FigureCategory.stock_idp_id(),
                 **global_filter
             )),
@@ -523,27 +547,23 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 ),
                 stock_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__year=int(self.report.filter_figure_start_after.year) - 1,
+                        start_date__year__lte=int(self.report.filter_figure_start_after.year) - 1,
                         country=OuterRef('country'),
                         category=FigureCategory.stock_idp_id(),
                         **global_filter
+                    ).filter(
+                        Q(
+                            end_date__isnull=False,
+                            end_date__year__gte=int(self.report.filter_figure_start_after.year) - 1
+                        ) | Q(
+                            end_date__isnull=True
+                        ),
                     ).annotate(
                         _total=Sum('total_figures')
                     ).values('_total').annotate(total=F('_total')).values('total')
                 ),
-                stock_historical_average=Subquery(
-                    Figure.objects.filter(
-                        start_date__lt=self.report.filter_figure_start_after,
-                        country=OuterRef('country'),
-                        category=FigureCategory.stock_idp_id(),
-                        **global_filter
-                    ).annotate(
-                        min_year=Min(Extract('start_date', 'year')),
-                        max_year=Max(Extract('start_date', 'year')),
-                    ).annotate(
-                        _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
-                    ).values('_total').annotate(total=F('_total')).values('total')
-                ),
+                # FIXME: we will need to handle each year separately for idp figures to get the average
+                stock_historical_average=Value('...'),
             )
         return {
             'headers': headers,
@@ -616,8 +636,14 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 **global_filter
             )),
             stock_total=Sum('total_figures', filter=Q(
+                Q(
+                    end_date__isnull=True,
+                ) | Q(
+                    end_date__isnull=False,
+                    end_date__gte=self.report.filter_figure_end_before or datetime.today(),
+                ),
                 category=FigureCategory.stock_idp_id(),
-                **global_filter
+                **global_filter,
             )),
         )
         if self.include_history:
@@ -647,27 +673,23 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 ),
                 stock_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__year=int(self.report.filter_figure_start_after.year) - 1,
+                        start_date__year__lte=int(self.report.filter_figure_start_after.year) - 1,
                         country__region=OuterRef('region'),
                         category=FigureCategory.stock_idp_id(),
                         **global_filter
+                    ).filter(
+                        Q(
+                            end_date__isnull=False,
+                            end_date__year__gte=int(self.report.filter_figure_start_after.year) - 1
+                        ) | Q(
+                            end_date__isnull=True
+                        ),
                     ).annotate(
                         _total=Sum('total_figures')
                     ).values('_total').annotate(total=F('_total')).values('total')
                 ),
-                stock_historical_average=Subquery(
-                    Figure.objects.filter(
-                        start_date__lt=self.report.filter_figure_start_after,
-                        country__region=OuterRef('region'),
-                        category=FigureCategory.stock_idp_id(),
-                        **global_filter
-                    ).annotate(
-                        min_year=Min(Extract('start_date', 'year')),
-                        max_year=Max(Extract('start_date', 'year')),
-                    ).annotate(
-                        _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
-                    ).values('_total').annotate(total=F('_total')).values('total')
-                ),
+                # FIXME: stock historical average must be pre-calculated for each year
+                stock_historical_average=Value('...'),
             )
         return {
             'headers': headers,
@@ -821,6 +843,12 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 Sum(
                     'total_figures',
                     filter=Q(
+                        Q(
+                            end_date__isnull=True,
+                        ) | Q(
+                            end_date__isnull=False,
+                            end_date__gte=self.report.filter_figure_end_before or datetime.today(),
+                        ),
                         **conflict_filter,
                         category=FigureCategory.stock_idp_id(),
                     )
