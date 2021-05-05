@@ -190,7 +190,7 @@ class ReportType(DjangoObjectType):
                                                     ))
     figures_report = DjangoPaginatedListObjectField(FigureListType,
                                                     accessor='report_figures',
-                                                    pagination=PageGraphqlPagination(
+                                                    pagination=PageGraphqlPaginationWithoutCount(
                                                         page_size_query_param='pageSize'
                                                     ))
     crises_report = CustomPaginatedListObjectField(ReportCrisisListType,
