@@ -305,7 +305,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
                               variables=variables)
         content = response.json()
 
-        expected = [self.event1.id]
+        expected = [event1.id]
         self.assertResponseNoErrors(response)
         self.assertEqual([int(each['id']) for each in content['data']['eventList']['results']],
                          expected)
@@ -317,7 +317,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
                               variables=variables)
         content = response.json()
 
-        expected = [self.event1.id]
+        expected = [event1.id]
         self.assertResponseNoErrors(response)
         self.assertEqual(
             [int(each['id']) for each in content['data']['eventList']['results']],
