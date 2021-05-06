@@ -361,4 +361,5 @@ GRAPHENE_NODES_WHITELIST = (
     # __ double undrescore nodes
     '__schema',
     '__type',
+    '__typename',
 )
