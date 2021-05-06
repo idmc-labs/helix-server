@@ -19,12 +19,14 @@ class ContextualUpdateType(DjangoObjectType):
     sources = graphene.Dynamic(
         lambda: DjangoPaginatedListObjectField(
             get_type('apps.organization.schema.OrganizationListType'),
-            accessor='sources'
+            related_name='sources',
+            reverse_related_name='sourced_contextual_updates',
         ))
     publishers = graphene.Dynamic(
         lambda: DjangoPaginatedListObjectField(
             get_type('apps.organization.schema.OrganizationListType'),
-            accessor='publishers'
+            related_name='publishers',
+            reverse_related_name='published_contextual_updates',
         ))
 
 
