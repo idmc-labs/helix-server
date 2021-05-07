@@ -40,7 +40,7 @@ class CreateActor(graphene.Mutation):
     @staticmethod
     @permission_checker(['event.add_actor'])
     def mutate(root, info, data):
-        serializer = ActorSerializer(data=data, context={'request': info.context})
+        serializer = ActorSerializer(data=data, context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateActor(errors=errors, ok=False)
         instance = serializer.save()
@@ -65,7 +65,7 @@ class UpdateActor(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('Actor does not exist.'))
             ])
         serializer = ActorSerializer(instance=instance, data=data,
-                                     context=dict(request=info.context), partial=True)
+                                     context=dict(request=info.context.request), partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateActor(errors=errors, ok=False)
         instance = serializer.save()
@@ -117,7 +117,7 @@ class CreateEvent(graphene.Mutation):
     @staticmethod
     @permission_checker(['event.add_event'])
     def mutate(root, info, data):
-        serializer = EventSerializer(data=data, context=dict(request=info.context))
+        serializer = EventSerializer(data=data, context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
             return CreateEvent(errors=errors, ok=False)
         instance = serializer.save()
@@ -142,7 +142,7 @@ class UpdateEvent(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
             ])
         serializer = EventSerializer(instance=instance, data=data,
-                                     context=dict(request=info.context), partial=True)
+                                     context=dict(request=info.context.request), partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateEvent(errors=errors, ok=False)
         instance = serializer.save()

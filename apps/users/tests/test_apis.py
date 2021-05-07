@@ -337,9 +337,9 @@ class TestUserSchema(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertEqual(content['data']['me']['email'], e1.email)
         self.assertIn(entry, e1.review_entries.all())
-        self.assertEqual(content['data']['me']['reviewing']['totalCount'], 1)
         self.assertEqual(content['data']['me']['reviewing']['results'][0]['entry']['id'],
                          str(entry.id))
+        self.assertEqual(content['data']['me']['reviewing']['totalCount'], 1)
 
         self.force_login(e2)
         response = self.query(self.reviewer_q)

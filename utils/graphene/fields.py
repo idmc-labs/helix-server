@@ -17,6 +17,15 @@ from graphene_django_extras.utils import get_extra_filters
 from utils.pagination import OrderingOnlyArgumentPagination
 
 
+def path_has_list(info):
+    '''
+    Checks if the parent path contains list
+
+    e.g: ['countryList', 'results', 1, 'region']
+    '''
+    return bool([each for each in info.path if str(each).isdigit()])
+
+
 class CustomDjangoListObjectBase(DjangoListObjectBase):
     def __init__(self, results, count, page, pageSize, results_field_name="results"):
         self.results = results
@@ -65,6 +74,9 @@ class CustomDjangoListField(DjangoListField):
 
 
 class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
+    '''
+    For non-model (or custom queryset) pagination and filtering
+    '''
     def __init__(
         self,
         _type,
@@ -109,7 +121,7 @@ class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
         qs = getattr(root, self.accessor)
         if hasattr(qs, 'all'):
             qs = qs.all()
-        qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context).qs
+        qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context.request).qs
         count = qs.count()
 
         if getattr(self, "pagination", None):
@@ -187,8 +199,13 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
         if not kwargs.get("description", None):
             kwargs["description"] = "{} list".format(_type._meta.model.__name__)
 
-        # accessor will be used with m2m or reverse_fk fields
+        # accessor will be used with custom querysets
         self.accessor = kwargs.pop('accessor', None)
+        # related_names will be used especially for fkeys and m2ms with
+        # relationships spanning across more than one fields
+        self.related_name = kwargs.pop('related_name', None)
+        self.reverse_related_name = kwargs.pop('reverse_related_name', None)
+
         super(DjangoFilterPaginateListField, self).__init__(
             _type, *args, **kwargs
         )
@@ -196,30 +213,76 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
     def list_resolver(
             self, manager, filterset_class, filtering_args, root, info, **kwargs
     ):
-
         filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
-        if self.accessor:
-            qs = getattr(root, self.accessor)
-            if hasattr(qs, 'all'):
-                qs = qs.all()
-            qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context).qs
-        else:
-            qs = self.get_queryset(manager, info, **kwargs)
-            qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context).qs
-            if root and is_valid_django_model(root._meta.model):
-                extra_filters = get_extra_filters(root, manager.model)
-                qs = qs.filter(**extra_filters)
-        count = qs.count()
 
+        # setup pagination
         if getattr(self, "pagination", None):
             ordering = kwargs.pop(self.pagination.ordering_param, None) or self.pagination.ordering
             ordering = ','.join([to_snake_case(each) for each in ordering.strip(',').replace(' ', '').split(',')])
             self.pagination.ordering = ordering
-            qs = self.pagination.paginate_queryset(qs, **kwargs)
+
+        if root and path_has_list(info):
+            if not getattr(self, 'related_name', None):
+                raise NotImplementedError(f'Dataloader error: fetching without dataloader. {info.path}')
+            parent_class = root._meta.model
+            child_class = manager.model
+            # FIXME: qs should be executed only when we access the results node in the future
+            qs = info.context.get_dataloader(
+                parent_class.__name__,
+                self.related_name,
+            ).load(
+                root.id,
+                parent=parent_class,
+                child=child_class,
+                accessor=self.accessor,
+                related_name=self.related_name,
+                reverse_related_name=self.reverse_related_name,
+                pagination=self.pagination,
+                filterset_class=filterset_class,
+                filter_kwargs=filter_kwargs,
+                request=info.context,
+                **kwargs,
+            )
+            count = info.context.get_count_loader(
+                parent_class.__name__,
+                child_class.__name__,
+            ).load(
+                root.id,
+                parent=parent_class,
+                child=child_class,
+                accessor=self.accessor,
+                related_name=self.related_name,
+                reverse_related_name=self.reverse_related_name,
+                pagination=self.pagination,
+                filterset_class=filterset_class,
+                filter_kwargs=filter_kwargs,
+                request=info.context,
+                **kwargs,
+            )
+        else:
+            accessor = self.accessor or self.related_name
+            if accessor:
+                qs = getattr(root, accessor, None)
+                if hasattr(qs, 'all'):
+                    qs = qs.all()
+            else:
+                qs = self.get_queryset(manager, info, **kwargs)
+            qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context.request).qs
+            if root and not accessor and is_valid_django_model(root._meta.model):
+                extra_filters = get_extra_filters(root, manager.model)
+                if len(list(extra_filters.keys())) == 1:
+                    # NOTE: multiple field filters are returned when
+                    # root and child are related in multiple ways
+                    qs = qs.filter(**extra_filters)
+            count = qs.count()
+            qs = self.pagination.paginate_queryset(
+                qs,
+                **kwargs
+            )
 
         return CustomDjangoListObjectBase(
+            results=qs,
             count=count,
-            results=maybe_queryset(qs),
             results_field_name=self.type._meta.results_field_name,
             page=kwargs.get('page', 1) if hasattr(self.pagination, 'page_query_param') else None,
             pageSize=kwargs.get(

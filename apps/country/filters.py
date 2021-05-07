@@ -1,5 +1,7 @@
 import django_filters
-from django.db.models import Value
+from django.db.models import (
+    Value,
+)
 from django.db.models.functions import Lower, StrIndex
 
 from apps.country.models import (

@@ -50,7 +50,7 @@ class CreateEntry(graphene.Mutation):
     @staticmethod
     @permission_checker(['entry.add_entry'])
     def mutate(root, info, data):
-        serializer = EntryCreateSerializer(data=data, context={'request': info.context})
+        serializer = EntryCreateSerializer(data=data, context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateEntry(errors=errors, ok=False)
         instance = serializer.save()
@@ -79,7 +79,7 @@ class UpdateEntry(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('You cannot update this entry.'))
             ])
         serializer = EntryUpdateSerializer(instance=instance, data=data,
-                                           context={'request': info.context}, partial=True)
+                                           context={'request': info.context.request}, partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateEntry(errors=errors, ok=False)
         instance = serializer.save()
@@ -140,14 +140,14 @@ class CreateSourcePreview(graphene.Mutation):
             try:
                 instance = SourcePreview.objects.get(id=data['id'])
                 serializer = SourcePreviewSerializer(data=data, instance=instance,
-                                                     context={'request': info.context})
+                                                     context={'request': info.context.request})
             except SourcePreview.DoesNotExist:
                 return CreateSourcePreview(errors=[
                     dict(field='nonFieldErrors', messages=gettext('Preview does not exist.'))
                 ])
         else:
             serializer = SourcePreviewSerializer(data=data,
-                                                 context={'request': info.context})
+                                                 context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateSourcePreview(errors=errors, ok=False)
         instance = serializer.save()
@@ -225,7 +225,7 @@ class CreateFigureTag(graphene.Mutation):
     @staticmethod
     @is_authenticated()
     def mutate(root, info, data):
-        serializer = FigureTagCreateSerializer(data=data, context={'request': info.context})
+        serializer = FigureTagCreateSerializer(data=data, context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateFigureTag(errors=errors, ok=False)
         instance = serializer.save()
@@ -250,7 +250,7 @@ class UpdateFigureTag(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('Tag does not exist.'))
             ])
         serializer = FigureTagCreateSerializer(instance=instance, data=data,
-                                               context={'request': info.context}, partial=True)
+                                               context={'request': info.context.request}, partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateFigureTag(errors=errors, ok=False)
         instance = serializer.save()

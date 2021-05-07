@@ -35,7 +35,6 @@ from apps.event.models import Event
 from apps.extraction.models import QueryAbstractModel
 from apps.report.utils import excel_column_key
 from apps.report.tasks import trigger_report_generation
-# from utils.permissions import cache_me
 from utils.fields import CachedFileField
 
 logger = logging.getLogger(__name__)
@@ -138,7 +137,6 @@ class Report(MetaInformationArchiveAbstractModel,
         return self.extract_figures
 
     @property
-    # @cache_me(3000)
     def countries_report(self) -> list:
         return self.report_figures.select_related(
             'country'
@@ -149,7 +147,6 @@ class Report(MetaInformationArchiveAbstractModel,
         )
 
     @property
-    # @cache_me(3000)
     def events_report(self) -> list:
         return self.report_figures.select_related(
             'entry__event'
@@ -162,7 +159,6 @@ class Report(MetaInformationArchiveAbstractModel,
         )
 
     @property
-    # @cache_me(3000)
     def entries_report(self) -> list:
         from apps.entry.filters import (
             reviewed_subquery,
@@ -182,7 +178,6 @@ class Report(MetaInformationArchiveAbstractModel,
         )
 
     @property
-    # @cache_me(3000)
     def crises_report(self) -> list:
         return self.report_figures.filter(
             entry__event__crisis__isnull=False
@@ -197,7 +192,6 @@ class Report(MetaInformationArchiveAbstractModel,
         )
 
     @property
-    # @cache_me(3000)
     def total_disaggregation(self) -> dict:
         return self.report_figures.annotate(
             **self.TOTAL_FIGURE_DISAGGREGATIONS,

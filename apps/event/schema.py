@@ -1,6 +1,6 @@
 import graphene
 from graphene_django import DjangoObjectType
-from graphene_django_extras import DjangoObjectField, PageGraphqlPagination
+from graphene_django_extras import DjangoObjectField
 
 from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -20,6 +20,7 @@ from apps.event.models import (
 from apps.event.filters import EventFilter
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.pagination import PageGraphqlPaginationWithoutCount
 
 
 class TriggerSubObjectType(DjangoObjectType):
@@ -70,7 +71,11 @@ class ViolenceType(DjangoObjectType):
         model = Violence
         exclude_fields = ('events',)
 
-    sub_types = DjangoPaginatedListObjectField(ViolenceSubObjectListType)
+    sub_types = DjangoPaginatedListObjectField(
+        ViolenceSubObjectListType,
+        related_name='sub_types',
+        reverse_related_name='violence',
+    )
 
 
 class ViolenceListType(CustomDjangoListObjectType):
@@ -114,7 +119,11 @@ class DisasterTypeObjectType(DjangoObjectType):
         model = DisasterType
         exclude_fields = ('events', 'disaster_sub_category')
 
-    sub_types = DjangoPaginatedListObjectField(DisasterSubObjectListType)
+    sub_types = DjangoPaginatedListObjectField(
+        DisasterSubObjectListType,
+        related_name='sub_types',
+        reverse_related_name='type',
+    )
 
 
 class DisasterTypeObjectListType(CustomDjangoListObjectType):
@@ -130,7 +139,11 @@ class DisasterSubCategoryType(DjangoObjectType):
         model = DisasterSubCategory
         exclude_fields = ('events', 'category')
 
-    types = DjangoPaginatedListObjectField(DisasterTypeObjectListType)
+    types = DjangoPaginatedListObjectField(
+        DisasterTypeObjectListType,
+        related_name='types',
+        reverse_related_name='disaster_sub_category',
+    )
 
 
 class DisasterSubCategoryListType(CustomDjangoListObjectType):
@@ -146,7 +159,11 @@ class DisasterCategoryType(DjangoObjectType):
         model = DisasterCategory
         exclude_fields = ('events',)
 
-    sub_categories = DjangoPaginatedListObjectField(DisasterSubCategoryListType)
+    sub_categories = DjangoPaginatedListObjectField(
+        DisasterSubCategoryListType,
+        related_name='sub_categories',
+        reverse_related_name='category',
+    )
 
 
 class DisasterCategoryListType(CustomDjangoListObjectType):
@@ -174,6 +191,12 @@ class EventType(DjangoObjectType):
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
 
+    def resolve_total_stock_idp_figures(root, info, **kwargs):
+        return info.context.event_event_total_stock_idp_figures.load(root.id)
+
+    def resolve_total_flow_nd_figures(root, info, **kwargs):
+        return info.context.event_event_total_flow_nd_figures.load(root.id)
+
 
 class EventListType(CustomDjangoListObjectType):
     class Meta:
@@ -187,7 +210,7 @@ class Query:
     violence_list = DjangoPaginatedListObjectField(ViolenceListType)
     actor = DjangoObjectField(ActorType)
     actor_list = DjangoPaginatedListObjectField(ActorListType,
-                                                pagination=PageGraphqlPagination(
+                                                pagination=PageGraphqlPaginationWithoutCount(
                                                     page_size_query_param='pageSize'
                                                 ))
     disaster_category_list = DjangoPaginatedListObjectField(DisasterCategoryListType)
@@ -197,6 +220,6 @@ class Query:
 
     event = DjangoObjectField(EventType)
     event_list = DjangoPaginatedListObjectField(EventListType,
-                                                pagination=PageGraphqlPagination(
+                                                pagination=PageGraphqlPaginationWithoutCount(
                                                     page_size_query_param='pageSize'
                                                 ))

@@ -23,10 +23,14 @@ from django.views.decorators.csrf import csrf_exempt
 from graphene_file_upload.django import FileUploadGraphQLView
 
 from . import api_urls as rest_urls
+from utils.graphene.context import GQLContext
 
 
 class CustomGraphQLView(FileUploadGraphQLView):
     """Handles multipart/form-data content type in django views"""
+    def get_context(self, request):
+        return GQLContext(request)
+
     def parse_body(self, request):
         """
         Allow for variable batch

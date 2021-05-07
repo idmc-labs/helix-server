@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import logging
 
+from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.contrib.postgres.fields import ArrayField, JSONField
@@ -122,17 +123,35 @@ class FigureCategory(models.Model):
 
     @classmethod
     def stock_idp_id(cls):
-        return cls.objects.get(
-            type=STOCK,
-            name__iexact='idps'
-        )
+        _stock_idp_id = cache.get('_stock_idp_id')
+        if not _stock_idp_id:
+            _stock_idp_id = cls.objects.get(
+                type=STOCK,
+                name__iexact='idps'
+            )
+            cache.set('_stock_idp_id', _stock_idp_id, 2 * 60 * 60)
+        return _stock_idp_id
 
     @classmethod
     def flow_new_displacement_id(cls):
-        return cls.objects.get(
-            type=FLOW,
-            name__iexact='new displacement'
-        )
+        _flow_new_displacement_id = cache.get('_flow_new_displacement_id')
+        if not _flow_new_displacement_id:
+            _flow_new_displacement_id = cls.objects.get(
+                type=FLOW,
+                name__iexact='new displacement'
+            )
+            cache.set('_flow_new_displacement_id', _flow_new_displacement_id, 2 * 60 * 60)
+        return _flow_new_displacement_id
+
+    @classmethod
+    def _invalidate_category_ids_cache(cls):
+        '''
+        Invalidate the figure categories idp and nd cache
+        '''
+        cache.delete_many([
+            '_stock_idp_id',
+            '_flow_new_displacement_id',
+        ])
 
 
 class FigureDisaggregationAbstractModel(models.Model):
@@ -338,7 +357,7 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     # locations
     geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
-                                           related_name='+')
+                                           related_name='figures')
 
     # methods
 
@@ -478,7 +497,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         return super().save(*args, **kwargs)
 
     def __str__(self):
-        return f'{self.quantifier.label} {self.reported} {self.term.label}'
+        return f'{self.quantifier.label} {self.reported}'
 
 
 class FigureTag(MetaInformationAbstractModel):

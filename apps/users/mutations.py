@@ -33,7 +33,7 @@ class Register(graphene.Mutation):
     @staticmethod
     def mutate(root, info, data):
         serializer = RegisterSerializer(data=data,
-                                        context={'request': info.context})
+                                        context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return Register(errors=errors, ok=False)
         instance = serializer.save()
@@ -61,11 +61,11 @@ class Login(graphene.Mutation):
     @staticmethod
     def mutate(root, info, data):
         serializer = LoginSerializer(data=data,
-                                     context={'request': info.context})
+                                     context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return Login(errors=errors, ok=False)
         if user := serializer.validated_data.get('user'):
-            login(info.context, user)
+            login(info.context.request, user)
         return Login(
             result=user,
             errors=None,
@@ -89,7 +89,7 @@ class Activate(graphene.Mutation):
     @staticmethod
     def mutate(root, info, data):
         serializer = ActivateSerializer(data=data,
-                                        context={'request': info.context})
+                                        context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return Activate(errors=errors, ok=False)
         return Activate(errors=None, ok=True)
@@ -100,7 +100,7 @@ class Logout(graphene.Mutation):
 
     def mutate(self, info, *args, **kwargs):
         if info.context.user.is_authenticated:
-            logout(info.context)
+            logout(info.context.request)
         return Logout(ok=True)
 
 
@@ -123,7 +123,7 @@ class ChangeUserPassword(graphene.Mutation):
     def mutate(root, info, data):
         serializer = UserPasswordSerializer(instance=info.context.user,
                                             data=data,
-                                            context={'request': info.context},
+                                            context={'request': info.context.request},
                                             partial=True)
         if errors := mutation_is_not_valid(serializer):
             return ChangeUserPassword(errors=errors, ok=False)
@@ -158,7 +158,7 @@ class UpdateUser(graphene.Mutation):
             )
         serializer = UserSerializer(instance=user,
                                     data=data,
-                                    context={'request': info.context},
+                                    context={'request': info.context.request},
                                     partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateUser(errors=errors, ok=False)
