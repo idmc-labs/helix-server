@@ -92,7 +92,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # NOTE: DebugToolbarMiddleware will cause mutation to execute twice for the client, works find with graphiql
+    # NOTE: DebugToolbarMiddleware will cause mutation to execute twice for the client, works fine with graphiql
     # 'utils.middleware.DebugToolbarMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -253,7 +253,7 @@ CORS_ORIGIN_WHITELIST = [
     "http://127.0.0.1:3080"
 ]
 CORS_ALLOW_CREDENTIALS = True
-CORS_ORIGIN_ALLOW_ALL = True
+# CORS_ORIGIN_ALLOW_ALL = False
 # CORS_ORIGIN_REGEX_WHITELIST = [
 #     '^https://[\w\-]+\.idmcdb\.org$'
 # ]

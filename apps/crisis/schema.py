@@ -17,10 +17,14 @@ class CrisisType(DjangoObjectType):
         model = Crisis
 
     crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
-    events = DjangoPaginatedListObjectField(EventListType,
-                                            pagination=PageGraphqlPaginationWithoutCount(
-                                                page_size_query_param='pageSize'
-                                            ))
+    events = DjangoPaginatedListObjectField(
+        EventListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        ),
+        related_name='events',
+        reverse_related_name='crisis',
+    )
     total_stock_idp_figures = graphene.Field(graphene.Int)
     total_flow_nd_figures = graphene.Field(graphene.Int)
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)

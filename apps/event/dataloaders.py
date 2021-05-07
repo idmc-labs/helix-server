@@ -13,22 +13,22 @@ def batch_load_fn_by_category(keys, category):
     ).order_by().values(
         'entry__event'
     ).annotate(
-        total_idp_figures=models.Sum(
+        total_category_figures=models.Sum(
             'total_figures',
             filter=models.Q(
                 role=Figure.ROLE.RECOMMENDED,
-                category=FigureCategory.stock_idp_id(),
+                category=category,
             ),
         )
-    ).values('entry__event', 'total_idp_figures')
+    ).values('entry__event', 'total_category_figures')
 
     batch_load = {
-        item['entry__event']: item['total_idp_figures']
+        item['entry__event']: item['total_category_figures']
         for item in qs
     }
 
     return Promise.resolve([
-        batch_load.get(key, 0) for key in keys
+        batch_load.get(key) for key in keys
     ])
 
 
@@ -44,5 +44,5 @@ class TotalNDFigureByEventLoader(DataLoader):
     def batch_load_fn(self, keys):
         return batch_load_fn_by_category(
             keys,
-            FigureCategory.stock_idp_id(),
+            FigureCategory.flow_new_displacement_id(),
         )

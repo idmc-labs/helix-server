@@ -26,7 +26,7 @@ def batch_load_fn_by_category(keys, category):
     }
 
     return Promise.resolve([
-        batch_load.get(key, 0) for key in keys
+        batch_load.get(key) for key in keys
     ])
 
 

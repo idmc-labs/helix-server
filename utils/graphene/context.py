@@ -15,10 +15,10 @@ class GQLContext:
     def user(self):
         return self.request.user
 
-    def get_dataloader(self, parent: str, child: str):
+    def get_dataloader(self, parent: str, related_name: str):
         # TODO: rename to get OneToManyLoader?
         # return a different dataloader for each ref
-        ref = f'{parent}_{child}'
+        ref = f'{parent}_{related_name}'
         if ref not in self.one_to_many_dataloaders:
             self.one_to_many_dataloaders[ref] = OneToManyLoader()
         return self.one_to_many_dataloaders[ref]

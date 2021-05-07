@@ -92,7 +92,7 @@ class CountLoader(DataLoader):
         related_objects_by_parent = {id_: count for id_, count in qs}
 
         return Promise.resolve([
-            related_objects_by_parent.get(key, 0) for key in keys
+            related_objects_by_parent.get(key) or 0 for key in keys
         ])
 
 

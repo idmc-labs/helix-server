@@ -226,9 +226,10 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                 raise NotImplementedError(f'Dataloader error: fetching without dataloader. {info.path}')
             parent_class = root._meta.model
             child_class = manager.model
+            # FIXME: qs should be executed only when we access the results node in the future
             qs = info.context.get_dataloader(
                 parent_class.__name__,
-                child_class.__name__,
+                self.related_name,
             ).load(
                 root.id,
                 parent=parent_class,
@@ -267,7 +268,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             else:
                 qs = self.get_queryset(manager, info, **kwargs)
             qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context.request).qs
-            if root and is_valid_django_model(root._meta.model):
+            if root and not accessor and is_valid_django_model(root._meta.model):
                 extra_filters = get_extra_filters(root, manager.model)
                 if len(list(extra_filters.keys())) == 1:
                     # NOTE: multiple field filters are returned when

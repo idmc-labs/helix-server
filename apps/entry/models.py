@@ -497,7 +497,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         return super().save(*args, **kwargs)
 
     def __str__(self):
-        return f'{self.quantifier.label} {self.reported} {self.term.label}'
+        return f'{self.quantifier.label} {self.reported}'
 
 
 class FigureTag(MetaInformationAbstractModel):
