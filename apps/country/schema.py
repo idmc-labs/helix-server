@@ -152,14 +152,6 @@ class CountryType(DjangoObjectType):
     this_year_idps_disaster = graphene.Int()
     geojson_url = graphene.String()
 
-    def resolve_geojson_url(root, info, **kwargs):
-        if 'FileSystemStorage' in settings.DEFAULT_FILE_STORAGE:
-            return info.context.request.build_absolute_uri(
-                settings.MEDIA_URL +
-                Country.geojson_path(root.iso3)
-            )
-        return info.context.request.build_absolute_uri(Country.geojson_path(root.iso3))
-
     def resolve_this_year_idps_disaster(root, info, **kwargs):
         return info.context.country_country_this_year_idps_disaster_loader.load(root.id)
 
@@ -171,6 +163,14 @@ class CountryType(DjangoObjectType):
 
     def resolve_this_year_nd_disaster(root, info, **kwargs):
         return info.context.country_country_this_year_nd_disaster_loader.load(root.id)
+
+    def resolve_geojson_url(root, info, **kwargs):
+        if 'FileSystemStorage' in settings.DEFAULT_FILE_STORAGE:
+            return info.context.request.build_absolute_uri(
+                settings.MEDIA_URL +
+                Country.geojson_path(root.iso3)
+            )
+        return info.context.request.build_absolute_uri(Country.geojson_path(root.iso3))
 
     @staticmethod
     def get_queryset(queryset, info):
