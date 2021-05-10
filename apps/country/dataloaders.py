@@ -5,13 +5,14 @@ from promise import Promise
 from promise.dataloader import DataLoader
 
 
-class TotalFigureThisYearByCountryCategoryLoader(DataLoader):
+class TotalFigureThisYearByCountryCategoryEventTypeLoader(DataLoader):
     def __init__(
         self,
         *args,
         **kwargs
     ):
         self.category = kwargs.pop('category')
+        self.event_type = kwargs.pop('event_type')
         return super().__init__(*args, **kwargs)
 
     def batch_load_fn(self, keys):
@@ -20,9 +21,10 @@ class TotalFigureThisYearByCountryCategoryLoader(DataLoader):
         '''
         from apps.entry.models import Figure, FigureCategory
 
-        queryset = Figure.objects.fitler(
+        queryset = Figure.objects.filter(
             country__in=keys,
             role=Figure.ROLE.RECOMMENDED,
+            entry__event__event_type=self.event_type,
         )
         this_year = datetime.today().year
 
@@ -58,6 +60,6 @@ class TotalFigureThisYearByCountryCategoryLoader(DataLoader):
         }
 
         return Promise.resolve([
-            list_to_dict.get(country, 0)
+            list_to_dict.get(country)
             for country in keys
         ])

@@ -1,6 +1,6 @@
 from django.utils.functional import cached_property
 
-from apps.country.dataloaders import TotalFigureThisYearByCountryCategoryLoader
+from apps.country.dataloaders import TotalFigureThisYearByCountryCategoryEventTypeLoader
 from apps.entry.dataloaders import TotalIDPFigureByEntryLoader, TotalNDFigureByEntryLoader
 from apps.event.dataloaders import TotalIDPFigureByEventLoader, TotalNDFigureByEventLoader
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
@@ -53,15 +53,37 @@ class GQLContext:
         return TotalNDFigureByEventLoader()
 
     @cached_property
-    def country_country_this_year_idps_loader(self):
+    def country_country_this_year_idps_disaster_loader(self):
         from apps.entry.models import FigureCategory
-        return TotalFigureThisYearByCountryCategoryLoader(
-            category=FigureCategory.stock_idp_id()
+        from apps.crisis.models import Crisis
+        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
+            category=FigureCategory.stock_idp_id(),
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
         )
 
     @cached_property
-    def country_country_this_year_nd_loader(self):
+    def country_country_this_year_idps_conflict_loader(self):
         from apps.entry.models import FigureCategory
-        return TotalFigureThisYearByCountryCategoryLoader(
-            category=FigureCategory.flow_new_displacement_id()
+        from apps.crisis.models import Crisis
+        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
+            category=FigureCategory.stock_idp_id(),
+            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
+        )
+
+    @cached_property
+    def country_country_this_year_nd_conflict_loader(self):
+        from apps.entry.models import FigureCategory
+        from apps.crisis.models import Crisis
+        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
+            category=FigureCategory.flow_new_displacement_id(),
+            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
+        )
+
+    @cached_property
+    def country_country_this_year_nd_disaster_loader(self):
+        from apps.entry.models import FigureCategory
+        from apps.crisis.models import Crisis
+        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
+            category=FigureCategory.flow_new_displacement_id(),
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
         )
