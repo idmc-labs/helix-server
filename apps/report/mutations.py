@@ -281,7 +281,7 @@ class ExportReportFigures(graphene.Mutation):
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.FIGURE),
                 filters=kwargs,
             ),
-            context=dict(request=info.context)
+            context=dict(request=info.context.request)
         )
         if errors := mutation_is_not_valid(serializer):
             return ExportReportFigures(errors=errors, ok=False)

@@ -148,7 +148,7 @@ class CountryType(DjangoObjectType):
     geojson_url = graphene.String()
 
     def resolve_geojson_url(root, info, **kwargs):
-        return info.context.build_absolute_uri(Country.geojson_path(root.iso3))
+        return info.context.request.build_absolute_uri(Country.geojson_path(root.iso3))
 
     @staticmethod
     def get_queryset(queryset, info):

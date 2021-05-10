@@ -240,7 +240,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                 pagination=self.pagination,
                 filterset_class=filterset_class,
                 filter_kwargs=filter_kwargs,
-                request=info.context,
+                request=info.context.request,
                 **kwargs,
             )
             count = info.context.get_count_loader(
@@ -256,7 +256,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                 pagination=self.pagination,
                 filterset_class=filterset_class,
                 filter_kwargs=filter_kwargs,
-                request=info.context,
+                request=info.context.request,
                 **kwargs,
             )
         else:
