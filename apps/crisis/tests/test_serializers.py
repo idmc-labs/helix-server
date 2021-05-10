@@ -60,15 +60,26 @@ class TestCrisisUpdateSerializer(HelixTestCase):
         c1, c2, c3 = CountryFactory.create_batch(3)
 
         crisis = CrisisFactory.create()
-        crisis.countries.set([c1, c2, c3])
+        crisis.countries.set([c1])
         event = EventFactory.create(
             crisis=crisis
         )
-        event.countries.set([c1, c2, c3])
+        event.countries.set([c1])
+
+        # try updating with valid countries
+        data = dict(
+            countries=[c1.id]
+        )
+        serializer = CrisisUpdateSerializer(
+            instance=crisis,
+            data=data,
+            partial=True
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
         # now update crisis removing the c3, while keeping it in the event
         data = dict(
-            countries=[c1.id, c2.id]
+            countries=[c2.id]
         )
         serializer = CrisisUpdateSerializer(
             instance=crisis,
@@ -88,6 +99,18 @@ class TestCrisisUpdateSerializer(HelixTestCase):
             crisis=crisis,
             event_type=crisis.crisis_type,
         )
+
+        # update with the same crisis type, valid
+        data = dict(
+            crisis_type=crisis.crisis_type.value
+        )
+        serializer = CrisisUpdateSerializer(
+            instance=crisis,
+            data=data,
+            partial=True
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
         # now try to put in a different crisis type
         data = dict(
             crisis_type=Crisis.CRISIS_TYPE.CONFLICT.value

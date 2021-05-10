@@ -64,7 +64,7 @@ class CrisisSerializer(serializers.ModelSerializer):
         if not self.instance:
             return errors
 
-        countries = attrs.get('countries', [])
+        countries = [each.id for each in attrs.get('countries', [])]
         if countries is None:
             return errors
         event_countries = self.instance.events.filter(countries__isnull=False).values_list('countries', flat=True)
@@ -88,10 +88,10 @@ class CrisisSerializer(serializers.ModelSerializer):
             return errors
         # all events are bound to be the same as crisis type
         event_type = self.instance.events.first().event_type.value
-        if event_type and crisis_type != event_type:
+        if crisis_type != event_type:
             errors['crisis_type'] = gettext(
                 'There are events with different event type: %s'
-            ) % event_type
+            ) % Crisis.CRISIS_TYPE.get(event_type)
         return errors
 
     def validate_empty_countries(self, attrs):
