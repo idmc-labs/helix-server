@@ -1,3 +1,4 @@
+from django.conf import settings
 import graphene
 from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
@@ -138,16 +139,22 @@ class CountryType(DjangoObjectType):
         ),
         accessor='entries',
     ))
-    """
-    related_name='events__entries',
-    reverse_related_name='event__countries',
-    """
     figures = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
         get_type('apps.entry.schema.FigureListType'),
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
         ),
+        accessor='figures'
     ))
+    geojson_url = graphene.String()
+
+    def resolve_geojson_url(root, info, **kwargs):
+        if 'FileSystemStorage' in settings.DEFAULT_FILE_STORAGE:
+            return info.context.request.build_absolute_uri(
+                settings.MEDIA_URL +
+                Country.geojson_path(root.iso3)
+            )
+        return info.context.request.build_absolute_uri(Country.geojson_path(root.iso3))
 
     @staticmethod
     def get_queryset(queryset, info):

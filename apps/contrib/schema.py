@@ -26,7 +26,7 @@ class ExcelExportType(DjangoObjectType):
     def resolve_file(root, info, **kwargs):
         if not getattr(root, 'file', None):
             return None
-        return info.context.build_absolute_uri(root.file.url)
+        return info.context.request.build_absolute_uri(root.file.url)
 
 
 class ExcelExportsListType(CustomDjangoListObjectType):

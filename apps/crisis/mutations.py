@@ -105,7 +105,7 @@ class ExportCrises(graphene.Mutation):
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.CRISIS),
                 filters=kwargs,
             ),
-            context=dict(request=info.context)
+            context=dict(request=info.context.request)
         )
         if errors := mutation_is_not_valid(serializer):
             return ExportCrises(errors=errors, ok=False)
