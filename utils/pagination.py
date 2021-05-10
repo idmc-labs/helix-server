@@ -14,23 +14,22 @@ def nulls_last_order_queryset(qs, ordering_param, ordering, **kwargs):
     https://docs.djangoproject.com/en/3.1/ref/models/expressions/#django.db.models.Expression.desc
     https://docs.djangoproject.com/en/3.1/ref/models/expressions/#using-f-to-sort-null-values
     '''
-    order = kwargs.pop(ordering_param, None) or ordering
+    order = kwargs.pop(ordering_param, None) or ordering or ''
+    order = order.strip(",").replace(" ", "").split(",")
 
-    if order:
-        order = order.strip(",").replace(" ", "").split(",")
-        if order.__len__() > 0:
-            mod_ordering = []
-            if order:
-                for o in order:
-                    if not o:
-                        continue
-                    if o[0] == '-':
-                        mod_ordering.append(F(o[1:]).desc(nulls_last=True))
-                    else:
-                        mod_ordering.append(F(o).asc(nulls_last=True))
+    if order.__len__() == 0:
+        return qs
 
-            return qs.order_by(*mod_ordering)
-    return qs
+    mod_ordering = []
+    for o in order:
+        if not o:
+            continue
+        if o[0] == '-':
+            mod_ordering.append(F(o[1:]).desc(nulls_last=True))
+        else:
+            mod_ordering.append(F(o).asc(nulls_last=True))
+
+    return qs.order_by(*mod_ordering)
 
 
 class OrderingOnlyArgumentPagination(BaseDjangoGraphqlPagination):
