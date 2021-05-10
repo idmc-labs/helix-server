@@ -1,3 +1,4 @@
+from django.conf import settings
 import graphene
 from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
@@ -148,6 +149,11 @@ class CountryType(DjangoObjectType):
     geojson_url = graphene.String()
 
     def resolve_geojson_url(root, info, **kwargs):
+        if 'FileSystemStorage' in settings.DEFAULT_FILE_STORAGE:
+            return info.context.request.build_absolute_uri(
+                settings.MEDIA_URL +
+                Country.geojson_path(root.iso3)
+            )
         return info.context.request.build_absolute_uri(Country.geojson_path(root.iso3))
 
     @staticmethod
