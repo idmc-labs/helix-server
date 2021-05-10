@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
-from apps.entry.models import Figure
+from apps.entry.models import Figure, FigureCategory
 from apps.contrib.commons import DATE_ACCURACY
 from apps.users.models import User
 
@@ -65,6 +65,10 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             countries_name='Countries',
             regions_name='Regions',
             events_count='Events Count',
+            min_event_start='Earliest Event Start',
+            max_event_end='Latest Event End',
+            figures_count='Figures Count',
+            flow_figures_sum='Flow Figures Sum',
         )
         values = CrisisFilter(
             data=filters,
@@ -74,6 +78,16 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             countries_name=ArrayAgg('countries__name', distinct=True),
             regions_name=ArrayAgg('countries__region__name', distinct=True),
             events_count=models.Count('events', distinct=True),
+            min_event_start=models.Min('events__start_date', distinct=True),
+            max_event_end=models.Max('events__end_date', distinct=True),
+            figures_count=models.Count('events__entries__figures', distinct=True),
+            flow_figures_sum=models.Sum(
+                'entries__figures__total_figures',
+                filter=models.Q(
+                    entries__figures__category=FigureCategory.flow_new_displacement_id(),
+                    entries__figures__role=Figure.ROLE.RECOMMENDED,
+                ),
+            ),
         ).order_by('-created_at').select_related(
         ).prefetch_related(
             'countries'

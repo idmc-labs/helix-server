@@ -224,7 +224,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             countries_name='Geo Names',
             regions_name='Geo Regions',
             figures_count='Figures Count',
-            figures_sum='Reocmmended figures',
+            figures_sum='Flow Reocmmended figures',
             created_at='Created At',
             created_by__full_name='Created By',
             event_type='Event Type',
@@ -239,6 +239,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             disaster_sub_category__name='Disaster Subcategory',
             disaster_type__name='Disaster Type',
             disaster_sub_type__name='Disaster Sub Type',
+            disaster_sub_type='Hazaed Type ID',
         )
         values = EventFilter(
             data=filters,

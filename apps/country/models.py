@@ -1,12 +1,13 @@
 from collections import OrderedDict
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.db.models import Count
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel, ArchiveAbstractModel
-from apps.entry.models import Entry
+from apps.entry.models import Entry, Figure, FigureCategory
 from apps.crisis.models import Crisis
 from apps.users.models import User
 
@@ -72,12 +73,32 @@ class Country(models.Model):
             country_code='Country Code',
             idmc_short_name='IDMC Short Name',
             idmc_full_name='IDMC Full Name',
-            # TODO: crisis, event, entries counts
+            crises_count='Crisis Count',
+            events_count='Events Count',
+            entries_count='Entries Count',
+            figures_count='Figures Count',
+            figures_sum='Flow Figures Sum',
+            contacts_count='Contacts Count',
+            operating_contacts_count='Operating Contacts Count',
         )
         values = CountryFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
-        ).qs.select_related(
+        ).qs.annotate(
+            crises_count=Count('crises', distinct=True),
+            events_count=Count('events', distinct=True),
+            entries_count=Count('events__entries', distinct=True),
+            figures_count=Count('figures', distinct=True),
+            figures_sum=models.Sum(
+                'entries__figures__total_figures',
+                filter=models.Q(
+                    entries__figures__category=FigureCategory.flow_new_displacement_id(),
+                    entries__figures__role=Figure.ROLE.RECOMMENDED,
+                ),
+            ),
+            contacts_count=Count('contacts', distinct=True),
+            operating_contacts_count=Count('operating_contacts', distinct=True),
+        ).select_related(
             'geographical_group', 'region',
         ).values(*[header for header in headers.keys()])
         data = values
