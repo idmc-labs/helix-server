@@ -24,7 +24,6 @@ from graphene_file_upload.django import FileUploadGraphQLView
 
 from utils.graphene.context import GQLContext
 from . import api_urls as rest_urls
-from utils.graphene.context import GQLContext
 
 
 class CustomGraphQLView(FileUploadGraphQLView):

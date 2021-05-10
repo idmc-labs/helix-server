@@ -71,6 +71,7 @@ class TestFigureModel(HelixTestCase):
 
     def test_figure_nd_filtering(self):
         ref = datetime.today()
+        FigureCategory._invalidate_category_ids_cache()
         nd_cat = FigureCategory.flow_new_displacement_id()
         idp_cat = FigureCategory.stock_idp_id()
         f1 = FigureFactory.create(
@@ -125,6 +126,7 @@ class TestFigureModel(HelixTestCase):
 
     def test_figure_idp_filtering(self):
         ref = datetime.today()
+        FigureCategory._invalidate_category_ids_cache()
         nd_cat = FigureCategory.flow_new_displacement_id()
         idp_cat = FigureCategory.stock_idp_id()
         f1 = FigureFactory.create(
