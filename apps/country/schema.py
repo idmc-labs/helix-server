@@ -146,11 +146,11 @@ class CountryType(DjangoObjectType):
         ),
         accessor='figures'
     ))
-    geojson_url = graphene.String()
     this_year_nd_conflict = graphene.Int()
     this_year_nd_disaster = graphene.Int()
     this_year_idps_conflict = graphene.Int()
     this_year_idps_disaster = graphene.Int()
+    geojson_url = graphene.String()
 
     def resolve_geojson_url(root, info, **kwargs):
         if 'FileSystemStorage' in settings.DEFAULT_FILE_STORAGE:
