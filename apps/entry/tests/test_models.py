@@ -154,8 +154,7 @@ class TestFigureModel(HelixTestCase):
 
         idp = Figure.filtered_idp_figures(
             qs=Figure.objects.all(),
-            # because ref is today
-            end_date=None,
+            end_date=ref,
         )
         self.assertEqual(idp.count(), 2)
         self.assertNotIn(f4, idp)

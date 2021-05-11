@@ -140,6 +140,7 @@ class EntryFilter(df.FilterSet):
             _is_reviewed=Exists(reviewed_subquery),
             _is_under_review=Exists(under_review_subquery),
             _is_signed_off=Exists(signed_off_subquery),
+            **Entry._total_figure_disaggregation_subquery(),
         ).distinct()
 
 

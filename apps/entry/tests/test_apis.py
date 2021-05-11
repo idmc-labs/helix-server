@@ -44,6 +44,7 @@ class TestEntryQuery(HelixGraphQLTestCase):
         self.force_login(guest)
 
     def test_figure_count_filtered_resolvers(self):
+        FigureCategory._invalidate_category_ids_cache()
         self.stock_fig_cat = FigureCategory.stock_idp_id()
         self.stock_fig_cat_id = str(self.stock_fig_cat.id)
         self.random_fig_cat2 = FigureCategoryFactory.create(

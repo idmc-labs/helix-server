@@ -203,10 +203,18 @@ class EventType(DjangoObjectType):
         return info.context.event_event_review_count_dataloader.load(root.id)
 
     def resolve_total_stock_idp_figures(root, info, **kwargs):
-        return info.context.event_event_total_stock_idp_figures.load(root.id)
+        return getattr(
+            root,
+            Event.IDP_FIGURES_ANNOTATE,
+            info.context.event_event_total_stock_idp_figures.load(root.id)
+        )
 
     def resolve_total_flow_nd_figures(root, info, **kwargs):
-        return info.context.event_event_total_flow_nd_figures.load(root.id)
+        return getattr(
+            root,
+            Event.ND_FIGURES_ANNOTATE,
+            info.context.event_event_total_flow_nd_figures.load(root.id)
+        )
 
 
 class EventListType(CustomDjangoListObjectType):

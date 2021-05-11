@@ -152,19 +152,33 @@ class CountryType(DjangoObjectType):
     this_year_idps_disaster = graphene.Int()
     geojson_url = graphene.String()
 
-    '''
     def resolve_this_year_idps_disaster(root, info, **kwargs):
-        return info.context.country_country_this_year_idps_disaster_loader.load(root.id)
+        return getattr(
+            root,
+            Country.IDP_DISASTER_ANNOTATE,
+            info.context.country_country_this_year_idps_disaster_loader.load(root.id)
+        )
 
     def resolve_this_year_idps_conflict(root, info, **kwargs):
-        return info.context.country_country_this_year_idps_conflict_loader.load(root.id)
+        return getattr(
+            root,
+            Country.IDP_CONFLICT_ANNOTATE,
+            info.context.country_country_this_year_idps_conflict_loader.load(root.id)
+        )
 
     def resolve_this_year_nd_conflict(root, info, **kwargs):
-        return info.context.country_country_this_year_nd_conflict_loader.load(root.id)
+        return getattr(
+            root,
+            Country.ND_CONFLICT_ANNOTATE,
+            info.context.country_country_this_year_nd_conflict_loader.load(root.id)
+        )
 
     def resolve_this_year_nd_disaster(root, info, **kwargs):
-        return info.context.country_country_this_year_nd_disaster_loader.load(root.id)
-    '''
+        return getattr(
+            root,
+            Country.ND_DISASTER_ANNOTATE,
+            info.context.country_country_this_year_nd_disaster_loader.load(root.id)
+        )
 
     def resolve_geojson_url(root, info, **kwargs):
         if 'FileSystemStorage' in settings.DEFAULT_FILE_STORAGE:
