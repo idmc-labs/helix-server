@@ -4,6 +4,9 @@ from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand
 import requests
 
+from turfpy.measurement import bbox
+from geojson import MultiPolygon
+
 
 class Command(BaseCommand):
     help = 'Split country geojson'
@@ -29,8 +32,9 @@ class Command(BaseCommand):
             )
 
             instance = Country.objects.get(iso3=country['properties']['iso3'])
-            bbox = country['properties'].get('bouding_box') or country['properties'].get('bouding_1')
-            if bbox and instance:
-                instance.bounding_box = bbox
+            multipolygon = MultiPolygon(country['geometry']['coordinates'])
+            if multipolygon and instance:
+                bb = bbox(multipolygon)
+                instance.bounding_box = bb
                 instance.save()
         print('Dumped country geojsons.')
