@@ -11,7 +11,7 @@ from apps.contrib.models import (
 )
 from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
-from apps.entry.models import Figure, FigureCategory
+from apps.entry.models import Figure
 from apps.users.models import User
 from utils.validations import is_child_parent_dates_valid
 
@@ -101,6 +101,10 @@ class DisasterSubType(NameAttributedModels):
 
 
 class Event(MetaInformationArchiveAbstractModel, models.Model):
+    # NOTE figure disaggregation variable definitions
+    ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
+    IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
+
     class EVENT_OTHER_SUB_TYPE(enum.Enum):
         DEVELOPMENT = 0
         EVICTION = 1
@@ -204,6 +208,35 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         return errors
 
     @classmethod
+    def _total_figure_disaggregation_subquery(cls):
+        return {
+            cls.ND_FIGURES_ANNOTATE: models.Subquery(
+                Figure.filtered_nd_figures(
+                    Figure.objects.filter(
+                        entry__event=models.OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                    ),
+                    # TODO: what about date range
+                    # start_date=
+                ).order_by().values('entry__event').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+            cls.IDP_FIGURES_ANNOTATE: models.Subquery(
+                Figure.filtered_idp_figures(
+                    Figure.objects.filter(
+                        entry__event=models.OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                    )
+                ).order_by().values('entry__event').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+        }
+
+    @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
         from apps.event.filters import EventFilter
 
@@ -224,7 +257,10 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             countries_name='Geo Names',
             regions_name='Geo Regions',
             figures_count='Figures Count',
-            figures_sum='Flow Reocmmended figures',
+            **{
+                cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
+                cls.ND_FIGURES_ANNOTATE: 'ND Figure',
+            },
             created_at='Created At',
             created_by__full_name='Created By',
             event_type='Event Type',
@@ -248,14 +284,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             countries_iso3=ArrayAgg('countries__iso3', distinct=True),
             countries_name=ArrayAgg('countries__name', distinct=True),
             regions_name=ArrayAgg('countries__region__name', distinct=True),
-            figures_sum=models.Sum(
-                'entries__figures__total_figures',
-                filter=models.Q(
-                    entries__figures__category=FigureCategory.flow_new_displacement_id(),
-                    entries__figures__role=Figure.ROLE.RECOMMENDED,
-                ),
-            ),
             figures_count=models.Count('entries__figures', distinct=True),
+            **cls._total_figure_disaggregation_subquery(),
         ).order_by('-created_at').select_related(
             'trigger',
             'trigger_sub_type',

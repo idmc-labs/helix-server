@@ -6,12 +6,16 @@ from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
-from apps.entry.models import Figure, FigureCategory
+from apps.entry.models import Figure
 from apps.contrib.commons import DATE_ACCURACY
 from apps.users.models import User
 
 
 class Crisis(MetaInformationAbstractModel, models.Model):
+    # NOTE figure disaggregation variable definitions
+    ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
+    IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
+
     class CRISIS_TYPE(enum.Enum):
         CONFLICT = 0
         DISASTER = 1
@@ -46,6 +50,35 @@ class Crisis(MetaInformationAbstractModel, models.Model):
     )
 
     @classmethod
+    def _total_figure_disaggregation_subquery(cls):
+        return {
+            cls.ND_FIGURES_ANNOTATE: models.Subquery(
+                Figure.filtered_nd_figures(
+                    Figure.objects.filter(
+                        entry__event__crisis=models.OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                    ),
+                    # TODO: what about date range
+                    # start_date=
+                ).order_by().values('entry__event__crisis').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+            cls.IDP_FIGURES_ANNOTATE: models.Subquery(
+                Figure.filtered_idp_figures(
+                    Figure.objects.filter(
+                        entry__event__crisis=models.OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                    )
+                ).order_by().values('entry__event__crisis').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+        }
+
+    @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
         from apps.crisis.filters import CrisisFilter
 
@@ -68,7 +101,10 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             min_event_start='Earliest Event Start',
             max_event_end='Latest Event End',
             figures_count='Figures Count',
-            flow_figures_sum='Flow Figures Sum',
+            **{
+                cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
+                cls.ND_FIGURES_ANNOTATE: 'ND Figure',
+            }
         )
         values = CrisisFilter(
             data=filters,
@@ -81,13 +117,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             min_event_start=models.Min('events__start_date', distinct=True),
             max_event_end=models.Max('events__end_date', distinct=True),
             figures_count=models.Count('events__entries__figures', distinct=True),
-            flow_figures_sum=models.Sum(
-                'entries__figures__total_figures',
-                filter=models.Q(
-                    entries__figures__category=FigureCategory.flow_new_displacement_id(),
-                    entries__figures__role=Figure.ROLE.RECOMMENDED,
-                ),
-            ),
+            **cls._total_figure_disaggregation_subquery(),
         ).order_by('-created_at').select_related(
         ).prefetch_related(
             'countries'

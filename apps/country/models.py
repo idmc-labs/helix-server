@@ -1,13 +1,15 @@
+from datetime import datetime
+
 from collections import OrderedDict
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
-from django.db.models import Count
+from django.db.models import Count, OuterRef
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel, ArchiveAbstractModel
-from apps.entry.models import Entry, Figure, FigureCategory
+from apps.entry.models import Entry, Figure
 from apps.crisis.models import Crisis
 from apps.users.models import User
 
@@ -28,6 +30,11 @@ class CountryRegion(models.Model):
 
 class Country(models.Model):
     GEOJSON_PATH = 'geojsons'
+    # NOTE: following are the figure disaggregation fields
+    ND_CONFLICT_ANNOTATE = 'nd_conflict_figures_sum'
+    ND_DISASTER_ANNOTATE = 'nd_disaster_figures_sum'
+    IDP_CONFLICT_ANNOTATE = 'idp_conflict_figures_sum'
+    IDP_DISASTER_ANNOTATE = 'idp_disaster_figures_sum'
 
     name = models.CharField(verbose_name=_('Name'), max_length=256)
     geographical_group = models.ForeignKey('GeographicalGroup', verbose_name=_('Geographical Group'), null=True,
@@ -55,6 +62,68 @@ class Country(models.Model):
     idmc_short_name_ar = models.CharField(verbose_name=_('IDMC Short Name Ar'), max_length=256, null=True)
 
     @classmethod
+    def _total_figure_disaggregation_subquery(cls):
+        '''
+        returns the subqueries for figures sum annotations
+        '''
+        return {
+            cls.ND_CONFLICT_ANNOTATE: models.Subquery(
+                Figure.filtered_nd_figures(
+                    Figure.objects.filter(
+                        country=OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                        entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                    ),
+                    # TODO: what about date range
+                    start_date=datetime(year=datetime.today().year, month=1, day=1),
+                    end_date=datetime(year=datetime.today().year, month=12, day=31),
+                ).order_by().values('country').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+            cls.ND_DISASTER_ANNOTATE: models.Subquery(
+                Figure.filtered_nd_figures(
+                    Figure.objects.filter(
+                        country=OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                        entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                    ),
+                    # TODO: what about date range
+                    start_date=datetime(year=datetime.today().year, month=1, day=1),
+                    end_date=datetime(year=datetime.today().year, month=12, day=31),
+                ).order_by().values('country').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+            cls.IDP_CONFLICT_ANNOTATE: models.Subquery(
+                Figure.filtered_idp_figures(
+                    Figure.objects.filter(
+                        country=OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                        entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                    )
+                ).order_by().values('country').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+            cls.IDP_DISASTER_ANNOTATE: models.Subquery(
+                Figure.filtered_idp_figures(
+                    Figure.objects.filter(
+                        country=OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                        entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                    )
+                ).order_by().values('country').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+        }
+
+    @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
         from apps.country.filters import CountryFilter
 
@@ -77,9 +146,12 @@ class Country(models.Model):
             events_count='Events Count',
             entries_count='Entries Count',
             figures_count='Figures Count',
-            figures_sum='Flow Figures Sum',
-            contacts_count='Contacts Count',
-            operating_contacts_count='Operating Contacts Count',
+            **{
+                cls.IDP_DISASTER_ANNOTATE: 'IDPs Disaster Figure',
+                cls.ND_CONFLICT_ANNOTATE: 'ND Conflict Figure',
+                cls.IDP_CONFLICT_ANNOTATE: 'IDPs Conflict Figure',
+                cls.ND_DISASTER_ANNOTATE: 'ND Disaster Figure',
+            }
         )
         values = CountryFilter(
             data=filters,
@@ -89,15 +161,9 @@ class Country(models.Model):
             events_count=Count('events', distinct=True),
             entries_count=Count('events__entries', distinct=True),
             figures_count=Count('figures', distinct=True),
-            figures_sum=models.Sum(
-                'entries__figures__total_figures',
-                filter=models.Q(
-                    entries__figures__category=FigureCategory.flow_new_displacement_id(),
-                    entries__figures__role=Figure.ROLE.RECOMMENDED,
-                ),
-            ),
             contacts_count=Count('contacts', distinct=True),
             operating_contacts_count=Count('operating_contacts', distinct=True),
+            **cls._total_figure_disaggregation_subquery(),
         ).select_related(
             'geographical_group', 'region',
         ).values(*[header for header in headers.keys()])

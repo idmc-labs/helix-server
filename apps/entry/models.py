@@ -1,4 +1,3 @@
-from datetime import datetime
 from collections import OrderedDict
 from datetime import date
 import logging
@@ -400,22 +399,23 @@ class Figure(MetaInformationArchiveAbstractModel,
     def filtered_idp_figures(
         cls,
         qs: QuerySet,
-        end_date: Optional[date],
+        end_date: Optional[date] = None,
     ):
         end_date = end_date or date.today()
         qs = qs.filter(
             category=FigureCategory.stock_idp_id()
         ).filter(
+            start_date__lte=end_date,
+        ).filter(
             Q(
                 # if end date exists (=expired), we must make sure that expiry date is after the given end date,
                 # also figure started before the end date
                 end_date__isnull=False,
-                start_date__lte=end_date,
                 end_date__gte=end_date,
             ) | Q(
                 # if end date does not exist, we must make sure that that figure started before given start date
                 end_date__isnull=True,
-                start_date__lte=end_date,
+            )
         )
         return qs
 
@@ -574,6 +574,10 @@ class FigureTag(MetaInformationAbstractModel):
 
 
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
+    # NOTE figure disaggregation variable definitions
+    ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
+    IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
+
     url = models.URLField(verbose_name=_('Source URL'), max_length=2000,
                           blank=True, null=True)
     associated_parked_item = models.OneToOneField('parking_lot.ParkedItem',
@@ -618,6 +622,35 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                                        through_fields=('entry', 'reviewer'))
 
     @classmethod
+    def _total_figure_disaggregation_subquery(cls):
+        return {
+            cls.ND_FIGURES_ANNOTATE: models.Subquery(
+                Figure.filtered_nd_figures(
+                    Figure.objects.filter(
+                        entry=models.OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                    ),
+                    # TODO: what about date range
+                    # start_date=
+                ).order_by().values('entry').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+            cls.IDP_FIGURES_ANNOTATE: models.Subquery(
+                Figure.filtered_idp_figures(
+                    Figure.objects.filter(
+                        entry=models.OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                    )
+                ).order_by().values('entry').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+        }
+
+    @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
         from apps.extraction.filters import EntryExtractionFilterSet
 
@@ -639,7 +672,10 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             event__crisis_id='Crisis ID',
             event__crisis__name='Crisis Name',
             figures_count='Figure Count',
-            figures_sum='Recommended Figure',
+            **{
+                cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
+                cls.ND_FIGURES_ANNOTATE: 'ND Figure',
+            },
             sources_name='Sources',
             publishers_name='Publishers',
             created_at='Created at',
@@ -673,25 +709,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             centroid_lon=Avg('figures__geo_locations__lon'),
             sources_name=ArrayAgg('sources__name', distinct=True),
             publishers_name=ArrayAgg('publishers__name', distinct=True),
-            # FIXME: figure stock sum, and other download section
-            figures_sum=models.Sum(
-                'figures__total_figures',
-                filter=models.Q(
-                    figures__category=FigureCategory.flow_new_displacement_id(),
-                    figures__role=Figure.ROLE.RECOMMENDED,
-                ) | models.Q(
-                    models.Q(
-                        end_date__isnull=True,
-                    ) | models.Q(
-                        end_date__isnull=False,
-                        end_date__gte=datetime.today()
-                    ),
-                    start_date__lte=datetime.today(),
-                    figures__category=FigureCategory.stock_idp_id(),
-                    figures__role=Figure.ROLE.RECOMMENDED,
-                ),
-            ),
             figures_count=models.Count('figures', distinct=True),
+            **cls._total_figure_disaggregation_subquery(),
         ).annotate(
             centroid=Concat(
                 F('centroid_lat'), Value(', '), F('centroid_lon'),
