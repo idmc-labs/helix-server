@@ -21,25 +21,23 @@ def get_excel_sheet_content(headers, data, **kwargs):
     wb = Workbook(write_only=True)
 
     ws = wb.create_sheet('Main')
-    keys = headers.keys()
-    ws.append([headers[key] for key in keys])
-    for elements in data:
-        ws.append([
-            re.sub(ILLEGAL_CHARACTERS_RE, '', str(elements.get(key)) if elements.get(key) else '')
-            for key in keys
-        ])
-    for other in kwargs.get('other', []):
-        headers = other['results']['headers']
-        data = other['results']['data']
 
-        ws = wb.create_sheet(other['title'])
-        keys = headers.keys()
-        ws.append([headers[key] for key in keys])
-        for elements in data:
-            ws.append([
+    def append_to_worksheet(_ws, _headers, _data):
+        keys = _headers.keys()
+        _ws.append([_headers[key] for key in keys])
+        for elements in _data:
+            _ws.append([
                 re.sub(ILLEGAL_CHARACTERS_RE, '', str(elements.get(key)) if elements.get(key) else '')
                 for key in keys
             ])
+    append_to_worksheet(ws, headers, data)
+
+    for other in kwargs.get('other', []):
+        ws = wb.create_sheet(other['title'])
+        headers = other['results']['headers']
+        data = other['results']['data']
+        append_to_worksheet(ws, headers, data)
+
     with NamedTemporaryFile() as tmp:
         wb.save(tmp.name)
         tmp.seek(0)
