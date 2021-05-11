@@ -1,3 +1,6 @@
+from datetime import datetime
+
+from django.db import models
 from django.db.models import (
     Count,
     Subquery,
@@ -6,6 +9,8 @@ from django.db.models import (
 )
 from promise import Promise
 from promise.dataloader import DataLoader
+
+from apps.entry.models import Figure, FigureCategory
 
 
 class CrisisReviewCountLoader(DataLoader):
@@ -66,3 +71,66 @@ class CrisisReviewCountLoader(DataLoader):
             list_to_dict.get(crisis_id, dict())
             for crisis_id in keys
         ])
+
+
+def batch_load_fn_by_category(keys, category):
+    qs = Figure.objects.select_related(
+        'entry__event__crisis'
+    ).filter(
+        entry__event__crisis__in=keys,
+        role=Figure.ROLE.RECOMMENDED,
+    )
+    this_year = datetime.today().year
+
+    if category == FigureCategory.flow_new_displacement_id():
+        qs = Figure.filtered_nd_figures(
+            qs,
+            # TODO Lets discuss on the date range
+            start_date=datetime(
+                year=this_year,
+                month=1,
+                day=1
+            ),
+            end_date=datetime(
+                year=this_year,
+                month=12,
+                day=31
+            )
+        )
+    elif category == FigureCategory.stock_idp_id():
+        qs = Figure.filtered_idp_figures(
+            qs,
+        )
+
+    qs.order_by().values(
+        'entry__event__crisis'
+    ).annotate(
+        _total=models.Sum(
+            'total_figures',
+        )
+    ).values('entry__event__crisis', '_total')
+
+    batch_load = {
+        item['entry__event__crisis']: item['_total']
+        for item in qs
+    }
+
+    return Promise.resolve([
+        batch_load.get(key) for key in keys
+    ])
+
+
+class TotalIDPFigureByCrisisLoader(DataLoader):
+    def batch_load_fn(self, keys):
+        return batch_load_fn_by_category(
+            keys,
+            FigureCategory.stock_idp_id(),
+        )
+
+
+class TotalNDFigureByCrisisLoader(DataLoader):
+    def batch_load_fn(self, keys):
+        return batch_load_fn_by_category(
+            keys,
+            FigureCategory.flow_new_displacement_id(),
+        )

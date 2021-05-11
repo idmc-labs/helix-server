@@ -1,6 +1,7 @@
 from django.utils.functional import cached_property
 
 from apps.country.dataloaders import TotalFigureThisYearByCountryCategoryEventTypeLoader
+from apps.crisis.dataloaders import TotalIDPFigureByCrisisLoader, TotalNDFigureByCrisisLoader
 from apps.entry.dataloaders import TotalIDPFigureByEntryLoader, TotalNDFigureByEntryLoader
 from apps.event.dataloaders import (
     TotalIDPFigureByEventLoader,
@@ -48,6 +49,14 @@ class GQLContext:
     @cached_property
     def entry_entry_total_flow_nd_figures(self):
         return TotalNDFigureByEntryLoader()
+
+    @cached_property
+    def crisis_crisis_total_stock_idp_figures(self):
+        return TotalIDPFigureByCrisisLoader()
+
+    @cached_property
+    def crisis_crisis_total_flow_nd_figures(self):
+        return TotalNDFigureByCrisisLoader()
 
     @cached_property
     def event_event_total_stock_idp_figures(self):

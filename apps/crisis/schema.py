@@ -41,6 +41,20 @@ class CrisisType(DjangoObjectType):
     def resolve_review_count(root, info, **kwargs):
         return info.context.crisis_crisis_review_count_dataloader.load(root.id)
 
+    def resolve_total_stock_idp_figures(root, info, **kwargs):
+        return getattr(
+            root,
+            Crisis.IDP_FIGURES_ANNOTATE,
+            info.context.crisis_crisis_total_stock_idp_figures.load(root.id)
+        )
+
+    def resolve_total_flow_nd_figures(root, info, **kwargs):
+        return getattr(
+            root,
+            Crisis.ND_FIGURES_ANNOTATE,
+            info.context.crisis_crisis_total_flow_nd_figures.load(root.id)
+        )
+
 
 class CrisisListType(CustomDjangoListObjectType):
     class Meta:

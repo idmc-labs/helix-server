@@ -32,3 +32,9 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
                 Crisis.CRISIS_TYPE.get(item).value for item in value
             ]).distinct()
         return qs
+
+    @property
+    def qs(self):
+        return super().qs.annotate(
+            **Crisis._total_figure_disaggregation_subquery(),
+        )

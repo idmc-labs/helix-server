@@ -142,18 +142,6 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             'formulae': None,
         }
 
-    # property
-
-    @property
-    def total_stock_idp_figures(self) -> int:
-        filters = dict(crisis=self.id)
-        return Figure.get_total_stock_idp_figure(filters)
-
-    @property
-    def total_flow_nd_figures(self) -> int:
-        filters = dict(crisis=self.id)
-        return Figure.get_total_flow_nd_figure(filters)
-
     # dunders
 
     def __str__(self):
