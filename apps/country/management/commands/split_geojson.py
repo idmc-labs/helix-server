@@ -1,5 +1,4 @@
 import json
-
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand
@@ -17,8 +16,15 @@ class Command(BaseCommand):
         countries = response['features']
         print('Starting country geojson dumps...')
         for country in countries:
+            country_iso3 = country['properties']['iso3']
+            crs = response['crs'],
             default_storage.save(
-                Country.geojson_path(country['properties']['iso3']),
-                ContentFile(json.dumps(country))
+                Country.geojson_path(country_iso3),
+                ContentFile(json.dumps({
+                    'type': 'FeatureCollection',
+                    'crs': crs,
+                    'name': country_iso3,
+                    'features': [country],
+                }))
             )
         print('Dumped country geojsons.')
