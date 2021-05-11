@@ -217,7 +217,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     # TODO: what about date range
-                    # start_date=
+                    start_date=None,
+                    end_date=None,
                 ).order_by().values('entry__event').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],

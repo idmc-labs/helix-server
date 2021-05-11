@@ -1,3 +1,4 @@
+from datetime import datetime
 from collections import OrderedDict
 
 from django.contrib.postgres.aggregates.general import ArrayAgg
@@ -59,7 +60,8 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     # TODO: what about date range
-                    # start_date=
+                    start_date=datetime(year=datetime.today().year, month=1, day=1),
+                    end_date=datetime(year=datetime.today().year, month=12, day=31),
                 ).order_by().values('entry__event__crisis').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
@@ -114,8 +116,8 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             countries_name=ArrayAgg('countries__name', distinct=True),
             regions_name=ArrayAgg('countries__region__name', distinct=True),
             events_count=models.Count('events', distinct=True),
-            min_event_start=models.Min('events__start_date', distinct=True),
-            max_event_end=models.Max('events__end_date', distinct=True),
+            min_event_start=models.Min('events__start_date'),
+            max_event_end=models.Max('events__end_date'),
             figures_count=models.Count('events__entries__figures', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
         ).order_by('-created_at').select_related(
