@@ -31,10 +31,10 @@ class CountryRegion(models.Model):
 class Country(models.Model):
     GEOJSON_PATH = 'geojsons'
     # NOTE: following are the figure disaggregation fields
-    ND_CONFLICT_ANNOTATE = 'nd_conflict_figures_sum'
-    ND_DISASTER_ANNOTATE = 'nd_disaster_figures_sum'
-    IDP_CONFLICT_ANNOTATE = 'idp_conflict_figures_sum'
-    IDP_DISASTER_ANNOTATE = 'idp_disaster_figures_sum'
+    ND_CONFLICT_ANNOTATE = 'this_year_nd_conflict'
+    ND_DISASTER_ANNOTATE = 'this_year_nd_disaster'
+    IDP_CONFLICT_ANNOTATE = 'this_year_idps_conflict'
+    IDP_DISASTER_ANNOTATE = 'this_year_idps_disaster'
 
     name = models.CharField(verbose_name=_('Name'), max_length=256)
     geographical_group = models.ForeignKey('GeographicalGroup', verbose_name=_('Geographical Group'), null=True,
@@ -159,8 +159,24 @@ class Country(models.Model):
         ).qs.annotate(
             crises_count=Count('crises', distinct=True),
             events_count=Count('events', distinct=True),
-            entries_count=Count('events__entries', distinct=True),
-            figures_count=Count('figures', distinct=True),
+            # NOTE: Subquery was relatively faster than JOINs
+            # entries_count=Count('events__entries', distinct=True),
+            entries_count=models.Subquery(
+                Entry.objects.filter(
+                    event__countries=OuterRef('pk')
+                ).order_by().values('event__countries').annotate(
+                    _count=Count('pk')
+                ).values('_count')[:1],
+                output_field=models.IntegerField()
+            ),
+            figures_count=models.Subquery(
+                Figure.objects.filter(
+                    country=OuterRef('pk')
+                ).order_by().values('country').annotate(
+                    _count=Count('pk')
+                ).values('_count')[:1],
+                output_field=models.IntegerField()
+            ),
             contacts_count=Count('contacts', distinct=True),
             operating_contacts_count=Count('operating_contacts', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
