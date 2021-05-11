@@ -158,6 +158,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
                 }
             }'''
         self.event = EventFactory.create(crisis=None)
+        v_sub_type = ViolenceSubTypeFactory.create()
         self.input = {
             "id": self.event.id,
             "endDate": "2020-10-29",
@@ -165,7 +166,8 @@ class TestUpdateEvent(HelixGraphQLTestCase):
             "eventType": "CONFLICT",
             "name": "xyz",
             "startDate": "2020-10-20",
-            "violenceSubType": ViolenceSubTypeFactory.create().id,
+            "violence": v_sub_type.violence.id,
+            "violenceSubType": v_sub_type.id,
         }
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.force_login(editor)
