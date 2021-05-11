@@ -27,4 +27,10 @@ class Command(BaseCommand):
                     'features': [country],
                 }))
             )
+
+            instance = Country.objects.get(iso3=country['properties']['iso3'])
+            bbox = country['properties'].get('bouding_box') or country['properties'].get('bouding_1')
+            if bbox and instance:
+                instance.bounding_box = bbox
+                instance.save()
         print('Dumped country geojsons.')
