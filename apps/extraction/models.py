@@ -4,7 +4,7 @@ from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
-from apps.entry.models import Figure
+from apps.entry.models import Figure, EntryReviewer
 from apps.crisis.models import Crisis
 
 
@@ -74,6 +74,11 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
+    filter_entry_review_status = ArrayField(
+        base_field=enum.EnumField(enum=EntryReviewer.REVIEW_STATUS),
+        blank=True,
+        null=True
+    )
 
     @property
     def extract_figures(self) -> ['Figure']:  # noqa
@@ -112,6 +117,7 @@ class QueryAbstractModel(models.Model):
             filter_figure_end_before=self.filter_figure_end_before,
             filter_entry_article_title=self.filter_entry_article_title,
             filter_event_crisis_types=self.filter_event_crisis_types,
+            filter_entry_review_status=self.filter_entry_review_status,
         ))
 
     class Meta:

@@ -1,7 +1,13 @@
 import json
 
 from apps.users.enums import USER_ROLE
-from utils.factories import CountryFactory, CrisisFactory
+from apps.review.models import Review
+from utils.factories import (
+    CountryFactory,
+    CrisisFactory,
+    EntryFactory,
+    EventFactory,
+)
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
@@ -171,3 +177,106 @@ class TestCrisisDelete(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+
+
+class TestCrisisList(HelixGraphQLTestCase):
+    def setUp(self):
+        self.q = '''
+        query crisisList {
+          crisisList {
+            results {
+              reviewCount {
+                toBeReviewedCount
+                underReviewCount
+                reviewCompleteCount
+                signedOffCount
+              }
+            }
+          }
+        }
+        '''
+        admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.force_login(admin)
+
+    def test_crisis_review_count_with_dataloader(self):
+        crisis = CrisisFactory.create()
+        event = EventFactory.create(
+            crisis=crisis
+        )
+        r1 = create_user_with_role(
+            USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+        )
+        r2 = create_user_with_role(
+            USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+        )
+        entry1 = EntryFactory.create(
+            event=event,
+        )
+        entry1.reviewers.set([r1, r2])
+
+        event2 = EventFactory.create(
+            crisis=crisis
+        )
+        r3 = create_user_with_role(
+            USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+        )
+        entry2 = EntryFactory.create(
+            event=event2,
+        )
+
+        # see that r2 is duplicated across entries
+        # so crisis must show 4 not 3
+        entry2.reviewers.set([r3, r2])
+
+        response = self.query(
+            self.q,
+        )
+        content = response.json()
+        # check the counts
+        data = content['data']
+        self.assertEqual(
+            data['crisisList']['results'][0]['reviewCount']['toBeReviewedCount'],
+            4
+        )
+        self.assertEqual(
+            data['crisisList']['results'][0]['reviewCount']['underReviewCount'],
+            None
+        )
+        self.assertEqual(
+            data['crisisList']['results'][0]['reviewCount']['signedOffCount'],
+            None
+        )
+        self.assertEqual(
+            data['crisisList']['results'][0]['reviewCount']['reviewCompleteCount'],
+            None
+        )
+
+        # one reviewer starts reviewing an entry
+        Review.objects.create(
+            entry=entry1,
+            created_by=r2,
+            field='field',
+            value=0,
+        )
+        response = self.query(
+            self.q,
+        )
+        content = response.json()
+        # check the counts
+        data = content['data']
+        self.assertEqual(
+            data['crisisList']['results'][0]['reviewCount']['toBeReviewedCount'],
+            3
+        )
+        self.assertEqual(
+            data['crisisList']['results'][0]['reviewCount']['underReviewCount'],
+            1
+        )
+        self.assertEqual(
+            data['crisisList']['results'][0]['reviewCount']['signedOffCount'],
+            None
+        )
+        self.assertEqual(
+            data['crisisList']['results'][0]['reviewCount']['reviewCompleteCount'],
+            None
+        )

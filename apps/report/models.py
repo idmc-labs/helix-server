@@ -54,6 +54,18 @@ class Report(MetaInformationArchiveAbstractModel,
         GROUP = 0
         MASTERFACT = 1
 
+    class REPORT_REVIEW_FILTER(enum.Enum):
+        '''Simply for the filtering'''
+        SIGNED_OFF = 0
+        APPROVED = 1
+        UNAPPROVED = 2
+
+        __labels__ = {
+            SIGNED_OFF: _("Signed Off"),
+            APPROVED: _("Approved"),
+            UNAPPROVED: _("Unapproved"),
+        }
+
     @cached_property
     def TOTAL_FIGURE_DISAGGREGATIONS(self):
         return dict(

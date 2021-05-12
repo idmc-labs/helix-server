@@ -1,8 +1,19 @@
 from django_filters import rest_framework as df
+from django.db.models import Exists
 
-from apps.entry.models import Entry, Figure
-from apps.extraction.models import ExtractionQuery
 from apps.crisis.models import Crisis
+from apps.extraction.models import ExtractionQuery
+from apps.entry.models import (
+    Entry,
+    Figure,
+    EntryReviewer,
+)
+from apps.entry.filters import (
+    under_review_subquery,
+    reviewed_subquery,
+    signed_off_subquery,
+    to_be_reviewed_subquery,
+)
 from utils.filters import StringListFilter, IDListFilter
 
 
@@ -20,6 +31,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     # TODO: GRID filter
     filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
     filter_event_crisis_types = StringListFilter(method='filter_crisis_types')
+    filter_entry_review_status = StringListFilter(method='filter_by_review_status')
 
     class Meta:
         model = Entry
@@ -87,6 +99,30 @@ class EntryExtractionFilterSet(df.FilterSet):
                 Crisis.CRISIS_TYPE.get(item).value for item in value
             ])
         return qs
+
+    def filter_by_review_status(self, qs, name, value):
+        if not value:
+            return qs
+        qs = qs.annotate(
+            _is_reviewed=Exists(reviewed_subquery),
+            _is_under_review=Exists(under_review_subquery),
+            _is_signed_off=Exists(signed_off_subquery),
+            _to_be_reviewed=Exists(to_be_reviewed_subquery),
+        )
+        _temp = qs.none()
+        if EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED.name in value:
+            reviewed = qs.filter(_is_reviewed=True)
+            _temp = _temp | reviewed
+        if EntryReviewer.REVIEW_STATUS.UNDER_REVIEW.name in value:
+            under_review = qs.filter(_is_under_review=True)
+            _temp = _temp | under_review
+        if EntryReviewer.REVIEW_STATUS.SIGNED_OFF.name in value:
+            signed_off = qs.filter(_is_signed_off=True)
+            _temp = _temp | signed_off
+        if EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.name in value:
+            to_be_reviewed = qs.filter(_to_be_reviewed=True)
+            _temp = _temp | to_be_reviewed
+        return _temp
 
 
 class FigureExtractionFilterSet(df.FilterSet):

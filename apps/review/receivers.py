@@ -9,8 +9,10 @@ from .models import Review, ReviewComment
 def update_entry_reviewer_status(sender, instance, created, **kwargs):
     if created:
         from apps.entry.models import EntryReviewer
-        EntryReviewer.objects.filter(
+        entry_reviewer, _ = EntryReviewer.objects.get_or_create(
             entry=instance.entry,
             reviewer=instance.created_by,
-            status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED,
-        ).update(status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW)
+        )
+        if entry_reviewer.status == EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED:
+            entry_reviewer.status = EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
+            entry_reviewer.save()

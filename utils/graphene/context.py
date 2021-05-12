@@ -2,7 +2,12 @@ from django.utils.functional import cached_property
 
 from apps.country.dataloaders import TotalFigureThisYearByCountryCategoryEventTypeLoader
 from apps.entry.dataloaders import TotalIDPFigureByEntryLoader, TotalNDFigureByEntryLoader
-from apps.event.dataloaders import TotalIDPFigureByEventLoader, TotalNDFigureByEventLoader
+from apps.event.dataloaders import (
+    TotalIDPFigureByEventLoader,
+    TotalNDFigureByEventLoader,
+    EventReviewCountLoader
+)
+from apps.crisis.dataloaders import CrisisReviewCountLoader
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 
 
@@ -87,3 +92,11 @@ class GQLContext:
             category=FigureCategory.flow_new_displacement_id(),
             event_type=Crisis.CRISIS_TYPE.DISASTER.value,
         )
+
+    @cached_property
+    def event_event_review_count_dataloader(self):
+        return EventReviewCountLoader()
+
+    @cached_property
+    def crisis_crisis_review_count_dataloader(self):
+        return CrisisReviewCountLoader()
