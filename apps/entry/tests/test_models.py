@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
 from apps.entry.models import (
@@ -126,26 +127,34 @@ class TestFigureModel(HelixTestCase):
     def test_figure_idp_filtering(self):
         ref = datetime.today()
         FigureCategory._invalidate_category_ids_cache()
+        # TODO: Add test for DISASTER as well, once the logic arrives
+        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT)
+        entry = EntryFactory.create(event=event)
         nd_cat = FigureCategory.flow_new_displacement_id()
         idp_cat = FigureCategory.stock_idp_id()
         f1 = FigureFactory.create(
+            entry=entry,
             start_date=ref - timedelta(days=30),
             end_date=ref,
             category=idp_cat,
             role=Figure.ROLE.RECOMMENDED,
         )
         FigureFactory.create(
+            entry=entry,
             start_date=ref,
+            end_date=None,
             category=idp_cat,
             role=Figure.ROLE.RECOMMENDED,
         )
         f3 = FigureFactory.create(
+            entry=entry,
             start_date=ref + timedelta(days=30),
             end_date=ref + timedelta(days=60),
             category=idp_cat,
             role=Figure.ROLE.RECOMMENDED,
         )
         f4 = FigureFactory.create(
+            entry=entry,
             start_date=ref + timedelta(days=1),
             end_date=ref + timedelta(days=2),
             category=nd_cat,  # THIS IS nd
@@ -158,6 +167,7 @@ class TestFigureModel(HelixTestCase):
         )
         self.assertEqual(idp.count(), 2)
         self.assertNotIn(f4, idp)
+        self.assertNotIn(f3, idp)
 
         idp = Figure.filtered_idp_figures(
             qs=Figure.objects.all(),

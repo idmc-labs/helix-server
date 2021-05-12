@@ -2,14 +2,10 @@ import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
-from apps.country.models import Country
 from apps.country.schema import CountryType
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.crisis.models import Crisis
 from apps.entry.enums import RoleGrapheneEnum
-from apps.entry.models import Entry
 from apps.entry.schema import FigureListType
-from apps.event.models import Event
 from apps.report.models import (
     Report,
     ReportComment,
@@ -24,43 +20,44 @@ from utils.graphene.fields import CustomPaginatedListObjectField, DjangoPaginate
 from utils.pagination import PageGraphqlPaginationWithoutCount
 
 
-class ReportFigureMixin:
-    total_stock_conflict = graphene.Int()
-    total_flow_conflict = graphene.Int()
-    total_stock_disaster = graphene.Int()
-    total_flow_disaster = graphene.Int()
-
-
-class ReportCountryType(ReportFigureMixin, graphene.ObjectType):
+class ReportCountryType(graphene.ObjectType):
     """
     Note: These fields are pre-defined in the queryset annotation
     """
     country = graphene.Field('apps.country.schema.CountryType', required=True)
     id = graphene.ID(required=True)
+    total_stock_conflict = graphene.Int()
+    total_flow_conflict = graphene.Int()
+    total_stock_disaster = graphene.Int()
+    total_flow_disaster = graphene.Int()
 
     def resolve_country(root, info, **kwargs):
-        return Country.objects.get(id=root['id'])
+        return root
 
 
 class ReportCountryListType(CustomListObjectType):
+    # TODO: lets reuse country list type now since both are the same
     class Meta:
         base_type = ReportCountryType
         filterset_class = CountryReportFilter
 
 
-class ReportEventType(ReportFigureMixin, graphene.ObjectType):
+class ReportEventType(graphene.ObjectType):
     """
     NOTE: These fields are pre-defined in the queryset annotation
     """
     event = graphene.Field('apps.event.schema.EventType', required=True)
     id = graphene.ID(required=True)
     countries = graphene.List(graphene.NonNull(CountryType), required=False)
+    total_stock_idp_figures = graphene.Field(graphene.Int)
+    total_flow_nd_figures = graphene.Field(graphene.Int)
 
     def resolve_event(root, info, **kwargs):
-        return Event.objects.get(id=root['id'])
+        # FIXME: make me eventlist
+        return root
 
     def resolve_countries(root, info, **kwargs):
-        return Event.objects.get(id=root['id']).countries.all()
+        return root.countries.all()
 
 
 class ReportEventListType(CustomListObjectType):
@@ -68,7 +65,7 @@ class ReportEventListType(CustomListObjectType):
         base_type = ReportEventType
 
 
-class ReportEntryType(ReportFigureMixin, graphene.ObjectType):
+class ReportEntryType(graphene.ObjectType):
     """
     NOTE: These fields are pre-defined in the queryset annotation
     """
@@ -77,9 +74,12 @@ class ReportEntryType(ReportFigureMixin, graphene.ObjectType):
     is_reviewed = graphene.Boolean(required=True)
     is_under_review = graphene.Boolean(required=True)
     is_signed_off = graphene.Boolean(required=True)
+    total_stock_idp_figures = graphene.Field(graphene.Int)
+    total_flow_nd_figures = graphene.Field(graphene.Int)
 
     def resolve_entry(root, info, **kwargs):
-        return Entry.objects.get(id=root['id'])
+        # FIXME: make me entrylist
+        return root
 
 
 class ReportEntryListType(CustomListObjectType):
@@ -87,17 +87,18 @@ class ReportEntryListType(CustomListObjectType):
         base_type = ReportEntryType
 
 
-class ReportCrisisType(ReportFigureMixin, graphene.ObjectType):
+class ReportCrisisType(graphene.ObjectType):
     """
     NOTE: These fields are pre-defined in the queryset annotation
     """
     crisis = graphene.Field('apps.crisis.schema.CrisisType', required=True)
     id = graphene.ID(required=True)
-    name = graphene.String(required=True)
-    crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
+    total_stock_idp_figures = graphene.Field(graphene.Int)
+    total_flow_nd_figures = graphene.Field(graphene.Int)
 
     def resolve_crisis(root, info, **kwargs):
-        return Crisis.objects.get(id=root['id'])
+        # FIXME: make me crisislist
+        return root
 
 
 class ReportCrisisListType(CustomListObjectType):

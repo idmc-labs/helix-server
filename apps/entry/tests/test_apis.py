@@ -33,9 +33,9 @@ class TestEntryQuery(HelixGraphQLTestCase):
             created_by=self.editor
         )
         self.entry_query = '''
-        query MyQuery($id: ID!, $data: TotalFigureFilterInputType) {
+        query MyQuery($id: ID!) {
           entry(id: $id) {
-            totalStockIdpFigures(data: $data)
+            totalStockIdpFigures
             totalFlowNdFigures
           }
         }
@@ -83,7 +83,6 @@ class TestEntryQuery(HelixGraphQLTestCase):
             self.entry_query,
             variables=dict(
                 id=str(self.entry.id),
-                data=dict(categories=[self.stock_fig_cat_id])
             )
         )
         content = json.loads(response.content)

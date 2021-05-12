@@ -62,21 +62,32 @@ class Country(models.Model):
     idmc_short_name_ar = models.CharField(verbose_name=_('IDMC Short Name Ar'), max_length=256, null=True)
 
     @classmethod
-    def _total_figure_disaggregation_subquery(cls):
+    def _total_figure_disaggregation_subquery(
+        cls,
+        figures=None,
+        ignore_dates=False,
+    ):
         '''
         returns the subqueries for figures sum annotations
         '''
+        figures = figures or Figure.objects.all()
+        if ignore_dates:
+            start_date = None
+            end_date = None
+        else:
+            start_date = datetime(year=datetime.today().year, month=1, day=1)
+            end_date = datetime(year=datetime.today().year, month=12, day=31)
         return {
             cls.ND_CONFLICT_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
-                    Figure.objects.filter(
+                    figures.filter(
                         country=OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
                     ),
                     # TODO: what about date range
-                    start_date=datetime(year=datetime.today().year, month=1, day=1),
-                    end_date=datetime(year=datetime.today().year, month=12, day=31),
+                    start_date=start_date,
+                    end_date=end_date
                 ).order_by().values('country').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
@@ -84,14 +95,14 @@ class Country(models.Model):
             ),
             cls.ND_DISASTER_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
-                    Figure.objects.filter(
+                    figures.filter(
                         country=OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
                     ),
                     # TODO: what about date range
-                    start_date=datetime(year=datetime.today().year, month=1, day=1),
-                    end_date=datetime(year=datetime.today().year, month=12, day=31),
+                    start_date=start_date,
+                    end_date=end_date,
                 ).order_by().values('country').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
@@ -99,11 +110,12 @@ class Country(models.Model):
             ),
             cls.IDP_CONFLICT_ANNOTATE: models.Subquery(
                 Figure.filtered_idp_figures(
-                    Figure.objects.filter(
+                    figures.filter(
                         country=OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
-                    )
+                    ),
+                    end_date=end_date,
                 ).order_by().values('country').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
@@ -111,11 +123,12 @@ class Country(models.Model):
             ),
             cls.IDP_DISASTER_ANNOTATE: models.Subquery(
                 Figure.filtered_idp_figures(
-                    Figure.objects.filter(
+                    figures.filter(
                         country=OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
-                    )
+                    ),
+                    end_date=end_date,
                 ).order_by().values('country').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],

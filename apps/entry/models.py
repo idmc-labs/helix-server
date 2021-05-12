@@ -401,11 +401,15 @@ class Figure(MetaInformationArchiveAbstractModel,
         qs: QuerySet,
         end_date: Optional[date] = None,
     ):
+        from apps.crisis.models import Crisis
+
         end_date = end_date or date.today()
         qs = qs.filter(
-            category=FigureCategory.stock_idp_id()
-        ).filter(
+            category=FigureCategory.stock_idp_id(),
             start_date__lte=end_date,
+        ).exclude(
+            # TODO: Will come from https://github.com/idmc-labs/Helix2.0/issues/49
+            entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
         ).filter(
             Q(
                 # if end date exists (=expired), we must make sure that expiry date is after the given end date,
@@ -622,11 +626,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                                        through_fields=('entry', 'reviewer'))
 
     @classmethod
-    def _total_figure_disaggregation_subquery(cls):
+    def _total_figure_disaggregation_subquery(cls, figures=None):
+        figures = figures or Figure.objects.all()
         return {
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
-                    Figure.objects.filter(
+                    figures.filter(
                         entry=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
@@ -640,7 +645,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             ),
             cls.IDP_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_idp_figures(
-                    Figure.objects.filter(
+                    figures.filter(
                         entry=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     )
@@ -794,16 +799,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             errors['document'] = gettext('Please fill the URL or upload a document.')
         return errors
     # Methods
-
-    def total_stock_idp_figures(self, filters=None) -> int:
-        filters = filters or dict()
-        filters.update(entry=self.id)
-        return Figure.get_total_stock_idp_figure(filters)
-
-    def total_flow_nd_figures(self, filters=None) -> int:
-        filters = filters or dict()
-        filters.update(entry=self.id)
-        return Figure.get_total_flow_nd_figure(filters)
 
     def can_be_updated_by(self, user: User) -> bool:
         """

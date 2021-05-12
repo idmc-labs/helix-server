@@ -56,7 +56,7 @@ class TestReportModel(HelixTestCase):
         r.save()
         assert r.report_figures.count() == 1
 
-        self.assertEqual(r.countries_report[0]['total_stock_conflict'],
+        self.assertEqual(r.countries_report[0].total_stock_conflict,
                          f1.total_figures,
                          r.countries_report)
 

@@ -25,7 +25,7 @@ from django.utils import timezone
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel
-from apps.country.models import CountryPopulation
+from apps.country.models import CountryPopulation, Country
 from apps.crisis.models import Crisis
 from apps.entry.models import (
     FigureDisaggregationAbstractModel,
@@ -91,20 +91,8 @@ class Report(MetaInformationArchiveAbstractModel,
                          role=Figure.ROLE.RECOMMENDED,
                          entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
             ),
-            total_stock_disaster=Sum(
-                'total_figures',
-                filter=Q(
-                    Q(
-                        end_date__isnull=True,
-                    ) | Q(
-                        end_date__isnull=False,
-                        end_date__gte=self.filter_figure_end_before or datetime.today(),
-                    ),
-                    category=FigureCategory.stock_idp_id(),
-                    role=Figure.ROLE.RECOMMENDED,
-                    entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
-                )
-            ),
+            # TODO: Will come from https://github.com/idmc-labs/Helix2.0/issues/49
+            # total_stock_disaster,
             total_flow_disaster=Sum(
                 'total_figures',
                 filter=Q(category=FigureCategory.flow_new_displacement_id(),
@@ -168,57 +156,59 @@ class Report(MetaInformationArchiveAbstractModel,
 
     @property
     def countries_report(self) -> list:
-        return self.report_figures.select_related(
-            'country'
-        ).values('country').order_by().distinct().annotate(
-            # id is needed by apollo-client
-            id=F('country_id'),
-            **self.TOTAL_FIGURE_DISAGGREGATIONS,
+        return Country.objects.filter(
+            id__in=self.report_figures.values(
+                'country'
+            )
+        ).annotate(
+            **Country._total_figure_disaggregation_subquery(
+                self.report_figures,
+                ignore_dates=True,
+            )
+        ).annotate(
+            # for consistency
+            total_flow_conflict=F(Country.ND_CONFLICT_ANNOTATE),
+            total_flow_disaster=F(Country.ND_DISASTER_ANNOTATE),
+            total_stock_conflict=F(Country.IDP_CONFLICT_ANNOTATE),
         )
 
     @property
     def events_report(self) -> list:
-        return self.report_figures.select_related(
-            'entry__event'
-        ).prefetch_related(
-            'entry__event__countries'
-        ).values('entry__event').order_by().distinct().annotate(
-            # id is needed by apollo-client
-            id=F('entry__event_id'),
-            **self.TOTAL_FIGURE_DISAGGREGATIONS,
+        return Event.objects.filter(
+            id__in=self.report_figures.values(
+                'entry__event'
+            )
+        ).annotate(
+            **Event._total_figure_disaggregation_subquery(self.report_figures),
         )
 
     @property
     def entries_report(self) -> list:
-        from apps.entry.filters import (
-            reviewed_subquery,
-            signed_off_subquery,
-            under_review_subquery,
-        )
+        # from apps.entry.filters import (
+        #     reviewed_subquery,
+        #     signed_off_subquery,
+        #     under_review_subquery,
+        # )
 
-        return self.report_figures.select_related(
-            'entry'
-        ).values('entry').order_by().distinct().annotate(
-            # id is needed by apollo-client
-            id=F('entry_id'),
-            is_reviewed=Exists(reviewed_subquery),
-            is_under_review=Exists(under_review_subquery),
-            is_signed_off=Exists(signed_off_subquery),
-            **self.TOTAL_FIGURE_DISAGGREGATIONS,
+        return Entry.objects.filter(
+            id__in=self.report_figures.values(
+                'entry'
+            )
+        ).annotate(
+            # is_reviewed=Exists(reviewed_subquery),
+            # is_under_review=Exists(under_review_subquery),
+            # is_signed_off=Exists(signed_off_subquery),
+            **Entry._total_figure_disaggregation_subquery(self.report_figures),
         )
 
     @property
     def crises_report(self) -> list:
-        return self.report_figures.filter(
-            entry__event__crisis__isnull=False
-        ).select_related(
-            'entry__event__crisis'
-        ).values('entry__event__crisis').order_by().distinct().annotate(
-            # id is needed by apollo-client
-            id=F('entry__event__crisis_id'),
-            name=F('entry__event__crisis__name'),
-            crisis_type=F('entry__event__crisis__crisis_type'),
-            **self.TOTAL_FIGURE_DISAGGREGATIONS,
+        return Crisis.objects.filter(
+            id__in=self.report_figures.values(
+                'entry__event__crisis'
+            )
+        ).annotate(
+            **Crisis._total_figure_disaggregation_subquery(self.report_figures),
         )
 
     @property
@@ -228,7 +218,6 @@ class Report(MetaInformationArchiveAbstractModel,
         ).aggregate(
             total_stock_conflict_sum=Sum('total_stock_conflict'),
             total_flow_conflict_sum=Sum('total_flow_conflict'),
-            total_stock_disaster_sum=Sum('total_stock_disaster'),
             total_flow_disaster_sum=Sum('total_flow_disaster'),
         )
 

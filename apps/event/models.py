@@ -198,11 +198,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         return errors
 
     @classmethod
-    def _total_figure_disaggregation_subquery(cls):
+    def _total_figure_disaggregation_subquery(cls, figures=None):
+        figures = figures or Figure.objects.all()
+
         return {
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
-                    Figure.objects.filter(
+                    figures.filter(
                         entry__event=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
@@ -216,7 +218,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             ),
             cls.IDP_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_idp_figures(
-                    Figure.objects.filter(
+                    figures.filter(
                         entry__event=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     )
