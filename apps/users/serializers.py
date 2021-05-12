@@ -41,6 +41,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         model = User
         fields = ['email', 'first_name', 'last_name', 'username', 'password']
 
+    def validate_password(self, password) -> str:
+        validate_password(password)
+        return password
+
     def validate_email(self, email) -> str:
         if User.objects.filter(email__iexact=email).exists():
             raise serializers.ValidationError('The email is taken.')
