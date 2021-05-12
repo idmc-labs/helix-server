@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import magic
 
+from django.utils.translation import gettext
 from rest_framework import serializers
 
 from apps.entry.tasks import DRAMATIQ_TIMEOUT
@@ -47,11 +48,16 @@ class AttachmentSerializer(serializers.ModelSerializer):
         model = Attachment
         fields = '__all__'
 
+    def _validate_mimetype(self, mimetype):
+        if mimetype not in Attachment.ALLOWED_MIMETYPES:
+            raise serializers.ValidationError(gettext('Give mimetype is not allowed: %s') % mimetype)
+
     def validate(self, attrs) -> dict:
         attachment = attrs['attachment']
         byte_stream = attachment.file.read()
         with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
             attrs['mimetype'] = m.id_buffer(byte_stream)
+            self._validate_mimetype(attrs['mimetype'])
         with magic.Magic(flags=magic.MAGIC_MIME_ENCODING) as m:
             attrs['encoding'] = m.id_buffer(byte_stream)
         with magic.Magic() as m:
