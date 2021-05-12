@@ -60,6 +60,12 @@ class Report(MetaInformationArchiveAbstractModel,
         APPROVED = 1
         UNAPPROVED = 2
 
+        __labels__ = {
+            SIGNED_OFF: _("Signed Off"),
+            APPROVED: _("Approved"),
+            UNAPPROVED: _("Unapproved"),
+        }
+
     @cached_property
     def TOTAL_FIGURE_DISAGGREGATIONS(self):
         return dict(
