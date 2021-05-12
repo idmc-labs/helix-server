@@ -54,7 +54,7 @@ class AttachmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 gettext('Filesize is greater than: %s. Current is: %s') % (
                     filesizeformat(Attachment.MAX_FILE_SIZE),
-                    filesizeformat(file_content._size),
+                    filesizeformat(file_content.size),
                 )
             )
 
