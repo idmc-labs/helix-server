@@ -1,5 +1,6 @@
 from django.utils.functional import cached_property
 
+from apps.country.dataloaders import TotalFigureThisYearByCountryCategoryEventTypeLoader
 from apps.entry.dataloaders import TotalIDPFigureByEntryLoader, TotalNDFigureByEntryLoader
 from apps.event.dataloaders import TotalIDPFigureByEventLoader, TotalNDFigureByEventLoader
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
@@ -8,6 +9,7 @@ from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 class GQLContext:
     def __init__(self, request):
         self.request = request
+        # global dataloaders
         self.one_to_many_dataloaders = {}
         self.count_dataloaders = {}
 
@@ -17,7 +19,7 @@ class GQLContext:
 
     def get_dataloader(self, parent: str, related_name: str):
         # TODO: rename to get OneToManyLoader?
-        # return a different dataloader for each ref
+        # returns a different dataloader for each ref
         ref = f'{parent}_{related_name}'
         if ref not in self.one_to_many_dataloaders:
             self.one_to_many_dataloaders[ref] = OneToManyLoader()
@@ -49,3 +51,39 @@ class GQLContext:
     @cached_property
     def event_event_total_flow_nd_figures(self):
         return TotalNDFigureByEventLoader()
+
+    @cached_property
+    def country_country_this_year_idps_disaster_loader(self):
+        from apps.entry.models import FigureCategory
+        from apps.crisis.models import Crisis
+        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
+            category=FigureCategory.stock_idp_id(),
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
+        )
+
+    @cached_property
+    def country_country_this_year_idps_conflict_loader(self):
+        from apps.entry.models import FigureCategory
+        from apps.crisis.models import Crisis
+        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
+            category=FigureCategory.stock_idp_id(),
+            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
+        )
+
+    @cached_property
+    def country_country_this_year_nd_conflict_loader(self):
+        from apps.entry.models import FigureCategory
+        from apps.crisis.models import Crisis
+        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
+            category=FigureCategory.flow_new_displacement_id(),
+            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
+        )
+
+    @cached_property
+    def country_country_this_year_nd_disaster_loader(self):
+        from apps.entry.models import FigureCategory
+        from apps.crisis.models import Crisis
+        return TotalFigureThisYearByCountryCategoryEventTypeLoader(
+            category=FigureCategory.flow_new_displacement_id(),
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
+        )

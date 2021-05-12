@@ -137,7 +137,7 @@ class CountryType(DjangoObjectType):
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
         ),
-        accessor='entries',
+        accessor='events__entries',
     ))
     figures = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
         get_type('apps.entry.schema.FigureListType'),
@@ -147,6 +147,10 @@ class CountryType(DjangoObjectType):
         accessor='figures'
     ))
     geojson_url = graphene.String()
+    this_year_nd_conflict = graphene.Int()
+    this_year_nd_disaster = graphene.Int()
+    this_year_idps_conflict = graphene.Int()
+    this_year_idps_disaster = graphene.Int()
 
     def resolve_geojson_url(root, info, **kwargs):
         if 'FileSystemStorage' in settings.DEFAULT_FILE_STORAGE:
@@ -155,6 +159,18 @@ class CountryType(DjangoObjectType):
                 Country.geojson_path(root.iso3)
             )
         return info.context.request.build_absolute_uri(Country.geojson_path(root.iso3))
+
+    def resolve_this_year_idps_disaster(root, info, **kwargs):
+        return info.context.country_country_this_year_idps_disaster_loader.load(root.id)
+
+    def resolve_this_year_idps_conflict(root, info, **kwargs):
+        return info.context.country_country_this_year_idps_conflict_loader.load(root.id)
+
+    def resolve_this_year_nd_conflict(root, info, **kwargs):
+        return info.context.country_country_this_year_nd_conflict_loader.load(root.id)
+
+    def resolve_this_year_nd_disaster(root, info, **kwargs):
+        return info.context.country_country_this_year_nd_disaster_loader.load(root.id)
 
     @staticmethod
     def get_queryset(queryset, info):

@@ -22,8 +22,8 @@ from django.views.decorators.csrf import csrf_exempt
 # from graphene_django.views import GraphQLView
 from graphene_file_upload.django import FileUploadGraphQLView
 
-from . import api_urls as rest_urls
 from utils.graphene.context import GQLContext
+from . import api_urls as rest_urls
 
 
 class CustomGraphQLView(FileUploadGraphQLView):
