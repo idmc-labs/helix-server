@@ -58,17 +58,6 @@ class TestFigureModel(HelixTestCase):
         figure.save()
         self.assertEqual(figure.total_figures, figure.reported * figure.household_size)
 
-    def test_figure_dates(self):
-        self.event.refresh_from_db()
-        data = dict(
-            start_date=self.event.start_date - timedelta(days=1),
-            end_date=self.event.end_date + timedelta(days=1),
-        )
-        self.figure.save()
-        errors = Figure.validate_dates(data, self.figure)
-        self.assertIn('end_date', errors)
-        self.assertIn('start_date', errors)
-
     def test_figure_nd_filtering(self):
         ref = datetime.today()
         FigureCategory._invalidate_category_ids_cache()

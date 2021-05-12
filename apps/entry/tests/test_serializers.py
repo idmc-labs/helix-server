@@ -1,4 +1,5 @@
 from copy import copy
+from datetime import date, timedelta
 from uuid import uuid4
 
 from django.test import RequestFactory
@@ -20,6 +21,7 @@ from utils.factories import (
     EntryFactory,
     OrganizationFactory,
     CountryFactory,
+    FigureFactory,
     FigureCategoryFactory
 )
 from utils.tests import HelixTestCase, create_user_with_role
@@ -274,6 +276,51 @@ class TestEntrySerializer(HelixTestCase):
         self.assertIn('geo_locations', serializer.errors['figures'][0].keys())
 
     # TODO: test entry serializer validation for figure household size
+
+    def test_entry_event_with_incoherent_dates_in_figure(self):
+        c1 = CountryFactory.create()
+        c2 = CountryFactory.create()
+        ref = date.today()
+
+        event = EventFactory.create(start_date=ref, end_date=ref + timedelta(days=1))
+        event.countries.set([c1])
+        event2 = EventFactory.create(start_date=ref - timedelta(days=10), end_date=ref - timedelta(days=5))
+        event2.countries.set([c2])
+
+        entry = EntryFactory.create(event=event)
+        figure = FigureFactory.create(entry=entry, country=c1)
+
+        data = dict(
+            event=event.id,
+            figures=[
+                dict(
+                    id=figure.id,
+                    uuid=figure.uuid,
+                    country=c1.id,
+                    start_date=event.start_date.strftime('%Y-%m-%d'),
+                    end_date=event.end_date.strftime('%Y-%m-%d'),
+                )
+            ]
+        )
+        serializer = EntryUpdateSerializer(
+            instance=entry,
+            data=data,
+            context={'request': self.request},
+            partial=True
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        data['event'] = event2.id
+        serializer = EntryUpdateSerializer(
+            instance=entry,
+            data=data,
+            context={'request': self.request},
+            partial=True
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('figures', serializer.errors)
+        self.assertIn('country', serializer.errors['figures'][0])
+        self.assertIn('end_date', serializer.errors['figures'][0])
 
 
 class TestFigureSerializer(HelixTestCase):

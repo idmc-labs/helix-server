@@ -26,7 +26,7 @@ from apps.entry.constants import (
 from apps.event.models import Event
 from apps.users.models import User
 from apps.users.enums import USER_ROLE
-from utils.validations import is_child_parent_inclusion_valid
+from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
 
 
 class DisaggregatedAgeSerializer(serializers.Serializer):
@@ -85,13 +85,12 @@ class CommonFigureValidationMixin:
             # this if block currently only is for directly testing this serializer which does not use event
             return None
 
-        if not hasattr(self, 'event_id'):
+        if not hasattr(self, 'event'):
             self.event_id = self.parent.parent.initial_data.get('event', None)
             if self.event_id:
                 self.event = Event.objects.filter(id=self.event_id).first()
             else:
                 self.event = self.parent.parent.instance.event
-                self.event_id = self.event.id
         return self.event
 
     def validate_disaggregation_age_json(self, age_groups):
@@ -198,10 +197,13 @@ class CommonFigureValidationMixin:
 
     def validate_dates(self, attrs):
         errors = OrderedDict()
-        _attrs = copy(attrs)
         if self.get_event():
-            _attrs.update({'entry': {'event': self.event}})
-            errors.update(Figure.validate_dates(attrs, self.instance))
+            errors.update(is_child_parent_dates_valid(
+                attrs.get('start_date', getattr(self.instance, 'start_date', None)),
+                attrs.get('end_date', getattr(self.instance, 'end_date', None)),
+                self.event.start_date,
+                self.event.end_date,
+            ))
         return errors
 
     def clean_term_with_displacement_occur(self, attrs):

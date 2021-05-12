@@ -35,7 +35,7 @@ class TestCreateEventSerializer(HelixTestCase):
             "crisis": crisis.id,
             "name": "test event",
             "start_date": (start - timedelta(days=1)).strftime('%Y-%m-%d'),
-            "end_date": end.strftime('%Y-%m-%d'),
+            "end_date": (end + timedelta(days=1)).strftime('%Y-%m-%d'),
             'event_type': int(crisis.crisis_type),
             'violence_sub_type': ViolenceSubTypeFactory.create().id,
             'disaster_sub_category': DisasterSubCategoryFactory.create().id,
@@ -43,6 +43,7 @@ class TestCreateEventSerializer(HelixTestCase):
         serializer = EventSerializer(data=data, context=self.context)
         self.assertFalse(serializer.is_valid())
         self.assertIn('start_date', serializer.errors)
+        self.assertIn('end_date', serializer.errors)
 
     def test_invalid_event_type(self):
         crisis = CrisisFactory.create(

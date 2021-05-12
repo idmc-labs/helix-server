@@ -13,7 +13,6 @@ from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
 from apps.users.models import User
-from utils.validations import is_child_parent_dates_valid
 
 
 class NameAttributedModels(models.Model):
@@ -178,11 +177,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     )
     event_narrative = models.TextField(verbose_name=_('Event Narrative'),
                                        null=True, blank=True)
-
-    @staticmethod
-    def clean_dates(values: dict, instance=None) -> OrderedDict:
-        # NOTE: There is nothing wrong with moving this to serializers
-        return is_child_parent_dates_valid(values, instance, 'crisis')
 
     @staticmethod
     def clean_by_event_type(values: dict, instance=None) -> OrderedDict:

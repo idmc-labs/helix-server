@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 from django.test import RequestFactory
 import mock
 
@@ -6,6 +8,7 @@ from apps.report.serializers import (
     ReportSignoffSerializer,
     ReportGenerationSerializer,
     ReportApproveSerializer,
+    ReportSerializer,
 )
 from apps.users.enums import USER_ROLE
 from utils.factories import ReportFactory
@@ -195,3 +198,44 @@ class TestReportSignOffSerializer(HelixTestCase):
             context=self.context
         )
         self.assertFalse(serializer.is_valid())
+
+
+class TestReportSerializer(HelixTestCase):
+    def setUp(self):
+        self.request = RequestFactory().post('/graphql')
+        self.request.user = create_user_with_role(USER_ROLE.IT_HEAD.name)
+        self.context = dict(
+            request=self.request
+        )
+
+    def test_report_date_range(self):
+        ref = date.today()
+        start = ref.strftime('%Y-%m-%d')
+        end = (ref + timedelta(days=1)).strftime('%Y-%m-%d')
+
+        report = Report.objects.create(name='hello')
+        data = dict(
+            filter_figure_start_after=start,
+            filter_figure_end_before=end
+        )
+        serializer = ReportSerializer(
+            instance=report,
+            data=data,
+            partial=True,
+            context=self.context
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        end = (ref - timedelta(days=1)).strftime('%Y-%m-%d')
+        data = dict(
+            filter_figure_start_after=start,
+            filter_figure_end_before=end
+        )
+        serializer = ReportSerializer(
+            instance=report,
+            data=data,
+            partial=True,
+            context=self.context
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('filter_figure_start_after', serializer.errors)

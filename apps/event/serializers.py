@@ -14,7 +14,7 @@ from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 from apps.event.models import Event, Actor
-from utils.validations import is_child_parent_inclusion_valid
+from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
 
 
 class ActorSerializer(MetaInformationSerializerMixin,
@@ -108,8 +108,14 @@ class EventSerializer(MetaInformationSerializerMixin,
     def validate(self, attrs: dict) -> dict:
         errors = OrderedDict()
         errors.update(Event.clean_by_event_type(attrs, self.instance))
-        if attrs.get('crisis') or getattr(self.instance, 'crisis', None):
-            errors.update(Event.clean_dates(attrs, self.instance))
+        crisis = attrs.get('crisis') or getattr(self.instance, 'crisis', None)
+        if crisis:
+            errors.update(is_child_parent_dates_valid(
+                attrs.get('start_date', getattr(self.instance, 'start_date', None)),
+                attrs.get('end_date', getattr(self.instance, 'end_date', None)),
+                crisis.start_date,
+                crisis.end_date,
+            ))
             errors.update(
                 is_child_parent_inclusion_valid(attrs, self.instance, field='countries', parent_field='crisis.countries')
             )

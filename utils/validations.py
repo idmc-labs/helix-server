@@ -1,19 +1,11 @@
 from collections import OrderedDict
-from copy import deepcopy
 from django.utils.translation import gettext
 from django.db.models.query import QuerySet
 
 
 def is_child_parent_dates_valid(
-    data,
-    instance,
-    parent_field=None,
-    c_start_field='start_date',
-    c_end_field='end_date',
-    p_start_field='start_date',
-    p_end_field='end_date',
-    start_text='start date',
-    end_text='end date'
+    c_start_date, c_end_date,
+    p_start_date, p_end_date
 ) -> OrderedDict:
     """
     c = child
@@ -21,39 +13,17 @@ def is_child_parent_dates_valid(
     """
     errors = OrderedDict()
 
-    c_start_date = data.get(c_start_field, getattr(instance, c_start_field, None))
-    c_end_date = data.get(c_end_field, getattr(instance, c_end_field, None))
     if c_start_date and c_end_date and c_start_date > c_end_date:
-        errors[c_start_field] = gettext('Choose your %s earlier than %s') % (start_text, c_end_date)
-        errors[c_end_field] = gettext('Choose your %s earlier than %s') % (start_text, c_end_date)
-    if not parent_field:
+        errors['start_date'] = gettext('Choose your start date earlier than end.')
+        errors['end_date'] = gettext('Choose your start date earlier than end.')
         return errors
-    parent = instance
-    p_start_date = None
-    p_end_date = None
-    parent_data = deepcopy(data)
-    __first = True
-    for pf in parent_field.split('.'):
-        if __first:
-            # only look into parent_data once
-            parent = parent_data.get(pf) or getattr(parent, pf, None)
-        else:
-            if hasattr(parent, 'get'):
-                parent = parent.get(pf)
-            else:
-                parent = getattr(parent, pf, None)
-    if parent:
-        p_start_date = getattr(parent, p_start_field, None)
-        p_end_date = getattr(parent, p_end_field, None)
     if c_start_date and p_start_date and p_start_date > c_start_date:
-        errors[c_start_field] = gettext('Choose your start date between %(p_start_date)s & %(p_end_date)s.') % dict(
-            p_start_date=p_start_date,
-            p_end_date=p_end_date,
+        errors['start_date'] = gettext('Choose your start date between %s & %s.') % (
+            p_start_date, p_end_date
         )
     if c_end_date and p_end_date and c_end_date > p_end_date:
-        errors[c_end_field] = gettext('Choose your end date between %(p_start_date)s & %(p_end_date)s.') % dict(
-            p_start_date=p_start_date,
-            p_end_date=p_end_date,
+        errors['end_date'] = gettext('Choose your end date between %s & %s.') % (
+            p_start_date, p_end_date
         )
     return errors
 
