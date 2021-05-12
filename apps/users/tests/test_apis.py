@@ -361,18 +361,23 @@ class TestUserListSchema(HelixGraphQLTestCase):
                 results {
                   id
                   role
+                  permissions {
+                    action
+                  }
+                  email
                 }
               }
             }
         '''
-        guest = create_user_with_role(USER_ROLE.GUEST.name)
-        self.force_login(guest)
 
     def test_filter_users(self):
         ue = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         ur = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         ua = create_user_with_role(USER_ROLE.ADMIN.name)
         create_user_with_role(USER_ROLE.IT_HEAD.name)
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
+
+        self.force_login(guest)
 
         roles = [USER_ROLE.ADMIN.name, USER_ROLE.MONITORING_EXPERT_EDITOR.name]
         response = self.query(
@@ -381,7 +386,6 @@ class TestUserListSchema(HelixGraphQLTestCase):
         )
 
         content = response.json()
-        print(content)
         self.assertResponseNoErrors(response)
         self.assertEqual(sorted([int(each['id']) for each in content['data']['users']['results']]),
                          sorted([ue.id, ua.id]))
@@ -395,6 +399,78 @@ class TestUserListSchema(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertEqual(sorted([int(each['id']) for each in content['data']['users']['results']]),
                          sorted([ur.id, ue.id]))
+
+    def test_users_fields_access(self):
+        users_q = '''
+            query MyQuery {
+              users {
+                totalCount
+                results {
+                  id
+                  role
+                  permissions {
+                    action
+                  }
+                  email
+                }
+              }
+            }
+        '''
+        create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        ur = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        ua = create_user_with_role(USER_ROLE.ADMIN.name)
+        create_user_with_role(USER_ROLE.IT_HEAD.name)
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
+
+        self.force_login(guest)
+        response = self.query(
+            users_q
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertEqual(content['data']['users']['totalCount'], 5)
+        self.assertEqual(set([item['email'] for item in content['data']['users']['results']]),
+                         set([guest.email, None]))
+        self.assertEqual(set([item['role'] for item in content['data']['users']['results']]),
+                         set(['GUEST', None]))
+        self.assertIn(
+            None,
+            [item['permissions'] for item in content['data']['users']['results']]
+        )
+
+        self.force_login(ur)
+        response = self.query(
+            users_q
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertEqual(content['data']['users']['totalCount'], 5)
+        self.assertEqual(set([item['email'] for item in content['data']['users']['results']]),
+                         set([ur.email, None]))
+        self.assertEqual(set([item['role'] for item in content['data']['users']['results']]),
+                         set([ur.role.name, None]))
+        self.assertIn(
+            None,
+            [item['permissions'] for item in content['data']['users']['results']]
+        )
+
+        self.force_login(ua)
+        response = self.query(
+            users_q
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertEqual(content['data']['users']['totalCount'], 5)
+        # we should not get all email
+        self.assertIn(
+            None,
+            [item['email'] for item in content['data']['users']['results']]
+        )
+        # we should get all roles
+        self.assertNotIn(
+            None,
+            [item['role'] for item in content['data']['users']['results']]
+        )
 
 
 class TestAPIMe(HelixAPITestCase):
@@ -417,5 +493,4 @@ class TestAPIMe(HelixAPITestCase):
         url = '/api/users/'
         response = self.client.get(url)
         assert response.status_code == 200
-        print(response.data)
         assert len(response.data) == count + old_count
