@@ -21,7 +21,6 @@ from apps.entry.serializers import (
 )
 from apps.extraction.filters import FigureExtractionFilterSet, EntryExtractionFilterSet
 from apps.contrib.serializers import SourcePreviewSerializer, ExcelDownloadSerializer
-from apps.users.roles import USER_ROLE
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker, is_authenticated
 from utils.mutation import generate_input_type_for_serializer
@@ -181,22 +180,22 @@ class UpdateEntryReview(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('Entry does not exist.'))
             ])
         try:
-            entry_review = EntryReviewer.objects.get(entry=entry, reviewer=reviewer)
-            entry_review.status = data['status']
-            entry_review.save()
-        except EntryReviewer.DoesNotExist:
-            signed_off_status = EntryReviewer.REVIEW_STATUS.SIGNED_OFF
-            if reviewer.role == USER_ROLE.IT_HEAD.value and data['status'] == signed_off_status:
-                entry_review = EntryReviewer.objects.create(entry=entry, reviewer=reviewer, status=signed_off_status)
-            else:
-                return UpdateEntryReview(errors=[
-                    dict(field='nonFieldErrors', messages=gettext('Review not found.'))
-                ])
+            try:
+                entry_review = EntryReviewer.objects.get(entry=entry, reviewer=reviewer)
+                entry_review.status = data['status']
+                entry_review.save()
+            except EntryReviewer.DoesNotExist:
+                # anyone can come along and change the status if they have the permission
+                entry_review = EntryReviewer.objects.create(
+                    entry=entry,
+                    reviewer=reviewer,
+                    status=data['status']
+                )
         except EntryReviewer.CannotUpdateStatusException as e:
             return UpdateEntryReview(errors=[
                 dict(field='nonFieldErrors', messages=gettext(e.message))
             ])
-        return CreateSourcePreview(errors=None, ok=True, result=entry_review)
+        return UpdateEntryReview(errors=None, ok=True, result=entry_review)
 
 
 # Figure Tag
