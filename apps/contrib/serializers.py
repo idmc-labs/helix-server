@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import magic
 
+from django.template.defaultfilters import filesizeformat
 from django.utils.translation import gettext
 from rest_framework import serializers
 
@@ -48,12 +49,22 @@ class AttachmentSerializer(serializers.ModelSerializer):
         model = Attachment
         fields = '__all__'
 
+    def _validate_file_size(self, file_content):
+        if file_content._size > Attachment.MAX_FILE_SIZE:
+            raise serializers.ValidationError(
+                gettext('Filesize is greater than: %s. Current is: %s') % (
+                    filesizeformat(Attachment.MAX_FILE_SIZE),
+                    filesizeformat(file_content._size),
+                )
+            )
+
     def _validate_mimetype(self, mimetype):
         if mimetype not in Attachment.ALLOWED_MIMETYPES:
-            raise serializers.ValidationError(gettext('Give mimetype is not allowed: %s') % mimetype)
+            raise serializers.ValidationError(gettext('Filetype not allowed: %s') % mimetype)
 
     def validate(self, attrs) -> dict:
         attachment = attrs['attachment']
+        self._validate_file_size(attachment)
         byte_stream = attachment.file.read()
         with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
             attrs['mimetype'] = m.id_buffer(byte_stream)
