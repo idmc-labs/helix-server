@@ -31,6 +31,11 @@ class QueryAbstractModel(models.Model):
         blank=True,
         related_name='+'
     )
+    filter_events = models.ManyToManyField(
+        'event.Event',
+        verbose_name=_('Events'),
+        blank=True,
+    )
     filter_event_crises = models.ManyToManyField(
         'crisis.Crisis',
         verbose_name=_('Crises'),
@@ -41,6 +46,18 @@ class QueryAbstractModel(models.Model):
         'entry.FigureCategory',
         verbose_name=_('figure categories'),
         related_name='+',
+        blank=True
+    )
+    filter_entry_sources = models.ManyToManyField(
+        'organization.Organization',
+        verbose_name=_('Sources'),
+        related_name='sourced_%(class)s',
+        blank=True
+    )
+    filter_entry_publishers = models.ManyToManyField(
+        'organization.Organization',
+        verbose_name=_('Publishers'),
+        related_name='published_%(class)s',
         blank=True
     )
     filter_figure_start_after = models.DateField(
@@ -88,6 +105,7 @@ class QueryAbstractModel(models.Model):
             filter_figure_countries=self.filter_figure_countries.all(),
             filter_figure_regions=self.filter_figure_regions.all(),
             filter_figure_geographical_groups=self.filter_figure_geographical_groups.all(),
+            filter_events=self.filter_events.all(),
             filter_event_crises=self.filter_event_crises.all(),
             filter_figure_categories=self.filter_figure_categories.all(),
             filter_entry_tags=self.filter_entry_tags.all(),
@@ -96,6 +114,9 @@ class QueryAbstractModel(models.Model):
             filter_figure_end_before=self.filter_figure_end_before,
             filter_entry_article_title=self.filter_entry_article_title,
             filter_event_crisis_types=self.filter_event_crisis_types,
+            # NOTE: Implement this for report if required
+            # filter_entry_publishers=self.filter_entry_publishers,
+            # filter_entry_sources=self.filter_entry_sources,
         )).qs
 
     @classmethod
@@ -109,6 +130,7 @@ class QueryAbstractModel(models.Model):
             filter_figure_countries=self.filter_figure_countries.all(),
             filter_figure_regions=self.filter_figure_regions.all(),
             filter_figure_geographical_groups=self.filter_figure_geographical_groups.all(),
+            filter_events=self.filter_events.all(),
             filter_event_crises=self.filter_event_crises.all(),
             filter_figure_categories=self.filter_figure_categories.all(),
             filter_entry_tags=self.filter_entry_tags.all(),
@@ -118,6 +140,8 @@ class QueryAbstractModel(models.Model):
             filter_entry_article_title=self.filter_entry_article_title,
             filter_event_crisis_types=self.filter_event_crisis_types,
             filter_entry_review_status=self.filter_entry_review_status,
+            filter_entry_publishers=self.filter_entry_publishers.all(),
+            filter_entry_sources=self.filter_entry_sources.all(),
         ))
 
     class Meta:

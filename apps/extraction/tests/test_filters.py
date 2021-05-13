@@ -8,6 +8,7 @@ from utils.factories import (
     TagFactory,
     FigureCategoryFactory,
     FigureFactory,
+    OrganizationFactory,
 )
 from apps.extraction.filters import EntryExtractionFilterSet as f
 from apps.crisis.models import Crisis
@@ -43,6 +44,11 @@ class TestExtractionFilter(HelixTestCase):
         self.tag1 = TagFactory.create()
         self.tag2 = TagFactory.create()
         self.tag3 = TagFactory.create()
+
+        self.org1 = OrganizationFactory.create()
+        self.org2 = OrganizationFactory.create()
+        self.org3 = OrganizationFactory.create()
+
         self.entry1ev1 = EntryFactory.create(event=self.event1crisis1)
         self.entry1ev1.tags.set([self.tag1, self.tag2])
         FigureFactory.create(entry=self.entry1ev1,
@@ -108,6 +114,23 @@ class TestExtractionFilter(HelixTestCase):
         data['filter_event_crises'] = [self.crisis2.id]
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), set())
+
+    def test_filter_by_publishers(self):
+        self.entry1ev1.publishers.set([self.org1, self.org2])
+        self.entry2ev1.publishers.set([self.org2])
+        self.entry3ev2.publishers.set([self.org1, self.org3])
+        data = dict(
+            filter_entry_publishers=[self.org3.id]
+        )
+        print(data)
+        fqs = f(data=data).qs
+        self.assertEqual(set(fqs), {self.entry3ev2})
+
+        data = dict(
+            filter_entry_publishers=[self.org2.id]
+        )
+        fqs = f(data=data).qs
+        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
 
     def test_filter_by_categories(self):
         data = dict(
