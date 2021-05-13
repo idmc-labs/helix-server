@@ -146,34 +146,34 @@ class CountryType(DjangoObjectType):
         ),
         accessor='figures'
     ))
-    this_year_nd_conflict = graphene.Int()
-    this_year_nd_disaster = graphene.Int()
-    this_year_idps_conflict = graphene.Int()
-    this_year_idps_disaster = graphene.Int()
+    total_flow_conflict = graphene.Int()
+    total_flow_disaster = graphene.Int()
+    total_stock_conflict = graphene.Int()
+    total_stock_disaster = graphene.Int()
     geojson_url = graphene.String()
 
-    def resolve_this_year_idps_disaster(root, info, **kwargs):
+    def resolve_total_stock_disaster(root, info, **kwargs):
         return getattr(
             root,
             Country.IDP_DISASTER_ANNOTATE,
             info.context.country_country_this_year_idps_disaster_loader.load(root.id)
         )
 
-    def resolve_this_year_idps_conflict(root, info, **kwargs):
+    def resolve_total_stock_conflict(root, info, **kwargs):
         return getattr(
             root,
             Country.IDP_CONFLICT_ANNOTATE,
             info.context.country_country_this_year_idps_conflict_loader.load(root.id)
         )
 
-    def resolve_this_year_nd_conflict(root, info, **kwargs):
+    def resolve_total_flow_conflict(root, info, **kwargs):
         return getattr(
             root,
             Country.ND_CONFLICT_ANNOTATE,
             info.context.country_country_this_year_nd_conflict_loader.load(root.id)
         )
 
-    def resolve_this_year_nd_disaster(root, info, **kwargs):
+    def resolve_total_flow_disaster(root, info, **kwargs):
         return getattr(
             root,
             Country.ND_DISASTER_ANNOTATE,
@@ -187,12 +187,6 @@ class CountryType(DjangoObjectType):
                 Country.geojson_path(root.iso3)
             )
         return info.context.request.build_absolute_uri(Country.geojson_path(root.iso3))
-
-    @staticmethod
-    def get_queryset(queryset, info):
-        # graphene_django/fields.py:57 demands we implement this method
-        # so that we can filter based on request, but we do not need
-        return queryset
 
 
 class CountryListType(CustomDjangoListObjectType):

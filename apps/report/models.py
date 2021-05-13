@@ -165,11 +165,6 @@ class Report(MetaInformationArchiveAbstractModel,
                 self.report_figures,
                 ignore_dates=True,
             )
-        ).annotate(
-            # for consistency
-            total_flow_conflict=F(Country.ND_CONFLICT_ANNOTATE),
-            total_flow_disaster=F(Country.ND_DISASTER_ANNOTATE),
-            total_stock_conflict=F(Country.IDP_CONFLICT_ANNOTATE),
         )
 
     @property

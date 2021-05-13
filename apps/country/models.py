@@ -31,10 +31,10 @@ class CountryRegion(models.Model):
 class Country(models.Model):
     GEOJSON_PATH = 'geojsons'
     # NOTE: following are the figure disaggregation fields
-    ND_CONFLICT_ANNOTATE = 'this_year_nd_conflict'
-    ND_DISASTER_ANNOTATE = 'this_year_nd_disaster'
-    IDP_CONFLICT_ANNOTATE = 'this_year_idps_conflict'
-    IDP_DISASTER_ANNOTATE = 'this_year_idps_disaster'
+    ND_CONFLICT_ANNOTATE = 'total_flow_conflict'
+    ND_DISASTER_ANNOTATE = 'total_flow_disaster'
+    IDP_CONFLICT_ANNOTATE = 'total_stock_conflict'
+    IDP_DISASTER_ANNOTATE = 'total_stock_disaster'
 
     name = models.CharField(verbose_name=_('Name'), max_length=256)
     geographical_group = models.ForeignKey('GeographicalGroup', verbose_name=_('Geographical Group'), null=True,
