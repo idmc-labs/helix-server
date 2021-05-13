@@ -50,7 +50,7 @@ class AttachmentSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
     def _validate_file_size(self, file_content):
-        if file_content._size > Attachment.MAX_FILE_SIZE:
+        if file_content.size > Attachment.MAX_FILE_SIZE:
             raise serializers.ValidationError(
                 gettext('Filesize is greater than: %s. Current is: %s') % (
                     filesizeformat(Attachment.MAX_FILE_SIZE),

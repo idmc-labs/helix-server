@@ -159,7 +159,7 @@ class TestRegister(HelixGraphQLTestCase):
         self.input = {
             'email': 'admin@email.com',
             'username': 'test',
-            'password': 'admin123',
+            'password': 'jjaakksjsj1j2',
         }
 
     def test_valid_registration(self):
