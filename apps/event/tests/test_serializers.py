@@ -13,6 +13,7 @@ from utils.factories import (
     DisasterSubTypeFactory,
 )
 from apps.crisis.models import Crisis
+from apps.entry.models import FigureCategory
 
 
 class TestCreateEventSerializer(HelixTestCase):
@@ -74,6 +75,9 @@ class TestCreateEventSerializer(HelixTestCase):
 class TestUpdateEventSerializer(HelixTestCase):
     def test_invalid_event_dates_beyond_figure_dates(self):
         from datetime import datetime, timedelta
+        FigureCategory._invalidate_category_ids_cache()
+        flow = FigureCategory.flow_new_displacement_id()
+        stock = FigureCategory.stock_idp_id()
 
         start = datetime.today().date()
         end = (datetime.today() + timedelta(days=100)).date()
@@ -94,9 +98,10 @@ class TestUpdateEventSerializer(HelixTestCase):
         )
         figure = FigureFactory.create(
             entry=entry,
+            category=flow,
             # start and end matches the events
             start_date=event.start_date,
-            end_date=event.end_date,
+            end_date=event.end_date - timedelta(days=5),
         )
         # no changes, should be valid
         data = dict(
@@ -137,6 +142,25 @@ class TestUpdateEventSerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('end_date', serializer.errors)
         self.assertNotIn('start_date', serializer.errors)
+
+        figure = FigureFactory.create(
+            entry=entry,
+            category=stock,
+            # start and end matches the events
+            start_date=event.start_date,
+            end_date=event.end_date,
+        )
+
+        # now decrease the event end, should not fail the validation because it is allowed for stock
+        data = dict(
+            end_date=figure.end_date - timedelta(days=1),
+        )
+        serializer = EventSerializer(
+            instance=event,
+            data=data,
+            partial=True,
+        )
+        self.assertTrue(serializer.is_valid())
 
     def test_invalid_event_countries_not_including_figure_countries(self):
         c1, c2, c3 = CountryFactory.create_batch(3)

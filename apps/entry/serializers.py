@@ -20,6 +20,7 @@ from apps.entry.models import (
     FigureTag,
     DisaggregatedAgeCategory,
 )
+from apps.entry.constants import STOCK
 from apps.entry.constants import (
     DISAGGREGATED_AGE_SEX_CHOICES,
 )
@@ -198,12 +199,21 @@ class CommonFigureValidationMixin:
     def validate_dates(self, attrs):
         errors = OrderedDict()
         if self.get_event():
-            errors.update(is_child_parent_dates_valid(
-                attrs.get('start_date', getattr(self.instance, 'start_date', None)),
-                attrs.get('end_date', getattr(self.instance, 'end_date', None)),
-                self.event.start_date,
-                self.event.end_date,
-            ))
+            category = attrs.get('category', getattr(self.instance, 'category', None))
+            if category.type == STOCK:
+                errors.update(is_child_parent_dates_valid(
+                    attrs.get('start_date', getattr(self.instance, 'start_date', None)),
+                    attrs.get('end_date', getattr(self.instance, 'end_date', None)),
+                    self.event.start_date,
+                    None  # self.event.end_date,  not compare against event however
+                ))
+            else:
+                errors.update(is_child_parent_dates_valid(
+                    attrs.get('start_date', getattr(self.instance, 'start_date', None)),
+                    attrs.get('end_date', getattr(self.instance, 'end_date', None)),
+                    self.event.start_date,
+                    self.event.end_date,
+                ))
         return errors
 
     def clean_term_with_displacement_occur(self, attrs):

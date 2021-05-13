@@ -14,6 +14,7 @@ from apps.entry.models import (
     EntryReviewer,
     OSMName,
     Figure,
+    FigureCategory,
     FigureTerm,
 )
 from utils.factories import (
@@ -178,10 +179,14 @@ class TestEntrySerializer(HelixTestCase):
         source3 = copy(source1)
         source3['lon'] = 45.9
         source3['uuid'] = str(uuid4())
+
+        FigureCategory._invalidate_category_ids_cache()
+        flow = FigureCategory.flow_new_displacement_id()
         figures = [{
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
+            "category": flow.id,
             "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
             "term": FigureTerm.objects.first().id,
@@ -282,13 +287,17 @@ class TestEntrySerializer(HelixTestCase):
         c2 = CountryFactory.create()
         ref = date.today()
 
+        FigureCategory._invalidate_category_ids_cache()
+        flow = FigureCategory.flow_new_displacement_id()
+        stock = FigureCategory.stock_idp_id()
+
         event = EventFactory.create(start_date=ref, end_date=ref + timedelta(days=1))
         event.countries.set([c1])
         event2 = EventFactory.create(start_date=ref - timedelta(days=10), end_date=ref - timedelta(days=5))
         event2.countries.set([c2])
 
         entry = EntryFactory.create(event=event)
-        figure = FigureFactory.create(entry=entry, country=c1)
+        figure = FigureFactory.create(entry=entry, category=flow, country=c1)
 
         data = dict(
             event=event.id,
@@ -321,6 +330,29 @@ class TestEntrySerializer(HelixTestCase):
         self.assertIn('figures', serializer.errors)
         self.assertIn('country', serializer.errors['figures'][0])
         self.assertIn('end_date', serializer.errors['figures'][0])
+
+        # however it will be valid for stock end date to go beyond event date
+        figure = FigureFactory.create(entry=entry, category=stock, country=c1)
+
+        data = dict(
+            event=event.id,
+            figures=[
+                dict(
+                    id=figure.id,
+                    uuid=figure.uuid,
+                    country=c1.id,
+                    start_date=event.start_date.strftime('%Y-%m-%d'),
+                    end_date=(event.end_date + timedelta(days=1)).strftime('%Y-%m-%d'),
+                )
+            ]
+        )
+        serializer = EntryUpdateSerializer(
+            instance=entry,
+            data=data,
+            context={'request': self.request},
+            partial=True
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
 
 class TestFigureSerializer(HelixTestCase):
