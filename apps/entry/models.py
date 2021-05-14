@@ -32,7 +32,6 @@ from apps.entry.constants import STOCK, FLOW
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
-from utils.validations import is_child_parent_dates_valid
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -555,10 +554,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             if excerpt_idu is None or not excerpt_idu.strip():
                 errors['excerpt_idu'] = gettext('This field is required.')
         return errors
-
-    @staticmethod
-    def validate_dates(values: dict, instance=None) -> OrderedDict:
-        return is_child_parent_dates_valid(values, instance, 'entry.event')
 
     # core
 

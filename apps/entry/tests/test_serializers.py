@@ -1,4 +1,5 @@
 from copy import copy
+from datetime import date, timedelta
 from uuid import uuid4
 
 from django.test import RequestFactory
@@ -13,6 +14,7 @@ from apps.entry.models import (
     EntryReviewer,
     OSMName,
     Figure,
+    FigureCategory,
     FigureTerm,
 )
 from utils.factories import (
@@ -20,6 +22,7 @@ from utils.factories import (
     EntryFactory,
     OrganizationFactory,
     CountryFactory,
+    FigureFactory,
     FigureCategoryFactory
 )
 from utils.tests import HelixTestCase, create_user_with_role
@@ -176,10 +179,14 @@ class TestEntrySerializer(HelixTestCase):
         source3 = copy(source1)
         source3['lon'] = 45.9
         source3['uuid'] = str(uuid4())
+
+        FigureCategory._invalidate_category_ids_cache()
+        flow = FigureCategory.flow_new_displacement_id()
         figures = [{
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
+            "category": flow.id,
             "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
             "term": FigureTerm.objects.first().id,
@@ -275,13 +282,85 @@ class TestEntrySerializer(HelixTestCase):
 
     # TODO: test entry serializer validation for figure household size
 
+    def test_entry_event_with_incoherent_dates_in_figure(self):
+        c1 = CountryFactory.create()
+        c2 = CountryFactory.create()
+        ref = date.today()
+
+        FigureCategory._invalidate_category_ids_cache()
+        flow = FigureCategory.flow_new_displacement_id()
+        stock = FigureCategory.stock_idp_id()
+
+        event = EventFactory.create(start_date=ref, end_date=ref + timedelta(days=1))
+        event.countries.set([c1])
+        event2 = EventFactory.create(start_date=ref - timedelta(days=10), end_date=ref - timedelta(days=5))
+        event2.countries.set([c2])
+
+        entry = EntryFactory.create(event=event)
+        figure = FigureFactory.create(entry=entry, category=flow, country=c1)
+
+        data = dict(
+            event=event.id,
+            figures=[
+                dict(
+                    id=figure.id,
+                    uuid=figure.uuid,
+                    country=c1.id,
+                    start_date=event.start_date.strftime('%Y-%m-%d'),
+                    end_date=event.end_date.strftime('%Y-%m-%d'),
+                )
+            ]
+        )
+        serializer = EntryUpdateSerializer(
+            instance=entry,
+            data=data,
+            context={'request': self.request},
+            partial=True
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        data['event'] = event2.id
+        serializer = EntryUpdateSerializer(
+            instance=entry,
+            data=data,
+            context={'request': self.request},
+            partial=True
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('figures', serializer.errors)
+        self.assertIn('country', serializer.errors['figures'][0])
+        self.assertIn('end_date', serializer.errors['figures'][0])
+
+        # however it will be valid for stock end date to go beyond event date
+        figure = FigureFactory.create(entry=entry, category=stock, country=c1)
+
+        data = dict(
+            event=event.id,
+            figures=[
+                dict(
+                    id=figure.id,
+                    uuid=figure.uuid,
+                    country=c1.id,
+                    start_date=event.start_date.strftime('%Y-%m-%d'),
+                    end_date=(event.end_date + timedelta(days=1)).strftime('%Y-%m-%d'),
+                )
+            ]
+        )
+        serializer = EntryUpdateSerializer(
+            instance=entry,
+            data=data,
+            context={'request': self.request},
+            partial=True
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
 
 class TestFigureSerializer(HelixTestCase):
     def setUp(self):
         self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.factory = RequestFactory()
-        country1 = CountryFactory.create(country_code=123)
-        country2 = CountryFactory.create(name='Nepal')
+        country1 = CountryFactory.create(country_code=123, iso2='lo')
+        country2 = CountryFactory.create(name='Nepal', iso2='bo')
         self.event = EventFactory.create(name="hahaha")
         self.event.countries.set([country1, country2])
         self.entry = EntryFactory.create(
@@ -334,31 +413,31 @@ class TestFigureSerializer(HelixTestCase):
         self.data['geo_locations'] = [
             {
                 "country": "Nepal",
-                "countryCode": "23",
-                "osmId": "tets1",
-                "osmType": "HA",
+                "country_code": "23",
+                "osm_id": "tets1",
+                "osm_type": "HA",
                 "identifier": OSMName.IDENTIFIER.ORIGIN.value,
-                "displayName": "testname",
+                "display_name": "testname",
                 "lon": 12.34,
                 "lat": 23.21,
                 "name": "testme",
                 "accuracy": OSMName.OSM_ACCURACY.COUNTRY.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                "boundingBox": [1.2],
+                "bounding_box": [1.2],
             },
             {
                 "country": "Nepal",
-                "countryCode": "423",
-                "osmId": "tets1",
-                "osmType": "HA",
+                "country_code": "423",
+                "osm_id": "tets1",
+                "osm_type": "HA",
                 "identifier": OSMName.IDENTIFIER.ORIGIN.value,
-                "displayName": "testname",
+                "display_name": "testname",
                 "lon": 12.34,
                 "lat": 23.21,
                 "name": "testme",
                 "accuracy": OSMName.OSM_ACCURACY.COUNTRY.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                "boundingBox": [1.2],
+                "bounding_box": [1.2],
             },
         ]
         serializer = FigureSerializer(data=self.data,

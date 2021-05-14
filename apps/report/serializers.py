@@ -15,7 +15,6 @@ from apps.report.models import (
     ReportGeneration,
     ReportApproval,
 )
-from utils.validations import is_child_parent_dates_valid
 
 
 class ReportSerializer(MetaInformationSerializerMixin,
@@ -31,16 +30,20 @@ class ReportSerializer(MetaInformationSerializerMixin,
             'filter_event_crisis_types', 'filter_figure_geographical_groups',
         ]
 
+    def validate_dates(self, attrs):
+        errors = OrderedDict()
+        start = attrs.get('filter_figure_start_after', getattr(self.instance, 'filter_figure_start_after', None)),
+        end = attrs.get('filter_figure_end_before', getattr(self.instance, 'filter_figure_end_before', None)),
+        if start and end and start > end:
+            errors.update(dict(
+                filter_figure_start_after=gettext('Choose start date earlier than end date.')
+            ))
+        return errors
+
     def validate(self, attrs) -> dict:
         attrs = super().validate(attrs)
         errors = OrderedDict()
-        errors.update(is_child_parent_dates_valid(
-            attrs,
-            self.instance,
-            parent_field=None,
-            c_start_field='filter_figure_start_after',
-            c_end_field='filter_figure_end_before',
-        ))
+        errors.update(self.validate_dates(attrs))
         if errors:
             raise serializers.ValidationError(errors)
         return attrs

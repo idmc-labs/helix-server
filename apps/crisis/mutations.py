@@ -57,7 +57,12 @@ class UpdateCrisis(graphene.Mutation):
             return UpdateCrisis(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Crisis does not exist.'))
             ])
-        serializer = CrisisSerializer(instance=instance, data=data, partial=True)
+        serializer = CrisisSerializer(
+            instance=instance,
+            data=data,
+            context=dict(request=info.context),
+            partial=True
+        )
         if errors := mutation_is_not_valid(serializer):
             return UpdateCrisis(errors=errors, ok=False)
         instance = serializer.save()

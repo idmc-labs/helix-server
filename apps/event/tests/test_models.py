@@ -1,12 +1,14 @@
+from datetime import date, timedelta
+
 from apps.crisis.models import Crisis
 from apps.event.models import Event
 from utils.factories import (
     CrisisFactory,
     DisasterSubTypeFactory,
     ViolenceSubTypeFactory,
-    EventFactory,
 )
 from utils.tests import HelixTestCase
+from utils.validations import is_child_parent_dates_valid
 
 
 class TestEventModel(HelixTestCase):
@@ -39,22 +41,58 @@ class TestEventModel(HelixTestCase):
         self.data['violence_sub_type'] = violence
         self.assertFalse(Event.clean_by_event_type(self.data))
 
-    def test_invalid_clean_end_smaller_than_start_date(self):
-        self.data['end_date'] = '2020-10-12'
-        self.data['start_date'] = '2020-10-13'
-        errors = Event.clean_dates(self.data)
+
+class TestGenericValidator(HelixTestCase):
+    def test_is_child_parent_dates_valid(self):
+        func = is_child_parent_dates_valid
+
+        c_start = _c_start = date.today()
+        c_end = _c_end = date.today() + timedelta(days=10)
+        p_start = _p_start = c_start - timedelta(days=100)
+        p_end = _p_end = c_end + timedelta(days=100)
+
+        errors = func(c_start, c_end, p_start, p_end)
+        self.assertFalse(errors)
+
+        c_start = _c_end + timedelta(days=1)
+        errors = func(c_start, c_end, p_start, p_end)
+        self.assertTrue(errors)
+        self.assertIn('start_date', errors)
+
+        c_start = _c_start
+
+        p_start = _c_start + timedelta(days=1)
+        errors = func(c_start, c_end, p_start, p_end)
+        self.assertTrue(errors)
+        self.assertIn('start_date', errors)
+
+        p_start = None
+        errors = func(c_start, c_end, p_start, p_end)
+        self.assertFalse(errors)
+
+        p_start = _p_start
+        c_start = None
+        errors = func(c_start, c_end, p_start, p_end)
+        self.assertFalse(errors)
+
+        c_start = _c_start
+
+        c_end = _c_start - timedelta(days=1)
+        errors = func(c_start, c_end, p_start, p_end)
+        self.assertTrue(errors)
         self.assertIn('end_date', errors)
 
-    def test_invalid_clean_end_smaller_than_start_date_during_update(self):
-        # event with a start date
-        event = EventFactory.create(start_date='2020-10-13')
-        # try to update with earlier end date
-        self.data['end_date'] = '2020-10-12'
-        errors = Event.clean_dates(self.data, event)
+        c_end = _p_end + timedelta(days=1)
+        errors = func(c_start, c_end, p_start, p_end)
+        self.assertTrue(errors)
         self.assertIn('end_date', errors)
 
-        # event without start date
-        event = EventFactory.create()
-        self.data['end_date'] = '2020-10-12'
-        errors = Event.clean_dates(self.data, event)
+        p_end = None
+        c_end = _p_end + timedelta(days=1)
+        errors = func(c_start, c_end, p_start, p_end)
+        self.assertFalse(errors)
+
+        c_end = None
+        p_end = _p_end
+        errors = func(c_start, c_end, p_start, p_end)
         self.assertFalse(errors)
