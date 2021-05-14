@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime
 
 from django.db.models import Sum
 from promise import Promise
@@ -45,7 +45,6 @@ class TotalFigureThisYearByCountryCategoryEventTypeLoader(DataLoader):
         elif self.category == FigureCategory.stock_idp_id():
             qs = Figure.filtered_idp_figures(
                 queryset,
-                end_date=date.today()
             )
 
         qs = qs.order_by().values(

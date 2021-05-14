@@ -1,3 +1,4 @@
+from datetime import datetime
 from collections import OrderedDict
 
 from django.contrib.postgres.aggregates.general import ArrayAgg
@@ -12,6 +13,10 @@ from apps.users.models import User
 
 
 class Crisis(MetaInformationAbstractModel, models.Model):
+    # NOTE figure disaggregation variable definitions
+    ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
+    IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
+
     class CRISIS_TYPE(enum.Enum):
         CONFLICT = 0
         DISASTER = 1
@@ -46,6 +51,37 @@ class Crisis(MetaInformationAbstractModel, models.Model):
     )
 
     @classmethod
+    def _total_figure_disaggregation_subquery(cls, figures=None):
+        figures = figures or Figure.objects.all()
+        return {
+            cls.ND_FIGURES_ANNOTATE: models.Subquery(
+                Figure.filtered_nd_figures(
+                    figures.filter(
+                        entry__event__crisis=models.OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                    ),
+                    # TODO: what about date range
+                    start_date=datetime(year=datetime.today().year, month=1, day=1),
+                    end_date=datetime(year=datetime.today().year, month=12, day=31),
+                ).order_by().values('entry__event__crisis').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+            cls.IDP_FIGURES_ANNOTATE: models.Subquery(
+                Figure.filtered_idp_figures(
+                    figures.filter(
+                        entry__event__crisis=models.OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                    )
+                ).order_by().values('entry__event__crisis').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+        }
+
+    @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
         from apps.crisis.filters import CrisisFilter
 
@@ -65,6 +101,13 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             countries_name='Countries',
             regions_name='Regions',
             events_count='Events Count',
+            min_event_start='Earliest Event Start',
+            max_event_end='Latest Event End',
+            figures_count='Figures Count',
+            **{
+                cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
+                cls.ND_FIGURES_ANNOTATE: 'ND Figure',
+            }
         )
         values = CrisisFilter(
             data=filters,
@@ -74,6 +117,10 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             countries_name=ArrayAgg('countries__name', distinct=True),
             regions_name=ArrayAgg('countries__region__name', distinct=True),
             events_count=models.Count('events', distinct=True),
+            min_event_start=models.Min('events__start_date'),
+            max_event_end=models.Max('events__end_date'),
+            figures_count=models.Count('events__entries__figures', distinct=True),
+            **cls._total_figure_disaggregation_subquery(),
         ).order_by('-created_at').select_related(
         ).prefetch_related(
             'countries'
@@ -95,18 +142,6 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             'data': data,
             'formulae': None,
         }
-
-    # property
-
-    @property
-    def total_stock_idp_figures(self) -> int:
-        filters = dict(crisis=self.id)
-        return Figure.get_total_stock_idp_figure(filters)
-
-    @property
-    def total_flow_nd_figures(self) -> int:
-        filters = dict(crisis=self.id)
-        return Figure.get_total_flow_nd_figure(filters)
 
     # dunders
 

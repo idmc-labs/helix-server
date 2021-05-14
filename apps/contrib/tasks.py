@@ -11,7 +11,7 @@ from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 
 from helix.settings import QueuePriority
 
-TIMEOUT = 2 * 60 * 1000  # 2 minutes
+TIMEOUT = 10 * 60 * 1000
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,11 +19,25 @@ logger = logging.getLogger(__name__)
 
 def get_excel_sheet_content(headers, data, **kwargs):
     wb = Workbook(write_only=True)
-    ws = wb.create_sheet('Sheet 1')
-    keys = headers.keys()
-    ws.append([headers[key] for key in keys])
-    for elements in data:
-        ws.append([re.sub(ILLEGAL_CHARACTERS_RE, '', str(elements.get(key)) if elements.get(key) else '') for key in keys])
+
+    ws = wb.create_sheet('Main')
+
+    def append_to_worksheet(_ws, _headers, _data):
+        keys = _headers.keys()
+        _ws.append([_headers[key] for key in keys])
+        for elements in _data:
+            _ws.append([
+                re.sub(ILLEGAL_CHARACTERS_RE, '', str(elements.get(key)) if elements.get(key) else '')
+                for key in keys
+            ])
+    append_to_worksheet(ws, headers, data)
+
+    for other in kwargs.get('other', []):
+        ws = wb.create_sheet(other['title'])
+        headers = other['results']['headers']
+        data = other['results']['data']
+        append_to_worksheet(ws, headers, data)
+
     with NamedTemporaryFile() as tmp:
         wb.save(tmp.name)
         tmp.seek(0)
@@ -31,7 +45,7 @@ def get_excel_sheet_content(headers, data, **kwargs):
         return content
 
 
-@dramatiq.actor(queue_name=QueuePriority.DEFAULT.value, max_retries=1, time_limit=TIMEOUT)
+@dramatiq.actor(queue_name=QueuePriority.HEAVY.value, max_retries=0, time_limit=TIMEOUT)
 def generate_excel_file(download_id, user_id):
     '''
     Fetch the filter data from excel download

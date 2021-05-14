@@ -8,8 +8,17 @@ from django.contrib.auth import get_user_model
 from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
-from django.db.models import Sum, Q
 from django.db.models.query import QuerySet
+from django.db.models import (
+    Sum,
+    Avg,
+    F,
+    Value,
+    Min,
+    Max,
+    Q,
+)
+from django.db.models.functions import Concat
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
@@ -390,22 +399,26 @@ class Figure(MetaInformationArchiveAbstractModel,
     def filtered_idp_figures(
         cls,
         qs: QuerySet,
-        end_date: Optional[date],
+        end_date: Optional[date] = None,
     ):
+        from apps.crisis.models import Crisis
+
         end_date = end_date or date.today()
         qs = qs.filter(
-            category=FigureCategory.stock_idp_id()
+            category=FigureCategory.stock_idp_id(),
+            start_date__lte=end_date,
+        ).exclude(
+            # TODO: Will come from https://github.com/idmc-labs/Helix2.0/issues/49
+            entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
         ).filter(
             Q(
                 # if end date exists (=expired), we must make sure that expiry date is after the given end date,
                 # also figure started before the end date
                 end_date__isnull=False,
-                start_date__lte=end_date,
                 end_date__gte=end_date,
             ) | Q(
                 # if end date does not exist, we must make sure that that figure started before given start date
                 end_date__isnull=True,
-                start_date__lte=end_date,
             )
         )
         return qs
@@ -418,6 +431,14 @@ class Figure(MetaInformationArchiveAbstractModel,
             def __init__(self, user):
                 self.user = user
 
+        qs = FigureExtractionFilterSet(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs
+        return cls.get_figure_excel_sheets_data(qs)
+
+    @classmethod
+    def get_figure_excel_sheets_data(cls, figures):
         headers = OrderedDict(
             id='Id',
             entry_id='Entry ID',
@@ -436,17 +457,26 @@ class Figure(MetaInformationArchiveAbstractModel,
             end_date_accuracy='End Date Accuracy',
             country__iso3='ISO3 Country',
             country__name='Country',
+            country__region__name='Region',
+            centroid_lat='Centroid Lat',
+            centroid_lon='Centroid Lon',
             geolocations='Geolocations (City)',
             created_at='Created at',
             created_by__full_name='Created by',
             include_idu='Include in IDU',
             excerpt_idu='Excerpt IDU',
             entry__event_id='Event ID',
+            publishers_name='Publishers',
+            is_housing_destruction='Is housing destruction',
+            entry__url='Link',
             entry__event__name='Event Name',
             entry__event__event_type='Event Type',
             entry__event__other_sub_type='Event Subtype',
             entry__event__start_date='Event Start Date',
-            is_housing_destruction='Is housing destruction',
+            entry__event__disaster_category='Hazard Category',
+            entry__event__disaster_sub_category='Hazard Sub-Category',
+            entry__event__disaster_type='Hazard Type',
+            entry__event__disaster_sub_type='Hazard Sub-Type',
             disaggregation_displacement_urban='Displacement: Urban',
             disaggregation_displacement_rural='Displacement: Rural',
             disaggregation_location_camp='Location: Camp',
@@ -454,20 +484,14 @@ class Figure(MetaInformationArchiveAbstractModel,
             disaggregation_sex_male='Sex: Male',
             disaggregation_sex_female='Sex: Female',
             disaggregation_age_json='Displacement: Age',
-            disaggregation_strata_json='Displacement: Strata',
-            disaggregation_conflict='Conflict: Conflict',
-            disaggregation_conflict_political='Conflict: Political',
-            disaggregation_conflict_criminal='Conflict: Criminal',
-            disaggregation_conflict_communal='Conflict: Communal',
-            disaggregation_conflict_other='Conflict: Other',
         )
-        values = FigureExtractionFilterSet(
-            data=filters,
-            request=DummyRequest(user=User.objects.get(id=user_id)),
-        ).qs.order_by(
+        values = figures.order_by(
             '-created_at'
         ).annotate(
-            geolocations=ArrayAgg('geo_locations__city', distinct=True)
+            centroid_lat=Avg('geo_locations__lat'),
+            centroid_lon=Avg('geo_locations__lon'),
+            geolocations=ArrayAgg('geo_locations__city', distinct=True),
+            publishers_name=ArrayAgg('entry__publishers__name', distinct=True),
         ).select_related(
             'entry',
             'entry__event',
@@ -554,6 +578,10 @@ class FigureTag(MetaInformationAbstractModel):
 
 
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
+    # NOTE figure disaggregation variable definitions
+    ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
+    IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
+
     url = models.URLField(verbose_name=_('Source URL'), max_length=2000,
                           blank=True, null=True)
     associated_parked_item = models.OneToOneField('parking_lot.ParkedItem',
@@ -598,8 +626,39 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                                        through_fields=('entry', 'reviewer'))
 
     @classmethod
+    def _total_figure_disaggregation_subquery(cls, figures=None):
+        figures = figures or Figure.objects.all()
+        return {
+            cls.ND_FIGURES_ANNOTATE: models.Subquery(
+                Figure.filtered_nd_figures(
+                    figures.filter(
+                        entry=models.OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                    ),
+                    # TODO: what about date range
+                    start_date=None,
+                    end_date=None,
+                ).order_by().values('entry').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+            cls.IDP_FIGURES_ANNOTATE: models.Subquery(
+                Figure.filtered_idp_figures(
+                    figures.filter(
+                        entry=models.OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                    )
+                ).order_by().values('entry').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+        }
+
+    @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
-        from apps.entry.filters import EntryFilter
+        from apps.extraction.filters import EntryExtractionFilterSet
 
         class DummyRequest:
             def __init__(self, user):
@@ -619,27 +678,50 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             event__crisis_id='Crisis ID',
             event__crisis__name='Crisis Name',
             figures_count='Figure Count',
-            figures_sum='Recommended Figure',
+            **{
+                cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
+                cls.ND_FIGURES_ANNOTATE: 'ND Figure',
+            },
             sources_name='Sources',
             publishers_name='Publishers',
             created_at='Created at',
             created_by__full_name='Created by',
             idmc_analysis='IDMC Anlysis',
+            countries='Countries Affected',
+            countries_iso3='ISO3s Affected',
+            centroid_lat='Centroid Lat',
+            centroid_lon='Centroid Lon',
+            centroid='Centroid',
+            categories='Categories (Figure Types)',
+            terms='Figure Terms',
+            min_fig_start='Earliest figure start',
+            max_fig_start='Latest figure start',
+            min_fig_end='Earliest figure end',
+            max_fig_end='Latest figure end',
         )
-        values = EntryFilter(
+        entries = EntryExtractionFilterSet(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
+            countries=ArrayAgg('figures__country', distinct=True),
+            countries_iso3=ArrayAgg('figures__country__iso3', distinct=True),
+            categories=ArrayAgg('figures__category__name'),
+            terms=ArrayAgg('figures__term__name'),
+            min_fig_start=Min('figures__start_date'),
+            min_fig_end=Min('figures__end_date'),
+            max_fig_start=Max('figures__start_date'),
+            max_fig_end=Max('figures__end_date'),
+            centroid_lat=Avg('figures__geo_locations__lat'),
+            centroid_lon=Avg('figures__geo_locations__lon'),
             sources_name=ArrayAgg('sources__name', distinct=True),
             publishers_name=ArrayAgg('publishers__name', distinct=True),
-            figures_sum=models.Sum(
-                'figures__total_figures',
-                filter=models.Q(
-                    figures__category=FigureCategory.flow_new_displacement_id(),
-                    figures__role=Figure.ROLE.RECOMMENDED,
-                ),
-            ),
             figures_count=models.Count('figures', distinct=True),
+            **cls._total_figure_disaggregation_subquery(),
+        ).annotate(
+            centroid=Concat(
+                F('centroid_lat'), Value(', '), F('centroid_lon'),
+                output_field=models.CharField()
+            )
         ).order_by('-created_at').select_related(
             'event',
             'event__crisis',
@@ -649,12 +731,20 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             'sources',
             'publishers',
         ).values(*[header for header in headers.keys()])
-        data = values
+
+        figures = Figure.objects.filter(entry__in=entries.values('id'))
+        figure_data = Figure.get_figure_excel_sheets_data(figures)
 
         return {
             'headers': headers,
-            'data': data,
+            'data': entries,
             'formulae': None,
+            'other': [
+                dict(
+                    title='Figures',
+                    results=figure_data,
+                ),
+            ]
         }
 
     # Properties
@@ -709,16 +799,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             errors['document'] = gettext('Please fill the URL or upload a document.')
         return errors
     # Methods
-
-    def total_stock_idp_figures(self, filters=None) -> int:
-        filters = filters or dict()
-        filters.update(entry=self.id)
-        return Figure.get_total_stock_idp_figure(filters)
-
-    def total_flow_nd_figures(self, filters=None) -> int:
-        filters = filters or dict()
-        filters.update(entry=self.id)
-        return Figure.get_total_flow_nd_figure(filters)
 
     def can_be_updated_by(self, user: User) -> bool:
         """

@@ -192,10 +192,18 @@ class EntryType(DjangoObjectType):
     is_signed_off = graphene.NonNull(graphene.Boolean)
 
     def resolve_total_stock_idp_figures(root, info, **kwargs):
-        return info.context.entry_entry_total_stock_idp_figures.load(root.id)
+        return getattr(
+            root,
+            Entry.IDP_FIGURES_ANNOTATE,
+            info.context.entry_entry_total_stock_idp_figures.load(root.id)
+        )
 
     def resolve_total_flow_nd_figures(root, info, **kwargs):
-        return info.context.entry_entry_total_flow_nd_figures.load(root.id)
+        return getattr(
+            root,
+            Entry.ND_FIGURES_ANNOTATE,
+            info.context.entry_entry_total_flow_nd_figures.load(root.id)
+        )
 
 
 class EntryListType(CustomDjangoListObjectType):

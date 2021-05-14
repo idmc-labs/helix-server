@@ -33,9 +33,9 @@ class TestEntryQuery(HelixGraphQLTestCase):
             created_by=self.editor
         )
         self.entry_query = '''
-        query MyQuery($id: ID!, $data: TotalFigureFilterInputType) {
+        query MyQuery($id: ID!) {
           entry(id: $id) {
-            totalStockIdpFigures(data: $data)
+            totalStockIdpFigures
             totalFlowNdFigures
           }
         }
@@ -44,6 +44,7 @@ class TestEntryQuery(HelixGraphQLTestCase):
         self.force_login(guest)
 
     def test_figure_count_filtered_resolvers(self):
+        FigureCategory._invalidate_category_ids_cache()
         self.stock_fig_cat = FigureCategory.stock_idp_id()
         self.stock_fig_cat_id = str(self.stock_fig_cat.id)
         self.random_fig_cat2 = FigureCategoryFactory.create(
@@ -82,7 +83,6 @@ class TestEntryQuery(HelixGraphQLTestCase):
             self.entry_query,
             variables=dict(
                 id=str(self.entry.id),
-                data=dict(categories=[self.stock_fig_cat_id])
             )
         )
         content = json.loads(response.content)

@@ -88,3 +88,10 @@ class CountryFilter(django_filters.FilterSet):
         if not value:
             return qs
         return qs.filter(geographical_group__in=value).distinct()
+
+    @property
+    def qs(self):
+        qs = super().qs.annotate(
+            **Country._total_figure_disaggregation_subquery()
+        )
+        return qs

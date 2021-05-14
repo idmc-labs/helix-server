@@ -75,8 +75,8 @@ class ReportFilter(df.FilterSet):
         return super().qs.distinct()
 
 
-class CountryReportFilter(df.FilterSet):
+class DummyFilter(df.FilterSet):
     """
-    NOTE: following fields are predefined and annotated into the queryset
+    NOTE: Created to override the default filters of list types
     """
-    country = df.CharFilter(field_name='id', lookup_expr='exact')
+    id = df.CharFilter(field_name='id', lookup_expr='exact')
