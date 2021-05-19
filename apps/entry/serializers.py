@@ -50,19 +50,6 @@ class DisaggregatedAgeSerializer(serializers.Serializer):
         return attrs
 
 
-class DisaggregatedStratumSerializer(serializers.Serializer):
-    uuid = serializers.UUIDField(required=True)
-    date = serializers.DateField(required=True)
-    value = serializers.IntegerField(validators=[MinValueValidator(0, _("Minimum value is 1. "))],
-                                     required=True)
-
-    def validate(self, attrs: dict) -> dict:
-        # in order to store into the JSONField
-        attrs['uuid'] = str(attrs['uuid'])
-        attrs['date'] = str(attrs['date'])
-        return attrs
-
-
 class OSMNameSerializer(serializers.ModelSerializer):
     # to allow updating
     id = IntegerIDField(required=False)
@@ -101,13 +88,6 @@ class CommonFigureValidationMixin:
         if len(values) != len(set(values)):
             raise serializers.ValidationError('Please provide unique categories and sex values.')
         return age_groups
-
-    def validate_disaggregation_strata_json(self, strata):
-        values = [each['date'] for each in strata]
-        if len(values) != len(set(values)):
-            raise serializers.ValidationError(
-                gettext('Make sure the dates are unique in a figure.'))
-        return strata
 
     def validate_unit_and_household_size(self, attrs):
         errors = OrderedDict()
@@ -255,7 +235,6 @@ class CommonFigureValidationMixin:
             'conflict'
         ))
         errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'disaggregation_age_json', 'age'))
-        errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'disaggregation_strata_json', 'strata'))
         if errors:
             raise ValidationError(errors)
 
@@ -268,7 +247,6 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
                                    CommonFigureValidationMixin,
                                    serializers.ModelSerializer):
     disaggregation_age_json = DisaggregatedAgeSerializer(many=True, required=False)
-    disaggregation_strata_json = DisaggregatedStratumSerializer(many=True, required=False)
     geo_locations = OSMNameSerializer(many=True, required=False)
 
     class Meta:

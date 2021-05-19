@@ -203,11 +203,6 @@ class FigureDisaggregationAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    disaggregation_strata_json = ArrayField(
-        base_field=JSONField(verbose_name=_('Stratum')),
-        verbose_name=_('Strata Disaggregation'),
-        blank=True,
-        null=True)
     # conflict based disaggregation
     disaggregation_conflict = models.PositiveIntegerField(
         verbose_name=_('Conflict/Conflict'),

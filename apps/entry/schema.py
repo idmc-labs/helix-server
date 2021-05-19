@@ -69,12 +69,6 @@ class DisaggregatedAgeType(ObjectType):
         return DisaggregatedAgeCategory.objects.filter(id=root['category']).first()
 
 
-class DisaggregatedStratumType(ObjectType):
-    uuid = graphene.String(required=True)
-    date = graphene.String()  # because inside the json field
-    value = graphene.Int()
-
-
 class OSMNameType(DjangoObjectType):
     class Meta:
         model = OSMName
@@ -118,13 +112,13 @@ class FigureTermListType(CustomDjangoListObjectType):
 class FigureType(DjangoObjectType):
     class Meta:
         model = Figure
+        exclude_fields = []
 
     quantifier = graphene.Field(QuantifierGrapheneEnum)
     unit = graphene.Field(UnitGrapheneEnum)
     role = graphene.Field(RoleGrapheneEnum)
     displacement_occurred = graphene.Field(DisplacementOccurredGrapheneEnum)
     disaggregation_age_json = graphene.List(graphene.NonNull(DisaggregatedAgeType))
-    disaggregation_strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
     geo_locations = DjangoPaginatedListObjectField(
         OSMNameListType,
         related_name='geo_locations',

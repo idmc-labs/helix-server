@@ -9,7 +9,7 @@ class Review(MetaInformationArchiveAbstractModel, models.Model):
     '''
     NOTE: Add to UNIQUE_TOGETHER_FIELDS if you add a new field to this model, if required
     '''
-    UNIQUE_TOGETHER_FIELDS = {'entry', 'figure', 'field', 'age_id', 'strata_id', 'geo_location'}
+    UNIQUE_TOGETHER_FIELDS = {'entry', 'figure', 'field', 'age_id', 'geo_location'}
     UNIQUE_TOGETHER_WITHOUT_ENTRY_FIELDS = UNIQUE_TOGETHER_FIELDS - {'entry'}
 
     class ENTRY_REVIEW_STATUS(enum.Enum):
@@ -32,8 +32,6 @@ class Review(MetaInformationArchiveAbstractModel, models.Model):
     value = enum.EnumField(enum=ENTRY_REVIEW_STATUS, default=ENTRY_REVIEW_STATUS.GREY.value)
     age_id = models.CharField(verbose_name=_('Age ID'), max_length=256,
                               null=True, blank=True)
-    strata_id = models.CharField(verbose_name=_('Strata ID'), max_length=256,
-                                 null=True, blank=True)
     geo_location = models.ForeignKey('entry.OSMName', verbose_name=_('Geolocation/OSM'),
                                      null=True, blank=True,
                                      related_name='reviews', on_delete=models.SET_NULL)

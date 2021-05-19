@@ -489,10 +489,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                         "value": 3
                     }
                 ],
-                "disaggregationStrataJson": [
-                    {"date": "2020-10-10", "value": 2, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
-                    {"date": "2020-10-12", "value": 2, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
-                ]
             },
             {
                 "id": figure.id,
@@ -518,10 +514,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                         "value": 3
                     }
                 ],
-                "disaggregationStrataJson": [
-                    {"date": "2020-10-10", "value": 2, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
-                    {"date": "2020-10-12", "value": 2, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
-                ]
             },
         ]
         old_figures_count = self.entry.figures.count()
