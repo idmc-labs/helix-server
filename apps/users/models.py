@@ -1,5 +1,6 @@
 import logging
 
+from django.core.cache import cache
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group
 from django.utils.translation import gettext_lazy as _
@@ -42,6 +43,21 @@ class User(AbstractUser):
         if not isinstance(role, enum.Enum):
             role = USER_ROLE.get(role)
         return self.role == role
+
+    @staticmethod
+    def _reset_login_cache(email: str):
+        cache.delete_many([
+            User._last_login_attempt_cache_key(email),
+            User._login_attempt_cache_key(email),
+        ])
+
+    @staticmethod
+    def _last_login_attempt_cache_key(email: str) -> str:
+        return f'{email}_lga_time'
+
+    @staticmethod
+    def _login_attempt_cache_key(email: str) -> str:
+        return f'{email}_lga'
 
     @property
     def role(self):

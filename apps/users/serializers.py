@@ -1,6 +1,11 @@
+from datetime import datetime
+import time
+
+from django.core.cache import cache
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
+from django.conf import settings
 from django.utils.translation import gettext
 from django_enumfield.contrib.drf import EnumField
 from rest_framework import serializers
@@ -8,6 +13,7 @@ from rest_framework import serializers
 from apps.users.enums import USER_ROLE
 from apps.users.utils import get_user_from_activation_token
 from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
+from utils.validations import validate_hcaptcha
 
 User = get_user_model()
 
@@ -36,10 +42,12 @@ class UserPasswordSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(required=True, write_only=True)
+    captcha = serializers.CharField(required=True, write_only=True)
+    site_key = serializers.CharField(required=True, write_only=True)
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'username', 'password']
+        fields = ['email', 'first_name', 'last_name', 'username', 'password', 'captcha', 'site_key']
 
     def validate_password(self, password) -> str:
         validate_password(password)
@@ -49,6 +57,12 @@ class RegisterSerializer(serializers.ModelSerializer):
         if User.objects.filter(email__iexact=email).exists():
             raise serializers.ValidationError('The email is taken.')
         return email
+
+    def validate_captcha(self, captcha):
+        if not validate_hcaptcha(captcha, self.initial_data.get('site_key', '')):
+            raise serializers.ValidationError(dict(
+                captcha=gettext('Invalid captcha')
+            ))
 
     def save(self, **kwargs):
         with transaction.atomic():
@@ -66,14 +80,55 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True, write_only=True)
     password = serializers.CharField(required=True, write_only=True)
+    captcha = serializers.CharField(required=False, write_only=True)
+    site_key = serializers.CharField(required=False, write_only=True)
+
+    def _validate_captcha(self, attrs):
+        captcha = attrs.get('captcha')
+        site_key = attrs.get('site_key')
+        email = attrs.get('email')
+        attempts = cache.get(User._login_attempt_cache_key(email), 0)
+
+        def throttle_login_attempt():
+            if attempts >= settings.MAX_CAPTCHA_LOGIN_ATTEMPTS:
+                now = time.mktime(datetime.now().timetuple())
+                last_tried = cache.get(User._last_login_attempt_cache_key(email))
+                if last_tried:
+                    if elapsed := (now - last_tried) < settings.LOGIN_TIMEOUT * 60:
+                        raise serializers.ValidationError(
+                            gettext(f'Please wait {60 - int(elapsed)} seconds.')
+                        )
+                    else:
+                        # reset
+                        cache.set(User._login_attempt_cache_key(email), settings.MAX_LOGIN_ATTEMPTS)
+                else:
+                    cache.set(User._last_login_attempt_cache_key(email), now)
+                    raise serializers.ValidationError(
+                        gettext(f'Please try again in {settings.LOGIN_TIMEOUT} minute(s)')
+                    )
+
+        if attempts >= settings.MAX_LOGIN_ATTEMPTS and not captcha and not site_key:
+            raise serializers.ValidationError(dict(
+                captcha=gettext('Missing captcha!')
+            ))
+        if captcha and not validate_hcaptcha(captcha, site_key):
+            attempts = cache.get(User._login_attempt_cache_key(email), 0)
+            cache.set(User._login_attempt_cache_key(email), attempts + 1)
+            throttle_login_attempt()
+            raise serializers.ValidationError(dict(
+                captcha=gettext('Invalid captcha')
+            ))
 
     def validate(self, attrs):
         email = attrs.get('email', '')
         if User.objects.filter(email__iexact=email, is_active=False).exists():
             raise serializers.ValidationError('Request an admin to activate your account.')
+        self._validate_captcha(attrs)
         user = authenticate(email=email,
                             password=attrs.get('password', ''))
         if not user:
+            attempts = cache.get(User._login_attempt_cache_key(email), 0)
+            cache.set(User._login_attempt_cache_key(email), attempts + 1)
             raise serializers.ValidationError('Invalid Email or Password.')
         attrs.update(dict(user=user))
         return attrs

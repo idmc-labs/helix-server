@@ -1,7 +1,9 @@
 import json
 
 from django.contrib.auth.tokens import default_token_generator
+from django.test import override_settings
 from djoser.utils import encode_uid
+import mock
 
 from apps.users.enums import USER_ROLE
 from apps.users.models import User
@@ -20,6 +22,18 @@ class TestLogin(HelixGraphQLTestCase):
             mutation MyMutation ($email: String!, $password: String!){
                 login(data: {email: $email, password: $password}) {
                     errors
+                    result {
+                        email
+                        role
+                    }
+                }
+            }
+        '''
+        self.login_query2 = '''
+            mutation MyMutation ($input: LoginInputType!){
+                login(data: $input) {
+                    errors
+                    ok
                     result {
                         email
                         role
@@ -97,6 +111,157 @@ class TestLogin(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertIn('nonFieldErrors', [each['field'] for each in content['data']['login']['errors']])
 
+    @override_settings(
+        MAX_LOGIN_ATTEMPTS=1,
+        MAX_CAPTCHA_LOGIN_ATTEMPTS=2,
+    )
+    @mock.patch('apps.users.serializers.validate_hcaptcha')
+    def test_too_many_logins_needs_captcha_and_more_will_throttle(self, validate):
+        User._reset_login_cache(self.user.email)
+        validate.return_value = False
+
+        response = self.query(
+            self.login_query2,
+            input_data={'email': self.user.email, 'password': self.user.raw_password},
+        )
+
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertIsNone(content['data']['login']['errors'])
+        self.assertTrue(content['data']['login']['ok'])
+
+        # attempt 1
+        response = self.query(
+            self.login_query2,
+            input_data={'email': self.user.email, 'password': 'worjsjlsjjssk'},
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['login']['ok'])
+        self.assertIn('invalid email or password', json.dumps(content['data']['login']['errors']).lower())
+
+        # attempt 2
+        # try again and it should fail with captcha error
+        response = self.query(
+            self.login_query2,
+            input_data={'email': self.user.email, 'password': 'worjsjlsjjssk'},
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['login']['ok'])
+        self.assertIn('missing captcha', json.dumps(content['data']['login']['errors']).lower())
+
+        # attempt 3
+        # invalid password and invalid captcha should raise invalid captcha
+        response = self.query(
+            self.login_query2,
+            input_data={
+                'email': self.user.email,
+                'password': 'worjsjlsjjssk',
+                'captcha': 'wrong=kaj',
+                'siteKey': 'blaablaa',
+            },
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['login']['ok'])
+        self.assertIn('invalid captcha', json.dumps(content['data']['login']['errors']).lower())
+        self.assertNotIn('invalid email or password', json.dumps(content['data']['login']['errors']).lower())
+
+        # again with captcha but wrong, throttles more login
+        # attempt 4
+        response = self.query(
+            self.login_query2,
+            input_data={
+                'email': self.user.email,
+                'password': 'worjsjlsjjssk',
+                'captcha': 'wrong=kaj',
+                'siteKey': 'blaablaa',
+            },
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['login']['ok'])
+        self.assertIn('try again', json.dumps(content['data']['login']['errors']).lower())
+
+    @override_settings(
+        MAX_LOGIN_ATTEMPTS=1
+    )
+    @mock.patch('apps.users.serializers.validate_hcaptcha')
+    def test_too_many_logins_with_valid_captcha(self, validate):
+        User._reset_login_cache(self.user.email)
+        response = self.query(
+            self.login_query2,
+            input_data={'email': self.user.email, 'password': self.user.raw_password},
+        )
+
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertIsNone(content['data']['login']['errors'])
+        self.assertTrue(content['data']['login']['ok'])
+
+        # attempt 1
+        response = self.query(
+            self.login_query2,
+            input_data={'email': self.user.email, 'password': 'worjsjlsjjssk'},
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['login']['ok'])
+        self.assertIn('invalid email or password', json.dumps(content['data']['login']['errors']).lower())
+
+        # attempt 2
+        # try again and it should fail with captcha error
+        response = self.query(
+            self.login_query2,
+            input_data={'email': self.user.email, 'password': 'worjsjlsjjssk'},
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['login']['ok'])
+        self.assertIn('missing captcha', json.dumps(content['data']['login']['errors']).lower())
+
+        # again with captcha but wrong
+        validate.return_value = False
+        response = self.query(
+            self.login_query2,
+            input_data={
+                'email': self.user.email,
+                'password': self.user.raw_password,
+                'captcha': 'keyeyeyeye',
+                'siteKey': 'keyeyeyeye',
+            },
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['login']['ok'])
+        self.assertIn('invalid captcha', json.dumps(content['data']['login']['errors']).lower())
+
+        # with correct captcha
+        validate.return_value = True
+        response = self.query(
+            self.login_query2,
+            input_data={
+                'email': self.user.email,
+                'password': self.user.raw_password,
+                'captcha': 'lakajl',
+                'siteKey': 'lakajl',
+            },
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['login']['ok'], content)
+
 
 class TestChangePassword(HelixGraphQLTestCase):
     def setUp(self) -> None:
@@ -131,7 +296,8 @@ class TestChangePassword(HelixGraphQLTestCase):
         self.user.refresh_from_db()
         assert self.user.check_password(newpass)
 
-    def test_invalid_password(self):
+    @mock.patch('apps.users.serializers.validate_password')
+    def test_invalid_password(self, validate):
         self.force_login(self.user)
         response = self.query(
             self.change_query,
@@ -141,12 +307,11 @@ class TestChangePassword(HelixGraphQLTestCase):
             },
         )
 
-        content = response.json()
-
         self.assertResponseNoErrors(response)
-        self.assertIn('newPassword', [each['field'] for each in content['data']['changePassword']['errors']])
+        assert validate.is_called()
 
 
+@mock.patch('apps.users.serializers.validate_hcaptcha')
 class TestRegister(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.register = '''
@@ -160,9 +325,12 @@ class TestRegister(HelixGraphQLTestCase):
             'email': 'admin@email.com',
             'username': 'test',
             'password': 'jjaakksjsj1j2',
+            'captcha': 'admin123',
+            'siteKey': 'admin123',
         }
 
-    def test_valid_registration(self):
+    def test_valid_registration(self, validate_captcha):
+        validate_captcha.return_value = True
         response = self.query(
             self.register,
             input_data=self.input,
@@ -173,7 +341,8 @@ class TestRegister(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertIsNone(content['data']['register']['errors'])
 
-    def test_invalid_user_already_exists(self):
+    def test_invalid_user_already_exists(self, validate_captcha):
+        validate_captcha.return_value = True
         self.user = self.create_user()
 
         self.input.update(dict(email=self.user.email))

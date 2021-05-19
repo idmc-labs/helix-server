@@ -367,8 +367,14 @@ GRAPHENE_NODES_WHITELIST = (
     'activate',
     'register',
     'me',
-    # __ double undrescore nodes
+    # __ double underscore nodes
     '__schema',
     '__type',
     '__typename',
 )
+
+# CAPTCHA
+HCAPTCHA_SECRET = os.environ.get('HCAPTCHA_SECRET', '0x0000000000000000000000000000000000000000')
+MAX_LOGIN_ATTEMPTS = int(os.environ.get('MAX_LOGIN_ATTEMPTS', 3))
+MAX_CAPTCHA_LOGIN_ATTEMPTS = MAX_LOGIN_ATTEMPTS + 5
+LOGIN_TIMEOUT = 1

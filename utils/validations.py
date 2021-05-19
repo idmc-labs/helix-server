@@ -1,6 +1,8 @@
 from collections import OrderedDict
 from django.utils.translation import gettext
 from django.db.models.query import QuerySet
+from django.conf import settings
+import requests
 
 
 def is_child_parent_dates_valid(
@@ -58,3 +60,14 @@ def is_child_parent_inclusion_valid(data, instance, field, parent_field) -> Orde
             )
         })
     return errors
+
+
+def validate_hcaptcha(captcha, site_key):
+    CAPTCHA_VERIFY_URL = 'https://hcaptcha.com/siteverify'
+    SECRET_KEY = settings.HCAPTCHA_SECRET
+
+    data = {'secret': SECRET_KEY, 'response': captcha, 'sitekey': site_key}
+    response = requests.post(url=CAPTCHA_VERIFY_URL, data=data)
+
+    response_json = response.json()
+    return response_json['success']
