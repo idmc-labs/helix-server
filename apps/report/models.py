@@ -385,7 +385,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 F(Country.ND_DISASTER_ANNOTATE), 0
             )
         ).order_by('id').values(
-            list(headers.keys())
+            *list(headers.keys())
         )
         return {
             'headers': headers,
@@ -419,7 +419,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 F(CountryRegion.ND_DISASTER_ANNOTATE), 0
             )
         ).values(
-            list(headers.keys())
+            *list(headers.keys())
         )
         return {
             'headers': headers,

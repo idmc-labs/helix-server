@@ -489,8 +489,16 @@ class Figure(MetaInformationArchiveAbstractModel,
         ).annotate(
             centroid_lat=Avg('geo_locations__lat'),
             centroid_lon=Avg('geo_locations__lon'),
-            geolocations=ArrayAgg('geo_locations__city', distinct=True),
-            publishers_name=ArrayAgg('entry__publishers__name', distinct=True),
+            geolocations=ArrayAgg(
+                'geo_locations__city',
+                filter=Q(geo_locations__city__isnull=False),
+                distinct=True
+            ),
+            publishers_name=ArrayAgg(
+                'entry__publishers__name',
+                filter=Q(entry__publishers__isnull=False),
+                distinct=True
+            ),
         ).select_related(
             'entry',
             'entry__event',
@@ -499,11 +507,12 @@ class Figure(MetaInformationArchiveAbstractModel,
             'created_by',
         ).prefetch_related(
             'geo_locations'
-        ).values(*[header for header in headers.keys()])
+        ).order_by('entry', 'id').values(*[header for header in headers.keys()])
         data = [
             {
                 **datum,
                 **dict(
+                    include_idu='Yes' if datum['include_idu'] else 'No',
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
                     quantifier=getattr(Figure.QUANTIFIER.get(datum['quantifier']), 'name', ''),
@@ -776,7 +785,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             'figures',
             'sources',
             'publishers',
-        ).values(*[header for header in headers.keys()])
+        ).order_by('id').values(*[header for header in headers.keys()])
 
         figures = Figure.objects.filter(entry__in=entries.values('id'))
         figure_data = Figure.get_figure_excel_sheets_data(figures)
