@@ -102,7 +102,7 @@ def batch_load_fn_by_category(keys, category):
             qs,
         )
 
-    qs.order_by().values(
+    qs = qs.order_by().values(
         'entry__event__crisis'
     ).annotate(
         _total=models.Sum(
