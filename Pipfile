@@ -1,0 +1,51 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+boto3 = "==1.14.63"
+django-cors-headers = "==3.4.0"
+django-debug-toolbar = "==2.2"
+django-enumfield = "==2.0.1"
+django-extensions = "==3.0.4"
+django-filter = "==2.3.0"
+django-graphiql-debug-toolbar = "==0.1.4"
+django-redis = "==4.12.1"
+django-rest-framework = "==0.1.0"
+django-storages = "==1.10.1"
+djoser = "==2.0.3"
+dramatiq = {version = "==1.10.0", extras = ["redis", "watch"]}
+django-dramatiq = "==0.9.1"
+factory-boy = "==3.0.1"
+filemagic = "==1.6"
+graphene-django-extras = "==0.4.9"
+graphene-django = "==2.13.0"
+graphene-file-upload = "==1.2.2"
+graphene-graphiql-explorer = "==0.0.1"
+ipython = "*"
+mock = "==4.0.2"
+openpyxl = "==3.0.6"
+pdfkit = "==0.6.1"
+psycopg2 = "==2.8"
+pytest-django = "==3.9.0"
+pytest-sugar = "==0.9.4"
+requests = "*"
+selenium = "==3.141.0"
+sentry-sdk = "<0.20,>=0.10"
+six = "==1.15"
+turfpy = "==0.0.6"
+Django = "==3.0.5"
+uWSGI = "*"
+
+[dev-packages]
+graphene-stubs = "*"
+mypy = "*"
+django-stubs = "*"
+djangorestframework-stubs = "*"
+flake8 = "*"
+openpyxl-stubs = "*"
+django-filter-stubs = "*"
+
+[requires]
+python_version = "3.8"

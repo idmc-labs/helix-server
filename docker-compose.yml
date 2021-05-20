@@ -22,6 +22,8 @@ services:
       target: server
       cache_from:
         - helix/helix-server:latest
+    # environment:
+    #   PIPENV_VENV_IN_PROJECT: enabled
     env_file:
       - .env
     command: python manage.py runserver 0.0.0.0:9000
