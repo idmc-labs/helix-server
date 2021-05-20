@@ -3,6 +3,7 @@ from collections import OrderedDict
 
 from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.db import models
+from django.db.models.functions import Coalesce
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
@@ -60,9 +61,14 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                         entry__event__crisis=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
-                    # TODO: what about date range
-                    start_date=datetime(year=datetime.today().year, month=1, day=1),
-                    end_date=datetime(year=datetime.today().year, month=12, day=31),
+                    start_date=Coalesce(
+                        models.OuterRef('start_date'),
+                        datetime(year=datetime.today().year, month=1, day=1)
+                    ),
+                    end_date=Coalesce(
+                        models.OuterRef('end_date'),
+                        datetime(year=datetime.today().year, month=12, day=31)
+                    ),
                 ).order_by().values('entry__event__crisis').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
@@ -73,6 +79,10 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                     figures.filter(
                         entry__event__crisis=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
+                    ),
+                    end_date=Coalesce(
+                        models.OuterRef('end_date'),
+                        datetime(year=datetime.today().year, month=12, day=31)
                     )
                 ).order_by().values('entry__event__crisis').annotate(
                     _total=models.Sum('total_figures')

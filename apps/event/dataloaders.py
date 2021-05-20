@@ -8,30 +8,25 @@ from django.db.models import (
 from promise import Promise
 from promise.dataloader import DataLoader
 
-from apps.entry.models import Figure, FigureCategory, EntryReviewer, Entry
+from apps.entry.models import FigureCategory, EntryReviewer, Entry
 from apps.event.models import Event
 
 
 def batch_load_fn_by_category(keys, category):
-    qs = Figure.objects.select_related(
-        'entry__event'
-    ).filter(
-        entry__event__in=keys
-    ).order_by().values(
-        'entry__event'
+    qs = Event.objects.filter(
+        id__in=keys
     ).annotate(
-        total_category_figures=models.Sum(
-            'total_figures',
-            filter=models.Q(
-                role=Figure.ROLE.RECOMMENDED,
-                category=category,
-            ),
-        )
-    ).values('entry__event', 'total_category_figures')
+        **Event._total_figure_disaggregation_subquery()
+    )
+
+    if category == FigureCategory.flow_new_displacement_id():
+        qs = qs.annotate(_total=models.F(Event.ND_FIGURES_ANNOTATE))
+    else:
+        qs = qs.annotate(_total=models.F(Event.IDP_FIGURES_ANNOTATE))
 
     batch_load = {
-        item['entry__event']: item['total_category_figures']
-        for item in qs
+        item['id']: item['_total']
+        for item in qs.values('id', '_total')
     }
 
     return Promise.resolve([
