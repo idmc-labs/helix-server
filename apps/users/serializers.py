@@ -93,19 +93,18 @@ class LoginSerializer(serializers.Serializer):
             if attempts >= settings.MAX_CAPTCHA_LOGIN_ATTEMPTS:
                 now = time.mktime(datetime.now().timetuple())
                 last_tried = cache.get(User._last_login_attempt_cache_key(email))
-                if last_tried:
-                    if elapsed := (now - last_tried) < settings.LOGIN_TIMEOUT * 60:
-                        raise serializers.ValidationError(
-                            gettext(f'Please wait {60 - int(elapsed)} seconds.')
-                        )
-                    else:
-                        # reset
-                        cache.set(User._login_attempt_cache_key(email), settings.MAX_LOGIN_ATTEMPTS)
-                else:
+                if not last_tried:
                     cache.set(User._last_login_attempt_cache_key(email), now)
                     raise serializers.ValidationError(
-                        gettext(f'Please try again in {settings.LOGIN_TIMEOUT} minute(s)')
+                        gettext('Please try again in %s minute(s)') % settings.LOGIN_TIMEOUT
                     )
+                if elapsed := (now - last_tried) < settings.LOGIN_TIMEOUT * 60:
+                    raise serializers.ValidationError(
+                        gettext('Please wait %s seconds.') % (60 - int(elapsed))
+                    )
+                else:
+                    # reset
+                    cache.set(User._login_attempt_cache_key(email), settings.MAX_LOGIN_ATTEMPTS)
 
         if attempts >= settings.MAX_LOGIN_ATTEMPTS and not captcha and not site_key:
             raise serializers.ValidationError(dict(

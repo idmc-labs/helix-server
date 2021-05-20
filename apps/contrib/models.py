@@ -62,14 +62,14 @@ class Attachment(MetaInformationAbstractModel):
         # text
         'application/x-abiword', 'text/csv', 'application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/epub+zip',
-        'application/json', 'application/vnd.oasis.opendocument.presentation',
+        'application/vnd.oasis.opendocument.presentation',
         'application/vnd.oasis.opendocument.spreadsheet', 'application/vnd.oasis.opendocument.text', 'application/pdf',
         'application/xml', 'text/xml', 'application/vnd.ms-powerpoint', 'application/xhtml+xml', 'application/vnd.ms-excel',
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/rtf', 'text/javascript',
-        'application/ld+json', 'text/html', 'text/calendar', 'text/plain',
+        'text/html', 'text/calendar', 'text/plain',
         # image
-        'image/gif', 'image/jpg', 'image/jpeg', 'image/png', 'image/svg+xml', 'application/x-tar', 'image/tiff',
+        'image/gif', 'image/jpg', 'image/jpeg', 'image/png', 'image/svg+xml', 'image/tiff',
         'image/webp', 'image/bmp', 'image/vnd.microsoft.icon'
     )
     MAX_FILE_SIZE = 50 * 1024 * 1024  # MB
