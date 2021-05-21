@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import json
 import socket
 import logging
 from enum import Enum
@@ -114,15 +115,26 @@ MIDDLEWARE = [
 if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
     MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.environ.get('REDIS_CACHE_URL', 'redis://redis:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+if 'COPILOT_ENVIRON' in os.environ:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': os.environ['CO_REDIS_CACHE_URL'],
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            }
         }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': os.environ.get('REDIS_CACHE_URL', 'redis://redis:6379/1'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            }
+        }
+    }
 
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
@@ -152,8 +164,20 @@ WSGI_APPLICATION = 'helix.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
-if os.environ.get('GITHUB_WORKFLOW'):
-    print('Database github workflow')
+if 'COPILOT_ENVIRON' in os.environ:
+    DBCLUSTER_SECRET = json.loads(os.environ.get('DJANGOSERVERCLUSTER_SECRET'))
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            # in the workflow environment
+            'NAME': DBCLUSTER_SECRET['dbname'],
+            'USER': DBCLUSTER_SECRET['username'],
+            'PASSWORD': DBCLUSTER_SECRET['password'],
+            'HOST': DBCLUSTER_SECRET['host'],
+            'PORT': DBCLUSTER_SECRET['port'],
+        }
+    }
+elif os.environ.get('GITHUB_WORKFLOW'):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
