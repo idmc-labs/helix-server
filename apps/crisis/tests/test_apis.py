@@ -1,5 +1,6 @@
 import json
 
+from apps.entry.models import EntryReviewer
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
 from utils.factories import (
@@ -238,7 +239,7 @@ class TestCrisisList(HelixGraphQLTestCase):
         data = content['data']
         self.assertEqual(
             data['crisisList']['results'][0]['reviewCount']['toBeReviewedCount'],
-            4
+            2
         )
         self.assertEqual(
             data['crisisList']['results'][0]['reviewCount']['underReviewCount'],
@@ -268,7 +269,7 @@ class TestCrisisList(HelixGraphQLTestCase):
         data = content['data']
         self.assertEqual(
             data['crisisList']['results'][0]['reviewCount']['toBeReviewedCount'],
-            3
+            1
         )
         self.assertEqual(
             data['crisisList']['results'][0]['reviewCount']['underReviewCount'],
@@ -281,4 +282,29 @@ class TestCrisisList(HelixGraphQLTestCase):
         self.assertEqual(
             data['crisisList']['results'][0]['reviewCount']['reviewCompleteCount'],
             None
+        )
+
+        # the other entry gets approved
+        EntryReviewer.objects.filter(entry=entry2).update(status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED)
+        response = self.query(
+            self.q,
+        )
+        content = response.json()
+        # check the counts
+        data = content['data']
+        self.assertEqual(
+            data['crisisList']['results'][0]['reviewCount']['toBeReviewedCount'],
+            None
+        )
+        self.assertEqual(
+            data['crisisList']['results'][0]['reviewCount']['underReviewCount'],
+            1
+        )
+        self.assertEqual(
+            data['crisisList']['results'][0]['reviewCount']['signedOffCount'],
+            None
+        )
+        self.assertEqual(
+            data['crisisList']['results'][0]['reviewCount']['reviewCompleteCount'],
+            1
         )

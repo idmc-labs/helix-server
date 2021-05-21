@@ -8,7 +8,8 @@ from django.db.models import (
 from promise import Promise
 from promise.dataloader import DataLoader
 
-from apps.entry.models import Figure, FigureCategory
+from apps.entry.models import Figure, FigureCategory, EntryReviewer
+from apps.event.models import Event
 
 
 def batch_load_fn_by_category(keys, category):
@@ -54,14 +55,22 @@ class TotalNDFigureByEventLoader(DataLoader):
         )
 
 
+def _if_has_higher_than(status):
+    # sets null if there is no status higher than given
+    return Subquery(
+        EntryReviewer.objects.filter(
+            entry=OuterRef('entry'),
+            status__gt=status
+        ).order_by().values('entry').annotate(c=Count('id')).values('c'),
+        output_field=IntegerField()
+    )
+
+
 class EventReviewCountLoader(DataLoader):
     def batch_load_fn(self, keys: list):
         '''
         keys: [entryId]
         '''
-        from apps.event.models import Event
-        from apps.entry.models import EntryReviewer
-
         qs = Event.objects.filter(
             id__in=keys
         ).annotate(
@@ -69,28 +78,46 @@ class EventReviewCountLoader(DataLoader):
                 EntryReviewer.objects.filter(
                     entry__event=OuterRef('pk'),
                     status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
-                ).order_by().values('entry__event').annotate(c=Count('id')).values('c'),
+                ).annotate(
+                    skip=_if_has_higher_than(
+                        EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
+                    )
+                ).exclude(
+                    skip__isnull=False
+                ).order_by().values('entry__event').annotate(c=Count('entry', distinct=True)).values('c'),
                 output_field=IntegerField()
             ),
             signed_off_count=Subquery(
                 EntryReviewer.objects.filter(
                     entry__event=OuterRef('pk'),
                     status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
-                ).order_by().values('entry__event').annotate(c=Count('id')).values('c'),
+                ).order_by().values('entry__event').annotate(c=Count('entry', distinct=True)).values('c'),
                 output_field=IntegerField()
             ),
             review_complete_count=Subquery(
                 EntryReviewer.objects.filter(
                     entry__event=OuterRef('pk'),
                     status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
-                ).order_by().values('entry__event').annotate(c=Count('id')).values('c'),
+                ).annotate(
+                    skip=_if_has_higher_than(
+                        EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
+                    )
+                ).exclude(
+                    skip__isnull=False
+                ).order_by().values('entry__event').annotate(c=Count('entry', distinct=True)).values('c'),
                 output_field=IntegerField()
             ),
             to_be_reviewed_count=Subquery(
                 EntryReviewer.objects.filter(
                     entry__event=OuterRef('pk'),
                     status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
-                ).order_by().values('entry__event').annotate(c=Count('id')).values('c'),
+                ).annotate(
+                    skip=_if_has_higher_than(
+                        EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
+                    )
+                ).exclude(
+                    skip__isnull=False
+                ).order_by().values('entry__event').annotate(c=Count('entry', distinct=True)).values('c'),
                 output_field=IntegerField()
             ),
         ).values(

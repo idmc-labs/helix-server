@@ -831,10 +831,11 @@ class EntryReviewer(MetaInformationAbstractModel, models.Model):
         message = CANNOT_UPDATE_MESSAGE
 
     class REVIEW_STATUS(enum.Enum):
-        UNDER_REVIEW = 0
-        REVIEW_COMPLETED = 1
-        SIGNED_OFF = 2
-        TO_BE_REVIEWED = 3
+        # NOTE: Values of each name contains its significance, and is used elsewhere for comparison
+        TO_BE_REVIEWED = 0
+        UNDER_REVIEW = 1
+        REVIEW_COMPLETED = 2
+        SIGNED_OFF = 3
 
         __labels__ = {
             UNDER_REVIEW: _("Under Review"),

@@ -345,7 +345,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
         data = content['data']
         self.assertEqual(
             data['eventList']['results'][0]['reviewCount']['toBeReviewedCount'],
-            2
+            1
         )
         self.assertEqual(
             data['eventList']['results'][0]['reviewCount']['underReviewCount'],
@@ -367,7 +367,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
         data = content['data']
         self.assertEqual(
             data['eventList']['results'][0]['reviewCount']['toBeReviewedCount'],
-            1
+            None
         )
         self.assertEqual(
             data['eventList']['results'][0]['reviewCount']['underReviewCount'],
