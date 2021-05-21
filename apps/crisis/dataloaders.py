@@ -10,10 +10,8 @@ from django.db.models import (
 from promise import Promise
 from promise.dataloader import DataLoader
 
-from apps.entry.models import Figure, FigureCategory
+from apps.entry.models import Figure, FigureCategory, Entry, EntryReviewer
 from apps.crisis.models import Crisis
-from apps.event.dataloaders import _if_has_higher_than
-from apps.entry.models import EntryReviewer
 
 
 class CrisisReviewCountLoader(DataLoader):
@@ -25,49 +23,31 @@ class CrisisReviewCountLoader(DataLoader):
             id__in=keys
         ).annotate(
             under_review_count=Subquery(
-                EntryReviewer.objects.filter(
-                    entry__event__crisis=OuterRef('pk'),
-                    status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
-                ).annotate(
-                    skip=_if_has_higher_than(
-                        EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
-                    )
-                ).exclude(
-                    skip__isnull=False
-                ).order_by().values('entry__event__crisis').annotate(c=Count('entry', distinct=True)).values('c'),
+                Entry.objects.filter(
+                    event__crisis=OuterRef('pk'),
+                    review_status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
+                ).order_by().values('event__crisis').annotate(c=Count('id')).values('c'),
                 output_field=IntegerField()
             ),
             signed_off_count=Subquery(
-                EntryReviewer.objects.filter(
-                    entry__event__crisis=OuterRef('pk'),
-                    status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
-                ).order_by().values('entry__event__crisis').annotate(c=Count('entry', distinct=True)).values('c'),
+                Entry.objects.filter(
+                    event__crisis=OuterRef('pk'),
+                    review_status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
+                ).order_by().values('event__crisis').annotate(c=Count('id')).values('c'),
                 output_field=IntegerField()
             ),
             review_complete_count=Subquery(
-                EntryReviewer.objects.filter(
-                    entry__event__crisis=OuterRef('pk'),
-                    status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
-                ).annotate(
-                    skip=_if_has_higher_than(
-                        EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
-                    )
-                ).exclude(
-                    skip__isnull=False
-                ).order_by().values('entry__event__crisis').annotate(c=Count('entry', distinct=True)).values('c'),
+                Entry.objects.filter(
+                    event__crisis=OuterRef('pk'),
+                    review_status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
+                ).order_by().values('event__crisis').annotate(c=Count('id')).values('c'),
                 output_field=IntegerField()
             ),
             to_be_reviewed_count=Subquery(
-                EntryReviewer.objects.filter(
-                    entry__event__crisis=OuterRef('pk'),
-                    status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
-                ).annotate(
-                    skip=_if_has_higher_than(
-                        EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
-                    )
-                ).exclude(
-                    skip__isnull=False
-                ).order_by().values('entry__event__crisis').annotate(c=Count('entry', distinct=True)).values('c'),
+                Entry.objects.filter(
+                    event__crisis=OuterRef('pk'),
+                    review_status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
+                ).order_by().values('event__crisis').annotate(c=Count('id')).values('c'),
                 output_field=IntegerField()
             ),
         ).values(

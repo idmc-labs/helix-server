@@ -179,20 +179,11 @@ class Report(MetaInformationArchiveAbstractModel,
 
     @property
     def entries_report(self) -> list:
-        # from apps.entry.filters import (
-        #     reviewed_subquery,
-        #     signed_off_subquery,
-        #     under_review_subquery,
-        # )
-
         return Entry.objects.filter(
             id__in=self.report_figures.values(
                 'entry'
             )
         ).annotate(
-            # is_reviewed=Exists(reviewed_subquery),
-            # is_under_review=Exists(under_review_subquery),
-            # is_signed_off=Exists(signed_off_subquery),
             **Entry._total_figure_disaggregation_subquery(self.report_figures),
         )
 

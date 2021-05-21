@@ -39,7 +39,7 @@ class TestEntryFilter(HelixTestCase):
         fqs = EntryFilter(
             data=data
         ).qs
-        self.assertEqual(fqs.count(), 2)
+        self.assertEqual(fqs.count(), 1)
 
         data = dict(
             review_status=[EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED.name]

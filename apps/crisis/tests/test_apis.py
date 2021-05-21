@@ -285,7 +285,9 @@ class TestCrisisList(HelixGraphQLTestCase):
         )
 
         # the other entry gets approved
-        EntryReviewer.objects.filter(entry=entry2).update(status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED)
+        entry_reviewer = EntryReviewer.objects.filter(entry=entry2).first()
+        entry_reviewer.status = EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
+        entry_reviewer.save()
         response = self.query(
             self.q,
         )
