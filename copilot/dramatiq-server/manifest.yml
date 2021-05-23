@@ -12,9 +12,8 @@ type: Backend Service
 image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
   build:
-    dockerfile: Dockerfile
+    dockerfile: dramatiq.Dockerfile
     context: ./
-    target: dramatiq
     healthcheck:
       command: ["CMD-SHELL", "curl -f http://localhost:9191 || exit 1"]
       interval: 10s
@@ -30,16 +29,18 @@ exec: true     # Enable running commands in your container.
 # Optional fields for more advanced use-cases.
 variables:                    # Pass environment variables as key value pairs.
   LOG_LEVEL: info
-  COPILOT_ENVIRON: prod
 
-#secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
+# secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
 #  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
+  # this secret is automatically transferred to django-server service, however we will need to manually do this for dramatiq
 
 # You can override any of the values defined above by environment.
 environments:
   test:
     secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
       DJANGO_SECRET_KEY: /copilot/helix-server/test/secrets/DJANGO_SECRET_KEY
+      # NOTE: these can be plainly kept in variables as well, but kept here for consistency between django and dramatiq services
       CO_DRAMATIQ_REDIS_URL: /copilot/helix-server/test/secrets/CO_DRAMATIQ_REDIS_URL
       CO_REDIS_CACHE_URL: /copilot/helix-server/test/secrets/CO_REDIS_CACHE_URL
+      HELIXDBCLUSTER_SECRET: helix-server-test-auroraSecret
 #    count: 2               # Number of tasks to run for the "test" environment.

@@ -39,7 +39,6 @@ exec: true     # Enable running commands in your container.
 #
 variables:                    # Pass environment variables as key value pairs.
   LOG_LEVEL: info
-  COPILOT_ENVIRON: prod
 
 # secrets:
 

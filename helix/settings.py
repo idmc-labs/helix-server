@@ -11,12 +11,12 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
-import json
 import socket
 import logging
 from enum import Enum
 
 from . import sentry
+from helix.aws.secrets_manager import get_db_cluster_secret
 
 logger = logging.getLogger(__name__)
 
@@ -115,7 +115,7 @@ MIDDLEWARE = [
 if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
     MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
 
-if 'COPILOT_ENVIRON' in os.environ:
+if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
     CACHES = {
         'default': {
             'BACKEND': 'django_redis.cache.RedisCache',
@@ -164,8 +164,8 @@ WSGI_APPLICATION = 'helix.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
-if 'COPILOT_ENVIRON' in os.environ:
-    DBCLUSTER_SECRET = json.loads(os.environ.get('DJANGOSERVERCLUSTER_SECRET'))
+if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
+    DBCLUSTER_SECRET = get_db_cluster_secret()
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -177,7 +177,7 @@ if 'COPILOT_ENVIRON' in os.environ:
             'PORT': DBCLUSTER_SECRET['port'],
         }
     }
-elif os.environ.get('GITHUB_WORKFLOW'):
+elif 'GITHUB_WORKFLOW' in os.environ:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -319,18 +319,19 @@ INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 # Django storage
 
 # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
-if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
+if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ['HELIXALPHAS3_NAME']
+elif HELIX_ENVIRONMENT not in (DEVELOPMENT,):
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'idmc-helix')
+    AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
 
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'idmc-helix')
-AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
-
-# NOTE: s3 bucket is now public
-#  AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12 * 60 * 60))
+# NOTE: s3 bucket is public
+# AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12 * 60 * 60))
 AWS_QUERYSTRING_AUTH = False
-
 AWS_S3_FILE_OVERWRITE = False
 AWS_IS_GZIPPED = True
 GZIP_CONTENT_TYPES = [

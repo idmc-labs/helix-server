@@ -1,0 +1,51 @@
+Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  Name:
+    Type: String
+    Description: The name of the service, job, or workflow being deployed.
+  DBClusterName:
+    Type: String
+    Description: The prefix of the db cluster name deployed with django server.
+    Default: helixdbcluster
+  # The following two are under feature request
+  # https://github.com/aws/copilot-cli/issues/1449
+  Region:
+    Type: String
+    Description: The region of the account
+    Default: us-east-1
+  AccountId:
+    Type: String
+    Description: The id of the account
+    Default: 209357624314
+
+Resources:
+  # https://aws.github.io/copilot-cli/docs/developing/additional-aws-resources/
+  secretAccessPolicy:
+    Metadata:
+      'aws:copilot:description': 'This is for the dramatiq service to access the addons created for django service'
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: SMActions
+            Effect: Allow
+            Action:
+              - secretsmanager:GetResourcePolicy
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+              - secretsmanager:ListSecretVersionIds,
+              - secretsmanager:ListSecrets
+            Resource:
+              !Sub 'arn:aws:secretsmanager:${Region}:${AccountId}:secret:${DBClusterName}*'
+
+Outputs:
+  # We also need to output the IAM ManagedPolicy so that Copilot can inject it to our ECS task role.
+  SecretAccessPolicyArn:
+    Description: "The ARN of the ManagedPolicy to attach to the task role."
+    Value: !Ref secretAccessPolicy

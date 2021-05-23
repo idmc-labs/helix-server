@@ -18,7 +18,6 @@ RUN pip install --upgrade --no-cache-dir pip poetry \
     # Remove installer
     && pip uninstall -y poetry virtualenv-clone virtualenv
 
-
 # ########################### BUILD SERVER WEB
 FROM base AS server
 

@@ -9,42 +9,32 @@ Parameters:
     Type: String
     Description: The name of the service, job, or workflow being deployed.
   # Customize your Aurora Serverless cluster by setting the default value of the following parameters.
-  djangoserverclusterDBName:
+  helixdbclusterDBName:
     Type: String
     Description: The name of the initial database to be created in the DB cluster.
     Default: postgres
     # Cannot have special characters
     # Naming constraints: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html#RDS_Limits.Constraints
-  djangoserverclusterDBAutoPauseSeconds:
+  helixdbclusterDBAutoPauseSeconds:
     Type: Number
     Description: The duration in seconds before the cluster pauses.
     Default: 1000
 Mappings:
-  djangoserverclusterEnvScalingConfigurationMap: 
+  helixdbclusterEnvScalingConfigurationMap: 
     test:
       "DBMinCapacity": 2 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
       "DBMaxCapacity": 8 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
 
 Resources:
-  djangoserverclusterDBSubnetGroup:
+  helixdbclusterDBSubnetGroup:
     Type: 'AWS::RDS::DBSubnetGroup'
     Properties:
       DBSubnetGroupDescription: Group of Copilot private subnets for Aurora cluster.
       SubnetIds:
         !Split [',', { 'Fn::ImportValue': !Sub '${App}-${Env}-PrivateSubnets' }]
-  djangoserverclusterSecurityGroup:
+  helixdbclusterDBClusterSecurityGroup:
     Metadata:
-      'aws:copilot:description': 'A security group for your workload to access the DB cluster djangoservercluster'
-    Type: 'AWS::EC2::SecurityGroup'
-    Properties:
-      GroupDescription: !Sub 'The Security Group for ${Name} to access DB cluster djangoservercluster.'
-      VpcId:
-        Fn::ImportValue:
-          !Sub '${App}-${Env}-VpcId'
-      Tags:
-        - Key: Name
-          Value: !Sub 'copilot-${App}-${Env}-${Name}-Aurora'
-  djangoserverclusterDBClusterSecurityGroup:
+      'aws:copilot:description': 'A security group for your DB cluster helixdbcluster'
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: The Security Group for the database cluster.
@@ -53,11 +43,13 @@ Resources:
           FromPort: 5432
           IpProtocol: tcp
           Description: !Sub 'From the Aurora Security Group of the workload ${Name}.'
-          SourceSecurityGroupId: !Ref djangoserverclusterSecurityGroup
+          SourceSecurityGroupId: { 'Fn::ImportValue': !Sub '${App}-${Env}-EnvironmentSecurityGroup' }
       VpcId:
         Fn::ImportValue:
           !Sub '${App}-${Env}-VpcId'
-  djangoserverclusterAuroraSecret:
+  helixdbclusterAuroraSecret:
+    Metadata:
+      'aws:copilot:description': 'A Secrets Manager secret to store your DB credentials'
     Type: AWS::SecretsManager::Secret
     Properties:
       Description: !Sub Aurora main user secret for ${AWS::StackName}
@@ -67,44 +59,50 @@ Resources:
         ExcludePunctuation: true
         IncludeSpace: false
         PasswordLength: 16
-  djangoserverclusterDBClusterParameterGroup:
+  helixdbclusterDBClusterParameterGroup:
+    Metadata:
+      'aws:copilot:description': 'A DB parameter group for engine configuration values'
     Type: 'AWS::RDS::DBClusterParameterGroup'
     Properties:
       Description: !Ref 'AWS::StackName'
       Family: 'aurora-postgresql10'
       Parameters:
         client_encoding: 'UTF8'
-  djangoserverclusterDBCluster:
+  helixdbclusterDBCluster:
+    Metadata:
+      'aws:copilot:description': 'The helixdbcluster Aurora Serverless database cluster'
     Type: 'AWS::RDS::DBCluster'
     Properties:
       MasterUsername:
-        !Join [ "",  [ '{{resolve:secretsmanager:', !Ref djangoserverclusterAuroraSecret, ":SecretString:username}}" ]]
+        !Join [ "",  [ '{{resolve:secretsmanager:', !Ref helixdbclusterAuroraSecret, ":SecretString:username}}" ]]
       MasterUserPassword:
-        !Join [ "",  [ '{{resolve:secretsmanager:', !Ref djangoserverclusterAuroraSecret, ":SecretString:password}}" ]]
-      DatabaseName: !Ref djangoserverclusterDBName
+        !Join [ "",  [ '{{resolve:secretsmanager:', !Ref helixdbclusterAuroraSecret, ":SecretString:password}}" ]]
+      DatabaseName: !Ref helixdbclusterDBName
       Engine: 'aurora-postgresql'
       EngineVersion: '10.12'
       EngineMode: serverless
-      DBClusterParameterGroupName: !Ref djangoserverclusterDBClusterParameterGroup
-      DBSubnetGroupName: !Ref djangoserverclusterDBSubnetGroup
+      DBClusterParameterGroupName: !Ref helixdbclusterDBClusterParameterGroup
+      DBSubnetGroupName: !Ref helixdbclusterDBSubnetGroup
       VpcSecurityGroupIds:
-        - !Ref djangoserverclusterDBClusterSecurityGroup
+        - !Ref helixdbclusterDBClusterSecurityGroup
       ScalingConfiguration:
         AutoPause: true
-        MinCapacity: !FindInMap [djangoserverclusterEnvScalingConfigurationMap, !Ref Env, DBMinCapacity]
-        MaxCapacity: !FindInMap [djangoserverclusterEnvScalingConfigurationMap, !Ref Env, DBMaxCapacity]
-        SecondsUntilAutoPause: !Ref djangoserverclusterDBAutoPauseSeconds
-  djangoserverclusterSecretAuroraClusterAttachment:
+        MinCapacity: !FindInMap [helixdbclusterEnvScalingConfigurationMap, !Ref Env, DBMinCapacity]
+        MaxCapacity: !FindInMap [helixdbclusterEnvScalingConfigurationMap, !Ref Env, DBMaxCapacity]
+        SecondsUntilAutoPause: !Ref helixdbclusterDBAutoPauseSeconds
+  helixdbclusterSecretAuroraClusterAttachment:
     Type: AWS::SecretsManager::SecretTargetAttachment
     Properties:
-      SecretId: !Ref djangoserverclusterAuroraSecret
-      TargetId: !Ref djangoserverclusterDBCluster
+      SecretId: !Ref helixdbclusterAuroraSecret
+      TargetId: !Ref helixdbclusterDBCluster
       TargetType: AWS::RDS::DBCluster
+  helixdbclusterSecretParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${App}-${Env}-auroraSecret
+      Type: String
+      Value: !Ref helixdbclusterAuroraSecret
 Outputs:
-  djangoserverclusterSecret: # injected as DJANGOSERVERCLUSTER_SECRET environment variable by Copilot.
+  helixdbclusterSecret: # injected as HELIXDBCLUSTER_SECRET environment variable by Copilot.
     Description: "The JSON secret that holds the database username and password. Fields are 'host', 'port', 'dbname', 'username', 'password', 'dbClusterIdentifier' and 'engine'"
-    Value: !Ref djangoserverclusterAuroraSecret
-  djangoserverclusterSecurityGroup:
-    Description: "The security group to attach to the workload."
-    Value: !Ref djangoserverclusterSecurityGroup
-
+    Value: !Ref helixdbclusterAuroraSecret
