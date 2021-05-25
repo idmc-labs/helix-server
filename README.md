@@ -55,12 +55,17 @@ https://aws.github.io/copilot-cli/docs/developing/additional-aws-resources/
 
 Django, dramatiq and redis are currently setup as independent services
 
-Access to redis is passed through secrets for django and dramatiq, environment variable is possible for this though
+Database
+
+- is directly liked with the django server
+- however for dramatiq, the djnago db cluster has exported a SSM resource
+    - which is passed as a environment variable (or secret) to the dramatiq service
+    - IAM policy has been added for the dramatiq service to read the secret stored in the ARN (specified inside the SSM)
 
 ~Regarding the storage, we are using aurora postgres rds cluster which is directly linked to the django server.~
 ~However the access is shared to the dramatiq using simply the secret created in the secrets manager for aurora cluster, this is achieved using SSM parameter.~
 
-The rds cluster is now added to the security group where Ingree access is provided to the application level environment:
+The RDS cluster is now added to the security group where Ingree access is provided to the application level environment:
 > SourceSecurityGroupId: { 'Fn::ImportValue': !Sub '${App}-${Env}-EnvironmentSecurityGroup' }
 
 Mind the addon for dramatiq server, we have created iam policy to attach to the copilot task role, so that the task can read the secret content.
@@ -68,3 +73,14 @@ Mind the addon for dramatiq server, we have created iam policy to attach to the 
 We will be doing the same for rds access.
 
 Regarding S3...
+
+- public acl are enabled in the addon for s3 storage
+
+Providing IAM policy of dramatiq with the help of resource tag as explained here: https://github.com/aws/copilot-cli/issues/1368#issuecomment-689228396 did not seem to work. It kept raising 403 on trying to save to s3.
+This was solved by actually writing down the s3 bucket name as defined in the s3 addon yml
+
+If a process you are trying to run within a service/task is getting killed, look into `dmesg`, in one of the case it was running out of memory.
+
+Redis Elastic Cache
+
+Access to redis is passed through secrets for django and dramatiq, environment variable is possible for this though

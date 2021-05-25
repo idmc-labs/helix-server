@@ -9,9 +9,9 @@ Parameters:
     Type: String
     Description: The name of the service, job, or workflow being deployed.
 Resources:
-  removemesooner:
+  helixalphas3:
     Metadata:
-      'aws:copilot:description': 'An Amazon S3 bucket to store and retrieve objects for remove-me-sooner'
+      'aws:copilot:description': 'An Amazon S3 bucket to store and retrieve objects for helix-alpha-s3'
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: Private
@@ -19,12 +19,13 @@ Resources:
         ServerSideEncryptionConfiguration:
         - ServerSideEncryptionByDefault:
             SSEAlgorithm: AES256
-      BucketName: !Sub '${App}-${Env}-${Name}-remove-me-sooner'
+      # changing the bucket name also requires change in the server settings.py storage
+      BucketName: !Sub '${App}-${Env}-s3-bucket'
       PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
 
-  removemesoonerBucketPolicy:
+  helixalphas3BucketPolicy:
     Metadata:
       'aws:copilot:description': 'A bucket policy to deny unencrypted access to the bucket and its contents'
     Type: AWS::S3::BucketPolicy
@@ -33,26 +34,33 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
+          - Sid: ReadAny
+            Effect: Allow
+            Principal: "*"
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Sub ${ helixalphas3.Arn}/*
           - Sid: ForceHTTPS
             Effect: Deny
             Principal: '*'
             Action: 's3:*'
             Resource: 
-              - !Sub ${ removemesooner.Arn}/*
-              - !Sub ${ removemesooner.Arn}
+              - !Sub ${ helixalphas3.Arn}/*
+              - !Sub ${ helixalphas3.Arn}
             Condition: 
               Bool:
                 "aws:SecureTransport": false
-      Bucket: !Ref removemesooner
+      Bucket: !Ref helixalphas3
 
-  removemesoonerAccessPolicy:
+  helixalphas3AccessPolicy:
     Metadata:
-      'aws:copilot:description': 'An IAM ManagedPolicy for your service to access the remove-me-sooner bucket'
+      'aws:copilot:description': 'An IAM ManagedPolicy for your service to access the helix-alpha-s3 bucket'
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: !Sub
         - Grants CRUD access to the S3 bucket ${Bucket}
-        - { Bucket: !Ref removemesooner }
+        - { Bucket: !Ref helixalphas3 }
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -65,16 +73,16 @@ Resources:
               - s3:PutObjectTagging
               - s3:DeleteObject
               - s3:RestoreObject
-            Resource: !Sub ${ removemesooner.Arn}/*
+            Resource: !Sub ${ helixalphas3.Arn}/*
           - Sid: S3ListAction
             Effect: Allow
             Action: s3:ListBucket
-            Resource: !Sub ${ removemesooner.Arn}
+            Resource: !Sub ${ helixalphas3.Arn}
 
 Outputs:
-  removemesoonerName:
+  helixalphas3Name:
     Description: "The name of a user-defined bucket."
-    Value: !Ref removemesooner
-  removemesoonerAccessPolicy:
+    Value: !Ref helixalphas3
+  helixalphas3AccessPolicy:
     Description: "The IAM::ManagedPolicy to attach to the task role"
-    Value: !Ref removemesoonerAccessPolicy
+    Value: !Ref helixalphas3AccessPolicy

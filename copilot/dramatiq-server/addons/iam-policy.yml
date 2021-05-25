@@ -25,11 +25,12 @@ Parameters:
 
 Resources:
   # https://aws.github.io/copilot-cli/docs/developing/additional-aws-resources/
-  secretAccessPolicy:
+  ResourceAccessPolicy:
     Metadata:
       'aws:copilot:description': 'This is for the dramatiq service to access the addons created for django service'
     Type: AWS::IAM::ManagedPolicy
     Properties:
+      Description: 'Grants secret manager access; Grants CRUD access to S3 bucket'
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -41,11 +42,26 @@ Resources:
               - secretsmanager:DescribeSecret
               - secretsmanager:ListSecretVersionIds,
               - secretsmanager:ListSecrets
+            # NOTE: tried with 'arn:aws:secretsmanager:::secret:*' followed by condition, did not work
             Resource:
               !Sub 'arn:aws:secretsmanager:${Region}:${AccountId}:secret:${DBClusterName}*'
+          - Sid: S3ObjectActions
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:PutObjectACL
+              - s3:PutObjectTagging
+              - s3:DeleteObject
+              - s3:RestoreObject
+            Resource: !Sub 'arn:aws:s3:::${App}-${Env}-s3-bucket/*'
+          - Sid: S3ListAction
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource: !Sub 'arn:aws:s3:::${App}-${Env}-s3-bucket'
 
 Outputs:
   # We also need to output the IAM ManagedPolicy so that Copilot can inject it to our ECS task role.
-  SecretAccessPolicyArn:
-    Description: "The ARN of the ManagedPolicy to attach to the task role."
-    Value: !Ref secretAccessPolicy
+  DramatiqIAMPolicy:
+    Description: "The ManagedPolicy to attach to the task role."
+    Value: !Ref ResourceAccessPolicy

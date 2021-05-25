@@ -321,12 +321,16 @@ INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
 if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ['HELIXALPHAS3_NAME']
+    # NOTE: This naming convention is defined in the addon for s3
+    AWS_STORAGE_BUCKET_NAME = '{App}-{Env}-s3-bucket'.format(
+        App=os.environ['COPILOT_APPLICATION_NAME'],
+        Env=os.environ['COPILOT_ENVIRONMENT_NAME'],
+    )
 elif HELIX_ENVIRONMENT not in (DEVELOPMENT,):
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'idmc-helix')
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'idmc-helix')
     AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
 
 # NOTE: s3 bucket is public
