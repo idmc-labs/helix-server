@@ -1,5 +1,4 @@
 from collections import OrderedDict
-from datetime import datetime
 from functools import cached_property
 import logging
 from uuid import uuid4
@@ -78,7 +77,7 @@ class Report(MetaInformationArchiveAbstractModel,
                         end_date__isnull=True,
                     ) | Q(
                         end_date__isnull=False,
-                        end_date__gte=self.filter_figure_end_before or datetime.today(),
+                        end_date__gte=self.filter_figure_end_before or timezone.now(),
                     ),
                     category=FigureCategory.stock_idp_id(),
                     role=Figure.ROLE.RECOMMENDED,
@@ -495,7 +494,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                     end_date__isnull=True,
                 ) | Q(
                     end_date__isnull=False,
-                    end_date__gte=self.report.filter_figure_end_before or datetime.today(),
+                    end_date__gte=self.report.filter_figure_end_before or timezone.now(),
                 ),
                 category=FigureCategory.stock_idp_id(),
                 **global_filter
@@ -621,7 +620,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                     end_date__isnull=True,
                 ) | Q(
                     end_date__isnull=False,
-                    end_date__gte=self.report.filter_figure_end_before or datetime.today(),
+                    end_date__gte=self.report.filter_figure_end_before or timezone.now(),
                 ),
                 category=FigureCategory.stock_idp_id(),
                 **global_filter,
@@ -828,7 +827,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                             end_date__isnull=True,
                         ) | Q(
                             end_date__isnull=False,
-                            end_date__gte=self.report.filter_figure_end_before or datetime.today(),
+                            end_date__gte=self.report.filter_figure_end_before or timezone.now(),
                         ),
                         **conflict_filter,
                         category=FigureCategory.stock_idp_id(),

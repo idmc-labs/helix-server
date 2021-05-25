@@ -153,42 +153,46 @@ class CountryType(DjangoObjectType):
     geojson_url = graphene.String()
 
     def resolve_total_stock_disaster(root, info, **kwargs):
+        NULL = 'null'
         value = getattr(
             root,
             Country.IDP_DISASTER_ANNOTATE,
-            'null'
+            NULL
         )
-        if value != 'null':
+        if value != NULL:
             return value
         return info.context.country_country_this_year_idps_disaster_loader.load(root.id)
 
     def resolve_total_stock_conflict(root, info, **kwargs):
+        NULL = 'null'
         value = getattr(
             root,
             Country.IDP_CONFLICT_ANNOTATE,
-            'null'
+            NULL
         )
-        if value != 'null':
+        if value != NULL:
             return value
         return info.context.country_country_this_year_idps_conflict_loader.load(root.id)
 
     def resolve_total_flow_conflict(root, info, **kwargs):
+        NULL = 'null'
         value = getattr(
             root,
             Country.ND_CONFLICT_ANNOTATE,
-            'null'
+            NULL
         )
-        if value != 'null':
+        if value != NULL:
             return value
         return info.context.country_country_this_year_nd_conflict_loader.load(root.id)
 
     def resolve_total_flow_disaster(root, info, **kwargs):
+        NULL = 'null'
         value = getattr(
             root,
             Country.ND_DISASTER_ANNOTATE,
-            'null'
+            NULL
         )
-        if value != 'null':
+        if value != NULL:
             return value
         return info.context.country_country_this_year_nd_disaster_loader.load(root.id)
 

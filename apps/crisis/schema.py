@@ -42,22 +42,24 @@ class CrisisType(DjangoObjectType):
         return info.context.crisis_crisis_review_count_dataloader.load(root.id)
 
     def resolve_total_stock_idp_figures(root, info, **kwargs):
+        NULL = 'null'
         value = getattr(
             root,
             Crisis.IDP_FIGURES_ANNOTATE,
-            'null'
+            NULL
         )
-        if value != 'null':
+        if value != NULL:
             return value
         return info.context.crisis_crisis_total_stock_idp_figures.load(root.id)
 
     def resolve_total_flow_nd_figures(root, info, **kwargs):
+        NULL = 'null'
         value = getattr(
             root,
             Crisis.ND_FIGURES_ANNOTATE,
-            'null',
+            NULL,
         )
-        if value != 'null':
+        if value != NULL:
             return value
         return info.context.crisis_crisis_total_flow_nd_figures.load(root.id)
 

@@ -5,6 +5,7 @@ from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.db import models
 from django.db.models.functions import Coalesce
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
@@ -63,11 +64,11 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                     ),
                     start_date=Coalesce(
                         models.OuterRef('start_date'),
-                        datetime(year=datetime.today().year, month=1, day=1)
+                        datetime(year=timezone.now().year, month=1, day=1)
                     ),
                     end_date=Coalesce(
                         models.OuterRef('end_date'),
-                        datetime(year=datetime.today().year, month=12, day=31)
+                        datetime(year=timezone.now().year, month=12, day=31)
                     ),
                 ).order_by().values('entry__event__crisis').annotate(
                     _total=models.Sum('total_figures')
@@ -82,7 +83,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                     ),
                     end_date=Coalesce(
                         models.OuterRef('end_date'),
-                        datetime(year=datetime.today().year, month=12, day=31)
+                        datetime(year=timezone.now().year, month=12, day=31)
                     )
                 ).order_by().values('entry__event__crisis').annotate(
                     _total=models.Sum('total_figures')
