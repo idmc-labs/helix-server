@@ -226,7 +226,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                 raise NotImplementedError(f'Dataloader error: fetching without dataloader. {info.path}')
             parent_class = root._meta.model
             child_class = manager.model
-            # FIXME: qs should be executed only when we access the results node in the future
+            # TODO: qs should be executed only when we access the results node in the future
             qs = info.context.get_dataloader(
                 parent_class.__name__,
                 self.related_name,

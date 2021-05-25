@@ -40,8 +40,9 @@ HELIX_ENVIRONMENT = os.environ.get('HELIX_ENVIRONMENT', DEVELOPMENT)
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 
-# FIXME:
-ALLOWED_HOSTS = [os.environ.get('ALLOWED_HOST', '*')]
+ALLOWED_HOSTS = [
+    os.environ.get('ALLOWED_HOST', '')
+]
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-CSRF_USE_SESSIONS
 CSRF_USE_SESSIONS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'False').lower() == 'true'
