@@ -6,6 +6,7 @@ from utils.factories import (
     CrisisFactory,
     DisasterSubTypeFactory,
     ViolenceSubTypeFactory,
+    EventFactory,
 )
 from utils.tests import HelixTestCase
 from utils.validations import is_child_parent_dates_valid
@@ -24,22 +25,6 @@ class TestEventModel(HelixTestCase):
     def test_valid_clean(self):
         event = Event(**self.data)
         self.assertIsNone(event.clean())
-
-    def test_invalid_clean_disaster_without_glide_or_disaster_sub_type(self):
-        self.data.pop('glide_number')
-        self.data.pop('disaster_sub_type')
-        errors = Event.clean_by_event_type(self.data)
-        # self.assertIn('glide_number', errors)
-        self.assertIn('disaster_sub_type', errors)
-
-    def test_invalid_clean_conflict_without_violence(self):
-        self.data['event_type'] = Crisis.CRISIS_TYPE.CONFLICT
-        errors = Event.clean_by_event_type(self.data)
-        self.assertIn('violence_sub_type', errors)
-        violence = ViolenceSubTypeFactory.create()
-        violence.save()
-        self.data['violence_sub_type'] = violence
-        self.assertFalse(Event.clean_by_event_type(self.data))
 
 
 class TestGenericValidator(HelixTestCase):

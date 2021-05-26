@@ -4,7 +4,7 @@ from datetime import date
 from django.db import models
 from django.db.models import functions
 from django.contrib.postgres.aggregates.general import ArrayAgg
-from django.utils.translation import gettext_lazy as _, gettext
+from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import (
@@ -135,7 +135,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                                          blank=True, null=True,
                                          related_name='events', on_delete=models.SET_NULL)
     violence = models.ForeignKey('Violence', verbose_name=_('Violence'),
-                                 blank=True, null=True,
+                                 blank=False, null=True,
                                  related_name='events', on_delete=models.SET_NULL)
     violence_sub_type = models.ForeignKey('ViolenceSubType', verbose_name=_('Violence Sub-Type'),
                                           blank=True, null=True,
@@ -179,19 +179,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     )
     event_narrative = models.TextField(verbose_name=_('Event Narrative'),
                                        null=True, blank=True)
-
-    @staticmethod
-    def clean_by_event_type(values: dict, instance=None) -> OrderedDict:
-        errors = OrderedDict()
-        event_type = values.get('event_type', getattr(instance, 'event_type', None))
-        if event_type == Crisis.CRISIS_TYPE.CONFLICT:
-            if not values.get('violence_sub_type', getattr(instance, 'violence_sub_type', None)):
-                errors['violence_sub_type'] = gettext('Please mention at least'
-                                                      ' the reason for violence.')
-        elif event_type == Crisis.CRISIS_TYPE.DISASTER:
-            if not values.get('disaster_sub_type', getattr(instance, 'disaster_sub_type', None)):
-                errors['disaster_sub_type'] = gettext('Please mention the sub-type of disaster.')
-        return errors
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
@@ -317,8 +304,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             self.disaster_type = self.disaster_sub_type.type
             self.disaster_sub_category = self.disaster_type.disaster_sub_category
             self.disaster_category = self.disaster_sub_category.category
-        if self.violence_sub_type:
-            self.violence = self.violence_sub_type.violence
         return super().save(*args, **kwargs)
 
     def __str__(self):

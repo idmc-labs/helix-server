@@ -37,6 +37,40 @@ class EventSerializer(MetaInformationSerializerMixin,
         model = Event
         fields = '__all__'
 
+    def validate_violence_sub_type_and_type(self, attrs):
+        errors = OrderedDict()
+        _type = attrs.get('violence', getattr(self.instance, 'violence', None))
+        sub_type = attrs.get(
+            'violence_sub_type',
+            getattr(self.instance, 'violence_sub_type', None)
+        )
+        if sub_type and sub_type.violence != _type:
+            errors['violence_sub_type'] = gettext('Violence Sub type does not match the violence type.')
+        return errors
+
+    def validate_event_type_with_crisis_type(self, attrs):
+        errors = OrderedDict()
+        crisis = attrs.get(
+            'crisis',
+            getattr(self.instance, 'crisis', None)
+        )
+        event_type = attrs.get(
+            'event_type',
+            getattr(self.instance, 'event_type', None)
+        )
+        if crisis and crisis.crisis_type != event_type:
+            errors['event_type'] = gettext('Event type does not match the crisis type.')
+        return errors
+
+    def validate_disaster_disaster_sub_type(self, attrs):
+        errors = OrderedDict()
+        if not attrs.get(
+            'disaster_sub_type',
+            getattr(self.instance, 'disaster_sub_type', None)
+        ):
+            errors['disaster_sub_type'] = gettext('Please mention the sub-type of disaster.')
+        return errors
+
     def validate_event_type_against_crisis_type(self, event_type, attrs):
         crisis = attrs.get('crisis', getattr(self.instance, 'crisis', None))
         if crisis and event_type != crisis.crisis_type.value:
@@ -109,7 +143,6 @@ class EventSerializer(MetaInformationSerializerMixin,
 
     def validate(self, attrs: dict) -> dict:
         errors = OrderedDict()
-        errors.update(Event.clean_by_event_type(attrs, self.instance))
         crisis = attrs.get('crisis') or getattr(self.instance, 'crisis', None)
         if crisis:
             errors.update(is_child_parent_dates_valid(
@@ -121,6 +154,11 @@ class EventSerializer(MetaInformationSerializerMixin,
             errors.update(
                 is_child_parent_inclusion_valid(attrs, self.instance, field='countries', parent_field='crisis.countries')
             )
+        errors.update(self.validate_event_type_with_crisis_type(attrs))
+        if attrs.get('event_type') == Crisis.CRISIS_TYPE.DISASTER:
+            errors.update(self.validate_disaster_disaster_sub_type(attrs))
+        if attrs.get('event_type') == Crisis.CRISIS_TYPE.CONFLICT:
+            errors.update(self.validate_violence_sub_type_and_type(attrs))
 
         if self.instance:
             errors.update(self.validate_figures_countries(attrs))

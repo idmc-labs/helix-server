@@ -9,6 +9,7 @@ from utils.factories import (
     EntryFactory,
     FigureFactory,
     ViolenceSubTypeFactory,
+    ViolenceFactory,
     DisasterSubCategoryFactory,
     DisasterSubTypeFactory,
 )
@@ -28,6 +29,7 @@ class TestCreateEventSerializer(HelixTestCase):
         start = datetime.today()
         end = datetime.today() + timedelta(days=3)
 
+        violence_sub_type = ViolenceSubTypeFactory.create()
         crisis = CrisisFactory.create(
             start_date=start,
             end_date=end,
@@ -38,7 +40,8 @@ class TestCreateEventSerializer(HelixTestCase):
             "start_date": (start - timedelta(days=1)).strftime('%Y-%m-%d'),
             "end_date": (end + timedelta(days=1)).strftime('%Y-%m-%d'),
             'event_type': int(crisis.crisis_type),
-            'violence_sub_type': ViolenceSubTypeFactory.create().id,
+            'violence': violence_sub_type.violence.id,
+            'violence_sub_type': violence_sub_type.id,
             'disaster_sub_category': DisasterSubCategoryFactory.create().id,
         }
         serializer = EventSerializer(data=data, context=self.context)
@@ -53,6 +56,7 @@ class TestCreateEventSerializer(HelixTestCase):
         violence_sub_type = ViolenceSubTypeFactory.create()
         data = dict(
             event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
+            violence=violence_sub_type.violence.pk,
             violence_sub_type=violence_sub_type.pk,
             crisis=crisis.pk,
             name='one',
@@ -199,3 +203,21 @@ class TestUpdateEventSerializer(HelixTestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertIn('countries', serializer.errors)
+
+    def test_invalid_violence_type(self):
+        violence_sub_type = ViolenceSubTypeFactory.create()
+        violence2 = ViolenceFactory.create()
+        data = dict(
+            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
+            violence=violence_sub_type.violence.pk,
+            violence_sub_type=violence_sub_type.pk,
+            name='one',
+        )
+        serializer = EventSerializer(data=data, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        # now put in a different violence keeping the sub type same
+        data['violence'] = violence2.id
+        serializer = EventSerializer(data=data, context=self.context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('violence_sub_type', serializer.errors)
