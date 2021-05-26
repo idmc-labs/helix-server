@@ -543,7 +543,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                         _total=Sum('total_figures')
                     ).values('_total').annotate(total=F('_total')).values('total')
                 ),
-                # FIXME: we will need to handle each year separately for idp figures to get the average
+                # TODO: we will need to handle each year separately for idp figures to get the average
                 stock_historical_average=Value('...'),
             )
         return {
@@ -669,7 +669,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                         _total=Sum('total_figures')
                     ).values('_total').annotate(total=F('_total')).values('total')
                 ),
-                # FIXME: stock historical average must be pre-calculated for each year
+                # TODO: stock historical average must be pre-calculated for each year
                 stock_historical_average=Value('...'),
             )
         return {

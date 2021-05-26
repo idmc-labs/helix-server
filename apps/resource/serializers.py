@@ -26,8 +26,7 @@ class ResourceSerializer(MetaInformationSerializerMixin, serializers.ModelSerial
         if self.instance is None and Resource.objects.filter(
             created_by=self.context['request'].user
         ).count() >= RESOURCE_NUMBER:
-            # FIXME: this is problematic
-            raise serializers.ValidationError(gettext(f"Can only create {RESOURCE_NUMBER} resources"))
+            raise serializers.ValidationError(gettext('Can only create %s resources') % RESOURCE_NUMBER)
         return super().validate(attrs)
 
 
@@ -44,8 +43,7 @@ class ResourceGroupSerializer(MetaInformationSerializerMixin, serializers.ModelS
         if self.instance is None and ResourceGroup.objects.filter(
             created_by=self.context['request'].user
         ).count() >= RESOURCEGROUP_NUMBER:
-            # FIXME: this is problematic
-            raise serializers.ValidationError(gettext(f"Can only create {RESOURCEGROUP_NUMBER} resource groups"))
+            raise serializers.ValidationError(gettext('Can only create %s resource groups') % RESOURCEGROUP_NUMBER)
         return super().validate(attrs)
 
 
