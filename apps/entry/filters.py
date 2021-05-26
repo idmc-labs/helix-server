@@ -1,7 +1,3 @@
-from django.db.models import (
-    Exists,
-    OuterRef,
-)
 from django_filters import rest_framework as df
 
 from apps.entry.models import (
@@ -11,23 +7,6 @@ from apps.entry.models import (
     Figure,
 )
 from utils.filters import StringListFilter, IDListFilter
-
-under_review_subquery = EntryReviewer.objects.filter(
-    entry=OuterRef('pk'),
-    status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
-)
-reviewed_subquery = EntryReviewer.objects.filter(
-    entry=OuterRef('pk'),
-    status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
-)
-signed_off_subquery = EntryReviewer.objects.filter(
-    entry=OuterRef('pk'),
-    status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
-)
-to_be_reviewed_subquery = EntryReviewer.objects.filter(
-    entry=OuterRef('pk'),
-    status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
-)
 
 
 class OSMNameFilter(df.FilterSet):
@@ -113,33 +92,12 @@ class EntryFilter(df.FilterSet):
     def filter_by_review_status(self, qs, name, value):
         if not value:
             return qs
-        qs = qs.annotate(
-            _is_reviewed=Exists(reviewed_subquery),
-            _is_under_review=Exists(under_review_subquery),
-            _is_signed_off=Exists(signed_off_subquery),
-            _to_be_reviewed=Exists(to_be_reviewed_subquery),
-        )
-        _temp = qs.none()
-        if EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED.name in value:
-            reviewed = qs.filter(_is_reviewed=True)
-            _temp = _temp | reviewed
-        if EntryReviewer.REVIEW_STATUS.UNDER_REVIEW.name in value:
-            under_review = qs.filter(_is_under_review=True)
-            _temp = _temp | under_review
-        if EntryReviewer.REVIEW_STATUS.SIGNED_OFF.name in value:
-            signed_off = qs.filter(_is_signed_off=True)
-            _temp = _temp | signed_off
-        if EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.name in value:
-            to_be_reviewed = qs.filter(_to_be_reviewed=True)
-            _temp = _temp | to_be_reviewed
-        return _temp
+        db_values = [EntryReviewer.REVIEW_STATUS.get(item) for item in value]
+        return qs.filter(review_status__in=db_values)
 
     @property
     def qs(self):
         return super().qs.annotate(
-            _is_reviewed=Exists(reviewed_subquery),
-            _is_under_review=Exists(under_review_subquery),
-            _is_signed_off=Exists(signed_off_subquery),
             **Entry._total_figure_disaggregation_subquery(),
         ).distinct()
 

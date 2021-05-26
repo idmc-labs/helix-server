@@ -221,4 +221,60 @@ class TestEntryModel(HelixTestCase):
                               created_by=reviewer)
         assert e.reviewing.first().status == EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
 
+        # try clearing the reviewers
+        e.reviewers.clear()
+        # should change the entry review_status
+        e.refresh_from_db()
+        assert e.review_status is None
+
+        # manually create entry reviewer
+        e_r = EntryReviewer.objects.create(
+            entry=e,
+            reviewer=reviewer
+        )
+        e.refresh_from_db()
+        assert e.review_status == EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
+        # change the status
+        e_r.status = EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
+        e_r.save()
+        e.refresh_from_db()
+        assert e.review_status == EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
+        # delete the instance
+        e_r.delete()
+        e.refresh_from_db()
+        assert e.review_status is None
+
+    def test_entry_review_status_change_on_reviewer_status_change(self):
+        e = EntryFactory.create(created_by=self.editor)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        assert e.review_status is None
+        e.reviewers.add(reviewer)
+        e.reviewers.add(reviewer2)
+
+        e.refresh_from_db()
+        assert e.review_status == EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
+
+        Review.objects.create(entry=e, field='article_title',
+                              value=Review.ENTRY_REVIEW_STATUS.RED,
+                              created_by=reviewer)
+        assert e.reviewing.first().status == EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
+
+        e.refresh_from_db()
+        assert e.review_status == EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
+        Review.objects.create(entry=e, field='article_title',
+                              value=Review.ENTRY_REVIEW_STATUS.RED,
+                              created_by=reviewer2)
+        e.refresh_from_db()
+        assert e.review_status == EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
+        review = EntryReviewer.objects.get(
+            entry=e,
+            reviewer=reviewer
+        )
+        review.status = EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
+        review.save()
+
+        e.refresh_from_db()
+        assert e.review_status == EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
+
     # TODO: Add test for pdf-generation task

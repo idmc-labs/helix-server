@@ -572,6 +572,52 @@ class FigureTag(MetaInformationAbstractModel):
     name = models.CharField(verbose_name=_('Name'), max_length=256)
 
 
+class EntryReviewer(MetaInformationAbstractModel, models.Model):
+    class CannotUpdateStatusException(Exception):
+        message = CANNOT_UPDATE_MESSAGE
+
+    class REVIEW_STATUS(enum.Enum):
+        # NOTE: Values of each name contains its significance, and is used elsewhere for comparison
+        TO_BE_REVIEWED = 0
+        UNDER_REVIEW = 1
+        REVIEW_COMPLETED = 2
+        SIGNED_OFF = 3
+
+        __labels__ = {
+            UNDER_REVIEW: _("Under Review"),
+            REVIEW_COMPLETED: _("Review Completed"),
+            SIGNED_OFF: _("Signed Off"),
+            TO_BE_REVIEWED: _("To be reviewed"),
+        }
+
+    entry = models.ForeignKey('Entry', verbose_name=_('Entry'),
+                              related_name='reviewing', on_delete=models.CASCADE)
+    reviewer = models.ForeignKey('users.User', verbose_name=_('Reviewer'),
+                                 related_name='reviewing', on_delete=models.CASCADE)
+    status = enum.EnumField(enum=REVIEW_STATUS, verbose_name=_('Review Status'),
+                            default=REVIEW_STATUS.TO_BE_REVIEWED)
+
+    def __str__(self):
+        return f'{self.entry_id} {self.reviewer} {self.status}'
+
+    @classmethod
+    def assign_creator(cls, entry: 'Entry', user: 'User') -> None:
+        cls.objects.filter(
+            entry=entry,
+            created_by__isnull=True
+        ).update(created_by=user)
+
+    def update_status(self, status: REVIEW_STATUS) -> None:
+        if status == self.REVIEW_STATUS.SIGNED_OFF \
+                and not self.reviewer.has_perms(('entry.sign_off_entry',)):
+            raise self.CannotUpdateStatusException()
+        self.status = status
+
+    def save(self, *args, **kwargs):
+        self.update_status(self.status)
+        return super().save(*args, **kwargs)
+
+
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
@@ -619,6 +665,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                                        related_name='review_entries',
                                        through='EntryReviewer',
                                        through_fields=('entry', 'reviewer'))
+    review_status = enum.EnumField(enum=EntryReviewer.REVIEW_STATUS, verbose_name=_('Review Status'),
+                                   null=True, blank=True)
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
@@ -744,27 +792,20 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
     # Properties
 
+    # FIXME: will deprecate
     @property
     def is_under_review(self):
-        if not hasattr(self, '_is_under_review'):
-            return self.reviewing.filter(status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW).exists()
-        return self._is_under_review
+        return self.review_status == EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
 
+    # FIXME: will deprecate
     @property
     def is_reviewed(self):
-        # User _is_reviewed from annotate if available
-        if not hasattr(self, '_is_reviewed'):
-            return self.reviewing.filter(status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED).exists()
-        return self._is_reviewed
+        return self.review_status == EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
 
+    # FIXME: will deprecate
     @property
     def is_signed_off(self):
-        # User _is_signed_off from annotate if available
-        if not hasattr(self, '_is_signed_off'):
-            return self.reviewing.filter(
-                status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
-            ).exists()
-        return self._is_signed_off
+        return self.review_status == EntryReviewer.REVIEW_STATUS.SIGNED_OFF
 
     @property
     def latest_reviews(self):
@@ -824,48 +865,3 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
     def __str__(self):
         return f'Entry {self.article_title}'
-
-
-class EntryReviewer(MetaInformationAbstractModel, models.Model):
-    class CannotUpdateStatusException(Exception):
-        message = CANNOT_UPDATE_MESSAGE
-
-    class REVIEW_STATUS(enum.Enum):
-        UNDER_REVIEW = 0
-        REVIEW_COMPLETED = 1
-        SIGNED_OFF = 2
-        TO_BE_REVIEWED = 3
-
-        __labels__ = {
-            UNDER_REVIEW: _("Under Review"),
-            REVIEW_COMPLETED: _("Review Completed"),
-            SIGNED_OFF: _("Signed Off"),
-            TO_BE_REVIEWED: _("To be reviewed"),
-        }
-
-    entry = models.ForeignKey(Entry, verbose_name=_('Entry'),
-                              related_name='reviewing', on_delete=models.CASCADE)
-    reviewer = models.ForeignKey('users.User', verbose_name=_('Reviewer'),
-                                 related_name='reviewing', on_delete=models.CASCADE)
-    status = enum.EnumField(enum=REVIEW_STATUS, verbose_name=_('Review Status'),
-                            default=REVIEW_STATUS.TO_BE_REVIEWED)
-
-    def __str__(self):
-        return f'{self.entry_id} {self.reviewer} {self.status}'
-
-    @classmethod
-    def assign_creator(cls, entry: 'Entry', user: 'User') -> None:
-        cls.objects.filter(
-            entry=entry,
-            created_by__isnull=True
-        ).update(created_by=user)
-
-    def update_status(self, status: REVIEW_STATUS) -> None:
-        if status == self.REVIEW_STATUS.SIGNED_OFF \
-                and not self.reviewer.has_perms(('entry.sign_off_entry',)):
-            raise self.CannotUpdateStatusException()
-        self.status = status
-
-    def save(self, *args, **kwargs):
-        self.update_status(self.status)
-        return super().save(*args, **kwargs)
