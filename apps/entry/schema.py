@@ -192,18 +192,26 @@ class EntryType(DjangoObjectType):
     is_signed_off = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
 
     def resolve_total_stock_idp_figures(root, info, **kwargs):
-        return getattr(
+        NULL = 'null'
+        value = getattr(
             root,
             Entry.IDP_FIGURES_ANNOTATE,
-            info.context.entry_entry_total_stock_idp_figures.load(root.id)
+            NULL
         )
+        if value != NULL:
+            return value
+        return info.context.entry_entry_total_stock_idp_figures.load(root.id)
 
     def resolve_total_flow_nd_figures(root, info, **kwargs):
-        return getattr(
+        NULL = 'null'
+        value = getattr(
             root,
             Entry.ND_FIGURES_ANNOTATE,
-            info.context.entry_entry_total_flow_nd_figures.load(root.id)
+            NULL
         )
+        if value != NULL:
+            return value
+        return info.context.entry_entry_total_flow_nd_figures.load(root.id)
 
 
 class EntryListType(CustomDjangoListObjectType):

@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from django.db import models
 from django.db.models import (
     Count,
@@ -10,7 +8,7 @@ from django.db.models import (
 from promise import Promise
 from promise.dataloader import DataLoader
 
-from apps.entry.models import Figure, FigureCategory, Entry, EntryReviewer
+from apps.entry.models import FigureCategory, Entry, EntryReviewer
 from apps.crisis.models import Crisis
 
 
@@ -72,45 +70,20 @@ class CrisisReviewCountLoader(DataLoader):
 
 
 def batch_load_fn_by_category(keys, category):
-    qs = Figure.objects.select_related(
-        'entry__event__crisis'
-    ).filter(
-        entry__event__crisis__in=keys,
-        role=Figure.ROLE.RECOMMENDED,
+    qs = Crisis.objects.filter(
+        id__in=keys
+    ).annotate(
+        **Crisis._total_figure_disaggregation_subquery()
     )
-    this_year = datetime.today().year
 
     if category == FigureCategory.flow_new_displacement_id():
-        qs = Figure.filtered_nd_figures(
-            qs,
-            # TODO Lets discuss on the date range
-            start_date=datetime(
-                year=this_year,
-                month=1,
-                day=1
-            ),
-            end_date=datetime(
-                year=this_year,
-                month=12,
-                day=31
-            )
-        )
-    elif category == FigureCategory.stock_idp_id():
-        qs = Figure.filtered_idp_figures(
-            qs,
-        )
-
-    qs = qs.order_by().values(
-        'entry__event__crisis'
-    ).annotate(
-        _total=models.Sum(
-            'total_figures',
-        )
-    ).values('entry__event__crisis', '_total')
+        qs = qs.annotate(_total=models.F(Crisis.ND_FIGURES_ANNOTATE))
+    else:
+        qs = qs.annotate(_total=models.F(Crisis.IDP_FIGURES_ANNOTATE))
 
     batch_load = {
-        item['entry__event__crisis']: item['_total']
-        for item in qs
+        item['id']: item['_total']
+        for item in qs.values('id', '_total')
     }
 
     return Promise.resolve([

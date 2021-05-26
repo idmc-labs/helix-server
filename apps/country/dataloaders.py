@@ -1,8 +1,10 @@
-from datetime import datetime
-
-from django.db.models import Sum
+from django.db import models
 from promise import Promise
 from promise.dataloader import DataLoader
+
+from apps.entry.models import FigureCategory
+from apps.crisis.models import Crisis
+from apps.country.models import Country
 
 
 class TotalFigureThisYearByCountryCategoryEventTypeLoader(DataLoader):
@@ -19,43 +21,27 @@ class TotalFigureThisYearByCountryCategoryEventTypeLoader(DataLoader):
         '''
         keys: [countryId]
         '''
-        from apps.entry.models import Figure, FigureCategory
 
-        queryset = Figure.objects.filter(
-            country__in=keys,
-            role=Figure.ROLE.RECOMMENDED,
-            entry__event__event_type=self.event_type,
+        qs = Country.objects.filter(
+            id__in=keys
+        ).annotate(
+            **Country._total_figure_disaggregation_subquery()
         )
-        this_year = datetime.today().year
 
         if self.category == FigureCategory.flow_new_displacement_id():
-            qs = Figure.filtered_nd_figures(
-                queryset,
-                start_date=datetime(
-                    year=this_year,
-                    month=1,
-                    day=1
-                ),
-                end_date=datetime(
-                    year=this_year,
-                    month=12,
-                    day=31
-                )
-            )
-        elif self.category == FigureCategory.stock_idp_id():
-            qs = Figure.filtered_idp_figures(
-                queryset,
-            )
-
-        qs = qs.order_by().values(
-            'country'
-        ).annotate(
-            _total=Sum('total_figures')
-        ).values('country', '_total')
+            if self.event_type == Crisis.CRISIS_TYPE.CONFLICT:
+                qs = qs.annotate(_total=models.F(Country.ND_CONFLICT_ANNOTATE))
+            else:
+                qs = qs.annotate(_total=models.F(Country.ND_DISASTER_ANNOTATE))
+        else:
+            if self.event_type == Crisis.CRISIS_TYPE.CONFLICT:
+                qs = qs.annotate(_total=models.F(Country.IDP_CONFLICT_ANNOTATE))
+            else:
+                qs = qs.annotate(_total=models.F(Country.IDP_DISASTER_ANNOTATE))
 
         list_to_dict = {
-            item['country']: item['_total']
-            for item in qs
+            item['id']: item['_total']
+            for item in qs.values('id', '_total')
         }
 
         return Promise.resolve([

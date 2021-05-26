@@ -18,7 +18,7 @@ from django.db.models import (
     Max,
     Q,
 )
-from django.db.models.functions import Concat
+from django.db.models.functions import Concat, Coalesce
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
 
@@ -678,7 +678,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                         entry=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
-                    # TODO: what about date range
                     start_date=None,
                     end_date=None,
                 ).order_by().values('entry').annotate(
@@ -691,6 +690,10 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                     figures.filter(
                         entry=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
+                    ),
+                    end_date=Coalesce(
+                        models.OuterRef('event__end_date'),
+                        date.today()
                     )
                 ).order_by().values('entry').annotate(
                     _total=models.Sum('total_figures')

@@ -1,5 +1,7 @@
 from datetime import datetime, timedelta
 
+from django.utils import timezone
+
 from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
@@ -22,8 +24,8 @@ class TestFigureModel(HelixTestCase):
     def setUp(self) -> None:
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.event = EventFactory.create(start_date=(datetime.today() + timedelta(days=10)).strftime('%Y-%m-%d'),
-                                         end_date=(datetime.today() + timedelta(days=25)).strftime('%Y-%m-%d'))
+        self.event = EventFactory.create(start_date=(timezone.now() + timedelta(days=10)).strftime('%Y-%m-%d'),
+                                         end_date=(timezone.now() + timedelta(days=25)).strftime('%Y-%m-%d'))
         self.entry = EntryFactory.create(created_by=self.editor, event=self.event)
         self.figure_cat = FigureCategoryFactory.create(type='FLOW')
         self.figure = FigureFactory.create(entry=self.entry, created_by=self.editor, category=self.figure_cat)

@@ -6,6 +6,7 @@ from django.db import models
 from django.db.models import Count, OuterRef
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel, ArchiveAbstractModel
@@ -75,8 +76,8 @@ class Country(models.Model):
             start_date = None
             end_date = None
         else:
-            start_date = datetime(year=datetime.today().year, month=1, day=1)
-            end_date = datetime(year=datetime.today().year, month=12, day=31)
+            start_date = datetime(year=timezone.now().year, month=1, day=1)
+            end_date = datetime(year=timezone.now().year, month=12, day=31)
         return {
             cls.ND_CONFLICT_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(

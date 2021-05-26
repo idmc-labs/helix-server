@@ -1,6 +1,8 @@
 from collections import OrderedDict
+from datetime import date
 
 from django.db import models
+from django.db.models import functions
 from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.utils.translation import gettext_lazy as _, gettext
 from django_enumfield import enum
@@ -215,6 +217,10 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     figures.filter(
                         entry__event=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
+                    ),
+                    end_date=functions.Coalesce(
+                        models.OuterRef('end_date'),
+                        date.today()
                     )
                 ).order_by().values('entry__event').annotate(
                     _total=models.Sum('total_figures')
