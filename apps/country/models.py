@@ -242,10 +242,10 @@ class Country(models.Model):
             entries_count='Entries Count',
             figures_count='Figures Count',
             **{
-                cls.IDP_DISASTER_ANNOTATE: 'IDPs Disaster Figure',
-                cls.ND_CONFLICT_ANNOTATE: 'ND Conflict Figure',
-                cls.IDP_CONFLICT_ANNOTATE: 'IDPs Conflict Figure',
-                cls.ND_DISASTER_ANNOTATE: 'ND Disaster Figure',
+                cls.IDP_DISASTER_ANNOTATE: f'IDPs Disaster Figure {timezone.now().year}',
+                cls.ND_CONFLICT_ANNOTATE: f'ND Conflict Figure {timezone.now().year}',
+                cls.IDP_CONFLICT_ANNOTATE: f'IDPs Conflict Figure {timezone.now().year}',
+                cls.ND_DISASTER_ANNOTATE: f'ND Disaster Figure {timezone.now().year}',
             }
         )
         values = CountryFilter(

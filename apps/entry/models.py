@@ -5,7 +5,7 @@ from typing import Optional
 
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
-from django.contrib.postgres.aggregates.general import ArrayAgg
+from django.contrib.postgres.aggregates.general import ArrayAgg, StringAgg
 from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
 from django.db.models.query import QuerySet
@@ -489,14 +489,25 @@ class Figure(MetaInformationArchiveAbstractModel,
         ).annotate(
             centroid_lat=Avg('geo_locations__lat'),
             centroid_lon=Avg('geo_locations__lon'),
-            geolocations=ArrayAgg(
+            geolocations=StringAgg(
                 'geo_locations__city',
-                filter=Q(geo_locations__city__isnull=False),
+                delimiter='; ',
+                filter=Q(
+                    geo_locations__isnull=False,
+                    geo_locations__city__isnull=False,
+                ) | ~Q(
+                    geo_locations__city='',
+                ),
                 distinct=True
             ),
-            publishers_name=ArrayAgg(
+            publishers_name=StringAgg(
                 'entry__publishers__name',
-                filter=Q(entry__publishers__isnull=False),
+                delimiter='; ',
+                filter=Q(
+                    entry__publishers__isnull=False
+                ) | ~Q(
+                    entry__publishers__name='',
+                ),
                 distinct=True
             ),
         ).select_related(
@@ -720,7 +731,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                 self.user = user
 
         headers = OrderedDict(
-            id='Id',
+            id='ID',
             article_title='Article Title',
             is_confidential='Confidential?',
             publish_date='Publish Date',
@@ -728,6 +739,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             document__attachment='Document',
             document__mimetype='Filetype',
             document__filetype_detail='Filetype Detail',
+            event__event_type='Cause',
             event_id='Event ID',
             event__name='Event Name',
             event__crisis_id='Crisis ID',
@@ -741,7 +753,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             publishers_name='Publishers',
             created_at='Created at',
             created_by__full_name='Created by',
-            idmc_analysis='IDMC Anlysis',
+            idmc_analysis='IDMC Analysis',
             countries='Countries Affected',
             countries_iso3='ISO3s Affected',
             centroid_lat='Centroid Lat',
@@ -759,23 +771,29 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
             countries=ArrayAgg('figures__country', distinct=True),
-            countries_iso3=ArrayAgg('figures__country__iso3', distinct=True),
-            categories=ArrayAgg('figures__category__name'),
-            terms=ArrayAgg('figures__term__name'),
+            countries_iso3=StringAgg('figures__country__iso3', delimiter='; ', distinct=True),
+            categories=StringAgg('figures__category__name', delimiter='; ', distinct=True),
+            terms=StringAgg('figures__term__name', delimiter='; ', distinct=True),
             min_fig_start=Min('figures__start_date'),
             min_fig_end=Min('figures__end_date'),
             max_fig_start=Max('figures__start_date'),
             max_fig_end=Max('figures__end_date'),
             centroid_lat=Avg('figures__geo_locations__lat'),
             centroid_lon=Avg('figures__geo_locations__lon'),
-            sources_name=ArrayAgg('sources__name', distinct=True),
-            publishers_name=ArrayAgg('publishers__name', distinct=True),
+            sources_name=StringAgg('sources__name', delimiter='; ', distinct=True),
+            publishers_name=StringAgg('publishers__name', delimiter='; ', distinct=True),
             figures_count=models.Count('figures', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
         ).annotate(
-            centroid=Concat(
-                F('centroid_lat'), Value(', '), F('centroid_lon'),
-                output_field=models.CharField()
+            centroid=models.Case(
+                models.When(
+                    centroid_lat__isnull=False,
+                    then=Concat(
+                        F('centroid_lat'), Value(', '), F('centroid_lon'),
+                        output_field=models.CharField()
+                    )
+                ),
+                default=Value('')
             )
         ).order_by('-created_at').select_related(
             'event',
