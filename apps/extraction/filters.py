@@ -132,7 +132,7 @@ class FigureExtractionFilterSet(df.FilterSet):
     filter_figure_end_before = df.DateFilter(method='noop')
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
     filter_entry_tags = IDListFilter(method='filter_tags')
-    filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
+    filter_entry_article_title = df.CharFilter(field_name='entry__article_title', lookup_expr='icontains')
     filter_event_crisis_types = StringListFilter(method='filter_crisis_types')
     # NOTE: report filter is an exclusive filter
     report = df.CharFilter()

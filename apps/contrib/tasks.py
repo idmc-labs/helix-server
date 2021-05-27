@@ -31,7 +31,6 @@ def get_excel_sheet_content(headers, data, **kwargs):
                 for key in keys
             ])
     append_to_worksheet(ws, headers, data)
-
     for other in kwargs.get('other', []):
         ws = wb.create_sheet(other['title'])
         headers = other['results']['headers']
@@ -74,4 +73,5 @@ def generate_excel_file(download_id, user_id):
     except Exception as e:  # NOQA E722
         logger.error(f'Error: Sheet generation for ExcelDownload={download_id}', exc_info=True)
         download.status = ExcelDownload.EXCEL_GENERATION_STATUS.FAILED
+        download.completed_at = timezone.now()
         download.save(update_fields=['status'])

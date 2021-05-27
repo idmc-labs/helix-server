@@ -23,7 +23,88 @@ class GeographicalGroup(models.Model):
 
 
 class CountryRegion(models.Model):
+    # NOTE: following are the figure disaggregation fields
+    ND_CONFLICT_ANNOTATE = 'total_flow_conflict'
+    ND_DISASTER_ANNOTATE = 'total_flow_disaster'
+    IDP_CONFLICT_ANNOTATE = 'total_stock_conflict'
+    IDP_DISASTER_ANNOTATE = 'total_stock_disaster'
+
     name = models.CharField(verbose_name=_('Name'), max_length=256)
+
+    @classmethod
+    def _total_figure_disaggregation_subquery(
+        cls,
+        figures=None,
+        ignore_dates=False,
+    ):
+        '''
+        returns the subqueries for figures sum annotations
+        '''
+        figures = figures or Figure.objects.all()
+        if ignore_dates:
+            start_date = None
+            end_date = None
+        else:
+            start_date = datetime(year=datetime.today().year, month=1, day=1)
+            end_date = datetime(year=datetime.today().year, month=12, day=31)
+        return {
+            cls.ND_CONFLICT_ANNOTATE: models.Subquery(
+                Figure.filtered_nd_figures(
+                    figures.filter(
+                        country__region=OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                        entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                    ),
+                    # TODO: what about date range
+                    start_date=start_date,
+                    end_date=end_date
+                ).order_by().values('country__region').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+            cls.ND_DISASTER_ANNOTATE: models.Subquery(
+                Figure.filtered_nd_figures(
+                    figures.filter(
+                        country__region=OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                        entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                    ),
+                    # TODO: what about date range
+                    start_date=start_date,
+                    end_date=end_date,
+                ).order_by().values('country__region').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+            cls.IDP_CONFLICT_ANNOTATE: models.Subquery(
+                Figure.filtered_idp_figures(
+                    figures.filter(
+                        country__region=OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                        entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                    ),
+                    end_date=end_date,
+                ).order_by().values('country__region').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+            cls.IDP_DISASTER_ANNOTATE: models.Subquery(
+                Figure.filtered_idp_figures(
+                    figures.filter(
+                        country__region=OuterRef('pk'),
+                        role=Figure.ROLE.RECOMMENDED,
+                        entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                    ),
+                    end_date=end_date,
+                ).order_by().values('country__region').annotate(
+                    _total=models.Sum('total_figures')
+                ).values('_total')[:1],
+                output_field=models.IntegerField()
+            ),
+        }
 
     def __str__(self):
         return self.name
@@ -161,10 +242,10 @@ class Country(models.Model):
             entries_count='Entries Count',
             figures_count='Figures Count',
             **{
-                cls.IDP_DISASTER_ANNOTATE: 'IDPs Disaster Figure',
-                cls.ND_CONFLICT_ANNOTATE: 'ND Conflict Figure',
-                cls.IDP_CONFLICT_ANNOTATE: 'IDPs Conflict Figure',
-                cls.ND_DISASTER_ANNOTATE: 'ND Disaster Figure',
+                cls.IDP_DISASTER_ANNOTATE: f'IDPs Disaster Figure {timezone.now().year}',
+                cls.ND_CONFLICT_ANNOTATE: f'ND Conflict Figure {timezone.now().year}',
+                cls.IDP_CONFLICT_ANNOTATE: f'IDPs Conflict Figure {timezone.now().year}',
+                cls.ND_DISASTER_ANNOTATE: f'ND Disaster Figure {timezone.now().year}',
             }
         )
         values = CountryFilter(

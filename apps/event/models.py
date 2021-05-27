@@ -255,7 +255,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             disaster_sub_category__name='Disaster Subcategory',
             disaster_type__name='Disaster Type',
             disaster_sub_type__name='Disaster Sub Type',
-            disaster_sub_type='Hazaed Type ID',
+            disaster_sub_type='Hazard Type ID',
         )
         values = EventFilter(
             data=filters,
