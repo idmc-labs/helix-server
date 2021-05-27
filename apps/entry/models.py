@@ -459,6 +459,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             country__region__name='Region',
             centroid_lat='Centroid Lat',
             centroid_lon='Centroid Lon',
+            centroid='Centroid',
             geolocations='Geolocations (City)',
             created_at='Created at',
             created_by__full_name='Created by',
@@ -503,6 +504,17 @@ class Figure(MetaInformationArchiveAbstractModel,
                 filter=~Q(entry__publishers__name=''),
                 distinct=True
             ),
+        ).annotate(
+            centroid=models.Case(
+                models.When(
+                    centroid_lat__isnull=False,
+                    then=Concat(
+                        F('centroid_lat'), Value(', '), F('centroid_lon'),
+                        output_field=models.CharField()
+                    )
+                ),
+                default=Value('')
+            )
         ).select_related(
             'entry',
             'entry__event',
