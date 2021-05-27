@@ -47,6 +47,12 @@ class DisaggregatedAgeCategory(models.Model):
         max_length=256,
         unique=True,
     )
+    age_group = models.CharField(
+        verbose_name=_('Age Group'),
+        max_length=256,
+        unique=True,
+        null=True,
+    )
     age_group_from = models.IntegerField(
         verbose_name=_('Age Group From'),
         null=True
