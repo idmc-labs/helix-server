@@ -492,22 +492,15 @@ class Figure(MetaInformationArchiveAbstractModel,
             geolocations=StringAgg(
                 'geo_locations__city',
                 delimiter='; ',
-                filter=Q(
-                    geo_locations__isnull=False,
-                    geo_locations__city__isnull=False,
-                ) | ~Q(
-                    geo_locations__city='',
+                filter=~Q(
+                    Q(geo_locations__city__isnull=True) | Q(geo_locations__city='')
                 ),
                 distinct=True
             ),
             publishers_name=StringAgg(
                 'entry__publishers__name',
                 delimiter='; ',
-                filter=Q(
-                    entry__publishers__isnull=False
-                ) | ~Q(
-                    entry__publishers__name='',
-                ),
+                filter=~Q(entry__publishers__name=''),
                 distinct=True
             ),
         ).select_related(

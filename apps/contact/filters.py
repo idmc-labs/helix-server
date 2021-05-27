@@ -1,4 +1,4 @@
-from django.db import models
+from django.db.models import Q
 import django_filters
 
 from apps.contact.models import Contact, Communication
@@ -17,7 +17,7 @@ class ContactFilter(django_filters.FilterSet):
         fields = ['country']
 
     def filter_name_contains(self, qs, name, value):
-        return qs.filter(models.Q(first_name__icontains=value) | models.Q(last_name__icontains=value))
+        return qs.filter(Q(first_name__icontains=value) | Q(last_name__icontains=value))
 
     def filter_countries(self, qs, name, value):
         if not value:
