@@ -84,3 +84,9 @@ If a process you are trying to run within a service/task is getting killed, look
 Redis Elastic Cache
 
 Access to redis is passed through secrets for django and dramatiq, environment variable is possible for this though
+
+> Sharing a variable or ARN
+
+We can use `Cloudformation Export` to do that. 
+https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-exports.html
+Example: https://github.com/aws-samples/startup-kit-templates/blob/master/templates/aurora.cfn.yml#L406

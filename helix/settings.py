@@ -112,14 +112,22 @@ MIDDLEWARE = [
     'django_otp.middleware.OTPMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
+
 if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
     MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
+
+REDIS_CACHE_DB = 1
+REDIS_DRAMATIQ_DB = 0
 
 if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
     CACHES = {
         'default': {
             'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': os.environ['CO_REDIS_CACHE_URL'],
+            'LOCATION': 'redis://{}:{}/{}'.format(
+                os.environ['ELASTI_CACHE_ADDRESS'],
+                os.environ['ELASTI_CACHE_PORT'],
+                REDIS_CACHE_DB,
+            ),
             'OPTIONS': {
                 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             }

@@ -83,6 +83,8 @@ Outputs:
   helixalphas3Name:
     Description: "The name of a user-defined bucket."
     Value: !Ref helixalphas3
+    Export:
+      Name: !Sub ${App}-${Env}-S3BucketName
   helixalphas3AccessPolicy:
     Description: "The IAM::ManagedPolicy to attach to the task role"
     Value: !Ref helixalphas3AccessPolicy

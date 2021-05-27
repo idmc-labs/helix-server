@@ -12,16 +12,6 @@ Parameters:
     Type: String
     Description: The prefix of the db cluster name deployed with django server.
     Default: helixdbcluster
-  # The following two are under feature request
-  # https://github.com/aws/copilot-cli/issues/1449
-  Region:
-    Type: String
-    Description: The region of the account
-    Default: us-east-1
-  AccountId:
-    Type: String
-    Description: The id of the account
-    Default: 209357624314
 
 Resources:
   # https://aws.github.io/copilot-cli/docs/developing/additional-aws-resources/
@@ -44,7 +34,7 @@ Resources:
               - secretsmanager:ListSecrets
             # NOTE: tried with 'arn:aws:secretsmanager:::secret:*' followed by condition, did not work
             Resource:
-              !Sub 'arn:aws:secretsmanager:${Region}:${AccountId}:secret:${DBClusterName}*'
+              !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${DBClusterName}*'
           - Sid: S3ObjectActions
             Effect: Allow
             Action:
@@ -54,14 +44,30 @@ Resources:
               - s3:PutObjectTagging
               - s3:DeleteObject
               - s3:RestoreObject
-            Resource: !Sub 'arn:aws:s3:::${App}-${Env}-s3-bucket/*'
+            Resource: !Sub
+              - arn:aws:s3:::${BucketArn}/*
+              - { BucketArn: { 'Fn::ImportValue': !Sub '${App}-${Env}-S3BucketName' }}
           - Sid: S3ListAction
             Effect: Allow
             Action: s3:ListBucket
-            Resource: !Sub 'arn:aws:s3:::${App}-${Env}-s3-bucket'
+            Resource: !Sub
+              - arn:aws:s3:::${BucketArn}
+              - { BucketArn: { 'Fn::ImportValue': !Sub '${App}-${Env}-S3BucketName' }}
 
 Outputs:
   # We also need to output the IAM ManagedPolicy so that Copilot can inject it to our ECS task role.
   DramatiqIAMPolicy:
     Description: "The ManagedPolicy to attach to the task role."
     Value: !Ref ResourceAccessPolicy
+
+  ElastiCacheAddress: # env var ELASTI_CACHE_ADDRESS
+    Description: ElastiCache endpoint address
+    Value:
+      Fn::ImportValue:
+        !Sub ${App}-${Env}-ElastiCacheAddress
+
+  ElastiCachePort: # env var ELASTI_CACHE_PORT
+    Description: ElastiCache port
+    Value:
+      Fn::ImportValue:
+        !Sub ${App}-${Env}-ElastiCachePort
