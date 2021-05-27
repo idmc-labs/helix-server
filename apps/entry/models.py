@@ -47,6 +47,14 @@ class DisaggregatedAgeCategory(models.Model):
         max_length=256,
         unique=True,
     )
+    age_group_from = models.IntegerField(
+        verbose_name=_('Age Group From'),
+        null=True
+    )
+    age_group_to = models.IntegerField(
+        verbose_name=_('Age Group To'),
+        null=True
+    )
 
 
 class OSMName(UUIDAbstractModel, models.Model):
