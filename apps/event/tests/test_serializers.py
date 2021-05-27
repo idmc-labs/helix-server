@@ -77,6 +77,11 @@ class TestCreateEventSerializer(HelixTestCase):
 
 
 class TestUpdateEventSerializer(HelixTestCase):
+    def setUp(self):
+        self.context = dict(
+            request=RequestFactory().post('/graphql')
+        )
+
     def test_invalid_event_dates_beyond_figure_dates(self):
         from datetime import datetime, timedelta
         FigureCategory._invalidate_category_ids_cache()

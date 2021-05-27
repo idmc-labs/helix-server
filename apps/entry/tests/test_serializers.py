@@ -498,6 +498,14 @@ class TestFigureSerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('disaggregation_age_json', serializer.errors)
 
+    def test_valid_disaggregation_age_json_can_be_null(self):
+        self.data['disaggregation_age_json'] = None
+        serializer = FigureSerializer(
+            data=self.data,
+            context={'request': self.request}
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
     def test_invalid_disaggregation_strata_json(self):
         self.data['disaggregation_strata_json'] = [
             {"date": "2020-10-10", "value": 120, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},

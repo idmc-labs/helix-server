@@ -37,7 +37,7 @@ NIGHTLY = 'nightly'
 HELIX_ENVIRONMENT = os.environ.get('HELIX_ENVIRONMENT', DEVELOPMENT)
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 
 ALLOWED_HOSTS = [
@@ -231,7 +231,7 @@ GRAPHENE_DJANGO_EXTRAS = {
     # 'CACHE_ACTIVE': True,
     # 'CACHE_TIMEOUT': 300    # seconds
 }
-if HELIX_ENVIRONMENT not in [DEVELOPMENT]:
+if not DEBUG:
     GRAPHENE['MIDDLEWARE'].append('utils.middleware.DisableIntrospectionSchemaMiddleware')
 
 AUTHENTICATION_BACKEND = [

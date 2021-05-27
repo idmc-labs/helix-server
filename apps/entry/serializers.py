@@ -95,6 +95,7 @@ class CommonFigureValidationMixin:
         return self.event
 
     def validate_disaggregation_age_json(self, age_groups):
+        age_groups = age_groups or []
         values = []
         for each in age_groups:
             values.append((each.get('category'), each.get('sex')))
@@ -267,7 +268,7 @@ class CommonFigureValidationMixin:
 class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
                                    CommonFigureValidationMixin,
                                    serializers.ModelSerializer):
-    disaggregation_age_json = DisaggregatedAgeSerializer(many=True, required=False)
+    disaggregation_age_json = DisaggregatedAgeSerializer(many=True, required=False, allow_null=True)
     disaggregation_strata_json = DisaggregatedStratumSerializer(many=True, required=False)
     geo_locations = OSMNameSerializer(many=True, required=False)
 

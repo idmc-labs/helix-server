@@ -51,14 +51,14 @@ CustomGraphQLView.graphiql_template = "graphene_graphiql_explorer/graphiql.html"
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    re_path('^graphiql/?$', csrf_exempt(CustomGraphQLView.as_view(graphiql=True))),
     re_path('^graphql/?$', csrf_exempt(CustomGraphQLView.as_view())),
     path('api/', include(rest_urls))
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT) \
-    + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+]
 
 if settings.DEBUG:
     import debug_toolbar
-    urlpatterns = [
+    urlpatterns = urlpatterns + [
         path('__debug__/', include(debug_toolbar.urls)),
-    ] + urlpatterns
+        re_path('^graphiql/?$', csrf_exempt(CustomGraphQLView.as_view(graphiql=True))),
+    ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) \
+      + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

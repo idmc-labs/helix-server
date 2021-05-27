@@ -9,6 +9,7 @@ from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
 from apps.users.filters import UserFilter, ReviewerUserFilter
+from apps.users.roles import USER_ROLE
 
 from .enums import PermissionActionEnum, PermissionModelEnum, PermissionRoleEnum
 
@@ -49,6 +50,21 @@ class UserType(DjangoObjectType):
     role = Field(PermissionRoleEnum)
     permissions = graphene.List(graphene.NonNull(PermissionsType))
     full_name = Field(graphene.String, required=True)
+    email = graphene.String()
+
+    def resolve_role(root, info, **kwargs):
+        if info.context.request.user == root:
+            return root.role
+        if info.context.request.user.role in [USER_ROLE.ADMIN, USER_ROLE.IT_HEAD]:
+            return root.role
+
+    def resolve_email(root, info, **kwargs):
+        if root == info.context.request.user:
+            return root.email
+
+    def resolve_permissions(root, info, **kwargs):
+        if root == info.context.request.user:
+            return root.permissions
 
 
 class UserListType(CustomDjangoListObjectType):
