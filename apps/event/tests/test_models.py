@@ -5,8 +5,6 @@ from apps.event.models import Event
 from utils.factories import (
     CrisisFactory,
     DisasterSubTypeFactory,
-    ViolenceSubTypeFactory,
-    EventFactory,
 )
 from utils.tests import HelixTestCase
 from utils.validations import is_child_parent_dates_valid
