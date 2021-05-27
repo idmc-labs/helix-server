@@ -14,6 +14,7 @@ from apps.users.serializers import (
 from utils.permissions import is_authenticated
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.mutation import generate_input_type_for_serializer
+from utils.validations import MissingCaptchaException
 
 
 RegisterInputType = generate_input_type_for_serializer(
@@ -29,6 +30,7 @@ class Register(graphene.Mutation):
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(UserType)
+    captcha_required = graphene.Boolean(required=True, default_value=True)
 
     @staticmethod
     def mutate(root, info, data):
@@ -56,14 +58,23 @@ class Login(graphene.Mutation):
 
     result = graphene.Field(UserType)
     errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
+    ok = graphene.Boolean(required=True)
+    captcha_required = graphene.Boolean(required=True, default_value=False)
 
     @staticmethod
     def mutate(root, info, data):
         serializer = LoginSerializer(data=data,
                                      context={'request': info.context.request})
-        if errors := mutation_is_not_valid(serializer):
-            return Login(errors=errors, ok=False)
+        try:
+            errors = mutation_is_not_valid(serializer)
+        except MissingCaptchaException:
+            return Login(ok=False, captcha_required=True)
+        if errors:
+            return Login(
+                errors=errors,
+                ok=False,
+                captcha_required='captcha' in [err['field'] for err in errors]
+            )
         if user := serializer.validated_data.get('user'):
             login(info.context.request, user)
         return Login(

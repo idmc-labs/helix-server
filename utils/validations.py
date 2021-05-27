@@ -5,6 +5,10 @@ from django.conf import settings
 import requests
 
 
+class MissingCaptchaException(Exception):
+    pass
+
+
 def is_child_parent_dates_valid(
     c_start_date, c_end_date,
     p_start_date, p_end_date

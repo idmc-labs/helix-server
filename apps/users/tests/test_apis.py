@@ -34,6 +34,7 @@ class TestLogin(HelixGraphQLTestCase):
                 login(data: $input) {
                     errors
                     ok
+                    captchaRequired
                     result {
                         email
                         role
@@ -152,7 +153,7 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['login']['ok'])
-        self.assertIn('missing captcha', json.dumps(content['data']['login']['errors']).lower())
+        self.assertTrue(content['data']['login']['captchaRequired'])
 
         # attempt 3
         # invalid password and invalid captcha should raise invalid captcha
@@ -169,6 +170,7 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['login']['ok'])
+        self.assertTrue(content['data']['login']['captchaRequired'])
         self.assertIn('invalid captcha', json.dumps(content['data']['login']['errors']).lower())
         self.assertNotIn('invalid email or password', json.dumps(content['data']['login']['errors']).lower())
 
@@ -227,7 +229,7 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['login']['ok'])
-        self.assertIn('missing captcha', json.dumps(content['data']['login']['errors']).lower())
+        self.assertTrue(content['data']['login']['captchaRequired'])
 
         # again with captcha but wrong
         validate.return_value = False
@@ -244,6 +246,7 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['login']['ok'])
+        self.assertTrue(content['data']['login']['captchaRequired'])
         self.assertIn('invalid captcha', json.dumps(content['data']['login']['errors']).lower())
 
         # with correct captcha
