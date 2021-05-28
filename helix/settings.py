@@ -330,10 +330,7 @@ INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     # NOTE: This naming convention is defined in the addon for s3
-    AWS_STORAGE_BUCKET_NAME = '{App}-{Env}-s3-bucket'.format(
-        App=os.environ['COPILOT_APPLICATION_NAME'],
-        Env=os.environ['COPILOT_ENVIRONMENT_NAME'],
-    )
+    AWS_STORAGE_BUCKET_NAME = os.environ['COPILOT_S3_BUCKET_NAME']
 elif HELIX_ENVIRONMENT not in (DEVELOPMENT,):
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')

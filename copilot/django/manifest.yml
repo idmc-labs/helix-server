@@ -1,9 +1,9 @@
-# The manifest for the "django-server" service.
+# The manifest for the "django" service.
 # Read the full specification for the "Load Balanced Web Service" type at:
 #  https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
-name: django-server
+name: django
 type: Load Balanced Web Service
 
 # Distribute traffic to your service.
@@ -46,5 +46,5 @@ variables:                    # Pass environment variables as key value pairs.
 environments:
   test:
     secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
-      DJANGO_SECRET_KEY: /copilot/helix-server/test/secrets/DJANGO_SECRET_KEY
-#    count: 2               # Number of tasks to run for the "test" environment.
+      DJANGO_SECRET_KEY: /copilot/helix-beta/test/secrets/DJANGO_SECRET_KEY
+

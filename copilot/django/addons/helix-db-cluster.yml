@@ -43,6 +43,7 @@ Resources:
           FromPort: 5432
           IpProtocol: tcp
           Description: !Sub 'From the Aurora Security Group of the workload ${Name}.'
+          # NOTE: replace the security group to use the env level group; so that other services in the same env can access it
           SourceSecurityGroupId: { 'Fn::ImportValue': !Sub '${App}-${Env}-EnvironmentSecurityGroup' }
       VpcId:
         Fn::ImportValue:
@@ -96,6 +97,7 @@ Resources:
       SecretId: !Ref helixdbclusterAuroraSecret
       TargetId: !Ref helixdbclusterDBCluster
       TargetType: AWS::RDS::DBCluster
+  # NOTE: this ssm bears the ARN for db secret, which cannot be readily exported
   helixdbclusterSecretParam:
     Type: AWS::SSM::Parameter
     Properties:

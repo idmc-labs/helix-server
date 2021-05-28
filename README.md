@@ -53,6 +53,14 @@ https://aws.github.io/copilot-cli/docs/getting-started/first-app-tutorial/
 
 https://aws.github.io/copilot-cli/docs/developing/additional-aws-resources/
 
+copilot init
+
+make sure that you have a domain registered in the route 53
+```bash
+example
+copilot app init --domain idmcdb.org
+```
+
 Django, dramatiq and redis are currently setup as independent services
 
 Database
@@ -90,3 +98,7 @@ Access to redis is passed through secrets for django and dramatiq, environment v
 We can use `Cloudformation Export` to do that. 
 https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/using-cfn-stack-exports.html
 Example: https://github.com/aws-samples/startup-kit-templates/blob/master/templates/aurora.cfn.yml#L406
+
+### Secrets
+
+Make sure that you are actually using the secret (if required) created under the same given app and environment.
