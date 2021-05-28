@@ -92,9 +92,7 @@ def generate_excel_file(download_id, user_id):
 @celery_app.task
 def kill_all_old_excel_exports():
     from apps.contrib.models import ExcelDownload
-
-    # if a task has been pending for too long, move it to killed
-    pending = ExcelDownload.objects.filter(
+# if a task has been pending for too long, move it to killed pending = ExcelDownload.objects.filter(
         status=ExcelDownload.EXCEL_GENERATION_STATUS.PENDING,
     ).filter(
         models.Q(
@@ -136,3 +134,10 @@ def kill_all_long_running_report_generations():
     ).update(status=ReportGeneration.REPORT_GENERATION_STATUS.KILLED)
 
     logger.info(f'Updated REPORT GENERATION to killed:\n{progress=}')
+
+
+@dramatiq.actor()
+def dramatiq_says_hello(name: str):
+    # This task is to check cross communication between django and dramatiq
+    # executed inside django, should be seen as a task from dramatiq
+    print(f'Hello {name.title()}')
