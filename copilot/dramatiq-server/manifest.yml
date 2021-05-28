@@ -39,8 +39,5 @@ environments:
   test:
     secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
       DJANGO_SECRET_KEY: /copilot/helix-server/test/secrets/DJANGO_SECRET_KEY
-      # NOTE: these can be plainly kept in variables as well, but kept here for consistency between django and dramatiq services
-      CO_DRAMATIQ_REDIS_URL: /copilot/helix-server/test/secrets/CO_DRAMATIQ_REDIS_URL
-      CO_REDIS_CACHE_URL: /copilot/helix-server/test/secrets/CO_REDIS_CACHE_URL
       HELIXDBCLUSTER_SECRET: helix-server-test-auroraSecret
 #    count: 2               # Number of tasks to run for the "test" environment.
