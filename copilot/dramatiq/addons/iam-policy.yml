@@ -60,6 +60,13 @@ Outputs:
     Description: "The ManagedPolicy to attach to the task role."
     Value: !Ref ResourceAccessPolicy
 
+  # NOTE: this bucket name env-var is uniform across stack
+  CopilotS3BucketName:
+    Description: "The name of a user-defined bucket."
+    Value:
+      Fn::ImportValue:
+        !Sub ${App}-${Env}-S3BucketName
+
   ElastiCacheAddress: # env var ELASTI_CACHE_ADDRESS
     Description: ElastiCache endpoint address
     Value:

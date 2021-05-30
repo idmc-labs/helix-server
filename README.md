@@ -102,3 +102,4 @@ Example: https://github.com/aws-samples/startup-kit-templates/blob/master/templa
 ### Secrets
 
 Make sure that you are actually using the secret (if required) created under the same given app and environment.
+

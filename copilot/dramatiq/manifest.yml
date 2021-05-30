@@ -1,9 +1,9 @@
-# The manifest for the "dramatiq-server" service.
+# The manifest for the "dramatiq" service.
 # Read the full specification for the "Backend Service" type at:
 #  https://aws.github.io/copilot-cli/docs/manifest/backend-service/
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
-name: dramatiq-server
+name: dramatiq
 type: Backend Service
 
 # Your service does not allow any traffic.
@@ -22,7 +22,7 @@ image:
       start_period: 10s
 
 cpu: 256       # Number of CPU units for the task.
-memory: 512    # Amount of memory in MiB used by the task.
+memory: 1024    # Amount of memory in MiB used by the task.
 count: 1       # Number of tasks that should be running in your service.
 exec: true     # Enable running commands in your container.
 
@@ -38,6 +38,6 @@ variables:                    # Pass environment variables as key value pairs.
 environments:
   test:
     secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
-      DJANGO_SECRET_KEY: /copilot/helix-server/test/secrets/DJANGO_SECRET_KEY
-      HELIXDBCLUSTER_SECRET: helix-server-test-auroraSecret
-#    count: 2               # Number of tasks to run for the "test" environment.
+      # NOTE: the secret name is taken from django db cluster addon
+      HELIXDBCLUSTER_SECRET: helix-beta-test-auroraSecret
+      DJANGO_SECRET_KEY: /copilot/helix-beta/test/secrets/DJANGO_SECRET_KEY

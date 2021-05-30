@@ -13,7 +13,7 @@ class Command(BaseCommand):
         task = Task.tasks.all().filter(
             status='done',
             created_at__gte=timezone.now() - timedelta(minutes=5)
-        ).order_by('-created_by').first()
+        ).order_by('-created_at').first()
         try:
             assert task is not None
             assert task.actor_name == 'dramatiq_says_hello'
