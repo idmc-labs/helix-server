@@ -39,6 +39,7 @@ TEST_CACHES = {
         'LOCATION': 'unique-snowflake',
     }
 }
+TEST_AUTH_PASSWORD_VALIDATORS = []
 
 
 class CommonSetupClassMixin:
@@ -92,6 +93,7 @@ class CommonSetupClassMixin:
     DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
     DRAMATIQ_BROKER=TEST_DRAMATIQ_BROKER,
     CACHES=TEST_CACHES,
+    AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
 )
 class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
     GRAPHQL_URL = '/graphql'
@@ -119,6 +121,9 @@ class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
 def create_user_with_role(role: str) -> User:
     user = UserFactory.create()
     user.groups.set([Group.objects.get(name=role)])
+    user.raw_password = 'lhjsjsjsjlj'
+    user.set_password(user.raw_password)
+    user.save()
     return user
 
 
@@ -153,6 +158,7 @@ class ImmediateOnCommitMixin(object):
     MEDIA_ROOT=TEST_MEDIA_ROOT,
     DRAMATIQ_BROKER=TEST_DRAMATIQ_BROKER,
     CACHES=TEST_CACHES,
+    AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
 )
 class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     pass
@@ -164,6 +170,7 @@ class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     MEDIA_ROOT=TEST_MEDIA_ROOT,
     DRAMATIQ_BROKER=TEST_DRAMATIQ_BROKER,
     CACHES=TEST_CACHES,
+    AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
 )
 class HelixAPITestCase(APITestCase):
     def __init__(self, *args, **kwargs):

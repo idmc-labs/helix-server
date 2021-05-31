@@ -15,6 +15,18 @@ from utils.graphene.options import CustomObjectTypeOptions
 
 
 class CustomListObjectType(ObjectType):
+    '''
+    Requires a base_type meta argument
+
+    Example:
+        class MyOwnObjectType(graphene.ObjectType):
+            field = graphene.Field()
+
+        class MyOwnListType(CustomListObjectType):
+            class Meta:
+                base_type = MyOwnObjectType
+                filterset_class = ... if possible
+    '''
     class Meta:
         abstract = True
 

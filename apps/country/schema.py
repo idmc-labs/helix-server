@@ -137,7 +137,7 @@ class CountryType(DjangoObjectType):
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
         ),
-        accessor='events__entries',
+        accessor='entries',
     ))
     figures = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
         get_type('apps.entry.schema.FigureListType'),
