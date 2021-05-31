@@ -1,7 +1,6 @@
 from datetime import datetime
 import time
 
-from django.core.cache import cache
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
@@ -80,21 +79,21 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True, write_only=True)
     password = serializers.CharField(required=True, write_only=True)
-    captcha = serializers.CharField(required=False, write_only=True)
-    site_key = serializers.CharField(required=False, write_only=True)
+    captcha = serializers.CharField(required=False, allow_null=True, write_only=True)
+    site_key = serializers.CharField(required=False, allow_null=True, write_only=True)
 
     def _validate_captcha(self, attrs):
         captcha = attrs.get('captcha')
         site_key = attrs.get('site_key')
         email = attrs.get('email')
-        attempts = cache.get(User._login_attempt_cache_key(email), 0)
+        attempts = User._get_login_attempt(email)
 
         def throttle_login_attempt():
             if attempts >= settings.MAX_CAPTCHA_LOGIN_ATTEMPTS:
                 now = time.mktime(datetime.now().timetuple())
-                last_tried = cache.get(User._last_login_attempt_cache_key(email))
+                last_tried = User._get_last_login_attempt(email)
                 if not last_tried:
-                    cache.set(User._last_login_attempt_cache_key(email), now)
+                    User._set_last_login_attempt(email, now)
                     raise serializers.ValidationError(
                         gettext('Please try again in %s minute(s)') % settings.LOGIN_TIMEOUT
                     )
@@ -107,11 +106,12 @@ class LoginSerializer(serializers.Serializer):
                     # reset
                     User._reset_login_cache(email)
 
-        if attempts >= settings.MAX_LOGIN_ATTEMPTS and not captcha and not site_key:
+        if attempts >= settings.MAX_LOGIN_ATTEMPTS and not captcha:
             raise MissingCaptchaException()
         if attempts >= settings.MAX_LOGIN_ATTEMPTS and captcha and not validate_hcaptcha(captcha, site_key):
-            attempts = cache.get(User._login_attempt_cache_key(email), 0)
-            cache.set(User._login_attempt_cache_key(email), attempts + 1)
+            attempts = User._get_login_attempt(email)
+            User._set_login_attempt(email, attempts + 1)
+
             throttle_login_attempt()
             raise serializers.ValidationError(dict(
                 captcha=gettext('Invalid captcha')
@@ -126,10 +126,11 @@ class LoginSerializer(serializers.Serializer):
         user = authenticate(email=email,
                             password=attrs.get('password', ''))
         if not user:
-            attempts = cache.get(User._login_attempt_cache_key(email), 0)
-            cache.set(User._login_attempt_cache_key(email), attempts + 1)
+            attempts = User._get_login_attempt(email)
+            User._set_login_attempt(email, attempts + 1)
             raise serializers.ValidationError('Invalid Email or Password.')
         attrs.update(dict(user=user))
+        User._reset_login_cache(email)
         return attrs
 
 

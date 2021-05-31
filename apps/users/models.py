@@ -52,6 +52,22 @@ class User(AbstractUser):
         ])
 
     @staticmethod
+    def _set_login_attempt(email: str, value: int):
+        return cache.set(User._login_attempt_cache_key(email), value)
+
+    @staticmethod
+    def _get_login_attempt(email: str):
+        return cache.get(User._login_attempt_cache_key(email), 0)
+
+    @staticmethod
+    def _set_last_login_attempt(email: str, value: float):
+        return cache.set(User._last_login_attempt_cache_key(email), value)
+
+    @staticmethod
+    def _get_last_login_attempt(email: str):
+        return cache.get(User._last_login_attempt_cache_key(email), 0)
+
+    @staticmethod
     def _last_login_attempt_cache_key(email: str) -> str:
         return f'{email}_lga_time'
 

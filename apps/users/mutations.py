@@ -1,5 +1,6 @@
 from django.contrib.auth import login, logout
 from django.utils.translation import gettext
+from django.conf import settings
 import graphene
 
 from apps.users.schema import UserType
@@ -70,10 +71,11 @@ class Login(graphene.Mutation):
         except MissingCaptchaException:
             return Login(ok=False, captcha_required=True)
         if errors:
+            attempts = User._get_login_attempt(data['email'])
             return Login(
                 errors=errors,
                 ok=False,
-                captcha_required='captcha' in [err['field'] for err in errors]
+                captcha_required=attempts >= settings.MAX_LOGIN_ATTEMPTS
             )
         if user := serializer.validated_data.get('user'):
             login(info.context.request, user)
