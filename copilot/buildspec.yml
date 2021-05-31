@@ -14,8 +14,15 @@ phases:
       - chmod +x ./copilot-linux
   build:
     commands:
-      - echo "Run your tests"
-      # - make test
+      - echo "Running DB Migrations across provided envs"
+      - APP=helix-beta
+      - pipeline=$(cat $CODEBUILD_SRC_DIR/copilot/pipeline.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
+      - pl_envs=$(echo $pipeline | jq '.stages[].name' | sed 's/"//g')
+      - >
+        for pl_env in $pl_envs; do
+          DB_SECRET=$(./copilot-linux svc show -a $APP -n django --json | jq '.secrets[].valueFrom' | grep Aurora | sed 's/"//g')
+          ./copilot-linux task run --app $APP --env $pl_env --command "./copilot.init.sh" --env-vars COPILOT_ENVIRONMENT_NAME=migrate,HELIXDBCLUSTER_SECRET=$DB_SECRET;
+        done;
   post_build:
     commands:
       - ls -l
