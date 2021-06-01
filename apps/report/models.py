@@ -143,7 +143,7 @@ class Report(MetaInformationArchiveAbstractModel,
 
     @property
     def _ends_within_start_year(self):
-        return self.report.filter_figure_end_before.year == self.report.filter_figure_start_after.year
+        return self.filter_figure_end_before.year == self.filter_figure_start_after.year
 
     @property
     def is_legacy(self):
@@ -375,7 +375,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             id__in=self.report.report_figures.values('country')
         ).annotate(
             **Country._total_figure_disaggregation_subquery(
-                self.report_figures,
+                self.report.report_figures,
                 ignore_dates=True,
             )
         ).annotate(
@@ -409,7 +409,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             id__in=self.report.report_figures.values('country__region')
         ).annotate(
             **CountryRegion._total_figure_disaggregation_subquery(
-                self.report_figures,
+                self.report.report_figures,
                 ignore_dates=True,
             )
         ).annotate(
@@ -505,8 +505,8 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             data = data.annotate(
                 flow_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__gte=self.report.filter_figure_start_after - timedelta(year=1),
-                        end_date__lte=self.report.filter_figure_end_before - timedelta(year=1),
+                        start_date__gte=self.report.filter_figure_start_after - timedelta(days=365),
+                        end_date__lte=self.report.filter_figure_end_before - timedelta(days=365),
                         country=OuterRef('country'),
                         category=FigureCategory.flow_new_displacement_id(),
                         **global_filter
@@ -532,14 +532,14 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 ),
                 stock_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__lte=self.report.filter_figure_end_before - timedelta(year=1),
+                        start_date__lte=self.report.filter_figure_end_before - timedelta(days=365),
                         country=OuterRef('country'),
                         category=FigureCategory.stock_idp_id(),
                         **global_filter
                     ).filter(
                         Q(
                             end_date__isnull=False,
-                            end_date__gte=self.report.filter_figure_end_before - timedelta(year=1)
+                            end_date__gte=self.report.filter_figure_end_before - timedelta(days=365)
                         ) | Q(
                             end_date__isnull=True
                         ),
@@ -548,7 +548,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                     ).values('_total').annotate(total=F('_total')).values('total')
                 ),
                 # TODO: we will need to handle each year separately for idp figures to get the average
-                stock_historical_average=Value('...'),
+                stock_historical_average=Value('...', output_field=models.CharField()),
             )
         return {
             'headers': headers,
@@ -636,8 +636,8 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             data = data.annotate(
                 flow_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__gte=self.report.filter_figure_start_after - timedelta(year=1),
-                        end_date__lte=self.report.filter_figure_end_before - timedelta(year=1),
+                        start_date__gte=self.report.filter_figure_start_after - timedelta(days=365),
+                        end_date__lte=self.report.filter_figure_end_before - timedelta(days=365),
                         country__region=OuterRef('region'),
                         category=FigureCategory.flow_new_displacement_id(),
                         **global_filter
@@ -662,14 +662,14 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 ),
                 stock_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__lte=self.report.filter_figure_end_before - timedelta(year=1),
+                        start_date__lte=self.report.filter_figure_end_before - timedelta(days=365),
                         country__region=OuterRef('region'),
                         category=FigureCategory.stock_idp_id(),
                         **global_filter
                     ).filter(
                         Q(
                             end_date__isnull=False,
-                            end_date__gte=self.report.filter_figure_end_before - timedelta(year=1)
+                            end_date__gte=self.report.filter_figure_end_before - timedelta(days=365)
                         ) | Q(
                             end_date__isnull=True
                         ),
@@ -678,7 +678,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                     ).values('_total').annotate(total=F('_total')).values('total')
                 ),
                 # TODO: stock historical average must be pre-calculated for each year
-                stock_historical_average=Value('...'),
+                stock_historical_average=Value('...', output_field=models.CharField()),
             )
         return {
             'headers': headers,
@@ -1059,8 +1059,8 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             data = data.annotate(
                 flow_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__gte=self.report.filter_figure_start_after - timedelta(year=1),
-                        end_date__lte=self.report.filter_figure_end_before - timedelta(year=1),
+                        start_date__gte=self.report.filter_figure_start_after - timedelta(days=365),
+                        end_date__lte=self.report.filter_figure_end_before - timedelta(days=365),
                         country__region=OuterRef('country__region'),
                         category=FigureCategory.flow_new_displacement_id(),
                         **global_filter
@@ -1148,8 +1148,8 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             data = data.annotate(
                 flow_total_last_year=Subquery(
                     Figure.objects.filter(
-                        start_date__gte=self.report.filter_figure_start_after - timedelta(year=1),
-                        end_date__lte=self.report.filter_figure_end_before - timedelta(year=1),
+                        start_date__gte=self.report.filter_figure_start_after - timedelta(days=365),
+                        end_date__lte=self.report.filter_figure_end_before - timedelta(days=365),
                         country=OuterRef('country'),
                         category=FigureCategory.flow_new_displacement_id(),
                         **global_filter
