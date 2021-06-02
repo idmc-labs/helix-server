@@ -103,3 +103,11 @@ Example: https://github.com/aws-samples/startup-kit-templates/blob/master/templa
 
 Make sure that you are actually using the secret (if required) created under the same given app and environment.
 
+latest: digest: sha256:ca3c56266a261b278d5cab6c22e20b50e7c28e86c4cc596899d8ab568297043d size: 3054
+✔ Proposing infrastructure changes for stack task-helix-mock-server
+- Updating the infrastructure for stack task-helix-mock-server  [update complete]  [11.9s]
+  - An ECS task definition to run your container on ECS         [create complete]  [4.2s]
+✘ Failed to run helix-mock-server.
+
+✘ run task helix-mock-server: run task helix-mock-server: run task(s) copilot-helix-mock-server: AccessDeniedException: User: arn:aws:sts::209357624314:assumed-role/helix-beta-test-EnvManagerRole/1622561758678954280 is not authorized to perform: iam:PassRole on resource: arn:aws:iam::209357624314:role/helix-beta-one-off-task-role
+
