@@ -326,7 +326,6 @@ class TestRegister(HelixGraphQLTestCase):
         '''
         self.input = {
             'email': 'admin@email.com',
-            'username': 'test',
             'password': 'jjaakksjsj1j2',
             'captcha': 'admin123',
             'siteKey': 'admin123',
