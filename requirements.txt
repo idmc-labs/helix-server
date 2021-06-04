@@ -10,6 +10,7 @@ django-graphiql-debug-toolbar==0.1.4
 django-redis==4.12.1
 # required by djoser
 django-rest-framework==0.1.0
+django-ses==2.0.0
 django-storages==1.10.1
 djoser==2.0.3
 dramatiq[redis,watch]==1.10.0
