@@ -8,11 +8,17 @@ from django.conf import settings
 from django.utils.translation import gettext
 from django_enumfield.contrib.drf import EnumField
 from rest_framework import serializers
+from django.utils.encoding import force_bytes, force_text
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils import timezone
+from datetime import datetime, timedelta
+from django.utils.dateparse import parse_datetime
 
 from apps.users.enums import USER_ROLE
 from apps.users.utils import get_user_from_activation_token
 from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
 from utils.validations import validate_hcaptcha, MissingCaptchaException
+from .tasks import send_email
 
 User = get_user_model()
 
@@ -195,6 +201,39 @@ class ForgotPasswordSerializer(serializers.Serializer):
                 captcha=gettext('Invalid captcha')
             ))
 
+    def validate(self, attrs):
+        email = attrs.get("email", None)
+        # if user exists for this email
+        try:
+            user = User.objects.get(email=email)
+            # generate a password reset token with user's id and token created date
+            code = urlsafe_base64_encode(force_bytes(f"{user.pk},{timezone.now() + timedelta(hours=24)}"))
+            base_url = settings.FRONTEND_BASE_URL
+            # Get base url by profile type
+            button_url = f"{base_url}/reset-password/?password_reset_token={code}"
+            message = (
+                "We received a request to reset your Helix account password. "
+                "If you wish to do so, please click below. Otherwise, you may "
+                "safely disregard this email."
+            )
+        # if no user exists for this email
+        except User.DoesNotExist:
+            # explanatory email message
+            raise serializers.ValidationError(f'User with this email {email} does not exists.')
+        subject = "Reset password request for Helix"
+        context = {
+            "heading": "Reset Password",
+            "message": message,
+            "button_text": "Reset Password",
+        }
+        if button_url:
+            context["button_url"] = button_url
+        transaction.on_commit(lambda: send_email(
+                subject, message, [email], html_context=context
+        ))
+        return attrs
+
+
 class ReSetPasswordSerializer(serializers.Serializer):
     """
     Serializer for password reset endpoints.
@@ -203,3 +242,36 @@ class ReSetPasswordSerializer(serializers.Serializer):
     password_reset_token = serializers.CharField(write_only=True, required=True)
     new_password = serializers.CharField(write_only=True, required=True)
     new_password_confirmation = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, attrs):
+        password_reset_token = attrs.get("password_reset_token")
+        user_id, token_created_time = None, None
+        invali_token_message = 'Token is not correct, might be expired (24 hours).'
+        # Decode token and parse token created time
+        try:
+            decoded_data = force_text(urlsafe_base64_decode(password_reset_token)).split(',')
+            user_id, token_created_time = decoded_data[0], parse_datetime(decoded_data[1])
+        except (TypeError, ValueError, IndexError):
+            raise serializers.ValidationError(invali_token_message)
+        if user_id and token_created_time:
+            # Check if user exists
+            user = User.objects.filter(id=user_id)
+            # Check if token expired
+            if timezone.now() < token_created_time and not user.exists():
+                raise serializers.ValidationError(invali_token_message)
+            # Get user object
+            user = user.first()
+            # check new password and confirmation match
+            new_password = attrs.get("new_password")
+            new_password_confirmation = attrs.get(
+                "new_password_confirmation"
+            )
+            if not new_password == new_password_confirmation:
+                raise serializers.ValidationError('Password confirmation mismatched.')
+            # Activate user (in case user just registered, not activated and forgets his/her password)
+            user.is_active = True
+            # set_password also hashes the password that the user will get
+            user.set_password(new_password)
+            user.save()
+            return attrs
+        raise serializers.ValidationError(invali_token_message)
