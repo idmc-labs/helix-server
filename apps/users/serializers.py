@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 
 from django.contrib.auth import get_user_model, authenticate
@@ -11,7 +11,6 @@ from rest_framework import serializers
 from django.utils.encoding import force_bytes, force_text
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils import timezone
-from datetime import datetime, timedelta
 from django.utils.dateparse import parse_datetime
 
 from apps.users.enums import USER_ROLE

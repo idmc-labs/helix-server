@@ -2,7 +2,7 @@ import dramatiq
 from helix.settings import QueuePriority
 from django.core.mail import send_mail
 from django.template import loader
-from django.template.loader import render_to_string
+
 
 @dramatiq.actor(queue_name=QueuePriority.DEFAULT.value, max_retries=3, time_limit=2000)
 def send_email(subject, message, recipient_list, html_context=None):
