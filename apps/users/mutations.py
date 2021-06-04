@@ -239,7 +239,69 @@ class ForgetPassword(graphene.Mutation):
                 subject, message, [email], html_context=context
         ))
         return ForgetPassword(errors=None, ok=True)
-        
+
+
+ResetPasswordType = generate_input_type_for_serializer(
+    'ResetPasswordType',
+    ReSetPasswordSerializer
+)
+
+
+class ResetPassword(graphene.Mutation):
+    class Arguments:
+        data = ResetPasswordType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, data):
+        serializer = ReSetPasswordSerializer(data=data)
+        if errors := mutation_is_not_valid(serializer):
+            return ResetPassword(errors=errors, ok=False)
+        password_reset_token = serializer.validated_data.get("password_reset_token")
+        user_id, token_created_time = None, None
+        # Decode token and parse token created time
+        try:
+            decoded_data = force_text(urlsafe_base64_decode(password_reset_token)).split(',')
+            user_id, token_created_time = decoded_data[0], parse_datetime(decoded_data[1])
+        except (TypeError, ValueError, IndexError):
+            return ResetPassword(
+                errors=[
+                    dict(field='nonFieldErrors', messages=gettext('Token is not correct, might be expired (24 hours).'))
+                ]
+            )
+        if user_id and token_created_time:
+            # Check if token expired
+            if timezone.now() < token_created_time:
+                # Check if user exists
+                user = User.objects.filter(id=user_id)
+                if not user.exists():
+                    return ResetPassword(
+                        errors=[
+                            dict(field='nonFieldErrors', messages=gettext('Token is not correct, might be expired (24 hours).'))
+                        ]
+                    )
+                # Get user object
+                user = user.first()
+                # check new password and confirmation match
+                new_password = serializer.validated_data.get("new_password")
+                new_password_confirmation = serializer.validated_data.get(
+                    "new_password_confirmation"
+                )
+                if not new_password == new_password_confirmation:
+                    return ResetPassword(
+                        errors=[
+                            dict(field='nonFieldErrors', messages=gettext('New password and confirmation not matching.'))
+                        ]
+                    )
+                # Activate user (in case user just registered, not activated and forgets his/her password)
+                user.is_active = True
+                # set_password also hashes the password that the user will get
+                user.set_password(serializer.validated_data.get("new_password"))
+                user.save()
+        return ResetPassword(errors=None, ok=True)
+
 
 class Mutation(object):
     login = Login.Field()
