@@ -228,7 +228,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
         if button_url:
             context["button_url"] = button_url
         transaction.on_commit(lambda: send_email(
-                subject, message, [email], html_context=context
+            subject, message, [email], html_context=context
         ))
         return attrs
 
