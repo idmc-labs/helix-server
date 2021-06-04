@@ -110,6 +110,20 @@ class CountryRegion(models.Model):
         return self.name
 
 
+class MonitoringSubRegion(models.Model):
+    name = models.CharField(verbose_name=_('Name'), max_length=256)
+
+    def __str__(self):
+        return self.name
+
+
+class CountrySubRegion(models.Model):
+    name = models.CharField(verbose_name=_('Name'), max_length=256)
+
+    def __str__(self):
+        return self.name
+
+
 class Country(models.Model):
     GEOJSON_PATH = 'geojsons'
     # NOTE: following are the figure disaggregation fields
@@ -123,7 +137,10 @@ class Country(models.Model):
                                            on_delete=models.SET_NULL)
     region = models.ForeignKey('CountryRegion', verbose_name=_('Region'),
                                related_name='countries', on_delete=models.PROTECT)
-    sub_region = models.CharField(verbose_name=_('Sub Region'), max_length=256, null=True)
+    sub_region = models.ForeignKey('CountrySubRegion', verbose_name=_('Sub Region'), null=True,
+                                   related_name='countries', on_delete=models.PROTECT)
+    monitoring_sub_region = models.ForeignKey('MonitoringSubRegion', verbose_name=_('Monitoring Sub-Region'), null=True,
+                                              related_name='countries', on_delete=models.PROTECT)
 
     iso2 = models.CharField(verbose_name=_('ISO2'), max_length=4,
                             null=True, blank=True)
