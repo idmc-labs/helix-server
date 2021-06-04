@@ -180,3 +180,26 @@ class UserSerializer(UpdateSerializerMixin, serializers.ModelSerializer):
         if role is not None:
             instance.set_role(role)
         return instance
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    """
+    Serializer for password forgot endpoint.
+    """
+    captcha = serializers.CharField(required=True, write_only=True)
+    email = serializers.EmailField(write_only=True, required=True)
+
+    def validate_captcha(self, captcha):
+        if not validate_hcaptcha(captcha, self.initial_data.get('site_key', '')):
+            raise serializers.ValidationError(dict(
+                captcha=gettext('Invalid captcha')
+            ))
+
+class ReSetPasswordSerializer(serializers.Serializer):
+    """
+    Serializer for password reset endpoints.
+    """
+
+    password_reset_token = serializers.CharField(write_only=True, required=True)
+    new_password = serializers.CharField(write_only=True, required=True)
+    new_password_confirmation = serializers.CharField(write_only=True, required=True)
