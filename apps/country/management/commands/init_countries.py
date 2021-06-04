@@ -13,7 +13,7 @@ class Command(BaseCommand):
     help = 'Initialize Country'
 
     def handle(self, *args, **options):
-        print('Obsolete')
+        print('Obsolete. Load directly from migrations...')
         return
         bbox_url = 'https://gist.githubusercontent.com/botzill/fc2a1581873200739f6dc5c1daf85a7d/raw/' \
                    '002372a57a40f299a463122c039faf9f927b13fe/countries_bbox.json'
