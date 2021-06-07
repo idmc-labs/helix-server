@@ -248,7 +248,7 @@ else:
     EMAIL_BACKEND = 'django_ses.SESBackend'
     AWS_SES_REGION_NAME = os.environ.get("AWS_SES_REGION_NAME")
     AWS_SES_REGION_ENDPOINT = os.environ.get("AWS_SES_REGION_ENDPOINT")
-    DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", 'contact@idmcdb.org')
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

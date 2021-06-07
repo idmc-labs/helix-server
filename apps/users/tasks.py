@@ -1,5 +1,5 @@
 import dramatiq
-from helix.settings import QueuePriority
+from helix.settings import QueuePriority, DEFAULT_FROM_EMAIL
 from django.core.mail import send_mail
 from django.template import loader
 
@@ -11,7 +11,7 @@ def send_email(subject, message, recipient_list, html_context=None):
     email_data = {
         "subject": subject,
         "message": message,
-        "from_email": "Helix <contact@helix.com>",
+        "from_email": f"Helix {DEFAULT_FROM_EMAIL}",
         "recipient_list": recipient_list,
         "fail_silently": False,
     }
