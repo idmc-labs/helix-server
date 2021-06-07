@@ -17,8 +17,8 @@ from apps.users.utils import (
     encode_reset_password_token,
     decode_reset_password_token
 )
-from django.utils.dateparse import parse_datetime
 from django.utils import timezone
+
 
 class TestLogin(HelixGraphQLTestCase):
     def setUp(self) -> None:
