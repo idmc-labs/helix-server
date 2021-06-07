@@ -31,7 +31,7 @@ class TestCountrySchema(HelixGraphQLTestCase):
         self.contact2 = ContactFactory.create(country=self.country2)
         self.contact2.countries_of_operation.set([self.country1, self.country3])
 
-        self.force_login(create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name))
+        self.force_login(create_user_with_role(USER_ROLE.MONITORING_EXPERT.name))
 
     def test_fetch_contacts_and_operating_contacts(self):
         response = self.query(self.country_q % self.country1.id)

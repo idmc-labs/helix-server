@@ -8,9 +8,7 @@ from utils.filters import AllowInitialFilterSetMixin, StringListFilter
 
 
 class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
-    role = django_filters.CharFilter(field_name='groups__name',
-                                     lookup_expr='iexact',
-                                     distinct=True)
+    # role = django_filters.CharFilter(...)  # TODO portfolio
     roleIn = StringListFilter(method='filter_role_in')
     full_name = django_filters.CharFilter(method='filter_full_name')
     include_inactive = django_filters.BooleanFilter(method='filter_include_inactive',
@@ -22,14 +20,8 @@ class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
         fields = ['email', 'is_active']
 
     def filter_role_in(self, queryset, name, value):
-        if not value:
-            return queryset
-        # NOTE: role names (permission group names) are always upper cased
-        # server/apps/users/roles.py:6
-        value = [each.upper() for each in value]
-        return queryset.filter(
-            groups__name__in=value
-        ).distinct()
+        # TODO portfolio
+        ...
 
     def filter_full_name(self, queryset, name, value):
         if not value:

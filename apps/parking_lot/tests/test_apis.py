@@ -26,7 +26,7 @@ class TestCreateParkedItem(HelixGraphQLTestCase):
         }
         '''
 
-        self.assigned_to = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.assigned_to = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.input = dict(
             assignedTo=str(self.assigned_to.id),
             status='TO_BE_REVIEWED',
@@ -35,7 +35,7 @@ class TestCreateParkedItem(HelixGraphQLTestCase):
         )
 
     def test_valid_parking_lot_creation(self) -> None:
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -53,7 +53,7 @@ class TestCreateParkedItem(HelixGraphQLTestCase):
 class TestUpdateParkedItem(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.country = CountryFactory.create()
-        self.reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.parking_lot = ParkingLotFactory.create(created_by=self.reviewer)
         self.mutation = '''
         mutation UpdateParkedItem($input: ParkedItemUpdateInputType!) {
@@ -103,7 +103,7 @@ class ParkedItemAPITestCase(HelixAPITestCase):
 
     def test_post_parked_item(self):
         self.country = CountryFactory.create(iso3='NPL')
-        self.assigned_to = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.assigned_to = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         data = {
             "title": "test_parking",
             "url": "http://google.com",
@@ -118,8 +118,8 @@ class ParkedItemAPITestCase(HelixAPITestCase):
         old_count = ParkedItem.objects.count()
         self.country1 = CountryFactory.create(iso3='NPL')
         self.country2 = CountryFactory.create(iso3='USA')
-        self.assigned_to1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        self.assigned_to2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.assigned_to1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.assigned_to2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         data = [
             {
                 "title": "test_parking",
@@ -142,7 +142,7 @@ class ParkedItemAPITestCase(HelixAPITestCase):
     def test_validate_iso3_for_country(self):
         self.country1 = CountryFactory.create(iso3='npl')
         self.country2 = CountryFactory.create(iso3='ind')
-        self.assigned_to1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.assigned_to1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         data = {
             "title": "test_parking",
             "url": "http://google.com",

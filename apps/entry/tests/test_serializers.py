@@ -32,8 +32,8 @@ from utils.tests import HelixTestCase, create_user_with_role
 
 class TestEntrySerializer(HelixTestCase):
     def setUp(self) -> None:
-        r1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        r1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.factory = RequestFactory()
         self.country = CountryFactory.create(country_code=123, iso2='ak')
         self.event = EventFactory.create()
@@ -55,7 +55,8 @@ class TestEntrySerializer(HelixTestCase):
         }
         self.request = self.factory.get('/graphql')
         self.request.user = self.user = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+            USER_ROLE.MONITORING_EXPERT.name
+        )
 
     def test_create_entry_requires_document_or_url(self):
         self.data['url'] = None
@@ -109,8 +110,8 @@ class TestEntrySerializer(HelixTestCase):
         self.assertIsNotNone(instance.modified_at)
 
     def test_entry_creation_create_entry_reviewers(self):
-        reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.data['reviewers'] = [reviewer1.id, reviewer2.id]
         serializer = EntryCreateSerializer(data=self.data,
                                            context={'request': self.request})
@@ -124,15 +125,15 @@ class TestEntrySerializer(HelixTestCase):
         )
 
     def test_entry_update_entry_reviewers(self):
-        x = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-        y = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-        z = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        x = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        y = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        z = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         entry = EntryFactory.create()
         entry.reviewers.set([x, y, z])
 
-        reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-        reviewer3 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        reviewer3 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         entry = EntryFactory.create()
         entry.reviewers.set([reviewer1, reviewer2, reviewer3])
         self.assertEqual(
@@ -359,7 +360,7 @@ class TestEntrySerializer(HelixTestCase):
 
 class TestFigureSerializer(HelixTestCase):
     def setUp(self):
-        self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.factory = RequestFactory()
         country1 = CountryFactory.create(country_code=123, iso2='lo')
         country2 = CountryFactory.create(name='Nepal', iso2='bo')
@@ -386,7 +387,7 @@ class TestFigureSerializer(HelixTestCase):
             "country": country1.id,
         }
         self.request = self.factory.get('/graphql')
-        self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
 
     def test_displacement_occur_only_allowed_for_specific_terms(self):
         term = FigureTerm.objects.first()

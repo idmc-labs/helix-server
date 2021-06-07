@@ -348,10 +348,9 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
         many=True,
         queryset=User.objects.filter(
             groups__name__in=[
-                USER_ROLE.IT_HEAD.name,
                 USER_ROLE.ADMIN.name,
-                USER_ROLE.MONITORING_EXPERT_REVIEWER.name,
-                USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+                USER_ROLE.MONITORING_EXPERT.name,
+                USER_ROLE.REGIONAL_COORDINATOR.name,
             ]
         ),
         required=False

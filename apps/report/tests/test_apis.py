@@ -50,7 +50,7 @@ class TestCreateReport(HelixGraphQLTestCase):
                          len(self.input['filterFigureCountries']))
 
     def test_invalid_report_creation_by_guest(self) -> None:
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -126,7 +126,7 @@ class TestReportSignOff(HelixGraphQLTestCase):
     def test_valid_report_generation_for_sign_off(self):
         assert self.report.is_approved is None
         assert self.report.is_signed_off is False
-        user = create_user_with_role(USER_ROLE.IT_HEAD.name)
+        user = create_user_with_role(USER_ROLE.ADMIN.name)
         self.force_login(user)
         response = self.query(
             self.generate_mutation,
@@ -154,7 +154,7 @@ class TestReportSignOff(HelixGraphQLTestCase):
         self.assertIn('report', [item['field'] for item in content['data']['startReportGeneration']['errors']])
 
     def test_valid_report_sign_off_and_retrieval(self):
-        user = create_user_with_role(USER_ROLE.IT_HEAD.name)
+        user = create_user_with_role(USER_ROLE.ADMIN.name)
         self.force_login(user)
         response = self.query(
             self.mutation,
@@ -188,7 +188,7 @@ class TestReportSignOff(HelixGraphQLTestCase):
         self.assertEqual(len(content['data']['signOffReport']['result']['generations']['results']), 1)
 
     def test_invalid_report_signoff(self):
-        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor)
         response = self.query(
             self.mutation,
@@ -243,7 +243,7 @@ class TestReportApprove(HelixGraphQLTestCase):
         }
 
     def test_valid_report_approval(self):
-        user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.report.approvals.count() == 0
         self.force_login(user)
         response = self.query(
@@ -305,7 +305,7 @@ class TestReportComment(HelixGraphQLTestCase):
         )
 
     def test_valid_commenting(self):
-        user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(user)
         response = self.query(
             self.mutation,
@@ -318,7 +318,7 @@ class TestReportComment(HelixGraphQLTestCase):
                         user.email)
 
     def test_valid_comment_update(self):
-        user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         comment = ReportCommentFactory.create(
             created_by=user
         )
@@ -338,7 +338,7 @@ class TestReportComment(HelixGraphQLTestCase):
                         user.email)
 
         # different user
-        user2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        user2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(user2)
         response = self.query(
             self.update_mutation,

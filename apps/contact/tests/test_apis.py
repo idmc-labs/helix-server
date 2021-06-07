@@ -46,7 +46,7 @@ class TestCreateContact(HelixGraphQLTestCase):
         }
 
     def test_valid_contact_creation(self) -> None:
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -100,7 +100,7 @@ class TestUpdateContact(HelixGraphQLTestCase):
         }
 
     def test_valid_contact_update(self) -> None:
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -145,7 +145,7 @@ class TestDeleteContact(HelixGraphQLTestCase):
         }
 
     def test_valid_contact_delete(self) -> None:
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -192,7 +192,7 @@ class TestCommunication(HelixGraphQLTestCase):
                       "content": "Content", "medium": str(self.medium.id)}
 
     def test_valid_communication_creation(self):
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,

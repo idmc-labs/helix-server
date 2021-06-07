@@ -30,7 +30,7 @@ class TestCreateContextualUpdate(HelixGraphQLTestCase):
         }
 
     def test_valid_creation(self) -> None:
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
