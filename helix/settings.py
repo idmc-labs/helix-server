@@ -372,6 +372,8 @@ GRAPHENE_NODES_WHITELIST = (
     'activate',
     'register',
     'me',
+    'forgetPassword',
+    'resetPassword',
     # __ double underscore nodes
     '__schema',
     '__type',
