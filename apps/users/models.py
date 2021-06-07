@@ -1,10 +1,13 @@
+from __future__ import annotations
 import logging
 
 from django.core.cache import cache
 from django.db import models
+from django.db.models.query import QuerySet
 from django.contrib.auth.models import AbstractUser, Group
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
+
 
 from .roles import PERMISSIONS, USER_ROLE
 
@@ -98,9 +101,77 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         self.full_name = self.get_full_name()
-        super().save(*args, **kwargs)
-        group_count = self.groups.count()
-        if group_count == 0:  # Set default group/role is guest
-            self.set_role(USER_ROLE.GUEST.value)
-        elif group_count > 1:  # Multiple groups can exist, but not allowed
-            self.groups.set([self.groups.first()])
+        instance = super().save(*args, **kwargs)
+        return instance
+
+
+class Portfolio(models.Model):
+    user = models.ForeignKey(
+        'User', verbose_name=_('User'),
+        related_name='portfolios', on_delete=models.CASCADE
+    )
+    role = enum.EnumField(
+        USER_ROLE,
+        verbose_name=_('Role'),
+        blank=False
+    )
+    monitoring_sub_region = models.ForeignKey(
+        'country.MonitoringSubRegion', verbose_name=_('Monitoring Sub-region'),
+        related_name='portfolios', on_delete=models.CASCADE,
+        null=True, blank=True
+    )
+
+    objects = models.Manager()
+
+    @classmethod
+    def get_coordinators(cls) -> QuerySet:
+        return cls.objects.filter(
+            role=USER_ROLE.REGIONAL_COORDINATOR,
+        )
+
+    @classmethod
+    def get_coordinator(cls, ms_region: int) -> Portfolio:
+        return cls.get_coordinators.get(
+            monitoring_sub_region=ms_region
+        )
+
+    @classmethod
+    def get_highest_role(cls, user: User) -> USER_ROLE:
+        # region based role is not required
+        portfolios = user.portfolios.all()
+
+        if USER_ROLE.ADMIN in portfolios:
+            return USER_ROLE.ADMIN
+        if USER_ROLE.REGIONAL_COORDINATOR in portfolios:
+            return USER_ROLE.REGIONAL_COORDINATOR
+        if USER_ROLE.MONITORING_EXPERT in portfolios:
+            return USER_ROLE.MONITORING_EXPERT
+        return USER_ROLE.GUEST
+
+    @property
+    def permissions(self) -> list[dict]:
+        return [
+            {'action': k, 'entities': list(v)} for k, v in
+            PERMISSIONS[self.role].items()
+        ]
+
+    def set_role(self, role: USER_ROLE) -> None:
+        try:
+            group = Group.objects.get(name=USER_ROLE.get(role).name)
+            self.user.groups.add([group])
+        except AttributeError:
+            logger.warning(f'User role with {role=} does not exist.')
+        except Group.DoesNotExist:
+            logger.warning(f'Group(UserRole) with name {USER_ROLE[role].name} does not exist.')
+
+    def _clean_fields(self) -> None:
+        # following roles are not allowed along with monitoring region
+        if self.role in [USER_ROLE.ADMIN, USER_ROLE.GUEST]:
+            self.monitoring_sub_region = None
+
+    def save(self, *args, **kwargs):
+        self._clean_fields()
+        return super().save(*args, **kwargs)
+
+    class Meta:
+        unique_together = (('user', 'role', 'monitoring_sub_region'),)
