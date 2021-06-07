@@ -26,7 +26,7 @@ class TestReviewCommentSerializer(HelixTestCase):
         self.factory = RequestFactory()
         self.request = self.factory.get('/graphql')
         self.request.user = self.user = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT_EDITOR.name
+            USER_ROLE.MONITORING_EXPERT.name
         )
         self.entry.reviewers.set([self.user])
 

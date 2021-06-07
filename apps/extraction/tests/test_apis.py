@@ -75,7 +75,7 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         '''
 
     def test_valid_extract_create_and_filter(self):
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
         _input = dict(
             name='LOl',
@@ -96,8 +96,8 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         )
 
     def test_extraction_query_list_filtered_by_user(self):
-        reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         ExtractionQuery.objects.create(name='one', created_by=reviewer1)
         ExtractionQuery.objects.create(name='one', created_by=reviewer2)
         self.force_login(reviewer1)

@@ -22,7 +22,7 @@ from utils.tests import HelixTestCase, create_user_with_role
 
 class TestFigureModel(HelixTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.event = EventFactory.create(start_date=(timezone.now() + timedelta(days=10)).strftime('%Y-%m-%d'),
                                          end_date=(timezone.now() + timedelta(days=25)).strftime('%Y-%m-%d'))
@@ -31,13 +31,13 @@ class TestFigureModel(HelixTestCase):
         self.figure = FigureFactory.create(entry=self.entry, created_by=self.editor, category=self.figure_cat)
 
     def test_figure_can_be_updated_by(self):
-        editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.assertFalse(self.figure.can_be_updated_by(editor2))
         self.assertTrue(self.figure.can_be_updated_by(self.editor))
         self.assertTrue(self.figure.can_be_updated_by(self.admin))
 
     def test_figure_can_be_created_by(self):
-        editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.assertFalse(self.figure.can_be_created_by(editor2, self.entry))
         self.assertTrue(self.figure.can_be_created_by(self.editor, self.entry))
 
@@ -185,14 +185,14 @@ class TestFigureModel(HelixTestCase):
 
 class TestEntryModel(HelixTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.entry = EntryFactory.create(created_by=self.editor)
 
     def test_entry_can_be_updated_by(self):
-        editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.assertFalse(self.entry.can_be_updated_by(editor2))
-        reviwer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        self.assertFalse(self.entry.can_be_updated_by(reviwer))
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.assertFalse(self.entry.can_be_updated_by(reviewer))
         admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.assertTrue(self.entry.can_be_updated_by(admin))
 
@@ -214,7 +214,7 @@ class TestEntryModel(HelixTestCase):
 
     def test_entry_reviewer_status_auto_updates_on_review_save(self):
         e = EntryFactory.create(created_by=self.editor)
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         e.reviewers.add(reviewer)
         assert e.reviewing.count() == 1
         assert e.reviewing.first().status == EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
@@ -248,8 +248,8 @@ class TestEntryModel(HelixTestCase):
 
     def test_entry_review_status_change_on_reviewer_status_change(self):
         e = EntryFactory.create(created_by=self.editor)
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         assert e.review_status is None
         e.reviewers.add(reviewer)
         e.reviewers.add(reviewer2)

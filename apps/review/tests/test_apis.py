@@ -5,7 +5,7 @@ from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 class TestUpdateReviewComment(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.instance = ReviewCommentFactory.create(created_by=self.creator)
         self.mutation = '''
         mutation($input: CommentUpdateInputType!){
@@ -38,7 +38,7 @@ class TestUpdateReviewComment(HelixGraphQLTestCase):
                          self.input['body'])
 
     def test_invalid_review_comment_update_by_non_creator(self) -> None:
-        different_user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        different_user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(different_user)
         response = self.query(
             self.mutation,
@@ -54,7 +54,7 @@ class TestUpdateReviewComment(HelixGraphQLTestCase):
 
 class TestDeleteReviewComment(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.instance = ReviewCommentFactory.create(created_by=self.creator)
         self.mutation = '''
         mutation DeleteReviewComment($id: ID!) {
@@ -87,7 +87,7 @@ class TestDeleteReviewComment(HelixGraphQLTestCase):
                          self.variables['id'])
 
     def test_invalid_review_comment_delete_by_non_creator(self) -> None:
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,

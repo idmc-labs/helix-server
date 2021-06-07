@@ -29,23 +29,9 @@ class User(AbstractUser):
     REQUIRED_FIELDS = ['username']
 
     @classmethod
-    def can_update_user(cls, user_id: int, authenticated_user: 'User') -> bool:
+    def can_update_user(cls, user_id: int, authenticated_user: User) -> bool:
         return authenticated_user.has_perm('users.change_user') or\
             user_id == authenticated_user.id
-
-    def set_role(self, role: int) -> None:
-        try:
-            group = Group.objects.get(name=USER_ROLE.get(role).name)
-            self.groups.set([group])
-        except AttributeError:
-            logger.warning(f'User role with {role=} does not exist.')
-        except Group.DoesNotExist:
-            logger.warning(f'Group(UserRole) with name {USER_ROLE[role].name} does not exist.')
-
-    def check_role(self, role) -> bool:
-        if not isinstance(role, enum.Enum):
-            role = USER_ROLE.get(role)
-        return self.role == role
 
     @staticmethod
     def _reset_login_cache(email: str):
@@ -53,6 +39,8 @@ class User(AbstractUser):
             User._last_login_attempt_cache_key(email),
             User._login_attempt_cache_key(email),
         ])
+
+    # login attempts related stuff
 
     @staticmethod
     def _set_login_attempt(email: str, value: int):
@@ -78,18 +66,17 @@ class User(AbstractUser):
     def _login_attempt_cache_key(email: str) -> str:
         return f'{email}_lga'
 
-    @property
-    def role(self):
-        if group := self.groups.first():
-            return USER_ROLE[group.name]
-        return None
+    # end login attempts related stuff
 
-    @property
-    def permissions(self):
-        if self.role is not None and self.role in PERMISSIONS:
-            return [{'action': k, 'entities': list(v)} for k, v in
-                    PERMISSIONS[self.role].items()]
-        return []
+    def set_highest_role(self) -> None:
+        role = Portfolio.get_highest_role(self)
+        try:
+            group = Group.objects.get(name=role.name)
+            self.groups.set([group])
+        except AttributeError:
+            logger.warning(f'User role with {role=} does not exist.')
+        except Group.DoesNotExist:
+            logger.warning(f'Group(UserRole) with name {USER_ROLE[role].name} does not exist.')
 
     def get_full_name(self):
         return ' '.join([

@@ -11,16 +11,16 @@ from utils.factories import (
 class TestEntryFilter(HelixTestCase):
     def test_filter_by_review_status(self):
         r1 = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+            USER_ROLE.MONITORING_EXPERT.name,
         )
         r2 = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+            USER_ROLE.MONITORING_EXPERT.name,
         )
         entry1 = EntryFactory.create()
         entry1.reviewers.set([r1, r2])
 
         r3 = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+            USER_ROLE.MONITORING_EXPERT.name,
         )
         entry2 = EntryFactory.create()
         entry2.reviewers.set([r1, r3])

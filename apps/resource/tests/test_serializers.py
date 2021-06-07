@@ -10,7 +10,7 @@ from utils.tests import HelixTestCase, create_user_with_role
 class TestResourceSerializer(HelixTestCase):
     def setUp(self):
         self.user = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT_EDITOR.name
+            USER_ROLE.MONITORING_EXPERT.name
         )
         self.group = ResourceGroupFactory.create(created_by=self.user)
         self.countries = CountryFactory.create_batch(2)

@@ -36,7 +36,7 @@ class TestCreateCrisis(HelixGraphQLTestCase):
         }
 
     def test_valid_crisis_creation(self) -> None:
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -65,7 +65,7 @@ class TestCreateCrisis(HelixGraphQLTestCase):
 
 class TestCrisisUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.crisis = CrisisFactory.create(
             created_by=self.editor
         )
@@ -101,7 +101,7 @@ class TestCrisisUpdate(HelixGraphQLTestCase):
                          self.input['name'])
 
     def test_valid_update_crisis_by_different_user(self):
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -127,7 +127,7 @@ class TestCrisisUpdate(HelixGraphQLTestCase):
 
 class TestCrisisDelete(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.crisis = CrisisFactory.create(
             created_by=self.editor
         )
@@ -159,7 +159,7 @@ class TestCrisisDelete(HelixGraphQLTestCase):
         self.assertIsNotNone(content['data']['deleteCrisis']['result']['name'])
 
     def test_valid_delete_crisis_by_different_monitoring_expert(self):
-        editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor2)
         response = self.query(
             self.mutation,
@@ -207,10 +207,10 @@ class TestCrisisList(HelixGraphQLTestCase):
             crisis=crisis
         )
         r1 = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+            USER_ROLE.MONITORING_EXPERT.name,
         )
         r2 = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+            USER_ROLE.MONITORING_EXPERT.name,
         )
         entry1 = EntryFactory.create(
             event=event,
@@ -221,7 +221,7 @@ class TestCrisisList(HelixGraphQLTestCase):
             crisis=crisis
         )
         r3 = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+            USER_ROLE.MONITORING_EXPERT.name,
         )
         entry2 = EntryFactory.create(
             event=event2,

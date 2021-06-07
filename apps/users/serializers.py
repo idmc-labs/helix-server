@@ -171,14 +171,14 @@ class PortfolioSerializer(serializers.ModelSerializer):
 
 
 class UserSerializer(UpdateSerializerMixin, serializers.ModelSerializer):
-    role = EnumField(USER_ROLE, required=False)
+    portfolios = PortfolioSerializer(many=True)
     id = IntegerIDField(required=True)
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'username', 'is_active', 'role']
+        fields = ['id', 'email', 'first_name', 'last_name', 'username', 'is_active', 'portfolios']
 
-    def validate_role(self, role):
+    def validate_portfolios(self, role):
         if not self.context['request'].user.has_perm('users.change_user'):
             raise serializers.ValidationError(gettext('You are not allowed to change the role.'))
         if self.instance and self.context['request'].user == self.instance and not \
@@ -197,8 +197,11 @@ class UserSerializer(UpdateSerializerMixin, serializers.ModelSerializer):
         return attrs
 
     def update(self, instance, validated_data):
-        role = validated_data.pop('role', None)
         instance = super().update(instance, validated_data)
-        if role is not None:
-            instance.set_role(role)
+        portfolios = validated_data.get('portfolios', [])
+        if portfolios:
+            Portfolio.objects.bulk_create([
+                Portfolio(**item, user=instance) for item in portfolios
+            ])
+
         return instance
