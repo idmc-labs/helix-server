@@ -13,7 +13,12 @@ from utils.tests import (
     create_user_with_role,
     HelixAPITestCase
 )
-
+from apps.users.utils import (
+    encode_reset_password_token,
+    decode_reset_password_token
+)
+from django.utils.dateparse import parse_datetime
+from django.utils import timezone
 
 class TestLogin(HelixGraphQLTestCase):
     def setUp(self) -> None:
@@ -665,3 +670,105 @@ class TestAPIMe(HelixAPITestCase):
         response = self.client.get(url)
         assert response.status_code == 200
         assert len(response.data) == count + old_count
+
+
+class TestForgetResetPassword(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.user = self.create_user()
+        self.forget_password_query = '''
+            mutation MyMutation (
+                $email: String!,
+                $captcha: String!,
+                $siteKey: String!
+            ){
+                forgetPassword(data: {
+                    email: $email,
+                    captcha: $captcha,
+                    siteKey: $siteKey
+                }) {
+                    ok
+                    errors
+                }
+            }
+        '''
+
+        self.reset_password_query = '''
+            mutation MyMutation (
+                $passwordResetToken: String!,
+                $newPassword: String!,
+                $newPasswordConfirmation: String!
+            ){
+                resetPassword(data: {
+                        passwordResetToken: $passwordResetToken,
+                        newPassword: $newPassword,
+                        newPasswordConfirmation: $newPasswordConfirmation
+                    }) {
+                    ok
+                    errors
+                }
+            }
+        '''
+
+    @mock.patch('apps.users.serializers.validate_hcaptcha')
+    def test_forget_password_should_return_success_response(self, validate):
+        response = self.query(
+            self.forget_password_query,
+            variables={
+            'email': self.user.email,
+            'captcha': 'aaaaaaaa',
+            'siteKey': 'bbbbbbbb',
+            },
+        )
+        self.assertResponseNoErrors(response)
+
+    def test_user_can_reset_password(self):
+        # Create password reset token
+        token = encode_reset_password_token(self.user.id)
+        response = self.query(
+            self.reset_password_query,
+            variables={
+            'passwordResetToken': token,
+            'newPassword': '12343@#S#',
+            'newPasswordConfirmation': '12343@#S#',
+            },
+        )
+        self.assertResponseNoErrors(response)
+
+    def test_user_user_should_provide_correct_password_confirmation(self):
+        # Create password reset token
+        token = encode_reset_password_token(self.user.id)
+        response = self.query(
+            self.reset_password_query,
+            variables={
+            'passwordResetToken': token,
+            'newPassword': '12343@#S#',
+            'newPasswordConfirmation': '123sss43@#S#',
+            },
+        )
+        content = json.loads(response.content)
+        self.assertFalse(content['data']['resetPassword']['ok'])
+        message = content['data']['resetPassword']['errors'][0]['messages']
+        self.assertEqual(message, 'Password confirmation mismatched.')
+
+    def test_should_not_accept_invalid_token(self):
+        token = 'MSwyMDIxLTA2LTA0IDE0OjM3O342jI1Ljg5NDQ4NSswMDowMA'
+        response = self.query(
+            self.reset_password_query,
+            variables={
+            'passwordResetToken': token,
+            'newPassword': '12343@#S#',
+            'newPasswordConfirmation': '12343@#S#',
+            },
+        )
+        content = json.loads(response.content)
+        self.assertFalse(content['data']['resetPassword']['ok'])
+        message = content['data']['resetPassword']['errors'][0]['messages']
+        self.assertEqual(message, 'Invalid token supplied')
+
+    def test_should_expire_after_24_hours(self):
+        token = encode_reset_password_token(self.user.id)
+        decoded_token = decode_reset_password_token(token)
+        expiry_period = decoded_token['token_expiry_time'] - timezone.now()
+        # 24 hours = 86400
+        expiry_period_in_hour = round(expiry_period.seconds/(60 * 60))
+        self.assertAlmostEqual(expiry_period_in_hour, 24)
