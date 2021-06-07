@@ -12,6 +12,7 @@ from django.utils import timezone
 from datetime import timedelta
 from django.utils.dateparse import parse_datetime
 from rest_framework import serializers
+from django.utils.translation import gettext
 
 
 User = get_user_model()
@@ -45,4 +46,4 @@ def decode_reset_password_token(password_reset_token):
         decoded_data = force_text(urlsafe_base64_decode(password_reset_token)).split(',')
         return {'user_id': decoded_data[0], 'token_expiry_time': parse_datetime(decoded_data[1])}
     except (TypeError, ValueError, IndexError):
-        raise serializers.ValidationError('Invalid token supplied')
+        raise serializers.ValidationError(gettext('Invalid token supplied'))

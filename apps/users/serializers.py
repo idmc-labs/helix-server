@@ -207,7 +207,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
             base_url = settings.FRONTEND_BASE_URL
             # Get base url by profile type
             button_url = f"{base_url}/reset-password/?password_reset_token={code}"
-            message = (
+            message = gettext(
                 "We received a request to reset your Helix account password. "
                 "If you wish to do so, please click below. Otherwise, you may "
                 "safely disregard this email."
@@ -215,12 +215,12 @@ class ForgotPasswordSerializer(serializers.Serializer):
         # if no user exists for this email
         except User.DoesNotExist:
             # explanatory email message
-            raise serializers.ValidationError(f'User with this email {email} does not exists.')
-        subject = "Reset password request for Helix"
+            raise serializers.ValidationError(gettext(f'User with this email {email} does not exists.'))
+        subject = gettext("Reset password request for Helix")
         context = {
-            "heading": "Reset Password",
+            "heading": gettext("Reset Password"),
             "message": message,
-            "button_text": "Reset Password",
+            "button_text": gettext("Reset Password"),
         }
         if button_url:
             context["button_url"] = button_url
@@ -242,8 +242,8 @@ class ResetPasswordSerializer(serializers.Serializer):
     def validate(self, attrs):
         password_reset_token = attrs.get("password_reset_token")
         user_id, token_expiry_time = None, None
-        invalid_token_message = 'Invalid token supplied'
-        expired_token_message = 'Token might be expired (24 hrous)'
+        invalid_token_message = gettext('Invalid token supplied')
+        expired_token_message = gettext('Token might be expired (24 hrous)')
         # Decode token and parse token created time
         decoded_data = decode_reset_password_token(password_reset_token)
         user_id, token_expiry_time = decoded_data['user_id'], decoded_data['token_expiry_time']
@@ -261,7 +261,7 @@ class ResetPasswordSerializer(serializers.Serializer):
             new_password = attrs["new_password"]
             new_password_confirmation = attrs["new_password_confirmation"]
             if not new_password == new_password_confirmation:
-                raise serializers.ValidationError('Password confirmation mismatched.')
+                raise serializers.ValidationError(gettext('Password confirmation mismatched.'))
             # set_password also hashes the password that the user will get
             user.set_password(new_password)
             user.save()
