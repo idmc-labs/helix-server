@@ -3,7 +3,6 @@ import shutil
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
 from django.core import management
 from django.test import TestCase, override_settings
 from graphene_django.utils import GraphQLTestCase
@@ -11,8 +10,10 @@ from rest_framework.test import APITestCase
 
 from apps.entry.models import FigureCategory, FigureTerm
 from apps.entry.constants import STOCK, FLOW
+from apps.users.enums import USER_ROLE
+from apps.users.models import Portfolio
 from helix.settings import BASE_DIR
-from utils.factories import UserFactory
+from utils.factories import UserFactory, MonitoringSubRegionFactory
 
 User = get_user_model()
 TEST_MEDIA_ROOT = 'media-temp'
@@ -108,12 +109,18 @@ class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
         return user
 
 
-def create_user_with_role(role: str) -> User:
+def create_user_with_role(role: str, monitoring_sub_region: int = None) -> User:
     user = UserFactory.create()
     user.raw_password = 'lhjsjsjsjlj'
     user.set_password(user.raw_password)
-    user.save()
-    user.groups.set([Group.objects.get(name=role)])
+    user.save()  # saves it as a guest
+    user.refresh_from_db()
+    Portfolio.objects.create(
+        user=user,
+        role=USER_ROLE[role],
+        monitoring_sub_region_id=monitoring_sub_region or MonitoringSubRegionFactory.create().id
+    )  # assigns a new role
+    user.refresh_from_db()
     return user
 
 

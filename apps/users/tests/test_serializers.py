@@ -38,8 +38,8 @@ class TestRegisterSerializer(HelixTestCase):
         serializer = RegisterSerializer(data=self.data, context=self.context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         user = serializer.save()
-        # TODO portfolio
-        self.assertEqual(user.groups.get(), USER_ROLE[GUEST])
+        self.assertEqual(user.portfolios.get().role, USER_ROLE.GUEST)
+        self.assertEqual(user.groups.get().name, USER_ROLE.GUEST.name)
 
 
 class TestUserSerializer(HelixTestCase):

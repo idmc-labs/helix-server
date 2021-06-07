@@ -149,7 +149,6 @@ class TestReportSignOff(HelixGraphQLTestCase):
 
         content = response.json()
 
-        print(content)
         self.assertResponseNoErrors(response)
         self.assertIn('report', [item['field'] for item in content['data']['startReportGeneration']['errors']])
 

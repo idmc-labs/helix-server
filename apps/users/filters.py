@@ -4,11 +4,11 @@ from django.db.models.functions import Lower, StrIndex, Concat, Coalesce
 import django_filters
 
 from apps.users.models import User
+from apps.users.enums import USER_ROLE
 from utils.filters import AllowInitialFilterSetMixin, StringListFilter
 
 
 class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
-    # role = django_filters.CharFilter(...)  # TODO portfolio
     roleIn = StringListFilter(method='filter_role_in')
     full_name = django_filters.CharFilter(method='filter_full_name')
     include_inactive = django_filters.BooleanFilter(method='filter_include_inactive',
@@ -20,8 +20,10 @@ class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
         fields = ['email', 'is_active']
 
     def filter_role_in(self, queryset, name, value):
-        # TODO portfolio
-        ...
+        roles = [USER_ROLE[role].value for role in value]
+        return queryset.filter(
+            portfolios__role__in=roles
+        )
 
     def filter_full_name(self, queryset, name, value):
         if not value:
