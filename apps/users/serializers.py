@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime
 import time
 
 from django.contrib.auth import get_user_model, authenticate
@@ -8,17 +8,14 @@ from django.conf import settings
 from django.utils.translation import gettext
 from django_enumfield.contrib.drf import EnumField
 from rest_framework import serializers
-from django.utils.encoding import force_bytes, force_text
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils import timezone
-from django.utils.dateparse import parse_datetime
 
 from apps.users.enums import USER_ROLE
 from apps.users.utils import get_user_from_activation_token
 from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
 from utils.validations import validate_hcaptcha, MissingCaptchaException
 from .tasks import send_email
-
+from .utils import encode_reset_password_token, decode_reset_password_token
 User = get_user_model()
 
 
@@ -206,8 +203,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
         # if user exists for this email
         try:
             user = User.objects.get(email=email)
-            # generate a password reset token with user's id and token created date
-            code = urlsafe_base64_encode(force_bytes(f"{user.pk},{timezone.now() + timedelta(hours=24)}"))
+            code = encode_reset_password_token(user.id)
             base_url = settings.FRONTEND_BASE_URL
             # Get base url by profile type
             button_url = f"{base_url}/reset-password/?password_reset_token={code}"
@@ -245,24 +241,21 @@ class ResetPasswordSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         password_reset_token = attrs.get("password_reset_token")
-        user_id, token_expiry_time_time = None, None
-        invalid_token_message = 'invalid token supplied'
+        user_id, token_expiry_time = None, None
+        invalid_token_message = 'Invalid token supplied'
         expired_token_message = 'Token might be expired (24 hrous)'
         # Decode token and parse token created time
-        try:
-            decoded_data = force_text(urlsafe_base64_decode(password_reset_token)).split(',')
-            user_id, token_expiry_time_time = decoded_data[0], parse_datetime(decoded_data[1])
-        except (TypeError, ValueError, IndexError):
-            raise serializers.ValidationError(invalid_token_message)
-        if user_id and token_expiry_time_time:
+        decoded_data = decode_reset_password_token(password_reset_token)
+        user_id, token_expiry_time = decoded_data['user_id'], decoded_data['token_expiry_time']
+        if user_id and token_expiry_time:
             # Check if user exists
             try:
-                user = User.objects.filter(id=user_id)
+                user = User.objects.get(id=user_id)
             except User.DoesNotExist:
                 # explanatory email message
                 raise serializers.ValidationError(invalid_token_message)
             # Check if token expired
-            if timezone.now() < token_expiry_time_time and not user.exists():
+            if timezone.now() > token_expiry_time:
                 raise serializers.ValidationError(expired_token_message)
             # check new password and confirmation match
             new_password = attrs["new_password"]
