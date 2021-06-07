@@ -64,7 +64,6 @@ class EntryExtractionFilterSet(df.FilterSet):
         return qs
 
     def filter_publishers(self, qs, name, value):
-        print(value)
         if value:
             t = qs.filter(publishers__in=value).distinct()
             return t

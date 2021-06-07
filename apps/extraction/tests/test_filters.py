@@ -122,7 +122,6 @@ class TestExtractionFilter(HelixTestCase):
         data = dict(
             filter_entry_publishers=[self.org3.id]
         )
-        print(data)
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry3ev2})
 

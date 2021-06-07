@@ -88,8 +88,7 @@ class User(AbstractUser):
 
     def save(self, *args, **kwargs):
         self.full_name = self.get_full_name()
-        instance = super().save(*args, **kwargs)
-        return instance
+        return super().save(*args, **kwargs)
 
 
 class Portfolio(models.Model):
@@ -125,13 +124,13 @@ class Portfolio(models.Model):
     @classmethod
     def get_highest_role(cls, user: User) -> USER_ROLE:
         # region based role is not required
-        portfolios = user.portfolios.all()
+        roles = user.portfolios.values_list('role', flat=True)
 
-        if USER_ROLE.ADMIN in portfolios:
+        if USER_ROLE.ADMIN in roles:
             return USER_ROLE.ADMIN
-        if USER_ROLE.REGIONAL_COORDINATOR in portfolios:
+        if USER_ROLE.REGIONAL_COORDINATOR in roles:
             return USER_ROLE.REGIONAL_COORDINATOR
-        if USER_ROLE.MONITORING_EXPERT in portfolios:
+        if USER_ROLE.MONITORING_EXPERT in roles:
             return USER_ROLE.MONITORING_EXPERT
         return USER_ROLE.GUEST
 
