@@ -263,14 +263,10 @@ class ResetPasswordSerializer(serializers.Serializer):
             # Get user object
             user = user.first()
             # check new password and confirmation match
-            new_password = attrs.get("new_password")
-            new_password_confirmation = attrs.get(
-                "new_password_confirmation"
-            )
+            new_password = attrs["new_password"]
+            new_password_confirmation = attrs["new_password_confirmation"]
             if not new_password == new_password_confirmation:
                 raise serializers.ValidationError('Password confirmation mismatched.')
-            # Activate user (in case user just registered, not activated and forgets his/her password)
-            user.is_active = True
             # set_password also hashes the password that the user will get
             user.set_password(new_password)
             user.save()
