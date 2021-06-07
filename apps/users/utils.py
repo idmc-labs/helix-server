@@ -36,9 +36,11 @@ def get_user_from_activation_token(uid, token) -> Union[User, None]:
         return None
     return user
 
+
 def encode_reset_password_token(user_id):
     # generate a password reset token with user's id and token created date
     return urlsafe_base64_encode(force_bytes(f"{user_id},{timezone.now() + timedelta(hours=24)}"))
+
 
 def decode_reset_password_token(password_reset_token):
     # Decode token and parse token expiry time

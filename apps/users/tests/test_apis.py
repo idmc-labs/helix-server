@@ -714,9 +714,9 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
         response = self.query(
             self.forget_password_query,
             variables={
-            'email': self.user.email,
-            'captcha': 'aaaaaaaa',
-            'siteKey': 'bbbbbbbb',
+                'email': self.user.email,
+                'captcha': 'aaaaaaaa',
+                'siteKey': 'bbbbbbbb',
             },
         )
         self.assertResponseNoErrors(response)
@@ -727,9 +727,9 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
         response = self.query(
             self.reset_password_query,
             variables={
-            'passwordResetToken': token,
-            'newPassword': '12343@#S#',
-            'newPasswordConfirmation': '12343@#S#',
+                'passwordResetToken': token,
+                'newPassword': '12343@#S#',
+                'newPasswordConfirmation': '12343@#S#',
             },
         )
         self.assertResponseNoErrors(response)
@@ -740,9 +740,9 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
         response = self.query(
             self.reset_password_query,
             variables={
-            'passwordResetToken': token,
-            'newPassword': '12343@#S#',
-            'newPasswordConfirmation': '123sss43@#S#',
+                'passwordResetToken': token,
+                'newPassword': '12343@#S#',
+                'newPasswordConfirmation': '123sss43@#S#',
             },
         )
         content = json.loads(response.content)
@@ -755,9 +755,9 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
         response = self.query(
             self.reset_password_query,
             variables={
-            'passwordResetToken': token,
-            'newPassword': '12343@#S#',
-            'newPasswordConfirmation': '12343@#S#',
+                'passwordResetToken': token,
+                'newPassword': '12343@#S#',
+                'newPasswordConfirmation': '12343@#S#',
             },
         )
         content = json.loads(response.content)
@@ -770,5 +770,5 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
         decoded_token = decode_reset_password_token(token)
         expiry_period = decoded_token['token_expiry_time'] - timezone.now()
         # 24 hours = 86400
-        expiry_period_in_hour = round(expiry_period.seconds/(60 * 60))
+        expiry_period_in_hour = round(expiry_period.seconds / (60 * 60))
         self.assertAlmostEqual(expiry_period_in_hour, 24)
