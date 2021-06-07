@@ -256,12 +256,14 @@ class ResetPasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError(invalid_token_message)
         if user_id and token_expiry_time_time:
             # Check if user exists
-            user = User.objects.filter(id=user_id)
+            try:
+                user = User.objects.filter(id=user_id)
+            except User.DoesNotExist:
+                # explanatory email message
+                raise serializers.ValidationError(invalid_token_message)
             # Check if token expired
             if timezone.now() < token_expiry_time_time and not user.exists():
                 raise serializers.ValidationError(expired_token_message)
-            # Get user object
-            user = user.first()
             # check new password and confirmation match
             new_password = attrs["new_password"]
             new_password_confirmation = attrs["new_password_confirmation"]
