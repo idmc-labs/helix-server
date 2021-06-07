@@ -10,6 +10,8 @@ from apps.contact.schema import ContactListType
 from apps.country.models import (
     Country,
     CountryRegion,
+    CountrySubRegion,
+    MonitoringSubRegion,
     ContextualAnalysis,
     Summary,
     HouseholdSize,
@@ -24,6 +26,16 @@ from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
+
+
+class MonitoringSubRegionType(DjangoObjectType):
+    class Meta:
+        model = MonitoringSubRegion
+
+
+class CountrySubRegionType(DjangoObjectType):
+    class Meta:
+        model = CountrySubRegion
 
 
 class CountryRegionType(DjangoObjectType):

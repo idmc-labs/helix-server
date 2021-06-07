@@ -7,8 +7,13 @@ __pycache__/
 media/
 media-temp/
 
+pyrightconfig.json
+
 static/
 schema.json
+
+typings/
+
 response.json
 
 *.bak

@@ -3,7 +3,7 @@ import shutil
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission, Group
+from django.contrib.auth.models import Group
 from django.core import management
 from django.test import TestCase, override_settings
 # dramatiq test case: setupclass is not properly called
@@ -102,11 +102,6 @@ class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
     def force_login(self, user):
         self._client.force_login(user)
 
-    def create_monitoring_expert(self):
-        user = UserFactory.create()
-        user.user_permissions.add(Permission.objects.get(codename='change_entry'))
-        return user
-
     def create_user(self) -> User:
         raw_password = 'admin123'
         user = User.objects.create_user(
@@ -120,10 +115,10 @@ class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
 
 def create_user_with_role(role: str) -> User:
     user = UserFactory.create()
-    user.groups.set([Group.objects.get(name=role)])
     user.raw_password = 'lhjsjsjsjlj'
     user.set_password(user.raw_password)
     user.save()
+    user.groups.set([Group.objects.get(name=role)])
     return user
 
 
