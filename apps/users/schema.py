@@ -1,4 +1,7 @@
+from typing import Union
+
 from django.contrib.auth import get_user_model
+from django.db.models import Model
 import graphene
 from graphene import Field, ObjectType
 from graphene.types.utils import get_type
@@ -10,13 +13,14 @@ from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
 from apps.users.filters import UserFilter, ReviewerUserFilter
 from apps.users.roles import USER_ROLE
+from apps.users.models import Portfolio
 
 from .enums import PermissionActionEnum, PermissionModelEnum, PermissionRoleEnum
 
-User = get_user_model()
+User: Model = get_user_model()
 
-EntryListType = get_type('apps.entry.schema.EntryListType')
-EntryReviewerListType = get_type('apps.entry.schema.EntryReviewerListType')
+EntryListType: ObjectType = get_type('apps.entry.schema.EntryListType')
+EntryReviewerListType: CustomDjangoListObjectType = get_type('apps.entry.schema.EntryReviewerListType')
 
 
 class PermissionsType(ObjectType):
@@ -24,12 +28,20 @@ class PermissionsType(ObjectType):
     entities = graphene.List(graphene.NonNull(PermissionModelEnum), required=True)
 
 
+class PortfolioType(DjangoObjectType):
+    class Meta:
+        model = Portfolio
+
+    role = Field(PermissionRoleEnum)
+    permissions = graphene.List(graphene.NonNull(PermissionsType))
+
+
 class UserType(DjangoObjectType):
     class Meta:
         model = User
         fields = ('created_entry', 'date_joined', 'email', 'first_name', 'last_name',
                   'full_name', 'id', 'is_active', 'last_login',
-                  'permissions', 'reviewing', 'role', 'username')
+                  'reviewing', 'role', 'username')
 
     reviewing = DjangoPaginatedListObjectField(
         EntryReviewerListType,
@@ -47,24 +59,21 @@ class UserType(DjangoObjectType):
         related_name='created_entry',
         reverse_related_name='created_by',
     )
-    role = Field(PermissionRoleEnum)
-    permissions = graphene.List(graphene.NonNull(PermissionsType))
     full_name = Field(graphene.String, required=True)
     email = graphene.String()
+    portfolios = graphene.List(PortfolioType)
 
+    @staticmethod
     def resolve_role(root, info, **kwargs):
         if info.context.request.user == root:
             return root.role
-        if info.context.request.user.role in [USER_ROLE.ADMIN, USER_ROLE.IT_HEAD]:
+        if info.context.request.user.role in [USER_ROLE.ADMIN]:
             return root.role
 
+    @staticmethod
     def resolve_email(root, info, **kwargs):
         if root == info.context.request.user:
             return root.email
-
-    def resolve_permissions(root, info, **kwargs):
-        if root == info.context.request.user:
-            return root.permissions
 
 
 class UserListType(CustomDjangoListObjectType):
@@ -85,7 +94,8 @@ class Query(object):
                                                             page_size_query_param='pageSize'
                                                         ), filterset_class=ReviewerUserFilter)
 
-    def resolve_me(self, info, **kwargs):
+    @staticmethod
+    def resolve_me(root, info, **kwargs) -> Union[User, None]:
         if info.context.user.is_authenticated:
             return info.context.user
         return None

@@ -10,6 +10,7 @@ from rest_framework import serializers
 
 from apps.users.enums import USER_ROLE
 from apps.users.utils import get_user_from_activation_token
+from apps.users.models import Portfolio
 from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
 from utils.validations import validate_hcaptcha, MissingCaptchaException
 from .tasks import send_email
@@ -148,6 +149,27 @@ class ActivateSerializer(serializers.Serializer):
         user.is_active = True
         user.save()
         return attrs
+
+
+class PortfolioSerializer(serializers.ModelSerializer):
+    role = EnumField(USER_ROLE, required=True)
+    id = IntegerIDField(required=False)
+
+    def _validate_role_region(self, attrs) -> None:
+        role = attrs.get('role')
+        monitoring_sub_region = attrs.get('monitoring_sub_region')
+        if role in [USER_ROLE.ADMIN, USER_ROLE.GUEST] and monitoring_sub_region:
+            raise serializers.ValidationError(gettext(
+                'Monitoring region is not allowed with given role'
+            ))
+
+    def validate(self, attrs) -> dict:
+        self._validate_role_region(attrs)
+        return attrs
+
+    class Meta:
+        model = Portfolio
+        fields = ['id', 'role', 'monitoring_sub_region']
 
 
 class UserSerializer(UpdateSerializerMixin, serializers.ModelSerializer):
