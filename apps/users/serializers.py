@@ -193,6 +193,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
     """
     captcha = serializers.CharField(required=True, write_only=True)
     email = serializers.EmailField(write_only=True, required=True)
+    site_key = serializers.CharField(required=True, write_only=True)
 
     def validate_captcha(self, captcha):
         if not validate_hcaptcha(captcha, self.initial_data.get('site_key', '')):
