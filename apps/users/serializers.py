@@ -234,7 +234,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
         return attrs
 
 
-class ReSetPasswordSerializer(serializers.Serializer):
+class ResetPasswordSerializer(serializers.Serializer):
     """
     Serializer for password reset endpoints.
     """
@@ -245,20 +245,21 @@ class ReSetPasswordSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         password_reset_token = attrs.get("password_reset_token")
-        user_id, token_created_time = None, None
-        invali_token_message = 'Token is not correct, might be expired (24 hours).'
+        user_id, token_expiry_time_time = None, None
+        invalid_token_message = 'invalid token supplied'
+        expired_token_message = 'Token might be expired (24 hrous)'
         # Decode token and parse token created time
         try:
             decoded_data = force_text(urlsafe_base64_decode(password_reset_token)).split(',')
-            user_id, token_created_time = decoded_data[0], parse_datetime(decoded_data[1])
+            user_id, token_expiry_time_time = decoded_data[0], parse_datetime(decoded_data[1])
         except (TypeError, ValueError, IndexError):
-            raise serializers.ValidationError(invali_token_message)
-        if user_id and token_created_time:
+            raise serializers.ValidationError(invalid_token_message)
+        if user_id and token_expiry_time_time:
             # Check if user exists
             user = User.objects.filter(id=user_id)
             # Check if token expired
-            if timezone.now() < token_created_time and not user.exists():
-                raise serializers.ValidationError(invali_token_message)
+            if timezone.now() < token_expiry_time_time and not user.exists():
+                raise serializers.ValidationError(expired_token_message)
             # Get user object
             user = user.first()
             # check new password and confirmation match
@@ -274,4 +275,4 @@ class ReSetPasswordSerializer(serializers.Serializer):
             user.set_password(new_password)
             user.save()
             return attrs
-        raise serializers.ValidationError(invali_token_message)
+        raise serializers.ValidationError(invalid_token_message)

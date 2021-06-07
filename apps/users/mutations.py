@@ -12,7 +12,7 @@ from apps.users.serializers import (
     UserSerializer,
     UserPasswordSerializer,
     ForgotPasswordSerializer,
-    ReSetPasswordSerializer,
+    ResetPasswordSerializer,
 )
 from utils.permissions import is_authenticated
 from utils.error_types import CustomErrorType, mutation_is_not_valid
@@ -203,7 +203,7 @@ class ForgetPassword(graphene.Mutation):
 
 ResetPasswordType = generate_input_type_for_serializer(
     'ResetPasswordType',
-    ReSetPasswordSerializer
+    ResetPasswordSerializer
 )
 
 
@@ -216,7 +216,7 @@ class ResetPassword(graphene.Mutation):
 
     @staticmethod
     def mutate(root, info, data):
-        serializer = ReSetPasswordSerializer(data=data)
+        serializer = ResetPasswordSerializer(data=data)
         if errors := mutation_is_not_valid(serializer):
             return ResetPassword(errors=errors, ok=False)
         return ResetPassword(errors=None, ok=True)
