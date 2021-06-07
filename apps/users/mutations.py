@@ -230,4 +230,4 @@ class Mutation(object):
     update_user = UpdateUser.Field()
     change_password = ChangeUserPassword.Field()
     forget_password = ForgetPassword.Field()
-    rest_password = ResetPassword.Field()
+    reset_password = ResetPassword.Field()
