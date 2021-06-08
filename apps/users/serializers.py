@@ -237,7 +237,6 @@ class ResetPasswordSerializer(serializers.Serializer):
 
     password_reset_token = serializers.CharField(write_only=True, required=True)
     new_password = serializers.CharField(write_only=True, required=True)
-    new_password_confirmation = serializers.CharField(write_only=True, required=True)
 
     def validate(self, attrs):
         password_reset_token = attrs.get("password_reset_token")
@@ -259,9 +258,6 @@ class ResetPasswordSerializer(serializers.Serializer):
                 raise serializers.ValidationError(expired_token_message)
             # check new password and confirmation match
             new_password = attrs["new_password"]
-            new_password_confirmation = attrs["new_password_confirmation"]
-            if not new_password == new_password_confirmation:
-                raise serializers.ValidationError(gettext('Password confirmation mismatched.'))
             # set_password also hashes the password that the user will get
             user.set_password(new_password)
             user.save()

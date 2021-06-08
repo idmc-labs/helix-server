@@ -695,13 +695,11 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
         self.reset_password_query = '''
             mutation MyMutation (
                 $passwordResetToken: String!,
-                $newPassword: String!,
-                $newPasswordConfirmation: String!
+                $newPassword: String!
             ){
                 resetPassword(data: {
                         passwordResetToken: $passwordResetToken,
                         newPassword: $newPassword,
-                        newPasswordConfirmation: $newPasswordConfirmation
                     }) {
                     ok
                     errors
@@ -729,26 +727,9 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
             variables={
                 'passwordResetToken': token,
                 'newPassword': '12343@#S#',
-                'newPasswordConfirmation': '12343@#S#',
             },
         )
         self.assertResponseNoErrors(response)
-
-    def test_user_user_should_provide_correct_password_confirmation(self):
-        # Create password reset token
-        token = encode_reset_password_token(self.user.id)
-        response = self.query(
-            self.reset_password_query,
-            variables={
-                'passwordResetToken': token,
-                'newPassword': '12343@#S#',
-                'newPasswordConfirmation': '123sss43@#S#',
-            },
-        )
-        content = json.loads(response.content)
-        self.assertFalse(content['data']['resetPassword']['ok'])
-        message = content['data']['resetPassword']['errors'][0]['messages']
-        self.assertEqual(message, 'Password confirmation mismatched.')
 
     def test_should_not_accept_invalid_token(self):
         token = 'MSwyMDIxLTA2LTA0IDE0OjM3O342jI1Ljg5NDQ4NSswMDowMA'
@@ -757,7 +738,6 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
             variables={
                 'passwordResetToken': token,
                 'newPassword': '12343@#S#',
-                'newPasswordConfirmation': '12343@#S#',
             },
         )
         content = json.loads(response.content)
