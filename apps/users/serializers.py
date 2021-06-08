@@ -9,6 +9,7 @@ from django.utils.translation import gettext
 from django_enumfield.contrib.drf import EnumField
 from rest_framework import serializers
 from django.utils import timezone
+from django.core.cache import cache
 
 from apps.users.enums import USER_ROLE
 from apps.users.utils import get_user_from_activation_token
@@ -204,6 +205,8 @@ class GenerateResetPasswordTokenSerializer(serializers.Serializer):
         try:
             user = User.objects.get(email=email)
             code = encode_reset_password_token(user.id)
+            # Store token in cache, set timeout 24 hrous
+            cache.set(f"reset-password-token-{user.id}", 24 * 60 * 60)
             base_url = settings.FRONTEND_BASE_URL
             # Get base url by profile type
             button_url = f"{base_url}/reset-password/?password_reset_token={code}"
@@ -253,6 +256,10 @@ class ResetPasswordSerializer(serializers.Serializer):
             except User.DoesNotExist:
                 # explanatory email message
                 raise serializers.ValidationError(invalid_token_message)
+            # Get token from cache
+            original_token = cache.get(f"reset-password-token-{user.id}")
+            if password_reset_token != original_token:
+                raise serializers.ValidationError(invalid_token_message)
             # Check if token expired
             if timezone.now() > token_expiry_time:
                 raise serializers.ValidationError(expired_token_message)
@@ -261,5 +268,8 @@ class ResetPasswordSerializer(serializers.Serializer):
             # set_password also hashes the password that the user will get
             user.set_password(new_password)
             user.save()
+            # Delete token from cache after reset password
+            # Ensure password reset link should be used only one time
+            cache.delete(f"reset-password-token-{user.id}")
             return attrs
         raise serializers.ValidationError(invalid_token_message)
