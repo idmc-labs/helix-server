@@ -206,7 +206,7 @@ class GenerateResetPasswordTokenSerializer(serializers.Serializer):
             user = User.objects.get(email=email)
             code = encode_reset_password_token(user.id)
             # Store token in cache, set timeout 24 hrous
-            cache.set(f"reset-password-token-{user.id}", 24 * 60 * 60)
+            cache.set(f"reset-password-token-{user.id}", code, 24 * 60 * 60)
             base_url = settings.FRONTEND_BASE_URL
             # Get base url by profile type
             button_url = f"{base_url}/reset-password/?password_reset_token={code}"
