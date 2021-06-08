@@ -184,7 +184,7 @@ class UserSerializer(UpdateSerializerMixin, serializers.ModelSerializer):
         return instance
 
 
-class ForgotPasswordSerializer(serializers.Serializer):
+class GenerateResetPasswordTokenSerializer(serializers.Serializer):
     """
     Serializer for password forgot endpoint.
     """

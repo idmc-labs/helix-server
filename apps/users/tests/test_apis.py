@@ -681,7 +681,7 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
                 $captcha: String!,
                 $siteKey: String!
             ){
-                forgetPassword(data: {
+                generateResetPasswordToken(data: {
                     email: $email,
                     captcha: $captcha,
                     siteKey: $siteKey

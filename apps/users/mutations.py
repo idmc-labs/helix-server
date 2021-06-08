@@ -11,7 +11,7 @@ from apps.users.serializers import (
     ActivateSerializer,
     UserSerializer,
     UserPasswordSerializer,
-    ForgotPasswordSerializer,
+    GenerateResetPasswordTokenSerializer,
     ResetPasswordSerializer,
 )
 from utils.permissions import is_authenticated
@@ -180,25 +180,25 @@ class UpdateUser(graphene.Mutation):
         return UpdateUser(result=user, errors=None, ok=True)
 
 
-ForgetPasswordType = generate_input_type_for_serializer(
-    'ForgetPasswordType',
-    ForgotPasswordSerializer
+GenerateResetPasswordTokenType = generate_input_type_for_serializer(
+    'GenerateResetPasswordTokenType',
+    GenerateResetPasswordTokenSerializer
 )
 
 
-class ForgetPassword(graphene.Mutation):
+class GenerateResetPasswordToken(graphene.Mutation):
     class Arguments:
-        data = ForgetPasswordType(required=True)
+        data = GenerateResetPasswordTokenType(required=True)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
 
     @staticmethod
     def mutate(root, info, data):
-        serializer = ForgotPasswordSerializer(data=data)
+        serializer = GenerateResetPasswordTokenSerializer(data=data)
         if errors := mutation_is_not_valid(serializer):
-            return ForgetPassword(errors=errors, ok=False)
-        return ForgetPassword(errors=None, ok=True)
+            return GenerateResetPasswordTokenType(errors=errors, ok=False)
+        return GenerateResetPasswordTokenType(errors=None, ok=True)
 
 
 ResetPasswordType = generate_input_type_for_serializer(
@@ -229,5 +229,5 @@ class Mutation(object):
     logout = Logout.Field()
     update_user = UpdateUser.Field()
     change_password = ChangeUserPassword.Field()
-    forget_password = ForgetPassword.Field()
+    generate_reset_password_token = GenerateResetPasswordToken.Field()
     reset_password = ResetPassword.Field()
