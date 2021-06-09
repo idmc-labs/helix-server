@@ -3,6 +3,7 @@ import logging
 
 from django.core.cache import cache
 from django.db import models
+from django.db.models.constraints import UniqueConstraint
 from django.db.models.query import QuerySet
 from django.contrib.auth.models import AbstractUser, Group
 from django.utils.translation import gettext_lazy as _
@@ -68,6 +69,13 @@ class User(AbstractUser):
 
     # end login attempts related stuff
 
+    @property
+    def permissions(self) -> list[dict]:
+        return [
+            {'action': k, 'entities': list(v)} for k, v in
+            PERMISSIONS[self.highest_role].items()
+        ]
+
     def set_highest_role(self) -> None:
         role = Portfolio.get_highest_role(self)
         try:
@@ -77,6 +85,10 @@ class User(AbstractUser):
             logger.warning(f'User role with {role=} does not exist.')
         except Group.DoesNotExist:
             logger.warning(f'Group(UserRole) with name {USER_ROLE[role].name} does not exist.')
+
+    @property
+    def highest_role(self) -> USER_ROLE:
+        return Portfolio.get_highest_role(self)
 
     def get_full_name(self):
         return ' '.join([
@@ -109,6 +121,29 @@ class Portfolio(models.Model):
 
     objects = models.Manager()
 
+    def user_can_alter(self, user: User) -> bool:
+        if user.highest_role == USER_ROLE.ADMIN:
+            return True
+        if user.highest_role == USER_ROLE.REGIONAL_COORDINATOR:
+            return self.monitoring_sub_region in user.portfolios.filter(
+                role=USER_ROLE.REGIONAL_COORDINATOR,
+                monitoring_sub_region=self.monitoring_sub_region
+            ).exists()
+        return False
+
+    @classmethod
+    def get_role_allows_region_map(cls) -> dict:
+        region_allowed_in = [
+            USER_ROLE.REGIONAL_COORDINATOR,
+            USER_ROLE.MONITORING_EXPERT,
+        ]
+        return {
+            role.name: {
+                'label': role.label,
+                'allows_region': role in region_allowed_in
+            } for role in USER_ROLE
+        }
+
     @classmethod
     def get_coordinators(cls) -> QuerySet:
         return cls.objects.filter(
@@ -138,7 +173,7 @@ class Portfolio(models.Model):
     def permissions(self) -> list[dict]:
         return [
             {'action': k, 'entities': list(v)} for k, v in
-            PERMISSIONS[self.role].items()
+            PERMISSIONS[USER_ROLE[self.role]].items()
         ]
 
     def set_role(self, role: USER_ROLE) -> None:
@@ -160,4 +195,10 @@ class Portfolio(models.Model):
         return super().save(*args, **kwargs)
 
     class Meta:
-        unique_together = (('user', 'role', 'monitoring_sub_region'),)
+        constraints = [
+            UniqueConstraint(fields=['user', 'role', 'monitoring_sub_region'],
+                             name='unique_with_region'),
+            UniqueConstraint(fields=['user', 'role'],
+                             condition=models.Q(monitoring_sub_region=None),
+                             name='unique_without_region'),
+        ]

@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 from django.db.models import Model
 import graphene
 from graphene import Field, ObjectType
+from graphene.types.generic import GenericScalar
 from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
@@ -11,7 +12,7 @@ from graphene_django_extras import DjangoObjectField
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
-from apps.users.filters import UserFilter, ReviewerUserFilter
+from apps.users.filters import UserFilter, ReviewerUserFilter, PortfolioFilter
 from apps.users.roles import USER_ROLE
 from apps.users.models import Portfolio
 
@@ -36,12 +37,18 @@ class PortfolioType(DjangoObjectType):
     permissions = graphene.List(graphene.NonNull(PermissionsType))
 
 
+class PortfolioListType(CustomDjangoListObjectType):
+    class Meta:
+        model = Portfolio
+        filterset_class = PortfolioFilter
+
+
 class UserType(DjangoObjectType):
     class Meta:
         model = User
         fields = ('created_entry', 'date_joined', 'email', 'first_name', 'last_name',
                   'full_name', 'id', 'is_active', 'last_login',
-                  'reviewing', 'role', 'username')
+                  'reviewing', 'username')
 
     reviewing = DjangoPaginatedListObjectField(
         EntryReviewerListType,
@@ -61,7 +68,14 @@ class UserType(DjangoObjectType):
     )
     full_name = Field(graphene.String, required=True)
     email = graphene.String()
-    portfolios = graphene.List(PortfolioType)
+    portfolios = DjangoPaginatedListObjectField(PortfolioListType,
+                                                pagination=PageGraphqlPaginationWithoutCount(
+                                                    page_size_query_param='pageSize'
+                                                ),
+                                                related_name='portfolios')
+
+    highest_role = Field(PermissionRoleEnum)
+    permissions = graphene.List(graphene.NonNull(PermissionsType))
 
     @staticmethod
     def resolve_role(root, info, **kwargs):
@@ -89,10 +103,19 @@ class Query(object):
                                            pagination=PageGraphqlPaginationWithoutCount(
                                                page_size_query_param='pageSize'
                                            ))
+    portfolios = DjangoPaginatedListObjectField(PortfolioListType,
+                                                pagination=PageGraphqlPaginationWithoutCount(
+                                                    page_size_query_param='pageSize'
+                                                ))
     reviewer_user_list = DjangoPaginatedListObjectField(UserListType,
                                                         pagination=PageGraphqlPaginationWithoutCount(
                                                             page_size_query_param='pageSize'
                                                         ), filterset_class=ReviewerUserFilter)
+    role_with_region_allowed_map = Field(GenericScalar)
+
+    @staticmethod
+    def resolve_role_with_region_allowed_map(root, info, **kwargs):
+        return Portfolio.get_role_allows_region_map()
 
     @staticmethod
     def resolve_me(root, info, **kwargs) -> Union[User, None]:

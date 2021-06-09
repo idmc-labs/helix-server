@@ -6,7 +6,6 @@ from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from django.conf import settings
 from django.utils.translation import gettext
-from django_enumfield.contrib.drf import EnumField
 from rest_framework import serializers
 
 from apps.users.enums import USER_ROLE
@@ -28,7 +27,7 @@ class UserPasswordSerializer(serializers.ModelSerializer):
 
     def validate_old_password(self, password) -> str:
         if not self.instance.check_password(password):
-            raise serializers.ValidationError('Invalid Password')
+            raise serializers.ValidationError(gettext('Invalid Password'))
         return password
 
     def validate_new_password(self, password) -> str:
@@ -55,7 +54,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate_email(self, email) -> str:
         if User.objects.filter(email__iexact=email).exists():
-            raise serializers.ValidationError('The email is taken.')
+            raise serializers.ValidationError(gettext('The email is taken.'))
         return email
 
     def validate_captcha(self, captcha):
@@ -123,13 +122,13 @@ class LoginSerializer(serializers.Serializer):
 
         email = attrs.get('email', '')
         if User.objects.filter(email__iexact=email, is_active=False).exists():
-            raise serializers.ValidationError('Request an admin to activate your account.')
+            raise serializers.ValidationError(gettext('Request an admin to activate your account.'))
         user = authenticate(email=email,
                             password=attrs.get('password', ''))
         if not user:
             attempts = User._get_login_attempt(email)
             User._set_login_attempt(email, attempts + 1)
-            raise serializers.ValidationError('Invalid Email or Password.')
+            raise serializers.ValidationError(gettext('Invalid Email or Password.'))
         attrs.update(dict(user=user))
         User._reset_login_cache(email)
         return attrs
@@ -143,48 +142,129 @@ class ActivateSerializer(serializers.Serializer):
         user = get_user_from_activation_token(uid=attrs.get('uid', ''),
                                               token=attrs.get('token', ''))
         if user is None:
-            raise serializers.ValidationError('Activation link is not valid.')
+            raise serializers.ValidationError(gettext('Activation link is not valid.'))
         user.is_active = True
         user.save()
         return attrs
 
 
 class PortfolioSerializer(serializers.ModelSerializer):
-    role = EnumField(USER_ROLE, required=True)
-    id = IntegerIDField(required=False)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if hasattr(self, 'initial_data'):
+            self.initial_data['monitoring_sub_region'] = self.initial_data.get('monitoring_sub_region')
+
+    def validate_user(self, user):
+        # During update we will not allow changing the user
+        if self.instance:
+            return self.instance.user
+        return user
+
+    def _validate_role_by_authenticated_user_role(self, attrs: dict) -> None:
+        # we cannot set a role higher than ourself
+        role = attrs.get('role')
+        authenticated_user = self.context['request'].user
+        highest_role = authenticated_user.highest_role
+        # though already handled in mutations
+        if highest_role not in [USER_ROLE.REGIONAL_COORDINATOR, USER_ROLE.ADMIN]:
+            raise serializers.ValidationError(
+                gettext('You cannot perform this action'),
+                code='not-allowed'
+            )
+        if highest_role == USER_ROLE.REGIONAL_COORDINATOR and role in [
+                USER_ROLE.ADMIN
+        ]:
+            raise serializers.ValidationError({
+                'role': gettext(
+                    'You are not allowed to set an admin.'
+                )
+            }, code='role-not-set')
+
+        # we cannot change our own role
+        if authenticated_user == attrs.get('user'):
+            raise serializers.ValidationError({
+                'role': gettext(
+                    'Please ask another admin or regional coordinator'
+                )
+            }, code='cannot-modify-yourself')
 
     def _validate_role_region(self, attrs) -> None:
         role = attrs.get('role')
-        monitoring_sub_region = attrs.get('monitoring_sub_region')
+        monitoring_sub_region = attrs.get('monitoring_sub_region') or getattr(self.instance, 'monitoring_sub_region', None)
         if role in [USER_ROLE.ADMIN, USER_ROLE.GUEST] and monitoring_sub_region:
             raise serializers.ValidationError(gettext(
                 'Monitoring region is not allowed with given role'
             ))
+        if role in [USER_ROLE.MONITORING_EXPERT, USER_ROLE.REGIONAL_COORDINATOR] and not monitoring_sub_region:
+            raise serializers.ValidationError({
+                'monitoring_sub_region': gettext(
+                    'This field is required'
+                )
+            }, code='required')
+
+        user = self.context['request'].user
+        # highest role here can only be either regional coordinator or admin
+        highest_role = user.highest_role
+        if highest_role == USER_ROLE.REGIONAL_COORDINATOR:
+            if not user.portfolios.filter(
+                role=USER_ROLE.REGIONAL_COORDINATOR,
+                monitoring_sub_region=monitoring_sub_region
+            ).exists():
+                raise serializers.ValidationError({
+                    'monitoring_sub_region': gettext(
+                        'You are not allowed to add in this monitoring region'
+                    )
+                })
+
+    def _validate_unique_together(self, attrs) -> None:
+        if Portfolio.objects.filter(
+            user=attrs.get('user') or getattr(self.instance, 'user', None),
+            role=attrs.get('role') or getattr(self.instance, 'role', None),
+            monitoring_sub_region=attrs.get('monitoring_sub_region') or getattr(self.instance, 'monitoring_sub_region', None),  # noqa
+        ).exclude(id=getattr(self.instance, 'id', None)):
+            raise serializers.ValidationError(gettext('This portfolio already exists.'))
+
+    def _validate_disallow_redundant_role(self, attrs) -> None:
+        user = attrs.get('user') or getattr(self.instance, 'user', None)
+        monitoring_sub_region = attrs.get('monitoring_sub_region') or getattr(self.instance, 'monitoring_sub_region', None)
+        if user.portfolios.count() and monitoring_sub_region == USER_ROLE.GUEST:
+            raise serializers.ValidationError(
+                gettext('Guest portfolio is not important for this user')
+            )
 
     def validate(self, attrs) -> dict:
+        self._validate_role_by_authenticated_user_role(attrs)
         self._validate_role_region(attrs)
+        self._validate_unique_together(attrs)
+        self._validate_disallow_redundant_role(attrs)
         return attrs
 
     class Meta:
         model = Portfolio
+        fields = '__all__'
+        extra_kwargs = dict(
+            monitoring_sub_region=dict(required=False)
+        )
+
+
+class PortfolioUpdateSerializer(PortfolioSerializer):
+    id = IntegerIDField(required=True)
+
+    class Meta:
+        model = Portfolio
         fields = ['id', 'role', 'monitoring_sub_region']
+        extra_kwargs = dict(
+            monitoring_sub_region=dict(required=False)
+        )
 
 
 class UserSerializer(UpdateSerializerMixin, serializers.ModelSerializer):
-    portfolios = PortfolioSerializer(many=True)
+    # portfolios = PortfolioSerializer(many=True)
     id = IntegerIDField(required=True)
 
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'username', 'is_active', 'portfolios']
-
-    def validate_portfolios(self, role):
-        if not self.context['request'].user.has_perm('users.change_user'):
-            raise serializers.ValidationError(gettext('You are not allowed to change the role.'))
-        if self.instance and self.context['request'].user == self.instance and not \
-                self.instance.check_role(role):
-            raise serializers.ValidationError(gettext('You are not allowed to change your role.'))
-        return role
+        fields = ['id', 'email', 'first_name', 'last_name', 'username', 'is_active']
 
     def validate_is_active(self, is_active):
         if self.instance and self.context['request'].user == self.instance:
@@ -195,13 +275,3 @@ class UserSerializer(UpdateSerializerMixin, serializers.ModelSerializer):
         if not User.can_update_user(self.instance.id, self.context['request'].user):
             raise serializers.ValidationError(gettext('You are not allowed to update this user.'))
         return attrs
-
-    def update(self, instance, validated_data):
-        instance = super().update(instance, validated_data)
-        portfolios = validated_data.get('portfolios', [])
-        if portfolios:
-            Portfolio.objects.bulk_create([
-                Portfolio(**item, user=instance) for item in portfolios
-            ])
-
-        return instance

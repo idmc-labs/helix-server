@@ -3,16 +3,18 @@ from django.utils.translation import gettext
 from django.conf import settings
 import graphene
 
-from apps.users.schema import UserType
-from apps.users.models import User
+from apps.users.schema import UserType, PortfolioType
+from apps.users.models import User, Portfolio
 from apps.users.serializers import (
     LoginSerializer,
     RegisterSerializer,
     ActivateSerializer,
     UserSerializer,
     UserPasswordSerializer,
+    PortfolioSerializer,
+    PortfolioUpdateSerializer,
 )
-from utils.permissions import is_authenticated
+from utils.permissions import is_authenticated, permission_checker
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.mutation import generate_input_type_for_serializer
 from utils.validations import MissingCaptchaException
@@ -179,6 +181,87 @@ class UpdateUser(graphene.Mutation):
         return UpdateUser(result=user, errors=None, ok=True)
 
 
+PortfolioInputType = generate_input_type_for_serializer(
+    'PortfolioInputType',
+    PortfolioSerializer
+)
+
+
+class CreatePortfolio(graphene.Mutation):
+    class Arguments:
+        data = PortfolioInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(PortfolioType)
+
+    @staticmethod
+    @permission_checker(['users.add_portfolio'])
+    def mutate(root, info, data):
+        serializer = PortfolioSerializer(data=data,
+                                         context={'request': info.context.request})
+        if errors := mutation_is_not_valid(serializer):
+            return CreatePortfolio(errors=errors, ok=False)
+        instance = serializer.save()
+        return CreatePortfolio(result=instance, errors=None, ok=True)
+
+
+PortfolioUpdateInputType = generate_input_type_for_serializer(
+    'PortfolioUpdateInputType',
+    PortfolioUpdateSerializer
+)
+
+
+class UpdatePortfolio(graphene.Mutation):
+    class Arguments:
+        data = PortfolioUpdateInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(PortfolioType)
+
+    @staticmethod
+    @permission_checker(['users.change_portfolio'])
+    def mutate(root, info, data):
+        try:
+            instance = Portfolio.objects.get(id=data['id'])
+        except Portfolio.DoesNotExist:
+            return UpdatePortfolio(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Portfolio does not exist.'))
+            ])
+        serializer = PortfolioUpdateSerializer(instance=instance,
+                                               data=data,
+                                               context={'request': info.context.request},
+                                               partial=True)
+        if errors := mutation_is_not_valid(serializer):
+            return UpdatePortfolio(errors=errors, ok=False)
+        instance = serializer.save()
+        return UpdatePortfolio(result=instance, errors=None, ok=True)
+
+
+class DeletePortfolio(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(PortfolioType)
+
+    @staticmethod
+    @permission_checker(['users.delete_portfolio'])
+    def mutate(root, info, id):
+        try:
+            instance: Portfolio = Portfolio.objects.get(id=id)
+            instance.user_can_alter(info.context.user)
+        except Portfolio.DoesNotExist:
+            return DeletePortfolio(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Portfolio does not exist.'))
+            ])
+        instance.delete()
+        instance.id = id
+        return DeletePortfolio(result=instance, errors=None, ok=True)
+
+
 class Mutation(object):
     login = Login.Field()
     register = Register.Field()
@@ -186,3 +269,6 @@ class Mutation(object):
     logout = Logout.Field()
     update_user = UpdateUser.Field()
     change_password = ChangeUserPassword.Field()
+    create_portfolio = CreatePortfolio.Field()
+    update_portfolio = UpdatePortfolio.Field()
+    delete_portfolio = DeletePortfolio.Field()
