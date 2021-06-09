@@ -197,8 +197,8 @@ class GenerateResetPasswordToken(graphene.Mutation):
     def mutate(root, info, data):
         serializer = GenerateResetPasswordTokenSerializer(data=data)
         if errors := mutation_is_not_valid(serializer):
-            return GenerateResetPasswordTokenType(errors=errors, ok=False)
-        return GenerateResetPasswordTokenType(errors=None, ok=True)
+            return GenerateResetPasswordToken(errors=errors, ok=False)
+        return GenerateResetPasswordToken(errors=None, ok=True)
 
 
 ResetPasswordType = generate_input_type_for_serializer(
