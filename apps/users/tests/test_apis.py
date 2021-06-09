@@ -563,8 +563,75 @@ class TestUserListSchema(HelixGraphQLTestCase):
                          sorted([ur.id, ue.id]))
 
     def test_users_fields_access_based_on_authentication(self):
-        # TODO portfolio
-        ...
+        users_q = '''
+            query MyQuery {
+              users {
+                totalCount
+                results {
+                  id
+                  highestRole
+                  permissions {
+                    action
+                  }
+                  email
+                }
+              }
+            }
+        '''
+        ua = create_user_with_role(USER_ROLE.ADMIN.name)
+        ur = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
+        create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
+
+        self.force_login(guest)
+        response = self.query(
+            users_q
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertEqual(content['data']['users']['totalCount'], 4)
+        self.assertEqual(set([item['email'] for item in content['data']['users']['results']]),
+                         set([guest.email, None]))
+        self.assertEqual(set([item['highestRole'] for item in content['data']['users']['results']]),
+                         set(['GUEST', None]))
+        self.assertIn(
+            None,
+            [item['permissions'] for item in content['data']['users']['results']]
+        )
+
+        self.force_login(ur)
+        response = self.query(
+            users_q
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertEqual(content['data']['users']['totalCount'], 4)
+        self.assertEqual(set([item['email'] for item in content['data']['users']['results']]),
+                         set([ur.email, None]))
+        self.assertEqual(set([item['highestRole'] for item in content['data']['users']['results']]),
+                         set([ur.highest_role.name, None]))
+        self.assertIn(
+            None,
+            [item['permissions'] for item in content['data']['users']['results']]
+        )
+
+        self.force_login(ua)
+        response = self.query(
+            users_q
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertEqual(content['data']['users']['totalCount'], 4)
+        # we should not get all email
+        self.assertIn(
+            None,
+            [item['email'] for item in content['data']['users']['results']]
+        )
+        # we should get all roles
+        self.assertNotIn(
+            None,
+            [item['highestRole'] for item in content['data']['users']['results']]
+        )
 
 
 class TestAPIMe(HelixAPITestCase):

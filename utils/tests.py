@@ -115,12 +115,12 @@ def create_user_with_role(role: str, monitoring_sub_region: int = None) -> User:
     user.set_password(user.raw_password)
     user.save()  # saves it as a guest
     user.refresh_from_db()
-    Portfolio.objects.create(
-        user=user,
-        role=USER_ROLE[role],
-        monitoring_sub_region_id=monitoring_sub_region or MonitoringSubRegionFactory.create().id
-    )  # assigns a new role
-    user.refresh_from_db()
+    if role != USER_ROLE.GUEST.name:
+        Portfolio.objects.create(
+            user=user,
+            role=USER_ROLE[role],
+            monitoring_sub_region_id=monitoring_sub_region or MonitoringSubRegionFactory.create().id
+        )  # assigns a new role
     return user
 
 

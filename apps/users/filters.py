@@ -3,7 +3,7 @@ from django.db.models import Value
 from django.db.models.functions import Lower, StrIndex, Concat, Coalesce
 import django_filters
 
-from apps.users.models import User
+from apps.users.models import User, Portfolio
 from apps.users.enums import USER_ROLE
 from utils.filters import AllowInitialFilterSetMixin, StringListFilter
 
@@ -41,6 +41,27 @@ class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
         if value is False:
             return queryset.filter(is_active=True)
         return queryset
+
+    @property
+    def qs(self):
+        # to get the highest role
+        return super().qs.prefetch_related('portfolios')
+
+
+class PortfolioFilter(django_filters.FilterSet):
+    role_in = StringListFilter(method='filter_role_in')
+
+    class Meta:
+        model = Portfolio
+        fields = {
+            'monitoring_sub_region': ['in']
+        }
+
+    def filter_role_in(self, queryset, name, value):
+        roles = [USER_ROLE[role].value for role in value]
+        return queryset.filter(
+            role__in=roles
+        )
 
 
 class ReviewerUserFilter(UserFilter):
