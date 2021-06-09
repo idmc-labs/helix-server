@@ -8,6 +8,7 @@ from apps.country.models import (
     Country,
     CountryRegion,
     GeographicalGroup,
+    MonitoringSubRegion,
 )
 from utils.filters import StringListFilter, NameFilterMixin
 
@@ -95,3 +96,20 @@ class CountryFilter(django_filters.FilterSet):
             **Country._total_figure_disaggregation_subquery()
         )
         return qs
+
+
+class MonitoringSubRegionFilter(django_filters.FilterSet):
+    name = django_filters.CharFilter(method='_filter_name')
+
+    class Meta:
+        model = MonitoringSubRegion
+        fields = []
+
+    def _filter_name(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.annotate(
+            lname=Lower('name')
+        ).annotate(
+            idx=StrIndex('lname', Value(value.lower()))
+        ).filter(idx__gt=0).order_by('idx', 'name')

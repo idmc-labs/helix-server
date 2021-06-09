@@ -21,6 +21,7 @@ from apps.country.filters import (
     CountryFilter,
     CountryRegionFilter,
     GeographicalGroupFilter,
+    MonitoringSubRegionFilter,
 )
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.graphene.types import CustomDjangoListObjectType
@@ -31,6 +32,12 @@ from utils.pagination import PageGraphqlPaginationWithoutCount
 class MonitoringSubRegionType(DjangoObjectType):
     class Meta:
         model = MonitoringSubRegion
+
+
+class MonitoringSubRegionListType(CustomDjangoListObjectType):
+    class Meta:
+        model = MonitoringSubRegion
+        filterset_class = MonitoringSubRegionFilter
 
 
 class CountrySubRegionType(DjangoObjectType):
@@ -239,6 +246,10 @@ class Query:
     household_size = graphene.Field(CountryHouseholdSizeType,
                                     country=graphene.ID(required=True),
                                     year=graphene.Int(required=True))
+    monitoring_sub_region_list = DjangoPaginatedListObjectField(MonitoringSubRegionListType,
+                                                                pagination=PageGraphqlPaginationWithoutCount(
+                                                                    page_size_query_param='pageSize'
+                                                                ))
 
     def resolve_household_size(root, info, country, year):
         try:
