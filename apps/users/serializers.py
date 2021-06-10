@@ -16,7 +16,9 @@ from apps.users.utils import get_user_from_activation_token
 from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
 from utils.validations import validate_hcaptcha, MissingCaptchaException
 from .tasks import send_email
-from .utils import encode_reset_password_token, decode_reset_password_token
+from django.contrib.auth.tokens import default_token_generator
+from djoser.utils import encode_uid
+
 User = get_user_model()
 
 
@@ -204,12 +206,12 @@ class GenerateResetPasswordTokenSerializer(serializers.Serializer):
         # if user exists for this email
         try:
             user = User.objects.get(email=email)
-            code = encode_reset_password_token(user.id)
-            # Store token in cache, set timeout 24 hrous
-            cache.set(f"reset-password-token-{user.id}", code, 24 * 60 * 60)
+            # Generate password reset token and uid
+            token = default_token_generator.make_token(user)
+            uid = encode_uid(user.pk)
             base_url = settings.FRONTEND_BASE_URL
             # Get base url by profile type
-            button_url = f"{base_url}/reset-password/{code}"
+            button_url = f"{base_url}/reset-password/{uid}/{token}"
             message = gettext(
                 "We received a request to reset your Helix account password. "
                 "If you wish to do so, please click below. Otherwise, you may "
@@ -239,37 +241,17 @@ class ResetPasswordSerializer(serializers.Serializer):
     """
 
     password_reset_token = serializers.CharField(write_only=True, required=True)
+    uid = serializers.CharField(write_only=True, required=True)
     new_password = serializers.CharField(write_only=True, required=True)
 
     def validate(self, attrs):
-        password_reset_token = attrs.get("password_reset_token")
-        user_id, token_expiry_time = None, None
-        invalid_token_message = gettext('Invalid token supplied')
-        expired_token_message = gettext('Token might be expired (24 hrous)')
-        # Decode token and parse token created time
-        decoded_data = decode_reset_password_token(password_reset_token)
-        user_id, token_expiry_time = decoded_data['user_id'], decoded_data['token_expiry_time']
-        if user_id and token_expiry_time:
-            # Check if user exists
-            try:
-                user = User.objects.get(id=user_id)
-            except User.DoesNotExist:
-                # explanatory email message
-                raise serializers.ValidationError(invalid_token_message)
-            # Get token from cache
-            original_token = cache.get(f"reset-password-token-{user.id}")
-            if password_reset_token != original_token:
-                raise serializers.ValidationError(invalid_token_message)
-            # Check if token expired
-            if timezone.now() > token_expiry_time:
-                raise serializers.ValidationError(expired_token_message)
-            # check new password and confirmation match
-            new_password = attrs["new_password"]
-            # set_password also hashes the password that the user will get
-            user.set_password(new_password)
-            user.save()
-            # Delete token from cache after reset password
-            # Ensure password reset link should be used only one time
-            cache.delete(f"reset-password-token-{user.id}")
-            return attrs
-        raise serializers.ValidationError(invalid_token_message)
+        uid = attrs.get("uid", None)
+        token = attrs.get("password_reset_token", None)
+        new_password = attrs.get("new_password", None)
+        user = get_user_from_activation_token(uid, token)
+        if user is None:
+            raise serializers.ValidationError(gettext('Invalid token supplied'))
+        # set_password also hashes the password that the user will get
+        user.set_password(new_password)
+        user.save()
+        return attrs

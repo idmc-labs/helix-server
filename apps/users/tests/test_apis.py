@@ -13,11 +13,6 @@ from utils.tests import (
     create_user_with_role,
     HelixAPITestCase
 )
-from apps.users.utils import (
-    encode_reset_password_token,
-    decode_reset_password_token
-)
-from django.utils import timezone
 
 
 class TestLogin(HelixGraphQLTestCase):
@@ -695,11 +690,13 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
         self.reset_password_query = '''
             mutation MyMutation (
                 $passwordResetToken: String!,
-                $newPassword: String!
+                $newPassword: String!,
+                $uid: String!
             ){
                 resetPassword(data: {
                         passwordResetToken: $passwordResetToken,
                         newPassword: $newPassword,
+                        uid: $uid
                     }) {
                     ok
                     errors
@@ -708,7 +705,7 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
         '''
 
     @mock.patch('apps.users.serializers.validate_hcaptcha')
-    def test_forget_password_should_return_success_response(self, validate):
+    def test_should_generate_reset_password_token(self, validate):
         response = self.query(
             self.forget_password_query,
             variables={
@@ -721,23 +718,25 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
 
     def test_user_can_reset_password(self):
         # Create password reset token
-        token = encode_reset_password_token(self.user.id)
+        token = default_token_generator.make_token(self.user)
+        uid = encode_uid(self.user.id)
         response = self.query(
             self.reset_password_query,
             variables={
                 'passwordResetToken': token,
                 'newPassword': '12343@#S#',
+                'uid': uid
             },
         )
         self.assertResponseNoErrors(response)
 
-    def test_should_not_accept_invalid_token(self):
-        token = 'MSwyMDIxLTA2LTA0IDE0OjM3O342jI1Ljg5NDQ4NSswMDowMA'
+        # Test link should expire if used by user
         response = self.query(
             self.reset_password_query,
             variables={
                 'passwordResetToken': token,
                 'newPassword': '12343@#S#',
+                'uid': uid
             },
         )
         content = json.loads(response.content)
@@ -745,10 +744,18 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
         message = content['data']['resetPassword']['errors'][0]['messages']
         self.assertEqual(message, 'Invalid token supplied')
 
-    def test_should_expire_after_24_hours(self):
-        token = encode_reset_password_token(self.user.id)
-        decoded_token = decode_reset_password_token(token)
-        expiry_period = decoded_token['token_expiry_time'] - timezone.now()
-        # 24 hours = 86400
-        expiry_period_in_hour = round(expiry_period.seconds / (60 * 60))
-        self.assertAlmostEqual(expiry_period_in_hour, 24)
+    def test_should_not_accept_invalid_token(self):
+        token = 'MSwyMDIxLTA2LTA0IDE0OjM3O342jI1Ljg5NDQ4NSswMDowMA'
+        uid = encode_uid(self.user.id)
+        response = self.query(
+            self.reset_password_query,
+            variables={
+                'passwordResetToken': token,
+                'newPassword': '12343@#S#',
+                'uid': uid
+            },
+        )
+        content = json.loads(response.content)
+        self.assertFalse(content['data']['resetPassword']['ok'])
+        message = content['data']['resetPassword']['errors'][0]['messages']
+        self.assertEqual(message, 'Invalid token supplied')
