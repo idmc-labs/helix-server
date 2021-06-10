@@ -386,5 +386,5 @@ MAX_LOGIN_ATTEMPTS = 3
 MAX_CAPTCHA_LOGIN_ATTEMPTS = 10
 LOGIN_TIMEOUT = 10
 
-# Frontent base curl for email button link
+# Frontend base url for email button link
 FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://127.0.0.1:3080')

@@ -218,7 +218,7 @@ class GenerateResetPasswordTokenSerializer(serializers.Serializer):
         # if no user exists for this email
         except User.DoesNotExist:
             # explanatory email message
-            raise serializers.ValidationError(gettext(f'User with this email {email} does not exists.'))
+            raise serializers.ValidationError(gettext('User with this email does not exists.'))
         subject = gettext("Reset password request for Helix")
         context = {
             "heading": gettext("Reset Password"),
