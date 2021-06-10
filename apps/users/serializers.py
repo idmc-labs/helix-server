@@ -209,7 +209,7 @@ class GenerateResetPasswordTokenSerializer(serializers.Serializer):
             cache.set(f"reset-password-token-{user.id}", code, 24 * 60 * 60)
             base_url = settings.FRONTEND_BASE_URL
             # Get base url by profile type
-            button_url = f"{base_url}/reset-password/?password_reset_token={code}"
+            button_url = f"{base_url}/reset-password/{code}"
             message = gettext(
                 "We received a request to reset your Helix account password. "
                 "If you wish to do so, please click below. Otherwise, you may "
