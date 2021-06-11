@@ -1,6 +1,5 @@
 from datetime import datetime
 import time
-
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
@@ -8,8 +7,6 @@ from django.conf import settings
 from django.utils.translation import gettext
 from django_enumfield.contrib.drf import EnumField
 from rest_framework import serializers
-from django.utils import timezone
-from django.core.cache import cache
 
 from apps.users.enums import USER_ROLE
 from apps.users.utils import get_user_from_activation_token

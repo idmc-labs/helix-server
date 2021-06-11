@@ -6,14 +6,6 @@ from django.utils.encoding import DjangoUnicodeDecodeError
 from djoser.compat import get_user_email
 from djoser.email import ActivationEmail
 from djoser.utils import decode_uid
-from django.utils.encoding import force_bytes, force_text
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils import timezone
-from datetime import timedelta
-from django.utils.dateparse import parse_datetime
-from rest_framework import serializers
-from django.utils.translation import gettext
-
 
 User = get_user_model()
 
