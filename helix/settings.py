@@ -76,6 +76,7 @@ THIRD_PARTY_APPS = [
     'djoser',
     'corsheaders',
     'django_filters',
+    'django_apscheduler',
     'debug_toolbar',
     'graphene_graphiql_explorer',
     'graphiql_debug_toolbar',

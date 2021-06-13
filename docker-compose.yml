@@ -39,7 +39,7 @@ services:
       target: dramatiq
     env_file:
       - .env
-    command: python manage.py rundramatiq --reload
+    command: ./deploy/scripts/run_tasks.sh
     volumes:
       - ./:/code
 

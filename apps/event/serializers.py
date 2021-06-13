@@ -142,6 +142,7 @@ class EventSerializer(MetaInformationSerializerMixin,
         return errors
 
     def validate(self, attrs: dict) -> dict:
+        attrs = super().validate(attrs)
         errors = OrderedDict()
         crisis = attrs.get('crisis') or getattr(self.instance, 'crisis', None)
         if crisis:
