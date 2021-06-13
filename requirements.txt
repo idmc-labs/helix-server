@@ -23,6 +23,7 @@ graphene-django==2.13.0
 graphene-file-upload==1.2.2
 graphene-graphiql-explorer==0.0.1
 ipython
+lxml==4.6.3
 mock==4.0.2
 openpyxl==3.0.6
 pdfkit==0.6.1

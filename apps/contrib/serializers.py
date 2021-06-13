@@ -108,6 +108,23 @@ class ExcelDownloadSerializer(MetaInformationSerializerMixin,
         model = ExcelDownload
         fields = '__all__'
 
+    def validate_concurrent_downloads(self, attrs: dict) -> None:
+        if ExcelDownload.objects.filter(
+            status__in=[
+                ExcelDownload.EXCEL_GENERATION_STATUS.PENDING,
+                ExcelDownload.EXCEL_GENERATION_STATUS.IN_PROGRESS
+            ],
+            created_by=self.context['request'].user,
+        ).exists():
+            raise serializers.ValidationError(gettext(
+                'Only one excel export is allowed at a time'
+            ), code='one-at-a-time')
+
+    def validate(self, attrs: dict) -> dict:
+        attrs = super().validate(attrs)
+        self.validate_concurrent_downloads(attrs)
+        return attrs
+
     def create(self, validated_data):
         instance = super().create(validated_data)
         instance.trigger_excel_generation(self.context['request'])
