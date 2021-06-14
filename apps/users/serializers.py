@@ -241,6 +241,10 @@ class ResetPasswordSerializer(serializers.Serializer):
     uid = serializers.CharField(write_only=True, required=True)
     new_password = serializers.CharField(write_only=True, required=True)
 
+    def validate_new_password(self, password):
+        validate_password(password)
+        return password
+
     def validate(self, attrs):
         uid = attrs.get("uid", None)
         token = attrs.get("password_reset_token", None)
