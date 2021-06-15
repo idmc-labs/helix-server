@@ -131,9 +131,7 @@ class CommonFigureValidationMixin:
             return errors
         location_code = country.iso2
         if not location_code:
-            errors.update({
-                'geo_locations': 'Invalid country for figure: Please contact administrator'
-            })
+            # ignore iso2 validation if missing
             return errors
         geo_locations_code = set([
             location['country_code'] for location in attrs['geo_locations']
