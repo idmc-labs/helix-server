@@ -14,11 +14,8 @@ from django.core.management.base import BaseCommand
 from django_apscheduler.jobstores import DjangoMemoryJobStore
 from django_apscheduler.models import DjangoJobExecution
 
-from apps.contrib.tasks import PROGRESS_STATE_TIMEOUT_MINUTES, PENDING_STATE_TIMEOUT_MINUTES
-
 
 logger = logging.getLogger(__name__)
-OLD_JOB_EXECUTION_TTL = 259_200  # seconds
 
 
 def fail_all_old_excel_exports():
@@ -27,19 +24,19 @@ def fail_all_old_excel_exports():
     # if a task has been pending for too long, move it to FAILED
     pending = ExcelDownload.objects.filter(
         status=ExcelDownload.EXCEL_GENERATION_STATUS.PENDING,
-        started_at__lte=timezone.now() - timedelta(minutes=PENDING_STATE_TIMEOUT_MINUTES),
+        started_at__lte=timezone.now() - timedelta(seconds=settings.EXCEL_EXPORT_PENDING_STATE_TIMEOUT),
     ).update(status=ExcelDownload.EXCEL_GENERATION_STATUS.FAILED)
 
     # if a task has been in progress beyond timeout, move it to FAILED
     progress = ExcelDownload.objects.filter(
         status=ExcelDownload.EXCEL_GENERATION_STATUS.IN_PROGRESS,
-        started_at__lte=timezone.now() - timedelta(minutes=PROGRESS_STATE_TIMEOUT_MINUTES),
+        started_at__lte=timezone.now() - timedelta(seconds=settings.EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT),
     ).update(status=ExcelDownload.EXCEL_GENERATION_STATUS.FAILED)
 
     logger.info(f'Updated excel exports to failed:\n{pending=}\n{progress=}')
 
 
-def delete_old_job_executions(max_age=OLD_JOB_EXECUTION_TTL):
+def delete_old_job_executions(max_age=settings.OLD_JOB_EXECUTION_TTL):
     """This job deletes all apscheduler job executions older than `max_age` seconds from the database."""
     DjangoJobExecution.objects.delete_old_job_executions(max_age)
 

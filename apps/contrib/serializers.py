@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 import magic
 
+from django.conf import settings
 from django.template.defaultfilters import filesizeformat
 from django.utils.translation import gettext
 from rest_framework import serializers
@@ -115,7 +116,7 @@ class ExcelDownloadSerializer(MetaInformationSerializerMixin,
                 ExcelDownload.EXCEL_GENERATION_STATUS.IN_PROGRESS
             ],
             created_by=self.context['request'].user,
-        ).exists():
+        ).count() >= settings.EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT:
             raise serializers.ValidationError(gettext(
                 'Only one excel export is allowed at a time'
             ), code='one-at-a-time')

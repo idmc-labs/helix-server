@@ -400,3 +400,12 @@ PASSWORD_RESET_TIMEOUT = 15 * 60
 PASSWORD_RESET_CLIENT_URL = "{FRONTEND_BASE_URL}/reset-password/{{uid}}/{{token}}".format(
     FRONTEND_BASE_URL=FRONTEND_BASE_URL
 )
+
+# TASKS TIMEOUTS
+OLD_JOB_EXECUTION_TTL = 259_200  # seconds
+# staying in pending for too long will be moved to failed
+EXCEL_EXPORT_PENDING_STATE_TIMEOUT = 18_000  # seconds
+# staying in progress for too long will be moved to failed
+# also dramatiq will stop generating the report
+EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT = 600  # seconds
+EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT = 3

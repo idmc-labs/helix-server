@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.test import RequestFactory
 from django.utils import timezone
 
@@ -39,17 +40,23 @@ class TestExcelDownload(HelixTestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
-    def test_invalid_excel_export_if_one_is_in_progress(self):
+    def test_invalid_excel_export_if_in_progress_beyond_limit(self):
         self.request.user = self.admin
         self.context['request'] = self.request
-        e = ExcelDownload.objects.create(
-            started_at=timezone.now(),
-            completed_at=timezone.now(),
-            download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY,
-            status=ExcelDownload.EXCEL_GENERATION_STATUS.PENDING,
-            created_by=self.admin,
-        )
+        downloads = []
+        for _ in range(settings.EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT):
+            downloads.append(
+                ExcelDownload.objects.create(
+                    started_at=timezone.now(),
+                    completed_at=timezone.now(),
+                    download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY,
+                    status=ExcelDownload.EXCEL_GENERATION_STATUS.PENDING,
+                    created_by=self.admin,
+                )
+            )
+        excel_download = downloads[-1]
 
+        # checking for pending only
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY.value,
@@ -59,8 +66,8 @@ class TestExcelDownload(HelixTestCase):
         )
         self.assertFalse(serializer.is_valid())
 
-        e.delete()
-        e = ExcelDownload.objects.create(
+        excel_download.delete()
+        excel_download = ExcelDownload.objects.create(
             started_at=timezone.now(),
             completed_at=timezone.now(),
             download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY,
@@ -68,6 +75,7 @@ class TestExcelDownload(HelixTestCase):
             created_by=self.admin,
         )
 
+        # checking with in_progress as well
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY.value,
@@ -79,9 +87,9 @@ class TestExcelDownload(HelixTestCase):
         self.assertIn('non_field_errors', serializer.errors)
         self.assertEqual('one-at-a-time', serializer.errors['non_field_errors'][0].code)
 
-        e.delete()
+        excel_download.delete()
         # failed downloads are allowed though
-        e = ExcelDownload.objects.create(
+        excel_download = ExcelDownload.objects.create(
             started_at=timezone.now(),
             completed_at=timezone.now(),
             download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY,
@@ -98,10 +106,9 @@ class TestExcelDownload(HelixTestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
-        e.delete()
         # other user downloads dont matter
         other_user = create_user_with_role(USER_ROLE.ADMIN.name)
-        e = ExcelDownload.objects.create(
+        ExcelDownload.objects.create(
             started_at=timezone.now(),
             completed_at=timezone.now(),
             download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY,

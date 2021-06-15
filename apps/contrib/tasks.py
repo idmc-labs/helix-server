@@ -4,6 +4,7 @@ from tempfile import NamedTemporaryFile
 import time
 
 from django.core.files.base import ContentFile
+from django.conf import settings
 from django.utils import timezone
 import dramatiq
 from openpyxl import Workbook
@@ -11,11 +12,6 @@ from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 
 from helix.settings import QueuePriority
 
-# staying in pending for too long will be moved to failed
-PENDING_STATE_TIMEOUT_MINUTES = 60
-# staying in progress for too long will be moved to failed
-# also dramatiq will stop generating the report
-PROGRESS_STATE_TIMEOUT_MINUTES = 10
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -48,7 +44,11 @@ def get_excel_sheet_content(headers, data, **kwargs):
         return content
 
 
-@dramatiq.actor(queue_name=QueuePriority.HEAVY.value, max_retries=0, time_limit=PROGRESS_STATE_TIMEOUT_MINUTES * 60 * 1000)
+@dramatiq.actor(
+    queue_name=QueuePriority.HEAVY.value,
+    max_retries=0,
+    time_limit=settings.EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT * 1000
+)
 def generate_excel_file(download_id, user_id):
     '''
     Fetch the filter data from excel download
