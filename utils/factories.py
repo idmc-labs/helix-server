@@ -43,6 +43,7 @@ class CountryFactory(DjangoModelFactory):
 
     name = factory.Faker('first_name')
     region = factory.SubFactory(CountryRegionFactory)
+    monitoring_sub_region = factory.SubFactory(MonitoringSubRegionFactory)
 
 
 class ContextualAnalysisFactory(DjangoModelFactory):

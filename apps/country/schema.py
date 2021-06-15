@@ -33,6 +33,14 @@ class MonitoringSubRegionType(DjangoObjectType):
     class Meta:
         model = MonitoringSubRegion
 
+    portfolios = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
+        get_type('apps.users.schema.PortfolioListType'),
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        ),
+        related_name='portfolios',
+    ))
+
 
 class MonitoringSubRegionListType(CustomDjangoListObjectType):
     class Meta:

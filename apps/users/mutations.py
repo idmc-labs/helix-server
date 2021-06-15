@@ -13,8 +13,6 @@ from apps.users.serializers import (
     UserPasswordSerializer,
     GenerateResetPasswordTokenSerializer,
     ResetPasswordSerializer,
-    PortfolioSerializer,
-    PortfolioUpdateSerializer,
 )
 from utils.permissions import is_authenticated, permission_checker
 from utils.error_types import CustomErrorType, mutation_is_not_valid
@@ -224,6 +222,7 @@ class ResetPassword(graphene.Mutation):
         return ResetPassword(errors=None, ok=True)
 
 
+'''
 PortfolioInputType = generate_input_type_for_serializer(
     'PortfolioInputType',
     PortfolioSerializer
@@ -303,6 +302,7 @@ class DeletePortfolio(graphene.Mutation):
         instance.delete()
         instance.id = id
         return DeletePortfolio(result=instance, errors=None, ok=True)
+'''
 
 
 class Mutation(object):
@@ -314,6 +314,8 @@ class Mutation(object):
     change_password = ChangeUserPassword.Field()
     generate_reset_password_token = GenerateResetPasswordToken.Field()
     reset_password = ResetPassword.Field()
+    '''
     create_portfolio = CreatePortfolio.Field()
     update_portfolio = UpdatePortfolio.Field()
     delete_portfolio = DeletePortfolio.Field()
+    '''

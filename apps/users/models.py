@@ -118,6 +118,11 @@ class Portfolio(models.Model):
         related_name='portfolios', on_delete=models.CASCADE,
         null=True, blank=True
     )
+    countries = models.ManyToManyField(
+        'country.Country',
+        verbose_name=_('Countries'),
+        related_name='portfolios'
+    )
 
     objects = models.Manager()
 
@@ -125,22 +130,23 @@ class Portfolio(models.Model):
         if user.highest_role == USER_ROLE.ADMIN:
             return True
         if user.highest_role == USER_ROLE.REGIONAL_COORDINATOR:
-            return self.monitoring_sub_region in user.portfolios.filter(
-                role=USER_ROLE.REGIONAL_COORDINATOR,
-                monitoring_sub_region=self.monitoring_sub_region
-            ).exists()
+            # regional coordinator cannot alter admins or regional coordinators
+            return self.role in [USER_ROLE.ADMIN, USER_ROLE.REGIONAL_COORDINATOR]
         return False
 
     @classmethod
     def get_role_allows_region_map(cls) -> dict:
         region_allowed_in = [
             USER_ROLE.REGIONAL_COORDINATOR,
+        ]
+        countries_allowed_in = [
             USER_ROLE.MONITORING_EXPERT,
         ]
         return {
             role.name: {
                 'label': role.label,
-                'allows_region': role in region_allowed_in
+                'allows_region': role in region_allowed_in,
+                'allows_countries': role in countries_allowed_in,
             } for role in USER_ROLE
         }
 
@@ -152,7 +158,8 @@ class Portfolio(models.Model):
 
     @classmethod
     def get_coordinator(cls, ms_region: int) -> Portfolio:
-        return cls.get_coordinators.get(
+        """Only one coordinator per region"""
+        return cls.get_coordinators().get(
             monitoring_sub_region=ms_region
         )
 
@@ -175,15 +182,6 @@ class Portfolio(models.Model):
             {'action': k, 'entities': list(v)} for k, v in
             PERMISSIONS[USER_ROLE[self.role]].items()
         ]
-
-    def _clean_fields(self) -> None:
-        # following roles are not allowed along with monitoring region
-        if self.role in [USER_ROLE.ADMIN, USER_ROLE.GUEST]:
-            self.monitoring_sub_region = None
-
-    def save(self, *args, **kwargs):
-        self._clean_fields()
-        return super().save(*args, **kwargs)
 
     class Meta:
         constraints = [

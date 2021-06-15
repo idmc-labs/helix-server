@@ -10,6 +10,7 @@ from rest_framework import serializers
 from apps.users.enums import USER_ROLE
 from apps.users.utils import get_user_from_activation_token
 from apps.users.models import Portfolio
+from apps.country.models import Country
 from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
 from utils.validations import validate_hcaptcha, MissingCaptchaException
 from .tasks import send_email
@@ -150,118 +151,122 @@ class ActivateSerializer(serializers.Serializer):
         return attrs
 
 
-class PortfolioSerializer(serializers.ModelSerializer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if hasattr(self, 'initial_data'):
-            self.initial_data['monitoring_sub_region'] = self.initial_data.get('monitoring_sub_region')
+# Begin Portfolios
 
-    def validate_user(self, user):
-        # During update we will not allow changing the user
-        if self.instance:
-            return self.instance.user
-        return user
 
-    def _validate_role_by_authenticated_user_role(self, attrs: dict) -> None:
-        # we cannot set a role higher than ourself
-        role = attrs.get('role')
-        authenticated_user = self.context['request'].user
-        highest_role = authenticated_user.highest_role
-        # though already handled in mutations
-        if highest_role not in [USER_ROLE.REGIONAL_COORDINATOR, USER_ROLE.ADMIN]:
+class MonitoringExpertPortfolioSerializer(serializers.ModelSerializer):
+    def _validate_country_is_not_occupied(self, attrs: dict) -> None:
+        portfolios = Portfolio.objects.filter(
+            countries__in=attrs.get('countries', []),
+        ).exclude(
+            id=getattr(self.instance, 'id', None)
+        )
+        if portfolios.exists():
+            countries = Country.objects.filter(
+                id__in=portfolios.values('countries')
+            )
             raise serializers.ValidationError(
-                gettext('You cannot perform this action'),
+                gettext('Following countries already have monitoring experts: %s')
+                % ' | '.join(c.name for c in countries),
+                code='already-occupied'
+            )
+
+    def _validate_can_add(self) -> None:
+        if self.context['request'].user.highest_role not in [USER_ROLE.ADMIN, USER_ROLE.REGIONAL_COORDINATOR]:
+            raise serializers.ValidationError(
+                gettext('You are not allowed to perform this action'),
                 code='not-allowed'
             )
-        if highest_role == USER_ROLE.REGIONAL_COORDINATOR and role in [
-                USER_ROLE.ADMIN
-        ]:
-            raise serializers.ValidationError({
-                'role': gettext(
-                    'You are not allowed to set an admin.'
-                )
-            }, code='role-not-set')
 
-        # we cannot change our own role
-        if authenticated_user == attrs.get('user'):
-            raise serializers.ValidationError({
-                'role': gettext(
-                    'Please ask another admin or regional coordinator'
-                )
-            }, code='cannot-modify-yourself')
-
-    def _validate_role_region(self, attrs) -> None:
-        role = attrs.get('role')
-        monitoring_sub_region = attrs.get('monitoring_sub_region')
-        if role in [USER_ROLE.ADMIN, USER_ROLE.GUEST] and monitoring_sub_region:
-            raise serializers.ValidationError(gettext(
-                'Monitoring region is not allowed with given role'
-            ))
-        if role in [USER_ROLE.MONITORING_EXPERT, USER_ROLE.REGIONAL_COORDINATOR] and not monitoring_sub_region:
-            raise serializers.ValidationError({
-                'monitoring_sub_region': gettext(
-                    'This field is required'
-                )
-            }, code='required')
-
-        user = self.context['request'].user
-        # highest role here can only be either regional coordinator or admin
-        highest_role = user.highest_role
-        if highest_role == USER_ROLE.REGIONAL_COORDINATOR:
-            if not user.portfolios.filter(
-                role=USER_ROLE.REGIONAL_COORDINATOR,
-                monitoring_sub_region=monitoring_sub_region
-            ).exists():
-                raise serializers.ValidationError({
-                    'monitoring_sub_region': gettext(
-                        'You are not allowed to add in this monitoring region'
-                    )
-                })
-
-    def _validate_unique_together(self, attrs) -> None:
+    def _validate_unique_monitoring_expert_per_user(self, attrs: dict):
+        # one user can only have one monitoring expert role
         if Portfolio.objects.filter(
-            user=attrs.get('user') or getattr(self.instance, 'user', None),
-            role=attrs.get('role') or getattr(self.instance, 'role', None),
-            monitoring_sub_region=attrs.get('monitoring_sub_region') or getattr(self.instance, 'monitoring_sub_region', None),  # noqa
-        ).exclude(id=getattr(self.instance, 'id', None)):
-            raise serializers.ValidationError(gettext('This portfolio already exists.'))
-
-    def _validate_disallow_redundant_role(self, attrs) -> None:
-        user = attrs.get('user') or getattr(self.instance, 'user', None)
-        monitoring_sub_region = attrs.get('monitoring_sub_region') or getattr(self.instance, 'monitoring_sub_region', None)
-        if user.portfolios.count() and monitoring_sub_region == USER_ROLE.GUEST:
+            user=attrs.get('user'),
+            role=USER_ROLE.MONITORING_EXPERT,
+        ).exclude(
+            id=getattr(self.instance, 'id', None)
+        ).exists():
             raise serializers.ValidationError(
-                gettext('Guest portfolio is not important for this user')
+                gettext('Monitoring expert already exists. Please update that portfolio instead.'),
+                code='duplicate-portfolio'
             )
 
-    def validate(self, attrs) -> dict:
-        self._validate_role_by_authenticated_user_role(attrs)
-        self._validate_role_region(attrs)
-        self._validate_unique_together(attrs)
-        self._validate_disallow_redundant_role(attrs)
+    def validate(self, attrs: dict) -> dict:
+        self._validate_can_add()
+        self._validate_country_is_not_occupied(attrs)
+        self._validate_unique_monitoring_expert_per_user(attrs)
+        attrs['role'] = USER_ROLE.MONITORING_EXPERT
         return attrs
 
     class Meta:
         model = Portfolio
-        fields = '__all__'
-        extra_kwargs = dict(
-            monitoring_sub_region=dict(required=False)
-        )
+        fields = ['user', 'countries']
 
 
-class PortfolioUpdateSerializer(PortfolioSerializer):
-    id = IntegerIDField(required=True)
+class RegionalCoordinatorPortfolioSerializer(serializers.ModelSerializer):
+    def _validate_monitoring_region_already_occupied(self, attrs: dict) -> None:
+        if portfolio := Portfolio.objects.filter(
+            role=USER_ROLE.REGIONAL_COORDINATOR,
+            monitoring_sub_region=attrs['monitoring_sub_region'].id,
+        ).exclude(id=getattr(self.instance, 'id', None)):
+            raise serializers.ValidationError(
+                gettext('This monitoring region is already occupied by %s')
+                % portfolio.get().user.full_name,
+                code='already-occupied'
+            )
+
+    def _validate_can_add(self) -> None:
+        if not self.context['request'].user.highest_role == USER_ROLE.ADMIN:
+            raise serializers.ValidationError(
+                gettext('You are not allowed to perform this action'),
+                code='not-allowed'
+            )
+
+    def validate(self, attrs: dict) -> dict:
+        self._validate_monitoring_region_already_occupied(attrs)
+        self._validate_can_add()
+        attrs['role'] = USER_ROLE.REGIONAL_COORDINATOR
+        return attrs
 
     class Meta:
         model = Portfolio
-        fields = ['id', 'role', 'monitoring_sub_region']
-        extra_kwargs = dict(
-            monitoring_sub_region=dict(required=False)
-        )
+        fields = ['user', 'monitoring_sub_region']
+
+
+class AdminPortfolioSerializer(serializers.ModelSerializer):
+    def _validate_unique(self, attrs) -> None:
+        if Portfolio.objects.filter(
+            user=attrs.get('user'),
+            role=USER_ROLE.ADMIN,
+        ).exclude(
+            id=getattr(self.instance, 'id', None)
+        ).exists():
+            raise serializers.ValidationError(gettext(
+                'Portfolio already exists'
+            ), code='already-exists')
+
+    def _validate_is_admin(self) -> None:
+        if not self.context['request'].user.highest_role == USER_ROLE.ADMIN:
+            raise serializers.ValidationError(
+                gettext('You are not allowed to perform this action'),
+                code='not-allowed'
+            )
+
+    def validate(self, attrs: dict) -> dict:
+        self._validate_is_admin()
+        self._validate_unique(attrs)
+        attrs['role'] = USER_ROLE.ADMIN
+        return attrs
+
+    class Meta:
+        model = Portfolio
+        fields = ['user']
+
+
+# End Portfolios
 
 
 class UserSerializer(UpdateSerializerMixin, serializers.ModelSerializer):
-    # portfolios = PortfolioSerializer(many=True)
     id = IntegerIDField(required=True)
 
     class Meta:

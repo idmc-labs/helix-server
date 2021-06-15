@@ -8,8 +8,4 @@ class UsersConfig(AppConfig):
 
         super().ready()
 
-        from apps.users.receivers import (  # noqa
-            add_default_guest_portfolio,
-            update_user_group_post_delete,
-            update_user_group_post_save,
-        )
+        from apps.users import receivers  # noqa: F401
