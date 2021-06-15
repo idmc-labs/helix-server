@@ -54,7 +54,8 @@ class PortfolioFilter(django_filters.FilterSet):
     class Meta:
         model = Portfolio
         fields = {
-            'monitoring_sub_region': ['in']
+            'monitoring_sub_region': ['in'],
+            'countries': ['in'],
         }
 
     def filter_role_in(self, queryset, name, value):
