@@ -368,6 +368,7 @@ class TestFigureSerializer(HelixTestCase):
             event=self.event
         )
         self.fig_cat = FigureCategoryFactory.create()
+        self.country = country1
         self.data = {
             "uuid": str(uuid4()),
             "entry": self.entry.id,
@@ -409,7 +410,7 @@ class TestFigureSerializer(HelixTestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertIsNone(serializer.data['displacement_occurred'])
 
-    def test_invalid_geo_locations(self):
+    def test_invalid_geo_locations_country_codes(self):
         self.data['geo_locations'] = [
             {
                 "country": "Nepal",
@@ -444,6 +445,14 @@ class TestFigureSerializer(HelixTestCase):
                                       context={'request': self.request})
         self.assertFalse(serializer.is_valid())
         self.assertIn('geo_locations', serializer.errors)
+
+        # if the figure country iso2 is missing, ignore the validation
+        self.country.iso2 = None
+        self.country.save()
+
+        serializer = FigureSerializer(data=self.data,
+                                      context={'request': self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_invalid_displacement(self):
         self.data['disaggregation_displacement_urban'] = 10
