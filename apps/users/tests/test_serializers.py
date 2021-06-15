@@ -186,14 +186,36 @@ class TestMonitoringExpertPortfolioSerializer(HelixTestCase):
         self.expert = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.request = RequestFactory().post('/graphql')
 
-    def test_coordinators_and_admin_are_allowed_to_create(self):
+    def test_admin_cannot_create(self):
+        self.request.user = self.admin
+        context = dict(
+            request=self.request
+        )
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
+        monitoring_sub_region = MonitoringSubRegionFactory.create()
+        data = dict(
+            user=guest.id,
+            monitoring_sub_region=monitoring_sub_region.id,
+            countries=[each.id for each in CountryFactory.create_batch(3)]
+        )
+        serializer = MonitoringExpertPortfolioSerializer(
+            data=data,
+            context=context
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('non_field_errors', serializer.errors)
+        self.assertEqual(serializer.errors['non_field_errors'][0].code, 'not-allowed', serializer.errors)
+
+    def test_coordinators_are_allowed_to_create(self):
         self.request.user = self.coordinator
         context = dict(
             request=self.request
         )
         guest = create_user_with_role(USER_ROLE.GUEST.name)
+        coordinator_region = self.coordinator.portfolios.first().monitoring_sub_region
         data = dict(
             user=guest.id,
+            monitoring_sub_region=coordinator_region.id,
             countries=[each.id for each in CountryFactory.create_batch(3)]
         )
         serializer = MonitoringExpertPortfolioSerializer(
@@ -211,6 +233,7 @@ class TestMonitoringExpertPortfolioSerializer(HelixTestCase):
         guest = create_user_with_role(USER_ROLE.GUEST.name)
         data = dict(
             user=guest.id,
+            monitoring_sub_region=coordinator_region.id,
             countries=[each.id for each in CountryFactory.create_batch(3)]
         )
         serializer = MonitoringExpertPortfolioSerializer(
@@ -218,38 +241,46 @@ class TestMonitoringExpertPortfolioSerializer(HelixTestCase):
             context=context
         )
         self.assertFalse(serializer.is_valid())
+        self.assertIn('non_field_errors', serializer.errors)
         self.assertEqual(serializer.errors['non_field_errors'][0].code, 'not-allowed', serializer.errors)
 
     def test_unique_expert_per_country(self):
-        country1 = CountryFactory.create()
-        country2 = CountryFactory.create()
-        portfolio = self.expert.portfolios.filter(
-            role=USER_ROLE.MONITORING_EXPERT
-        ).get()
-        portfolio.countries.set([country1, country2])
+        monitoring_sub_region = MonitoringSubRegionFactory.create()
+        country1 = CountryFactory.create(monitoring_sub_region=monitoring_sub_region)
+        country2 = CountryFactory.create(monitoring_sub_region=monitoring_sub_region)
 
-        self.request.user = self.admin
+        expert = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name,
+                                       monitoring_sub_region=monitoring_sub_region.id)
+        portfolio = expert.portfolios.first()
+        portfolio.countries.set([country1, country2])
+        coordinator = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name,
+                                            monitoring_sub_region=monitoring_sub_region.id)
+
+        self.request.user = coordinator
         context = dict(
             request=self.request
         )
 
-        # try and add this expert to the same country, should fail
+        # try and add another user to the same country, should fail
         guest = create_user_with_role(USER_ROLE.GUEST.name)
         data = dict(
             user=guest.id,
-            countries=[country1.id, country2.id]
+            monitoring_sub_region=monitoring_sub_region.id,
+            countries=[country1.id, country2.id],
         )
         serializer = MonitoringExpertPortfolioSerializer(
             data=data,
             context=context
         )
         self.assertFalse(serializer.is_valid())
+        self.assertIn('non_field_errors', serializer.errors)
         self.assertEqual(serializer.errors['non_field_errors'][0].code, 'already-occupied', serializer.errors)
 
-        country2 = CountryFactory.create()
+        country3 = CountryFactory.create(monitoring_sub_region=monitoring_sub_region)
         data = dict(
             user=guest.id,
-            countries=[country2.id]
+            monitoring_sub_region=monitoring_sub_region.id,
+            countries=[country3.id]
         )
         serializer = MonitoringExpertPortfolioSerializer(
             data=data,
@@ -258,21 +289,53 @@ class TestMonitoringExpertPortfolioSerializer(HelixTestCase):
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
 
-    def test_user_can_only_have_one_expert_role(self):
-        self.request.user = self.admin
+    def test_user_can_only_have_one_expert_role_in_region(self):
+        monitoring_sub_region = MonitoringSubRegionFactory.create()
+        coordinator = create_user_with_role(
+            USER_ROLE.REGIONAL_COORDINATOR.name,
+            monitoring_sub_region=monitoring_sub_region.id
+        )
+        expert = create_user_with_role(
+            USER_ROLE.MONITORING_EXPERT.name,
+            monitoring_sub_region=monitoring_sub_region.id
+        )
+
+        self.request.user = coordinator
         context = dict(
             request=self.request
         )
 
         country2 = CountryFactory.create()
         data = dict(
-            # already exists, though its a different country
-            user=self.expert.id,
-            countries=[country2.id]
+            user=expert.id,
+            # already exists, though its a different country but in the same monitoring region
+            monitoring_sub_region=monitoring_sub_region.id,
+            countries=[country2.id],
         )
         serializer = MonitoringExpertPortfolioSerializer(
             data=data,
             context=context
         )
         self.assertFalse(serializer.is_valid())
+        self.assertIn('non_field_errors', serializer.errors)
         self.assertEqual(serializer.errors['non_field_errors'][0].code, 'duplicate-portfolio', serializer.errors)
+
+    def test_coordinator_not_allowed_to_add_in_other_region(self):
+        self.request.user = self.coordinator
+        context = dict(
+            request=self.request
+        )
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
+        other_region = MonitoringSubRegionFactory.create()
+        data = dict(
+            user=guest.id,
+            monitoring_sub_region=other_region.id,
+            countries=[each.id for each in CountryFactory.create_batch(3)]
+        )
+        serializer = MonitoringExpertPortfolioSerializer(
+            data=data,
+            context=context
+        )
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('non_field_errors', serializer.errors, serializer.errors)
+        self.assertEqual('not-allowed-in-region', serializer.errors['non_field_errors'][0].code, serializer.errors)

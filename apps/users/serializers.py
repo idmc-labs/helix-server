@@ -157,6 +157,7 @@ class ActivateSerializer(serializers.Serializer):
 class MonitoringExpertPortfolioSerializer(serializers.ModelSerializer):
     def _validate_country_is_not_occupied(self, attrs: dict) -> None:
         portfolios = Portfolio.objects.filter(
+            role=USER_ROLE.MONITORING_EXPERT,
             countries__in=attrs.get('countries', []),
         ).exclude(
             id=getattr(self.instance, 'id', None)
@@ -171,28 +172,37 @@ class MonitoringExpertPortfolioSerializer(serializers.ModelSerializer):
                 code='already-occupied'
             )
 
-    def _validate_can_add(self) -> None:
-        if self.context['request'].user.highest_role not in [USER_ROLE.ADMIN, USER_ROLE.REGIONAL_COORDINATOR]:
+    def _validate_can_add(self, attrs: dict) -> None:
+        if self.context['request'].user.highest_role not in [USER_ROLE.REGIONAL_COORDINATOR]:
             raise serializers.ValidationError(
                 gettext('You are not allowed to perform this action'),
                 code='not-allowed'
+            )
+        portfolio = Portfolio.get_coordinator(
+            ms_region=attrs['monitoring_sub_region']
+        )
+        if portfolio is None or self.context['request'].user != portfolio.user:
+            raise serializers.ValidationError(
+                gettext('You are not allowed to add to this region'),
+                code='not-allowed-in-region'
             )
 
     def _validate_unique_monitoring_expert_per_user(self, attrs: dict):
         # one user can only have one monitoring expert role
         if Portfolio.objects.filter(
             user=attrs.get('user'),
+            monitoring_sub_region=attrs.get('monitoring_sub_region'),
             role=USER_ROLE.MONITORING_EXPERT,
         ).exclude(
             id=getattr(self.instance, 'id', None)
         ).exists():
             raise serializers.ValidationError(
-                gettext('Monitoring expert already exists. Please update that portfolio instead.'),
+                gettext('Monitoring expert portfolio for this region already exists.'),
                 code='duplicate-portfolio'
             )
 
     def validate(self, attrs: dict) -> dict:
-        self._validate_can_add()
+        self._validate_can_add(attrs)
         self._validate_country_is_not_occupied(attrs)
         self._validate_unique_monitoring_expert_per_user(attrs)
         attrs['role'] = USER_ROLE.MONITORING_EXPERT
@@ -200,7 +210,11 @@ class MonitoringExpertPortfolioSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Portfolio
-        fields = ['user', 'countries']
+        fields = ['user', 'countries', 'monitoring_sub_region']
+        extra_kwargs = {
+            'monitoring_sub_region': dict(required=True, allow_null=False),
+            'countries': dict(required=True),
+        }
 
 
 class RegionalCoordinatorPortfolioSerializer(serializers.ModelSerializer):
@@ -231,6 +245,9 @@ class RegionalCoordinatorPortfolioSerializer(serializers.ModelSerializer):
     class Meta:
         model = Portfolio
         fields = ['user', 'monitoring_sub_region']
+        extra_kwargs = {
+            'monitoring_sub_region': dict(required=True, allow_null=False),
+        }
 
 
 class AdminPortfolioSerializer(serializers.ModelSerializer):

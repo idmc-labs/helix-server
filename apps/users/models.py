@@ -159,9 +159,9 @@ class Portfolio(models.Model):
     @classmethod
     def get_coordinator(cls, ms_region: int) -> Portfolio:
         """Only one coordinator per region"""
-        return cls.get_coordinators().get(
+        return cls.get_coordinators().filter(
             monitoring_sub_region=ms_region
-        )
+        ).first()
 
     @classmethod
     def get_highest_role(cls, user: User) -> USER_ROLE:
