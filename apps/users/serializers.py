@@ -206,9 +206,11 @@ class GenerateResetPasswordTokenSerializer(serializers.Serializer):
             # Generate password reset token and uid
             token = default_token_generator.make_token(user)
             uid = encode_uid(user.pk)
-            base_url = settings.FRONTEND_BASE_URL
             # Get base url by profile type
-            button_url = f"{base_url}/reset-password/{uid}/{token}"
+            button_url = settings.PASSWORD_RESET_CLIENT_URL.format(
+                uid=uid,
+                token=token,
+            )
             message = gettext(
                 "We received a request to reset your Helix account password. "
                 "If you wish to do so, please click below. Otherwise, you may "

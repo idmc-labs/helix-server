@@ -387,6 +387,9 @@ MAX_CAPTCHA_LOGIN_ATTEMPTS = 10
 LOGIN_TIMEOUT = 10
 
 # Frontend base url for email button link
-FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://127.0.0.1:3080')
+FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'localhost:3080')
 
 PASSWORD_RESET_TIMEOUT = 24 * 60 * 60
+PASSWORD_RESET_CLIENT_URL = "{FRONTEND_BASE_URL}/reset-password/{{uid}}/{{token}}".format(
+    FRONTEND_BASE_URL=FRONTEND_BASE_URL
+)
