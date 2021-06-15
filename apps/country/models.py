@@ -1,3 +1,4 @@
+from typing import Union
 from datetime import datetime
 
 from collections import OrderedDict
@@ -12,7 +13,8 @@ from django_enumfield import enum
 from apps.contrib.models import MetaInformationArchiveAbstractModel, ArchiveAbstractModel
 from apps.entry.models import Entry, Figure
 from apps.crisis.models import Crisis
-from apps.users.models import User
+from apps.users.models import User, Portfolio
+from apps.users.enums import USER_ROLE
 
 
 class GeographicalGroup(models.Model):
@@ -112,6 +114,40 @@ class CountryRegion(models.Model):
 
 class MonitoringSubRegion(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=256)
+
+    @property
+    def unmonitored_countries_count(self) -> int:
+        portfolios = Portfolio.objects.filter(
+            role=USER_ROLE.MONITORING_EXPERT,
+            countries__isnull=False,
+        ).values_list('countries')
+        q = self.countries.filter(
+            ~models.Q(id__in=portfolios)
+        )
+        return q.count()
+
+    @property
+    def unmonitored_countries_names(self) -> str:
+        portfolios = Portfolio.objects.filter(
+            role=USER_ROLE.MONITORING_EXPERT,
+            countries__isnull=False,
+        ).values_list('countries')
+        q = self.countries.filter(
+            ~models.Q(id__in=portfolios)
+        )
+        return '; '.join(q.values_list('idmc_short_name', flat=True))
+
+    @property
+    def regional_coordinator(self) -> Union[User, None]:
+        if Portfolio.objects.filter(monitoring_sub_region=self).exists():
+            return Portfolio.objects.get(monitoring_sub_region=self).user
+
+    @property
+    def monitoring_experts_count(self) -> int:
+        return Portfolio.objects.filter(
+            monitoring_sub_region=self,
+            role=USER_ROLE.MONITORING_EXPERT,
+        ).values('user').distinct().count()
 
     def __str__(self):
         return self.name

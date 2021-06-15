@@ -32,14 +32,20 @@ from utils.pagination import PageGraphqlPaginationWithoutCount
 class MonitoringSubRegionType(DjangoObjectType):
     class Meta:
         model = MonitoringSubRegion
+        exclude_fields = ('portfolios',)
 
-    portfolios = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
-        get_type('apps.users.schema.PortfolioListType'),
+    countries = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
+        get_type('apps.country.schema.CountryListType'),
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
         ),
-        related_name='portfolios',
+        related_name='countries',
     ))
+    # TODO: Add dataloaders
+    regional_coordinator = graphene.Field('apps.users.schema.UserType')
+    monitoring_experts_count = graphene.Int(required=True)
+    unmonitored_countries_count = graphene.Int(required=True)
+    unmonitored_countries_names = graphene.String(required=True)
 
 
 class MonitoringSubRegionListType(CustomDjangoListObjectType):
