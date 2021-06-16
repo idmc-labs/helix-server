@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from datetime import date
 import logging
-from typing import Optional
+from typing import Optional, List
 
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
@@ -19,7 +19,9 @@ from django.db.models import (
     Q,
 )
 from django.db.models.functions import Concat, Coalesce
+from django.forms import model_to_dict
 from django.utils.translation import gettext_lazy as _, gettext
+from django.utils import timezone
 from django_enumfield import enum
 
 from apps.contrib.models import (
@@ -32,6 +34,10 @@ from apps.entry.constants import STOCK, FLOW
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from apps.event.models import Event
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -665,12 +671,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     associated_parked_item = models.OneToOneField('parking_lot.ParkedItem',
                                                   blank=True, null=True,
                                                   on_delete=models.SET_NULL, related_name='entry')
-    preview = models.OneToOneField('contrib.SourcePreview',
-                                   related_name='entry', on_delete=models.SET_NULL,
-                                   blank=True, null=True,
-                                   help_text=_('After the preview has been generated pass its id'
-                                               ' along during entry creation, so that during entry '
-                                               'update the preview can be obtained.'))
+    preview = models.ForeignKey('contrib.SourcePreview',
+                                related_name='entry', on_delete=models.SET_NULL,
+                                blank=True, null=True,
+                                help_text=_('After the preview has been generated pass its id'
+                                            ' along during entry creation, so that during entry '
+                                            'update the preview can be obtained.'))
     document = models.ForeignKey('contrib.Attachment', verbose_name='Attachment',
                                  on_delete=models.CASCADE, related_name='+',
                                  null=True, blank=True)
@@ -706,6 +712,59 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                                        through_fields=('entry', 'reviewer'))
     review_status = enum.EnumField(enum=EntryReviewer.REVIEW_STATUS, verbose_name=_('Review Status'),
                                    null=True, blank=True)
+
+    def clone_across_events(self, event_list: List['Event'], **detail) -> List[dict]:
+        cloned = model_to_dict(
+            self,
+            exclude=[
+                'id', 'created_at', 'created_by', 'last_modified_by',
+                'reviewers', 'review_status', 'associated_parked_item'
+            ]
+        )
+        cloned_entries = []
+        # we need to clean few fields
+        cloned['preview_id'] = cloned.pop('preview', None)
+        cloned['document_id'] = cloned.pop('document', None)
+        for event in event_list:
+            cloned_entries.append(
+                {
+                    **cloned,
+                    'event': event,
+                    **detail
+                }
+            )
+        return cloned_entries
+
+    def clone_and_save_entries(self, event_list: List['Event'], user: 'User'):
+        cloned_entries = self.clone_across_events(
+            event_list=event_list,
+            created_at=timezone.now(),
+            created_by=user,
+        )
+
+        # m2m hassle
+
+        sources = cloned_entries[0]['sources']
+        publishers = cloned_entries[0]['publishers']
+        tags = cloned_entries[0]['tags']
+
+        entries = []
+        for cloned_entry in cloned_entries:
+            cloned_entry.pop('sources')
+            cloned_entry.pop('publishers')
+            cloned_entry.pop('tags')
+            entries.append(Entry(**cloned_entry))
+
+        entries = Entry.objects.bulk_create(entries)
+
+        for entry in entries:
+            entry.sources.set(sources)
+            entry.publishers.set(publishers)
+            entry.tags.set(tags)
+
+        # end m2m hassle
+
+        return entries
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
