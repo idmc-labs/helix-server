@@ -394,6 +394,7 @@ LOGIN_TIMEOUT = 10 * 60
 # Frontend base url for email button link
 FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'localhost:3080')
 
+# https://docs.djangoproject.com/en/3.2/ref/settings/#password-reset-timeout
 PASSWORD_RESET_TIMEOUT = 15 * 60
 PASSWORD_RESET_CLIENT_URL = "{FRONTEND_BASE_URL}/reset-password/{{uid}}/{{token}}".format(
     FRONTEND_BASE_URL=FRONTEND_BASE_URL
