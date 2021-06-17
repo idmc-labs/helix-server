@@ -383,7 +383,7 @@ GRAPHENE_NODES_WHITELIST = (
 # CAPTCHA
 HCAPTCHA_SECRET = os.environ.get('HCAPTCHA_SECRET', '0x0000000000000000000000000000000000000000')
 
-# It login attempts exceed MAX_LOGIN_ATTEMPTS, users will need to enter catpcha
+# It login attempts exceed MAX_LOGIN_ATTEMPTS, users will need to enter captcha
 # to login
 MAX_LOGIN_ATTEMPTS = 3
 

@@ -29,7 +29,7 @@ class UserPasswordSerializer(serializers.ModelSerializer):
 
     def validate_old_password(self, password) -> str:
         if not self.instance.check_password(password):
-            raise serializers.ValidationError('Invalid Password')
+            raise serializers.ValidationError('The password is invalid.')
         return password
 
     def validate_new_password(self, password) -> str:
@@ -130,7 +130,7 @@ class LoginSerializer(serializers.Serializer):
         if not user:
             attempts = User._get_login_attempt(email)
             User._set_login_attempt(email, attempts + 1)
-            raise serializers.ValidationError('Invalid Email or Password.')
+            raise serializers.ValidationError('The email or password is invalid.')
         attrs.update(dict(user=user))
         User._reset_login_cache(email)
         return attrs

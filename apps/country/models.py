@@ -313,8 +313,8 @@ class CountryPopulation(models.Model):
     population = models.PositiveIntegerField('Population')
     year = models.PositiveIntegerField('Year',
                                        validators=[
-                                           MinValueValidator(1800, 'Invalid date'),
-                                           MaxValueValidator(9999, 'Invalid date'),
+                                           MinValueValidator(1800, 'The date is invalid.'),
+                                           MaxValueValidator(9999, 'The date is invalid.'),
                                        ])
 
     class Meta:

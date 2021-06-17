@@ -141,7 +141,7 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['login']['ok'])
-        self.assertIn('invalid email or password', json.dumps(content['data']['login']['errors']).lower())
+        self.assertIn('the email or password is invalid.', json.dumps(content['data']['login']['errors']).lower())
 
         # attempt 2
         # try again and it should fail with captcha error
@@ -171,8 +171,8 @@ class TestLogin(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['login']['ok'])
         self.assertTrue(content['data']['login']['captchaRequired'])
-        self.assertIn('invalid captcha', json.dumps(content['data']['login']['errors']).lower())
-        self.assertNotIn('invalid email or password', json.dumps(content['data']['login']['errors']).lower())
+        self.assertIn('the captcha is invalid.', json.dumps(content['data']['login']['errors']).lower())
+        self.assertNotIn('the email or password is invalid.', json.dumps(content['data']['login']['errors']).lower())
 
         # again with captcha but wrong, throttles more login
         # attempt 4
@@ -217,7 +217,7 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['login']['ok'])
-        self.assertIn('invalid email or password', json.dumps(content['data']['login']['errors']).lower())
+        self.assertIn('the email or password is invalid.', json.dumps(content['data']['login']['errors']).lower())
 
         # attempt 2
         # try again and it should fail with captcha error
@@ -247,7 +247,7 @@ class TestLogin(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['login']['ok'])
         self.assertTrue(content['data']['login']['captchaRequired'])
-        self.assertIn('invalid captcha', json.dumps(content['data']['login']['errors']).lower())
+        self.assertIn('the captcha is invalid.', json.dumps(content['data']['login']['errors']).lower())
 
         # with correct captcha
         validate.return_value = True
@@ -742,7 +742,7 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
         content = json.loads(response.content)
         self.assertFalse(content['data']['resetPassword']['ok'])
         message = content['data']['resetPassword']['errors'][0]['messages']
-        self.assertEqual(message, 'Invalid token supplied')
+        self.assertEqual(message, 'The token is invalid.')
 
     def test_should_not_accept_invalid_token(self):
         token = 'MSwyMDIxLTA2LTA0IDE0OjM3O342jI1Ljg5NDQ4NSswMDowMA'
@@ -758,4 +758,4 @@ class TestForgetResetPassword(HelixGraphQLTestCase):
         content = json.loads(response.content)
         self.assertFalse(content['data']['resetPassword']['ok'])
         message = content['data']['resetPassword']['errors'][0]['messages']
-        self.assertEqual(message, 'Invalid token supplied')
+        self.assertEqual(message, 'The token is invalid.')
