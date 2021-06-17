@@ -11,12 +11,13 @@ from apps.users.serializers import (
     ActivateSerializer,
     UserSerializer,
     UserPasswordSerializer,
+    GenerateResetPasswordTokenSerializer,
+    ResetPasswordSerializer,
 )
 from utils.permissions import is_authenticated
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.mutation import generate_input_type_for_serializer
 from utils.validations import MissingCaptchaException
-
 
 RegisterInputType = generate_input_type_for_serializer(
     'RegisterInputType',
@@ -179,6 +180,48 @@ class UpdateUser(graphene.Mutation):
         return UpdateUser(result=user, errors=None, ok=True)
 
 
+GenerateResetPasswordTokenType = generate_input_type_for_serializer(
+    'GenerateResetPasswordTokenType',
+    GenerateResetPasswordTokenSerializer
+)
+
+
+class GenerateResetPasswordToken(graphene.Mutation):
+    class Arguments:
+        data = GenerateResetPasswordTokenType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, data):
+        serializer = GenerateResetPasswordTokenSerializer(data=data)
+        if errors := mutation_is_not_valid(serializer):
+            return GenerateResetPasswordToken(errors=errors, ok=False)
+        return GenerateResetPasswordToken(errors=None, ok=True)
+
+
+ResetPasswordType = generate_input_type_for_serializer(
+    'ResetPasswordType',
+    ResetPasswordSerializer
+)
+
+
+class ResetPassword(graphene.Mutation):
+    class Arguments:
+        data = ResetPasswordType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, data):
+        serializer = ResetPasswordSerializer(data=data)
+        if errors := mutation_is_not_valid(serializer):
+            return ResetPassword(errors=errors, ok=False)
+        return ResetPassword(errors=None, ok=True)
+
+
 class Mutation(object):
     login = Login.Field()
     register = Register.Field()
@@ -186,3 +229,5 @@ class Mutation(object):
     logout = Logout.Field()
     update_user = UpdateUser.Field()
     change_password = ChangeUserPassword.Field()
+    generate_reset_password_token = GenerateResetPasswordToken.Field()
+    reset_password = ResetPassword.Field()

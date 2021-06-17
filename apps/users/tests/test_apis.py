@@ -141,7 +141,7 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['login']['ok'])
-        self.assertIn('invalid email or password', json.dumps(content['data']['login']['errors']).lower())
+        self.assertIn('the email or password is invalid.', json.dumps(content['data']['login']['errors']).lower())
 
         # attempt 2
         # try again and it should fail with captcha error
@@ -171,8 +171,8 @@ class TestLogin(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['login']['ok'])
         self.assertTrue(content['data']['login']['captchaRequired'])
-        self.assertIn('invalid captcha', json.dumps(content['data']['login']['errors']).lower())
-        self.assertNotIn('invalid email or password', json.dumps(content['data']['login']['errors']).lower())
+        self.assertIn('the captcha is invalid.', json.dumps(content['data']['login']['errors']).lower())
+        self.assertNotIn('the email or password is invalid.', json.dumps(content['data']['login']['errors']).lower())
 
         # again with captcha but wrong, throttles more login
         # attempt 4
@@ -217,7 +217,7 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['login']['ok'])
-        self.assertIn('invalid email or password', json.dumps(content['data']['login']['errors']).lower())
+        self.assertIn('the email or password is invalid.', json.dumps(content['data']['login']['errors']).lower())
 
         # attempt 2
         # try again and it should fail with captcha error
@@ -247,7 +247,7 @@ class TestLogin(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['login']['ok'])
         self.assertTrue(content['data']['login']['captchaRequired'])
-        self.assertIn('invalid captcha', json.dumps(content['data']['login']['errors']).lower())
+        self.assertIn('the captcha is invalid.', json.dumps(content['data']['login']['errors']).lower())
 
         # with correct captcha
         validate.return_value = True
@@ -665,3 +665,97 @@ class TestAPIMe(HelixAPITestCase):
         response = self.client.get(url)
         assert response.status_code == 200
         assert len(response.data) == count + old_count
+
+
+class TestForgetResetPassword(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.user = self.create_user()
+        self.forget_password_query = '''
+            mutation MyMutation (
+                $email: String!,
+                $captcha: String!,
+                $siteKey: String!
+            ){
+                generateResetPasswordToken(data: {
+                    email: $email,
+                    captcha: $captcha,
+                    siteKey: $siteKey
+                }) {
+                    ok
+                    errors
+                }
+            }
+        '''
+
+        self.reset_password_query = '''
+            mutation MyMutation (
+                $passwordResetToken: String!,
+                $newPassword: String!,
+                $uid: String!
+            ){
+                resetPassword(data: {
+                        passwordResetToken: $passwordResetToken,
+                        newPassword: $newPassword,
+                        uid: $uid
+                    }) {
+                    ok
+                    errors
+                }
+            }
+        '''
+
+    @mock.patch('apps.users.serializers.validate_hcaptcha')
+    def test_should_generate_reset_password_token(self, validate):
+        response = self.query(
+            self.forget_password_query,
+            variables={
+                'email': self.user.email,
+                'captcha': 'aaaaaaaa',
+                'siteKey': 'bbbbbbbb',
+            },
+        )
+        self.assertResponseNoErrors(response)
+
+    def test_user_can_reset_password(self):
+        # Create password reset token
+        token = default_token_generator.make_token(self.user)
+        uid = encode_uid(self.user.id)
+        response = self.query(
+            self.reset_password_query,
+            variables={
+                'passwordResetToken': token,
+                'newPassword': '12343@#S#',
+                'uid': uid
+            },
+        )
+        self.assertResponseNoErrors(response)
+
+        # Test link should expire if used by user
+        response = self.query(
+            self.reset_password_query,
+            variables={
+                'passwordResetToken': token,
+                'newPassword': '12343@#S#',
+                'uid': uid
+            },
+        )
+        content = json.loads(response.content)
+        self.assertFalse(content['data']['resetPassword']['ok'])
+        message = content['data']['resetPassword']['errors'][0]['messages']
+        self.assertEqual(message, 'The token is invalid.')
+
+    def test_should_not_accept_invalid_token(self):
+        token = 'MSwyMDIxLTA2LTA0IDE0OjM3O342jI1Ljg5NDQ4NSswMDowMA'
+        uid = encode_uid(self.user.id)
+        response = self.query(
+            self.reset_password_query,
+            variables={
+                'passwordResetToken': token,
+                'newPassword': '12343@#S#',
+                'uid': uid
+            },
+        )
+        content = json.loads(response.content)
+        self.assertFalse(content['data']['resetPassword']['ok'])
+        message = content['data']['resetPassword']['errors'][0]['messages']
+        self.assertEqual(message, 'The token is invalid.')

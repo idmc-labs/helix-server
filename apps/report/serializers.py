@@ -167,7 +167,7 @@ class ReportApproveSerializer(serializers.Serializer):
         ).approvers.count() == settings.GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']:
             raise serializers.ValidationError(
                 gettext(
-                    'Report Approvals is limited to %(size)s only.'
+                    'Report approvals is limited to %(size)s only.'
                 ) % {'size': settings.GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']}
             )
         return report

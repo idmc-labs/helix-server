@@ -138,7 +138,7 @@ class UpdateResourceGroup(graphene.Mutation):
             instance = ResourceGroup.objects.get(id=data['id'], created_by=info.context.user)
         except ResourceGroup.DoesNotExist:
             return UpdateResourceGroup(errors=[
-                dict(field='nonFieldErrors', messages=gettext('ResourceGroup does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Resource group does not exist.'))
             ])
         serializer = ResourceGroupSerializer(instance=instance,
                                              data=data,
@@ -165,7 +165,7 @@ class DeleteResourceGroup(graphene.Mutation):
             instance = ResourceGroup.objects.get(id=id, created_by=info.context.user)
         except ResourceGroup.DoesNotExist:
             return DeleteResourceGroup(errors=[
-                dict(field='nonFieldErrors', messages=gettext('ResourceGroup does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Resource group does not exist.'))
             ])
         can_delete, msg = instance.can_delete()
         if not can_delete:

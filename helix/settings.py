@@ -242,8 +242,13 @@ DJOSER = {
     'ACTIVATION_URL': '#/activate/{uid}/{token}',
     'SEND_ACTIVATION_EMAIL': os.environ.get('SEND_ACTIVATION_EMAIL', "True") == 'True',
 }
-
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django_ses.SESBackend'
+    AWS_SES_REGION_NAME = os.environ.get("AWS_SES_REGION_NAME")
+    AWS_SES_REGION_ENDPOINT = os.environ.get("AWS_SES_REGION_ENDPOINT")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", 'contact@idmcdb.org')
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -367,6 +372,8 @@ GRAPHENE_NODES_WHITELIST = (
     'activate',
     'register',
     'me',
+    'generateResetPasswordToken',
+    'resetPassword',
     # __ double underscore nodes
     '__schema',
     '__type',
@@ -375,6 +382,20 @@ GRAPHENE_NODES_WHITELIST = (
 
 # CAPTCHA
 HCAPTCHA_SECRET = os.environ.get('HCAPTCHA_SECRET', '0x0000000000000000000000000000000000000000')
+
+# It login attempts exceed MAX_LOGIN_ATTEMPTS, users will need to enter captcha
+# to login
 MAX_LOGIN_ATTEMPTS = 3
+
+# If login attempts exceed MAX_CAPTCHA_LOGIN_ATTEMPTS , users will need to wait LOGIN_TIMEOUT seconds
 MAX_CAPTCHA_LOGIN_ATTEMPTS = 10
-LOGIN_TIMEOUT = 10
+LOGIN_TIMEOUT = 10 * 60
+
+# Frontend base url for email button link
+FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'localhost:3080')
+
+# https://docs.djangoproject.com/en/3.2/ref/settings/#password-reset-timeout
+PASSWORD_RESET_TIMEOUT = 15 * 60
+PASSWORD_RESET_CLIENT_URL = "{FRONTEND_BASE_URL}/reset-password/{{uid}}/{{token}}".format(
+    FRONTEND_BASE_URL=FRONTEND_BASE_URL
+)

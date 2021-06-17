@@ -1,6 +1,5 @@
 from datetime import datetime
 import time
-
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
@@ -13,6 +12,9 @@ from apps.users.enums import USER_ROLE
 from apps.users.utils import get_user_from_activation_token
 from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
 from utils.validations import validate_hcaptcha, MissingCaptchaException
+from .tasks import send_email
+from django.contrib.auth.tokens import default_token_generator
+from djoser.utils import encode_uid
 
 User = get_user_model()
 
@@ -27,7 +29,7 @@ class UserPasswordSerializer(serializers.ModelSerializer):
 
     def validate_old_password(self, password) -> str:
         if not self.instance.check_password(password):
-            raise serializers.ValidationError('Invalid Password')
+            raise serializers.ValidationError('The password is invalid.')
         return password
 
     def validate_new_password(self, password) -> str:
@@ -54,13 +56,13 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate_email(self, email) -> str:
         if User.objects.filter(email__iexact=email).exists():
-            raise serializers.ValidationError('The email is taken.')
+            raise serializers.ValidationError('The email is already taken.')
         return email
 
     def validate_captcha(self, captcha):
         if not validate_hcaptcha(captcha, self.initial_data.get('site_key', '')):
             raise serializers.ValidationError(dict(
-                captcha=gettext('Invalid captcha')
+                captcha=gettext('The captcha is invalid.')
             ))
 
     def save(self, **kwargs):
@@ -95,12 +97,12 @@ class LoginSerializer(serializers.Serializer):
                 if not last_tried:
                     User._set_last_login_attempt(email, now)
                     raise serializers.ValidationError(
-                        gettext('Please try again in %s minute(s)') % settings.LOGIN_TIMEOUT
+                        gettext('Please try again in %s seconds.') % settings.LOGIN_TIMEOUT
                     )
                 elapsed = now - last_tried
-                if elapsed < settings.LOGIN_TIMEOUT * 60:
+                if elapsed < settings.LOGIN_TIMEOUT:
                     raise serializers.ValidationError(
-                        gettext('Please wait %s seconds.') % (60 - int(elapsed))
+                        gettext('Please try again in %s seconds.') % (settings.LOGIN_TIMEOUT - int(elapsed))
                     )
                 else:
                     # reset
@@ -114,7 +116,7 @@ class LoginSerializer(serializers.Serializer):
 
             throttle_login_attempt()
             raise serializers.ValidationError(dict(
-                captcha=gettext('Invalid captcha')
+                captcha=gettext('The captcha is invalid.')
             ))
 
     def validate(self, attrs):
@@ -128,7 +130,7 @@ class LoginSerializer(serializers.Serializer):
         if not user:
             attempts = User._get_login_attempt(email)
             User._set_login_attempt(email, attempts + 1)
-            raise serializers.ValidationError('Invalid Email or Password.')
+            raise serializers.ValidationError('The email or password is invalid.')
         attrs.update(dict(user=user))
         User._reset_login_cache(email)
         return attrs
@@ -180,3 +182,79 @@ class UserSerializer(UpdateSerializerMixin, serializers.ModelSerializer):
         if role is not None:
             instance.set_role(role)
         return instance
+
+
+class GenerateResetPasswordTokenSerializer(serializers.Serializer):
+    """
+    Serializer for password forgot endpoint.
+    """
+    captcha = serializers.CharField(required=True, write_only=True)
+    email = serializers.EmailField(write_only=True, required=True)
+    site_key = serializers.CharField(required=True, write_only=True)
+
+    def validate_captcha(self, captcha):
+        if not validate_hcaptcha(captcha, self.initial_data.get('site_key', '')):
+            raise serializers.ValidationError(dict(
+                captcha=gettext('The captcha is invalid.')
+            ))
+
+    def validate(self, attrs):
+        email = attrs.get("email", None)
+        # if user exists for this email
+        try:
+            user = User.objects.get(email=email)
+            # Generate password reset token and uid
+            token = default_token_generator.make_token(user)
+            uid = encode_uid(user.pk)
+            # Get base url by profile type
+            button_url = settings.PASSWORD_RESET_CLIENT_URL.format(
+                uid=uid,
+                token=token,
+            )
+            message = gettext(
+                "We received a request to reset your Helix account password. "
+                "If you wish to do so, please click below. Otherwise, you may "
+                "safely disregard this email."
+            )
+        # if no user exists for this email
+        except User.DoesNotExist:
+            # explanatory email message
+            raise serializers.ValidationError(gettext('User with this email does not exist.'))
+        subject = gettext("Reset password request for Helix")
+        context = {
+            "heading": gettext("Reset Password"),
+            "message": message,
+            "button_text": gettext("Reset Password"),
+        }
+        if button_url:
+            context["button_url"] = button_url
+        transaction.on_commit(lambda: send_email(
+            subject, message, [email], html_context=context
+        ))
+        return attrs
+
+
+class ResetPasswordSerializer(serializers.Serializer):
+    """
+    Serializer for password reset endpoints.
+    """
+
+    password_reset_token = serializers.CharField(write_only=True, required=True)
+    uid = serializers.CharField(write_only=True, required=True)
+    new_password = serializers.CharField(write_only=True, required=True)
+
+    def validate_new_password(self, password):
+        validate_password(password)
+        return password
+
+    def validate(self, attrs):
+        uid = attrs.get("uid", None)
+        token = attrs.get("password_reset_token", None)
+        new_password = attrs.get("new_password", None)
+        user = get_user_from_activation_token(uid, token)
+        if user is None:
+            raise serializers.ValidationError(gettext('The token is invalid.'))
+        # set_password also hashes the password that the user will get
+        user.set_password(new_password)
+        user.save()
+        return attrs

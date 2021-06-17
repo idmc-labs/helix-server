@@ -79,7 +79,7 @@ class DeleteExtraction(graphene.Mutation):
                                                    created_by=info.context.user)  # TODO: correct?
         except ExtractionQuery.DoesNotExist:
             return DeleteExtraction(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Extraction Query does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Extraction query does not exist.'))
             ])
         instance.delete()
         instance.id = id
