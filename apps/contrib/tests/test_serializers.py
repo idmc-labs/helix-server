@@ -85,7 +85,7 @@ class TestExcelDownload(HelixTestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertIn('non_field_errors', serializer.errors)
-        self.assertEqual('one-at-a-time', serializer.errors['non_field_errors'][0].code)
+        self.assertEqual('limited-at-a-time', serializer.errors['non_field_errors'][0].code)
 
         excel_download.delete()
         # failed downloads are allowed though

@@ -21,19 +21,19 @@ logger = logging.getLogger(__name__)
 def fail_all_old_excel_exports():
     from apps.contrib.models import ExcelDownload
 
-    # if a task has been pending for too long, move it to FAILED
+    # if a task has been pending for too long, move it to killed
     pending = ExcelDownload.objects.filter(
         status=ExcelDownload.EXCEL_GENERATION_STATUS.PENDING,
         started_at__lte=timezone.now() - timedelta(seconds=settings.EXCEL_EXPORT_PENDING_STATE_TIMEOUT),
-    ).update(status=ExcelDownload.EXCEL_GENERATION_STATUS.FAILED)
+    ).update(status=ExcelDownload.EXCEL_GENERATION_STATUS.KILLED)
 
-    # if a task has been in progress beyond timeout, move it to FAILED
+    # if a task has been in progress beyond timeout, move it to killed
     progress = ExcelDownload.objects.filter(
         status=ExcelDownload.EXCEL_GENERATION_STATUS.IN_PROGRESS,
         started_at__lte=timezone.now() - timedelta(seconds=settings.EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT),
-    ).update(status=ExcelDownload.EXCEL_GENERATION_STATUS.FAILED)
+    ).update(status=ExcelDownload.EXCEL_GENERATION_STATUS.KILLED)
 
-    logger.info(f'Updated excel exports to failed:\n{pending=}\n{progress=}')
+    logger.info(f'Updated excel exports to killed:\n{pending=}\n{progress=}')
 
 
 def delete_old_job_executions(max_age=settings.OLD_JOB_EXECUTION_TTL):

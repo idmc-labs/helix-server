@@ -118,8 +118,8 @@ class ExcelDownloadSerializer(MetaInformationSerializerMixin,
             created_by=self.context['request'].user,
         ).count() >= settings.EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT:
             raise serializers.ValidationError(gettext(
-                'Only one excel export is allowed at a time'
-            ), code='one-at-a-time')
+                'Only %s excel export(s) is allowed at a time'
+            ) % settings.EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT, code='limited-at-a-time')
 
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
