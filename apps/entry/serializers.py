@@ -100,7 +100,7 @@ class CommonFigureValidationMixin:
         for each in age_groups:
             values.append((each.get('category'), each.get('sex')))
         if len(values) != len(set(values)):
-            raise serializers.ValidationError('Please provide unique categories and sex values.')
+            raise serializers.ValidationError('Please provide unique age category and sex.')
         return age_groups
 
     def validate_disaggregation_strata_json(self, strata):

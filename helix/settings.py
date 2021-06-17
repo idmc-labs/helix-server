@@ -382,14 +382,19 @@ GRAPHENE_NODES_WHITELIST = (
 
 # CAPTCHA
 HCAPTCHA_SECRET = os.environ.get('HCAPTCHA_SECRET', '0x0000000000000000000000000000000000000000')
+
+# It login attempts exceed MAX_LOGIN_ATTEMPTS, users will need to enter catpcha
+# to login
 MAX_LOGIN_ATTEMPTS = 3
+
+# If login attempts exceed MAX_CAPTCHA_LOGIN_ATTEMPTS , users will need to wait LOGIN_TIMEOUT seconds
 MAX_CAPTCHA_LOGIN_ATTEMPTS = 10
-LOGIN_TIMEOUT = 10
+LOGIN_TIMEOUT = 10 * 60
 
 # Frontend base url for email button link
 FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'localhost:3080')
 
-PASSWORD_RESET_TIMEOUT = 24 * 60 * 60
+PASSWORD_RESET_TIMEOUT = 15 * 60
 PASSWORD_RESET_CLIENT_URL = "{FRONTEND_BASE_URL}/reset-password/{{uid}}/{{token}}".format(
     FRONTEND_BASE_URL=FRONTEND_BASE_URL
 )

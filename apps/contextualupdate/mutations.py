@@ -67,7 +67,7 @@ class UpdateContextualUpdate(graphene.Mutation):
             instance = ContextualUpdate.objects.get(id=data['id'])
         except ContextualUpdate.DoesNotExist:
             return UpdateContextualUpdate(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Contextual Update does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Contextual update does not exist.'))
             ])
         serializer = ContextualUpdateSerializer(instance=instance, data=data, partial=True,
                                                 context=dict(request=info.context.request))
@@ -92,7 +92,7 @@ class DeleteContextualUpdate(graphene.Mutation):
             instance = ContextualUpdate.objects.get(id=id)
         except ContextualUpdate.DoesNotExist:
             return DeleteContextualUpdate(errors=[
-                dict(field='nonFieldErrors', messages=gettext('ContextualUpdate does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Contextual update does not exist.'))
             ])
         instance.delete()
         instance.id = id
