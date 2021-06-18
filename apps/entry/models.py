@@ -674,6 +674,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     document = models.ForeignKey('contrib.Attachment', verbose_name='Attachment',
                                  on_delete=models.CASCADE, related_name='+',
                                  null=True, blank=True)
+    document_url = models.URLField(verbose_name=_('Document URL'), max_length=2000,
+                                   blank=True, null=True)
     article_title = models.TextField(verbose_name=_('Article Title'))
     sources = models.ManyToManyField('organization.Organization', verbose_name=_('Source'),
                                      blank=True, related_name='sourced_entries')
