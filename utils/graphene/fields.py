@@ -229,6 +229,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             # TODO: qs should be executed only when we access the results node in the future
             qs = info.context.get_dataloader(
                 parent_class.__name__,
+                # NOTE: this is inadequate if we use ALIASING
                 self.related_name,
             ).load(
                 root.id,

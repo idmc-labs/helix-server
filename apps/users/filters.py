@@ -13,13 +13,18 @@ class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
                                      distinct=True)
     roleIn = StringListFilter(method='filter_role_in')
     full_name = django_filters.CharFilter(method='filter_full_name')
-    include_inactive = django_filters.BooleanFilter(method='filter_include_inactive',
-                                                    initial=False)
     id = django_filters.CharFilter(field_name='id', lookup_expr='iexact')
+    is_active = django_filters.CharFilter(method='filter_is_active')
 
     class Meta:
         model = User
-        fields = ['email', 'is_active']
+        fields = ['email']
+
+    def filter_is_active(self, queryset, name, value):
+        value = value.lower()
+        if value in ['true', 'false']:
+            return queryset.filter(is_active=value == 'true')
+        return queryset
 
     def filter_role_in(self, queryset, name, value):
         if not value:
@@ -42,11 +47,6 @@ class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
         ).annotate(
             idx=StrIndex('full', Value(value.lower()))
         ).filter(idx__gt=0).order_by('idx')
-
-    def filter_include_inactive(self, queryset, name, value):
-        if value is False:
-            return queryset.filter(is_active=True)
-        return queryset
 
 
 class ReviewerUserFilter(UserFilter):
