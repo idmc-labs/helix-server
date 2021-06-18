@@ -256,7 +256,7 @@ class Report(MetaInformationArchiveAbstractModel,
                 'is_signed_off_on', 'include_history',
             ]
         )
-        transaction.on_commit(lambda: trigger_report_generation.send(
+        transaction.on_commit(lambda: trigger_report_generation.delay(
             current_gen.pk
         ))
 

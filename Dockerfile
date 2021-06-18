@@ -15,8 +15,8 @@ COPY . /code/
 CMD ./deploy/scripts/run_prod.sh
 
 
-FROM server AS dramatiq
+FROM server AS celery
 
 RUN apt update -y && apt install -y chromium chromium-driver
 
-CMD ["python", "manage.py", "rundramatiq"]
+CMD ["celery", "-A", "proj", "worker", "-B", "-l", "INFO"]

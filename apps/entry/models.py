@@ -538,25 +538,23 @@ class Figure(MetaInformationArchiveAbstractModel,
         ).prefetch_related(
             'geo_locations'
         ).order_by('entry', 'id').values(*[header for header in headers.keys()])
-        data = [
-            {
+
+        def transformer(datum):
+            return {
                 **datum,
-                **dict(
-                    include_idu='Yes' if datum['include_idu'] else 'No',
-                    start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
-                    end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
-                    quantifier=getattr(Figure.QUANTIFIER.get(datum['quantifier']), 'name', ''),
-                    unit=getattr(Figure.UNIT.get(datum['unit']), 'name', ''),
-                    role=getattr(Figure.ROLE.get(datum['role']), 'name', ''),
-                )
+                'include_idu': 'Yes' if datum['include_idu'] else 'No',
+                'start_date_accuracy': getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
+                'end_date_accuracy': getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
+                'quantifier': getattr(Figure.QUANTIFIER.get(datum['quantifier']), 'name', ''),
+                'unit': getattr(Figure.UNIT.get(datum['unit']), 'name', ''),
+                'role': getattr(Figure.ROLE.get(datum['role']), 'name', ''),
             }
-            for datum in values
-        ]
 
         return {
             'headers': headers,
-            'data': data,
+            'data': values,
             'formulae': None,
+            'transformer': transformer,
         }
 
     @classmethod
@@ -822,14 +820,15 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             'figures',
             'sources',
             'publishers',
-        ).order_by('id').values(*[header for header in headers.keys()])
+        ).order_by('id')
 
-        figures = Figure.objects.filter(entry__in=entries.values('id'))
+        # TODO: compare the queries between .values('id') and nothing
+        figures = Figure.objects.filter(entry__in=entries)
         figure_data = Figure.get_figure_excel_sheets_data(figures)
 
         return {
             'headers': headers,
-            'data': entries,
+            'data': entries.values(*[header for header in headers.keys()]),
             'formulae': None,
             'other': [
                 dict(

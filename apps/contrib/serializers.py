@@ -6,7 +6,7 @@ from django.template.defaultfilters import filesizeformat
 from django.utils.translation import gettext
 from rest_framework import serializers
 
-from apps.entry.tasks import DRAMATIQ_TIMEOUT
+from apps.entry.tasks import PDF_TASK_TIMEOUT
 from apps.contrib.models import (
     Attachment,
     SourcePreview,
@@ -88,7 +88,7 @@ class SourcePreviewSerializer(MetaInformationSerializerMixin,
             url=validated_data['url'],
             created_by=validated_data['created_by'],
             status=SourcePreview.PREVIEW_STATUS.IN_PROGRESS,
-            created_at__gte=datetime.now() - timedelta(seconds=DRAMATIQ_TIMEOUT)
+            created_at__gte=datetime.now() - timedelta(seconds=PDF_TASK_TIMEOUT)
         )
 
         if SourcePreview.objects.filter(

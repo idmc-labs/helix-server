@@ -228,7 +228,7 @@ class GenerateResetPasswordTokenSerializer(serializers.Serializer):
         }
         if button_url:
             context["button_url"] = button_url
-        transaction.on_commit(lambda: send_email(
+        transaction.on_commit(lambda: send_email.delay(
             subject, message, [email], html_context=context
         ))
         return attrs

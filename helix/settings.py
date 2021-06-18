@@ -76,11 +76,9 @@ THIRD_PARTY_APPS = [
     'djoser',
     'corsheaders',
     'django_filters',
-    'django_apscheduler',
     'debug_toolbar',
     'graphene_graphiql_explorer',
     'graphiql_debug_toolbar',
-    'django_dramatiq',
     'rest_framework',
 ]
 
@@ -338,22 +336,12 @@ if SENTRY_DSN:
 RESOURCE_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
 RESOURCEGROUP_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
 
-# https://dramatiq.io/reference.html#middleware
-DRAMATIQ_BROKER = {
-    "BROKER": "dramatiq.brokers.redis.RedisBroker",
-    "OPTIONS": {"url": os.environ.get("DRAMATIQ_REDIS_URL", "redis://redis:6379/0")},
-    "MIDDLEWARE": [
-        "dramatiq.middleware.Prometheus",
-        "dramatiq.middleware.AgeLimit",
-        "dramatiq.middleware.TimeLimit",
-        "dramatiq.middleware.Callbacks",
-        "dramatiq.middleware.Retries",
-        "django_dramatiq.middleware.DbConnectionsMiddleware",
-        "django_dramatiq.middleware.AdminMiddleware",
-    ],
-}
+# CELERY
 
-DRAMATIQ_TASKS_DATABASE = "default"
+CELERY_BROKER_URL = os.environ.get('CELERY_REDIS_URL', 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
+
+# end CELERY
 
 
 class QueuePriority(Enum):
@@ -406,6 +394,5 @@ OLD_JOB_EXECUTION_TTL = 259_200  # seconds
 # staying in pending for too long will be moved to killed
 EXCEL_EXPORT_PENDING_STATE_TIMEOUT = 18_000  # seconds
 # staying in progress for too long will be moved to killed
-# also dramatiq will stop generating the report
 EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT = 600  # seconds
 EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT = 3

@@ -108,8 +108,8 @@ class TestReportApprovalSerializer(HelixTestCase):
         assert report.is_approved is True
         report.last_generation.approvers.count() == 1
 
-    @mock.patch('apps.report.tasks.trigger_report_generation.send')
-    def test_invalid_approval_report_signed_off(self, trigger_send):
+    @mock.patch('apps.report.tasks.trigger_report_generation.delay')
+    def test_invalid_approval_report_signed_off(self, trigger_delay):
         # report not yet started generation
         assert self.report.generations.count() == 0
         # try approving fails
@@ -136,7 +136,7 @@ class TestReportApprovalSerializer(HelixTestCase):
         serializer.save()
         # generation is signed off
         self.report.sign_off(self.it_head)
-        trigger_send.assert_called()
+        trigger_delay.assert_called()
         self.report.last_generation.status = ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED
         self.report.last_generation.save()
         # report is signed off check
@@ -162,8 +162,8 @@ class TestReportSignOffSerializer(HelixTestCase):
         self.report = ReportFactory.create()
         self.data = dict(report=self.report.id)
 
-    @mock.patch('apps.report.tasks.trigger_report_generation.send')
-    def test_valid_sign_off_flow(self, trigger_send):
+    @mock.patch('apps.report.tasks.trigger_report_generation.delay')
+    def test_valid_sign_off_flow(self, trigger_delay):
         # check report approved flag
         assert self.report.is_signed_off is False
         serializer = ReportSignoffSerializer(
@@ -184,7 +184,7 @@ class TestReportSignOffSerializer(HelixTestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
-        trigger_send.assert_called()
+        trigger_delay.assert_called()
         self.report.last_generation.status = ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED
         self.report.last_generation.save()
         # check report sign flag should be true

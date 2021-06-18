@@ -7,10 +7,11 @@ from tempfile import NamedTemporaryFile
 from django.core.files.base import ContentFile
 from django.db import transaction
 from django.utils import timezone
-import dramatiq
 from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
-from helix.settings import QueuePriority
+
+# from helix.settings import QueuePriority
+from helix.celery import app as celery_app
 
 REPORT_TIMEOUT = 20 * 60 * 1000
 
@@ -97,7 +98,7 @@ def generate_report_snapshot(generation_id):
         return content
 
 
-@dramatiq.actor(queue_name=QueuePriority.HEAVY.value, max_retries=3, time_limit=REPORT_TIMEOUT)
+@celery_app.task(time_limit=REPORT_TIMEOUT)
 def trigger_report_generation(generation_id):
     from apps.report.models import ReportGeneration
     generation = ReportGeneration.objects.get(id=generation_id)

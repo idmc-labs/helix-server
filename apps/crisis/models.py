@@ -120,7 +120,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                 cls.ND_FIGURES_ANNOTATE: 'ND Figure',
             }
         )
-        values = CrisisFilter(
+        data = CrisisFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
@@ -135,9 +135,10 @@ class Crisis(MetaInformationAbstractModel, models.Model):
         ).order_by('-created_at').select_related(
         ).prefetch_related(
             'countries'
-        ).values(*[header for header in headers.keys()])
-        data = [
-            {
+        )
+
+        def transformer(datum):
+            return {
                 **datum,
                 **dict(
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
@@ -145,13 +146,12 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                     crisis_type=getattr(Crisis.CRISIS_TYPE.get(datum['crisis_type']), 'name', ''),
                 )
             }
-            for datum in values
-        ]
 
         return {
             'headers': headers,
-            'data': data,
+            'data': data.values(*[header for header in headers.keys()]),
             'formulae': None,
+            'transformer': transformer,
         }
 
     # dunders
