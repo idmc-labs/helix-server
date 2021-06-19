@@ -31,7 +31,6 @@ from apps.contrib.models import (
 )
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.constants import STOCK, FLOW
-from apps.users.enums import USER_ROLE
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
 
@@ -952,9 +951,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         """
         if self.is_signed_off:
             return False
-        if USER_ROLE.ADMIN.name in user.groups.values_list('name', flat=True):
-            return True
-        return self.created_by == user
+        return True
 
     def update_associated_parked_item(self):
         self.associated_parked_item.status = ParkedItem.PARKING_LOT_STATUS.REVIEWED

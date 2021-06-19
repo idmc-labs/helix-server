@@ -4,6 +4,7 @@ from datetime import datetime
 from collections import OrderedDict
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.db.models.query import QuerySet
 from django.db.models import Count, OuterRef
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
@@ -117,23 +118,23 @@ class MonitoringSubRegion(models.Model):
 
     @property
     def unmonitored_countries_count(self) -> int:
-        portfolios = Portfolio.objects.filter(
+        country_portfolios = Portfolio.objects.filter(
             role=USER_ROLE.MONITORING_EXPERT,
-            countries__isnull=False,
-        ).values_list('countries')
+            country__isnull=False,
+        ).values_list('country')
         q = self.countries.filter(
-            ~models.Q(id__in=portfolios)
+            ~models.Q(id__in=country_portfolios)
         )
         return q.count()
 
     @property
     def unmonitored_countries_names(self) -> str:
-        portfolios = Portfolio.objects.filter(
+        country_portfolios = Portfolio.objects.filter(
             role=USER_ROLE.MONITORING_EXPERT,
-            countries__isnull=False,
-        ).values_list('countries')
+            country__isnull=False,
+        ).values_list('country')
         q = self.countries.filter(
-            ~models.Q(id__in=portfolios)
+            ~models.Q(id__in=country_portfolios)
         )
         return '; '.join(q.values_list('idmc_short_name', flat=True))
 
@@ -345,12 +346,23 @@ class Country(models.Model):
             return f'{cls.GEOJSON_PATH}/{iso3.upper()}.json'
 
     @property
-    def entries(self):
+    def entries(self) -> QuerySet:
         return Entry.objects.filter(event__countries=self.id).distinct()
 
     @property
     def last_contextual_analysis(self):
         return self.contextual_analyses.last()
+
+    @property
+    def regional_coordinator(self) -> Portfolio:
+        return self.monitoring_sub_region.regional_coordinator
+
+    @property
+    def monitoring_expert(self) -> Portfolio:
+        return Portfolio.objects.filter(
+            country=self,
+            role=USER_ROLE.MONITORING_EXPERT,
+        ).first()
 
     @property
     def last_summary(self):

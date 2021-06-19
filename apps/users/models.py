@@ -77,14 +77,11 @@ class User(AbstractUser):
         ]
 
     def set_highest_role(self) -> None:
-        role = Portfolio.get_highest_role(self)
         try:
-            group = Group.objects.get(name=role.name)
-            self.groups.set([group])
-        except AttributeError:
-            logger.warning(f'User role with {role=} does not exist.')
+            groups = Group.objects.filter(name__in=[each.role.name for each in self.portfolios.all()])
+            self.groups.set(groups)
         except Group.DoesNotExist:
-            logger.warning(f'Group(UserRole) with name {USER_ROLE[role].name} does not exist.')
+            logger.warning(f'A group might be missing: {", ".join([each.role.name for each in self.portfolios.all()])}')
 
     @property
     def highest_role(self) -> USER_ROLE:
@@ -118,10 +115,12 @@ class Portfolio(models.Model):
         related_name='portfolios', on_delete=models.CASCADE,
         null=True, blank=True
     )
-    countries = models.ManyToManyField(
+    country = models.OneToOneField(
         'country.Country',
-        verbose_name=_('Countries'),
-        related_name='portfolios'
+        verbose_name=_('Country'),
+        related_name='portfolio',
+        blank=True, null=True,
+        on_delete=models.CASCADE,
     )
 
     objects = models.Manager()
@@ -131,7 +130,7 @@ class Portfolio(models.Model):
             return True
         if user.highest_role == USER_ROLE.REGIONAL_COORDINATOR:
             # regional coordinator cannot alter admins or regional coordinators
-            return self.role in [USER_ROLE.ADMIN, USER_ROLE.REGIONAL_COORDINATOR]
+            return self.role not in [USER_ROLE.ADMIN, USER_ROLE.REGIONAL_COORDINATOR]
         return False
 
     @classmethod
@@ -183,11 +182,22 @@ class Portfolio(models.Model):
             PERMISSIONS[USER_ROLE[self.role]].items()
         ]
 
+    def save(self, *args, **kwargs):
+        if self.role == USER_ROLE.ADMIN:
+            self.monitoring_sub_region = None
+            self.country = None
+        elif self.role == USER_ROLE.REGIONAL_COORDINATOR:
+            self.country = None
+        return super().save(*args, **kwargs)
+
     class Meta:
         constraints = [
-            UniqueConstraint(fields=['user', 'role', 'monitoring_sub_region'],
-                             name='unique_with_region'),
+            UniqueConstraint(fields=['role', 'monitoring_sub_region', 'country'],
+                             name='unique_with_country'),
             UniqueConstraint(fields=['user', 'role'],
                              condition=models.Q(monitoring_sub_region=None),
                              name='unique_without_region'),
+            UniqueConstraint(fields=['role', 'monitoring_sub_region'],
+                             condition=models.Q(country=None),
+                             name='unique_without_country'),
         ]

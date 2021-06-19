@@ -1,7 +1,9 @@
+from django.db.utils import IntegrityError
+
 from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio
 from utils.tests import HelixTestCase
-from utils.factories import UserFactory
+from utils.factories import UserFactory, MonitoringSubRegionFactory, CountryFactory
 
 ADMIN = USER_ROLE.ADMIN.name
 GUEST = USER_ROLE.GUEST.name
@@ -54,3 +56,58 @@ class TestUserModel(HelixTestCase):
             GUEST,
             self.user.portfolios.count()
         )
+
+
+class TestPortfolio(HelixTestCase):
+    def test_unique_constraints_check_regional(self):
+        rc_data = dict(
+            user=UserFactory.create(),
+            role=USER_ROLE.REGIONAL_COORDINATOR,
+            monitoring_sub_region=MonitoringSubRegionFactory.create()
+        )
+        Portfolio.objects.create(**rc_data)
+
+        # lets alter user, should not be allowed
+        rc_data['user'] = UserFactory.create()
+        with self.assertRaisesMessage(IntegrityError, 'unique'):
+            Portfolio.objects.create(**rc_data)
+
+    def test_unique_constraints_check_regional_2(self):
+        rc_data = dict(
+            user=UserFactory.create(),
+            role=USER_ROLE.REGIONAL_COORDINATOR,
+            monitoring_sub_region=MonitoringSubRegionFactory.create()
+        )
+        Portfolio.objects.create(**rc_data)
+
+        # lets alter user, should not be allowed
+        rc_data['user'] = UserFactory.create()
+        # additional info to irrelevant roles does not matter
+        rc_data['country'] = CountryFactory.create()
+        with self.assertRaisesMessage(IntegrityError, 'unique'):
+            Portfolio.objects.create(**rc_data)
+
+    def test_unique_constraints_check_admin(self):
+        admin_data = dict(
+            user=UserFactory.create(),
+            role=USER_ROLE.ADMIN,
+        )
+        Portfolio.objects.create(**admin_data)
+
+        # lets retry the same user
+        with self.assertRaisesMessage(IntegrityError, 'unique'):
+            Portfolio.objects.create(**admin_data)
+
+    def test_unique_constraints_check_monitor(self):
+        monitor_data = dict(
+            user=UserFactory.create(),
+            role=USER_ROLE.MONITORING_EXPERT,
+            monitoring_sub_region=MonitoringSubRegionFactory.create(),
+            country=CountryFactory.create(),
+        )
+        Portfolio.objects.create(**monitor_data)
+
+        # lets try with different user
+        monitor_data['user'] = UserFactory.create()
+        with self.assertRaisesMessage(IntegrityError, 'unique'):
+            Portfolio.objects.create(**monitor_data)

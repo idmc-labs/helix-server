@@ -13,7 +13,7 @@ from apps.entry.constants import STOCK, FLOW
 from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio
 from helix.settings import BASE_DIR
-from utils.factories import UserFactory, MonitoringSubRegionFactory
+from utils.factories import UserFactory, MonitoringSubRegionFactory, CountryFactory
 
 User = get_user_model()
 TEST_MEDIA_ROOT = 'media-temp'
@@ -109,17 +109,30 @@ class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
         return user
 
 
-def create_user_with_role(role: str, monitoring_sub_region: int = None) -> User:
+def create_user_with_role(role: str, monitoring_sub_region: int = None, country: int = None) -> User:
     user = UserFactory.create()
     user.raw_password = 'lhjsjsjsjlj'
     user.set_password(user.raw_password)
     user.save()  # saves it as a guest
     user.refresh_from_db()
-    if role != USER_ROLE.GUEST.name:
+    if role == USER_ROLE.ADMIN.name:
+        Portfolio.objects.create(
+            user=user,
+            role=USER_ROLE[role],
+        )
+    if role == USER_ROLE.REGIONAL_COORDINATOR.name:
         Portfolio.objects.create(
             user=user,
             role=USER_ROLE[role],
             monitoring_sub_region_id=monitoring_sub_region or MonitoringSubRegionFactory.create().id
+        )  # assigns a new role
+    elif role == USER_ROLE.MONITORING_EXPERT.name:
+        new_mr = MonitoringSubRegionFactory.create()
+        Portfolio.objects.create(
+            user=user,
+            role=USER_ROLE[role],
+            monitoring_sub_region_id=monitoring_sub_region or new_mr.id,
+            country_id=country or CountryFactory.create(monitoring_sub_region=new_mr).id
         )  # assigns a new role
     return user
 

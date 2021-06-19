@@ -42,7 +42,7 @@ class MonitoringSubRegionType(DjangoObjectType):
         related_name='countries',
     ))
     # TODO: Add dataloaders
-    regional_coordinator = graphene.Field('apps.users.schema.UserType')
+    regional_coordinator = graphene.Field('apps.users.schema.PortfolioType')
     monitoring_experts_count = graphene.Int(required=True)
     unmonitored_countries_count = graphene.Int(required=True)
     unmonitored_countries_names = graphene.String(required=True)
@@ -184,6 +184,9 @@ class CountryType(DjangoObjectType):
     total_stock_conflict = graphene.Int()
     total_stock_disaster = graphene.Int()
     geojson_url = graphene.String()
+
+    regional_coordinator = graphene.Field('apps.users.schema.PortfolioType')
+    monitoring_expert = graphene.Field('apps.users.schema.PortfolioType')
 
     def resolve_total_stock_disaster(root, info, **kwargs):
         NULL = 'null'

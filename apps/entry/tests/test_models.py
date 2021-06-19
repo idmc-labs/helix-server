@@ -32,13 +32,13 @@ class TestFigureModel(HelixTestCase):
 
     def test_figure_can_be_updated_by(self):
         editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        self.assertFalse(self.figure.can_be_updated_by(editor2))
+        self.assertTrue(self.figure.can_be_updated_by(editor2))
         self.assertTrue(self.figure.can_be_updated_by(self.editor))
         self.assertTrue(self.figure.can_be_updated_by(self.admin))
 
     def test_figure_can_be_created_by(self):
         editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        self.assertFalse(self.figure.can_be_created_by(editor2, self.entry))
+        self.assertTrue(self.figure.can_be_created_by(editor2, self.entry))
         self.assertTrue(self.figure.can_be_created_by(self.editor, self.entry))
 
     def test_figure_clean_idu(self):
@@ -190,9 +190,7 @@ class TestEntryModel(HelixTestCase):
 
     def test_entry_can_be_updated_by(self):
         editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        self.assertFalse(self.entry.can_be_updated_by(editor2))
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        self.assertFalse(self.entry.can_be_updated_by(reviewer))
+        self.assertTrue(self.entry.can_be_updated_by(editor2))
         admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.assertTrue(self.entry.can_be_updated_by(admin))
 

@@ -103,7 +103,7 @@ class MonitoringSubRegionFilter(django_filters.FilterSet):
 
     class Meta:
         model = MonitoringSubRegion
-        fields = []
+        fields = ['id']
 
     def _filter_name(self, queryset, name, value):
         if not value:

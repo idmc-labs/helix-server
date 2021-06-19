@@ -33,7 +33,7 @@ class PortfolioType(DjangoObjectType):
     class Meta:
         model = Portfolio
 
-    role = Field(PermissionRoleEnum)
+    role = Field(PermissionRoleEnum, required=True)
     permissions = graphene.List(graphene.NonNull(PermissionsType))
 
 

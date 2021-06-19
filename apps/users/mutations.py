@@ -13,7 +13,7 @@ from apps.users.serializers import (
     UserPasswordSerializer,
     GenerateResetPasswordTokenSerializer,
     ResetPasswordSerializer,
-    MonitoringExpertPortfolioSerializer,
+    BulkMonitoringExpertPortfolioSerializer,
     RegionalCoordinatorPortfolioSerializer,
     AdminPortfolioSerializer,
 )
@@ -225,9 +225,9 @@ class ResetPassword(graphene.Mutation):
         return ResetPassword(errors=None, ok=True)
 
 
-MonitoringExpertPortfolioInputType = generate_input_type_for_serializer(
-    'MonitoringExpertPortfolioInputType',
-    MonitoringExpertPortfolioSerializer
+BulkMonitoringExpertPortfolioInputType = generate_input_type_for_serializer(
+    'BulkMonitoringExpertPortfolioInputType ',
+    BulkMonitoringExpertPortfolioSerializer
 )
 
 RegionalCoordinatorPortfolioInputType = generate_input_type_for_serializer(
@@ -243,7 +243,7 @@ AdminPortfolioInputType = generate_input_type_for_serializer(
 
 class CreateMonitoringExpertPortfolio(graphene.Mutation):
     class Arguments:
-        data = MonitoringExpertPortfolioInputType(required=True)
+        data = BulkMonitoringExpertPortfolioInputType(required=True)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
@@ -252,7 +252,7 @@ class CreateMonitoringExpertPortfolio(graphene.Mutation):
     @staticmethod
     @permission_checker(['users.add_portfolio'])
     def mutate(root, info, data):
-        serializer = MonitoringExpertPortfolioSerializer(
+        serializer = BulkMonitoringExpertPortfolioSerializer(
             data=data,
             context={'request': info.context.request}
         )
@@ -260,36 +260,6 @@ class CreateMonitoringExpertPortfolio(graphene.Mutation):
             return CreateMonitoringExpertPortfolio(errors=errors, ok=False)
         instance = serializer.save()
         return CreateMonitoringExpertPortfolio(result=instance, errors=None, ok=True)
-
-
-class UpdateMonitoringExpertPortfolio(graphene.Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-        data = MonitoringExpertPortfolioInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-    result = graphene.Field(PortfolioType)
-
-    @staticmethod
-    @permission_checker(['users.change_portfolio'])
-    def mutate(root, info, id, data):
-        try:
-            instance = Portfolio.objects.get(id=id)
-        except Portfolio.DoesNotExist:
-            return UpdateMonitoringExpertPortfolio(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Portfolio does not exist.'))
-            ])
-        serializer = MonitoringExpertPortfolioSerializer(
-            instance=instance,
-            data=data,
-            context={'request': info.context.request},
-            partial=True
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return UpdateMonitoringExpertPortfolio(errors=errors, ok=False)
-        instance = serializer.save()
-        return UpdateMonitoringExpertPortfolio(result=instance, errors=None, ok=True)
 
 
 class CreateRegionalCoordinatorPortfolio(graphene.Mutation):
@@ -328,7 +298,7 @@ class UpdateRegionalCoordinatorPortfolio(graphene.Mutation):
         try:
             instance = Portfolio.objects.get(id=id)
         except Portfolio.DoesNotExist:
-            return UpdateMonitoringExpertPortfolio(errors=[
+            return UpdateRegionalCoordinatorPortfolio(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Portfolio does not exist.'))
             ])
         serializer = RegionalCoordinatorPortfolioSerializer(
@@ -431,7 +401,6 @@ class Mutation(object):
     reset_password = ResetPassword.Field()
     # portfolio
     create_monitoring_expert_portfolio = CreateMonitoringExpertPortfolio.Field()
-    update_monitoring_expert_portfolio = UpdateMonitoringExpertPortfolio.Field()
     create_regional_coordinator_portfolio = CreateRegionalCoordinatorPortfolio.Field()
     update_regional_coordinator_portfolio = UpdateRegionalCoordinatorPortfolio.Field()
     create_admin_portfolio = CreateAdminPortfolio.Field()

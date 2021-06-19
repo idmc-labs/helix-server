@@ -407,22 +407,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEntry']['ok'], content)
 
-    def test_invalid_entry_update_by_non_owner(self):
-        self.editor2 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT.name)
-        self.force_login(self.editor2)
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
-        content = json.loads(response.content)
-
-        self.assertResponseNoErrors(response)
-        self.assertFalse(content['data']['updateEntry']['ok'], content)
-        self.assertIn('nonFieldErrors',
-                      [each['field'] for each in content['data']['updateEntry']['errors']])
-        self.assertIn('You cannot update this entry',
-                      json.dumps(content['data']['updateEntry']['errors']))
-
     def test_valid_entry_update_by_admins(self):
         admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.force_login(admin)
@@ -589,22 +573,6 @@ class TestEntryDelete(HelixGraphQLTestCase):
         self.assertTrue(content['data']['deleteEntry']['ok'], content)
         self.assertEqual(content['data']['deleteEntry']['result']['url'],
                          self.entry.url)
-
-    def test_invalid_entry_delete_by_non_owner(self):
-        editor2 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT.name)
-        self.force_login(editor2)
-        response = self.query(
-            self.mutation,
-            variables=self.variables
-        )
-        content = json.loads(response.content)
-
-        self.assertResponseNoErrors(response)
-        self.assertFalse(content['data']['deleteEntry']['ok'], content)
-        self.assertIn('nonFieldErrors',
-                      [each['field'] for each in content['data']['deleteEntry']['errors']])
-        self.assertIn('You cannot delete this entry',
-                      json.dumps(content['data']['deleteEntry']['errors']))
 
     def test_valid_entry_delete_by_admins(self):
         admin = create_user_with_role(USER_ROLE.ADMIN.name)
