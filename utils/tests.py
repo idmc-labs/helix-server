@@ -6,8 +6,6 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission, Group
 from django.core import management
 from django.test import TestCase, override_settings
-# dramatiq test case: setupclass is not properly called
-# from django_dramatiq.test import DramatiqTestCase
 from graphene_django.utils import GraphQLTestCase
 from rest_framework.test import APITestCase
 
@@ -20,19 +18,12 @@ User = get_user_model()
 TEST_MEDIA_ROOT = 'media-temp'
 TEST_EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 TEST_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
-TEST_DRAMATIQ_BROKER = {
-    "BROKER": "dramatiq.brokers.stub.StubBroker",
-    "OPTIONS": {},
-    "MIDDLEWARE": [
-        "dramatiq.middleware.AgeLimit",
-        "dramatiq.middleware.TimeLimit",
-        "dramatiq.middleware.Callbacks",
-        "dramatiq.middleware.Pipelines",
-        "dramatiq.middleware.Retries",
-        "django_dramatiq.middleware.DbConnectionsMiddleware",
-        "django_dramatiq.middleware.AdminMiddleware",
-    ]
-}
+CELERY_BROKER_URL = 'memory://localhost/'
+CELERY_RESULT_BACKEND = 'memory://localhost/'
+BROKER_BACKEND = 'memory'
+CELERY_TASK_ALWAYS_EAGER = True
+CELERY_TASK_EAGER_PROPAGATES = True
+
 TEST_CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -91,9 +82,13 @@ class CommonSetupClassMixin:
     EMAIL_BACKEND=TEST_EMAIL_BACKEND,
     MEDIA_ROOT=TEST_MEDIA_ROOT,
     DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
-    DRAMATIQ_BROKER=TEST_DRAMATIQ_BROKER,
     CACHES=TEST_CACHES,
     AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
+    CELERY_BROKER_URL=CELERY_BROKER_URL,
+    CELERY_RESULT_BACKEND=CELERY_RESULT_BACKEND,
+    BROKER_BACKEND=BROKER_BACKEND,
+    CELERY_TASK_ALWAYS_EAGER=CELERY_TASK_ALWAYS_EAGER,
+    CELERY_TASK_EAGER_PROPAGATES=CELERY_TASK_EAGER_PROPAGATES,
 )
 class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
     GRAPHQL_URL = '/graphql'
@@ -156,9 +151,13 @@ class ImmediateOnCommitMixin(object):
     EMAIL_BACKEND=TEST_EMAIL_BACKEND,
     DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
     MEDIA_ROOT=TEST_MEDIA_ROOT,
-    DRAMATIQ_BROKER=TEST_DRAMATIQ_BROKER,
     CACHES=TEST_CACHES,
     AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
+    CELERY_BROKER_URL=CELERY_BROKER_URL,
+    CELERY_RESULT_BACKEND=CELERY_RESULT_BACKEND,
+    BROKER_BACKEND=BROKER_BACKEND,
+    CELERY_TASK_ALWAYS_EAGER=CELERY_TASK_ALWAYS_EAGER,
+    CELERY_TASK_EAGER_PROPAGATES=CELERY_TASK_EAGER_PROPAGATES,
 )
 class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     pass
@@ -168,9 +167,13 @@ class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     EMAIL_BACKEND=TEST_EMAIL_BACKEND,
     DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
     MEDIA_ROOT=TEST_MEDIA_ROOT,
-    DRAMATIQ_BROKER=TEST_DRAMATIQ_BROKER,
     CACHES=TEST_CACHES,
     AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
+    CELERY_BROKER_URL=CELERY_BROKER_URL,
+    CELERY_RESULT_BACKEND=CELERY_RESULT_BACKEND,
+    BROKER_BACKEND=BROKER_BACKEND,
+    CELERY_TASK_ALWAYS_EAGER=CELERY_TASK_ALWAYS_EAGER,
+    CELERY_TASK_EAGER_PROPAGATES=CELERY_TASK_EAGER_PROPAGATES,
 )
 class HelixAPITestCase(APITestCase):
     def __init__(self, *args, **kwargs):

@@ -257,7 +257,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             disaster_sub_type__name='Disaster Sub Type',
             disaster_sub_type='Hazard Type ID',
         )
-        values = EventFilter(
+        data = EventFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
@@ -279,9 +279,10 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             'created_at',
         ).prefetch_related(
             'countries',
-        ).values(*[header for header in headers.keys()])
-        data = [
-            {
+        )
+
+        def transformer(datum):
+            return {
                 **datum,
                 **dict(
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
@@ -290,13 +291,12 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     other_sub_type=getattr(Event.EVENT_OTHER_SUB_TYPE.get(datum['other_sub_type']), 'name', ''),
                 )
             }
-            for datum in values
-        ]
 
         return {
             'headers': headers,
-            'data': data,
+            'data': data.values(*[header for header in headers.keys()]),
             'formulae': None,
+            'transformer': transformer,
         }
 
     def save(self, *args, **kwargs):

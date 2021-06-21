@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
 import magic
 
+from django.conf import settings
 from django.template.defaultfilters import filesizeformat
 from django.utils.translation import gettext
 from rest_framework import serializers
 
-from apps.entry.tasks import DRAMATIQ_TIMEOUT
+from apps.entry.tasks import PDF_TASK_TIMEOUT
 from apps.contrib.models import (
     Attachment,
     SourcePreview,
@@ -87,7 +88,7 @@ class SourcePreviewSerializer(MetaInformationSerializerMixin,
             url=validated_data['url'],
             created_by=validated_data['created_by'],
             status=SourcePreview.PREVIEW_STATUS.IN_PROGRESS,
-            created_at__gte=datetime.now() - timedelta(seconds=DRAMATIQ_TIMEOUT)
+            created_at__gte=datetime.now() - timedelta(seconds=PDF_TASK_TIMEOUT)
         )
 
         if SourcePreview.objects.filter(
@@ -107,6 +108,23 @@ class ExcelDownloadSerializer(MetaInformationSerializerMixin,
     class Meta:
         model = ExcelDownload
         fields = '__all__'
+
+    def validate_concurrent_downloads(self, attrs: dict) -> None:
+        if ExcelDownload.objects.filter(
+            status__in=[
+                ExcelDownload.EXCEL_GENERATION_STATUS.PENDING,
+                ExcelDownload.EXCEL_GENERATION_STATUS.IN_PROGRESS
+            ],
+            created_by=self.context['request'].user,
+        ).count() >= settings.EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT:
+            raise serializers.ValidationError(gettext(
+                'Only %s excel export(s) is allowed at a time'
+            ) % settings.EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT, code='limited-at-a-time')
+
+    def validate(self, attrs: dict) -> dict:
+        attrs = super().validate(attrs)
+        self.validate_concurrent_downloads(attrs)
+        return attrs
 
     def create(self, validated_data):
         instance = super().create(validated_data)

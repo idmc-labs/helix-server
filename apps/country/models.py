@@ -248,7 +248,7 @@ class Country(models.Model):
                 cls.ND_DISASTER_ANNOTATE: f'ND Disaster Figure {timezone.now().year}',
             }
         )
-        values = CountryFilter(
+        data = CountryFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
@@ -277,13 +277,13 @@ class Country(models.Model):
             **cls._total_figure_disaggregation_subquery(),
         ).select_related(
             'geographical_group', 'region',
-        ).values(*[header for header in headers.keys()])
-        data = values
+        )
 
         return {
             'headers': headers,
-            'data': data,
+            'data': data.values(*[header for header in headers.keys()]),
             'formulae': None,
+            'transformer': None,
         }
 
     @classmethod

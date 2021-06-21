@@ -2,18 +2,17 @@ import base64
 import math
 import logging
 
-import dramatiq
+from helix.celery import app as celery_app
 from django.core.files.base import ContentFile
-from dramatiq.middleware import TimeLimitExceeded
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 
-from helix.settings import QueuePriority
+# from helix.settings import QueuePriority
 
 logger = logging.getLogger(__name__)
-DRAMATIQ_TIMEOUT = 30  # seconds
-SELENIUM_TIMEOUT = math.floor(DRAMATIQ_TIMEOUT * 0.8)
+PDF_TASK_TIMEOUT = 30  # seconds
+SELENIUM_TIMEOUT = math.floor(PDF_TASK_TIMEOUT * 0.8)
 
 
 def __get_pdf_from_html(path, timeout=SELENIUM_TIMEOUT, print_options={}):
@@ -35,8 +34,6 @@ def __get_pdf_from_html(path, timeout=SELENIUM_TIMEOUT, print_options={}):
         )
     except TimeoutException:
         logger.error(f'Chromium timed out for {path}', exc_info=True)
-    except TimeLimitExceeded:
-        logger.error(f'Dramatiq timed out for {path}', exc_info=True)
 
     final_print_options = {
         'landscape': False,
@@ -51,8 +48,7 @@ def __get_pdf_from_html(path, timeout=SELENIUM_TIMEOUT, print_options={}):
     return base64.b64decode(result['data'])
 
 
-# https://dramatiq.io/guide.html#dead-letters
-@dramatiq.actor(queue_name=QueuePriority.DEFAULT.value, max_retries=3, time_limit=DRAMATIQ_TIMEOUT * 1000)
+@celery_app.task(time_limit=PDF_TASK_TIMEOUT)
 def generate_pdf(pk):
     from apps.contrib.models import SourcePreview
 

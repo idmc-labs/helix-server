@@ -4,13 +4,14 @@ import re
 import time
 from tempfile import NamedTemporaryFile
 
-from django.core.files.base import ContentFile
+from django.core.files.base import File
 from django.db import transaction
 from django.utils import timezone
-import dramatiq
 from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
-from helix.settings import QueuePriority
+
+# from helix.settings import QueuePriority
+from helix.celery import app as celery_app
 
 REPORT_TIMEOUT = 20 * 60 * 1000
 
@@ -72,11 +73,7 @@ def generate_report_excel(generation_id):
                     continue
                 cell.value = formula.format(row=row)
 
-    with NamedTemporaryFile() as tmp:
-        wb.save(tmp.name)
-        tmp.seek(0)
-        content = tmp.read()
-        return content
+    return wb
 
 
 def generate_report_snapshot(generation_id):
@@ -90,14 +87,11 @@ def generate_report_snapshot(generation_id):
         ws.append(headers)
         for elements in sheet_data:
             ws.append([re.sub(ILLEGAL_CHARACTERS_RE, '', str(elements.get(header))) for header in headers])
-    with NamedTemporaryFile() as tmp:
-        wb.save(tmp.name)
-        tmp.seek(0)
-        content = tmp.read()
-        return content
+
+    return wb
 
 
-@dramatiq.actor(queue_name=QueuePriority.HEAVY.value, max_retries=3, time_limit=REPORT_TIMEOUT)
+@celery_app.task(time_limit=REPORT_TIMEOUT)
 def trigger_report_generation(generation_id):
     from apps.report.models import ReportGeneration
     generation = ReportGeneration.objects.get(id=generation_id)
@@ -110,13 +104,21 @@ def trigger_report_generation(generation_id):
             path = f'{generation.report.name}.xlsx'
 
             logger.warn('Starting report generation...')
-            content = generate_report_excel(generation_id)
-            generation.full_report.save(path, ContentFile(content))
+            workbook = generate_report_excel(generation_id)
+            with NamedTemporaryFile(dir='/tmp') as tmp:
+                workbook.save(tmp.name)
+                workbook.close()
+                generation.full_report.save(path, File(tmp))
+                del workbook
             logger.warn(f'Completed report generation in {time.time() - then}')
             then = time.time()
 
-            content = generate_report_snapshot(generation_id)
-            generation.snapshot.save(path, ContentFile(content))
+            workbook = generate_report_snapshot(generation_id)
+            with NamedTemporaryFile(dir='/tmp') as tmp:
+                workbook.save(tmp.name)
+                workbook.close()
+                generation.snapshot.save(path, File(tmp))
+                del workbook
             logger.warn(f'Completed snapshot generation {time.time() - then}')
 
             generation.status = ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED

@@ -1,10 +1,10 @@
-import dramatiq
-from helix.settings import QueuePriority, DEFAULT_FROM_EMAIL
+from celery import shared_task
+from helix.settings import DEFAULT_FROM_EMAIL
 from django.core.mail import send_mail
 from django.template import loader
 
 
-@dramatiq.actor(queue_name=QueuePriority.DEFAULT.value, max_retries=3, time_limit=2000)
+@shared_task
 def send_email(subject, message, recipient_list, html_context=None):
     """ A generic background task for sending emails """
 

@@ -1,7 +1,8 @@
 from django.test import RequestFactory
 
+from apps.users.enums import USER_ROLE
 from apps.event.serializers import EventSerializer
-from utils.tests import HelixTestCase
+from utils.tests import HelixTestCase, create_user_with_role
 from utils.factories import (
     CrisisFactory,
     CountryFactory,
@@ -19,8 +20,10 @@ from apps.entry.models import FigureCategory
 
 class TestCreateEventSerializer(HelixTestCase):
     def setUp(self) -> None:
+        self.request = RequestFactory().post('/graphql')
+        self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
         self.context = dict(
-            request=RequestFactory().post('/graphql')
+            request=self.request
         )
 
     def test_invalid_crisis_date_event_serializer(self):
@@ -78,12 +81,15 @@ class TestCreateEventSerializer(HelixTestCase):
 
 class TestUpdateEventSerializer(HelixTestCase):
     def setUp(self):
+        self.request = RequestFactory().post('/graphql')
+        self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
         self.context = dict(
-            request=RequestFactory().post('/graphql')
+            request=self.request
         )
 
     def test_invalid_event_dates_beyond_figure_dates(self):
         from datetime import datetime, timedelta
+
         FigureCategory._invalidate_category_ids_cache()
         flow = FigureCategory.flow_new_displacement_id()
         stock = FigureCategory.stock_idp_id()
@@ -119,6 +125,7 @@ class TestUpdateEventSerializer(HelixTestCase):
         )
         serializer = EventSerializer(
             instance=event,
+            context=self.context,
             data=data,
             partial=True,
         )
@@ -132,6 +139,7 @@ class TestUpdateEventSerializer(HelixTestCase):
         serializer = EventSerializer(
             instance=event,
             data=data,
+            context=self.context,
             partial=True,
         )
         self.assertFalse(serializer.is_valid())
@@ -146,6 +154,7 @@ class TestUpdateEventSerializer(HelixTestCase):
         serializer = EventSerializer(
             instance=event,
             data=data,
+            context=self.context,
             partial=True,
         )
         self.assertFalse(serializer.is_valid())
@@ -167,6 +176,7 @@ class TestUpdateEventSerializer(HelixTestCase):
         serializer = EventSerializer(
             instance=event,
             data=data,
+            context=self.context,
             partial=True,
         )
         self.assertTrue(serializer.is_valid())
@@ -193,6 +203,7 @@ class TestUpdateEventSerializer(HelixTestCase):
         serializer = EventSerializer(
             instance=event,
             data=data,
+            context=self.context,
             partial=True
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -204,6 +215,7 @@ class TestUpdateEventSerializer(HelixTestCase):
         serializer = EventSerializer(
             instance=event,
             data=data,
+            context=self.context,
             partial=True
         )
         self.assertFalse(serializer.is_valid())
@@ -218,6 +230,8 @@ class TestUpdateEventSerializer(HelixTestCase):
             violence_sub_type=violence_sub_type.pk,
             name='one',
         )
+        self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.context['request'] = self.request
         serializer = EventSerializer(data=data, context=self.context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
 

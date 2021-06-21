@@ -250,13 +250,15 @@ class Report(MetaInformationArchiveAbstractModel,
         current_gen.is_signed_off = True
         current_gen.is_signed_off_by = done_by
         current_gen.is_signed_off_on = timezone.now()
+        current_gen.created_at = timezone.now()
+        current_gen.created_by = done_by
         current_gen.save(
             update_fields=[
                 'is_signed_off', 'is_signed_off_by',
                 'is_signed_off_on', 'include_history',
             ]
         )
-        transaction.on_commit(lambda: trigger_report_generation.send(
+        transaction.on_commit(lambda: trigger_report_generation.delay(
             current_gen.pk
         ))
 
@@ -314,6 +316,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
         IN_PROGRESS = 1
         COMPLETED = 2
         FAILED = 3
+        KILLED = 4
 
     report = models.ForeignKey('Report', verbose_name=_('Report'),
                                related_name='generations', on_delete=models.CASCADE)

@@ -2,16 +2,19 @@ import logging
 import re
 from tempfile import NamedTemporaryFile
 import time
+from datetime import timedelta
 
-from django.core.files.base import ContentFile
+from django.core.files import File
+from django.conf import settings
 from django.utils import timezone
-import dramatiq
 from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 
-from helix.settings import QueuePriority
+# from helix.settings import QueuePriority
+from helix.celery import app as celery_app
+from apps.entry.tasks import PDF_TASK_TIMEOUT
+from apps.report.tasks import REPORT_TIMEOUT
 
-TIMEOUT = 10 * 60 * 1000
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,29 +25,32 @@ def get_excel_sheet_content(headers, data, **kwargs):
 
     ws = wb.create_sheet('Main')
 
-    def append_to_worksheet(_ws, _headers, _data):
+    def append_to_worksheet(_ws, _headers, _data, _transformer):
         keys = _headers.keys()
         _ws.append([_headers[key] for key in keys])
-        for elements in _data:
+        for _datum in _data.iterator(chunk_size=2000):
+            transformed_datum = _datum
+            if _transformer:
+                transformed_datum = _transformer(_datum)
             _ws.append([
-                re.sub(ILLEGAL_CHARACTERS_RE, '', str(elements.get(key)) if elements.get(key) else '')
+                re.sub(ILLEGAL_CHARACTERS_RE, '', str(transformed_datum.get(key)) if transformed_datum.get(key) else '')
                 for key in keys
             ])
-    append_to_worksheet(ws, headers, data)
+
+    # append the primary sheet
+    append_to_worksheet(ws, headers, data, kwargs.get('transformer'))
+    # append the secondary sheets if provided
     for other in kwargs.get('other', []):
         ws = wb.create_sheet(other['title'])
         headers = other['results']['headers']
         data = other['results']['data']
-        append_to_worksheet(ws, headers, data)
+        transformer = other['results'].get('transformer')
+        append_to_worksheet(ws, headers, data, transformer)
 
-    with NamedTemporaryFile() as tmp:
-        wb.save(tmp.name)
-        tmp.seek(0)
-        content = tmp.read()
-        return content
+    return wb
 
 
-@dramatiq.actor(queue_name=QueuePriority.HEAVY.value, max_retries=0, time_limit=TIMEOUT)
+@celery_app.task(time_limit=settings.EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT)
 def generate_excel_file(download_id, user_id):
     '''
     Fetch the filter data from excel download
@@ -63,8 +69,12 @@ def generate_excel_file(download_id, user_id):
         logger.warn(f'Starting sheet generation for ExcelDownload={download_id}...')
         sheet_data_getter = download.get_model_sheet_data_getter()
         sheet_data = sheet_data_getter(user_id=user_id, filters=download.filters)
-        content = get_excel_sheet_content(**sheet_data)
-        download.file.save(path, ContentFile(content))
+        workbook = get_excel_sheet_content(**sheet_data)
+        with NamedTemporaryFile(dir='/tmp') as tmp:
+            workbook.save(tmp.name)
+            workbook.close()
+            download.file.save(path, File(tmp))
+            del workbook
         download.status = ExcelDownload.EXCEL_GENERATION_STATUS.COMPLETED
         download.completed_at = timezone.now()
         download.save()
@@ -75,3 +85,46 @@ def generate_excel_file(download_id, user_id):
         download.status = ExcelDownload.EXCEL_GENERATION_STATUS.FAILED
         download.completed_at = timezone.now()
         download.save(update_fields=['status'])
+
+
+@celery_app.task
+def kill_all_old_excel_exports():
+    from apps.contrib.models import ExcelDownload
+
+    # if a task has been pending for too long, move it to killed
+    pending = ExcelDownload.objects.filter(
+        status=ExcelDownload.EXCEL_GENERATION_STATUS.PENDING,
+        started_at__lte=timezone.now() - timedelta(seconds=settings.EXCEL_EXPORT_PENDING_STATE_TIMEOUT),
+    ).update(status=ExcelDownload.EXCEL_GENERATION_STATUS.KILLED)
+
+    # if a task has been in progress beyond timeout, move it to killed
+    progress = ExcelDownload.objects.filter(
+        status=ExcelDownload.EXCEL_GENERATION_STATUS.IN_PROGRESS,
+        started_at__lte=timezone.now() - timedelta(seconds=settings.EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT),
+    ).update(status=ExcelDownload.EXCEL_GENERATION_STATUS.KILLED)
+
+    logger.info(f'Updated EXCEL EXPORTS to killed:\n{pending=}\n{progress=}')
+
+
+@celery_app.task
+def kill_all_long_running_previews():
+    from apps.contrib.models import SourcePreview
+
+    progress = SourcePreview.objects.filter(
+        status=SourcePreview.PREVIEW_STATUS.IN_PROGRESS,
+        created_at__lte=timezone.now() - timedelta(seconds=PDF_TASK_TIMEOUT * 5),
+    ).update(status=SourcePreview.PREVIEW_STATUS.KILLED)
+
+    logger.info(f'Updated SOURCE PREVIEWS to killed:\n{progress=}')
+
+
+@celery_app.task
+def kill_all_long_running_report_generations():
+    from apps.report.models import ReportGeneration
+
+    progress = ReportGeneration.objects.filter(
+        status=ReportGeneration.REPORT_GENERATION_STATUS.IN_PROGRESS,
+        created_at__lte=timezone.now() - timedelta(seconds=REPORT_TIMEOUT * 2),
+    ).update(status=ReportGeneration.REPORT_GENERATION_STATUS.KILLED)
+
+    logger.info(f'Updated REPORT GENERATION to killed:\n{progress=}')

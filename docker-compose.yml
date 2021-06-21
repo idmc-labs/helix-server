@@ -31,15 +31,17 @@ services:
       - db
       - redis
 
-  dramatiq:
+  celery:
     image: helix/helix-worker:latest
     restart: 'on-failure'
     build:
       context: ./
-      target: dramatiq
+      target: celery
     env_file:
       - .env
-    command: python manage.py rundramatiq --reload
+    environment:
+      - DEBUG=False
+    command: ./deploy/scripts/run_tasks.sh
     volumes:
       - ./:/code
 
