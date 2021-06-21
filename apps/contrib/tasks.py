@@ -12,6 +12,8 @@ from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 
 # from helix.settings import QueuePriority
 from helix.celery import app as celery_app
+from apps.entry.tasks import PDF_TASK_TIMEOUT
+from apps.report.tasks import REPORT_TIMEOUT
 
 
 logging.basicConfig(level=logging.INFO)
@@ -101,4 +103,28 @@ def kill_all_old_excel_exports():
         started_at__lte=timezone.now() - timedelta(seconds=settings.EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT),
     ).update(status=ExcelDownload.EXCEL_GENERATION_STATUS.KILLED)
 
-    logger.info(f'Updated excel exports to killed:\n{pending=}\n{progress=}')
+    logger.info(f'Updated EXCEL EXPORTS to killed:\n{pending=}\n{progress=}')
+
+
+@celery_app.task
+def kill_all_long_running_previews():
+    from apps.contrib.models import SourcePreview
+
+    progress = SourcePreview.objects.filter(
+        status=SourcePreview.PREVIEW_STATUS.IN_PROGRESS,
+        created_at__lte=timezone.now() - timedelta(seconds=PDF_TASK_TIMEOUT * 5),
+    ).update(status=SourcePreview.PREVIEW_STATUS.KILLED)
+
+    logger.info(f'Updated SOURCE PREVIEWS to killed:\n{progress=}')
+
+
+@celery_app.task
+def kill_all_long_running_report_generations():
+    from apps.report.models import ReportGeneration
+
+    progress = ReportGeneration.objects.filter(
+        status=ReportGeneration.REPORT_GENERATION_STATUS.IN_PROGRESS,
+        created_at__lte=timezone.now() - timedelta(seconds=REPORT_TIMEOUT * 2),
+    ).update(status=ReportGeneration.REPORT_GENERATION_STATUS.KILLED)
+
+    logger.info(f'Updated REPORT GENERATION to killed:\n{progress=}')

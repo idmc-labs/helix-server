@@ -130,12 +130,14 @@ class SourcePreview(MetaInformationAbstractModel):
         COMPLETED = 1
         FAILED = 2
         IN_PROGRESS = 3
+        KILLED = 4
 
         __labels__ = {
             PENDING: _("Pending"),
             COMPLETED: _("Completed"),
             FAILED: _("Failed"),
             IN_PROGRESS: _("In Progress"),
+            KILLED: _("Killed"),
         }
 
     url = models.URLField(verbose_name=_('Source URL'), max_length=2000)

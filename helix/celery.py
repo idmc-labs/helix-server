@@ -3,6 +3,7 @@ import os
 from celery import Celery
 from celery.schedules import crontab
 
+
 # Set the default Django settings module for the 'celery' program.
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'helix.settings')
 
@@ -15,9 +16,19 @@ app = Celery('helix')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
 app.conf.beat_schedule = {
-    'cron-job': {
+    'kill-exports': {
         'task': 'apps.contrib.tasks.kill_all_old_excel_exports',
         'schedule': crontab(minute='*/15'),
+        'args': [],
+    },
+    'kill-previews': {
+        'task': 'apps.contrib.tasks.kill_all_long_running_previews',
+        'schedule': crontab(hour='*/2'),
+        'args': [],
+    },
+    'kill-report-generations': {
+        'task': 'apps.contrib.tasks.kill_all_long_running_report_generations',
+        'schedule': crontab(hour='*/3'),
         'args': [],
     },
 }
