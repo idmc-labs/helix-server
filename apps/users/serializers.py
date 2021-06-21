@@ -262,9 +262,12 @@ class RegionalCoordinatorPortfolioSerializer(serializers.ModelSerializer):
         }
 
 
-class AdminPortfolioSerializer(serializers.ModelSerializer):
+class AdminPortfolioSerializer(serializers.Serializer):
+    register = serializers.BooleanField(required=True)
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+
     def _validate_unique(self, attrs) -> None:
-        if Portfolio.objects.filter(
+        if attrs['register'] and Portfolio.objects.filter(
             user=attrs.get('user'),
             role=USER_ROLE.ADMIN,
         ).exclude(
@@ -284,12 +287,21 @@ class AdminPortfolioSerializer(serializers.ModelSerializer):
     def validate(self, attrs: dict) -> dict:
         self._validate_is_admin()
         self._validate_unique(attrs)
-        attrs['role'] = USER_ROLE.ADMIN
+
         return attrs
 
-    class Meta:
-        model = Portfolio
-        fields = ['user']
+    def save(self):
+        if self.validated_data['register']:
+            Portfolio.objects.create(
+                user=self.validated_data['user'],
+                role=USER_ROLE.ADMIN
+            )
+        else:
+            p = Portfolio.objects.get(
+                user=self.validated_data['user'],
+                role=USER_ROLE.ADMIN
+            )
+            p.delete()
 
 
 # End Portfolios

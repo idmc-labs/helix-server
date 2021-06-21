@@ -262,27 +262,6 @@ class CreateMonitoringExpertPortfolio(graphene.Mutation):
         return CreateMonitoringExpertPortfolio(result=instance, errors=None, ok=True)
 
 
-class CreateRegionalCoordinatorPortfolio(graphene.Mutation):
-    class Arguments:
-        data = RegionalCoordinatorPortfolioInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-    result = graphene.Field(PortfolioType)
-
-    @staticmethod
-    @permission_checker(['users.add_portfolio'])
-    def mutate(root, info, data):
-        serializer = RegionalCoordinatorPortfolioSerializer(
-            data=data,
-            context={'request': info.context.request}
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return CreateRegionalCoordinatorPortfolio(errors=errors, ok=False)
-        instance = serializer.save()
-        return CreateRegionalCoordinatorPortfolio(result=instance, errors=None, ok=True)
-
-
 class UpdateRegionalCoordinatorPortfolio(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
@@ -313,57 +292,6 @@ class UpdateRegionalCoordinatorPortfolio(graphene.Mutation):
         return UpdateRegionalCoordinatorPortfolio(result=instance, errors=None, ok=True)
 
 
-class CreateAdminPortfolio(graphene.Mutation):
-    class Arguments:
-        data = AdminPortfolioInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-    result = graphene.Field(PortfolioType)
-
-    @staticmethod
-    @permission_checker(['users.add_portfolio'])
-    def mutate(root, info, data):
-        serializer = AdminPortfolioSerializer(
-            data=data,
-            context={'request': info.context.request}
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return CreateAdminPortfolio(errors=errors, ok=False)
-        instance = serializer.save()
-        return CreateAdminPortfolio(result=instance, errors=None, ok=True)
-
-
-class UpdateAdminPortfolio(graphene.Mutation):
-    class Arguments:
-        id = graphene.ID(required=True)
-        data = AdminPortfolioInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-    result = graphene.Field(PortfolioType)
-
-    @staticmethod
-    @permission_checker(['users.change_portfolio'])
-    def mutate(root, info, id, data):
-        try:
-            instance = Portfolio.objects.get(id=id)
-        except Portfolio.DoesNotExist:
-            return UpdateAdminPortfolio(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Portfolio does not exist.'))
-            ])
-        serializer = AdminPortfolioSerializer(
-            instance=instance,
-            data=data,
-            context={'request': info.context.request},
-            partial=True
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return UpdateAdminPortfolio(errors=errors, ok=False)
-        instance = serializer.save()
-        return UpdateAdminPortfolio(result=instance, errors=None, ok=True)
-
-
 class DeletePortfolio(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
@@ -390,6 +318,27 @@ class DeletePortfolio(graphene.Mutation):
         return DeletePortfolio(result=instance, errors=None, ok=True)
 
 
+class UpdateAdminPortfolio(graphene.Mutation):
+    class Arguments:
+        data = AdminPortfolioInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(PortfolioType)
+
+    @staticmethod
+    @permission_checker(['users.change_portfolio'])
+    def mutate(root, info, data):
+        serializer = AdminPortfolioSerializer(
+            data=data,
+            context={'request': info.context.request},
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return UpdateAdminPortfolio(errors=errors, ok=False)
+        instance = serializer.save()
+        return UpdateAdminPortfolio(result=instance, errors=None, ok=True)
+
+
 class Mutation(object):
     login = Login.Field()
     register = Register.Field()
@@ -401,9 +350,7 @@ class Mutation(object):
     reset_password = ResetPassword.Field()
     # portfolio
     create_monitoring_expert_portfolio = CreateMonitoringExpertPortfolio.Field()
-    create_regional_coordinator_portfolio = CreateRegionalCoordinatorPortfolio.Field()
     update_regional_coordinator_portfolio = UpdateRegionalCoordinatorPortfolio.Field()
-    create_admin_portfolio = CreateAdminPortfolio.Field()
-    update_admin_portfolio = UpdateAdminPortfolio.Field()
     delete_portfolio = DeletePortfolio.Field()
+    update_admin_portfolio = UpdateAdminPortfolio.Field()
     # end portfolio

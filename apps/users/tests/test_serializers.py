@@ -93,6 +93,7 @@ class TestAdminPortfolioSerializer(HelixTestCase):
         )
         data = dict(
             user=create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name).id,
+            register=True,
         )
         serializer = AdminPortfolioSerializer(
             data=data,
@@ -102,7 +103,8 @@ class TestAdminPortfolioSerializer(HelixTestCase):
 
         other_admin = create_user_with_role(USER_ROLE.ADMIN.name)
         data = dict(
-            user=other_admin.id
+            user=other_admin.id,
+            register=True,
         )
         serializer = AdminPortfolioSerializer(
             data=data,
@@ -111,6 +113,20 @@ class TestAdminPortfolioSerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid(), serializer.errors)
         self.assertEqual(serializer.errors['non_field_errors'][0].code, 'already-exists', serializer.errors)
 
+        # removing is fine
+        data = dict(
+            user=other_admin.id,
+            register=False,
+        )
+        serializer = AdminPortfolioSerializer(
+            data=data,
+            context=context
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+        other_admin.refresh_from_db()
+        self.assertEqual(other_admin.highest_role, USER_ROLE.GUEST)
+
     def test_only_admin_is_allowed(self):
         self.request.user = self.coordinator
         context = dict(
@@ -118,6 +134,7 @@ class TestAdminPortfolioSerializer(HelixTestCase):
         )
         data = dict(
             user=self.expert.id,
+            register=True,
         )
         serializer = AdminPortfolioSerializer(
             data=data,
