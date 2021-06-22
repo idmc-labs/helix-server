@@ -1,3 +1,5 @@
+from typing import List
+
 from celery import shared_task
 from helix.settings import DEFAULT_FROM_EMAIL
 from django.core.mail import send_mail
@@ -22,3 +24,12 @@ def send_email(subject, message, recipient_list, html_context=None):
         email_data["html_message"] = template.render(html_context)
 
     send_mail(**email_data)
+
+
+@shared_task()
+def recalculate_user_roles(pk_list: List[int]):
+    '''Called on portfolio updates. Primarily to reset previous role holders'''
+    from apps.users.models import User
+
+    for user in User.objects.filter(id__in=pk_list):
+        user.set_highest_role()

@@ -2,8 +2,10 @@ from datetime import datetime
 import time
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.tokens import default_token_generator
 from django.db import transaction
 from django.conf import settings
+from djoser.utils import encode_uid
 from django.utils.translation import gettext
 from rest_framework import serializers
 
@@ -13,9 +15,8 @@ from apps.users.models import Portfolio
 from apps.country.models import MonitoringSubRegion, Country
 from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
 from utils.validations import validate_hcaptcha, MissingCaptchaException
-from .tasks import send_email
-from django.contrib.auth.tokens import default_token_generator
-from djoser.utils import encode_uid
+
+from .tasks import send_email, recalculate_user_roles
 
 User = get_user_model()
 
@@ -203,26 +204,19 @@ class BulkMonitoringExpertPortfolioSerializer(serializers.Serializer):
 
     def save(self, *args, **kwargs):
         with transaction.atomic():
+            reset_user_roles_for = []
             for portfolio in self.validated_data['portfolios']:
-                instance = Portfolio.objects.get(country=portfolio['country'])
-                instance.__dict__.update(
-                    **{**portfolio, 'monitoring_sub_region': self.validated_data['region']}
-                )
+                instance = Portfolio.objects.get(country=portfolio['country'],
+                                                 role=USER_ROLE.MONITORING_EXPERT)
+                old_user = instance.user
+                instance.user = portfolio['user']
                 instance.save()
+                if portfolio['user'] != old_user:
+                    reset_user_roles_for.append(old_user.pk)
+            recalculate_user_roles.delay(reset_user_roles_for)
 
 
 class RegionalCoordinatorPortfolioSerializer(serializers.ModelSerializer):
-    def _validate_monitoring_region_already_occupied(self, attrs: dict) -> None:
-        if portfolio := Portfolio.objects.filter(
-            role=USER_ROLE.REGIONAL_COORDINATOR,
-            monitoring_sub_region=attrs['monitoring_sub_region'].id,
-        ).exclude(id=getattr(self.instance, 'id', None)):
-            raise serializers.ValidationError(
-                gettext('This monitoring region is already occupied by %s')
-                % portfolio.get().user.full_name,
-                code='already-occupied'
-            )
-
     def _validate_can_add(self) -> None:
         if self.context['request'].user.highest_role != USER_ROLE.ADMIN:
             raise serializers.ValidationError(
@@ -231,10 +225,18 @@ class RegionalCoordinatorPortfolioSerializer(serializers.ModelSerializer):
             )
 
     def validate(self, attrs: dict) -> dict:
-        self._validate_monitoring_region_already_occupied(attrs)
         self._validate_can_add()
         attrs['role'] = USER_ROLE.REGIONAL_COORDINATOR
+        self.instance = Portfolio.objects.get(
+            monitoring_sub_region=attrs['monitoring_sub_region'],
+            role=USER_ROLE.REGIONAL_COORDINATOR,
+        )
         return attrs
+
+    def save(self):
+        instance = super().save()
+        recalculate_user_roles.delay([self.instance.user.pk])
+        return instance
 
     class Meta:
         model = Portfolio
@@ -284,6 +286,8 @@ class AdminPortfolioSerializer(serializers.Serializer):
                 role=USER_ROLE.ADMIN
             )
             p.delete()
+
+        return self.validated_data['user']
 
 
 # End Portfolios

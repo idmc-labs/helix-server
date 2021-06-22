@@ -3,6 +3,7 @@ from django.utils.translation import gettext
 from django.conf import settings
 import graphene
 
+from apps.country.models import MonitoringSubRegion
 from apps.users.schema import UserType, PortfolioType
 from apps.users.models import User, Portfolio
 from apps.users.enums import USER_ROLE
@@ -227,17 +228,17 @@ class ResetPassword(graphene.Mutation):
 
 
 BulkMonitoringExpertPortfolioInputType = generate_input_type_for_serializer(
-    'BulkMonitoringExpertPortfolioInputType ',
+    'BulkMonitoringExpertPortfolioInputType',
     BulkMonitoringExpertPortfolioSerializer
 )
 
 RegionalCoordinatorPortfolioInputType = generate_input_type_for_serializer(
-    'RegionalCoordinatorPortfolioInputType ',
+    'RegionalCoordinatorPortfolioInputType',
     RegionalCoordinatorPortfolioSerializer
 )
 
 AdminPortfolioInputType = generate_input_type_for_serializer(
-    'AdminPortfolioInputType ',
+    'AdminPortfolioInputType',
     AdminPortfolioSerializer
 )
 
@@ -248,7 +249,7 @@ class CreateMonitoringExpertPortfolio(graphene.Mutation):
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.Field(PortfolioType)
+    result = graphene.Field('apps.country.schema.MonitoringSubRegionType')
 
     @staticmethod
     @permission_checker(['users.add_portfolio'])
@@ -259,8 +260,12 @@ class CreateMonitoringExpertPortfolio(graphene.Mutation):
         )
         if errors := mutation_is_not_valid(serializer):
             return CreateMonitoringExpertPortfolio(errors=errors, ok=False)
-        instance = serializer.save()
-        return CreateMonitoringExpertPortfolio(result=instance, errors=None, ok=True)
+        serializer.save()
+        return CreateMonitoringExpertPortfolio(
+            result=MonitoringSubRegion.objects.get(id=data['region']),
+            errors=None,
+            ok=True
+        )
 
 
 class UpdateRegionalCoordinatorPortfolio(graphene.Mutation):
@@ -269,14 +274,14 @@ class UpdateRegionalCoordinatorPortfolio(graphene.Mutation):
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.Field(PortfolioType)
+    result = graphene.Field('apps.country.schema.MonitoringSubRegionType')
 
     @staticmethod
     @permission_checker(['users.change_portfolio'])
     def mutate(root, info, data):
         try:
             instance = Portfolio.objects.get(
-                region=data['region'],
+                monitoring_sub_region=data['monitoring_sub_region'],
                 role=USER_ROLE.REGIONAL_COORDINATOR
             )
         except Portfolio.DoesNotExist:
@@ -292,7 +297,11 @@ class UpdateRegionalCoordinatorPortfolio(graphene.Mutation):
         if errors := mutation_is_not_valid(serializer):
             return UpdateRegionalCoordinatorPortfolio(errors=errors, ok=False)
         instance = serializer.save()
-        return UpdateRegionalCoordinatorPortfolio(result=instance, errors=None, ok=True)
+        return UpdateRegionalCoordinatorPortfolio(
+            result=instance.monitoring_sub_region,
+            errors=None,
+            ok=True
+        )
 
 
 class DeletePortfolio(graphene.Mutation):
@@ -327,7 +336,7 @@ class UpdateAdminPortfolio(graphene.Mutation):
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.Field(PortfolioType)
+    result = graphene.Field(UserType)
 
     @staticmethod
     @permission_checker(['users.change_portfolio'])
@@ -338,8 +347,8 @@ class UpdateAdminPortfolio(graphene.Mutation):
         )
         if errors := mutation_is_not_valid(serializer):
             return UpdateAdminPortfolio(errors=errors, ok=False)
-        instance = serializer.save()
-        return UpdateAdminPortfolio(result=instance, errors=None, ok=True)
+        user = serializer.save()
+        return UpdateAdminPortfolio(result=user, errors=None, ok=True)
 
 
 class Mutation(object):

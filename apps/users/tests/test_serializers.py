@@ -150,36 +150,6 @@ class TestRegionalCoordinatorPortfolioSerializer(HelixTestCase):
         self.expert = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.request = RequestFactory().post('/graphql')
 
-    def test_unique_coordinator_per_region(self):
-        self.request.user = self.admin
-        context = dict(
-            request=self.request
-        )
-        coordinator_region = self.coordinator.portfolios.first().monitoring_sub_region
-        other_coordinator = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
-        data = dict(
-            user=other_coordinator.id,
-            monitoring_sub_region=coordinator_region.id,
-        )
-        serializer = RegionalCoordinatorPortfolioSerializer(
-            data=data,
-            context=context
-        )
-        self.assertFalse(serializer.is_valid(), serializer.errors)
-        self.assertEqual(serializer.errors['non_field_errors'][0].code, 'already-occupied', serializer.errors)
-
-        # same coordinator in multiple region is allowed
-        data = dict(
-            user=self.coordinator.id,
-            monitoring_sub_region=MonitoringSubRegionFactory.create().id,
-        )
-        serializer = RegionalCoordinatorPortfolioSerializer(
-            data=data,
-            context=context
-        )
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        serializer.save()
-
     def test_only_admin_is_allowed(self):
         self.request.user = self.coordinator
         context = dict(
@@ -294,11 +264,9 @@ class TestMonitoringExpertPortfolioSerializer(HelixTestCase):
         data = dict(
             region=coordinator_region.id,
             portfolios=[dict(
-                id=portfolio1.id,
                 user=guest.id,
                 country=portfolio1.country.id,
             ), dict(
-                id=portfolio2.id,
                 user=guest.id,
                 country=portfolio2.country.id,
             )]
@@ -309,6 +277,14 @@ class TestMonitoringExpertPortfolioSerializer(HelixTestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
+
+        # test_check_roles_update_for_monitoring_portfolios
+
+        # expert's both portfolios have been replaced by guest
+        self.assertEqual(expert.highest_role,
+                         USER_ROLE.GUEST)
+        self.assertEqual(guest.highest_role,
+                         USER_ROLE.MONITORING_EXPERT)
 
         # try and add another user to the same country, should fail
         # it no longer fails, we overwrite the monitoring expert in the country
@@ -359,3 +335,27 @@ class TestMonitoringExpertPortfolioSerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('non_field_errors', serializer.errors, serializer.errors)
         self.assertEqual('region-mismatch', serializer.errors['non_field_errors'][0].code, serializer.errors)
+
+    def test_user_roles_are_reset_on_updating_regional_portfolio(self):
+        self.request.user = self.admin
+        context = dict(
+            request=self.request
+        )
+        guest = create_user_with_role(USER_ROLE.GUEST.name)
+        coordinator_region = self.coordinator.portfolios.first().monitoring_sub_region
+        data = dict(
+            monitoring_sub_region=coordinator_region.id,
+            user=guest.id,
+        )
+        serializer = RegionalCoordinatorPortfolioSerializer(
+            data=data,
+            context=context,
+        )
+
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+
+        self.assertEqual(self.coordinator.highest_role,
+                         USER_ROLE.GUEST)
+        self.assertEqual(guest.highest_role,
+                         USER_ROLE.REGIONAL_COORDINATOR)
