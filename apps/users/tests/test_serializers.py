@@ -4,7 +4,6 @@ import mock
 from apps.users.serializers import (
     RegisterSerializer,
     UserSerializer,
-    MonitoringExpertPortfolioSerializer,
     BulkMonitoringExpertPortfolioSerializer,
     RegionalCoordinatorPortfolioSerializer,
     AdminPortfolioSerializer,
@@ -236,10 +235,7 @@ class TestMonitoringExpertPortfolioSerializer(HelixTestCase):
         coordinator_region = self.coordinator.portfolios.first().monitoring_sub_region
         data = dict(
             region=coordinator_region.id,
-            portfolios=[dict(
-                user=guest.id,
-                country=each.id
-            ) for each in CountryFactory.create_batch(3, monitoring_sub_region=coordinator_region)]
+            portfolios=[],
         )
         serializer = BulkMonitoringExpertPortfolioSerializer(
             data=data,
@@ -315,73 +311,9 @@ class TestMonitoringExpertPortfolioSerializer(HelixTestCase):
         serializer.save()
 
         # try and add another user to the same country, should fail
-        guest = create_user_with_role(USER_ROLE.GUEST.name)
-        data = dict(
-            user=guest.id,
-            country=country1.id,
-        )
-        serializer = MonitoringExpertPortfolioSerializer(
-            data=data,
-            context=context
-        )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('country', serializer.errors)
-        self.assertEqual(serializer.errors['country'][0].code, 'already-occupied', serializer.errors)
-
-        # a different country is fine
-        country3 = CountryFactory.create(monitoring_sub_region=monitoring_sub_region)
-        data = dict(
-            region=coordinator_region.id,
-            portfolios=[dict(
-                user=guest.id,
-                country=country3.id,
-            )]
-        )
-        serializer = BulkMonitoringExpertPortfolioSerializer(
-            data=data,
-            context=context
-        )
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        serializer.save()
-
-        # checking for simultaneous create and update
-        country4 = CountryFactory.create(monitoring_sub_region=monitoring_sub_region)
-        data = dict(
-            region=coordinator_region.id,
-            portfolios=[dict(
-                user=guest.id,
-                country=country4.id,
-            ), dict(
-                id=portfolio2.id,
-                user=portfolio2.user.id,
-                country=portfolio2.country.id,
-            )]
-        )
-        serializer = BulkMonitoringExpertPortfolioSerializer(
-            data=data,
-            context=context
-        )
-        old_count = Portfolio.objects.count()
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        serializer.save()
-        self.assertEqual(Portfolio.objects.count(), old_count + 1)
-
-        # non existent id is invalid
-        data = dict(
-            region=coordinator_region.id,
-            portfolios=[dict(
-                id=10 + portfolio2.id,
-                user=guest.id,
-                country=CountryFactory.create(monitoring_sub_region=coordinator_region).id,
-            )]
-        )
-        serializer = BulkMonitoringExpertPortfolioSerializer(
-            data=data,
-            context=context
-        )
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        with self.assertRaisesMessage(Portfolio.DoesNotExist, 'does not exist'):
-            serializer.save()
+        # it no longer fails, we overwrite the monitoring expert in the country
+        # self.assertEqual(serializer.errors['country'][0].code, 'already-occupied', serializer.errors)
+        # The big assumption: portfolio for each country and region should already exist
 
     def test_coordinator_not_allowed_to_add_in_other_region(self):
         self.request.user = self.coordinator

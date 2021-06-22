@@ -139,9 +139,11 @@ class MonitoringSubRegion(models.Model):
         return '; '.join(q.values_list('idmc_short_name', flat=True))
 
     @property
-    def regional_coordinator(self) -> Union[User, None]:
-        if Portfolio.objects.filter(monitoring_sub_region=self).exists():
-            return Portfolio.objects.get(monitoring_sub_region=self).user
+    def regional_coordinator(self) -> Union[Portfolio, None]:
+        if Portfolio.objects.filter(monitoring_sub_region=self,
+                                    role=USER_ROLE.REGIONAL_COORDINATOR).exists():
+            return Portfolio.objects.get(monitoring_sub_region=self,
+                                         role=USER_ROLE.REGIONAL_COORDINATOR)
 
     @property
     def monitoring_experts_count(self) -> int:

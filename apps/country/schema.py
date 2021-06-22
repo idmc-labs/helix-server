@@ -263,6 +263,7 @@ class Query:
     household_size = graphene.Field(CountryHouseholdSizeType,
                                     country=graphene.ID(required=True),
                                     year=graphene.Int(required=True))
+    monitoring_sub_region = DjangoObjectField(MonitoringSubRegionType)
     monitoring_sub_region_list = DjangoPaginatedListObjectField(MonitoringSubRegionListType,
                                                                 pagination=PageGraphqlPaginationWithoutCount(
                                                                     page_size_query_param='pageSize'

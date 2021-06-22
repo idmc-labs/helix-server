@@ -155,28 +155,15 @@ class ActivateSerializer(serializers.Serializer):
 
 
 class MonitoringExpertPortfolioSerializer(serializers.ModelSerializer):
-    id = IntegerIDField(required=False)
     country = serializers.PrimaryKeyRelatedField(queryset=Country.objects.all(), required=True)
 
-    def _validate_country_already_occupied(self, attrs: dict) -> None:
-        if Portfolio.objects.filter(
-            role=USER_ROLE.MONITORING_EXPERT,
-            country=attrs['country']
-        ).exclude(
-            id=attrs.get('id')
-        ).exists():
-            raise serializers.ValidationError({
-                'country': gettext('This country is already taken.')
-            }, code='already-occupied')
-
     def validate(self, attrs: dict) -> dict:
-        self._validate_country_already_occupied(attrs)
         attrs['role'] = USER_ROLE.MONITORING_EXPERT
         return attrs
 
     class Meta:
         model = Portfolio
-        fields = ['id', 'user', 'country']
+        fields = ['user', 'country']
 
 
 class BulkMonitoringExpertPortfolioSerializer(serializers.Serializer):
@@ -217,16 +204,11 @@ class BulkMonitoringExpertPortfolioSerializer(serializers.Serializer):
     def save(self, *args, **kwargs):
         with transaction.atomic():
             for portfolio in self.validated_data['portfolios']:
-                if portfolio.get('id'):
-                    instance = Portfolio.objects.get(id=portfolio.pop('id'))
-                    instance.__dict__.update(
-                        **{**portfolio, 'monitoring_sub_region': self.validated_data['region']}
-                    )
-                    instance.save()
-                else:
-                    Portfolio.objects.create(
-                        **{**portfolio, 'monitoring_sub_region': self.validated_data['region']}
-                    )
+                instance = Portfolio.objects.get(country=portfolio['country'])
+                instance.__dict__.update(
+                    **{**portfolio, 'monitoring_sub_region': self.validated_data['region']}
+                )
+                instance.save()
 
 
 class RegionalCoordinatorPortfolioSerializer(serializers.ModelSerializer):

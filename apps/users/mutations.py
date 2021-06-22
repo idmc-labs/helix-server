@@ -5,6 +5,7 @@ import graphene
 
 from apps.users.schema import UserType, PortfolioType
 from apps.users.models import User, Portfolio
+from apps.users.enums import USER_ROLE
 from apps.users.serializers import (
     LoginSerializer,
     RegisterSerializer,
@@ -264,7 +265,6 @@ class CreateMonitoringExpertPortfolio(graphene.Mutation):
 
 class UpdateRegionalCoordinatorPortfolio(graphene.Mutation):
     class Arguments:
-        id = graphene.ID(required=True)
         data = RegionalCoordinatorPortfolioInputType(required=True)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
@@ -273,9 +273,12 @@ class UpdateRegionalCoordinatorPortfolio(graphene.Mutation):
 
     @staticmethod
     @permission_checker(['users.change_portfolio'])
-    def mutate(root, info, id, data):
+    def mutate(root, info, data):
         try:
-            instance = Portfolio.objects.get(id=id)
+            instance = Portfolio.objects.get(
+                region=data['region'],
+                role=USER_ROLE.REGIONAL_COORDINATOR
+            )
         except Portfolio.DoesNotExist:
             return UpdateRegionalCoordinatorPortfolio(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Portfolio does not exist.'))
