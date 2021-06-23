@@ -14,37 +14,12 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    services:
-      db:
-        image: postgres:12
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-
-    strategy:
-      max-parallel: 4
-      matrix:
-        python-version: [3.8.2]
-
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Setup Postgres Dependencies
+      - name: Build docker image
         run: |
-          sudo apt install python3-dev libpq-dev
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r ./requirements.txt
-      - name: Run Migrations
-        run: |
-          python ./manage.py migrate
+          touch .env
+          docker-compose build
       - name: Run Tests
         run: |
-          py.test ./
+          docker-compose run server py.test
