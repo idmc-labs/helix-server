@@ -469,6 +469,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             category__name='Category',
             category__type='Category Type',
             term__name='Term',
+            displacement_occurred='Displacement Occurred',
             role='Role',
             start_date='Start Date',
             start_date_accuracy='Start Date Accuracy',
@@ -554,6 +555,9 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'quantifier': getattr(Figure.QUANTIFIER.get(datum['quantifier']), 'name', ''),
                 'unit': getattr(Figure.UNIT.get(datum['unit']), 'name', ''),
                 'role': getattr(Figure.ROLE.get(datum['role']), 'name', ''),
+                'displacement_occurred': getattr(
+                    Figure.DISPLACEMENT_OCCURRED.get(datum['displacement_occurred']), 'name', ''
+                ),
             }
 
         return {
