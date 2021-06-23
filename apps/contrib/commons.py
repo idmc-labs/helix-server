@@ -9,11 +9,13 @@ class DATE_ACCURACY(enum.Enum):
     DAY = 0
     WEEK = 1
     MONTH = 2
+    YEAR = 3
 
     __labels__ = {
         DAY: _('Day'),
         WEEK: _('Week'),
         MONTH: _('Month'),
+        YEAR: _('Year'),
     }
 
 

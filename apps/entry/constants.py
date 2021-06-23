@@ -94,8 +94,10 @@ FIGURE_TERMS = dict(
 class DISAGGREGATED_AGE_SEX_CHOICES(enum.Enum):
     MALE = 0
     FEMALE = 1
+    UNKNOWN = 2
 
     __labels__ = {
         MALE: 'Male',
         FEMALE: 'Female',
+        UNKNOWN: 'Unknown',
     }
