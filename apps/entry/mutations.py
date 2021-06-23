@@ -18,6 +18,7 @@ from apps.entry.serializers import (
     EntryUpdateSerializer,
     FigureTagCreateSerializer,
     FigureTagUpdateSerializer,
+    CloneEntrySerializer,
 )
 from apps.extraction.filters import FigureExtractionFilterSet, EntryExtractionFilterSet
 from apps.contrib.serializers import SourcePreviewSerializer, ExcelDownloadSerializer
@@ -332,6 +333,33 @@ class ExportFigures(graphene.Mutation):
         return ExportFigures(errors=None, ok=True)
 
 
+CloneEntryInputType = generate_input_type_for_serializer(
+    'CloneEntryInputType',
+    CloneEntrySerializer
+)
+
+
+class CloneEntry(graphene.Mutation):
+    class Arguments:
+        data = CloneEntryInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.List(EntryType)
+
+    @staticmethod
+    @permission_checker(['entry.add_entry'])
+    def mutate(root, info, data):
+        serializer = CloneEntrySerializer(
+            data=data,
+            context=dict(request=info.context.request),
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return CloneEntry(errors=errors, ok=False)
+        cloned_entries = serializer.save()
+        return CloneEntry(result=cloned_entries, errors=None, ok=True)
+
+
 class Mutation(object):
     create_entry = CreateEntry.Field()
     update_entry = UpdateEntry.Field()
@@ -346,3 +374,5 @@ class Mutation(object):
     # exports
     export_entries = ExportEntries.Field()
     export_figures = ExportFigures.Field()
+    # clone
+    clone_entry = CloneEntry.Field()

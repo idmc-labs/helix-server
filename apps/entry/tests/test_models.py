@@ -279,4 +279,37 @@ class TestEntryModel(HelixTestCase):
         e.refresh_from_db()
         assert e.review_status == EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
 
-    # TODO: Add test for pdf-generation task
+
+class TestCloneEntry(HelixTestCase):
+    def test_clone_relevant_fields_only(self):
+        user = create_user_with_role(USER_ROLE.ADMIN.name)
+        event = EventFactory.create()
+        entry = EntryFactory.create(
+            created_by=user,
+            event=event,
+        )
+
+        # lets clone to following events
+        new_events = EventFactory.create_batch(3)
+        duplicated_entries = entry.clone_across_events(new_events)
+
+        self.assertEqual(len(new_events), len(duplicated_entries))
+        self.assertNotIn(event.id,
+                         [each['event'] for each in duplicated_entries])
+        self.assertEqual(
+            {None},
+            set([each.get('id') for each in duplicated_entries])
+        )
+        self.assertEqual(
+            {None},
+            set([each.get('created_by') for each in duplicated_entries])
+        )
+        self.assertEqual(
+            {None},
+            set([each.get('created_at') for each in duplicated_entries])
+        )
+        self.assertEqual(
+            1,
+            len(set([each.get('article_title') for each in duplicated_entries]))
+        )
+        self.assertIsNotNone(duplicated_entries[0].get('article_title'))

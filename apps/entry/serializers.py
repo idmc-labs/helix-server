@@ -441,3 +441,16 @@ class FigureTagCreateSerializer(MetaInformationSerializerMixin,
 class FigureTagUpdateSerializer(UpdateSerializerMixin,
                                 FigureTagCreateSerializer):
     id = IntegerIDField(required=True)
+
+
+class CloneEntrySerializer(serializers.Serializer):
+    events = serializers.PrimaryKeyRelatedField(queryset=Event.objects.all(), many=True)
+    entry = serializers.PrimaryKeyRelatedField(queryset=Entry.objects.all())
+
+    def save(self, *args, **kwargs):
+        entry: Entry = self.validated_data['entry']
+
+        return entry.clone_and_save_entries(
+            event_list=self.validated_data['events'],
+            user=self.context['request'].user,
+        )
