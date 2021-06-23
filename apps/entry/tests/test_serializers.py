@@ -302,6 +302,20 @@ class TestEntrySerializer(HelixTestCase):
         entry = EntryFactory.create(event=event)
         figure = FigureFactory.create(entry=entry, category=flow, country=c1)
 
+        source1 = dict(
+            uuid=str(uuid4()),
+            rank=101,
+            country=str(self.country.name),
+            country_code=self.country.iso2,
+            osm_id='ted',
+            osm_type='okay',
+            display_name='okay',
+            lat=68.88,
+            lon=46.66,
+            name='name',
+            accuracy=OSMName.OSM_ACCURACY.COUNTRY.value,
+            identifier=OSMName.IDENTIFIER.ORIGIN.value,
+        )
         data = dict(
             event=event.id,
             figures=[
@@ -311,6 +325,7 @@ class TestEntrySerializer(HelixTestCase):
                     country=c1.id,
                     start_date=event.start_date.strftime('%Y-%m-%d'),
                     end_date=event.end_date.strftime('%Y-%m-%d'),
+                    geo_locations=[source1],
                 )
             ]
         )
@@ -346,6 +361,7 @@ class TestEntrySerializer(HelixTestCase):
                     country=c1.id,
                     start_date=event.start_date.strftime('%Y-%m-%d'),
                     end_date=(event.end_date + timedelta(days=1)).strftime('%Y-%m-%d'),
+                    geo_locations=[source1],
                 )
             ]
         )
@@ -372,6 +388,20 @@ class TestFigureSerializer(HelixTestCase):
         )
         self.fig_cat = FigureCategoryFactory.create()
         self.country = country1
+        source1 = dict(
+            uuid=str(uuid4()),
+            rank=101,
+            country=str(self.country.name),
+            country_code=self.country.iso2,
+            osm_id='ted',
+            osm_type='okay',
+            display_name='okay',
+            lat=68.88,
+            lon=46.66,
+            name='name',
+            accuracy=OSMName.OSM_ACCURACY.COUNTRY.value,
+            identifier=OSMName.IDENTIFIER.ORIGIN.value,
+        )
         self.data = {
             "uuid": str(uuid4()),
             "entry": self.entry.id,
@@ -385,6 +415,7 @@ class TestFigureSerializer(HelixTestCase):
             "include_idu": True,
             "excerpt_idu": "excerpt abc",
             "country": country1.id,
+            "geo_locations": [source1],
         }
         self.request = self.factory.get('/graphql')
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
