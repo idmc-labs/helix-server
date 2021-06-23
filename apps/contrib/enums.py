@@ -12,6 +12,7 @@ from apps.event.enums import enum_map as event_enums
 from apps.parking_lot.enums import enum_map as parking_enums
 from apps.review.enums import enum_map as review_enums
 from apps.users.enums import enum_map as user_enums
+from apps.organization.enums import enum_map as organization_enums
 from apps.report.enums import enum_map as report_enums
 from utils.enums import enum_description
 
@@ -44,5 +45,6 @@ ENUM_TO_GRAPHENE_ENUM_MAP = {
     **parking_enums,
     **review_enums,
     **user_enums,
+    **organization_enums,
     **report_enums,
 }
