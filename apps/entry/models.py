@@ -544,7 +544,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             'created_by',
         ).prefetch_related(
             'geo_locations'
-        ).order_by('entry', 'id').values(*[header for header in headers.keys()])
+        ).order_by('-entry', '-created_at').values(*[header for header in headers.keys()])
 
         def transformer(datum):
             return {
@@ -889,22 +889,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             'figures',
             'sources',
             'publishers',
-        ).order_by('id')
-
-        # TODO: compare the queries between .values('id') and nothing
-        figures = Figure.objects.filter(entry__in=entries)
-        figure_data = Figure.get_figure_excel_sheets_data(figures)
+        ).order_by('-id')
 
         return {
             'headers': headers,
             'data': entries.values(*[header for header in headers.keys()]),
             'formulae': None,
-            'other': [
-                dict(
-                    title='Figures',
-                    results=figure_data,
-                ),
-            ]
         }
 
     # Properties
