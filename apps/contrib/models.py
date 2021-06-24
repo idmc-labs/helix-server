@@ -221,6 +221,11 @@ class ExcelDownload(MetaInformationAbstractModel):
         null=True,
         upload_to=excel_upload_to
     )
+    file_size = models.IntegerField(
+        verbose_name=_('File Size'),
+        blank=True,
+        null=True,
+    )
     filters = JSONField(
         verbose_name=_('Filters'),
         blank=True,
