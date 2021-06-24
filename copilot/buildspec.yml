@@ -14,15 +14,8 @@ phases:
       - chmod +x ./copilot-linux
   build:
     commands:
-      - echo "Running DB Migrations across provided envs"
-      - APP=helix-beta
-      - pipeline=$(cat $CODEBUILD_SRC_DIR/copilot/pipeline.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
-      - pl_envs=$(echo $pipeline | jq '.stages[].name' | sed 's/"//g')
-      - >
-        for pl_env in $pl_envs; do
-          DB_SECRET=$(./copilot-linux svc show -a $APP -n django --json | jq '.secrets[].valueFrom' | grep Aurora | sed 's/"//g')
-          ./copilot-linux task run --app $APP --env $pl_env --command "./copilot.init.sh" --env-vars COPILOT_ENVIRONMENT_NAME=migrate,HELIXDBCLUSTER_SECRET=$DB_SECRET;
-        done;
+      - echo "Run your tests"
+      # - make test
   post_build:
     commands:
       - ls -l
@@ -64,8 +57,9 @@ phases:
           if [ -f "$ADDONSFILE" ]; then
             tmp=$(mktemp)
             timestamp=$(date +%s)
-            aws s3 cp "$ADDONSFILE" "s3://stackset-helix-beta-infr-pipelinebuiltartifactbuc-9ritexh831du/manual/$timestamp/$workload.addons.stack.yml";
-            jq --arg a "https://stackset-helix-beta-infr-pipelinebuiltartifactbuc-9ritexh831du.s3.us-east-1.amazonaws.com/manual/$timestamp/$workload.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$workload-test.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-test.params.json
+            aws s3 cp "$ADDONSFILE" "s3://stackset-helix-beta-infr-pipelinebuiltartifactbuc-15f5oyn6b1l3a/manual/$timestamp/$workload.addons.stack.yml";
+            jq --arg a "https://stackset-helix-beta-infr-pipelinebuiltartifactbuc-15f5oyn6b1l3a.s3.us-east-1.amazonaws.com/manual/$timestamp/$workload.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$workload-test.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-test.params.json
+            jq --arg a "https://stackset-helix-beta-infr-pipelinebuiltartifactbuc-15f5oyn6b1l3a.s3.us-east-1.amazonaws.com/manual/$timestamp/$workload.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$workload-prod.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-prod.params.json
           fi
         done;
       # Build images

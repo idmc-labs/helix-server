@@ -1,9 +1,9 @@
-# The manifest for the "django" service.
+# The manifest for the "api" service.
 # Read the full specification for the "Load Balanced Web Service" type at:
 #  https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
-name: django
+name: api
 type: Load Balanced Web Service
 
 # Distribute traffic to your service.
@@ -13,8 +13,8 @@ http:
   path: '/'
   # You can specify a custom health check path. The default is "/".
   healthcheck:
-    path: '/graphql'
-    success_codes: '400'
+    path: '/health'
+    success_codes: '200'
     interval: 30s
     timeout: 15s
     retries: 3
@@ -24,9 +24,8 @@ http:
 image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/lb-web-service/#image-build
   build:
-    dockerfile: Dockerfile
+    dockerfile: api.Dockerfile
     context: ./
-    target: server
   # Port exposed through your container to route traffic to it.
   port: 80
 
@@ -40,11 +39,17 @@ exec: true     # Enable running commands in your container.
 variables:                    # Pass environment variables as key value pairs.
   LOG_LEVEL: info
 
-# secrets:
+secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
+  DJANGO_SECRET_KEY: /copilot/helix-beta/test/secrets/DJANGO_SECRET_KEY
+  HCAPTCHA_SECRET: /copilot/helix-beta/test/secrets/HELIX_HCAPTCHA_SECRET
+  SENTRY_DNS: /copilot/helix-beta/test/secrets/HELIX_SENTRY_DNS
 
 # You can override any of the values defined above by environment.
 environments:
   test:
-    secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
-      DJANGO_SECRET_KEY: /copilot/helix-beta/test/secrets/DJANGO_SECRET_KEY
-
+    memory: 1024
+  prod:
+    count:
+      range: 1-3
+      cpu_percentage: 80
+      memory_percentage: 80

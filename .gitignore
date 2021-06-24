@@ -1,6 +1,7 @@
 __pycache__/
 .idea/
 .env
+typings/
 
 *.sqlite3
 
@@ -14,6 +15,7 @@ schema.json
 
 typings/
 
+pyrightconfig.json
 response.json
 
 *.bak

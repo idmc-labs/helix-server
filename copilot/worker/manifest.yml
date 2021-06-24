@@ -1,9 +1,9 @@
-# The manifest for the "dramatiq" service.
+# The manifest for the "worker" service.
 # Read the full specification for the "Backend Service" type at:
 #  https://aws.github.io/copilot-cli/docs/manifest/backend-service/
 
 # Your service name will be used in naming your resources like log groups, ECS services, etc.
-name: dramatiq
+name: worker
 type: Backend Service
 
 # Your service does not allow any traffic.
@@ -12,10 +12,10 @@ type: Backend Service
 image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
   build:
-    dockerfile: dramatiq.Dockerfile
+    dockerfile: worker.Dockerfile
     context: ./
     healthcheck:
-      command: ["CMD-SHELL", "curl -f http://localhost:9191 || exit 1"]
+      command: ["CMD-SHELL", "celery -A helix status"]
       interval: 10s
       retries: 2
       timeout: 30s
@@ -30,14 +30,17 @@ exec: true     # Enable running commands in your container.
 variables:                    # Pass environment variables as key value pairs.
   LOG_LEVEL: info
 
-# secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
-#  GITHUB_TOKEN: GITHUB_TOKEN  # The key is the name of the environment variable, the value is the name of the SSM parameter.
-  # this secret is automatically transferred to django-server service, however we will need to manually do this for dramatiq
+secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
+  # NOTE: the secret name is taken from django db cluster addon
+  HELIXDBCLUSTER_SECRET: helix-beta-test-auroraSecret
+  DJANGO_SECRET_KEY: /copilot/helix-beta/test/secrets/DJANGO_SECRET_KEY
+  HCAPTCHA_SECRET: /copilot/helix-beta/test/secrets/HELIX_HCAPTCHA_SECRET
+  SENTRY_DNS: /copilot/helix-beta/test/secrets/HELIX_SENTRY_DNS
 
 # You can override any of the values defined above by environment.
 environments:
-  test:
-    secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
-      # NOTE: the secret name is taken from django db cluster addon
-      HELIXDBCLUSTER_SECRET: helix-beta-test-auroraSecret
-      DJANGO_SECRET_KEY: /copilot/helix-beta/test/secrets/DJANGO_SECRET_KEY
+  prod:
+    count:
+      range: 1-3
+      cpu_percentage: 80
+      memory_percentage: 80

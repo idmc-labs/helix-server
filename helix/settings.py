@@ -42,7 +42,7 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 
 ALLOWED_HOSTS = [
-    os.environ.get('ALLOWED_HOST', '')
+    os.environ.get('ALLOWED_HOST', '.idmcdb.org')
 ]
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-CSRF_USE_SESSIONS
@@ -50,7 +50,16 @@ CSRF_USE_SESSIONS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'False').lower() == '
 # https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-SESSION_COOKIE_DOMAIN
 SESSION_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
 # https://docs.djangoproject.com/en/3.2/ref/settings/#csrf-cookie-domain
-CSRF_COOKIE_DOMAIN = os.environ.get('CSRF_COOKIE_DOMAIN', None)
+CSRF_COOKIE_DOMAIN = os.environ.get('CSRF_COOKIE_DOMAIN', '.idmcdb.org')
+
+CORS_ORIGIN_REGEX_WHITELIST = [
+    '^https://[\w\-]+\.idmcdb\.org$'
+]
+CSRF_TRUSTED_ORIGINS = [
+    'media-monitoring.idmcdb.org',
+    'https://media-monitoring.idmcdb.org',
+    'http://media-monitoring.idmcdb.org',
+]
 
 # Application definition
 
@@ -104,6 +113,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'utils.middleware.HealthCheckMiddleware',
     'django.middleware.common.CommonMiddleware',
     # NOTE: DebugToolbarMiddleware will cause mutation to execute twice for the client, works fine with graphiql
     # 'utils.middleware.DebugToolbarMiddleware',
@@ -116,8 +126,9 @@ MIDDLEWARE = [
 if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
     MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
 
+REDIS_BROKER_URL = 0
 REDIS_CACHE_DB = 1
-REDIS_DRAMATIQ_DB = 0
+REDIS_RESULT_BACKEND = 2
 
 if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
     CACHES = {
@@ -286,8 +297,7 @@ if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
     EMAIL_BACKEND = 'django_ses.SESBackend'
-    AWS_SES_REGION_NAME = os.environ.get("AWS_SES_REGION_NAME")
-    AWS_SES_REGION_ENDPOINT = os.environ.get("AWS_SES_REGION_ENDPOINT")
+
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", 'contact@idmcdb.org')
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
@@ -382,8 +392,20 @@ FIGURE_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
 
 # CELERY
 
-CELERY_BROKER_URL = os.environ.get('CELERY_REDIS_URL', 'redis://redis:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
+if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
+    CELERY_BROKER_URL = 'redis://{}:{}/{}'.format(
+        os.environ['ELASTI_CACHE_ADDRESS'],
+        os.environ['ELASTI_CACHE_PORT'],
+        REDIS_BROKER_URL,
+    )
+    CELERY_RESULT_BACKEND = 'redis://{}:{}/{}'.format(
+        os.environ['ELASTI_CACHE_ADDRESS'],
+        os.environ['ELASTI_CACHE_PORT'],
+        REDIS_RESULT_BACKEND ,
+    )
+else:
+    CELERY_BROKER_URL = os.environ.get('CELERY_REDIS_URL', 'redis://redis:6379/0')
+    CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
 
 # end CELERY
 
