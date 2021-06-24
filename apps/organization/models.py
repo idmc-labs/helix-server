@@ -1,8 +1,13 @@
+from collections import OrderedDict
+
+from django.contrib.auth import get_user_model
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel, SoftDeleteModel
+
+User = get_user_model()
 
 
 class OrganizationKind(MetaInformationArchiveAbstractModel, models.Model):
@@ -41,6 +46,48 @@ class Organization(MetaInformationArchiveAbstractModel,
     parent = models.ForeignKey('Organization', verbose_name=_('Organization'),
                                null=True, blank=True,
                                on_delete=models.CASCADE, related_name='sub_organizations')
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.organization.filters import OrganizationFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='Id',
+            name='Name',
+            short_name='Short name',
+            organization_kind__name='Organization Type',
+            methodology='Methodology',
+            breakdown='Breakdown',
+            sourced_entries_count='Sourced Entries Count',
+            published_entries_count='Published Entries Count',
+            created_by__full_name='Created By',
+            created_at='Created At',
+            last_modified_by__full_name='Modified By',
+            modified_at='Modified At',
+            # TODO: add countries as well
+        )
+        data = OrganizationFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.annotate(
+            sourced_entries_count=models.Count('sourced_entries', distinct=True),
+            published_entries_count=models.Count('published_entries', distinct=True),
+        ).order_by('-created_at').select_related(
+            'organization_kind'
+            'created_by',
+            'last_modified_by',
+        )
+
+        return {
+            'headers': headers,
+            'data': data.values(*[header for header in headers.keys()]),
+            'formulae': None,
+            'transformer': None,
+        }
 
     def __str__(self):
         return self.name

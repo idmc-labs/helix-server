@@ -1,8 +1,14 @@
+from collections import OrderedDict
+
+from django.contrib.auth import get_user_model
+from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel
+
+User = get_user_model()
 
 
 class Contact(MetaInformationArchiveAbstractModel, models.Model):
@@ -65,6 +71,53 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
         return ' '.join([
             name for name in [self.first_name, self.last_name] if name
         ]) or self.email
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.contact.filters import ContactFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='Id',
+            designation='Designation',
+            full_name='Name',
+            gender='Gender',
+            job_title='Job Title',
+            country='Country',
+            organization__name='Organization',
+            operating_countries='Operating Countries',
+            created_at='Created At',
+            created_by='Created By',
+        )
+        data = ContactFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.annotate(
+            operating_countries=ArrayAgg('countries_of_operation__iso3'),
+        ).order_by('-created_at').select_related(
+            'organization'
+        ).prefetch_related(
+            'countries_of_operation__iso3'
+        )
+
+        def transformer(datum):
+            return {
+                **datum,
+                **dict(
+                    designation=getattr(Contact.DESIGNATION.get(datum['designation']), 'name', ''),
+                    gender=getattr(Contact.GENDER.get(datum['gender']), 'name', ''),
+                )
+            }
+
+        return {
+            'headers': headers,
+            'data': data.values(*[header for header in headers.keys()]),
+            'formulae': None,
+            'transformer': transformer,
+        }
 
     def save(self, *args, **kwargs):
         self.full_name = self.get_full_name()

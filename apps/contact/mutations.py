@@ -1,7 +1,9 @@
 from django.utils.translation import gettext
 import graphene
+from graphene_django.filter.utils import get_filtering_args_from_filterset
 
 from apps.contact.models import Contact, Communication
+from apps.contact.filters import ContactFilter
 from apps.contact.schema import ContactType, CommunicationType
 from apps.contact.serializers import (
     ContactSerializer,
@@ -9,6 +11,7 @@ from apps.contact.serializers import (
     ContactUpdateSerializer,
     CommunicationUpdateSerializer,
 )
+from apps.contrib.serializers import ExcelDownloadSerializer
 from utils.mutation import generate_input_type_for_serializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
@@ -164,6 +167,33 @@ class DeleteCommunication(graphene.Mutation):
         return DeleteCommunication(result=instance, errors=None, ok=True)
 
 
+class ExportContacts(graphene.Mutation):
+    class Meta:
+        arguments = get_filtering_args_from_filterset(
+            ContactFilter,
+            ContactType
+        )
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **kwargs):
+        from apps.contrib.models import ExcelDownload
+
+        serializer = ExcelDownloadSerializer(
+            data=dict(
+                download_type=int(ExcelDownload.DOWNLOAD_TYPES.CONTACT),
+                filters=kwargs,
+            ),
+            context=dict(request=info.context.request)
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return ExportContacts(errors=errors, ok=False)
+        serializer.save()
+        return ExportContacts(errors=None, ok=True)
+
+
 class Mutation(object):
     create_contact = CreateContact.Field()
     update_contact = UpdateContact.Field()
@@ -171,3 +201,4 @@ class Mutation(object):
     create_communication = CreateCommunication.Field()
     update_communication = UpdateCommunication.Field()
     delete_communication = DeleteCommunication.Field()
+    export_contacts = ExportContacts.Field()

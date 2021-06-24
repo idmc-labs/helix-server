@@ -1,8 +1,11 @@
-import graphene
 from django.utils.translation import gettext
+import graphene
+from graphene_django.filter.utils import get_filtering_args_from_filterset
 
+from apps.contrib.serializers import ExcelDownloadSerializer
 from apps.organization.models import Organization, OrganizationKind
 from apps.organization.schema import OrganizationType, OrganizationKindObjectType
+from apps.organization.filters import OrganizationFilter
 from apps.organization.serializers import (
     OrganizationSerializer,
     OrganizationUpdateSerializer,
@@ -169,6 +172,33 @@ class DeleteOrganization(graphene.Mutation):
         return DeleteOrganization(result=instance, errors=None, ok=True)
 
 
+class ExportOrganizations(graphene.Mutation):
+    class Meta:
+        arguments = get_filtering_args_from_filterset(
+            OrganizationFilter,
+            OrganizationType
+        )
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **kwargs):
+        from apps.contrib.models import ExcelDownload
+
+        serializer = ExcelDownloadSerializer(
+            data=dict(
+                download_type=int(ExcelDownload.DOWNLOAD_TYPES.ORGANIZATION),
+                filters=kwargs,
+            ),
+            context=dict(request=info.context.request)
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return ExportOrganizations(errors=errors, ok=False)
+        serializer.save()
+        return ExportOrganizations(errors=None, ok=True)
+
+
 class Mutation(object):
     create_organization = CreateOrganization.Field()
     update_organization = UpdateOrganization.Field()
@@ -176,3 +206,4 @@ class Mutation(object):
     create_organization_kind = CreateOrganizationKind.Field()
     update_organization_kind = UpdateOrganizationKind.Field()
     delete_organization_kind = DeleteOrganizationKind.Field()
+    export_organizations = ExportOrganizations.Field()
