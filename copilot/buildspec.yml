@@ -1,5 +1,9 @@
 # Buildspec runs in the build stage of your pipeline.
 version: 0.2
+env:
+  parameter-store:
+    DOCKER_USERNAME: DOCKER_USERNAME
+    DOCKER_PASSWORD: DOCKER_PASSWORD
 phases:
   install:
     runtime-versions:
@@ -20,6 +24,8 @@ phases:
     commands:
       - ls -l
       - export COLOR="false"
+      # https://github.com/copilot-example-voting-app/api/commit/7834a2c66cbb59744229f10a3ee1681b103ad8d6
+      - docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
       # First, upgrade the cloudformation stack of every environment in the pipeline.
       - pipeline=$(cat $CODEBUILD_SRC_DIR/copilot/pipeline.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
       - pl_envs=$(echo $pipeline | jq '.stages[].name' | sed 's/"//g')

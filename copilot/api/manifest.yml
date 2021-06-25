@@ -44,7 +44,6 @@ variables:                    # Pass environment variables as key value pairs.
 # You can override any of the values defined above by environment.
 environments:
   test:
-    memory: 1024
     secrets:
       DJANGO_SECRET_KEY: /copilot/helix-beta/test/secrets/DJANGO_SECRET_KEY
       HCAPTCHA_SECRET: /copilot/helix-beta/test/secrets/HELIX_HCAPTCHA_SECRET
