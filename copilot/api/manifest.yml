@@ -39,17 +39,22 @@ exec: true     # Enable running commands in your container.
 variables:                    # Pass environment variables as key value pairs.
   LOG_LEVEL: info
 
-secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
-  DJANGO_SECRET_KEY: /copilot/helix-beta/test/secrets/DJANGO_SECRET_KEY
-  HCAPTCHA_SECRET: /copilot/helix-beta/test/secrets/HELIX_HCAPTCHA_SECRET
-  SENTRY_DNS: /copilot/helix-beta/test/secrets/HELIX_SENTRY_DNS
+# secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
 
 # You can override any of the values defined above by environment.
 environments:
   test:
     memory: 1024
+    secrets:
+      DJANGO_SECRET_KEY: /copilot/helix-beta/test/secrets/DJANGO_SECRET_KEY
+      HCAPTCHA_SECRET: /copilot/helix-beta/test/secrets/HELIX_HCAPTCHA_SECRET
+      SENTRY_DNS: /copilot/helix-beta/test/secrets/HELIX_SENTRY_DNS
   prod:
     count:
       range: 1-3
       cpu_percentage: 80
       memory_percentage: 80
+    secrets:
+      DJANGO_SECRET_KEY: /copilot/helix-beta/prod/secrets/DJANGO_SECRET_KEY
+      HCAPTCHA_SECRET: /copilot/helix-beta/prod/secrets/HELIX_HCAPTCHA_SECRET
+      SENTRY_DNS: /copilot/helix-beta/prod/secrets/HELIX_SENTRY_DNS

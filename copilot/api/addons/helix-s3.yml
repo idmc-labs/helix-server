@@ -14,7 +14,7 @@ Resources:
       'aws:copilot:description': 'An Amazon S3 bucket to store and retrieve objects for helix-s3'
     Type: AWS::S3::Bucket
     Properties:
-      AccessControl: Private
+      AccessControl: PublicRead
       BucketEncryption:
         ServerSideEncryptionConfiguration:
         - ServerSideEncryptionByDefault:

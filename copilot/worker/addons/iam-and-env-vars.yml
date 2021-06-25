@@ -17,7 +17,7 @@ Resources:
   # https://aws.github.io/copilot-cli/docs/developing/additional-aws-resources/
   ResourceAccessPolicy:
     Metadata:
-      'aws:copilot:description': 'This is for the dramatiq service to access the addons created for django service'
+      'aws:copilot:description': 'This is for the worker service to access the addons created for django service'
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: 'Grants secret manager access; Grants CRUD access to S3 bucket'
@@ -63,7 +63,7 @@ Resources:
 
 Outputs:
   # We also need to output the IAM ManagedPolicy so that Copilot can inject it to our ECS task role.
-  DramatiqIAMPolicy:
+  WorkerIAMPolicy:
     Description: "The ManagedPolicy to attach to the task role."
     Value: !Ref ResourceAccessPolicy
 

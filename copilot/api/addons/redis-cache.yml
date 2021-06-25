@@ -15,11 +15,6 @@ Parameters:
     Type: String
     Description: The name of the service, job, or workflow being deployed.
 
-  ClusterName:
-    Type: String
-    Description: The name of the initial database to be created in the DB cluster.
-    Default: helix-redis-cluster
-
   CacheNodeType:
     Description: Cache node instance class, e.g. cache.t2.micro(free tier). See https://docs.aws.amazon.com/AmazonElastiCache/latest/UserGuide/CacheNodes.SelectSize.html
     Type: String
@@ -91,7 +86,7 @@ Resources:
       AutoMinorVersionUpgrade: !Ref AutoMinorVersionUpgrade
       Engine: 'redis'
       CacheNodeType: !Ref CacheNodeType
-      ClusterName : !Ref ClusterName
+      ClusterName : !Sub '${App}-${Env}-redis-elasticache'
       NumCacheNodes: !Ref CacheNodeCount
       CacheSubnetGroupName: !Ref SubnetGroup
       VpcSecurityGroupIds:
