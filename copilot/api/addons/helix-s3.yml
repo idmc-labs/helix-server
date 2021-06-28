@@ -46,10 +46,10 @@ Resources:
             Effect: Deny
             Principal: '*'
             Action: 's3:*'
-            Resource: 
+            Resource:
               - !Sub ${ helixs3.Arn}/*
               - !Sub ${ helixs3.Arn}
-            Condition: 
+            Condition:
               Bool:
                 "aws:SecureTransport": false
       Bucket: !Ref helixs3

@@ -13,7 +13,7 @@ def send_email(subject, message, recipient_list, html_context=None):
     email_data = {
         "subject": subject,
         "message": message,
-        "from_email": f"Helix {DEFAULT_FROM_EMAIL}",
+        "from_email": DEFAULT_FROM_EMAIL,
         "recipient_list": recipient_list,
         "fail_silently": False,
     }

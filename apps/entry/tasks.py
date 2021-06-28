@@ -2,12 +2,13 @@ import base64
 import math
 import logging
 
-from helix.celery import app as celery_app
+from billiard.exceptions import TimeLimitExceeded
 from django.core.files.base import ContentFile
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.common.exceptions import TimeoutException
 
+from helix.celery import app as celery_app
 # from helix.settings import QueuePriority
 
 logger = logging.getLogger(__name__)
@@ -27,13 +28,11 @@ def __get_pdf_from_html(path, timeout=SELENIUM_TIMEOUT, print_options={}):
     browser.get(path)
 
     try:
-        WebDriverWait(browser, timeout).until(
-            lambda d: d.execute_script(
-                'document.readyState == "complete"'
-            )
-        )
+        WebDriverWait(browser, timeout).until(lambda d: d.execute_script('return document.readyState') == 'complete')
     except TimeoutException:
-        logger.error(f'Chromium timed out for {path}', exc_info=True)
+        logger.error(f'Chromium timed out for {path}. Saving as is...', exc_info=True)
+    except TimeLimitExceeded:
+        logger.error(f'Selenium timed out for {path}. Saving as is...', exc_info=True)
 
     final_print_options = {
         'landscape': False,

@@ -35,13 +35,6 @@ Resources:
             # NOTE: tried with 'arn:aws:secretsmanager:::secret:*' followed by condition, did not work
             Resource:
               !Sub 'arn:aws:secretsmanager:${AWS::Region}:${AWS::AccountId}:secret:${DBClusterName}*'
-          # TODO next step is to pass iam:passrole, however this will probably attach to task role, however we want to actually attach to EnvManager role
-          - Sid: IamPassActions
-            Effect: Allow
-            Action:
-              - iam:PassRole
-            Resource:
-              'arn:aws:iam::209357624314:role/helix-beta-one-off-task-role'
           - Sid: S3ObjectActions
             Effect: Allow
             Action:
@@ -60,6 +53,15 @@ Resources:
             Resource: !Sub
               - arn:aws:s3:::${BucketArn}
               - { BucketArn: { 'Fn::ImportValue': !Sub '${App}-${Env}-S3BucketName' }}
+          - Sid: EmailSenderAction
+            Effect: Allow
+            Action:
+              - ses:GetSendQuota
+              - ses:SendEmail
+              - ses:SendRawEmail
+            Resource: '*'
+            # NOTE: below did not work, though it is specific
+            # Resource: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/idmcdb.org'
 
 Outputs:
   # We also need to output the IAM ManagedPolicy so that Copilot can inject it to our ECS task role.

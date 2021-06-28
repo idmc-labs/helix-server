@@ -196,18 +196,6 @@ if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
             'PORT': DBCLUSTER_SECRET['port'],
         }
     }
-elif 'GITHUB_WORKFLOW' in os.environ:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            # in the workflow environment
-            'NAME': 'postgres',
-            'USER': 'postgres',
-            'PASSWORD': 'postgres',
-            'HOST': 'localhost',
-            'PORT': 5432,
-        }
-    }
 else:
     DATABASES = {
         'default': {
@@ -342,6 +330,7 @@ if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
     # NOTE: This naming convention is defined in the addon for s3
     AWS_STORAGE_BUCKET_NAME = os.environ['COPILOT_S3_BUCKET_NAME']
 elif HELIX_ENVIRONMENT not in (DEVELOPMENT,):
+    # TODO: Remove me after complete move to copilot
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
     AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
@@ -362,9 +351,6 @@ GZIP_CONTENT_TYPES = [
     'application/json',
     'application/pdf',
 ]
-
-# sign off admin emails
-ENTRY_SIGNER_EMAILS = ','.split(os.environ.get('ENTRY_SIGNER_EMAILS', 'admin@helix.com'))
 
 # Sentry Config
 SENTRY_DSN = os.environ.get('SENTRY_DSN')
@@ -447,11 +433,11 @@ MAX_CAPTCHA_LOGIN_ATTEMPTS = 10
 LOGIN_TIMEOUT = 10 * 60
 
 # Frontend base url for email button link
-FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'localhost:3080')
+FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://localhost:3080/')
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#password-reset-timeout
 PASSWORD_RESET_TIMEOUT = 15 * 60
-PASSWORD_RESET_CLIENT_URL = "{FRONTEND_BASE_URL}/reset-password/{{uid}}/{{token}}".format(
+PASSWORD_RESET_CLIENT_URL = "{FRONTEND_BASE_URL}reset-password/{{uid}}/{{token}}".format(
     FRONTEND_BASE_URL=FRONTEND_BASE_URL
 )
 
