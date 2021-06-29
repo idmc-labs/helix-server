@@ -402,7 +402,8 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     # start date is stock reporting date for stock figures
     start_date = models.DateField(verbose_name=_('Start Date'),
-                                  blank=False, null=True)
+                                  blank=False, null=True,
+                                  db_index=True)
     start_date_accuracy = enum.EnumField(
         DATE_ACCURACY,
         verbose_name=_('Start Date Accuracy'),
@@ -438,6 +439,15 @@ class Figure(MetaInformationArchiveAbstractModel,
     # locations
     geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
                                            related_name='figures')
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['start_date']),
+            models.Index(fields=['end_date']),
+            models.Index(fields=['country']),
+            models.Index(fields=['category']),
+            models.Index(fields=['role']),
+        ]
 
     # methods
 
@@ -1014,6 +1024,9 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         return super().save(*args, **kwargs)
 
     class Meta:
+        indexes = [
+            models.Index(fields=['event']),
+        ]
         permissions = (('sign_off_entry', 'Can sign off the entry'),)
 
     # Dunders

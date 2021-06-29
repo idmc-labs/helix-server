@@ -3,6 +3,7 @@ from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 from apps.crisis.models import Crisis
+from apps.country.models import Country
 from apps.extraction.models import ExtractionQuery
 from apps.entry.models import (
     Entry,
@@ -64,17 +65,29 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     def filter_geographical_groups(self, qs, name, value):
         if value:
-            qs = qs.filter(figures__country__geographical_group__in=value).distinct()
+            qs = qs.filter(
+                id__in=Figure.objects.filter(
+                    country__geographical_group__in=value
+                ).values('entry')
+            )
         return qs
 
     def filter_regions(self, qs, name, value):
         if value:
-            qs = qs.filter(figures__country__region__in=value).distinct()
+            qs = qs.filter(
+                id__in=Figure.objects.filter(
+                    country__region__in=value
+                ).values('entry')
+            )
         return qs
 
     def filter_countries(self, qs, name, value):
         if value:
-            return qs.filter(figures__country__in=value).distinct()
+            return qs.filter(
+                id__in=Figure.objects.filter(
+                    country__in=value
+                ).values('entry')
+            )
         return qs
 
     def filter_events_(self, qs, name, value):
@@ -104,7 +117,9 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     def filter_filter_figure_categories(self, qs, name, value):
         if value:
-            return qs.filter(figures__category__in=value).distinct()
+            return qs.filter(
+                id__in=Figure.objects.filter(category__in=value).values('entry')
+            )
         return qs
 
     def filter_filter_figure_category_types(self, qs, name, value):
@@ -114,24 +129,35 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     def filter_time_frame_after(self, qs, name, value):
         if value:
-            return qs.exclude(figures__start_date__isnull=True)\
-                .filter(figures__start_date__gte=value).distinct()
+            return qs\
+                .filter(
+                    id__in=Figure.objects
+                    .exclude(start_date__isnull=True)
+                    .filter(start_date__gte=value)
+                    .values('entry')
+                )
         return qs
 
     def filter_time_frame_before(self, qs, name, value):
         if value:
-            return qs.exclude(figures__end_date__isnull=True).\
-                filter(figures__end_date__lt=value).distinct()
+            return qs\
+                .filter(
+                    id__in=Figure.objects
+                    .exclude(end_date__isnull=True)
+                    .filter(end_date__lt=value)
+                    .values('entry')
+                )
         return qs
 
     def filter_filter_figure_roles(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
                 # coming from saved query
-                return qs.filter(figures__role__in=value).distinct()
-            return qs.filter(figures__role__in=[
-                Figure.ROLE.get(item).value for item in value
-            ]).distinct()
+                return qs.filter(id__in=Figure.objects.filter(role__in=value))
+            return qs.filter(
+                id__in=Figure.objects.filter(role__in=[
+                    Figure.ROLE.get(item).value for item in value
+                ]))
         return qs
 
     def filter_tags(self, qs, name, value):
@@ -272,12 +298,20 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
 
     def filter_geographical_groups(self, qs, name, value):
         if value:
-            qs = qs.filter(country__geographical_group__in=value).distinct()
+            qs = qs.filter(
+                country__in=Country.objects.filter(
+                    geographical_group__in=value
+                )
+            )
         return qs
 
     def filter_regions(self, qs, name, value):
         if value:
-            qs = qs.filter(country__region__in=value).distinct()
+            qs = qs.filter(
+                country__in=Country.objects.filter(
+                    region__in=value
+                )
+            )
         return qs
 
     def filter_countries(self, qs, name, value):
