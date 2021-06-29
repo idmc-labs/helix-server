@@ -174,7 +174,7 @@ class TestMonitoringExpertPortfolioSerializer(HelixTestCase):
         self.expert = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.request = RequestFactory().post('/graphql')
 
-    def test_admin_cannot_create(self):
+    def test_admin_can_create(self):
         self.request.user = self.admin
         context = dict(
             request=self.request
@@ -186,15 +186,13 @@ class TestMonitoringExpertPortfolioSerializer(HelixTestCase):
             portfolios=[dict(
                 user=guest.id,
                 country=each.id
-            ) for each in CountryFactory.create_batch(3)]
+            ) for each in CountryFactory.create_batch(3, monitoring_sub_region=monitoring_sub_region)]
         )
         serializer = BulkMonitoringExpertPortfolioSerializer(
             data=data,
             context=context
         )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('non_field_errors', serializer.errors)
-        self.assertEqual(serializer.errors['non_field_errors'][0].code, 'not-allowed', serializer.errors)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_coordinators_are_allowed_to_create(self):
         self.request.user = self.coordinator

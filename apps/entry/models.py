@@ -949,9 +949,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         used to check before deleting as well
             i.e `can be DELETED by`
         """
-        if self.is_signed_off:
-            return False
-        return True
+        return not self.is_signed_off
 
     def update_associated_parked_item(self):
         self.associated_parked_item.status = ParkedItem.PARKING_LOT_STATUS.REVIEWED

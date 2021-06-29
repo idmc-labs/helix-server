@@ -183,6 +183,8 @@ class BulkMonitoringExpertPortfolioSerializer(serializers.Serializer):
             raise serializers.ValidationError('Countries are not part of the region', code='region-mismatch')
 
     def _validate_can_add(self, attrs: dict) -> None:
+        if self.context['request'].user.highest_role == USER_ROLE.ADMIN:
+            return
         if self.context['request'].user.highest_role not in [USER_ROLE.REGIONAL_COORDINATOR]:
             raise serializers.ValidationError(
                 gettext('You are not allowed to perform this action'),

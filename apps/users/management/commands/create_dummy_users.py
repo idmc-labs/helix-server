@@ -3,7 +3,6 @@ from django.core.management.base import BaseCommand
 
 from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio
-from utils.factories import MonitoringSubRegionFactory
 
 
 class Command(BaseCommand):
@@ -13,8 +12,6 @@ class Command(BaseCommand):
         User = get_user_model()
         raw_password = 'admin123'
         roles = [('admin', USER_ROLE.ADMIN, 'Eric', 'Lowe'),
-                 ('coordinator', USER_ROLE.REGIONAL_COORDINATOR, 'Larissa', 'Stevens'),
-                 ('reviewer', USER_ROLE.MONITORING_EXPERT, 'Herman', 'Garza'),
                  ('guest', USER_ROLE.GUEST, 'Frederick', 'Gutierrez')]
 
         for username, role, first_name, last_name in roles:
@@ -33,7 +30,6 @@ class Command(BaseCommand):
                 Portfolio.objects.get_or_create(
                     user=user,
                     role=role,
-                    monitoring_sub_region=MonitoringSubRegionFactory.create()
                 )
                 self.stdout.write(self.style.SUCCESS(f'Added portfolio for {role.name}\n'))
             except Exception as e:
