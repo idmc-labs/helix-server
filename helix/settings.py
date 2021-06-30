@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 import os
 import socket
 import logging
-from enum import Enum
 
 from . import sentry
 from helix.aws.secrets_manager import get_db_cluster_secret
@@ -387,20 +386,30 @@ if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
     CELERY_RESULT_BACKEND = 'redis://{}:{}/{}'.format(
         os.environ['ELASTI_CACHE_ADDRESS'],
         os.environ['ELASTI_CACHE_PORT'],
-        REDIS_RESULT_BACKEND ,
+        REDIS_RESULT_BACKEND,
     )
 else:
     CELERY_BROKER_URL = os.environ.get('CELERY_REDIS_URL', 'redis://redis:6379/0')
     CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
 
+# NOTE: These queue names must match the worker container command
+CELERY_DEFAULT_QUEUE = LOW_PRIO_QUEUE = os.environ.get('LOW_PRIO_QUEUE_NAME', 'celery_low')
+HIGH_PRIO_QUEUE = os.environ.get('HIGH_PRIO_QUEUE_NAME', 'celery_high')
+
+# CELERY ROUTES
+CELERY_ROUTES = {
+    'apps.users.tasks.send_email': {'queue': HIGH_PRIO_QUEUE},
+    'apps.entry.tasks.generate_pdf': {'queue': HIGH_PRIO_QUEUE},
+    # LOW
+    'apps.contrib.tasks.kill_all_old_excel_exports': {'queue': LOW_PRIO_QUEUE},
+    'apps.contrib.tasks.kill_all_long_running_previews': {'queue': LOW_PRIO_QUEUE},
+    'apps.contrib.tasks.kill_all_long_running_report_generations': {'queue': LOW_PRIO_QUEUE},
+    'apps.report.tasks.trigger_report_generation': {'queue': LOW_PRIO_QUEUE},
+    'apps.contrib.tasks.generate_excel_file': {'queue': LOW_PRIO_QUEUE},
+}
+# Every othe rtasks end up at default queue
+
 # end CELERY
-
-
-class QueuePriority(Enum):
-    DEFAULT = 'default'
-    HEAVY = 'heavy'
-    CRON = 'cron'
-
 
 LOCALE_PATHS = [
     os.path.join(BASE_DIR, 'locale'),
@@ -429,11 +438,12 @@ HCAPTCHA_SECRET = os.environ.get('HCAPTCHA_SECRET', '0x0000000000000000000000000
 MAX_LOGIN_ATTEMPTS = 3
 
 # If login attempts exceed MAX_CAPTCHA_LOGIN_ATTEMPTS , users will need to wait LOGIN_TIMEOUT seconds
+
 MAX_CAPTCHA_LOGIN_ATTEMPTS = 10
 LOGIN_TIMEOUT = 10 * 60
 
 # Frontend base url for email button link
-FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://localhost:3080/')
+FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://localhost:3080')
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#password-reset-timeout
 PASSWORD_RESET_TIMEOUT = 15 * 60

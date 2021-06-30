@@ -113,7 +113,7 @@ def kill_all_old_excel_exports():
     logger.info(f'Updated EXCEL EXPORTS to killed:\n{pending=}\n{progress=}')
 
 
-@ celery_app.task
+@celery_app.task
 def kill_all_long_running_previews():
     from apps.contrib.models import SourcePreview
 
@@ -125,7 +125,7 @@ def kill_all_long_running_previews():
     logger.info(f'Updated SOURCE PREVIEWS to killed:\n{progress=}')
 
 
-@ celery_app.task
+@celery_app.task
 def kill_all_long_running_report_generations():
     from apps.report.models import ReportGeneration
 

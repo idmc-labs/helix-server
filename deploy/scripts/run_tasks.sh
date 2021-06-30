@@ -5,4 +5,5 @@ echo "Running Scheduler"
 celery -A helix beat -l INFO -s ~/celerybeat-schedule &
 
 echo "Running Task Runner"
-celery -A helix worker -l INFO
+celery -A helix worker -l INFO --autoscale=6,3 -Q celery_low &
+celery -A helix worker -l INFO --autoscale=3,2 -Q celery_high

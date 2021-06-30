@@ -43,7 +43,7 @@ services:
       - .env
     environment:
       - DEBUG=False
-    command: ./deploy/scripts/run_tasks.sh
+    command: "celery -A helix worker -B -l INFO"
     volumes:
       - ./:/code
 

@@ -48,6 +48,7 @@ environments:
       range: 1-4
       cpu_percentage: 80
       memory_percentage: 80
+      requests: 1000
     secrets:
       DJANGO_SECRET_KEY: /copilot/helix-beta/test/secrets/DJANGO_SECRET_KEY
       HCAPTCHA_SECRET: /copilot/helix-beta/test/secrets/HELIX_HCAPTCHA_SECRET
@@ -60,6 +61,7 @@ environments:
       range: 1-3
       cpu_percentage: 80
       memory_percentage: 80
+      requests: 1000
     secrets:
       DJANGO_SECRET_KEY: /copilot/helix-beta/prod/secrets/DJANGO_SECRET_KEY
       HCAPTCHA_SECRET: /copilot/helix-beta/prod/secrets/HELIX_HCAPTCHA_SECRET

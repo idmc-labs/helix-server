@@ -21,4 +21,4 @@ RUN pip install --upgrade --no-cache-dir pip poetry \
 
 COPY . /code/
 
-CMD ["celery", "-A", "proj", "worker", "-B", "-l", "INFO"]
+CMD ./deploy/scripts/run_tasks.sh
