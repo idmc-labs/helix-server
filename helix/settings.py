@@ -393,21 +393,20 @@ else:
     CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
 
 # NOTE: These queue names must match the worker container command
-CELERY_DEFAULT_QUEUE = LOW_PRIO_QUEUE = os.environ.get('LOW_PRIO_QUEUE_NAME', 'celery_low')
-HIGH_PRIO_QUEUE = os.environ.get('HIGH_PRIO_QUEUE_NAME', 'celery_high')
+# CELERY_DEFAULT_QUEUE = LOW_PRIO_QUEUE = os.environ.get('LOW_PRIO_QUEUE_NAME', 'celery_low')
+# HIGH_PRIO_QUEUE = os.environ.get('HIGH_PRIO_QUEUE_NAME', 'celery_high')
 
 # CELERY ROUTES
-CELERY_ROUTES = {
-    'apps.users.tasks.send_email': {'queue': HIGH_PRIO_QUEUE},
-    'apps.entry.tasks.generate_pdf': {'queue': HIGH_PRIO_QUEUE},
-    # LOW
-    'apps.contrib.tasks.kill_all_old_excel_exports': {'queue': LOW_PRIO_QUEUE},
-    'apps.contrib.tasks.kill_all_long_running_previews': {'queue': LOW_PRIO_QUEUE},
-    'apps.contrib.tasks.kill_all_long_running_report_generations': {'queue': LOW_PRIO_QUEUE},
-    'apps.report.tasks.trigger_report_generation': {'queue': LOW_PRIO_QUEUE},
-    'apps.contrib.tasks.generate_excel_file': {'queue': LOW_PRIO_QUEUE},
-}
-# Every othe rtasks end up at default queue
+# CELERY_ROUTES = {
+#     'apps.users.tasks.send_email': {'queue': HIGH_PRIO_QUEUE},
+#     'apps.entry.tasks.generate_pdf': {'queue': HIGH_PRIO_QUEUE},
+#     # LOW
+#     'apps.contrib.tasks.kill_all_old_excel_exports': {'queue': LOW_PRIO_QUEUE},
+#     'apps.contrib.tasks.kill_all_long_running_previews': {'queue': LOW_PRIO_QUEUE},
+#     'apps.contrib.tasks.kill_all_long_running_report_generations': {'queue': LOW_PRIO_QUEUE},
+#     'apps.report.tasks.trigger_report_generation': {'queue': LOW_PRIO_QUEUE},
+#     'apps.contrib.tasks.generate_excel_file': {'queue': LOW_PRIO_QUEUE},
+# }
 
 # end CELERY
 
