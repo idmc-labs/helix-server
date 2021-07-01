@@ -1,8 +1,10 @@
+from typing import Union
 from datetime import datetime
 
 from collections import OrderedDict
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.db.models.query import QuerySet
 from django.db.models import Count, OuterRef
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
@@ -12,7 +14,8 @@ from django_enumfield import enum
 from apps.contrib.models import MetaInformationArchiveAbstractModel, ArchiveAbstractModel
 from apps.entry.models import Entry, Figure
 from apps.crisis.models import Crisis
-from apps.users.models import User
+from apps.users.models import User, Portfolio
+from apps.users.enums import USER_ROLE
 
 
 class GeographicalGroup(models.Model):
@@ -110,6 +113,56 @@ class CountryRegion(models.Model):
         return self.name
 
 
+class MonitoringSubRegion(models.Model):
+    name = models.CharField(verbose_name=_('Name'), max_length=256)
+
+    @property
+    def unmonitored_countries_count(self) -> int:
+        country_portfolios = Portfolio.objects.filter(
+            role=USER_ROLE.MONITORING_EXPERT,
+            country__isnull=False,
+        ).values_list('country')
+        q = self.countries.filter(
+            ~models.Q(id__in=country_portfolios)
+        )
+        return q.count()
+
+    @property
+    def unmonitored_countries_names(self) -> str:
+        country_portfolios = Portfolio.objects.filter(
+            role=USER_ROLE.MONITORING_EXPERT,
+            country__isnull=False,
+        ).values_list('country')
+        q = self.countries.filter(
+            ~models.Q(id__in=country_portfolios)
+        )
+        return '; '.join(q.values_list('idmc_short_name', flat=True))
+
+    @property
+    def regional_coordinator(self) -> Union[Portfolio, None]:
+        if Portfolio.objects.filter(monitoring_sub_region=self,
+                                    role=USER_ROLE.REGIONAL_COORDINATOR).exists():
+            return Portfolio.objects.get(monitoring_sub_region=self,
+                                         role=USER_ROLE.REGIONAL_COORDINATOR)
+
+    @property
+    def monitoring_experts_count(self) -> int:
+        return Portfolio.objects.filter(
+            monitoring_sub_region=self,
+            role=USER_ROLE.MONITORING_EXPERT,
+        ).values('user').distinct().count()
+
+    def __str__(self):
+        return self.name
+
+
+class CountrySubRegion(models.Model):
+    name = models.CharField(verbose_name=_('Name'), max_length=256)
+
+    def __str__(self):
+        return self.name
+
+
 class Country(models.Model):
     GEOJSON_PATH = 'geojsons'
     # NOTE: following are the figure disaggregation fields
@@ -123,7 +176,10 @@ class Country(models.Model):
                                            on_delete=models.SET_NULL)
     region = models.ForeignKey('CountryRegion', verbose_name=_('Region'),
                                related_name='countries', on_delete=models.PROTECT)
-    sub_region = models.CharField(verbose_name=_('Sub Region'), max_length=256, null=True)
+    sub_region = models.ForeignKey('CountrySubRegion', verbose_name=_('Sub Region'), null=True,
+                                   related_name='countries', on_delete=models.PROTECT)
+    monitoring_sub_region = models.ForeignKey('MonitoringSubRegion', verbose_name=_('Monitoring Sub-Region'), null=True,
+                                              related_name='countries', on_delete=models.PROTECT)
 
     iso2 = models.CharField(verbose_name=_('ISO2'), max_length=4,
                             null=True, blank=True)
@@ -292,12 +348,23 @@ class Country(models.Model):
             return f'{cls.GEOJSON_PATH}/{iso3.upper()}.json'
 
     @property
-    def entries(self):
+    def entries(self) -> QuerySet:
         return Entry.objects.filter(event__countries=self.id).distinct()
 
     @property
     def last_contextual_analysis(self):
         return self.contextual_analyses.last()
+
+    @property
+    def regional_coordinator(self) -> Portfolio:
+        return self.monitoring_sub_region.regional_coordinator
+
+    @property
+    def monitoring_expert(self) -> Portfolio:
+        return Portfolio.objects.filter(
+            country=self,
+            role=USER_ROLE.MONITORING_EXPERT,
+        ).first()
 
     @property
     def last_summary(self):

@@ -13,14 +13,14 @@ from utils.factories import (
 
 class TestReportFilter(HelixTestCase):
     def test_filter_report_by_review_status(self):
-        head = create_user_with_role(USER_ROLE.IT_HEAD.name)
+        admin = create_user_with_role(USER_ROLE.ADMIN.name)
         signed_off = Report.REPORT_REVIEW_FILTER.SIGNED_OFF.name
         approved = Report.REPORT_REVIEW_FILTER.APPROVED.name
         unapproved = Report.REPORT_REVIEW_FILTER.UNAPPROVED.name
 
         rep1 = ReportFactory.create(
             is_signed_off=True,
-            is_signed_off_by=head,
+            is_signed_off_by=admin,
         )
         rep2 = ReportFactory.create()
         data = dict(
@@ -40,7 +40,7 @@ class TestReportFilter(HelixTestCase):
         # and then add approvers
         ReportApproval.objects.create(
             generation=gen2,
-            created_by=head,
+            created_by=admin,
             is_approved=True
         )
 

@@ -43,6 +43,7 @@ class PERMISSION_ENTITY(enum.Enum):
     contextualupdate = 16
     report = 17
     reportcomment = 18
+    portfolio = 19
 
     __labels__ = {
         crisis: _('Crisis'),
@@ -64,6 +65,7 @@ class PERMISSION_ENTITY(enum.Enum):
         contextualupdate: _('Contextual Update'),
         report: _('Report'),
         reportcomment: _('Report Comment'),
+        portfolio: _('Portfolio'),
     }
 
 
@@ -71,17 +73,15 @@ class PERMISSION_ENTITY(enum.Enum):
 # be upper-cased
 class USER_ROLE(enum.Enum):
     ADMIN = 0
-    IT_HEAD = 1
-    MONITORING_EXPERT_EDITOR = 2
-    MONITORING_EXPERT_REVIEWER = 3
-    GUEST = 4
+    REGIONAL_COORDINATOR = 1
+    MONITORING_EXPERT = 2
+    GUEST = 3
 
     __labels__ = {
-        ADMIN: _('ADMIN'),
-        IT_HEAD: _('IT_HEAD'),
-        MONITORING_EXPERT_EDITOR: _('MONITORING_EXPERT_EDITOR'),
-        MONITORING_EXPERT_REVIEWER: _('MONITORING_EXPERT_REVIEWER'),
-        GUEST: _('GUEST'),
+        ADMIN: _('Admin'),
+        MONITORING_EXPERT: _('Monitoring Expert'),
+        REGIONAL_COORDINATOR: _('Regional Coordinator'),
+        GUEST: _('Guest'),
     }
 
 

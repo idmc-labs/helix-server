@@ -17,7 +17,7 @@ from utils.tests import HelixTestCase, create_user_with_role
 
 class TestGenerationSerializer(HelixTestCase):
     def setUp(self) -> None:
-        self.it_head = create_user_with_role(USER_ROLE.IT_HEAD.name)
+        self.it_head = create_user_with_role(USER_ROLE.ADMIN.name)
         self.request = RequestFactory().post('/graphql')
         self.report = ReportFactory.create(
             # only grid based report or null can be generated
@@ -76,7 +76,7 @@ class TestGenerationSerializer(HelixTestCase):
 
 class TestReportApprovalSerializer(HelixTestCase):
     def setUp(self):
-        self.it_head = create_user_with_role(USER_ROLE.IT_HEAD.name)
+        self.it_head = create_user_with_role(USER_ROLE.ADMIN.name)
         self.request = RequestFactory().post('/graphql')
         self.report = ReportFactory.create()
         self.report_id = self.report.id
@@ -88,7 +88,7 @@ class TestReportApprovalSerializer(HelixTestCase):
         ReportGeneration.objects.create(report=self.report)
 
         # approve
-        self.request.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.request.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         context = dict(
             request=self.request
         )
@@ -113,7 +113,7 @@ class TestReportApprovalSerializer(HelixTestCase):
         # report not yet started generation
         assert self.report.generations.count() == 0
         # try approving fails
-        self.request.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.request.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         context = dict(
             request=self.request
         )
@@ -153,7 +153,7 @@ class TestReportApprovalSerializer(HelixTestCase):
 
 class TestReportSignOffSerializer(HelixTestCase):
     def setUp(self):
-        self.it_head = create_user_with_role(USER_ROLE.IT_HEAD.name)
+        self.it_head = create_user_with_role(USER_ROLE.ADMIN.name)
         self.request = RequestFactory().post('/graphql')
         self.request.user = self.it_head
         self.context = dict(
@@ -203,7 +203,7 @@ class TestReportSignOffSerializer(HelixTestCase):
 class TestReportSerializer(HelixTestCase):
     def setUp(self):
         self.request = RequestFactory().post('/graphql')
-        self.request.user = create_user_with_role(USER_ROLE.IT_HEAD.name)
+        self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
         self.context = dict(
             request=self.request
         )

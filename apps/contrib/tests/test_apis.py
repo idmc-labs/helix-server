@@ -10,7 +10,7 @@ from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 class TestAttachment(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.mutation = """
             mutation ($data: AttachmentCreateInputType!) {
               createAttachment(data: $data) {

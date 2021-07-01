@@ -129,7 +129,7 @@ class TestReportGenerationApproval(HelixTestCase):
         r = ReportFactory.create()
         gen = ReportGeneration(report=r)
         gen.save()
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         ReportApproval.objects.create(
             generation=gen,
             created_by=reviewer,

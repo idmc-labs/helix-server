@@ -10,6 +10,8 @@ from apps.contact.schema import ContactListType
 from apps.country.models import (
     Country,
     CountryRegion,
+    CountrySubRegion,
+    MonitoringSubRegion,
     ContextualAnalysis,
     Summary,
     HouseholdSize,
@@ -19,11 +21,42 @@ from apps.country.filters import (
     CountryFilter,
     CountryRegionFilter,
     GeographicalGroupFilter,
+    MonitoringSubRegionFilter,
 )
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
+
+
+class MonitoringSubRegionType(DjangoObjectType):
+    class Meta:
+        model = MonitoringSubRegion
+        exclude_fields = ('portfolios',)
+
+    countries = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
+        get_type('apps.country.schema.CountryListType'),
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        ),
+        related_name='countries',
+    ))
+    # TODO: Add dataloaders
+    regional_coordinator = graphene.Field('apps.users.schema.PortfolioType')
+    monitoring_experts_count = graphene.Int(required=True)
+    unmonitored_countries_count = graphene.Int(required=True)
+    unmonitored_countries_names = graphene.String(required=True)
+
+
+class MonitoringSubRegionListType(CustomDjangoListObjectType):
+    class Meta:
+        model = MonitoringSubRegion
+        filterset_class = MonitoringSubRegionFilter
+
+
+class CountrySubRegionType(DjangoObjectType):
+    class Meta:
+        model = CountrySubRegion
 
 
 class CountryRegionType(DjangoObjectType):
@@ -152,6 +185,9 @@ class CountryType(DjangoObjectType):
     total_stock_disaster = graphene.Int()
     geojson_url = graphene.String()
 
+    regional_coordinator = graphene.Field('apps.users.schema.PortfolioType')
+    monitoring_expert = graphene.Field('apps.users.schema.PortfolioType')
+
     def resolve_total_stock_disaster(root, info, **kwargs):
         NULL = 'null'
         value = getattr(
@@ -227,6 +263,11 @@ class Query:
     household_size = graphene.Field(CountryHouseholdSizeType,
                                     country=graphene.ID(required=True),
                                     year=graphene.Int(required=True))
+    monitoring_sub_region = DjangoObjectField(MonitoringSubRegionType)
+    monitoring_sub_region_list = DjangoPaginatedListObjectField(MonitoringSubRegionListType,
+                                                                pagination=PageGraphqlPaginationWithoutCount(
+                                                                    page_size_query_param='pageSize'
+                                                                ))
 
     def resolve_household_size(root, info, country, year):
         try:

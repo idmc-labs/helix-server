@@ -24,7 +24,6 @@ class TestLogin(HelixGraphQLTestCase):
                     errors
                     result {
                         email
-                        role
                     }
                 }
             }
@@ -37,7 +36,6 @@ class TestLogin(HelixGraphQLTestCase):
                     captchaRequired
                     result {
                         email
-                        role
                     }
                 }
             }
@@ -46,7 +44,6 @@ class TestLogin(HelixGraphQLTestCase):
             query MeQuery {
                 me {
                     email
-                    role
                 }
             }
         '''
@@ -74,7 +71,6 @@ class TestLogin(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertEqual(content['data']['me']['email'], self.user.email)
-        self.assertEqual(content['data']['me']['role'], self.user.role.name)
 
     def test_invalid_email(self):
         response = self.query(
@@ -494,8 +490,8 @@ class TestUserSchema(HelixGraphQLTestCase):
         '''
 
     def test_fetch_reviews_to_be_reviewed(self):
-        e1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-        e2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        e1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        e2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         entry = EntryFactory.create(created_by=e1)
         entry.reviewers.set([e1, e2])
         entry2 = EntryFactory.create(created_by=e1)
@@ -531,10 +527,6 @@ class TestUserListSchema(HelixGraphQLTestCase):
               users(roleIn: $roles) {
                 results {
                   id
-                  role
-                  permissions {
-                    action
-                  }
                   email
                 }
               }
@@ -542,15 +534,14 @@ class TestUserListSchema(HelixGraphQLTestCase):
         '''
 
     def test_filter_users(self):
-        ue = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-        ur = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        ue = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        ur = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         ua = create_user_with_role(USER_ROLE.ADMIN.name)
-        create_user_with_role(USER_ROLE.IT_HEAD.name)
         guest = create_user_with_role(USER_ROLE.GUEST.name)
 
         self.force_login(guest)
 
-        roles = [USER_ROLE.ADMIN.name, USER_ROLE.MONITORING_EXPERT_EDITOR.name]
+        roles = [USER_ROLE.ADMIN.name, USER_ROLE.MONITORING_EXPERT.name]
         response = self.query(
             self.users_q,
             variables={"roles": roles},
@@ -559,9 +550,9 @@ class TestUserListSchema(HelixGraphQLTestCase):
         content = response.json()
         self.assertResponseNoErrors(response)
         self.assertEqual(sorted([int(each['id']) for each in content['data']['users']['results']]),
-                         sorted([ue.id, ua.id]))
+                         sorted([ue.id, ur.id, ua.id]))
 
-        roles = [USER_ROLE.MONITORING_EXPERT_REVIEWER.name, USER_ROLE.MONITORING_EXPERT_EDITOR.name]
+        roles = [USER_ROLE.MONITORING_EXPERT.name]
         response = self.query(
             self.users_q,
             variables={"roles": roles},
@@ -571,14 +562,14 @@ class TestUserListSchema(HelixGraphQLTestCase):
         self.assertEqual(sorted([int(each['id']) for each in content['data']['users']['results']]),
                          sorted([ur.id, ue.id]))
 
-    def test_users_fields_access(self):
+    def test_users_fields_access_based_on_authentication(self):
         users_q = '''
             query MyQuery {
               users {
                 totalCount
                 results {
                   id
-                  role
+                  highestRole
                   permissions {
                     action
                   }
@@ -587,10 +578,9 @@ class TestUserListSchema(HelixGraphQLTestCase):
               }
             }
         '''
-        create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-        ur = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
         ua = create_user_with_role(USER_ROLE.ADMIN.name)
-        create_user_with_role(USER_ROLE.IT_HEAD.name)
+        ur = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
+        create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         guest = create_user_with_role(USER_ROLE.GUEST.name)
 
         self.force_login(guest)
@@ -599,10 +589,10 @@ class TestUserListSchema(HelixGraphQLTestCase):
         )
         content = response.json()
         self.assertResponseNoErrors(response)
-        self.assertEqual(content['data']['users']['totalCount'], 5)
+        self.assertEqual(content['data']['users']['totalCount'], 4)
         self.assertEqual(set([item['email'] for item in content['data']['users']['results']]),
                          set([guest.email, None]))
-        self.assertEqual(set([item['role'] for item in content['data']['users']['results']]),
+        self.assertEqual(set([item['highestRole'] for item in content['data']['users']['results']]),
                          set(['GUEST', None]))
         self.assertIn(
             None,
@@ -615,11 +605,11 @@ class TestUserListSchema(HelixGraphQLTestCase):
         )
         content = response.json()
         self.assertResponseNoErrors(response)
-        self.assertEqual(content['data']['users']['totalCount'], 5)
+        self.assertEqual(content['data']['users']['totalCount'], 4)
         self.assertEqual(set([item['email'] for item in content['data']['users']['results']]),
                          set([ur.email, None]))
-        self.assertEqual(set([item['role'] for item in content['data']['users']['results']]),
-                         set([ur.role.name, None]))
+        self.assertEqual(set([item['highestRole'] for item in content['data']['users']['results']]),
+                         set([ur.highest_role.name, None]))
         self.assertIn(
             None,
             [item['permissions'] for item in content['data']['users']['results']]
@@ -631,7 +621,7 @@ class TestUserListSchema(HelixGraphQLTestCase):
         )
         content = response.json()
         self.assertResponseNoErrors(response)
-        self.assertEqual(content['data']['users']['totalCount'], 5)
+        self.assertEqual(content['data']['users']['totalCount'], 4)
         # we should not get all email
         self.assertIn(
             None,
@@ -640,7 +630,7 @@ class TestUserListSchema(HelixGraphQLTestCase):
         # we should get all roles
         self.assertNotIn(
             None,
-            [item['role'] for item in content['data']['users']['results']]
+            [item['highestRole'] for item in content['data']['users']['results']]
         )
 
 

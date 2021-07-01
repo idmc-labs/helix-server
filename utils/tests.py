@@ -3,7 +3,6 @@ import shutil
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Permission, Group
 from django.core import management
 from django.test import TestCase, override_settings
 from graphene_django.utils import GraphQLTestCase
@@ -11,18 +10,18 @@ from rest_framework.test import APITestCase
 
 from apps.entry.models import FigureCategory, FigureTerm
 from apps.entry.constants import STOCK, FLOW
+from apps.users.enums import USER_ROLE
+from apps.users.models import Portfolio
 from helix.settings import BASE_DIR
-from utils.factories import UserFactory
+from utils.factories import UserFactory, MonitoringSubRegionFactory, CountryFactory
 
 User = get_user_model()
 TEST_MEDIA_ROOT = 'media-temp'
 TEST_EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 TEST_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
-CELERY_BROKER_URL = 'memory://localhost/'
-CELERY_RESULT_BACKEND = 'memory://localhost/'
 BROKER_BACKEND = 'memory'
-CELERY_TASK_ALWAYS_EAGER = True
-CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_ALWAYS_EAGER = True
+CELERY_EAGER_PROPAGATES = True
 
 TEST_CACHES = {
     'default': {
@@ -84,11 +83,9 @@ class CommonSetupClassMixin:
     DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
     CACHES=TEST_CACHES,
     AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
-    CELERY_BROKER_URL=CELERY_BROKER_URL,
-    CELERY_RESULT_BACKEND=CELERY_RESULT_BACKEND,
     BROKER_BACKEND=BROKER_BACKEND,
-    CELERY_TASK_ALWAYS_EAGER=CELERY_TASK_ALWAYS_EAGER,
-    CELERY_TASK_EAGER_PROPAGATES=CELERY_TASK_EAGER_PROPAGATES,
+    CELERY_ALWAYS_EAGER=CELERY_ALWAYS_EAGER,
+    CELERY_EAGER_PROPAGATES=CELERY_EAGER_PROPAGATES,
 )
 class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
     GRAPHQL_URL = '/graphql'
@@ -96,11 +93,6 @@ class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
 
     def force_login(self, user):
         self._client.force_login(user)
-
-    def create_monitoring_expert(self):
-        user = UserFactory.create()
-        user.user_permissions.add(Permission.objects.get(codename='change_entry'))
-        return user
 
     def create_user(self) -> User:
         raw_password = 'admin123'
@@ -113,12 +105,31 @@ class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
         return user
 
 
-def create_user_with_role(role: str) -> User:
+def create_user_with_role(role: str, monitoring_sub_region: int = None, country: int = None) -> User:
     user = UserFactory.create()
-    user.groups.set([Group.objects.get(name=role)])
     user.raw_password = 'lhjsjsjsjlj'
     user.set_password(user.raw_password)
-    user.save()
+    user.save()  # saves it as a guest
+    user.refresh_from_db()
+    if role == USER_ROLE.ADMIN.name:
+        Portfolio.objects.create(
+            user=user,
+            role=USER_ROLE[role],
+        )
+    if role == USER_ROLE.REGIONAL_COORDINATOR.name:
+        Portfolio.objects.create(
+            user=user,
+            role=USER_ROLE[role],
+            monitoring_sub_region_id=monitoring_sub_region or MonitoringSubRegionFactory.create().id
+        )  # assigns a new role
+    elif role == USER_ROLE.MONITORING_EXPERT.name:
+        new_mr = MonitoringSubRegionFactory.create()
+        Portfolio.objects.create(
+            user=user,
+            role=USER_ROLE[role],
+            monitoring_sub_region_id=monitoring_sub_region or new_mr.id,
+            country_id=country or CountryFactory.create(monitoring_sub_region=new_mr).id
+        )  # assigns a new role
     return user
 
 
@@ -153,11 +164,9 @@ class ImmediateOnCommitMixin(object):
     MEDIA_ROOT=TEST_MEDIA_ROOT,
     CACHES=TEST_CACHES,
     AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
-    CELERY_BROKER_URL=CELERY_BROKER_URL,
-    CELERY_RESULT_BACKEND=CELERY_RESULT_BACKEND,
     BROKER_BACKEND=BROKER_BACKEND,
-    CELERY_TASK_ALWAYS_EAGER=CELERY_TASK_ALWAYS_EAGER,
-    CELERY_TASK_EAGER_PROPAGATES=CELERY_TASK_EAGER_PROPAGATES,
+    CELERY_ALWAYS_EAGER=CELERY_ALWAYS_EAGER,
+    CELERY_EAGER_PROPAGATES=CELERY_EAGER_PROPAGATES,
 )
 class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     pass
@@ -169,11 +178,9 @@ class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     MEDIA_ROOT=TEST_MEDIA_ROOT,
     CACHES=TEST_CACHES,
     AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
-    CELERY_BROKER_URL=CELERY_BROKER_URL,
-    CELERY_RESULT_BACKEND=CELERY_RESULT_BACKEND,
     BROKER_BACKEND=BROKER_BACKEND,
-    CELERY_TASK_ALWAYS_EAGER=CELERY_TASK_ALWAYS_EAGER,
-    CELERY_TASK_EAGER_PROPAGATES=CELERY_TASK_EAGER_PROPAGATES,
+    CELERY_ALWAYS_EAGER=CELERY_ALWAYS_EAGER,
+    CELERY_EAGER_PROPAGATES=CELERY_EAGER_PROPAGATES,
 )
 class HelixAPITestCase(APITestCase):
     def __init__(self, *args, **kwargs):

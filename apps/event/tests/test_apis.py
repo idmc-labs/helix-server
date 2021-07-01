@@ -68,7 +68,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
             "disasterSubType": DisasterSubTypeFactory().id,
             "countries": [each.id for each in countries]
         }
-        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor)
 
     def test_valid_event_creation(self) -> None:
@@ -169,7 +169,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
             "violence": v_sub_type.violence.id,
             "violenceSubType": v_sub_type.id,
         }
-        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor)
 
     def test_invalid_event_dates_beyond_crisis(self):
@@ -247,7 +247,7 @@ class TestDeleteEvent(HelixGraphQLTestCase):
         self.variables = {
             "id": self.event.id,
         }
-        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor)
 
     def test_valid_event_delete(self) -> None:
@@ -329,10 +329,10 @@ class TestEventListQuery(HelixGraphQLTestCase):
     def test_event_review_count_with_dataloader(self):
         event = EventFactory.create()
         r1 = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+            USER_ROLE.MONITORING_EXPERT.name,
         )
         r2 = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT_EDITOR.name,
+            USER_ROLE.MONITORING_EXPERT.name,
         )
         entry = EntryFactory.create(
             event=event,

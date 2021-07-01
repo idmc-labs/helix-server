@@ -43,7 +43,7 @@ class TestCreateResourceGroup(HelixGraphQLTestCase):
 
     def test_valid_create_resource_group(self):
         old = ResourceGroup.objects.count()
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,
@@ -60,7 +60,7 @@ class TestCreateResourceGroup(HelixGraphQLTestCase):
 
 class TestCreateResource(HelixGraphQLTestCase):
     def setUp(self):
-        self.reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.group = ResourceGroupFactory.create(created_by=self.reviewer)
         self.countries = CountryFactory.create_batch(3)
         self.mutation = '''
@@ -105,7 +105,7 @@ class TestCreateResource(HelixGraphQLTestCase):
         self.assertIn('countries', [each['field'] for each in content['data']['createResource']['errors']], content)
 
     def test_invalid_create_different_users_resource_group(self):
-        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer2)
         response = self.query(
             self.mutation,
@@ -136,8 +136,8 @@ class TestQueryResource(HelixGraphQLTestCase):
         '''
 
     def test_resources_by_user(self):
-        self.reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        self.reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        self.reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         ResourceFactory.create(
             name='test111',
             created_by=self.reviewer1,

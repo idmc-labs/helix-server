@@ -23,6 +23,13 @@ class GeographicalGroupFactory(DjangoModelFactory):
     name = factory.Faker('first_name')
 
 
+class MonitoringSubRegionFactory(DjangoModelFactory):
+    class Meta:
+        model = 'country.MonitoringSubRegion'
+
+    name = factory.Faker('first_name')
+
+
 class CountryRegionFactory(DjangoModelFactory):
     class Meta:
         model = 'country.CountryRegion'
@@ -36,6 +43,7 @@ class CountryFactory(DjangoModelFactory):
 
     name = factory.Faker('first_name')
     region = factory.SubFactory(CountryRegionFactory)
+    monitoring_sub_region = factory.SubFactory(MonitoringSubRegionFactory)
 
 
 class ContextualAnalysisFactory(DjangoModelFactory):

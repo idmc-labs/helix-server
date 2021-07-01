@@ -28,7 +28,7 @@ class TestEntryQuery(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.country = CountryFactory.create()
         self.country_id = str(self.country.id)
-        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.entry = EntryFactory.create(
             created_by=self.editor
         )
@@ -108,7 +108,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.country_id = str(self.country.id)
         self.fig_cat = FigureCategoryFactory.create()
         self.fig_cat_id = str(self.fig_cat.id)
-        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.event = EventFactory.create()
         self.event.countries.add(self.country)
         self.mutation = """
@@ -244,21 +244,10 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertEqual('reported',
                          content['data']['createEntry']['errors'][0]['arrayErrors'][0]['objectErrors'][0]['field'])
 
-    def test_invalid_entry_created_by_reviewer(self):
-        reviewer = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        self.force_login(reviewer)
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
-        content = json.loads(response.content)
-
-        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
-
     def test_add_reviewers_while_create_entry(self):
-        r1 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        r2 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        r3 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
+        r1 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT.name)
+        r2 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT.name)
+        r3 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT.name)
         self.input.update(dict(reviewers=[str(r1.id), str(r2.id), str(r3.id)]))
 
         response = self.query(
@@ -366,7 +355,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.country_id = str(self.country.id)
         self.fig_cat = FigureCategoryFactory.create()
         self.fig_cat_id = str(self.fig_cat.id)
-        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.event = EventFactory.create(name='myevent')
         self.event.countries.add(self.country)
         DisaggregatedAgeCategory.objects.create(name='one')
@@ -417,33 +406,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEntry']['ok'], content)
-
-    def test_invalid_update_by_reviewer(self):
-        reviewer = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        self.force_login(reviewer)
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
-        content = json.loads(response.content)
-
-        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
-
-    def test_invalid_entry_update_by_non_owner(self):
-        self.editor2 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-        self.force_login(self.editor2)
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
-        content = json.loads(response.content)
-
-        self.assertResponseNoErrors(response)
-        self.assertFalse(content['data']['updateEntry']['ok'], content)
-        self.assertIn('nonFieldErrors',
-                      [each['field'] for each in content['data']['updateEntry']['errors']])
-        self.assertIn('You cannot update this entry',
-                      json.dumps(content['data']['updateEntry']['errors']))
 
     def test_valid_entry_update_by_admins(self):
         admin = create_user_with_role(USER_ROLE.ADMIN.name)
@@ -573,7 +535,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
 
 class TestEntryDelete(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT_EDITOR.name)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.entry = EntryFactory.create(
             created_by=self.editor
         )
@@ -612,33 +574,6 @@ class TestEntryDelete(HelixGraphQLTestCase):
         self.assertEqual(content['data']['deleteEntry']['result']['url'],
                          self.entry.url)
 
-    def test_invalid_delete_by_reviewer(self):
-        reviewer = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        self.force_login(reviewer)
-        response = self.query(
-            self.mutation,
-            variables=self.variables
-        )
-        content = json.loads(response.content)
-
-        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
-
-    def test_invalid_entry_delete_by_non_owner(self):
-        editor2 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT_EDITOR.name)
-        self.force_login(editor2)
-        response = self.query(
-            self.mutation,
-            variables=self.variables
-        )
-        content = json.loads(response.content)
-
-        self.assertResponseNoErrors(response)
-        self.assertFalse(content['data']['deleteEntry']['ok'], content)
-        self.assertIn('nonFieldErrors',
-                      [each['field'] for each in content['data']['deleteEntry']['errors']])
-        self.assertIn('You cannot delete this entry',
-                      json.dumps(content['data']['deleteEntry']['errors']))
-
     def test_valid_entry_delete_by_admins(self):
         admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.force_login(admin)
@@ -657,10 +592,10 @@ class TestEntryDelete(HelixGraphQLTestCase):
 class TestEntryReviewUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.entry = EntryFactory.create()
-        self.r1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        self.r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        self.r3 = create_user_with_role(USER_ROLE.MONITORING_EXPERT_REVIEWER.name)
-        self.it = create_user_with_role(USER_ROLE.IT_HEAD.name)
+        self.r1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.r3 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.it = create_user_with_role(USER_ROLE.ADMIN.name)
         self.entry.reviewers.set([self.r1, self.r2, self.r3, self.it])
         self.q = '''
         mutation MyMutation ($input: EntryReviewStatusInputType!){
