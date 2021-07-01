@@ -13,3 +13,4 @@ python manage.py init_roles
 python manage.py init_types_subtypes # event related
 python manage.py init_figure_types # figure related
 python manage.py init_figure_tags
+python manage.py split_geojson
