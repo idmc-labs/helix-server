@@ -18,6 +18,11 @@ class OrganizationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Organization
         fields = '__all__'
+        extra_kwargs = {
+            'countries': {
+                'required': False
+            },
+        }
 
 
 class OrganizationUpdateSerializer(UpdateSerializerMixin, OrganizationSerializer):

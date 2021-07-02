@@ -1,8 +1,10 @@
+import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.contact.schema import ContactListType
 from apps.organization.models import Organization, OrganizationKind
+from apps.organization.enums import OrganizationCategoryTypeGrapheneEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
@@ -12,6 +14,7 @@ class OrganizationType(DjangoObjectType):
     class Meta:
         model = Organization
 
+    category = graphene.Field(OrganizationCategoryTypeGrapheneEnum)
     contacts = DjangoPaginatedListObjectField(ContactListType,
                                               pagination=PageGraphqlPaginationWithoutCount(
                                                   page_size_query_param='pageSize'
