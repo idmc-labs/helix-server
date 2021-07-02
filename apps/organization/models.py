@@ -16,12 +16,12 @@ class Organization(MetaInformationArchiveAbstractModel,
                    SoftDeleteModel,
                    models.Model):
     class ORGANIZATION_CATEGORY(enum.Enum):
-        EMPTY = 0
+        UNKNOWN = 0
         REGIONAL = 1
         INTERNATIONAL = 2
 
         __labels__ = {
-            EMPTY: _(""),
+            UNKNOWN: _("Unknown"),
             REGIONAL: _("Regional"),
             INTERNATIONAL: _("International"),
         }
@@ -29,7 +29,7 @@ class Organization(MetaInformationArchiveAbstractModel,
     short_name = models.CharField(verbose_name=_('Short Name'), max_length=64,
                                   null=True)
     category = enum.EnumField(ORGANIZATION_CATEGORY, verbose_name=_('Crisis Type'),
-                              default=ORGANIZATION_CATEGORY.EMPTY)
+                              default=ORGANIZATION_CATEGORY.UNKNOWN)
     countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
                                        related_name='organizations')
     organization_kind = models.ForeignKey('OrganizationKind', verbose_name=_('Organization Type'),
