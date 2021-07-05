@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from django.contrib.auth import get_user_model
+from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
@@ -60,6 +61,7 @@ class Organization(MetaInformationArchiveAbstractModel,
             name='Name',
             short_name='Short name',
             organization_kind__name='Organization Type',
+            countries_iso3='ISO3',
             methodology='Methodology',
             breakdown='Breakdown',
             sourced_entries_count='Sourced Entries Count',
@@ -68,18 +70,20 @@ class Organization(MetaInformationArchiveAbstractModel,
             created_at='Created At',
             last_modified_by__full_name='Modified By',
             modified_at='Modified At',
-            # TODO: add countries as well
         )
         data = OrganizationFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
+            countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
             sourced_entries_count=models.Count('sourced_entries', distinct=True),
             published_entries_count=models.Count('published_entries', distinct=True),
         ).order_by('-created_at').select_related(
             'organization_kind'
             'created_by',
             'last_modified_by',
+        ).prefetch_related(
+            'countries'
         )
 
         return {
