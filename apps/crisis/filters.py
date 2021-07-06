@@ -1,13 +1,14 @@
 import django_filters
 
 from apps.crisis.models import Crisis
-from utils.filters import StringListFilter, NameFilterMixin
+from utils.filters import StringListFilter, NameFilterMixin, IDListFilter
 
 
 class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
     name = django_filters.CharFilter(method='_filter_name')
     countries = StringListFilter(method='filter_countries')
     crisis_types = StringListFilter(method='filter_crisis_types')
+    events = IDListFilter(method='filter_events')
 
     class Meta:
         model = Crisis
@@ -16,6 +17,11 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
             'start_date': ['lt', 'lte', 'gt', 'gte'],
             'end_date': ['lt', 'lte', 'gt', 'gte'],
         }
+
+    def filter_events(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(events__in=value).distinct()
 
     def filter_countries(self, qs, name, value):
         if not value:

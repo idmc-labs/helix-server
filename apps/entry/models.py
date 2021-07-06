@@ -190,6 +190,24 @@ class FigureCategory(models.Model):
 
 
 class FigureDisaggregationAbstractModel(models.Model):
+    class DISPLACEMENT_TYPE(enum.Enum):
+        RURAL = 0
+        URBAN = 1
+
+        __labels__ = {
+            RURAL: _("Rural"),
+            URBAN: _("Urban"),
+        }
+
+    class GENDER_TYPE(enum.Enum):
+        MALE = 0
+        FEMALE = 1
+
+        __labels__ = {
+            MALE: _("Male"),
+            FEMALE: _("Female"),
+        }
+
     # disaggregation information
     disaggregation_displacement_urban = models.PositiveIntegerField(
         verbose_name=_('Displacement/Urban'),
