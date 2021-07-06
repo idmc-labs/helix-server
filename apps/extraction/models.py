@@ -4,7 +4,11 @@ from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
-from apps.entry.models import Figure, EntryReviewer
+from apps.entry.models import (
+    Figure,
+    EntryReviewer,
+    FigureDisaggregationAbstractModel,
+)
 from apps.crisis.models import Crisis
 
 
@@ -96,6 +100,26 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
+    filter_event_glide_number = models.TextField(
+        verbose_name=_('Glide Number'),
+        blank=True,
+        null=True
+    )
+    filter_entry_created_by = models.ManyToManyField(
+        'users.User',
+        verbose_name=_('Entry Created by'),
+        blank=True,
+    )
+    filter_figure_displacement_types = ArrayField(
+        base_field=enum.EnumField(enum=FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE),
+        blank=True,
+        null=True
+    )
+    filter_figure_sex_types = ArrayField(
+        base_field=enum.EnumField(enum=FigureDisaggregationAbstractModel.GENDER_TYPE),
+        blank=True,
+        null=True
+    )
 
     @property
     def extract_figures(self) -> ['Figure']:  # noqa
@@ -114,6 +138,8 @@ class QueryAbstractModel(models.Model):
             filter_figure_end_before=self.filter_figure_end_before,
             filter_entry_article_title=self.filter_entry_article_title,
             filter_event_crisis_types=self.filter_event_crisis_types,
+            filter_entry_review_status=self.filter_entry_review_status,
+            filter_figure_displacement_types=self.filter_figure_displacement_types,
             # NOTE: Implement this for report if required
             # filter_entry_publishers=self.filter_entry_publishers,
             # filter_entry_sources=self.filter_entry_sources,
@@ -142,6 +168,7 @@ class QueryAbstractModel(models.Model):
             filter_entry_review_status=self.filter_entry_review_status,
             filter_entry_publishers=self.filter_entry_publishers.all(),
             filter_entry_sources=self.filter_entry_sources.all(),
+            filter_figure_displacement_types=self.filter_figure_displacement_types,
         ))
 
     class Meta:

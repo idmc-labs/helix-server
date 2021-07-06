@@ -4,13 +4,26 @@ __all__ = ['QuantifierGrapheneEnum', 'UnitGrapheneEnum',
 
 import graphene
 
-from apps.entry.models import Figure, EntryReviewer, OSMName
+from apps.entry.models import (
+    Figure,
+    EntryReviewer,
+    OSMName,
+    FigureDisaggregationAbstractModel,
+)
 from apps.entry.constants import (
     DISAGGREGATED_AGE_SEX_CHOICES,
 )
 
 from utils.enums import enum_description
 
+DisplacementTypeGrapheneEnum = graphene.Enum.from_enum(
+    FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE,
+    description=enum_description
+)
+GenderTypeGrapheneEnum = graphene.Enum.from_enum(
+    FigureDisaggregationAbstractModel.GENDER_TYPE,
+    description=enum_description
+)
 QuantifierGrapheneEnum = graphene.Enum.from_enum(Figure.QUANTIFIER, description=enum_description)
 UnitGrapheneEnum = graphene.Enum.from_enum(Figure.UNIT, description=enum_description)
 RoleGrapheneEnum = graphene.Enum.from_enum(Figure.ROLE, description=enum_description)
@@ -26,6 +39,8 @@ IdentifierGrapheneEnum = graphene.Enum.from_enum(OSMName.IDENTIFIER, description
 DisaggregatedAgeSexGrapheneEnum = graphene.Enum.from_enum(DISAGGREGATED_AGE_SEX_CHOICES, description=enum_description)
 
 enum_map = dict(
+    DISPLACEMENT_TYPE=DisplacementTypeGrapheneEnum,
+    GENDER_TYPE=GenderTypeGrapheneEnum,
     QUANTIFIER=QuantifierGrapheneEnum,
     UNIT=UnitGrapheneEnum,
     ROLE=RoleGrapheneEnum,
