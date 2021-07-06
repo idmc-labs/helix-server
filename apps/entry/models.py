@@ -568,7 +568,10 @@ class Figure(MetaInformationArchiveAbstractModel,
             'created_by',
         ).prefetch_related(
             'geo_locations'
-        ).order_by('-entry', '-created_at').values(*[header for header in headers.keys()])
+        ).order_by(
+            '-entry',
+            '-created_at',
+        ).values(*[header for header in headers.keys()])
 
         def transformer(datum):
             return {
