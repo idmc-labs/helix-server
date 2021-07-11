@@ -2,6 +2,7 @@ import django_filters
 
 from apps.event.models import Event
 from apps.crisis.models import Crisis
+from apps.report.models import Report
 from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
 
 
@@ -12,6 +13,9 @@ class EventFilter(NameFilterMixin,
     event_types = StringListFilter(method='filter_event_types')
     countries = IDListFilter(method='filter_countries')
 
+    # used in report entry table
+    report = django_filters.CharFilter(method='filter_report')
+
     class Meta:
         model = Event
         fields = {
@@ -20,6 +24,13 @@ class EventFilter(NameFilterMixin,
             'end_date': ['lte', 'lt', 'gte', 'gt'],
             'glide_number': ['icontains'],
         }
+
+    def filter_report(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(
+            id__in=Report.objects.get(id=value).report_figures.values('entry__event')
+        )
 
     def filter_countries(self, qs, name, value):
         if not value:

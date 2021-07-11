@@ -9,6 +9,7 @@ from apps.entry.models import (
     EntryReviewer,
     FigureDisaggregationAbstractModel,
 )
+from apps.report.models import Report
 from utils.filters import StringListFilter, IDListFilter
 
 RURAL = FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE.RURAL.name
@@ -40,9 +41,19 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
     filter_figure_sex_types = StringListFilter(method='filter_by_figure_sex_types')
 
+    # used in report entry table
+    report = df.CharFilter(method='filter_report')
+
     class Meta:
         model = Entry
         fields = {}
+
+    def filter_report(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(
+            id__in=Report.objects.get(id=value).report_figures.values('entry')
+        )
 
     def filter_geographical_groups(self, qs, name, value):
         if value:
@@ -179,12 +190,23 @@ class FigureExtractionFilterSet(df.FilterSet):
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
     filter_figure_sex_types = StringListFilter(method='filter_by_figure_sex_types')
 
+    # used in report entry table
+    report = df.CharFilter(method='filter_report')
+
     class Meta:
         model = Figure
         fields = ['entry']
 
     def noop(self, qs, *args):
         return qs
+
+    def filter_report(self, qs, name, value):
+        if not value:
+            return qs
+
+        return qs.filter(
+            id__in=Report.objects.get(id=value).report_figures.values('id')
+        )
 
     def filter_geographical_groups(self, qs, name, value):
         if value:

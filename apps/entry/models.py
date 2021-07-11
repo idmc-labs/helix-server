@@ -425,15 +425,14 @@ class Figure(MetaInformationArchiveAbstractModel,
         start_date: Optional[date],
         end_date: Optional[date],
     ):
-        qs = qs.filter(
-            category=FigureCategory.flow_new_displacement_id(),
-        )
         if end_date:
             qs = qs.filter(
+                category=FigureCategory.flow_new_displacement_id(),
                 end_date__lte=end_date,
             )
         if start_date:
             qs = qs.filter(
+                category=FigureCategory.flow_new_displacement_id(),
                 end_date__gte=start_date,
             )
         return qs
