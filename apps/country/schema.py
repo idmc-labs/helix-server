@@ -233,12 +233,12 @@ class CountryType(DjangoObjectType):
         return info.context.country_country_this_year_nd_disaster_loader.load(root.id)
 
     def resolve_geojson_url(root, info, **kwargs):
-        if 'FileSystemStorage' in settings.DEFAULT_FILE_STORAGE:
-            return info.context.request.build_absolute_uri(
-                settings.MEDIA_URL +
-                Country.geojson_path(root.iso3)
-            )
-        return info.context.request.build_absolute_uri(Country.geojson_path(root.iso3))
+        if 'S3Boto3Storage' in settings.DEFAULT_FILE_STORAGE:
+            return info.context.request.build_absolute_uri(Country.geojson_path(root.iso3))
+        return info.context.request.build_absolute_uri(
+            settings.MEDIA_URL +
+            Country.geojson_path(root.iso3)
+        )
 
 
 class CountryListType(CustomDjangoListObjectType):
