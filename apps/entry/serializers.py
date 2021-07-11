@@ -128,6 +128,9 @@ class CommonFigureValidationMixin:
         if not country and self.instance:
             country = self.instance.country
         if not attrs.get('geo_locations'):
+            errors.update({
+                'geo_locations': 'This field is required.'
+            })
             return errors
         location_code = country.iso2
         if not location_code:
@@ -268,7 +271,7 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
                                    serializers.ModelSerializer):
     disaggregation_age_json = DisaggregatedAgeSerializer(many=True, required=False, allow_null=True)
     disaggregation_strata_json = DisaggregatedStratumSerializer(many=True, required=False)
-    geo_locations = OSMNameSerializer(many=True, required=False)
+    geo_locations = OSMNameSerializer(many=True, required=False, allow_null=False)
 
     class Meta:
         model = Figure

@@ -141,6 +141,58 @@ class Report(MetaInformationArchiveAbstractModel,
                                          blank=True, null=True,
                                          related_name='signed_off_reports', on_delete=models.CASCADE)
 
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.report.filters import ReportFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='Id',
+            created_at='Created At',
+            created_by__full_name='Created By',
+            name='Name',
+            filter_figure_start_after='Start Date',
+            filter_figure_end_before='End Date',
+            analysis='Analysis',
+            methodology='Methodology',
+            significant_updates='Significant Updates',
+            challenges='Challenges',
+            summary='Summary',
+            # these are calculated in transformer ref: heavy
+            total_flow_conflict_sum='ND Conflict',
+            total_flow_disaster_sum='ND Disaster',
+            total_stock_conflict_sum='IDP Conflict',
+        )
+        data = ReportFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.annotate(
+            # placeholder
+            total_flow_conflict_sum=Value(0, output_field=models.IntegerField()),
+            total_flow_disaster_sum=Value(0, output_field=models.IntegerField()),
+            total_stock_conflict_sum=Value(0, output_field=models.IntegerField()),
+        ).order_by('-created_at').select_related(
+            'created_by',
+        )
+
+        def transformer(datum):
+            return {
+                **datum,
+                # ref: heavy
+                # NOTE: there must be a better way
+                **Report.objects.get(id=datum['id']).total_disaggregation
+            }
+
+        return {
+            'headers': headers,
+            'data': data.values(*[header for header in headers.keys()]),
+            'formulae': None,
+            'transformer': transformer,
+        }
+
     @property
     def _ends_within_start_year(self):
         return self.filter_figure_end_before.year == self.filter_figure_start_after.year

@@ -50,10 +50,7 @@ class EventSerializer(MetaInformationSerializerMixin,
 
     def validate_event_type_with_crisis_type(self, attrs):
         errors = OrderedDict()
-        crisis = attrs.get(
-            'crisis',
-            getattr(self.instance, 'crisis', None)
-        )
+        crisis = attrs.get('crisis')
         event_type = attrs.get(
             'event_type',
             getattr(self.instance, 'event_type', None)
@@ -72,7 +69,7 @@ class EventSerializer(MetaInformationSerializerMixin,
         return errors
 
     def validate_event_type_against_crisis_type(self, event_type, attrs):
-        crisis = attrs.get('crisis', getattr(self.instance, 'crisis', None))
+        crisis = attrs.get('crisis')
         if crisis and event_type != crisis.crisis_type.value:
             raise serializers.ValidationError({'event_type': gettext('Event type and crisis type do not match.')})
 
@@ -144,7 +141,7 @@ class EventSerializer(MetaInformationSerializerMixin,
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
         errors = OrderedDict()
-        crisis = attrs.get('crisis') or getattr(self.instance, 'crisis', None)
+        crisis = attrs.get('crisis')
         if crisis:
             errors.update(is_child_parent_dates_valid(
                 attrs.get('start_date', getattr(self.instance, 'start_date', None)),

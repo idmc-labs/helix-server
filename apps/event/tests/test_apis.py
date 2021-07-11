@@ -180,6 +180,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         crisis.start_date = datetime.today()
         crisis.end_date = datetime.today() + timedelta(days=10)
         crisis.save()
+        self.input['crisis'] = crisis.id
         self.input['startDate'] = (crisis.start_date - timedelta(days=1)).strftime('%Y-%m-%d')
         self.input['endDate'] = (crisis.end_date + timedelta(days=1)).strftime('%Y-%m-%d')
         response = self.query(

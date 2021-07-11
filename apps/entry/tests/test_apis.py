@@ -1,9 +1,11 @@
+from copy import copy
 import json
 from uuid import uuid4
 
 from apps.entry.models import (
     Figure,
     FigureTerm,
+    OSMName,
     Entry,
     EntryReviewer,
     CANNOT_UPDATE_MESSAGE,
@@ -104,7 +106,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         DisaggregatedAgeCategory.objects.create(name='one')
         DisaggregatedAgeCategory.objects.create(name='two')
         DisaggregatedAgeCategory.objects.create(name='three')
-        self.country = CountryFactory.create()
+        self.country = CountryFactory.create(iso2='lo', iso3='lol')
         self.country_id = str(self.country.id)
         self.fig_cat = FigureCategoryFactory.create()
         self.fig_cat_id = str(self.fig_cat.id)
@@ -161,6 +163,20 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertIsNotNone(content['data']['createEntry']['result']['id'])
 
     def test_valid_nested_figures_create(self):
+        source1 = dict(
+            uuid=str(uuid4()),
+            rank=101,
+            country=str(self.country.name),
+            countryCode=self.country.iso2,
+            osmId='ted',
+            osmType='okay',
+            displayName='okay',
+            lat=68.88,
+            lon=46.66,
+            name='name',
+            accuracy=OSMName.OSM_ACCURACY.COUNTRY.name,
+            identifier=OSMName.IDENTIFIER.ORIGIN.name,
+        )
         figures = [
             {
                 "uuid": str(uuid4()),
@@ -174,8 +190,10 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "startDate": "2020-10-10",
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
+                "geoLocations": [source1],
             }
         ]
+
         self.input.update({
             'figures': figures
         })
@@ -196,6 +214,24 @@ class TestEntryCreation(HelixGraphQLTestCase):
     def test_assert_nested_figures_errors(self):
         uuid = str(uuid4())
         uuid_error = str(uuid4())
+        source1 = dict(
+            uuid=str(uuid4()),
+            rank=101,
+            country=str(self.country.name),
+            countryCode=self.country.iso2,
+            osmId='ted',
+            osmType='okay',
+            displayName='okay',
+            lat=68.88,
+            lon=46.66,
+            name='name',
+            accuracy=OSMName.OSM_ACCURACY.COUNTRY.name,
+            identifier=OSMName.IDENTIFIER.ORIGIN.name,
+        )
+        source2 = copy(source1)
+        source2['lat'] = 67.5
+        source2['uuid'] = str(uuid4())
+
         figures = [
             # valid data
             {
@@ -210,6 +246,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "startDate": "2020-10-10",
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
+                "geoLocations": [source1],
             },
             # invalid now
             {
@@ -224,6 +261,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "startDate": "2020-10-10",
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
+                "geoLocations": [source2],
             }
         ]
         self.input.update({
@@ -427,6 +465,23 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         )
         # this figure will be deleted
         deleted_figure = FigureFactory.create(entry=self.entry)
+        source1 = dict(
+            uuid=str(uuid4()),
+            rank=101,
+            country=str(self.country.name),
+            countryCode=self.country.iso2,
+            osmId='ted',
+            osmType='okay',
+            displayName='okay',
+            lat=68.88,
+            lon=46.66,
+            name='name',
+            accuracy=OSMName.OSM_ACCURACY.COUNTRY.name,
+            identifier=OSMName.IDENTIFIER.ORIGIN.name,
+        )
+        source2 = copy(source1)
+        source2['lat'] = 67.5
+        source2['uuid'] = str(uuid4())
         figures = [
             {
                 "uuid": "1cd00034-037e-4c5f-b196-fa05b6bed803",
@@ -454,7 +509,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "disaggregationStrataJson": [
                     {"date": "2020-10-10", "value": 2, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
                     {"date": "2020-10-12", "value": 2, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
-                ]
+                ],
+                "geoLocations": [source1],
             },
             {
                 "id": figure.id,
@@ -483,7 +539,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "disaggregationStrataJson": [
                     {"date": "2020-10-10", "value": 2, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
                     {"date": "2020-10-12", "value": 2, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
-                ]
+                ],
+                "geoLocations": [source2],
             },
         ]
         old_figures_count = self.entry.figures.count()

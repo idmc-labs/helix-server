@@ -6,6 +6,7 @@ from datetime import timedelta
 
 from django.core.files import File
 from django.conf import settings
+from django.db import models
 from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
@@ -74,6 +75,7 @@ def generate_excel_file(download_id, user_id):
             workbook.save(tmp.name)
             workbook.close()
             download.file.save(path, File(tmp))
+            download.file_size = File(tmp).size
             del workbook
         download.status = ExcelDownload.EXCEL_GENERATION_STATUS.COMPLETED
         download.completed_at = timezone.now()
@@ -94,7 +96,13 @@ def kill_all_old_excel_exports():
     # if a task has been pending for too long, move it to killed
     pending = ExcelDownload.objects.filter(
         status=ExcelDownload.EXCEL_GENERATION_STATUS.PENDING,
-        started_at__lte=timezone.now() - timedelta(seconds=settings.EXCEL_EXPORT_PENDING_STATE_TIMEOUT),
+    ).filter(
+        models.Q(
+            started_at__isnull=False,
+            started_at__lte=timezone.now() - timedelta(seconds=settings.EXCEL_EXPORT_PENDING_STATE_TIMEOUT),
+        ) | models.Q(
+            created_at__lte=timezone.now() - timedelta(seconds=settings.EXCEL_EXPORT_PENDING_STATE_TIMEOUT * 3),
+        )
     ).update(status=ExcelDownload.EXCEL_GENERATION_STATUS.KILLED)
 
     # if a task has been in progress beyond timeout, move it to killed

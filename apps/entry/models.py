@@ -100,7 +100,8 @@ class OSMName(UUIDAbstractModel, models.Model):
                                null=True)
     country = models.TextField(verbose_name=_('Country'))
     # NOTE: country-code here actually stores iso2
-    country_code = models.CharField(verbose_name=_('Country Code'), max_length=8)
+    country_code = models.CharField(verbose_name=_('Country Code'), max_length=8,
+                                    null=True, blank=False)
     street = models.TextField(verbose_name=_('Street'),
                               blank=True,
                               null=True)
@@ -468,6 +469,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             category__name='Category',
             category__type='Category Type',
             term__name='Term',
+            displacement_occurred='Displacement Occurred',
             role='Role',
             start_date='Start Date',
             start_date_accuracy='Start Date Accuracy',
@@ -542,7 +544,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             'created_by',
         ).prefetch_related(
             'geo_locations'
-        ).order_by('entry', 'id').values(*[header for header in headers.keys()])
+        ).order_by('-entry', '-created_at').values(*[header for header in headers.keys()])
 
         def transformer(datum):
             return {
@@ -553,6 +555,9 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'quantifier': getattr(Figure.QUANTIFIER.get(datum['quantifier']), 'name', ''),
                 'unit': getattr(Figure.UNIT.get(datum['unit']), 'name', ''),
                 'role': getattr(Figure.ROLE.get(datum['role']), 'name', ''),
+                'displacement_occurred': getattr(
+                    Figure.DISPLACEMENT_OCCURRED.get(datum['displacement_occurred']), 'name', ''
+                ),
             }
 
         return {
@@ -884,22 +889,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             'figures',
             'sources',
             'publishers',
-        ).order_by('id')
-
-        # TODO: compare the queries between .values('id') and nothing
-        figures = Figure.objects.filter(entry__in=entries)
-        figure_data = Figure.get_figure_excel_sheets_data(figures)
+        ).order_by('-id')
 
         return {
             'headers': headers,
             'data': entries.values(*[header for header in headers.keys()]),
             'formulae': None,
-            'other': [
-                dict(
-                    title='Figures',
-                    results=figure_data,
-                ),
-            ]
         }
 
     # Properties

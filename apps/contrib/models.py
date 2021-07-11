@@ -192,6 +192,9 @@ class ExcelDownload(MetaInformationAbstractModel):
         COUNTRY = 2
         ENTRY = 3
         FIGURE = 4
+        ORGANIZATION = 5
+        CONTACT = 6
+        REPORT = 7
 
     started_at = models.DateTimeField(
         verbose_name=_('Started at'),
@@ -218,6 +221,11 @@ class ExcelDownload(MetaInformationAbstractModel):
         null=True,
         upload_to=excel_upload_to
     )
+    file_size = models.IntegerField(
+        verbose_name=_('File Size'),
+        blank=True,
+        null=True,
+    )
     filters = JSONField(
         verbose_name=_('Filters'),
         blank=True,
@@ -231,6 +239,9 @@ class ExcelDownload(MetaInformationAbstractModel):
             self.DOWNLOAD_TYPES.COUNTRY: apps.get_model('country', 'Country'),
             self.DOWNLOAD_TYPES.ENTRY: apps.get_model('entry', 'Entry'),
             self.DOWNLOAD_TYPES.FIGURE: apps.get_model('entry', 'Figure'),
+            self.DOWNLOAD_TYPES.ORGANIZATION: apps.get_model('organization', 'Organization'),
+            self.DOWNLOAD_TYPES.CONTACT: apps.get_model('contact', 'Contact'),
+            self.DOWNLOAD_TYPES.REPORT: apps.get_model('report', 'Report'),
         }
         model = mapper.get(self.download_type)
         if not model:
