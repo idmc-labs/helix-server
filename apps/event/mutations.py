@@ -4,7 +4,7 @@ from django.utils.translation import gettext
 
 from apps.contrib.serializers import ExcelDownloadSerializer
 from apps.event.models import Event, Actor
-from apps.event.filters import EventFilter
+from apps.event.filters import ActorFilter, EventFilter
 from apps.event.schema import EventType, ActorType
 from apps.event.serializers import (
     EventSerializer,
@@ -198,6 +198,33 @@ class ExportEvents(graphene.Mutation):
         return ExportEvents(errors=None, ok=True)
 
 
+class ExportActors(graphene.Mutation):
+    class Meta:
+        arguments = get_filtering_args_from_filterset(
+            ActorFilter,
+            ActorType
+        )
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+
+    @staticmethod
+    def mutate(root, info, **kwargs):
+        from apps.contrib.models import ExcelDownload
+
+        serializer = ExcelDownloadSerializer(
+            data=dict(
+                download_type=int(ExcelDownload.DOWNLOAD_TYPES.ACTOR),
+                filters=kwargs,
+            ),
+            context=dict(request=info.context.request)
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return ExportActors(errors=errors, ok=False)
+        serializer.save()
+        return ExportActors(errors=None, ok=True)
+
+
 class Mutation(object):
     create_event = CreateEvent.Field()
     update_event = UpdateEvent.Field()
@@ -205,4 +232,6 @@ class Mutation(object):
     create_actor = CreateActor.Field()
     update_actor = UpdateActor.Field()
     delete_actor = DeleteActor.Field()
+    # exports
     export_events = ExportEvents.Field()
+    export_actors = ExportActors.Field()

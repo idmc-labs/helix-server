@@ -1,6 +1,6 @@
 import django_filters
 
-from apps.event.models import Event
+from apps.event.models import Actor, Event
 from apps.crisis.models import Crisis
 from apps.report.models import Report
 from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
@@ -57,3 +57,11 @@ class EventFilter(NameFilterMixin,
         return super().qs.annotate(
             **Event._total_figure_disaggregation_subquery(),
         )
+
+
+class ActorFilter(django_filters.FilterSet):
+    class Meta:
+        model = Actor
+        fields = {
+            'name': ['icontains']
+        }

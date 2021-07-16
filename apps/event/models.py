@@ -66,6 +66,34 @@ class Actor(MetaInformationAbstractModel, NameAttributedModels):
     # NOTE: torg is used to map actors in the system to it's external source
     torg = models.CharField(verbose_name=_('Torg'), max_length=10, null=True)
 
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.event.filters import ActorFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='Id',
+            name='Name',
+            country__iso3='ISO3',
+            torg='TORG',
+            created_at='Created At',
+            created_by__full_name='Created By',
+        )
+        data = ActorFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.order_by('id')
+
+        return {
+            'headers': headers,
+            'data': data.values(*[header for header in headers.keys()]),
+            'formulae': None,
+            'transformer': None,
+        }
+
 
 # Models related to displacement caused by disaster
 
