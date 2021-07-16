@@ -1,6 +1,7 @@
 from copy import copy
 from datetime import date, timedelta
 from uuid import uuid4
+from unittest.mock import patch
 
 from django.test import RequestFactory
 
@@ -283,8 +284,6 @@ class TestEntrySerializer(HelixTestCase):
         self.assertIn('figures', serializer.errors)
         self.assertIn('geo_locations', serializer.errors['figures'][0].keys())
 
-    # TODO: test entry serializer validation for figure household size
-
     def test_entry_event_with_incoherent_dates_in_figure(self):
         c1 = CountryFactory.create()
         c2 = CountryFactory.create()
@@ -372,6 +371,71 @@ class TestEntrySerializer(HelixTestCase):
             partial=True
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    @patch('apps.entry.serializers.Entry')
+    def test_limit_entry_figures_count(self, Entry):
+        Entry.FIGURES_PER_ENTRY = 1
+
+        # one figure is allowed
+        source1 = dict(
+            uuid=str(uuid4()),
+            rank=101,
+            country=str(self.country.name),
+            country_code=self.country.iso2,
+            osm_id='ted',
+            osm_type='okay',
+            display_name='okay',
+            lat=68.88,
+            lon=46.66,
+            name='name',
+            accuracy=OSMName.OSM_ACCURACY.COUNTRY.value,
+            identifier=OSMName.IDENTIFIER.ORIGIN.value,
+        )
+        flow = FigureCategory.flow_new_displacement_id()
+        figures = [{
+            "uuid": str(uuid4()),
+            "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
+            "reported": 10,
+            "category": flow.id,
+            "country": str(self.country.id),
+            "unit": Figure.UNIT.PERSON.value,
+            "term": FigureTerm.objects.first().id,
+            "role": Figure.ROLE.RECOMMENDED.value,
+            "start_date": "2020-09-09",
+            "include_idu": False,
+            "geo_locations": [source1],
+        }]
+        self.data['figures'] = figures
+
+        serializer = EntryCreateSerializer(instance=None,
+                                           data=self.data,
+                                           context={'request': self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        # more figures are not allowed
+        source2 = copy(source1)
+        source2['uuid'] = str(uuid4())
+
+        figures = figures.append({
+            "uuid": str(uuid4()),
+            "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
+            "reported": 10,
+            "category": flow.id,
+            "country": str(self.country.id),
+            "unit": Figure.UNIT.PERSON.value,
+            "term": FigureTerm.objects.first().id,
+            "role": Figure.ROLE.RECOMMENDED.value,
+            "start_date": "2020-09-09",
+            "include_idu": False,
+            "geo_locations": [source1],
+        })
+        self.data['figures'] = figures
+
+        serializer = EntryCreateSerializer(instance=None,
+                                           data=self.data,
+                                           context={'request': self.request})
+        self.assertFalse(serializer.is_valid())
+        self.assertIn('figures', serializer.errors)
 
 
 class TestFigureSerializer(HelixTestCase):

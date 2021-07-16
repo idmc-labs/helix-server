@@ -692,6 +692,8 @@ class EntryReviewer(MetaInformationAbstractModel, models.Model):
 
 
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
+    FIGURES_PER_ENTRY = 50
+
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
     IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
