@@ -24,6 +24,7 @@ from graphene_file_upload.django import FileUploadGraphQLView
 
 from . import api_urls as rest_urls
 from utils.graphene.context import GQLContext
+from django_otp.admin import OTPAdminSite
 
 
 class CustomGraphQLView(FileUploadGraphQLView):
@@ -48,6 +49,10 @@ class CustomGraphQLView(FileUploadGraphQLView):
 
 
 CustomGraphQLView.graphiql_template = "graphene_graphiql_explorer/graphiql.html"
+
+# Enable OTP in produciton
+# if not settings.DEBUG:
+admin.site.__class__ = OTPAdminSite
 
 urlpatterns = [
     path('admin/', admin.site.urls),

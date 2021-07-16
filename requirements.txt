@@ -33,5 +33,5 @@ selenium==3.141.0
 sentry-sdk>=0.10,<0.20
 six==1.15
 turfpy==0.0.6
-
+django-otp[qrcode]==1.0.6
 uwsgi
