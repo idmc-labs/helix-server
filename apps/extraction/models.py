@@ -120,6 +120,11 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
+    filter_figure_terms = models.ManyToManyField(
+        'entry.FigureTerm',
+        verbose_name=_('Figure Term'),
+        blank=True,
+    )
 
     @property
     def extract_figures(self) -> ['Figure']:  # noqa

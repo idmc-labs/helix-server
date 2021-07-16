@@ -40,6 +40,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_entry_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
     filter_figure_sex_types = StringListFilter(method='filter_by_figure_sex_types')
+    filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
 
     # used in report entry table
     report = df.CharFilter(method='filter_report')
@@ -88,6 +89,11 @@ class EntryExtractionFilterSet(df.FilterSet):
     def filter_publishers(self, qs, name, value):
         if value:
             return qs.filter(publishers__in=value).distinct()
+        return qs
+
+    def filter_by_figure_terms(self, qs, name, value):
+        if value:
+            return qs.filter(figures__term__in=value).distinct()
         return qs
 
     def filter_filter_figure_categories(self, qs, name, value):
@@ -189,6 +195,7 @@ class FigureExtractionFilterSet(df.FilterSet):
     filter_entry_created_by = IDListFilter(field_name='entry__created_by', lookup_expr='in')
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
     filter_figure_sex_types = StringListFilter(method='filter_by_figure_sex_types')
+    filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
 
     # used in report entry table
     report = df.CharFilter(method='filter_report')
@@ -309,6 +316,11 @@ class FigureExtractionFilterSet(df.FilterSet):
         if URBAN in value:
             query_expr = query_expr | models.Q(disaggregation_displacement_urban__gt=0)
         return qs.filter(query_expr)
+
+    def filter_by_figure_terms(self, qs, name, value):
+        if value:
+            return qs.filter(term__in=value).distinct()
+        return qs
 
     @property
     def qs(self):
