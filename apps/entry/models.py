@@ -423,13 +423,19 @@ class Figure(MetaInformationArchiveAbstractModel,
         cls,
         qs: QuerySet,
         start_date: Optional[date],
-        end_date: Optional[date],
+        end_date: Optional[date] = None,
     ):
-        if end_date:
-            qs = qs.filter(
-                category=FigureCategory.flow_new_displacement_id(),
+        end_date = end_date or date.today()
+        qs = qs.filter(
+            models.Q(
+                end_date__isnull=False,
                 end_date__lte=end_date,
+            ) | models.Q(
+                end_date__isnull=True,
             )
+        ).filter(
+            category=FigureCategory.flow_new_displacement_id(),
+        )
         if start_date:
             qs = qs.filter(
                 category=FigureCategory.flow_new_displacement_id(),
@@ -447,10 +453,12 @@ class Figure(MetaInformationArchiveAbstractModel,
 
         end_date = end_date or date.today()
         qs = qs.filter(
-            category=FigureCategory.stock_idp_id(),
+            start_date__isnull=False,
             start_date__lte=end_date,
+        ).filter(
+            category=FigureCategory.stock_idp_id(),
         ).exclude(
-            # TODO: Will come from https://github.com/idmc-labs/Helix2.0/issues/49
+            # TODO: New changes have been recommended... Needs implementing
             entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
         ).filter(
             Q(
@@ -800,11 +808,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
-        figures = figures or Figure.objects.all()
+        figures1 = figures or Figure.objects.all()
+        figures2 = figures or Figure.objects.all()
         return {
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
-                    figures.filter(
+                    figures1.filter(
                         entry=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
@@ -817,7 +826,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             ),
             cls.IDP_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_idp_figures(
-                    figures.filter(
+                    figures2.filter(
                         entry=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),

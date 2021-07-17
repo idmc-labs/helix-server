@@ -2,6 +2,7 @@ from copy import copy
 import json
 from uuid import uuid4
 
+from apps.crisis.models import Crisis
 from apps.entry.models import (
     Figure,
     FigureTerm,
@@ -56,6 +57,9 @@ class TestEntryQuery(HelixGraphQLTestCase):
         self.random_fig_cat_id2 = str(self.random_fig_cat2.id)
         self.flow_fig_cat3 = FigureCategory.flow_new_displacement_id()
         self.flow_fig_cat_id3 = str(self.flow_fig_cat3.id)
+        # XXX: only conflict figures are considered in stock (as of now)
+        self.entry.event.event_type = Crisis.CRISIS_TYPE.CONFLICT
+        self.entry.event.save()
         figure1 = FigureFactory.create(entry=self.entry,
                                        category=self.stock_fig_cat,
                                        reported=101,
@@ -121,10 +125,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     result {
                         id
                         figures {
-                            results {
-                                id
-                            }
-                            totalCount
+                            id
                         }
                         reviewers {
                             results {
@@ -207,9 +208,9 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertTrue(content['data']['createEntry']['ok'], content)
         self.assertIsNone(content['data']['createEntry']['errors'], content)
         self.assertIsNotNone(content['data']['createEntry']['result']['id'])
-        self.assertEqual(content['data']['createEntry']['result']['figures']['totalCount'],
+        self.assertEqual(len(content['data']['createEntry']['result']['figures']),
                          len(figures))
-        self.assertIsNotNone(content['data']['createEntry']['result']['figures']['results'][0]['id'])
+        self.assertIsNotNone(content['data']['createEntry']['result']['figures'][0]['id'])
 
     def test_assert_nested_figures_errors(self):
         uuid = str(uuid4())
@@ -411,15 +412,13 @@ class TestEntryUpdate(HelixGraphQLTestCase):
             result {
               id
               figures {
-                results {
-                  id
-                  createdAt
-                  disaggregationAgeJson {
-                    uuid
-                    category {
-                      id
-                      name
-                    }
+                id
+                createdAt
+                disaggregationAgeJson {
+                  uuid
+                  category {
+                    id
+                    name
                   }
                 }
               }
