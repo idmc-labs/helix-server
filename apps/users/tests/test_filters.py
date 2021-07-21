@@ -39,7 +39,7 @@ class TestUserFilter(HelixTestCase):
         self.assertEqual([each for each in filtered], [u2])
 
         data['include_inactive'] = True
-        filtered = UserFilter(data).qs
+        filtered = UserFilter(data).qs.order_by('pk')
         self.assertEqual([each for each in filtered], [u1, u2])
 
     def test_filter_user_by_role(self):
