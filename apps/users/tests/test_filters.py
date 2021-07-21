@@ -1,7 +1,12 @@
 from apps.users.filters import UserFilter
 from apps.users.enums import USER_ROLE
+from apps.users.models import Portfolio
 from utils.tests import HelixTestCase, create_user_with_role
-from utils.factories import UserFactory, MonitoringSubRegionFactory
+from utils.factories import (
+    UserFactory,
+    CountryFactory,
+    MonitoringSubRegionFactory
+)
 
 
 class TestUserFilter(HelixTestCase):
@@ -40,6 +45,18 @@ class TestUserFilter(HelixTestCase):
     def test_filter_user_by_role(self):
         u1 = create_user_with_role(role=USER_ROLE.ADMIN.name)
         u2 = create_user_with_role(role=USER_ROLE.REGIONAL_COORDINATOR.name)
+
+        c1 = CountryFactory.create()
+        u3 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT.name,
+                                   monitoring_sub_region=c1.monitoring_sub_region.id,
+                                   country=c1.id)
+        for country in CountryFactory.create_batch(5):
+            Portfolio.objects.create(
+                user=u3,
+                role=USER_ROLE.MONITORING_EXPERT,
+                monitoring_sub_region=country.monitoring_sub_region,
+                country=country,
+            )
         qs = UserFilter(
             data=dict(
                 role_in=[USER_ROLE.ADMIN.name]
@@ -55,6 +72,17 @@ class TestUserFilter(HelixTestCase):
         ).qs
         self.assertIn(u2, qs)
         self.assertNotIn(u1, qs)
+
+        # test for monitoring expert
+        qs = UserFilter(
+            data=dict(
+                role_in=[USER_ROLE.MONITORING_EXPERT.name]
+            )
+        ).qs
+        self.assertIn(u3, qs)
+        self.assertEqual(1, len(qs))
+        self.assertNotIn(u1, qs)
+        self.assertNotIn(u2, qs)
 
     def test_filter_user_by_monitoring_sub_region(self):
         u1 = create_user_with_role(role=USER_ROLE.ADMIN.name)
