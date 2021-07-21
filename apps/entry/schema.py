@@ -110,9 +110,10 @@ class FigureTermType(DjangoObjectType):
 class FigureTermListType(CustomDjangoListObjectType):
     class Meta:
         model = FigureTerm
-        filter_fields = (
-            'is_housing_related',
-        )
+        filter_fields = {
+            'is_housing_related': ('exact',),
+            'name': ('icontains',),
+        }
 
 
 class FigureType(DjangoObjectType):
