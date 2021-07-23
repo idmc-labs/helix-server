@@ -80,6 +80,11 @@ THIRD_PARTY_APPS = [
     'graphene_graphiql_explorer',
     'graphiql_debug_toolbar',
     'rest_framework',
+    'django_otp',
+    'django_otp.plugins.otp_static',
+    'django_otp.plugins.otp_email',
+    'django_otp.plugins.otp_totp',
+    'django_otp.plugins.otp_hotp',
 ]
 
 INSTALLED_APPS = [
@@ -103,6 +108,7 @@ MIDDLEWARE = [
     # 'utils.middleware.DebugToolbarMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django_otp.middleware.OTPMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
 if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
@@ -396,3 +402,9 @@ EXCEL_EXPORT_PENDING_STATE_TIMEOUT = 18_000  # seconds
 # staying in progress for too long will be moved to killed
 EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT = 600  # seconds
 EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT = 3
+
+OTP_TOTP_ISSUER = 'IDMC'
+OTP_HOTP_ISSUER = 'IDMC'
+OTP_EMAIL_SENDER = DEFAULT_FROM_EMAIL
+OTP_EMAIL_SUBJECT = 'IDMC OTP Token'
+OTP_EMAIL_BODY_TEMPLATE_PATH = 'emails/otp.html'

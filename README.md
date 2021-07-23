@@ -44,3 +44,8 @@ This will create appropriate buckets with required policies based on the `.env`.
 ```bash
 sh deploy/scripts/s3_bucket_setup.sh
 ```
+
+## To enable two factor authentication (generate statictoken) of admin user from command line
+```bash
+python manage.py addstatictoken -t 123456 "admin@idmcdb.org"
+```
