@@ -2,6 +2,7 @@ from collections import OrderedDict
 from datetime import date
 import logging
 from typing import Optional, List
+from uuid import uuid4
 
 from django.core.cache import cache
 from django.contrib.auth import get_user_model
@@ -91,6 +92,9 @@ class OSMName(UUIDAbstractModel, models.Model):
             DESTINATION: _('Destination'),
         }
 
+    # default unique behaviour is removed
+    uuid = models.UUIDField(verbose_name='UUID',
+                            blank=True, default=uuid4)
     # external API fields
     wikipedia = models.TextField(verbose_name=_('Wikipedia'),
                                  blank=True,
@@ -328,6 +332,8 @@ class Figure(MetaInformationArchiveAbstractModel,
             UNKNOWN: _('Unknown'),
         }
 
+    uuid = models.UUIDField(verbose_name='UUID',
+                            blank=True, default=uuid4)
     entry = models.ForeignKey('Entry', verbose_name=_('Entry'),
                               related_name='figures', on_delete=models.CASCADE)
     # to keep track of the old sub facts

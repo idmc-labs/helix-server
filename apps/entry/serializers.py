@@ -366,13 +366,16 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
     def validate_figures(self, figures):
         uuids = [figure['uuid'] for figure in figures]
         if len(uuids) != len(set(uuids)):
-            raise serializers.ValidationError('Duplicate keys found. ')
+            raise serializers.ValidationError(gettext('Duplicate keys found. '))
+        geo_uuids = [loc['uuid'] for figure in figures for loc in figure.get('geo_locations', [])]
+        if len(geo_uuids) != len(set(geo_uuids)):
+            raise serializers.ValidationError(gettext('Duplicate geolocation keys found. '))
         if self.instance:
             if {each['id'] for each in figures if 'id' in each}.difference(
                     list(self.instance.figures.values_list('id', flat=True))
             ):
-                raise serializers.ValidationError('Some figures you are trying to update does'
-                                                  'not exist.')
+                raise serializers.ValidationError(gettext('Some figures you are trying to update does'
+                                                  'not exist.'))
         return figures
 
     def validate(self, attrs: dict) -> dict:
