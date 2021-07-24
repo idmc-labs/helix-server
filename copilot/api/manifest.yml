@@ -44,8 +44,10 @@ variables:                    # Pass environment variables as key value pairs.
 # You can override any of the values defined above by environment.
 environments:
   test:
+    cpu: 256
+    memory: 1024
     count:
-      range: 1-4
+      range: 1-2
       cpu_percentage: 80
       memory_percentage: 80
       requests: 1000
