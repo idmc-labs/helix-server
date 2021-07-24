@@ -18,7 +18,12 @@ from apps.entry.enums import (
     IdentifierGrapheneEnum,
     DisaggregatedAgeSexGrapheneEnum,
 )
-from apps.entry.filters import EntryFilter, EntryReviewerFilter, OSMNameFilter
+from apps.entry.filters import (
+    EntryFilter,
+    EntryReviewerFilter,
+    OSMNameFilter,
+    FigureTermFilter,
+)
 from apps.entry.models import (
     Figure,
     FigureTag,
@@ -110,10 +115,7 @@ class FigureTermType(DjangoObjectType):
 class FigureTermListType(CustomDjangoListObjectType):
     class Meta:
         model = FigureTerm
-        filter_fields = {
-            'is_housing_related': ('exact',),
-            'name': ('icontains',),
-        }
+        filterset_class = FigureTermFilter
 
 
 class FigureType(DjangoObjectType):

@@ -5,8 +5,13 @@ from apps.entry.models import (
     EntryReviewer,
     OSMName,
     Figure,
+    FigureTerm,
 )
-from utils.filters import StringListFilter, IDListFilter
+from utils.filters import (
+    StringListFilter,
+    IDListFilter,
+    NameFilterMixin,
+)
 
 
 class OSMNameFilter(df.FilterSet):
@@ -114,3 +119,13 @@ class EntryReviewerFilter(df.FilterSet):
             # map enum names to values
             return queryset.filter(status__in=[EntryReviewer.REVIEW_STATUS.get(each) for each in value])
         return queryset
+
+
+class FigureTermFilter(NameFilterMixin, df.FilterSet):
+    name = df.CharFilter(method='_filter_name')
+
+    class Meta:
+        model = FigureTerm
+        fields = {
+            'is_housing_related': ('exact',),
+        }
