@@ -6,10 +6,10 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /code
 
-COPY ./Pipfile* /code
-RUN python3 -m pip install --upgrade pip \
-    && pipenv lock --keep-outdated --requirements > requirements.txt
-    && pip install -r requirements.txt
+COPY Pipfile Pipfile.lock /code
+RUN pip install --upgrade --no-cache-dir pip pipenv \
+    && pipenv install --dev --system --deploy \
+    && pip uninstall -y pipenv virtualenv-clone virtualenv
 
 COPY . /code/
 
