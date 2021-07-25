@@ -52,11 +52,13 @@ class TestExtractionFilter(HelixTestCase):
         self.entry1ev1 = EntryFactory.create(event=self.event1crisis1)
         self.entry1ev1.tags.set([self.tag1, self.tag2])
         FigureFactory.create(entry=self.entry1ev1,
-                             country=self.country2reg2)
+                             country=self.country2reg2,
+                             disaggregation_displacement_rural=100)
         self.entry2ev1 = EntryFactory.create(event=self.event1crisis1)
         self.entry2ev1.tags.set([self.tag3])
         FigureFactory.create(entry=self.entry2ev1,
-                             country=self.country2reg2)
+                             country=self.country2reg2,
+                             disaggregation_displacement_urban=100)
         self.entry3ev2 = EntryFactory.create(event=self.event2crisis1)
         self.entry3ev2.tags.set([self.tag2])
         FigureFactory.create(entry=self.entry3ev2,
@@ -142,6 +144,28 @@ class TestExtractionFilter(HelixTestCase):
         )
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1ev1, self.entry3ev2})
+
+    def test_filter_by_displacement_types(self):
+        data = dict(
+            filter_figure_displacement_types=['RURAL']
+        )
+        fqs = f(data=data).qs
+        self.assertEqual(set(fqs), {self.entry1ev1})
+        self.assertNotIn(self.entry3ev2, fqs)
+
+        data = dict(
+            filter_figure_displacement_types=['URBAN']
+        )
+        fqs = f(data=data).qs
+        self.assertEqual(set(fqs), {self.entry2ev1})
+        self.assertNotIn(self.entry3ev2, fqs)
+
+        data = dict(
+            filter_figure_displacement_types=['URBAN', 'RURAL']
+        )
+        fqs = f(data=data).qs
+        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
+        self.assertNotIn(self.entry3ev2, fqs)
 
     def test_filter_by_time_frame(self):
         Figure.objects.all().delete()

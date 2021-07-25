@@ -25,6 +25,7 @@ from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
 from django_enumfield import enum
 
+from helix.settings import FIGURE_NUMBER
 from apps.contrib.models import (
     MetaInformationAbstractModel,
     UUIDAbstractModel,
@@ -190,6 +191,24 @@ class FigureCategory(models.Model):
 
 
 class FigureDisaggregationAbstractModel(models.Model):
+    class DISPLACEMENT_TYPE(enum.Enum):
+        RURAL = 0
+        URBAN = 1
+
+        __labels__ = {
+            RURAL: _("Rural"),
+            URBAN: _("Urban"),
+        }
+
+    class GENDER_TYPE(enum.Enum):
+        MALE = 0
+        FEMALE = 1
+
+        __labels__ = {
+            MALE: _("Male"),
+            FEMALE: _("Female"),
+        }
+
     # disaggregation information
     disaggregation_displacement_urban = models.PositiveIntegerField(
         verbose_name=_('Displacement/Urban'),
@@ -405,17 +424,22 @@ class Figure(MetaInformationArchiveAbstractModel,
         cls,
         qs: QuerySet,
         start_date: Optional[date],
-        end_date: Optional[date],
+        end_date: Optional[date] = None,
     ):
+        end_date = end_date or date.today()
         qs = qs.filter(
+            models.Q(
+                end_date__isnull=False,
+                end_date__lte=end_date,
+            ) | models.Q(
+                end_date__isnull=True,
+            )
+        ).filter(
             category=FigureCategory.flow_new_displacement_id(),
         )
-        if end_date:
-            qs = qs.filter(
-                end_date__lte=end_date,
-            )
         if start_date:
             qs = qs.filter(
+                category=FigureCategory.flow_new_displacement_id(),
                 end_date__gte=start_date,
             )
         return qs
@@ -430,10 +454,12 @@ class Figure(MetaInformationArchiveAbstractModel,
 
         end_date = end_date or date.today()
         qs = qs.filter(
-            category=FigureCategory.stock_idp_id(),
+            start_date__isnull=False,
             start_date__lte=end_date,
+        ).filter(
+            category=FigureCategory.stock_idp_id(),
         ).exclude(
-            # TODO: Will come from https://github.com/idmc-labs/Helix2.0/issues/49
+            # TODO: New changes have been recommended... Needs implementing
             entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
         ).filter(
             Q(
@@ -550,7 +576,10 @@ class Figure(MetaInformationArchiveAbstractModel,
             'created_by',
         ).prefetch_related(
             'geo_locations'
-        ).order_by('-entry', '-created_at').values(*[header for header in headers.keys()])
+        ).order_by(
+            '-entry',
+            '-created_at',
+        ).values(*[header for header in headers.keys()])
 
         def transformer(datum):
             return {
@@ -672,6 +701,8 @@ class EntryReviewer(MetaInformationAbstractModel, models.Model):
 
 
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
+    FIGURES_PER_ENTRY = FIGURE_NUMBER
+
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
     IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
@@ -778,11 +809,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
-        figures = figures or Figure.objects.all()
+        figures1 = figures or Figure.objects.all()
+        figures2 = figures or Figure.objects.all()
         return {
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
-                    figures.filter(
+                    figures1.filter(
                         entry=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
@@ -795,7 +827,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             ),
             cls.IDP_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_idp_figures(
-                    figures.filter(
+                    figures2.filter(
                         entry=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),

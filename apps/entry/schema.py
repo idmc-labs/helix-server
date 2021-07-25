@@ -163,10 +163,6 @@ class EntryType(DjangoObjectType):
     publishers = DjangoPaginatedListObjectField(OrganizationListType,
                                                 related_name='publishers',
                                                 reverse_related_name='published_entries')
-    figures = DjangoPaginatedListObjectField(FigureListType,
-                                             pagination=PageGraphqlPaginationWithoutCount(
-                                                 page_size_query_param='pageSize'
-                                             ))
     latest_reviews = graphene.List('apps.review.schema.ReviewType')
     reviewers = graphene.Dynamic(
         lambda: DjangoPaginatedListObjectField(

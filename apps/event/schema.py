@@ -17,7 +17,7 @@ from apps.event.models import (
     DisasterSubType,
     DisasterType
 )
-from apps.event.filters import EventFilter
+from apps.event.filters import ActorFilter, EventFilter
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
@@ -95,9 +95,7 @@ class ActorType(DjangoObjectType):
 class ActorListType(CustomDjangoListObjectType):
     class Meta:
         model = Actor
-        filter_fields = {
-            'name': ['icontains']
-        }
+        filterset_class = ActorFilter
 
 
 class DisasterSubObjectType(DjangoObjectType):

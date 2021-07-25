@@ -364,6 +364,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
         fields = '__all__'
 
     def validate_figures(self, figures):
+        if len(figures) > Entry.FIGURES_PER_ENTRY:
+            raise serializers.ValidationError(
+                gettext('Too many figures. Limit is %s. Please contact the administrator.' % Entry.FIGURES_PER_ENTRY)
+            )
         uuids = [figure['uuid'] for figure in figures]
         if len(uuids) != len(set(uuids)):
             raise serializers.ValidationError(gettext('Duplicate keys found. '))

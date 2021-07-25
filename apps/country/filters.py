@@ -10,6 +10,7 @@ from apps.country.models import (
     GeographicalGroup,
     MonitoringSubRegion,
 )
+from apps.report.models import Report
 from utils.filters import StringListFilter, NameFilterMixin
 
 
@@ -42,12 +43,22 @@ class CountryFilter(django_filters.FilterSet):
     region_by_ids = StringListFilter(method='filter_regions')
     geo_group_by_ids = StringListFilter(method='filter_geo_groups')
 
+    # used in report country table
+    report = django_filters.CharFilter(method='filter_report')
+
     class Meta:
         model = Country
         fields = {
             'iso3': ['icontains'],
             'id': ['iexact'],
         }
+
+    def filter_report(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(
+            id__in=Report.objects.get(id=value).report_figures.values('country')
+        )
 
     def _filter_name(self, queryset, name, value):
         if not value:

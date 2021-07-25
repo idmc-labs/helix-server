@@ -8,7 +8,12 @@ from apps.extraction.models import (
     ExtractionQuery,
 )
 from apps.entry.schema import EntryListType
-from apps.entry.enums import RoleGrapheneEnum
+from apps.entry.enums import (
+    RoleGrapheneEnum,
+    GenderTypeGrapheneEnum,
+    DisplacementTypeGrapheneEnum,
+    EntryReviewerGrapheneEnum,
+)
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
@@ -27,6 +32,9 @@ class ExtractionQueryObjectType(DjangoObjectType):
                                              ), accessor='entries')
     filter_figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
     filter_event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
+    filter_figure_sex_types = graphene.List(graphene.NonNull(GenderTypeGrapheneEnum))
+    filter_figure_displacement_types = graphene.List(graphene.NonNull(DisplacementTypeGrapheneEnum))
+    filter_entry_review_status = graphene.List(graphene.NonNull(EntryReviewerGrapheneEnum))
 
 
 class ExtractionQueryListType(CustomDjangoListObjectType):

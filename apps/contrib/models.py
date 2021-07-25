@@ -195,6 +195,7 @@ class ExcelDownload(MetaInformationAbstractModel):
         ORGANIZATION = 5
         CONTACT = 6
         REPORT = 7
+        ACTOR = 8
 
     started_at = models.DateTimeField(
         verbose_name=_('Started at'),
@@ -242,6 +243,7 @@ class ExcelDownload(MetaInformationAbstractModel):
             self.DOWNLOAD_TYPES.ORGANIZATION: apps.get_model('organization', 'Organization'),
             self.DOWNLOAD_TYPES.CONTACT: apps.get_model('contact', 'Contact'),
             self.DOWNLOAD_TYPES.REPORT: apps.get_model('report', 'Report'),
+            self.DOWNLOAD_TYPES.ACTOR: apps.get_model('event', 'Actor'),
         }
         model = mapper.get(self.download_type)
         if not model:
