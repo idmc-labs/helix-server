@@ -25,6 +25,7 @@ from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
 from django_enumfield import enum
 
+from helix.settings import FIGURE_NUMBER
 from apps.contrib.models import (
     MetaInformationAbstractModel,
     UUIDAbstractModel,
@@ -700,7 +701,7 @@ class EntryReviewer(MetaInformationAbstractModel, models.Model):
 
 
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
-    FIGURES_PER_ENTRY = 50
+    FIGURES_PER_ENTRY = FIGURE_NUMBER
 
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
