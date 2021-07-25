@@ -64,7 +64,7 @@ class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
     @property
     def qs(self):
         # to get the highest role
-        return super().qs.prefetch_related('portfolios')
+        return super().qs.prefetch_related('portfolios').distinct()
 
 
 class PortfolioFilter(django_filters.FilterSet):
