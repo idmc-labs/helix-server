@@ -437,6 +437,15 @@ class TestEntrySerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('figures', serializer.errors)
 
+    def test_idmc_analysis_should_be_non_required_field(self):
+        self.data['idmc_analysis'] = None
+        serializer = EntryCreateSerializer(data=self.data,
+                                           context={'request': self.request})
+        self.assertTrue(serializer.is_valid())
+        self.assertNotIn('idmc_analysis', serializer.errors)
+        entry_obj = serializer.save()
+        self.assertEqual(entry_obj.idmc_analysis, None)
+
 
 class TestFigureSerializer(HelixTestCase):
     def setUp(self):
