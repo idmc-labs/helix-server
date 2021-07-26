@@ -454,6 +454,14 @@ class TestEntrySerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('calculation_logic', serializer.errors)
 
+        self.data['calculation_logic'] = 'calculation logic text'
+        serializer = EntryCreateSerializer(data=self.data,
+                                           context={'request': self.request})
+        self.assertTrue(serializer.is_valid())
+        self.assertNotIn('calculation_logic', serializer.errors)
+        entry_obj = serializer.save()
+        self.assertEqual(entry_obj.calculation_logic, 'calculation logic text')
+
 
 class TestFigureSerializer(HelixTestCase):
     def setUp(self):
