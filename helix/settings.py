@@ -193,6 +193,9 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+    {
+        'NAME': 'apps.users.password_validation.MaximumLengthValidator',
+    },
 ]
 
 
@@ -409,3 +412,6 @@ OTP_HOTP_ISSUER = 'IDMC'
 OTP_EMAIL_SENDER = DEFAULT_FROM_EMAIL
 OTP_EMAIL_SUBJECT = 'IDMC OTP Token'
 OTP_EMAIL_BODY_TEMPLATE_PATH = 'emails/otp.html'
+
+# Maxium password length
+MAX_PASSWORD_LENGTH = int(os.environ.get('MAX_PASSWORD_LENGTH', 255))
