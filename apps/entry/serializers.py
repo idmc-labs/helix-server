@@ -382,6 +382,13 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                                                   'not exist.'))
         return figures
 
+    def validate_calculation_logic(self, value):
+        errors = OrderedDict()
+        if not value:
+            errors['calculation_logic'] = gettext('This field is required.')
+            raise serializers.ValidationError(errors)
+        return value
+
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
         errors = OrderedDict()
