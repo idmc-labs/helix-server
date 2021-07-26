@@ -1,13 +1,12 @@
 from django.core.exceptions import ValidationError
 from django.utils.translation import ngettext
-from django.conf import settings
 
 
 class MaximumLengthValidator:
     """
     Validate whether the password is of a maximum length.
     """
-    def __init__(self, max_length=settings.MAX_PASSWORD_LENGTH):
+    def __init__(self, max_length=255):
         self.max_length = max_length
 
     def validate(self, password, user=None):
