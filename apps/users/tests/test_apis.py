@@ -309,6 +309,22 @@ class TestChangePassword(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         assert validate.is_called()
 
+    @override_settings(
+        AUTH_PASSWORD_VALIDATORS=[{'NAME': 'apps.users.password_validation.MaximumLengthValidator'}],
+    )
+    def test_maximum_password_length_validation(self):
+        self.force_login(self.user)
+        response = self.query(
+            self.change_query,
+            variables={
+                'oldPassword': self.user.raw_password,
+                'newPassword': '1W#$' * 100,
+            },
+        )
+        content = json.loads(response.content)
+        self.assertIsNotNone(content['data']['changePassword']['errors'])
+        self.assertIn("newPassword", content['data']['changePassword']['errors'][0]["field"])
+
 
 @mock.patch('apps.users.serializers.validate_hcaptcha')
 class TestRegister(HelixGraphQLTestCase):
@@ -354,6 +370,20 @@ class TestRegister(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertIsNotNone(content['data']['register']['errors'])
         self.assertIn('email', [each['field'] for each in content['data']['register']['errors']])
+
+    @override_settings(
+        AUTH_PASSWORD_VALIDATORS=[{'NAME': 'apps.users.password_validation.MaximumLengthValidator'}],
+    )
+    def test_maximum_password_length_validation(self, validate_captcha):
+        validate_captcha.return_value = True
+        self.input['password'] = '#$@DFR$' * 100
+        response = self.query(
+            self.register,
+            input_data=self.input,
+        )
+        content = json.loads(response.content)
+        self.assertIsNotNone(content['data']['register']['errors'])
+        self.assertIn("password", content['data']['register']['errors'][0]["field"])
 
 
 class TestActivate(HelixGraphQLTestCase):
