@@ -76,12 +76,14 @@ class OSMName(UUIDAbstractModel, models.Model):
         STATE = 1
         COUNTY = 2
         POINT = 3
+        CATEGORY = 4
 
         __labels__ = {
-            COUNTRY: _('Country'),
-            STATE: _('State/District'),
-            COUNTY: _('County/City/Town/Village/Hamlet'),
+            COUNTRY: _('Country/territory (AM0)'),
+            STATE: _('State/Region/Province (ADM1)'),
+            COUNTY: _('County/City/town/Village/Woreda (ADM3)'),
             POINT: _('Point'),
+            CATEGORY: _('District/Zone/Department (ADM2)'),
         }
 
     class IDENTIFIER(enum.Enum):
