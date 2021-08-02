@@ -73,17 +73,17 @@ class DisaggregatedAgeCategory(models.Model):
 class OSMName(UUIDAbstractModel, models.Model):
     class OSM_ACCURACY(enum.Enum):
         COUNTRY = 0
-        STATE = 1
-        COUNTY = 2
+        ADM1 = 1
+        ADM3 = 2
         POINT = 3
-        CATEGORY = 4
+        ADM2 = 4
 
         __labels__ = {
             COUNTRY: _('Country/territory (AM0)'),
-            STATE: _('State/Region/Province (ADM1)'),
-            COUNTY: _('County/City/town/Village/Woreda (ADM3)'),
+            ADM1: _('State/Region/Province (ADM1)'),
+            ADM3: _('County/City/town/Village/Woreda (ADM3)'),
             POINT: _('Point'),
-            CATEGORY: _('District/Zone/Department (ADM2)'),
+            ADM2: _('District/Zone/Department (ADM2)'),
         }
 
     class IDENTIFIER(enum.Enum):
