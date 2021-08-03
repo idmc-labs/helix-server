@@ -15,6 +15,7 @@ from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
 from apps.users.models import User
+from django.contrib.postgres.fields import ArrayField
 
 
 class NameAttributedModels(models.Model):
@@ -153,8 +154,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     event_type = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Event Type'))
     other_sub_type = enum.EnumField(EVENT_OTHER_SUB_TYPE, verbose_name=_('Other subtypes'),
                                     blank=True, null=True)
-    glide_number = models.CharField(verbose_name=_('Glide Number'), max_length=256,
-                                    null=True, blank=True)
+    glide_numbers = ArrayField(
+        models.CharField(
+            verbose_name=_('Glide Number'), max_length=256, null=True, blank=True
+        ),
+        default=[],
+        null=True, blank=True
+    )
     # conflict related fields
     trigger = models.ForeignKey('Trigger', verbose_name=_('Trigger'),
                                 blank=True, null=True,
