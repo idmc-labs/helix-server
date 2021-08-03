@@ -16,7 +16,7 @@ class TestEventModel(HelixTestCase):
             "crisis": CrisisFactory(),
             "name": "Event1",
             "event_type": Crisis.CRISIS_TYPE.DISASTER,
-            "glide_number": "glide number",
+            "glide_numbers": ["glide number"],
             "disaster_sub_type": DisasterSubTypeFactory(),
         }
 
