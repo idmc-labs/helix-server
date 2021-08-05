@@ -174,6 +174,10 @@ class EventSerializer(MetaInformationSerializerMixin,
 
         self.validate_event_type_against_crisis_type(event_type, attrs)
 
+        for attr in ["start_date", "end_date", "event_narrative"]:
+            if not attrs.get(attr, None):
+                errors.update({attr: gettext('This field is required.')})
+
         return attrs
 
 

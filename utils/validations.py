@@ -21,14 +21,9 @@ def is_child_parent_dates_valid(
 
     if c_start_date and c_end_date and c_start_date > c_end_date:
         errors['start_date'] = gettext('Choose your start date earlier than end.')
-        errors['end_date'] = gettext('Choose your start date earlier than end.')
         return errors
     if c_start_date and p_start_date and p_start_date > c_start_date:
         errors['start_date'] = gettext('Choose your start date after %s.') % (
-            p_end_date
-        )
-    if c_end_date and p_end_date and c_end_date > p_end_date:
-        errors['end_date'] = gettext('Choose your end date before %s.') % (
             p_end_date
         )
     return errors
