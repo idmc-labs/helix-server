@@ -173,7 +173,7 @@ class EntryExtractionFilterSet(df.FilterSet):
         return qs.filter(query_expr).distinct()
 
 
-class FigureExtractionFilterSet(df.FilterSet):
+class BaseFigureExtractionFilterSet(df.FilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
     filter_figure_regions = IDListFilter(method='filter_regions')
     filter_figure_geographical_groups = IDListFilter(method='filter_geographical_groups')
@@ -184,8 +184,8 @@ class FigureExtractionFilterSet(df.FilterSet):
     filter_entry_publishers = IDListFilter(method='filter_publishers')
     filter_figure_categories = IDListFilter(method='filter_filter_figure_categories')
     filter_figure_category_types = StringListFilter(field_name='category__type', lookup_expr='in')
-    filter_figure_start_after = df.DateFilter(method='noop')
-    filter_figure_end_before = df.DateFilter(method='noop')
+    filter_figure_start_after = df.DateFilter(method='filter_time_frame_after')
+    filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
     filter_entry_tags = IDListFilter(method='filter_tags')
     filter_entry_article_title = df.CharFilter(field_name='entry__article_title', lookup_expr='icontains')
@@ -204,7 +204,16 @@ class FigureExtractionFilterSet(df.FilterSet):
         model = Figure
         fields = ['entry']
 
-    def noop(self, qs, *args):
+    def filter_time_frame_after(self, qs, name, value):
+        if value:
+            return qs.exclude(start_date__isnull=True)\
+                .filter(start_date__gte=value).distinct()
+        return qs
+
+    def filter_time_frame_before(self, qs, name, value):
+        if value:
+            return qs.exclude(end_date__isnull=True).\
+                filter(end_date__lt=value).distinct()
         return qs
 
     def filter_report(self, qs, name, value):
@@ -320,6 +329,15 @@ class FigureExtractionFilterSet(df.FilterSet):
     def filter_by_figure_terms(self, qs, name, value):
         if value:
             return qs.filter(term__in=value).distinct()
+        return qs
+
+
+class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
+
+    filter_figure_start_after = df.DateFilter(method='noop')
+    filter_figure_end_before = df.DateFilter(method='noop')
+
+    def noop(self, qs, *args):
         return qs
 
     @property
