@@ -338,6 +338,10 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
     filter_figure_end_before = df.DateFilter(method='noop')
 
     def noop(self, qs, *args):
+        """
+        NOTE: Return queryset as it is, don't apply filter here,
+        filter is handled in qs method
+        """
         return qs
 
     @property

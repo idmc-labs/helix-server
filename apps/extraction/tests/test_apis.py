@@ -160,4 +160,4 @@ class TestExtractionFigureList(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
-        self.assertEqual(content['data']["extractionFigureList"]["totalCount"], 3)
+        self.assertEqual(content["data"]["extractionFigureList"]["totalCount"], 3)
