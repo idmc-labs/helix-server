@@ -277,6 +277,23 @@ class TestEntryModel(HelixTestCase):
         e.refresh_from_db()
         assert e.review_status == EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
 
+    def test_should_remove_html_and_script_tags_from_text_field(self):
+        e = EntryFactory.create(created_by=self.editor)
+        html_data = '<html><body><h2>test</h2><p> test</p><p id="demo"> test</p><script></script></body></html>'
+        e.source_excerpt = html_data
+        e.save()
+        e.refresh_from_db()
+        print(e.source_excerpt)
+        self.assertEqual(e.source_excerpt, 'test test test')
+
+    def test_should_allow_special_chars_in_text_field(self):
+        e = EntryFactory.create(created_by=self.editor)
+        e.calculation_logic = '~!@#$%^&*<>?/'
+        e.save()
+        e.refresh_from_db()
+        print(e.source_excerpt)
+        self.assertEqual(e.calculation_logic, '~!@#$%^&*<>?/')
+
 
 class TestCloneEntry(HelixTestCase):
     def test_clone_relevant_fields_only(self):
