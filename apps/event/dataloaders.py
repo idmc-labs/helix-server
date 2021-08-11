@@ -105,3 +105,18 @@ class EventReviewCountLoader(DataLoader):
             list_to_dict.get(event_id, dict())
             for event_id in keys
         ])
+
+
+class EventEntryCountLoader(DataLoader):
+    def batch_load_fn(self, keys):
+        qs = Event.objects.filter(
+            id__in=keys
+        ).annotate(entry_count=Count('entries'))
+
+        batch_load = {
+            item['id']: item['entry_count']
+            for item in qs.values('id', 'entry_count')
+        }
+        return Promise.resolve([
+            batch_load.get(key) for key in keys
+        ])
