@@ -5,7 +5,6 @@ from django.core.cache import cache
 from django.db.models import FileField, TextField
 from django.db.models.fields.files import FieldFile
 from html import unescape
-from django.utils.html import strip_tags
 
 
 class CachedFieldFile(FieldFile):
@@ -35,7 +34,7 @@ class BleachedTextField(TextField):
     def get_db_prep_value(self, *args, **kwargs):
         value = super().get_db_prep_value(*args, **kwargs)
         if isinstance(value, str):
-            return unescape(bleach.clean(strip_tags(value)))
+            return unescape(bleach.clean(value, strip=True))
         return value
 
 
