@@ -196,7 +196,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
     filter_figure_sex_types = StringListFilter(method='filter_by_figure_sex_types')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
-    event = df.NumberFilter(field_name='entry__event', lookup_expr='exact')
+    event = df.CharFilter(field_name='entry__event', lookup_expr='exact')
 
     # used in report entry table
     report = df.CharFilter(method='filter_report')
