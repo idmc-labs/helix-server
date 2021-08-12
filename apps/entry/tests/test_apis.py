@@ -732,3 +732,45 @@ class TestExportEntry(HelixGraphQLTestCase):
             variables=self.variables
         )
         self.assertResponseNoErrors(response)
+
+
+class TestFigureDelete(HelixGraphQLTestCase):
+
+    def setUp(self) -> None:
+        self.country = CountryFactory.create()
+        self.country_id = str(self.country.id)
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.entry = EntryFactory.create(
+            created_by=self.editor
+        )
+        self.figure = FigureFactory.create(
+            entry=self.entry,
+            reported=101,
+            role=Figure.ROLE.RECOMMENDED,
+            unit=Figure.UNIT.PERSON
+        )
+        self.mutation = """
+            mutation DeleteFigure($id: ID!) {
+                deleteFigure(id: $id) {
+                    ok
+                    errors
+                    result {
+                        id
+                    }
+                }
+            }
+        """
+        self.variables = {
+            "id": self.figure.id,
+        }
+
+    def test_can_delete_figure(self):
+        self.force_login(self.editor)
+        response = self.query(
+            self.mutation,
+            variables=self.variables
+        )
+        self.assertResponseNoErrors(response)
+
+        content = json.loads(response.content)
+        self.assertTrue(content['data']['deleteFigure']['ok'], content)

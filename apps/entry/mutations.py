@@ -6,7 +6,7 @@ from apps.contrib.models import SourcePreview
 from apps.entry.enums import (
     EntryReviewerGrapheneEnum,
 )
-from apps.entry.models import Entry, EntryReviewer, FigureTag
+from apps.entry.models import Entry, EntryReviewer, FigureTag, Figure
 from apps.entry.schema import (
     EntryType,
     FigureType,
@@ -112,6 +112,31 @@ class DeleteEntry(graphene.Mutation):
         instance.id = id
         return DeleteEntry(result=instance, errors=None, ok=True)
 
+
+class DeleteFigure(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(FigureType)
+
+    @staticmethod
+    @permission_checker(['entry.delete_figure'])
+    def mutate(root, info, id):
+        try:
+            instance = Figure.objects.get(id=id)
+        except Entry.DoesNotExist:
+            return DeleteFigure(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
+            ])
+        if not instance.can_be_updated_by(info.context.user):
+            return DeleteFigure(errors=[
+                dict(field='nonFieldErrors', messages=gettext('You cannot delete this figure.'))
+            ])
+        instance.delete()
+        instance.id = id
+        return DeleteFigure(result=instance, errors=None, ok=True)
 
 # source preview
 
@@ -377,3 +402,4 @@ class Mutation(object):
     export_figures = ExportFigures.Field()
     # clone
     clone_entry = CloneEntry.Field()
+    delete_figure = DeleteFigure.Field()
