@@ -19,6 +19,7 @@ from apps.entry.serializers import (
     FigureTagCreateSerializer,
     FigureTagUpdateSerializer,
     CloneEntrySerializer,
+    NestedFigureUpdateSerializer,
 )
 from apps.extraction.filters import FigureExtractionFilterSet, EntryExtractionFilterSet
 from apps.contrib.serializers import SourcePreviewSerializer, ExcelDownloadSerializer
@@ -37,6 +38,11 @@ EntryCreateInputType = generate_input_type_for_serializer(
 EntryUpdateInputType = generate_input_type_for_serializer(
     'EntryUpdateInputType',
     serializer_class=EntryUpdateSerializer,
+)
+
+FigureUpdateInputType = generate_input_type_for_serializer(
+    'FigureUpdateInputType',
+    serializer_class=NestedFigureUpdateSerializer,
 )
 
 
@@ -111,6 +117,38 @@ class DeleteEntry(graphene.Mutation):
         instance.delete()
         instance.id = id
         return DeleteEntry(result=instance, errors=None, ok=True)
+
+
+class updateFigure(graphene.Mutation):
+
+    class Arguments:
+        data = FigureUpdateInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(EntryType)
+
+    @staticmethod
+    @permission_checker(['entry.change_figure'])
+    def mutate(root, info, data):
+        try:
+            instance = Figure.objects.get(id=data['id'])
+        except Entry.DoesNotExist:
+            return updateFigure(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
+            ])
+        if not instance.can_be_updated_by(info.context.user):
+            return updateFigure(errors=[
+                dict(field='nonFieldErrors', messages=gettext('You cannot update this figure.'))
+            ])
+        serializer = NestedFigureUpdateSerializer(
+            instance=instance, data=data,
+            context={'request': info.context.request}, partial=True
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return updateFigure(errors=errors, ok=False)
+        instance = serializer.save()
+        return updateFigure(result=instance, errors=None, ok=True)
 
 
 class DeleteFigure(graphene.Mutation):
@@ -402,4 +440,6 @@ class Mutation(object):
     export_figures = ExportFigures.Field()
     # clone
     clone_entry = CloneEntry.Field()
+    # figure
+    update_figure = updateFigure.Field()
     delete_figure = DeleteFigure.Field()
