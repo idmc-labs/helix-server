@@ -18,7 +18,9 @@ SELENIUM_TIMEOUT = math.floor(PDF_TASK_TIMEOUT * 0.8)
 
 def __get_pdf_from_html(path, timeout=SELENIUM_TIMEOUT, print_options={}):
     browser_options = webdriver.ChromeOptions()
-    browser_options.add_argument('no-sandbox')
+    # browser_options.add_argument('no-sandbox')
+    # Don't add no-sandbox option,
+    # Reference https://stackoverflow.com/questions/60101367/security-considerations-chromedriver-webdriver-for-chrome
     browser_options.add_argument('headless')
     browser_options.add_argument('disable-gpu')
     browser_options.add_argument('disable-dev-shm-usage')
