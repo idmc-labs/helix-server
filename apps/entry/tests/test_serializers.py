@@ -175,7 +175,7 @@ class TestEntrySerializer(HelixTestCase):
             lat=68.88,
             lon=46.66,
             name='name',
-            accuracy=OSMName.OSM_ACCURACY.COUNTRY.value,
+            accuracy=OSMName.OSM_ACCURACY.ADM0.value,
             identifier=OSMName.IDENTIFIER.ORIGIN.value,
         )
         source2 = copy(source1)
@@ -313,7 +313,7 @@ class TestEntrySerializer(HelixTestCase):
             lat=68.88,
             lon=46.66,
             name='name',
-            accuracy=OSMName.OSM_ACCURACY.COUNTRY.value,
+            accuracy=OSMName.OSM_ACCURACY.ADM0.value,
             identifier=OSMName.IDENTIFIER.ORIGIN.value,
         )
         data = dict(
@@ -389,7 +389,7 @@ class TestEntrySerializer(HelixTestCase):
             lat=68.88,
             lon=46.66,
             name='name',
-            accuracy=OSMName.OSM_ACCURACY.COUNTRY.value,
+            accuracy=OSMName.OSM_ACCURACY.ADM0.value,
             identifier=OSMName.IDENTIFIER.ORIGIN.value,
         )
         flow = FigureCategory.flow_new_displacement_id()
@@ -488,7 +488,7 @@ class TestFigureSerializer(HelixTestCase):
             lat=68.88,
             lon=46.66,
             name='name',
-            accuracy=OSMName.OSM_ACCURACY.COUNTRY.value,
+            accuracy=OSMName.OSM_ACCURACY.ADM0.value,
             identifier=OSMName.IDENTIFIER.ORIGIN.value,
         )
         self.data = {
@@ -545,7 +545,7 @@ class TestFigureSerializer(HelixTestCase):
                 "lon": 12.34,
                 "lat": 23.21,
                 "name": "testme",
-                "accuracy": OSMName.OSM_ACCURACY.COUNTRY.value,
+                "accuracy": OSMName.OSM_ACCURACY.ADM0.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                 "bounding_box": [1.2],
             },
@@ -559,7 +559,7 @@ class TestFigureSerializer(HelixTestCase):
                 "lon": 12.34,
                 "lat": 23.21,
                 "name": "testme",
-                "accuracy": OSMName.OSM_ACCURACY.COUNTRY.value,
+                "accuracy": OSMName.OSM_ACCURACY.ADM0.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                 "bounding_box": [1.2],
             },

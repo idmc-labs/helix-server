@@ -175,7 +175,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
             lat=68.88,
             lon=46.66,
             name='name',
-            accuracy=OSMName.OSM_ACCURACY.COUNTRY.name,
+            accuracy=OSMName.OSM_ACCURACY.ADM0.name,
             identifier=OSMName.IDENTIFIER.ORIGIN.name,
         )
         figures = [
@@ -226,7 +226,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
             lat=68.88,
             lon=46.66,
             name='name',
-            accuracy=OSMName.OSM_ACCURACY.COUNTRY.name,
+            accuracy=OSMName.OSM_ACCURACY.ADM0.name,
             identifier=OSMName.IDENTIFIER.ORIGIN.name,
         )
         source2 = copy(source1)
@@ -475,7 +475,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
             lat=68.88,
             lon=46.66,
             name='name',
-            accuracy=OSMName.OSM_ACCURACY.COUNTRY.name,
+            accuracy=OSMName.OSM_ACCURACY.ADM0.name,
             identifier=OSMName.IDENTIFIER.ORIGIN.name,
         )
         source2 = copy(source1)
