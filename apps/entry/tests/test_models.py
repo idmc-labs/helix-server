@@ -278,10 +278,7 @@ class TestEntryModel(HelixTestCase):
         assert e.review_status == EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
 
     def test_text_field_should_accept_markup_and_speicial_should_remove_html_tags(self):
-        e = EntryFactory.create(created_by=self.editor)
         html_data = '<html><body><h2>test</h2><p> test</p><p id="demo"> test</p><script></script></body></html>'
-        e.source_excerpt = html_data
-        e.calculation_logic = '~!@#$%^&*<>?/'
         markup_text = """
         # H1 heading 1
         ## H2 heading 2
@@ -300,12 +297,41 @@ class TestEntryModel(HelixTestCase):
         [title](https://www.example.com)
         ![alt text](image.jpg)
         """
+        markup_and_html_mixed_data = """
+        # H1 heading 1
+        ## H2 heading 2
+        ### H3 heading 3
+        **bold text**
+        *italicized text*
+        > blockquote
+        1. <html><head>test</head><body><p>First item</p><script></script></body></html>
+        2. <h1>Second item</h1>
+        3. <div><p>Third item</p></div>
+        - <li>First item</li>
+        - <li>Second item</li>
+        - <li>Third item</li>
+        `code`
+        ---
+        [title](https://www.example.com)
+        ![alt text](image.jpg)
+        <script>console.log("test")</script>
+        """
+
+        e = EntryFactory.create(created_by=self.editor)
+        e.source_excerpt = html_data
+        e.calculation_logic = '~!@#$%^&*<>?/'
         e.article_title = markup_text
         e.save()
         e.refresh_from_db()
+
         self.assertEqual(e.source_excerpt, 'test test test')
         self.assertEqual(e.calculation_logic, '~!@#$%^&*<>?/')
         self.assertEqual(e.calculation_logic, '~!@#$%^&*<>?/')
+        self.assertEqual(e.article_title, markup_text)
+
+        e.calculation_logic = markup_and_html_mixed_data
+        e.save()
+        e.refresh_from_db()
         self.assertEqual(e.article_title, markup_text)
 
 
