@@ -345,7 +345,7 @@ class CloneEntry(graphene.Mutation):
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.List(EntryType)
+    result = graphene.List(graphene.NonNull(EntryType))
 
     @staticmethod
     @permission_checker(['entry.add_entry'])
