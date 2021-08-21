@@ -735,7 +735,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                               related_name='entries', on_delete=models.CASCADE)
 
     idmc_analysis = models.TextField(verbose_name=_('IDMC Analysis'),
-                                     blank=False, null=True)
+                                     blank=True, null=True)
     calculation_logic = models.TextField(verbose_name=_('Calculation Logic'),
                                          blank=True, null=True)
     is_confidential = models.BooleanField(
