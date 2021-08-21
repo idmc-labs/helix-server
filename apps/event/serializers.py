@@ -56,7 +56,9 @@ class EventSerializer(MetaInformationSerializerMixin,
             getattr(self.instance, 'event_type', None)
         )
         if crisis and crisis.crisis_type != event_type:
-            errors['event_type'] = gettext('Event type does not match the crisis type.')
+            errors['event_type'] = (
+                gettext('Event type should be {} to match the crisis type').format(gettext(crisis.crisis_type.label.lower()))
+            )
         return errors
 
     def validate_disaster_disaster_sub_type(self, attrs):
