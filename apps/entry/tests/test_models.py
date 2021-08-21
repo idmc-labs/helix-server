@@ -297,6 +297,17 @@ class TestEntryModel(HelixTestCase):
         [title](https://www.example.com)
         ![alt text](image.jpg)
         """
+        e = EntryFactory.create(created_by=self.editor)
+        e.source_excerpt = html_data
+        e.calculation_logic = '~!@#$%^&*<>?/'
+        e.article_title = markup_text
+        e.save()
+        e.refresh_from_db()
+
+        self.assertEqual(e.source_excerpt, 'test test test')
+        self.assertEqual(e.calculation_logic, '~!@#$%^&*<>?/')
+        self.assertEqual(e.article_title, markup_text)
+
         markup_and_html_mixed_data = """
         # H1 heading 1
         ## H2 heading 2
@@ -304,7 +315,7 @@ class TestEntryModel(HelixTestCase):
         **bold text**
         *italicized text*
         > blockquote
-        1. <html><head>test</head><body><p>First item</p><script></script></body></html>
+        1. <html><body><p>First item</p><script></script></body></html>
         2. <h1>Second item</h1>
         3. <div><p>Third item</p></div>
         - <li>First item</li>
@@ -316,23 +327,30 @@ class TestEntryModel(HelixTestCase):
         ![alt text](image.jpg)
         <script>console.log("test")</script>
         """
-
-        e = EntryFactory.create(created_by=self.editor)
-        e.source_excerpt = html_data
-        e.calculation_logic = '~!@#$%^&*<>?/'
-        e.article_title = markup_text
-        e.save()
-        e.refresh_from_db()
-
-        self.assertEqual(e.source_excerpt, 'test test test')
-        self.assertEqual(e.calculation_logic, '~!@#$%^&*<>?/')
-        self.assertEqual(e.calculation_logic, '~!@#$%^&*<>?/')
-        self.assertEqual(e.article_title, markup_text)
+        markup_and_html_mixed_data_cleaned = """
+        # H1 heading 1
+        ## H2 heading 2
+        ### H3 heading 3
+        **bold text**
+        *italicized text*
+        > blockquote
+        1. First item
+        2. Second item
+        3. Third item
+        - <li>First item</li>
+        - <li>Second item</li>
+        - <li>Third item</li>
+        `code`
+        ---
+        [title](https://www.example.com)
+        ![alt text](image.jpg)
+        console.log("test")
+        """
 
         e.calculation_logic = markup_and_html_mixed_data
         e.save()
         e.refresh_from_db()
-        self.assertEqual(e.article_title, markup_text)
+        self.assertEqual(e.calculation_logic, markup_and_html_mixed_data_cleaned)
 
 
 class TestCloneEntry(HelixTestCase):
