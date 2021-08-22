@@ -1,4 +1,5 @@
 import factory
+from datetime import date
 from dateutil.utils import today
 from factory.django import DjangoModelFactory
 
@@ -158,6 +159,8 @@ class EventFactory(DjangoModelFactory):
 
     crisis = factory.SubFactory(CrisisFactory)
     event_type = factory.Iterator(Crisis.CRISIS_TYPE)
+    start_date = factory.LazyFunction(lambda: date(2010, 1, 1))
+    end_date = factory.LazyFunction(today().date)
 
 
 class EntryFactory(DjangoModelFactory):

@@ -187,8 +187,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
 
     countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
                                        related_name='events', blank=True)
-    start_date = models.DateField(verbose_name=_('Start Date'),
-                                  blank=True, null=True)
+    start_date = models.DateField(verbose_name=_('Start Date'))
     start_date_accuracy = enum.EnumField(
         DATE_ACCURACY,
         verbose_name=_('Start Date Accuracy'),
@@ -196,8 +195,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         blank=True,
         null=True,
     )
-    end_date = models.DateField(verbose_name=_('End Date'),
-                                blank=True, null=True)
+    end_date = models.DateField(verbose_name=_('End Date'))
     end_date_accuracy = enum.EnumField(
         DATE_ACCURACY,
         verbose_name=_('End date accuracy'),
@@ -205,8 +203,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         blank=True,
         null=True,
     )
-    event_narrative = models.TextField(verbose_name=_('Event Narrative'),
-                                       null=True, blank=True)
+    event_narrative = models.TextField(verbose_name=_('Event Narrative'), null=True)
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):

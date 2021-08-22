@@ -347,7 +347,6 @@ class TestEntrySerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('figures', serializer.errors)
         self.assertIn('country', serializer.errors['figures'][0])
-        self.assertIn('end_date', serializer.errors['figures'][0])
 
         # however it will be valid for stock end date to go beyond event date
         figure = FigureFactory.create(entry=entry, category=stock, country=c1)

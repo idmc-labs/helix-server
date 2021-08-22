@@ -149,7 +149,7 @@ class EventSerializer(MetaInformationSerializerMixin,
                 attrs.get('start_date', getattr(self.instance, 'start_date', None)),
                 attrs.get('end_date', getattr(self.instance, 'end_date', None)),
                 crisis.start_date,
-                crisis.end_date,
+                'crisis',
             ))
             errors.update(
                 is_child_parent_inclusion_valid(attrs, self.instance, field='countries', parent_field='crisis.countries')
@@ -173,6 +173,10 @@ class EventSerializer(MetaInformationSerializerMixin,
             attrs['other_sub_type'] = None
 
         self.validate_event_type_against_crisis_type(event_type, attrs)
+
+        for attr in ['event_narrative']:
+            if not attrs.get(attr, None):
+                errors.update({attr: gettext('This field is required.')})
 
         return attrs
 

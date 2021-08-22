@@ -16,6 +16,7 @@ from utils.factories import (
 )
 from apps.crisis.models import Crisis
 from apps.entry.models import FigureCategory
+from datetime import datetime, timedelta
 
 
 class TestCreateEventSerializer(HelixTestCase):
@@ -27,8 +28,6 @@ class TestCreateEventSerializer(HelixTestCase):
         )
 
     def test_invalid_crisis_date_event_serializer(self):
-        from datetime import datetime, timedelta
-
         start = datetime.today()
         end = datetime.today() + timedelta(days=3)
 
@@ -50,19 +49,23 @@ class TestCreateEventSerializer(HelixTestCase):
         serializer = EventSerializer(data=data, context=self.context)
         self.assertFalse(serializer.is_valid())
         self.assertIn('start_date', serializer.errors)
-        self.assertIn('end_date', serializer.errors)
 
     def test_invalid_event_type(self):
         crisis = CrisisFactory.create(
             crisis_type=Crisis.CRISIS_TYPE.DISASTER.value
         )
         violence_sub_type = ViolenceSubTypeFactory.create()
+        start_date = datetime.today() - timedelta(days=20)
+        end_date = datetime.today() - timedelta(days=10)
         data = dict(
             event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
             violence=violence_sub_type.violence.pk,
             violence_sub_type=violence_sub_type.pk,
             crisis=crisis.pk,
             name='one',
+            start_date=start_date.date(),
+            end_date=end_date.date(),
+            event_narrative="event narrative"
         )
         serializer = EventSerializer(data=data, context=self.context)
         self.assertFalse(serializer.is_valid())
@@ -73,6 +76,9 @@ class TestCreateEventSerializer(HelixTestCase):
             disaster_sub_type=DisasterSubTypeFactory.create().pk,
             crisis=crisis.pk,
             name='one',
+            start_date=start_date.date(),
+            end_date=end_date.date(),
+            event_narrative="event narrative2"
         )
         serializer = EventSerializer(data=data, context=self.context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -88,8 +94,6 @@ class TestUpdateEventSerializer(HelixTestCase):
         )
 
     def test_invalid_event_dates_beyond_figure_dates(self):
-        from datetime import datetime, timedelta
-
         FigureCategory._invalidate_category_ids_cache()
         flow = FigureCategory.flow_new_displacement_id()
         stock = FigureCategory.stock_idp_id()
@@ -122,6 +126,7 @@ class TestUpdateEventSerializer(HelixTestCase):
         data = dict(
             start_date=event.start_date,
             end_date=event.end_date,
+            event_narrative="event narrative"
         )
         serializer = EventSerializer(
             instance=event,
@@ -179,15 +184,21 @@ class TestUpdateEventSerializer(HelixTestCase):
             context=self.context,
             partial=True,
         )
+        if not serializer.is_valid():
+            print(serializer.errors)
         self.assertTrue(serializer.is_valid())
 
     def test_invalid_event_countries_not_including_figure_countries(self):
         c1, c2, c3 = CountryFactory.create_batch(3)
-
+        start_date = datetime.today() - timedelta(days=170)
+        end_date = datetime.today() + timedelta(days=70)
         event = EventFactory.create(
             crisis=None,
             violence_sub_type=ViolenceSubTypeFactory.create(),
             disaster_sub_type=DisasterSubTypeFactory.create(),
+            start_date=start_date.date(),
+            end_date=end_date.date(),
+            event_narrative="test event narrative"
         )
         event.countries.set([c1, c2, c3])
         entry = EntryFactory.create(event=event)
@@ -224,11 +235,15 @@ class TestUpdateEventSerializer(HelixTestCase):
     def test_invalid_violence_type(self):
         violence_sub_type = ViolenceSubTypeFactory.create()
         violence2 = ViolenceFactory.create()
+        start_date = datetime.today() - timedelta(days=300)
         data = dict(
             event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
             violence=violence_sub_type.violence.pk,
             violence_sub_type=violence_sub_type.pk,
             name='one',
+            start_date=start_date.date(),
+            end_date=datetime.today().date(),
+            event_narrative="test event narrative"
         )
         self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
         self.context['request'] = self.request

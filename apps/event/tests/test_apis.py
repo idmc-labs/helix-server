@@ -66,7 +66,10 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
             "eventType": "DISASTER",
             "glideNumber": "glide number",
             "disasterSubType": DisasterSubTypeFactory().id,
-            "countries": [each.id for each in countries]
+            "countries": [each.id for each in countries],
+            "startDate": "2014-01-01",
+            "endDate": "2016-01-01",
+            "eventNarrative": "event narrative"
         }
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor)
@@ -162,7 +165,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.input = {
             "id": self.event.id,
             "endDate": "2020-10-29",
-            "eventNarrative": "",
+            "eventNarrative": "event narrative",
             "eventType": "CONFLICT",
             "name": "xyz",
             "startDate": "2020-10-20",
@@ -182,7 +185,6 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         crisis.save()
         self.input['crisis'] = crisis.id
         self.input['startDate'] = (crisis.start_date - timedelta(days=1)).strftime('%Y-%m-%d')
-        self.input['endDate'] = (crisis.end_date + timedelta(days=1)).strftime('%Y-%m-%d')
         response = self.query(
             self.mutation,
             input_data=self.input
@@ -191,7 +193,6 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['updateEvent']['ok'], content)
         self.assertIn('startDate', [item['field'] for item in content['data']['updateEvent']['errors']], content)
-        self.assertIn('endDate', [item['field'] for item in content['data']['updateEvent']['errors']], content)
 
     def test_valid_event_update(self) -> None:
         response = self.query(

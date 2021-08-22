@@ -207,14 +207,14 @@ class CommonFigureValidationMixin:
                     attrs.get('start_date', getattr(self.instance, 'start_date', None)),
                     attrs.get('end_date', getattr(self.instance, 'end_date', None)),
                     self.event.start_date,
-                    None  # self.event.end_date,  not compare against event however
+                    'event',
                 ))
             else:
                 errors.update(is_child_parent_dates_valid(
                     attrs.get('start_date', getattr(self.instance, 'start_date', None)),
                     attrs.get('end_date', getattr(self.instance, 'end_date', None)),
                     self.event.start_date,
-                    self.event.end_date,
+                    'event',
                 ))
         return errors
 
