@@ -236,6 +236,22 @@ class FigureDisaggregationAbstractModel(models.Model):
         blank=True,
         null=True
     )
+    # lesbian, gay, bisexual, transgender, intersex, and questioning (LGBTIQ)
+    disaggregation_lgbtiq = models.PositiveIntegerField(
+        verbose_name=_('LGBTIQ+'),
+        blank=True,
+        null=True
+    )
+    disaggregation_disability = models.PositiveIntegerField(
+        verbose_name=_('Disability'),
+        blank=True,
+        null=True
+    )
+    disaggregation_indigenous_people = models.PositiveIntegerField(
+        verbose_name=_('Indigenous people'),
+        blank=True,
+        null=True
+    )
     disaggregation_sex_male = models.PositiveIntegerField(
         verbose_name=_('Sex/Male'),
         blank=True,
