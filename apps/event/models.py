@@ -292,7 +292,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             disaster_type__name='Disaster Type',
             disaster_sub_type__name='Disaster Sub Type',
             disaster_sub_type='Diaster Sub Type Id',
-            glide_numbers='Event Codes'
+            glide_numbers='Event Codes',
+            osv_sub_type__name="OSV Sub Type",
         )
         data = EventFilter(
             data=filters,
@@ -315,6 +316,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             'disaster_type',
             'disaster_sub_type',
             'created_at',
+            'osv_sub_type'
         ).prefetch_related(
             'countries',
         )
