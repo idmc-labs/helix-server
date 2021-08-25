@@ -66,3 +66,13 @@ DISASTERS = {
         }
     }
 }
+
+OSV_SUB_TYPE = [
+    "Religious tensions",
+    "Agricultural/pastoralist tensions",
+    "Host/Displaced tensions",
+    "Elections",
+    "Demonstrations",
+    "Police operatins",
+    "Other"
+]
