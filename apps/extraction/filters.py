@@ -47,7 +47,9 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     class Meta:
         model = Entry
-        fields = {}
+        fields = {
+            'event': ['exact'],
+        }
 
     def filter_report(self, qs, name, value):
         if not value:
