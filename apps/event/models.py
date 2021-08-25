@@ -212,6 +212,11 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         null=True,
     )
     event_narrative = models.TextField(verbose_name=_('Event Narrative'), null=True)
+    osv_sub_type = models.ForeignKey(
+        'OsvSubType', verbose_name=_('OSV sub type'),
+        blank=True, null=True, related_name='events',
+        on_delete=models.SET_NULL
+    )
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
@@ -375,3 +380,9 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         # Add m2m contires
         cloned_event.countries.set(countries)
         return cloned_event
+
+
+class OsvSubType(NameAttributedModels):
+    """
+    Holds the possible OSV sub types
+    """
