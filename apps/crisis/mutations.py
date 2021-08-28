@@ -10,6 +10,7 @@ from apps.crisis.serializers import CrisisSerializer, CrisisUpdateSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 from utils.mutation import generate_input_type_for_serializer
+from utils.common import convert_date_object_to_string_in_dict
 
 CrisisCreateInputType = generate_input_type_for_serializer(
     'CrisisCreateInputType',
@@ -108,7 +109,7 @@ class ExportCrises(graphene.Mutation):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.CRISIS),
-                filters=kwargs,
+                filters=convert_date_object_to_string_in_dict(kwargs),
             ),
             context=dict(request=info.context.request)
         )

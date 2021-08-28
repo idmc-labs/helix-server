@@ -701,3 +701,34 @@ class TestEntryReviewUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEntryReview']['ok'], content)
+
+
+class TestExportEntry(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        for i in range(3):
+            EntryFactory.create(created_by=self.editor)
+        self.mutation = """
+        mutation ExportEntries($filterFigureStartAfter: Date, $filterFigureEndBefore: Date){
+            exportEntries(
+                filterFigureStartAfter: $filterFigureStartAfter
+                filterFigureEndBefore: $filterFigureEndBefore
+          ){
+            errors
+            ok
+          }
+        }
+
+        """
+        self.variables = {
+            "filterFigureStartAfter": "2018-08-25",
+            "filterFigureEndBefore": "2021-08-25",
+        }
+
+    def test_export_entry(self):
+        self.force_login(self.editor)
+        response = self.query(
+            self.mutation,
+            variables=self.variables
+        )
+        self.assertResponseNoErrors(response)

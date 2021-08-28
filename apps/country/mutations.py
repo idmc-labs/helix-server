@@ -12,6 +12,7 @@ from apps.contrib.serializers import ExcelDownloadSerializer
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
+from utils.common import convert_date_object_to_string_in_dict
 
 
 class SummaryCreateInputType(graphene.InputObjectType):
@@ -87,7 +88,7 @@ class ExportCountries(graphene.Mutation):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.COUNTRY),
-                filters=kwargs,
+                filters=convert_date_object_to_string_in_dict(kwargs),
             ),
             context=dict(request=info.context.request)
         )
