@@ -1,7 +1,7 @@
 
 from django.core.management.base import BaseCommand
 
-from apps.event.constants import VIOLENCES, TRIGGERS, SUB_TRIGGERS, DISASTERS
+from apps.event.constants import CONFLICT_TYPES, TRIGGERS, SUB_TRIGGERS, DISASTERS
 from apps.event.models import (
     Violence,
     ViolenceSubType,
@@ -18,7 +18,7 @@ class Command(BaseCommand):
     help = 'Initialize or update event types.'
 
     def handle(self, *args, **options):
-        for v_type, v_sub_types in VIOLENCES.items():
+        for v_type, v_sub_types in CONFLICT_TYPES.items():
             if Violence.objects.filter(name__iexact=v_type).exists():
                 violence = Violence.objects.get(name__iexact=v_type)
             else:
