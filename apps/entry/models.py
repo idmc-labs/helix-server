@@ -848,7 +848,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                         entry=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
-                    end_date=Coalesce(
+                    reference_point=Coalesce(
                         models.OuterRef('event__end_date'),
                         date.today()
                     )

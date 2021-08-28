@@ -81,7 +81,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                         entry__event__crisis=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
-                    end_date=Coalesce(
+                    reference_point=Coalesce(
                         models.OuterRef('end_date'),
                         datetime(year=timezone.now().year, month=12, day=31)
                     )

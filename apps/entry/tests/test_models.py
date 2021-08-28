@@ -154,7 +154,7 @@ class TestFigureModel(HelixTestCase):
 
         idp = Figure.filtered_idp_figures(
             qs=Figure.objects.all(),
-            end_date=ref,
+            reference_point=ref,
         )
         self.assertEqual(idp.count(), 2)
         self.assertNotIn(f4, idp)
@@ -162,21 +162,21 @@ class TestFigureModel(HelixTestCase):
 
         idp = Figure.filtered_idp_figures(
             qs=Figure.objects.all(),
-            end_date=ref,
+            reference_point=ref,
         )
         self.assertEqual(idp.count(), 2)
         self.assertNotIn(f3, idp)
 
         idp = Figure.filtered_idp_figures(
             qs=Figure.objects.all(),
-            end_date=ref - timedelta(days=1),
+            reference_point=ref - timedelta(days=1),
         )
         self.assertEqual(idp.count(), 1)
         self.assertIn(f1, idp)
 
         idp = Figure.filtered_idp_figures(
             qs=Figure.objects.all(),
-            end_date=ref + timedelta(days=30),
+            reference_point=ref + timedelta(days=30),
         )
         self.assertEqual(idp.count(), 2)
         self.assertNotIn(f1, idp)

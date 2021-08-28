@@ -88,7 +88,7 @@ class CountryRegion(models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
                     ),
-                    end_date=end_date,
+                    reference_point=end_date,
                 ).order_by().values('country__region').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
@@ -101,7 +101,7 @@ class CountryRegion(models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
                     ),
-                    end_date=end_date,
+                    reference_point=end_date,
                 ).order_by().values('country__region').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
@@ -253,7 +253,7 @@ class Country(models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
                     ),
-                    end_date=end_date,
+                    reference_point=end_date,
                 ).order_by().values('country').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
@@ -266,7 +266,7 @@ class Country(models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
                     ),
-                    end_date=end_date,
+                    reference_point=end_date,
                 ).order_by().values('country').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
