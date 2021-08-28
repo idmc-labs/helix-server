@@ -433,6 +433,7 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         flow_qs = Figure.filtered_nd_figures(
             queryset, start_date, end_date
         )
+        # FIXME: discuss with bimal
         stock_qs = Figure.filtered_idp_figures(
             queryset, end_date
         )

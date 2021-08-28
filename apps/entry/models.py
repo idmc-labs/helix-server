@@ -19,7 +19,7 @@ from django.db.models import (
     Max,
     Q,
 )
-from django.db.models.functions import Concat, Coalesce
+from django.db.models.functions import Concat
 from django.forms import model_to_dict
 from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
@@ -848,10 +848,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                         entry=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
-                    reference_point=Coalesce(
-                        models.OuterRef('event__end_date'),
-                        date.today()
-                    )
+                    reference_point=timezone.now().date(),
                 ).order_by().values('entry').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],

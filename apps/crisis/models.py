@@ -1,11 +1,9 @@
-from datetime import datetime
 from collections import OrderedDict
 
 from django.contrib.postgres.aggregates.general import ArrayAgg
-from django.db import models
-from django.db.models.functions import Coalesce
-from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
+from django.db import models
+from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
@@ -62,14 +60,9 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                         entry__event__crisis=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
-                    start_date=Coalesce(
-                        models.OuterRef('start_date'),
-                        datetime(year=timezone.now().year, month=1, day=1)
-                    ),
-                    end_date=Coalesce(
-                        models.OuterRef('end_date'),
-                        datetime(year=timezone.now().year, month=12, day=31)
-                    ),
+                    # TODO: what about date range
+                    start_date=None,
+                    end_date=None,
                 ).order_by().values('entry__event__crisis').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
@@ -81,10 +74,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                         entry__event__crisis=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
-                    reference_point=Coalesce(
-                        models.OuterRef('end_date'),
-                        datetime(year=timezone.now().year, month=12, day=31)
-                    )
+                    reference_point=timezone.now().date(),
                 ).order_by().values('entry__event__crisis').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],

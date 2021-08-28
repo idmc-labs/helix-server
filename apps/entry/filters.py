@@ -1,5 +1,6 @@
 from django_filters import rest_framework as df
 
+from django.utils import timezone
 from apps.entry.models import (
     Entry,
     EntryReviewer,
@@ -48,7 +49,8 @@ class FigureFilter(df.FilterSet):
             queryset, start_date, end_date
         )
         stock_qs = Figure.filtered_idp_figures(
-            queryset, end_date
+            queryset,
+            reference_point=timezone.now().date(),
         )
         return flow_qs | stock_qs
 

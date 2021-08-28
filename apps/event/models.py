@@ -1,10 +1,9 @@
 from collections import OrderedDict
-from datetime import date
 
 from django.db import models
-from django.db.models import functions
 from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.utils.translation import gettext_lazy as _
+from django.utils import timezone
 from django_enumfield import enum
 
 from apps.contrib.models import (
@@ -237,10 +236,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                         entry__event=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
-                    reference_point=functions.Coalesce(
-                        models.OuterRef('end_date'),
-                        date.today()
-                    )
+                    reference_point=timezone.now().date(),
                 ).order_by().values('entry__event').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],

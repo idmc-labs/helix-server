@@ -48,8 +48,9 @@ class CountryRegion(models.Model):
             start_date = None
             end_date = None
         else:
-            start_date = datetime(year=datetime.today().year, month=1, day=1)
-            end_date = datetime(year=datetime.today().year, month=12, day=31)
+            now = timezone.now()
+            start_date = datetime(year=now.year, month=1, day=1)
+            end_date = now.date()
         return {
             cls.ND_CONFLICT_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
