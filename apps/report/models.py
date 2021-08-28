@@ -95,14 +95,26 @@ class Report(MetaInformationArchiveAbstractModel,
                          role=Figure.ROLE.RECOMMENDED,
                          entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
             ),
-            # TODO: Will come from https://github.com/idmc-labs/Helix2.0/issues/49
-            # total_stock_disaster,
             total_flow_disaster=Sum(
                 'total_figures',
                 filter=Q(category=FigureCategory.flow_new_displacement_id(),
                          role=Figure.ROLE.RECOMMENDED,
                          entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
             ),
+            total_stock_disaster=Sum(
+                'total_figures',
+                filter=Q(
+                    Q(
+                        end_date__isnull=True,
+                    ) | Q(
+                        end_date__isnull=False,
+                        end_date__gte=self.filter_figure_end_before or timezone.now(),
+                    ),
+                    category=FigureCategory.stock_idp_id(),
+                    role=Figure.ROLE.RECOMMENDED,
+                    entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                )
+            )
         )
 
     generated_from = enum.EnumField(REPORT_TYPE,
