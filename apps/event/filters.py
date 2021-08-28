@@ -1,5 +1,5 @@
 import django_filters
-
+from django.db.models import Q
 from apps.event.models import Actor, Event
 from apps.crisis.models import Crisis
 from apps.report.models import Report
@@ -41,12 +41,12 @@ class EventFilter(NameFilterMixin,
     def filter_disaster_categories(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(disaster_category__in=value).distinct()
+        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_category__in=value)).distinct()
 
     def filter_violence_types(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(violence__in=value).distinct()
+        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence__in=value)).distinct()
 
     def filter_crises(self, qs, name, value):
         if not value:
