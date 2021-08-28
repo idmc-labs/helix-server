@@ -15,6 +15,7 @@ from apps.organization.serializers import (
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 from utils.mutation import generate_input_type_for_serializer
+from utils.common import convert_date_object_to_string_in_dict
 
 
 # organization kind
@@ -189,7 +190,7 @@ class ExportOrganizations(graphene.Mutation):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.ORGANIZATION),
-                filters=kwargs,
+                filters=convert_date_object_to_string_in_dict(kwargs),
             ),
             context=dict(request=info.context.request)
         )

@@ -15,6 +15,7 @@ from apps.event.serializers import (
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 from utils.mutation import generate_input_type_for_serializer
+from utils.common import convert_date_object_to_string_in_dict
 
 
 ActorCreateInputType = generate_input_type_for_serializer(
@@ -188,7 +189,7 @@ class ExportEvents(graphene.Mutation):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.EVENT),
-                filters=kwargs,
+                filters=convert_date_object_to_string_in_dict(kwargs),
             ),
             context=dict(request=info.context.request)
         )
@@ -215,7 +216,7 @@ class ExportActors(graphene.Mutation):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.ACTOR),
-                filters=kwargs,
+                filters=convert_date_object_to_string_in_dict(kwargs),
             ),
             context=dict(request=info.context.request)
         )
