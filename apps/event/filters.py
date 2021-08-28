@@ -4,6 +4,8 @@ from apps.event.models import Actor, Event
 from apps.crisis.models import Crisis
 from apps.report.models import Report
 from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
+from apps.event.constants import CONFLICT_TYPES
+from django.db.models import Q
 
 
 class EventFilter(NameFilterMixin,
@@ -14,6 +16,7 @@ class EventFilter(NameFilterMixin,
     countries = IDListFilter(method='filter_countries')
     glide_numbers = StringListFilter(method='filter_glide_numbers')
 
+    osv_sub_type_by_ids = IDListFilter(method='filter_osv_sub_types')
     # used in report entry table
     report = django_filters.CharFilter(method='filter_report')
     disaster_sub_types = IDListFilter(method='filter_disaster_sub_types')
@@ -27,7 +30,6 @@ class EventFilter(NameFilterMixin,
             'start_date': ['lte', 'lt', 'gte', 'gt'],
             'end_date': ['lte', 'lt', 'gte', 'gt'],
             'glide_number': ['icontains'],
-            'osv_sub_type': ['in'],
         }
 
     def filter_report(self, qs, name, value):
@@ -76,6 +78,12 @@ class EventFilter(NameFilterMixin,
         if not value:
             return qs
         return qs.filter(name__unaccent__icontains=value).distinct()
+
+    def filter_osv_sub_types(self, qs, name, value):
+        if value:
+            osv = list(CONFLICT_TYPES)[2]
+            return qs.filter(~Q(violence__name=osv) | Q(osv_sub_type__in=value)).distinct()
+        return qs
 
     @property
     def qs(self):
