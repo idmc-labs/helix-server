@@ -1,3 +1,6 @@
+import json
+from datetime import timedelta
+from django.utils import timezone
 from apps.users.enums import USER_ROLE
 from apps.extraction.models import ExtractionQuery
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -9,6 +12,7 @@ from utils.factories import (
     EntryFactory,
     TagFactory,
     FigureFactory,
+    FigureCategoryFactory,
 )
 
 
@@ -120,3 +124,40 @@ class TestCreateExtraction(HelixGraphQLTestCase):
             len(content['data']['extractionQueryList']['results']),
             ExtractionQuery.objects.filter(created_by=reviewer2).count()
         )
+
+
+class TestExtractionFigureList(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        for i in range(3):
+            start_date = (timezone.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+            end_date = (timezone.now() + timedelta(days=30)).strftime('%Y-%m-%d')
+            event = EventFactory.create(start_date=start_date, end_date=end_date)
+            entry = EntryFactory.create(created_by=admin, event=event)
+            figure_category = FigureCategoryFactory.create(type='STOCK')
+            FigureFactory.create(entry=entry, created_by=admin, category=figure_category)
+
+        self.figure_query = '''
+        query MyQuery {
+          extractionFigureList {
+            results {
+              createdAt
+              id
+              includeIdu
+              isDisaggregated
+              startDate
+              endDate
+            }
+            totalCount
+          }
+        }
+        '''
+        self.force_login(admin)
+
+    def test_should_retrieve_figures(self):
+        response = self.query(
+            self.figure_query
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertEqual(content["data"]["extractionFigureList"]["totalCount"], 3)

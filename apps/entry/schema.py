@@ -18,7 +18,7 @@ from apps.entry.enums import (
     IdentifierGrapheneEnum,
     DisaggregatedAgeSexGrapheneEnum,
 )
-from apps.entry.filters import EntryFilter, EntryReviewerFilter, OSMNameFilter
+from apps.entry.filters import EntryReviewerFilter, OSMNameFilter
 from apps.entry.models import (
     Figure,
     FigureTag,
@@ -36,6 +36,7 @@ from apps.organization.schema import OrganizationListType
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
+from apps.extraction.filters import BaseFigureExtractionFilterSet, EntryExtractionFilterSet
 
 logger = logging.getLogger(__name__)
 
@@ -213,7 +214,7 @@ class EntryType(DjangoObjectType):
 class EntryListType(CustomDjangoListObjectType):
     class Meta:
         model = Entry
-        filterset_class = EntryFilter
+        filterset_class = EntryExtractionFilterSet
 
 
 class SourcePreviewType(DjangoObjectType):
@@ -270,8 +271,8 @@ class Query:
     figure = DjangoObjectField(FigureType)
     figure_list = DjangoPaginatedListObjectField(FigureListType,
                                                  pagination=PageGraphqlPaginationWithoutCount(
-                                                     page_size_query_param='pageSize'
-                                                 ))
+                                                     page_size_query_param='pageSize',
+                                                 ), filterset_class=BaseFigureExtractionFilterSet)
     source_preview = DjangoObjectField(SourcePreviewType)
     entry = DjangoObjectField(EntryType)
     entry_list = DjangoPaginatedListObjectField(EntryListType,

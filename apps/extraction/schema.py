@@ -3,11 +3,12 @@ from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 import logging
 
-from apps.extraction.filters import EntryExtractionFilterSet, ExtractionQueryFilter
+from apps.extraction.filters import EntryExtractionFilterSet, ExtractionQueryFilter, BaseFigureExtractionFilterSet
 from apps.extraction.models import (
     ExtractionQuery,
 )
-from apps.entry.schema import EntryListType
+from apps.entry.schema import EntryListType, FigureListType
+
 from apps.entry.enums import (
     RoleGrapheneEnum,
     GenderTypeGrapheneEnum,
@@ -54,3 +55,8 @@ class Query:
                                                                page_size_query_param='pageSize'
                                                            ),
                                                            filterset_class=EntryExtractionFilterSet)
+    extraction_figure_list = DjangoPaginatedListObjectField(FigureListType,
+                                                            pagination=PageGraphqlPaginationWithoutCount(
+                                                                page_size_query_param='pageSize'
+                                                            ),
+                                                            filterset_class=BaseFigureExtractionFilterSet)
