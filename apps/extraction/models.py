@@ -125,6 +125,26 @@ class QueryAbstractModel(models.Model):
         verbose_name=_('Figure Term'),
         blank=True,
     )
+    filter_event_disaster_categories = models.ManyToManyField(
+        'event.DisasterCategory',
+        verbose_name=_('Disaster Category'),
+        blank=True,
+    )
+    filter_event_disaster_sub_categories = models.ManyToManyField(
+        'event.DisasterSubCategory',
+        verbose_name=_('Disaster Sub Category'),
+        blank=True,
+    )
+    filter_event_disaster_types = models.ManyToManyField(
+        'event.DisasterType',
+        verbose_name=_('Disaster Type'),
+        blank=True,
+    )
+    filter_event_disaster_sub_types = models.ManyToManyField(
+        'event.DisasterSubType',
+        verbose_name=_('Disaster Sub Type'),
+        blank=True,
+    )
 
     @property
     def extract_figures(self) -> ['Figure']:  # noqa

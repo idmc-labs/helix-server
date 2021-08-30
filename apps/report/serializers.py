@@ -28,7 +28,9 @@ class ReportSerializer(MetaInformationSerializerMixin,
             'filter_event_crises', 'filter_figure_categories',
             'filter_figure_start_after', 'filter_figure_end_before',
             'filter_event_crisis_types', 'filter_figure_geographical_groups',
-            'filter_events', 'filter_entry_tags'
+            'filter_events', 'filter_entry_tags', 'filter_event_disaster_categories',
+            'filter_event_disaster_sub_categories', 'filter_event_disaster_types',
+            'filter_event_disaster_sub_types'
         ]
 
     def validate_dates(self, attrs):
