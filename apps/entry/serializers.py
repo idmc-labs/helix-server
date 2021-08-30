@@ -247,7 +247,10 @@ class CommonFigureValidationMixin:
             'male, female and other'
         ))
         errors.update(self.validate_disaggregated_sum_against_reported(
-            attrs, ['disaggregation_disability', 'disaggregation_indigenous_people'], 'Disability and indigenous people',
+            attrs, ['disaggregation_disability'], 'Disability',
+        ))
+        errors.update(self.validate_disaggregated_sum_against_reported(
+            attrs, ['disaggregation_indigenous_people'], 'Indigenous people',
         ))
         errors.update(self.validate_disaggregated_sum_against_reported(
             attrs,
