@@ -1,6 +1,7 @@
 from django_filters import rest_framework as df
 from django.db import models
 from django.db.models import Q
+from django.utils import timezone
 from apps.crisis.models import Crisis
 from apps.extraction.models import ExtractionQuery
 from apps.entry.models import (
@@ -433,9 +434,8 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         flow_qs = Figure.filtered_nd_figures(
             queryset, start_date, end_date
         )
-        # FIXME: discuss with bimal
         stock_qs = Figure.filtered_idp_figures(
-            queryset, end_date
+            queryset, reference_point=timezone.now().date()
         )
         return flow_qs | stock_qs
 
