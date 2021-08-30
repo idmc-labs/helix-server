@@ -4,7 +4,7 @@ from apps.event.models import Actor, Event
 from apps.crisis.models import Crisis
 from apps.report.models import Report
 from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
-from apps.event.constants import CONFLICT_TYPES
+from apps.event.constants import OSV
 from django.db.models import Q
 
 
@@ -81,8 +81,7 @@ class EventFilter(NameFilterMixin,
 
     def filter_osv_sub_types(self, qs, name, value):
         if value:
-            osv = list(CONFLICT_TYPES)[2]
-            return qs.filter(~Q(violence__name=osv) | Q(osv_sub_type__in=value)).distinct()
+            return qs.filter(~Q(violence__name=OSV) | Q(osv_sub_type__in=value)).distinct()
         return qs
 
     @property

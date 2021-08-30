@@ -1,3 +1,5 @@
+OSV = "Other situations of violence (OSV)"
+
 CONFLICT_TYPES = {
     "International armed conflict(IAC)": [
         "Military Occupation",
@@ -11,7 +13,7 @@ CONFLICT_TYPES = {
         "Other",
         "Unknown"
     ],
-    "Other situations of violence (OSV)": [
+    OSV: [
         "Civilian-state violence",
         "Crime-related",
         "Communal violence",
