@@ -20,3 +20,4 @@ response.json
 
 *.bak
 *.swp
+secrets.yml
