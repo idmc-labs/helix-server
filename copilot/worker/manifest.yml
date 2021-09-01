@@ -41,8 +41,8 @@ environments:
       memory_percentage: 80
     secrets:
       DJANGO_SECRET_KEY: /copilot/helix/nightly/secrets/DJANGO_SECRET_KEY
-      HCAPTCHA_SECRET: /copilot/helix/nightly/secrets/HELIX_HCAPTCHA_SECRET
-      SENTRY_DNS: /copilot/helix/nightly/secrets/HELIX_SENTRY_DNS
+      HCAPTCHA_SECRET: /copilot/helix/nightly/secrets/HCAPTCHA_SECRET
+      SENTRY_DNS: /copilot/helix/nightly/secrets/SENTRY_DNS
       HELIXDBCLUSTER_SECRET: helix-nightly-auroraSecret
   alpha:
     count:
@@ -51,6 +51,6 @@ environments:
       memory_percentage: 80
     secrets:
       DJANGO_SECRET_KEY: /copilot/helix/alpha/secrets/DJANGO_SECRET_KEY
-      HCAPTCHA_SECRET: /copilot/helix/alpha/secrets/HELIX_HCAPTCHA_SECRET
-      SENTRY_DNS: /copilot/helix/alpha/secrets/HELIX_SENTRY_DNS
+      HCAPTCHA_SECRET: /copilot/helix/alpha/secrets/HCAPTCHA_SECRET
+      SENTRY_DNS: /copilot/helix/alpha/secrets/SENTRY_DNS
       HELIXDBCLUSTER_SECRET: helix-alpha-auroraSecret
