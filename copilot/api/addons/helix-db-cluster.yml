@@ -94,6 +94,8 @@ Resources:
         MinCapacity: !FindInMap [helixdbclusterEnvScalingConfigurationMap, !Ref Env, DBMinCapacity]
         MaxCapacity: !FindInMap [helixdbclusterEnvScalingConfigurationMap, !Ref Env, DBMaxCapacity]
         SecondsUntilAutoPause: !Ref helixdbclusterDBAutoPauseSeconds
+      BackupRetentionPeriod: 7
+      
   helixdbclusterSecretAuroraClusterAttachment:
     Type: AWS::SecretsManager::SecretTargetAttachment
     Properties:
