@@ -63,6 +63,7 @@ phases:
           if [ -f "$ADDONSFILE" ]; then
             tmp=$(mktemp)
             timestamp=$(date +%s)
+            # FIXME: change prod, test and helix-beta later on
             aws s3 cp "$ADDONSFILE" "s3://stackset-helix-beta-infr-pipelinebuiltartifactbuc-15f5oyn6b1l3a/manual/$timestamp/$workload.addons.stack.yml";
             jq --arg a "https://stackset-helix-beta-infr-pipelinebuiltartifactbuc-15f5oyn6b1l3a.s3.us-east-1.amazonaws.com/manual/$timestamp/$workload.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$workload-test.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-test.params.json
             jq --arg a "https://stackset-helix-beta-infr-pipelinebuiltartifactbuc-15f5oyn6b1l3a.s3.us-east-1.amazonaws.com/manual/$timestamp/$workload.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$workload-prod.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-prod.params.json

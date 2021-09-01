@@ -77,13 +77,13 @@ the same given app and environment.
 
 ### Pipeline
 
-> Deploying an environment(eg: prod) for the first time?
+> Deploying an environment(eg: alpha) for the first time?
 
 Pipeline was unable to create Addon stacks. "Deploy the environment manually
 first using `svc deploy -e ENV`". And add the env into the pipeline afterwards
 and run `pipeline update`. This might be wrong however.
 
-Lets not try to access the same secret in `test` env from `prod` env deployment.
+Lets not try to access the same secret in `test` env from `alpha` env deployment.
 
 NOTE: Make sure the name is unique across environments with `${Env}` attached
 to the names.
