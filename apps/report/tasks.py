@@ -108,7 +108,8 @@ def trigger_report_generation(generation_id):
             with NamedTemporaryFile(dir='/tmp') as tmp:
                 workbook.save(tmp.name)
                 workbook.close()
-                generation.full_report.save(path, File(tmp))
+                file = File(tmp)
+                generation.full_report.save(path, file)
                 del workbook
             logger.warn(f'Completed report generation in {time.time() - then}')
             then = time.time()
@@ -117,7 +118,8 @@ def trigger_report_generation(generation_id):
             with NamedTemporaryFile(dir='/tmp') as tmp:
                 workbook.save(tmp.name)
                 workbook.close()
-                generation.snapshot.save(path, File(tmp))
+                file = File(tmp)
+                generation.snapshot.save(path, file)
                 del workbook
             logger.warn(f'Completed snapshot generation {time.time() - then}')
 

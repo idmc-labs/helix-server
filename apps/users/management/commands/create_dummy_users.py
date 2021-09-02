@@ -24,7 +24,7 @@ class Command(BaseCommand):
         user.username = options['email']
         user.first_name = options['firstname']
         user.last_name = options['lastname']
-        user.set_password(options['jassword'])
+        user.set_password(options['password'])
         user.save()
 
         role = USER_ROLE.ADMIN if options['role'] == 'admin' else USER_ROLE.GUEST

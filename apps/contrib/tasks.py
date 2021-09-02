@@ -74,8 +74,9 @@ def generate_excel_file(download_id, user_id):
         with NamedTemporaryFile(dir='/tmp') as tmp:
             workbook.save(tmp.name)
             workbook.close()
-            download.file.save(path, File(tmp))
-            download.file_size = File(tmp).size
+            file = File(tmp)
+            download.file_size = file.size
+            download.file.save(path, file)
             del workbook
         download.status = ExcelDownload.EXCEL_GENERATION_STATUS.COMPLETED
         download.completed_at = timezone.now()
