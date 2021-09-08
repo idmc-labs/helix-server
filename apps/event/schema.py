@@ -197,6 +197,7 @@ class EventType(DjangoObjectType):
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     review_count = graphene.Field(EventReviewCountType)
     entry_count = graphene.Field(graphene.Int)
+    glide_numbers = graphene.List(graphene.NonNull(graphene.String))
 
     def resolve_review_count(root, info, **kwargs):
         return info.context.event_event_review_count_dataloader.load(root.id)
