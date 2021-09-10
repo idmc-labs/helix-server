@@ -361,6 +361,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             "actor": Actor,
             "disaster_category": DisasterCategory,
             "disaster_sub_category": DisasterSubCategory,
+            "disaster_sub_type": DisasterSubType,
             "disaster_type": DisasterType
         }
         for field, model in foreign_key_fields_dict.items():
