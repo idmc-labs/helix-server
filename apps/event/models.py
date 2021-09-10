@@ -16,6 +16,7 @@ from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
 from apps.users.models import User
 from django.contrib.postgres.fields import ArrayField
+from django.forms import model_to_dict
 
 
 class NameAttributedModels(models.Model):
@@ -339,3 +340,35 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
 
     def __str__(self):
         return self.name or str(self.id)
+
+    def clone_and_save_event(self, user: 'User'):
+        event_data = model_to_dict(
+            self,
+            exclude=[
+                'id', 'created_at', 'created_by'
+            ]
+        )
+        # Clone m2m keys fields
+        countries = event_data['countries']
+        event_data.pop('countries')
+        # Clone foreigh key fields
+        foreign_key_fields_dict = {
+            "crisis": Crisis,
+            "trigger": Trigger,
+            "trigger_sub_type": TriggerSubType,
+            "violence": Violence,
+            "violence_sub_type": ViolenceSubType,
+            "actor": Actor,
+            "disaster_category": DisasterCategory,
+            "disaster_sub_category": DisasterSubCategory,
+            "disaster_type": DisasterType
+        }
+        for field, model in foreign_key_fields_dict.items():
+            if event_data[field]:
+                event_data[field] = model.objects.get(pk=event_data[field])
+
+        event_data['created_by'] = user
+        clonned_event = Event.objects.create(**event_data)
+        # Add m2m contires
+        clonned_event.countries.set(countries)
+        return [clonned_event]
