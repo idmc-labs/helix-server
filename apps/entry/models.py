@@ -450,6 +450,10 @@ class Figure(MetaInformationArchiveAbstractModel,
             models.Index(fields=['role']),
         ]
 
+    calculation_logic = models.TextField(verbose_name=_('Calculation Logic'),
+                                         blank=True, null=True)
+    caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
+    tags = models.ManyToManyField('FigureTag', blank=True)
     # methods
 
     @classmethod
@@ -766,16 +770,10 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
     idmc_analysis = models.TextField(verbose_name=_('IDMC Analysis'),
                                      blank=True, null=True)
-    calculation_logic = models.TextField(verbose_name=_('Calculation Logic'),
-                                         blank=True, null=True)
     is_confidential = models.BooleanField(
         verbose_name=_('Confidential Source'),
         default=False,
     )
-    caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
-    # TODO: grid
-    tags = models.ManyToManyField('FigureTag', blank=True)
-
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
                                        blank=True,
                                        related_name='review_entries',
