@@ -40,17 +40,15 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         self.tag2 = TagFactory.create()
         self.tag3 = TagFactory.create()
         self.entry1ev1 = EntryFactory.create(event=self.event1crisis1)
-        self.entry1ev1.tags.set([self.tag1, self.tag2])
         FigureFactory.create(entry=self.entry1ev1,
                              country=self.country1reg1)
         self.entry2ev1 = EntryFactory.create(event=self.event1crisis1)
-        self.entry2ev1.tags.set([self.tag3])
         FigureFactory.create(entry=self.entry2ev1,
                              country=self.country1reg1)
         self.entry3ev2 = EntryFactory.create(event=self.event2crisis1)
-        self.entry3ev2.tags.set([self.tag2])
         self.fig1entry3 = FigureFactory.create(entry=self.entry2ev1,
                                                country=self.country3reg3)
+        self.fig1entry3.tags.set([self.tag1, self.tag2, self.tag3])
 
         self.mutation = '''
         mutation CreateExtraction($input: CreateExtractInputType!) {

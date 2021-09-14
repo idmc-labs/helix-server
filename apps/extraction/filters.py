@@ -37,6 +37,9 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_entry_tags = IDListFilter(method='filter_tags')
     filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='unaccent__icontains')
     filter_event_glide_number = df.CharFilter(field_name='event__glide_number', lookup_expr='unaccent__icontains')
+    filter_figure_tags = IDListFilter(method='filter_tags')
+    filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
+    filter_event_glide_number = df.CharFilter(field_name='event__glide_numbers', lookup_expr='in')
     filter_event_crisis_types = StringListFilter(method='filter_crisis_types')
     filter_entry_review_status = StringListFilter(method='filter_by_review_status')
     filter_entry_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
@@ -166,7 +169,7 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     def filter_tags(self, qs, name, value):
         if value:
-            return qs.filter(tags__in=value).distinct()
+            return qs.filter(figures__tags__in=value).distinct()
         return qs
 
     def filter_crisis_types(self, qs, name, value):
@@ -274,6 +277,8 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
     filter_entry_tags = IDListFilter(method='filter_tags')
     filter_entry_article_title = df.CharFilter(field_name='entry__article_title', lookup_expr='unaccent__icontains')
+    filter_figure_tags = IDListFilter(method='filter_tags')
+    filter_entry_article_title = df.CharFilter(field_name='entry__article_title', lookup_expr='icontains')
     filter_event_crisis_types = StringListFilter(method='filter_crisis_types')
     filter_event_glide_number = df.CharFilter(field_name='entry__event__glide_number', lookup_expr='unaccent__icontains')
     filter_entry_review_status = StringListFilter(method='filter_by_review_status')
@@ -384,7 +389,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
 
     def filter_tags(self, qs, name, value):
         if value:
-            return qs.filter(entry__tags__in=value).distinct()
+            return qs.filter(tags__in=value).distinct()
         return qs
 
     def filter_crisis_types(self, qs, name, value):

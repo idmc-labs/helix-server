@@ -441,6 +441,11 @@ class Figure(MetaInformationArchiveAbstractModel,
     geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
                                            related_name='figures')
 
+    calculation_logic = models.TextField(verbose_name=_('Calculation Logic'),
+                                         blank=True, null=True)
+    caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
+    tags = models.ManyToManyField('FigureTag', blank=True)
+
     class Meta:
         indexes = [
             models.Index(fields=['start_date']),
@@ -450,12 +455,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             models.Index(fields=['role']),
         ]
 
-    calculation_logic = models.TextField(verbose_name=_('Calculation Logic'),
-                                         blank=True, null=True)
-    caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
-    tags = models.ManyToManyField('FigureTag', blank=True)
     # methods
-
     @classmethod
     def filtered_nd_figures(
         cls,
@@ -570,7 +570,9 @@ class Figure(MetaInformationArchiveAbstractModel,
             disaggregation_disability='Disability',
             disaggregation_indigenous_people='Indigenous People',
             disaggregation_age_json='Displacement: Age',
-            entry__tags__name='Tags',
+            tags__name='Tags',
+            calculation_logic='Calculation Logic',
+            caveats='Caveats',
         )
         values = figures.order_by(
             '-created_at'
@@ -815,7 +817,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
         sources = cloned_entries[0]['sources']
         publishers = cloned_entries[0]['publishers']
-        tags = cloned_entries[0]['tags']
 
         entries = []
         for cloned_entry in cloned_entries:
@@ -830,7 +831,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         for entry in entries:
             entry.sources.set(sources)
             entry.publishers.set(publishers)
-            entry.tags.set(tags)
 
         # end m2m hassle
 
