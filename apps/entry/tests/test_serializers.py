@@ -587,12 +587,21 @@ class TestFigureSerializer(HelixTestCase):
     def test_invalid_gender(self):
         self.data['disaggregation_sex_male'] = 10
         self.data['disaggregation_sex_female'] = 120
-        self.data['reported'] = self.data['disaggregation_sex_male'] + self.data['disaggregation_sex_female'] - 1
+        self.data['disaggregation_lgbtiq'] = 100
+        self.data['reported'] = (
+            self.data['disaggregation_sex_male'] +
+            self.data['disaggregation_sex_female'] +
+            self.data['disaggregation_lgbtiq'] - 1
+        )
         serializer = FigureSerializer(data=self.data,
                                       context={'request': self.request})
         self.assertFalse(serializer.is_valid())
         self.assertIn('disaggregation_sex_male', serializer.errors)
-        self.data['reported'] = self.data['disaggregation_sex_male'] + self.data['disaggregation_sex_female']
+        self.data['reported'] = (
+            self.data['disaggregation_sex_male'] +
+            self.data['disaggregation_sex_female'] +
+            self.data['disaggregation_lgbtiq']
+        )
         serializer = FigureSerializer(data=self.data,
                                       context={'request': self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
