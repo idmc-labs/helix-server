@@ -10,7 +10,8 @@ from apps.event.serializers import (
     EventSerializer,
     EventUpdateSerializer,
     ActorSerializer,
-    ActorUpdateSerializer
+    ActorUpdateSerializer,
+    CloneEventSerializer,
 )
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
@@ -226,6 +227,33 @@ class ExportActors(graphene.Mutation):
         return ExportActors(errors=None, ok=True)
 
 
+CloneEntryInputType = generate_input_type_for_serializer(
+    'CloneEventInputType',
+    CloneEventSerializer
+)
+
+
+class CloneEvent(graphene.Mutation):
+    class Arguments:
+        data = CloneEntryInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(EventType)
+
+    @staticmethod
+    @permission_checker(['event.add_event'])
+    def mutate(root, info, data):
+        serializer = CloneEventSerializer(
+            data=data,
+            context=dict(request=info.context.request),
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return CloneEvent(errors=errors, ok=False)
+        cloned_entries = serializer.save()
+        return CloneEvent(result=cloned_entries, errors=None, ok=True)
+
+
 class Mutation(object):
     create_event = CreateEvent.Field()
     update_event = UpdateEvent.Field()
@@ -236,3 +264,4 @@ class Mutation(object):
     # exports
     export_events = ExportEvents.Field()
     export_actors = ExportActors.Field()
+    clone_event = CloneEvent.Field()

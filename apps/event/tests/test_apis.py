@@ -385,3 +385,80 @@ class TestEventListQuery(HelixGraphQLTestCase):
             data['eventList']['results'][0]['reviewCount']['reviewCompleteCount'],
             None
         )
+
+
+class CloneEventTest(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.mutation = '''mutation cloneEvent($event: ID!) {
+            cloneEvent(data: {event: $event}) {
+                errors
+                result {
+                    id
+                    startDate
+                    endDate
+                    name
+                    eventType
+                    crisis {
+                        id
+                    }
+                    violence {
+                        id
+                    }
+                    violenceSubType {
+                        id
+                    }
+                    trigger {
+                        id
+                    }
+                    triggerSubType {
+                        id
+                    }
+                    actor {
+                        id
+                    }
+                    disasterCategory {
+                        id
+                    }
+                    disasterType {
+                        id
+                    }
+                    countries {
+                        id
+                    }
+                }
+                ok
+                errors
+                }
+            }'''
+        self.event = EventFactory.create(name='test event')
+        self.country = CountryFactory.create()
+        self.event.countries.add(self.country)
+        self.variables = {
+            "event": self.event.id,
+        }
+        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.force_login(editor)
+
+    def test_event_list_filter(self):
+        response = self.query(
+            self.mutation,
+            variables=self.variables
+        )
+        content = response.json()
+        cloned_event = content["data"]["cloneEvent"]["result"]
+        # Check data cloned properly
+        self.assertEqual(cloned_event["id"], str(self.event.id + 1))
+        self.assertEqual(cloned_event["startDate"], str(self.event.start_date))
+        self.assertEqual(cloned_event["endDate"], str(self.event.end_date))
+        self.assertEqual(cloned_event["name"], self.event.name)
+        # Check data cloned properly in foreign key fields
+        self.assertEqual(cloned_event["crisis"]["id"], str(self.event.crisis.id))
+        self.assertEqual(cloned_event["trigger"]["id"], str(self.event.trigger.id))
+        self.assertEqual(cloned_event["triggerSubType"]["id"], str(self.event.trigger_sub_type.id))
+        self.assertEqual(cloned_event["violence"]["id"], str(self.event.violence.id))
+        self.assertEqual(cloned_event["violenceSubType"]["id"], str(self.event.violence_sub_type.id))
+        self.assertEqual(cloned_event["actor"]["id"], str(self.event.actor.id))
+        self.assertEqual(cloned_event["disasterCategory"]["id"], str(self.event.disaster_category.id))
+        self.assertEqual(cloned_event["disasterType"]["id"], str(self.event.disaster_type.id))
+        # Check data cloned properly in m2m key field
+        self.assertEqual(cloned_event["countries"][0]["id"], str(self.country.id))

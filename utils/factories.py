@@ -153,6 +153,23 @@ class CrisisFactory(DjangoModelFactory):
     crisis_type = factory.Iterator(Crisis.CRISIS_TYPE)
 
 
+class ActorFactory(DjangoModelFactory):
+    class Meta:
+        model = 'event.Actor'
+
+    country = factory.SubFactory(CountryFactory)
+
+
+class TriggerFactory(DjangoModelFactory):
+    class Meta:
+        model = "event.Trigger"
+
+
+class TriggerSubTypeFactory(DjangoModelFactory):
+    class Meta:
+        model = "event.TriggerSubType"
+
+
 class EventFactory(DjangoModelFactory):
     class Meta:
         model = 'event.Event'
@@ -161,6 +178,14 @@ class EventFactory(DjangoModelFactory):
     event_type = factory.Iterator(Crisis.CRISIS_TYPE)
     start_date = factory.LazyFunction(lambda: date(2010, 1, 1))
     end_date = factory.LazyFunction(today().date)
+    trigger = factory.SubFactory(TriggerFactory)
+    trigger_sub_type = factory.SubFactory(TriggerSubTypeFactory)
+    violence = factory.SubFactory(ViolenceFactory)
+    violence_sub_type = factory.SubFactory(ViolenceSubTypeFactory)
+    actor = factory.SubFactory(ActorFactory)
+    disaster_category = factory.SubFactory(DisasterCategoryFactory)
+    disaster_sub_category = factory.SubFactory(DisasterSubCategoryFactory)
+    disaster_type = factory.SubFactory(DisasterTypeFactory)
 
 
 class EntryFactory(DjangoModelFactory):

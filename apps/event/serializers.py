@@ -183,3 +183,14 @@ class EventSerializer(MetaInformationSerializerMixin,
 
 class EventUpdateSerializer(UpdateSerializerMixin, EventSerializer):
     id = IntegerIDField(required=True)
+
+
+class CloneEventSerializer(serializers.Serializer):
+    event = serializers.PrimaryKeyRelatedField(queryset=Event.objects.all())
+
+    def save(self, *args, **kwargs):
+        event: Event = self.validated_data['event']
+
+        return event.clone_and_save_event(
+            user=self.context['request'].user,
+        )
