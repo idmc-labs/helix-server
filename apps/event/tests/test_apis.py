@@ -445,7 +445,7 @@ class CloneEventTest(HelixGraphQLTestCase):
             variables=self.variables
         )
         content = response.json()
-        cloned_event = content["data"]["cloneEvent"]["result"][0]
+        cloned_event = content["data"]["cloneEvent"]["result"]
         # Check data cloned properly
         self.assertEqual(cloned_event["id"], str(self.event.id + 1))
         self.assertEqual(cloned_event["startDate"], str(self.event.start_date))

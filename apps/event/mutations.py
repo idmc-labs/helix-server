@@ -239,7 +239,7 @@ class CloneEvent(graphene.Mutation):
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.List(graphene.NonNull(EventType))
+    result = graphene.Field(EventType)
 
     @staticmethod
     @permission_checker(['event.add_event'])

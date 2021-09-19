@@ -345,7 +345,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         event_data = model_to_dict(
             self,
             exclude=[
-                'id', 'created_at', 'created_by'
+                'id', 'created_at', 'created_by', 'last_modified_by',
             ]
         )
         # Clone m2m keys fields
@@ -369,7 +369,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 event_data[field] = model.objects.get(pk=event_data[field])
 
         event_data['created_by'] = user
-        clonned_event = Event.objects.create(**event_data)
+        cloned_event = Event.objects.create(**event_data)
         # Add m2m contires
-        clonned_event.countries.set(countries)
-        return [clonned_event]
+        cloned_event.countries.set(countries)
+        return cloned_event
