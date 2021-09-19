@@ -48,8 +48,9 @@ class CountryRegion(models.Model):
             start_date = None
             end_date = None
         else:
-            start_date = datetime(year=datetime.today().year, month=1, day=1)
-            end_date = datetime(year=datetime.today().year, month=12, day=31)
+            now = timezone.now()
+            start_date = datetime(year=now.year, month=1, day=1)
+            end_date = now.date()
         return {
             cls.ND_CONFLICT_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
@@ -88,7 +89,7 @@ class CountryRegion(models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
                     ),
-                    end_date=end_date,
+                    reference_point=end_date,
                 ).order_by().values('country__region').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
@@ -101,7 +102,7 @@ class CountryRegion(models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
                     ),
-                    end_date=end_date,
+                    reference_point=end_date,
                 ).order_by().values('country__region').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
@@ -253,7 +254,7 @@ class Country(models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
                     ),
-                    end_date=end_date,
+                    reference_point=end_date,
                 ).order_by().values('country').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
@@ -266,7 +267,7 @@ class Country(models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
                     ),
-                    end_date=end_date,
+                    reference_point=end_date,
                 ).order_by().values('country').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],

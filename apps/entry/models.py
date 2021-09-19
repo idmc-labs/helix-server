@@ -19,7 +19,7 @@ from django.db.models import (
     Max,
     Q,
 )
-from django.db.models.functions import Concat, Coalesce
+from django.db.models.functions import Concat
 from django.forms import model_to_dict
 from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
@@ -470,25 +470,20 @@ class Figure(MetaInformationArchiveAbstractModel,
     def filtered_idp_figures(
         cls,
         qs: QuerySet,
-        end_date: Optional[date] = None,
+        reference_point: Optional[date] = None,
     ):
-        from apps.crisis.models import Crisis
-
-        end_date = end_date or date.today()
+        reference_point = reference_point or date.today()
         qs = qs.filter(
             start_date__isnull=False,
-            start_date__lte=end_date,
+            start_date__lte=reference_point,
         ).filter(
             category=FigureCategory.stock_idp_id(),
-        ).exclude(
-            # TODO: New changes have been recommended... Needs implementing
-            entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
         ).filter(
             Q(
                 # if end date exists (=expired), we must make sure that expiry date is after the given end date,
                 # also figure started before the end date
                 end_date__isnull=False,
-                end_date__gte=end_date,
+                end_date__gte=reference_point,
             ) | Q(
                 # if end date does not exist, we must make sure that that figure started before given start date
                 end_date__isnull=True,
@@ -853,10 +848,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                         entry=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
-                    end_date=Coalesce(
-                        models.OuterRef('event__end_date'),
-                        date.today()
-                    )
+                    reference_point=timezone.now().date(),
                 ).order_by().values('entry').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
