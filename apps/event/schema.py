@@ -196,9 +196,13 @@ class EventType(DjangoObjectType):
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     review_count = graphene.Field(EventReviewCountType)
+    entry_count = graphene.Field(graphene.Int)
 
     def resolve_review_count(root, info, **kwargs):
         return info.context.event_event_review_count_dataloader.load(root.id)
+
+    def resolve_entry_count(root, info, **kwargs):
+        return info.context.event_entry_count_dataloader.load(root.id)
 
     def resolve_total_stock_idp_figures(root, info, **kwargs):
         NULL = 'null'
