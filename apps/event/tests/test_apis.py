@@ -64,7 +64,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
             "crisis": str(crisis.id),
             "name": "Event1",
             "eventType": "DISASTER",
-            "glideNumber": "glide number",
+            "glideNumbers": ["glide number"],
             "disasterSubType": DisasterSubTypeFactory().id,
             "countries": [each.id for each in countries],
             "startDate": "2014-01-01",

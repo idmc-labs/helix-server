@@ -12,6 +12,8 @@ class EventFilter(NameFilterMixin,
     crisis_by_ids = IDListFilter(method='filter_crises')
     event_types = StringListFilter(method='filter_event_types')
     countries = IDListFilter(method='filter_countries')
+    glide_numbers = StringListFilter(method='filter_glide_numbers')
+
     # used in report entry table
     report = django_filters.CharFilter(method='filter_report')
     disaster_categories = IDListFilter(method='filter_disaster_categories')
@@ -22,8 +24,7 @@ class EventFilter(NameFilterMixin,
         fields = {
             'created_at': ['lte', 'lt', 'gte', 'gt'],
             'start_date': ['lte', 'lt', 'gte', 'gt'],
-            'end_date': ['lte', 'lt', 'gte', 'gt'],
-            'glide_number': ['icontains'],
+            'end_date': ['lte', 'lt', 'gte', 'gt']
         }
 
     def filter_report(self, qs, name, value):
@@ -62,6 +63,11 @@ class EventFilter(NameFilterMixin,
                 Crisis.CRISIS_TYPE.get(item).value for item in value
             ]).distinct()
         return qs
+
+    def filter_glide_numbers(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(glide_numbers__overlap=value).distinct()
 
     @property
     def qs(self):
