@@ -125,6 +125,26 @@ class QueryAbstractModel(models.Model):
         verbose_name=_('Figure Term'),
         blank=True,
     )
+    filter_event_disaster_categories = models.ManyToManyField(
+        'event.DisasterCategory',
+        verbose_name=_('Disaster Category'),
+        blank=True,
+    )
+    filter_event_disaster_sub_categories = models.ManyToManyField(
+        'event.DisasterSubCategory',
+        verbose_name=_('Disaster Sub Category'),
+        blank=True,
+    )
+    filter_event_disaster_types = models.ManyToManyField(
+        'event.DisasterType',
+        verbose_name=_('Disaster Type'),
+        blank=True,
+    )
+    filter_event_disaster_sub_types = models.ManyToManyField(
+        'event.DisasterSubType',
+        verbose_name=_('Disaster Sub Type'),
+        blank=True,
+    )
 
     @property
     def extract_figures(self) -> ['Figure']:  # noqa
@@ -145,6 +165,10 @@ class QueryAbstractModel(models.Model):
             filter_event_crisis_types=self.filter_event_crisis_types,
             filter_entry_review_status=self.filter_entry_review_status,
             filter_figure_displacement_types=self.filter_figure_displacement_types,
+            filter_event_disaster_categories=self.filter_event_disaster_categories,
+            filter_event_disaster_sub_categories=self.filter_event_disaster_sub_categories,
+            filter_event_disaster_types=self.filter_event_disaster_types,
+            filter_event_disaster_sub_types=self.filter_event_disaster_sub_types
             # NOTE: Implement this for report if required
             # filter_entry_publishers=self.filter_entry_publishers,
             # filter_entry_sources=self.filter_entry_sources,
@@ -174,6 +198,10 @@ class QueryAbstractModel(models.Model):
             filter_entry_publishers=self.filter_entry_publishers.all(),
             filter_entry_sources=self.filter_entry_sources.all(),
             filter_figure_displacement_types=self.filter_figure_displacement_types,
+            filter_event_disaster_categories=self.filter_event_disaster_categories,
+            filter_event_disaster_sub_categories=self.filter_event_disaster_sub_categories,
+            filter_event_disaster_types=self.filter_event_disaster_types,
+            filter_event_disaster_sub_types=self.filter_event_disaster_sub_types
         ))
 
     class Meta:
