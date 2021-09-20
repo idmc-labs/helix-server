@@ -52,7 +52,7 @@ SESSION_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
 CSRF_COOKIE_DOMAIN = os.environ.get('CSRF_COOKIE_DOMAIN', '.idmcdb.org')
 
 CORS_ORIGIN_REGEX_WHITELIST = [
-    '^https://[\w\-]+\.idmcdb\.org$'
+    r'^https://[\w\-]+\.idmcdb\.org$'
 ]
 CSRF_TRUSTED_ORIGINS = [
     'media-monitoring.idmcdb.org',

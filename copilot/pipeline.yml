@@ -14,7 +14,7 @@ source:
   # the artifacts should be sourced from. For example, the GitHub provider
   # has the following properties: repository, branch.
   properties:
-    branch: feature/copilot
+    branch: release
     repository: https://github.com/idmc-labs/helix-server
     # Optional: specify the name of an existing CodeStar Connections connection.
     # connection_name: a-connection
@@ -23,7 +23,7 @@ source:
 # to your environments.
 stages:
     - # The name of the environment to deploy to.
-      name: test
+      name: nightly
       # Optional: flag for manual approval action before deployment.
       # requires_approval: true
       # Optional: use test commands to validate this stage of your build.
