@@ -1,4 +1,5 @@
-FROM python:3.8.2-buster AS server
+# ########################### BUILD SERVER BASE
+FROM python:3.8.2-buster AS base
 
 LABEL maintainer="dev@togglecorp.com"
 
@@ -6,17 +7,30 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /code
 
-COPY ./requirements.txt /code/requirements.txt
-RUN python3 -m pip install --upgrade pip \
-    && pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml poetry.lock /code/
+
+# Upgrade pip and install python packages for code
+RUN pip install --upgrade --no-cache-dir pip poetry \
+    && poetry --version \
+    # Configure to use system instead of virtualenvs
+    && poetry config virtualenvs.create false \
+    && poetry install --no-root \
+    # Remove installer
+    && pip uninstall -y poetry virtualenv-clone virtualenv
+
+
+# ########################### BUILD SERVER WEB
+FROM base AS server
 
 COPY . /code/
 
 CMD ./deploy/scripts/run_prod.sh
 
-
-FROM server AS celery
+# ########################### BUILD SERVER WORKER
+FROM base AS celery
 
 RUN apt update -y && apt install -y chromium chromium-driver
+
+COPY . /code/
 
 CMD ["celery", "-A", "proj", "worker", "-B", "-l", "INFO"]
