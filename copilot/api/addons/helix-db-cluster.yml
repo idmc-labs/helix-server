@@ -1,0 +1,115 @@
+Parameters:
+  App:
+    Type: String
+    Description: Your application's name.
+  Env:
+    Type: String
+    Description: The environment name your service, job, or workflow is being deployed to.
+  Name:
+    Type: String
+    Description: The name of the service, job, or workflow being deployed.
+  # Customize your Aurora Serverless cluster by setting the default value of the following parameters.
+  helixdbclusterDBName:
+    Type: String
+    Description: The name of the initial database to be created in the DB cluster.
+    Default: postgres
+    # Cannot have special characters
+    # Naming constraints: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/CHAP_Limits.html#RDS_Limits.Constraints
+  helixdbclusterDBAutoPauseSeconds:
+    Type: Number
+    Description: The duration in seconds before the cluster pauses.
+    Default: 1000
+Mappings:
+  helixdbclusterEnvScalingConfigurationMap:
+    nightly:
+      "DBMinCapacity": 2 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
+      "DBMaxCapacity": 8 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
+    alpha:
+      "DBMinCapacity": 2 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
+      "DBMaxCapacity": 8 # AllowedValues: [2, 4, 8, 16, 32, 64, 192, 384]
+
+Resources:
+  helixdbclusterDBSubnetGroup:
+    Type: 'AWS::RDS::DBSubnetGroup'
+    Properties:
+      DBSubnetGroupDescription: Group of Copilot private subnets for Aurora cluster.
+      SubnetIds:
+        !Split [',', { 'Fn::ImportValue': !Sub '${App}-${Env}-PrivateSubnets' }]
+  helixdbclusterDBClusterSecurityGroup:
+    Metadata:
+      'aws:copilot:description': 'A security group for your DB cluster helixdbcluster'
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: The Security Group for the database cluster.
+      SecurityGroupIngress:
+        - ToPort: 5432
+          FromPort: 5432
+          IpProtocol: tcp
+          Description: !Sub 'From the Aurora Security Group of the workload ${Name}.'
+          # NOTE: replace the security group to use the env level group; so that other services in the same env can access it
+          SourceSecurityGroupId: { 'Fn::ImportValue': !Sub '${App}-${Env}-EnvironmentSecurityGroup' }
+      VpcId:
+        Fn::ImportValue:
+          !Sub '${App}-${Env}-VpcId'
+  helixdbclusterAuroraSecret:
+    Metadata:
+      'aws:copilot:description': 'A Secrets Manager secret to store your DB credentials'
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Description: !Sub Aurora main user secret for ${AWS::StackName}
+      GenerateSecretString:
+        SecretStringTemplate: '{"username": "postgres"}'
+        GenerateStringKey: "password"
+        ExcludePunctuation: true
+        IncludeSpace: false
+        PasswordLength: 16
+  helixdbclusterDBClusterParameterGroup:
+    Metadata:
+      'aws:copilot:description': 'A DB parameter group for engine configuration values'
+    Type: 'AWS::RDS::DBClusterParameterGroup'
+    Properties:
+      Description: !Ref 'AWS::StackName'
+      Family: 'aurora-postgresql10'
+      Parameters:
+        client_encoding: 'UTF8'
+  helixdbclusterDBCluster:
+    Metadata:
+      'aws:copilot:description': 'The helixdbcluster Aurora Serverless database cluster'
+    Type: 'AWS::RDS::DBCluster'
+    Properties:
+      MasterUsername:
+        !Join [ "",  [ '{{resolve:secretsmanager:', !Ref helixdbclusterAuroraSecret, ":SecretString:username}}" ]]
+      MasterUserPassword:
+        !Join [ "",  [ '{{resolve:secretsmanager:', !Ref helixdbclusterAuroraSecret, ":SecretString:password}}" ]]
+      DatabaseName: !Ref helixdbclusterDBName
+      Engine: 'aurora-postgresql'
+      EngineVersion: '10.12'
+      EngineMode: serverless
+      DBClusterParameterGroupName: !Ref helixdbclusterDBClusterParameterGroup
+      DBSubnetGroupName: !Ref helixdbclusterDBSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref helixdbclusterDBClusterSecurityGroup
+      ScalingConfiguration:
+        AutoPause: true
+        MinCapacity: !FindInMap [helixdbclusterEnvScalingConfigurationMap, !Ref Env, DBMinCapacity]
+        MaxCapacity: !FindInMap [helixdbclusterEnvScalingConfigurationMap, !Ref Env, DBMaxCapacity]
+        SecondsUntilAutoPause: !Ref helixdbclusterDBAutoPauseSeconds
+      BackupRetentionPeriod: 7
+
+  helixdbclusterSecretAuroraClusterAttachment:
+    Type: AWS::SecretsManager::SecretTargetAttachment
+    Properties:
+      SecretId: !Ref helixdbclusterAuroraSecret
+      TargetId: !Ref helixdbclusterDBCluster
+      TargetType: AWS::RDS::DBCluster
+  # NOTE: this ssm bears the ARN for db secret, which cannot be readily exported
+  helixdbclusterSecretParam:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub ${App}-${Env}-auroraSecret
+      Type: String
+      Value: !Ref helixdbclusterAuroraSecret
+Outputs:
+  helixdbclusterSecret: # injected as HELIXDBCLUSTER_SECRET environment variable by Copilot.
+    Description: "The JSON secret that holds the database username and password. Fields are 'host', 'port', 'dbname', 'username', 'password', 'dbClusterIdentifier' and 'engine'"
+    Value: !Ref helixdbclusterAuroraSecret

@@ -3,6 +3,7 @@ import json
 from debug_toolbar.middleware import DebugToolbarMiddleware as BaseMiddleware
 from debug_toolbar.middleware import get_show_toolbar
 from debug_toolbar.toolbar import DebugToolbar
+from django.http import HttpResponse
 from django.template.loader import render_to_string
 from graphiql_debug_toolbar.middleware import get_payload, set_content_length
 from graphiql_debug_toolbar.serializers import CallableJSONEncoder
@@ -63,3 +64,13 @@ class DisableIntrospectionSchemaMiddleware:
         if info.field_name == '__schema':
             return None
         return next(root, info, **args)
+
+
+class HealthCheckMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.path == '/health':
+            return HttpResponse('ok')
+        return self.get_response(request)

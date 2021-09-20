@@ -1,0 +1,56 @@
+# The manifest for the "worker" service.
+# Read the full specification for the "Backend Service" type at:
+#  https://aws.github.io/copilot-cli/docs/manifest/backend-service/
+
+# Your service name will be used in naming your resources like log groups, ECS services, etc.
+name: worker
+type: Backend Service
+
+# Your service does not allow any traffic.
+
+# Configuration for your containers and service.
+image:
+  # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
+  build:
+    dockerfile: worker.Dockerfile
+    context: ./
+    healthcheck:
+      command: ["CMD-SHELL", "celery -A helix status"]
+      interval: 10s
+      retries: 2
+      timeout: 30s
+      start_period: 10s
+
+cpu: 1024       # Number of CPU units for the task.
+memory: 8192    # Amount of memory in MiB used by the task.
+count: 1       # Number of tasks that should be running in your service.
+exec: true     # Enable running commands in your container.
+
+# Optional fields for more advanced use-cases.
+variables:                    # Pass environment variables as key value pairs.
+  LOG_LEVEL: info
+
+# You can override any of the values defined above by environment.
+environments:
+  nightly:
+    cpu: 256
+    memory: 1024
+    count:
+      range: 1-2
+      cpu_percentage: 80
+      memory_percentage: 80
+    secrets:
+      DJANGO_SECRET_KEY: /copilot/helix/nightly/secrets/DJANGO_SECRET_KEY
+      HCAPTCHA_SECRET: /copilot/helix/nightly/secrets/HCAPTCHA_SECRET
+      SENTRY_DNS: /copilot/helix/nightly/secrets/SENTRY_DNS
+      HELIXDBCLUSTER_SECRET: helix-nightly-auroraSecret
+  alpha:
+    count:
+      range: 1-3
+      cpu_percentage: 80
+      memory_percentage: 80
+    secrets:
+      DJANGO_SECRET_KEY: /copilot/helix/alpha/secrets/DJANGO_SECRET_KEY
+      HCAPTCHA_SECRET: /copilot/helix/alpha/secrets/HCAPTCHA_SECRET
+      SENTRY_DNS: /copilot/helix/alpha/secrets/SENTRY_DNS
+      HELIXDBCLUSTER_SECRET: helix-alpha-auroraSecret

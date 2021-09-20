@@ -13,9 +13,9 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 import os
 import socket
 import logging
-from enum import Enum
 
 from . import sentry
+from helix.aws.secrets_manager import get_db_cluster_secret
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 
 ALLOWED_HOSTS = [
-    os.environ.get('ALLOWED_HOST', '')
+    os.environ.get('ALLOWED_HOST', '.idmcdb.org')
 ]
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-CSRF_USE_SESSIONS
@@ -49,7 +49,16 @@ CSRF_USE_SESSIONS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'False').lower() == '
 # https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-SESSION_COOKIE_DOMAIN
 SESSION_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
 # https://docs.djangoproject.com/en/3.2/ref/settings/#csrf-cookie-domain
-CSRF_COOKIE_DOMAIN = os.environ.get('CSRF_COOKIE_DOMAIN', None)
+CSRF_COOKIE_DOMAIN = os.environ.get('CSRF_COOKIE_DOMAIN', '.idmcdb.org')
+
+CORS_ORIGIN_REGEX_WHITELIST = [
+    r'^https://[\w\-]+\.idmcdb\.org$'
+]
+CSRF_TRUSTED_ORIGINS = [
+    'media-monitoring.idmcdb.org',
+    'https://media-monitoring.idmcdb.org',
+    'http://media-monitoring.idmcdb.org',
+]
 
 # Application definition
 
@@ -103,6 +112,7 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'utils.middleware.HealthCheckMiddleware',
     'django.middleware.common.CommonMiddleware',
     # NOTE: DebugToolbarMiddleware will cause mutation to execute twice for the client, works fine with graphiql
     # 'utils.middleware.DebugToolbarMiddleware',
@@ -111,18 +121,38 @@ MIDDLEWARE = [
     'django_otp.middleware.OTPMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
+
 if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
     MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
 
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.environ.get('REDIS_CACHE_URL', 'redis://redis:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+REDIS_BROKER_URL = 0
+REDIS_CACHE_DB = 1
+REDIS_RESULT_BACKEND = 2
+
+if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': 'redis://{}:{}/{}'.format(
+                os.environ['ELASTI_CACHE_ADDRESS'],
+                os.environ['ELASTI_CACHE_PORT'],
+                REDIS_CACHE_DB,
+            ),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            }
         }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': os.environ.get('REDIS_CACHE_URL', 'redis://redis:6379/1'),
+            'OPTIONS': {
+                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            }
+        }
+    }
 
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
@@ -152,17 +182,17 @@ WSGI_APPLICATION = 'helix.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
-if os.environ.get('GITHUB_WORKFLOW'):
-    print('Database github workflow')
+if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
+    DBCLUSTER_SECRET = get_db_cluster_secret()
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
             # in the workflow environment
-            'NAME': 'postgres',
-            'USER': 'postgres',
-            'PASSWORD': 'postgres',
-            'HOST': 'localhost',
-            'PORT': 5432,
+            'NAME': DBCLUSTER_SECRET['dbname'],
+            'USER': DBCLUSTER_SECRET['username'],
+            'PASSWORD': DBCLUSTER_SECRET['password'],
+            'HOST': DBCLUSTER_SECRET['host'],
+            'PORT': DBCLUSTER_SECRET['port'],
         }
     }
 else:
@@ -254,8 +284,7 @@ if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
     EMAIL_BACKEND = 'django_ses.SESBackend'
-    AWS_SES_REGION_NAME = os.environ.get("AWS_SES_REGION_NAME")
-    AWS_SES_REGION_ENDPOINT = os.environ.get("AWS_SES_REGION_ENDPOINT")
+
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", 'contact@idmcdb.org')
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
@@ -295,18 +324,21 @@ INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 # Django storage
 
 # https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
-if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
+if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    # NOTE: This naming convention is defined in the addon for s3
+    AWS_STORAGE_BUCKET_NAME = os.environ['COPILOT_S3_BUCKET_NAME']
+elif HELIX_ENVIRONMENT not in (DEVELOPMENT,):
+    # TODO: Remove me after complete move to copilot
+    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'idmc-helix')
+    AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
 
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-AWS_STORAGE_BUCKET_NAME = S3_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'idmc-helix')
-AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
-
-# NOTE: s3 bucket is now public
-#  AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12 * 60 * 60))
+# NOTE: s3 bucket is public
+# AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12 * 60 * 60))
 AWS_QUERYSTRING_AUTH = False
-
 AWS_S3_FILE_OVERWRITE = False
 AWS_IS_GZIPPED = True
 GZIP_CONTENT_TYPES = [
@@ -318,9 +350,6 @@ GZIP_CONTENT_TYPES = [
     'application/json',
     'application/pdf',
 ]
-
-# sign off admin emails
-ENTRY_SIGNER_EMAILS = ','.split(os.environ.get('ENTRY_SIGNER_EMAILS', 'admin@helix.com'))
 
 # Sentry Config
 SENTRY_DSN = os.environ.get('SENTRY_DSN')
@@ -348,17 +377,38 @@ FIGURE_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
 
 # CELERY
 
-CELERY_BROKER_URL = os.environ.get('CELERY_REDIS_URL', 'redis://redis:6379/0')
-CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
+if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
+    CELERY_BROKER_URL = 'redis://{}:{}/{}'.format(
+        os.environ['ELASTI_CACHE_ADDRESS'],
+        os.environ['ELASTI_CACHE_PORT'],
+        REDIS_BROKER_URL,
+    )
+    CELERY_RESULT_BACKEND = 'redis://{}:{}/{}'.format(
+        os.environ['ELASTI_CACHE_ADDRESS'],
+        os.environ['ELASTI_CACHE_PORT'],
+        REDIS_RESULT_BACKEND,
+    )
+else:
+    CELERY_BROKER_URL = os.environ.get('CELERY_REDIS_URL', 'redis://redis:6379/0')
+    CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
+
+# NOTE: These queue names must match the worker container command
+# CELERY_DEFAULT_QUEUE = LOW_PRIO_QUEUE = os.environ.get('LOW_PRIO_QUEUE_NAME', 'celery_low')
+# HIGH_PRIO_QUEUE = os.environ.get('HIGH_PRIO_QUEUE_NAME', 'celery_high')
+
+# CELERY ROUTES
+# CELERY_ROUTES = {
+#     'apps.users.tasks.send_email': {'queue': HIGH_PRIO_QUEUE},
+#     'apps.entry.tasks.generate_pdf': {'queue': HIGH_PRIO_QUEUE},
+#     # LOW
+#     'apps.contrib.tasks.kill_all_old_excel_exports': {'queue': LOW_PRIO_QUEUE},
+#     'apps.contrib.tasks.kill_all_long_running_previews': {'queue': LOW_PRIO_QUEUE},
+#     'apps.contrib.tasks.kill_all_long_running_report_generations': {'queue': LOW_PRIO_QUEUE},
+#     'apps.report.tasks.trigger_report_generation': {'queue': LOW_PRIO_QUEUE},
+#     'apps.contrib.tasks.generate_excel_file': {'queue': LOW_PRIO_QUEUE},
+# }
 
 # end CELERY
-
-
-class QueuePriority(Enum):
-    DEFAULT = 'default'
-    HEAVY = 'heavy'
-    CRON = 'cron'
-
 
 LOCALE_PATHS = [
     os.path.join(BASE_DIR, 'locale'),
@@ -387,15 +437,16 @@ HCAPTCHA_SECRET = os.environ.get('HCAPTCHA_SECRET', '0x0000000000000000000000000
 MAX_LOGIN_ATTEMPTS = 3
 
 # If login attempts exceed MAX_CAPTCHA_LOGIN_ATTEMPTS , users will need to wait LOGIN_TIMEOUT seconds
+
 MAX_CAPTCHA_LOGIN_ATTEMPTS = 10
 LOGIN_TIMEOUT = 10 * 60
 
 # Frontend base url for email button link
-FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'localhost:3080')
+FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://localhost:3080')
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#password-reset-timeout
 PASSWORD_RESET_TIMEOUT = 15 * 60
-PASSWORD_RESET_CLIENT_URL = "{FRONTEND_BASE_URL}/reset-password/{{uid}}/{{token}}".format(
+PASSWORD_RESET_CLIENT_URL = "{FRONTEND_BASE_URL}reset-password/{{uid}}/{{token}}".format(
     FRONTEND_BASE_URL=FRONTEND_BASE_URL
 )
 
@@ -405,7 +456,7 @@ OLD_JOB_EXECUTION_TTL = 259_200  # seconds
 EXCEL_EXPORT_PENDING_STATE_TIMEOUT = 18_000  # seconds
 # staying in progress for too long will be moved to killed
 EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT = 600  # seconds
-EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT = 3
+EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT = 10
 
 OTP_TOTP_ISSUER = 'IDMC'
 OTP_HOTP_ISSUER = 'IDMC'

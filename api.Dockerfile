@@ -1,5 +1,4 @@
-# ########################### BUILD SERVER BASE
-FROM python:3.8.2-buster AS base
+FROM python:3.8.2-buster
 
 LABEL maintainer="dev@togglecorp.com"
 
@@ -18,19 +17,6 @@ RUN pip install --upgrade --no-cache-dir pip poetry \
     # Remove installer
     && pip uninstall -y poetry virtualenv-clone virtualenv
 
-
-# ########################### BUILD SERVER WEB
-FROM base AS server
-
 COPY . /code/
 
 CMD ./deploy/scripts/run_prod.sh
-
-# ########################### BUILD SERVER WORKER
-FROM base AS celery
-
-RUN apt update -y && apt install -y chromium chromium-driver
-
-COPY . /code/
-
-CMD ["celery", "-A", "proj", "worker", "-B", "-l", "INFO"]
