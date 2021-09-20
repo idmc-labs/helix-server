@@ -7,8 +7,8 @@ services:
       POSTGRES_PASSWORD: postgres
     volumes:
       - helix-db-data:/var/lib/postgresql/data
-    ports:
-      - '6050:5432'
+    # ports:
+    #   - '6050:5432'
 
   redis:
     image: redis:latest
@@ -22,8 +22,6 @@ services:
       target: server
       cache_from:
         - helix/helix-server:latest
-    # environment:
-    #   PIPENV_VENV_IN_PROJECT: enabled
     env_file:
       - .env
     command: python manage.py runserver 0.0.0.0:9000
