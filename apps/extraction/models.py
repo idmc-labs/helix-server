@@ -184,7 +184,7 @@ class QueryAbstractModel(models.Model):
             filter_event_disaster_types=self.filter_event_disaster_types,
             filter_event_disaster_sub_types=self.filter_event_disaster_sub_types,
             filter_figure_category_types=self.filter_figure_category_types,
-            filter_entry_has_review_comments=self.filter_has_review_comments
+            filter_entry_has_review_comments=self.filter_entry_has_review_comments
             # NOTE: Implement this for report if required
             # filter_entry_publishers=self.filter_entry_publishers,
             # filter_entry_sources=self.filter_entry_sources,
@@ -219,7 +219,7 @@ class QueryAbstractModel(models.Model):
             filter_event_disaster_types=self.filter_event_disaster_types,
             filter_event_disaster_sub_types=self.filter_event_disaster_sub_types,
             filter_figure_category_types=self.filter_figure_category_types,
-            filter_entry_has_review_comments=self.filter_has_review_comments
+            filter_entry_has_review_comments=self.filter_entry_has_review_comments
         ))
 
     class Meta:

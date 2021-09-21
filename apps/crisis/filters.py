@@ -55,7 +55,7 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
     def filter_name(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(Q(name__accent__icontains=value) | Q(events__name__accent__icontains=value)).distinct()
+        return qs.filter(Q(name__unaccent__icontains=value) | Q(events__name__unaccent__icontains=value)).distinct()
 
     def filter_created_by(self, qs, name, value):
         if not value:
