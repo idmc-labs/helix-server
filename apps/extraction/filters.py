@@ -47,6 +47,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_event_disaster_sub_categories = IDListFilter(method='filter_event_disaster_sub_categories')
     filter_event_disaster_sub_types = IDListFilter(method='filter_event_disaster_sub_types')
     filter_event_disaster_types = IDListFilter(method='filter_event_disaster_types')
+    filter_entry_has_review_comments = df.BooleanFilter(method='filter_has_review_comments', initial=False)
     # used in report entry table
     report = df.CharFilter(method='filter_report')
 
@@ -240,6 +241,11 @@ class EntryExtractionFilterSet(df.FilterSet):
             ).distinct()
         return qs
 
+    def filter_has_review_comments(self, qs, name, value):
+        if value is True:
+            return qs.filter(reviews__comment__isnull=False)
+        return qs
+
 
 class BaseFigureExtractionFilterSet(df.FilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
@@ -269,6 +275,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_event_disaster_sub_categories = IDListFilter(method='filter_event_disaster_sub_categories')
     filter_event_disaster_sub_types = IDListFilter(method='filter_event_disaster_sub_types')
     filter_event_disaster_types = IDListFilter(method='filter_event_disaster_types')
+    filter_entry_has_review_comments = df.BooleanFilter(method='filter_has_review_comments', initial=False)
     # used in report entry table
     report = df.CharFilter(method='filter_report')
 
@@ -445,6 +452,11 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
                     event__event_type=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(entry__event__disaster_type__in=value)
             ).distinct()
+        return qs
+
+    def filter_has_review_comments(self, qs, name, value):
+        if value is True:
+            return qs.filter(figure_reviews__comment__isnull=False)
         return qs
 
 
