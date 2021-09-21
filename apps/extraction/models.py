@@ -145,6 +145,9 @@ class QueryAbstractModel(models.Model):
         verbose_name=_('Disaster Sub Type'),
         blank=True,
     )
+    filter_figure_category_types = models.CharField(
+        verbose_name=_('Type'), max_length=8, null=True, blank=True
+    )
 
     @property
     def extract_figures(self) -> ['Figure']:  # noqa
@@ -168,7 +171,8 @@ class QueryAbstractModel(models.Model):
             filter_event_disaster_categories=self.filter_event_disaster_categories,
             filter_event_disaster_sub_categories=self.filter_event_disaster_sub_categories,
             filter_event_disaster_types=self.filter_event_disaster_types,
-            filter_event_disaster_sub_types=self.filter_event_disaster_sub_types
+            filter_event_disaster_sub_types=self.filter_event_disaster_sub_types,
+            filter_figure_category_types=self.filter_figure_category_types
             # NOTE: Implement this for report if required
             # filter_entry_publishers=self.filter_entry_publishers,
             # filter_entry_sources=self.filter_entry_sources,
@@ -201,7 +205,8 @@ class QueryAbstractModel(models.Model):
             filter_event_disaster_categories=self.filter_event_disaster_categories,
             filter_event_disaster_sub_categories=self.filter_event_disaster_sub_categories,
             filter_event_disaster_types=self.filter_event_disaster_types,
-            filter_event_disaster_sub_types=self.filter_event_disaster_sub_types
+            filter_event_disaster_sub_types=self.filter_event_disaster_sub_types,
+            filter_figure_category_types=self.filter_figure_category_types
         ))
 
     class Meta:
