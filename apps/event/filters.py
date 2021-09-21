@@ -18,6 +18,7 @@ class EventFilter(NameFilterMixin,
     report = django_filters.CharFilter(method='filter_report')
     disaster_categories = IDListFilter(method='filter_disaster_categories')
     violence_types = IDListFilter(method='filter_violence_types')
+    created_by_ids = IDListFilter(method='filter_created_by')
 
     class Meta:
         model = Event
@@ -74,6 +75,11 @@ class EventFilter(NameFilterMixin,
         return super().qs.annotate(
             **Event._total_figure_disaggregation_subquery(),
         )
+
+    def filter_created_by(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(created_by__in=value)
 
 
 class ActorFilter(django_filters.FilterSet):
