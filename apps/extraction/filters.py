@@ -35,8 +35,8 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
     filter_entry_tags = IDListFilter(method='filter_tags')
-    filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='icontains')
-    filter_event_glide_number = df.CharFilter(field_name='event__glide_number', lookup_expr='icontains')
+    filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='unaccent__icontains')
+    filter_event_glide_number = df.CharFilter(field_name='event__glide_number', lookup_expr='unaccent__icontains')
     filter_event_crisis_types = StringListFilter(method='filter_crisis_types')
     filter_entry_review_status = StringListFilter(method='filter_by_review_status')
     filter_entry_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
@@ -262,9 +262,9 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
     filter_entry_tags = IDListFilter(method='filter_tags')
-    filter_entry_article_title = df.CharFilter(field_name='entry__article_title', lookup_expr='icontains')
+    filter_entry_article_title = df.CharFilter(field_name='entry__article_title', lookup_expr='unaccent__icontains')
     filter_event_crisis_types = StringListFilter(method='filter_crisis_types')
-    filter_event_glide_number = df.CharFilter(field_name='entry__event__glide_number', lookup_expr='icontains')
+    filter_event_glide_number = df.CharFilter(field_name='entry__event__glide_number', lookup_expr='unaccent__icontains')
     filter_entry_review_status = StringListFilter(method='filter_by_review_status')
     filter_entry_created_by = IDListFilter(field_name='entry__created_by', lookup_expr='in')
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
@@ -491,7 +491,7 @@ class ExtractionQueryFilter(df.FilterSet):
         model = ExtractionQuery
         fields = {
             'id': ('exact',),
-            'name': ('icontains',),
+            'name': ('unaccent__icontains',),
         }
 
     @property

@@ -34,7 +34,7 @@ class TriggerSubObjectListType(CustomDjangoListObjectType):
     class Meta:
         model = TriggerSubType
         filter_fields = {
-            'name': ['icontains']
+            'name': ['unaccent__icontains']
         }
 
 
@@ -48,7 +48,7 @@ class TriggerListType(CustomDjangoListObjectType):
     class Meta:
         model = Trigger
         filter_fields = {
-            'name': ['icontains']
+            'name': ['unaccent__icontains']
         }
 
 
@@ -108,7 +108,7 @@ class DisasterSubObjectListType(CustomDjangoListObjectType):
     class Meta:
         model = DisasterSubType
         filter_fields = {
-            'name': ['icontains'],
+            'name': ['unaccent__icontains'],
         }
 
 
@@ -128,7 +128,7 @@ class DisasterTypeObjectListType(CustomDjangoListObjectType):
     class Meta:
         model = DisasterType
         filter_fields = {
-            'name': ['icontains'],
+            'name': ['unaccent__icontains'],
         }
 
 
@@ -148,7 +148,7 @@ class DisasterSubCategoryListType(CustomDjangoListObjectType):
     class Meta:
         model = DisasterSubCategory
         filter_fields = {
-            'name': ['icontains'],
+            'name': ['unaccent__icontains'],
         }
 
 
@@ -168,7 +168,7 @@ class DisasterCategoryListType(CustomDjangoListObjectType):
     class Meta:
         model = DisasterCategory
         filter_fields = {
-            'name': ['icontains'],
+            'name': ['unaccent__icontains'],
         }
 
 

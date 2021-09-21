@@ -54,7 +54,7 @@ class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
             )
         ).annotate(
             idx=StrIndex('full', models.Value(value.lower()))
-        ).filter(idx__gt=0).order_by('idx')
+        ).filter(full__unaccent__icontains=value).order_by('idx')
 
     def filter_include_inactive(self, queryset, name, value):
         if value is False:

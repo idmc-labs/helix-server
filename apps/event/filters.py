@@ -8,7 +8,7 @@ from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
 
 class EventFilter(NameFilterMixin,
                   django_filters.FilterSet):
-    name = django_filters.CharFilter(method='_filter_name')
+    name = django_filters.CharFilter(method='filter_name')
     crisis_by_ids = IDListFilter(method='filter_crises')
     event_types = StringListFilter(method='filter_event_types')
     countries = IDListFilter(method='filter_countries')
@@ -70,6 +70,11 @@ class EventFilter(NameFilterMixin,
             return qs
         return qs.filter(glide_numbers__overlap=value).distinct()
 
+    def filter_name(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(name__unaccent__icontains=value).distinct()
+
     @property
     def qs(self):
         return super().qs.annotate(
@@ -86,5 +91,5 @@ class ActorFilter(django_filters.FilterSet):
     class Meta:
         model = Actor
         fields = {
-            'name': ['icontains']
+            'name': ['unaccent__icontains']
         }

@@ -56,7 +56,7 @@ class DisaggregatedAgeCategoryListType(CustomDjangoListObjectType):
     class Meta:
         model = DisaggregatedAgeCategory
         filter_fields = {
-            'name': ('icontains',),
+            'name': ('unaccent__icontains',),
         }
 
 
@@ -99,7 +99,7 @@ class FigureCategoryListType(CustomDjangoListObjectType):
     class Meta:
         model = FigureCategory
         filter_fields = {
-            'name': ('icontains',),
+            'name': ('unaccent__icontains',),
         }
 
 
@@ -253,7 +253,7 @@ class FigureTagListType(CustomDjangoListObjectType):
     class Meta:
         model = FigureTag
         filter_fields = {
-            'name': ('icontains',),
+            'name': ('unaccent__icontains',),
         }
 
 

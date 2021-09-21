@@ -25,7 +25,7 @@ class OrganizationListType(CustomDjangoListObjectType):
     class Meta:
         model = Organization
         filter_fields = {
-            'name': ['icontains']
+            'name': ['unaccent__icontains']
         }
 
 

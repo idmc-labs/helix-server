@@ -49,7 +49,7 @@ class CountryFilter(django_filters.FilterSet):
     class Meta:
         model = Country
         fields = {
-            'iso3': ['icontains'],
+            'iso3': ['unaccent__icontains'],
             'id': ['iexact'],
         }
 
