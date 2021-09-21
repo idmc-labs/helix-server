@@ -115,6 +115,14 @@ class CrisisSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(errors)
         return attrs
 
+    def create(self, validated_data):
+        validated_data["created_by"] = self.context['request'].user
+        countries = validated_data.pop("countries", None)
+        crisis = Crisis.objects.create(**validated_data)
+        if countries:
+            crisis.countries.set(countries)
+        return crisis
+
     def udpate(self, *a, **kw):
         raise NotImplementedError('Use `CrisisUpdateSerializer` instead')
 

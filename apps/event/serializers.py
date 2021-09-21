@@ -180,6 +180,10 @@ class EventSerializer(MetaInformationSerializerMixin,
 
         return attrs
 
+    def create(self, validated_data):
+        validated_data["created_by"] = self.context['request'].user
+        return Event.objects.create(**validated_data)
+
 
 class EventUpdateSerializer(UpdateSerializerMixin, EventSerializer):
     id = IntegerIDField(required=True)
