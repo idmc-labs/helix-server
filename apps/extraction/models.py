@@ -10,6 +10,7 @@ from apps.entry.models import (
     FigureDisaggregationAbstractModel,
 )
 from apps.crisis.models import Crisis
+from apps.entry.constants import STOCK, FLOW
 
 
 class QueryAbstractModel(models.Model):
@@ -147,6 +148,12 @@ class QueryAbstractModel(models.Model):
     )
     filter_figure_category_types = models.CharField(
         verbose_name=_('Type'), max_length=8, null=True, blank=True
+    )
+    filter_figure_category_types = ArrayField(
+        base_field=models.CharField(verbose_name=_('Type'), max_length=8, choices=(
+            (STOCK, STOCK),
+            (FLOW, FLOW),
+        ), null=True, blank=True), null=True, blank=True,
     )
     filter_entry_has_review_comments = models.NullBooleanField(
         verbose_name=_('Has review comments'),
