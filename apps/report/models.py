@@ -177,6 +177,7 @@ class Report(MetaInformationArchiveAbstractModel,
             total_flow_conflict_sum='ND Conflict',
             total_flow_disaster_sum='ND Disaster',
             total_stock_conflict_sum='IDP Conflict',
+            total_stock_disaster_sum='IDP Disaster',
         )
         data = ReportFilter(
             data=filters,
@@ -186,6 +187,7 @@ class Report(MetaInformationArchiveAbstractModel,
             total_flow_conflict_sum=Value(0, output_field=models.IntegerField()),
             total_flow_disaster_sum=Value(0, output_field=models.IntegerField()),
             total_stock_conflict_sum=Value(0, output_field=models.IntegerField()),
+            total_stock_disaster_sum=Value(0, output_field=models.IntegerField()),
         ).order_by('-created_at').select_related(
             'created_by',
         )
@@ -277,6 +279,7 @@ class Report(MetaInformationArchiveAbstractModel,
             total_stock_conflict_sum=Sum('total_stock_conflict'),
             total_flow_conflict_sum=Sum('total_flow_conflict'),
             total_flow_disaster_sum=Sum('total_flow_disaster'),
+            total_stock_disaster_sum=Sum('total_stock_disaster')
         )
 
     @cached_property
