@@ -243,8 +243,12 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     def filter_has_review_comments(self, qs, name, value):
         if value is True:
-            return qs.filter(reviews__comment__isnull=False)
+            return qs.filter(review_comments__isnull=False)
         return qs
+
+    @property
+    def qs(self):
+        return super().qs.prefetch_related('review_comments').distinct()
 
 
 class BaseFigureExtractionFilterSet(df.FilterSet):
@@ -456,8 +460,12 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
 
     def filter_has_review_comments(self, qs, name, value):
         if value is True:
-            return qs.filter(figure_reviews__comment__isnull=False)
+            return qs.filter(entry__review_comments__isnull=False)
         return qs
+
+    @property
+    def qs(self):
+        return super().qs.prefetch_related('entry__review_comments').distinct()
 
 
 class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
