@@ -7,8 +7,8 @@ from utils.filters import StringListFilter
 
 class ContactFilter(django_filters.FilterSet):
     id = django_filters.CharFilter(field_name='id', lookup_expr='iexact')
-    first_name_contains = django_filters.CharFilter(field_name='first_name', lookup_expr='icontains')
-    last_name_contains = django_filters.CharFilter(field_name='last_name', lookup_expr='icontains')
+    first_name_contains = django_filters.CharFilter(field_name='first_name', lookup_expr='unaccent__icontains')
+    last_name_contains = django_filters.CharFilter(field_name='last_name', lookup_expr='unaccent__icontains')
     name_contains = django_filters.CharFilter(method='filter_name_contains')
     countries_of_operation = StringListFilter(method='filter_countries')
 
@@ -17,7 +17,7 @@ class ContactFilter(django_filters.FilterSet):
         fields = ['country']
 
     def filter_name_contains(self, qs, name, value):
-        return qs.filter(Q(first_name__icontains=value) | Q(last_name__icontains=value))
+        return qs.filter(Q(first_name__unaccent__icontains=value) | Q(last_name__unaccent__icontains=value))
 
     def filter_countries(self, qs, name, value):
         if not value:
@@ -27,7 +27,7 @@ class ContactFilter(django_filters.FilterSet):
 
 class CommunicationFilter(django_filters.FilterSet):
     id = django_filters.CharFilter(field_name='id', lookup_expr='iexact')
-    subject_contains = django_filters.CharFilter(field_name='subject', lookup_expr='icontains')
+    subject_contains = django_filters.CharFilter(field_name='subject', lookup_expr='unaccent__icontains')
 
     class Meta:
         model = Communication

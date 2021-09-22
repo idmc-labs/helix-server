@@ -12,7 +12,7 @@ class ParkingLotFilter(df.FilterSet):
     class Meta:
         model = ParkedItem
         fields = {
-            'title': ['icontains'],
+            'title': ['unaccent__icontains'],
             'created_by': ['exact'],
         }
 

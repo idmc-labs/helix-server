@@ -236,6 +236,14 @@ class ResourceFactory(DjangoModelFactory):
     group = factory.SubFactory(ResourceGroupFactory)
 
 
+class EntryReviewerFactoryFactory(DjangoModelFactory):
+    class Meta:
+        model = 'entry.EntryReviewer'
+
+    entry = factory.SubFactory(EntryFactory)
+    reviewer = factory.SubFactory(UserFactory)
+
+
 class ReviewCommentFactory(DjangoModelFactory):
     class Meta:
         model = 'review.ReviewComment'

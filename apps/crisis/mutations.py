@@ -34,7 +34,7 @@ class CreateCrisis(graphene.Mutation):
     @staticmethod
     @permission_checker(['crisis.add_crisis'])
     def mutate(root, info, data):
-        serializer = CrisisSerializer(data=data)
+        serializer = CrisisSerializer(data=data, context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
             return CreateCrisis(errors=errors, ok=False)
         instance = serializer.save()

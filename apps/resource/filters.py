@@ -10,7 +10,7 @@ class ResourceFilter(df.FilterSet):
     class Meta:
         model = Resource
         fields = {
-            'name': ['icontains']
+            'name': ['unaccent__icontains']
         }
 
     @property
@@ -29,7 +29,7 @@ class ResourceGroupFilter(df.FilterSet):
     class Meta:
         model = ResourceGroup
         fields = {
-            'name': ['icontains']
+            'name': ['unaccent__icontains']
         }
 
     @property

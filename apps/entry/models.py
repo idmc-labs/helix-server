@@ -631,16 +631,16 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     @classmethod
     def get_total_stock_idp_figure(cls, filters):
-        from apps.entry.filters import FigureFilter
-        return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
+        from apps.extraction.filters import FigureExtractionFilterSet
+        return FigureExtractionFilterSet(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
             category=FigureCategory.stock_idp_id()
         ).aggregate(total=Sum('total_figures'))['total']
 
     @classmethod
     def get_total_flow_nd_figure(cls, filters):
-        from apps.entry.filters import FigureFilter
-        return FigureFilter(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
+        from apps.extraction.filters import FigureExtractionFilterSet
+        return FigureExtractionFilterSet(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
             category=FigureCategory.flow_new_displacement_id()
         ).aggregate(total=Sum('total_figures'))['total']

@@ -56,7 +56,7 @@ class DisaggregatedAgeCategoryListType(CustomDjangoListObjectType):
     class Meta:
         model = DisaggregatedAgeCategory
         filter_fields = {
-            'name': ('icontains',),
+            'name': ('unaccent__icontains',),
         }
 
 
@@ -99,7 +99,7 @@ class FigureCategoryListType(CustomDjangoListObjectType):
     class Meta:
         model = FigureCategory
         filter_fields = {
-            'name': ('icontains',),
+            'name': ('unaccent__icontains',),
         }
 
 
@@ -145,8 +145,8 @@ class FigureListType(CustomDjangoListObjectType):
 
 class TotalFigureFilterInputType(graphene.InputObjectType):
     categories = graphene.List(graphene.NonNull(graphene.ID))
-    start_date = graphene.Date()
-    end_date = graphene.Date()
+    filter_figure_start_after = graphene.Date()
+    filter_figure_end_before = graphene.Date()
     roles = graphene.List(graphene.NonNull(graphene.String))
 
 
@@ -253,7 +253,7 @@ class FigureTagListType(CustomDjangoListObjectType):
     class Meta:
         model = FigureTag
         filter_fields = {
-            'name': ('icontains',),
+            'name': ('unaccent__icontains',),
         }
 
 

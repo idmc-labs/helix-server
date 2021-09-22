@@ -22,7 +22,7 @@ class ReportFilter(df.FilterSet):
     class Meta:
         model = Report
         fields = {
-            'name': ['icontains'],
+            'name': ['unaccent__icontains'],
         }
 
     def filter_countries(self, qs, name, value):
