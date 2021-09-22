@@ -78,6 +78,7 @@ class Actor(MetaInformationAbstractModel, NameAttributedModels):
         headers = OrderedDict(
             id='Id',
             name='Name',
+            country__name='Country',
             country__iso3='ISO3',
             torg='TORG',
             created_at='Created At',
