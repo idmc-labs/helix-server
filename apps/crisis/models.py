@@ -108,7 +108,8 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             **{
                 cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
                 cls.ND_FIGURES_ANNOTATE: 'ND Figure',
-            }
+            },
+            created_at='Date Created'
         )
         data = CrisisFilter(
             data=filters,
