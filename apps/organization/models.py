@@ -5,6 +5,7 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
+from django.contrib.postgres.aggregates.general import ArrayAgg
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel, SoftDeleteModel
 
@@ -70,6 +71,8 @@ class Organization(MetaInformationArchiveAbstractModel,
             created_at='Created At',
             last_modified_by__full_name='Modified By',
             modified_at='Modified At',
+            category='Category',
+            countries_name='Countries',
         )
         data = OrganizationFilter(
             data=filters,
@@ -78,6 +81,7 @@ class Organization(MetaInformationArchiveAbstractModel,
             countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
             sourced_entries_count=models.Count('sourced_entries', distinct=True),
             published_entries_count=models.Count('published_entries', distinct=True),
+            countries_name=ArrayAgg('countries__name', distinct=True),
         ).order_by('-created_at').select_related(
             'organization_kind'
             'created_by',
@@ -86,11 +90,19 @@ class Organization(MetaInformationArchiveAbstractModel,
             'countries'
         )
 
+        def transformer(datum):
+            return {
+                **datum,
+                **dict(
+                    category=getattr(Organization.ORGANIZATION_CATEGORY.get(datum['category']), 'name', ''),
+                )
+            }
+
         return {
             'headers': headers,
             'data': data.values(*[header for header in headers.keys()]),
             'formulae': None,
-            'transformer': None,
+            'transformer': transformer,
         }
 
     def __str__(self):
