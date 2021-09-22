@@ -91,12 +91,14 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
             operating_countries='Operating Countries',
             created_at='Created At',
             created_by='Created By',
+            communications_count='Communications'
         )
         data = ContactFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
             operating_countries=ArrayAgg('countries_of_operation__iso3'),
+            communications_count=models.Count('communications', distinct=True),
         ).order_by('-created_at').select_related(
             'organization'
         ).prefetch_related(
