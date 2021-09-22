@@ -265,6 +265,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             countries_name='Geo Names',
             regions_name='Geo Regions',
             figures_count='Figures Count',
+            entries_count='Entries Count',
             **{
                 cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
                 cls.ND_FIGURES_ANNOTATE: 'ND Figure',
@@ -293,6 +294,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             countries_name=ArrayAgg('countries__name', distinct=True),
             regions_name=ArrayAgg('countries__region__name', distinct=True),
             figures_count=models.Count('entries__figures', distinct=True),
+            entries_count=models.Count('entries', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
         ).order_by('-created_at').select_related(
             'trigger',
