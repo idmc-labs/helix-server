@@ -552,7 +552,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             entry__event_id='Event ID',
             entry__event__crisis__name='Crisis Name',
             entry__event__name='Event Name',
-            entry__article_title='Entry Article Title',
+            entry__article_title='Entry Title',
             entry__event__event_type='Event Type',
             entry__event__other_sub_type='Event Subtype',
             entry__event__start_date='Event Start Date',
@@ -567,6 +567,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             disaggregation_sex_male='Sex: Male',
             disaggregation_sex_female='Sex: Female',
             disaggregation_age_json='Displacement: Age',
+            entry__tags__name='Tags',
         )
         values = figures.order_by(
             '-created_at'
@@ -914,6 +915,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             max_fig_start='Latest figure start',
             min_fig_end='Earliest figure end',
             max_fig_end='Latest figure end',
+            tags__name='Tags',
         )
         entries = EntryExtractionFilterSet(
             data=filters,
