@@ -880,7 +880,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
         headers = OrderedDict(
             id='ID',
-            article_title='Article Title',
+            article_title='Entry Title',
             is_confidential='Confidential?',
             publish_date='Publish Date',
             url='URL',
