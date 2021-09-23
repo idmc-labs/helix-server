@@ -286,6 +286,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             disaster_type__name='Disaster Type',
             disaster_sub_type__name='Disaster Sub Type',
             disaster_sub_type='Hazard Type ID',
+            glide_numbers='Event Ids(Glide Numbers)'
         )
         data = EventFilter(
             data=filters,
