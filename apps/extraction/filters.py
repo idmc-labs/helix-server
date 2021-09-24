@@ -126,7 +126,8 @@ class EntryExtractionFilterSet(df.FilterSet):
     def filter_filter_figure_category_types(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(figures__category__type__in=value).distinct()
+        figure_category_types = [category_type.capitalize() for category_type in value]
+        return qs.filter(figures__category__type__in=figure_category_types).distinct()
 
     def filter_time_frame_after(self, qs, name, value):
         if value:
@@ -362,7 +363,8 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     def filter_filter_figure_category_types(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(category__type__in=value).distinct()
+        figure_category_types = [category_type.capitalize() for category_type in value]
+        return qs.filter(category__type__in=figure_category_types).distinct()
 
     def filter_filter_figure_roles(self, qs, name, value):
         if value:
