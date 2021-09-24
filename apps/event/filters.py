@@ -43,7 +43,7 @@ class EventFilter(NameFilterMixin,
     def filter_disaster_categories(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_category__in=value)).distinct()
+        return qs.filter(Q(disaster_sub_type__in=value)).distinct()
 
     def filter_violence_types(self, qs, name, value):
         if not value:
