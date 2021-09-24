@@ -1,12 +1,18 @@
+from django.utils import timezone
+from django.core.cache import cache
 from apps.users.enums import USER_ROLE
 from apps.report.models import ReportGeneration, Report
+from apps.entry.models import FigureCategory
 from utils.factories import (
     CountryFactory,
     ReportFactory,
     ReportCommentFactory,
+    EntryFactory,
+    FigureFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from apps.entry.constants import STOCK
 
 
 class TestCreateReport(HelixGraphQLTestCase):
@@ -346,3 +352,134 @@ class TestReportComment(HelixGraphQLTestCase):
         content = response.json()
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['updateReportComment']['ok'], content)
+
+
+class TestReportFilter(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.create_report = '''mutation MyMutation($input: ReportCreateInputType!) {
+            createReport(data: $input) {
+                result {
+                    id
+                }
+                ok
+                errors
+            }
+        }'''
+        self.entries_report_query = '''
+        query MyQuery($id: ID!) {
+          report(id: $id) {
+            entriesReport {
+              results {
+                id
+                articleTitle
+              }
+              totalCount
+            }
+          }
+        }
+        '''
+        self.figures_report_query = '''
+        query MyQuery($id: ID!) {
+          report(id: $id) {
+            figuresReport {
+              results {
+                id
+              }
+              totalCount
+            }
+          }
+        }
+        '''
+        # Create 10 days grid report
+        report_start_date = timezone.now() + timezone.timedelta(days=-20)
+        report_end_date = timezone.now() + timezone.timedelta(days=-10)
+        print(f"Report end date {report_end_date}")
+        self.input = {
+            "name": "disss",
+            "filterFigureStartAfter": str(report_start_date.date()),
+            "filterFigureEndBefore": str(report_end_date.date()),
+        }
+        self.editor = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.force_login(self.editor)
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_report_should_list_entries_between_figure_start_date_and_figure_end_date(self):
+        # Create entries such that report end date is between figure start
+        # date and figure end date
+        category = FigureCategory.objects.create(name="Figure category", type=STOCK)
+        for i in range(3):
+            entry = EntryFactory.create()
+            FigureFactory.create(
+                entry=entry,
+                start_date=timezone.now() + timezone.timedelta(days=-15),
+                end_date=timezone.now() + timezone.timedelta(days=20),
+                category=category
+            )
+
+        # Test for entries
+        response = self.query(
+            self.create_report,
+            input_data=self.input,
+        )
+        report = response.json()
+        repot_id = report["data"]["createReport"]["result"]["id"]
+        response = self.query(
+            self.entries_report_query,
+            variables=dict(
+                id=str(repot_id),
+            )
+        )
+        entries = response.json()
+        entries_count = entries["data"]["report"]["entriesReport"]["totalCount"]
+        self.assertEqual(entries_count, 3)
+
+        # Test for figures
+        response = self.query(
+            self.figures_report_query,
+            variables=dict(
+                id=str(repot_id),
+            )
+        )
+        entries = response.json()
+        entries_count = entries["data"]["report"]["figuresReport"]["totalCount"]
+        self.assertEqual(entries_count, 3)
+
+    def test_report_should_exclude_figures_without_end_date(self):
+        category = FigureCategory.objects.create(name="Figure category 2", type=STOCK)
+        for i in range(3):
+            entry = EntryFactory.create()
+            FigureFactory.create(
+                entry=entry,
+                start_date=timezone.now() + timezone.timedelta(days=-15),
+                category=category
+            )
+        response = self.query(
+            self.create_report,
+            input_data=self.input,
+        )
+        report = response.json()
+        repot_id = report["data"]["createReport"]["result"]["id"]
+
+        # Test for entries
+        response = self.query(
+            self.entries_report_query,
+            variables=dict(
+                id=str(repot_id),
+            )
+        )
+        entries = response.json()
+        entries_count = entries["data"]["report"]["entriesReport"]["totalCount"]
+        self.assertEqual(entries_count, 0)
+
+        # Test for figures
+        response = self.query(
+            self.figures_report_query,
+            variables=dict(
+                id=str(repot_id),
+            )
+        )
+        entries = response.json()
+        entries_count = entries["data"]["report"]["figuresReport"]["totalCount"]
+        self.assertEqual(entries_count, 0)

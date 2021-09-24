@@ -1,5 +1,5 @@
-from datetime import date, timedelta
-
+from datetime import timedelta
+from django.utils import timezone
 from apps.crisis.models import Crisis
 from apps.event.models import Event
 from utils.factories import (
@@ -29,8 +29,8 @@ class TestGenericValidator(HelixTestCase):
     def test_is_child_parent_dates_valid(self):
         func = is_child_parent_dates_valid
 
-        c_start = _c_start = date.today()
-        c_end = _c_end = date.today() + timedelta(days=10)
+        c_start = _c_start = timezone.now()
+        c_end = _c_end = timezone.now() + timedelta(days=10)
         p_start = _p_start = c_start - timedelta(days=100)
 
         errors = func(c_start, c_end, p_start, 'parent')

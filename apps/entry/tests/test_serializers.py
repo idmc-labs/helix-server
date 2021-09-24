@@ -1,5 +1,6 @@
 from copy import copy
-from datetime import date, timedelta
+from datetime import timedelta
+from django.utils import timezone
 from uuid import uuid4
 from unittest.mock import patch
 
@@ -288,7 +289,7 @@ class TestEntrySerializer(HelixTestCase):
     def test_entry_event_with_incoherent_dates_in_figure(self):
         c1 = CountryFactory.create()
         c2 = CountryFactory.create()
-        ref = date.today()
+        ref = timezone.now()
 
         FigureCategory._invalidate_category_ids_cache()
         flow = FigureCategory.flow_new_displacement_id()

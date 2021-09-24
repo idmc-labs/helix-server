@@ -24,7 +24,6 @@ from django.forms import model_to_dict
 from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
 from django_enumfield import enum
-
 from helix.settings import FIGURE_NUMBER
 from apps.contrib.models import (
     MetaInformationAbstractModel,
@@ -458,7 +457,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
-        end_date = end_date or date.today()
+        end_date = end_date or timezone.now()
         qs = qs.filter(
             models.Q(
                 end_date__isnull=True,
@@ -479,8 +478,9 @@ class Figure(MetaInformationArchiveAbstractModel,
         cls,
         qs: QuerySet,
         reference_point: Optional[date] = None,
+        report_end_date: Optional[date] = None
     ):
-        reference_point = reference_point or date.today()
+        reference_point = reference_point or timezone.now()
         qs = qs.filter(
             Q(
                 # if end date does not exist, we must make sure that that figure started before given start date
@@ -495,6 +495,8 @@ class Figure(MetaInformationArchiveAbstractModel,
             start_date__lte=reference_point,
             category=FigureCategory.stock_idp_id(),
         )
+        if report_end_date:
+            return qs.filter(start_date__lte=report_end_date, end_date__gte=report_end_date)
         return qs
 
     @classmethod
