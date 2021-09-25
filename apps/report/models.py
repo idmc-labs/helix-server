@@ -214,6 +214,7 @@ class Report(MetaInformationArchiveAbstractModel,
         # TODO: use generated_from after next migration
         return self.generated_from or not self.generated
 
+    # FIXME: we need to use dataloader
     @property
     def attached_figures(self):
         figures_ids = (Report.objects.filter(id=self.id) |

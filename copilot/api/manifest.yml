@@ -70,4 +70,4 @@ environments:
       HCAPTCHA_SECRET: /copilot/helix/alpha/secrets/HCAPTCHA_SECRET
       SENTRY_DNS: /copilot/helix/alpha/secrets/SENTRY_DNS
     variables:
-      HELIX_ENVIRONMENT: production
+      HELIX_ENVIRONMENT: alpha

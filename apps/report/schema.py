@@ -126,6 +126,7 @@ class ReportType(DjangoObjectType):
         filterset_class=DummyFilter
     ))
     total_disaggregation = graphene.NonNull(ReportTotalsType)
+    # FIXME: use dataloader for last_generation
     last_generation = graphene.Field(ReportGenerationType)
     generations = DjangoPaginatedListObjectField(
         ReportGenerationListType,

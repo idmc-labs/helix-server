@@ -461,17 +461,15 @@ class Figure(MetaInformationArchiveAbstractModel,
         end_date = end_date or date.today()
         qs = qs.filter(
             models.Q(
+                end_date__isnull=True,
+            ) | models.Q(
                 end_date__isnull=False,
                 end_date__lte=end_date,
-            ) | models.Q(
-                end_date__isnull=True,
-            )
-        ).filter(
+            ),
             category=FigureCategory.flow_new_displacement_id(),
         )
         if start_date:
             qs = qs.filter(
-                category=FigureCategory.flow_new_displacement_id(),
                 end_date__gte=start_date,
             )
         return qs
@@ -484,20 +482,18 @@ class Figure(MetaInformationArchiveAbstractModel,
     ):
         reference_point = reference_point or date.today()
         qs = qs.filter(
-            start_date__isnull=False,
-            start_date__lte=reference_point,
-        ).filter(
-            category=FigureCategory.stock_idp_id(),
-        ).filter(
             Q(
+                # if end date does not exist, we must make sure that that figure started before given start date
+                end_date__isnull=True
+            ) | Q(
                 # if end date exists (=expired), we must make sure that expiry date is after the given end date,
                 # also figure started before the end date
                 end_date__isnull=False,
                 end_date__gte=reference_point,
-            ) | Q(
-                # if end date does not exist, we must make sure that that figure started before given start date
-                end_date__isnull=True,
-            )
+            ),
+            start_date__isnull=False,
+            start_date__lte=reference_point,
+            category=FigureCategory.stock_idp_id(),
         )
         return qs
 

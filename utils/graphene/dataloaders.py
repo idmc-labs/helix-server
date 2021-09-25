@@ -144,6 +144,7 @@ class OneToManyLoader(DataLoader):
         ).values('id')
 
         OUT_RELATED_FIELD = 'out_related_field'
+
         prefetch = Prefetch(
             related_name,
             queryset=self.child.objects.filter(
@@ -154,6 +155,7 @@ class OneToManyLoader(DataLoader):
             to_attr=OUT_RELATED_FIELD,
         )
 
+        # FIXME: this prefetch is causing un-necessary join in generated queries
         qs = self.parent.objects.filter(id__in=keys).prefetch_related(prefetch)
 
         for each in qs:

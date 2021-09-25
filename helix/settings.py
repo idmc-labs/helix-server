@@ -46,19 +46,29 @@ ALLOWED_HOSTS = [
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-CSRF_USE_SESSIONS
 CSRF_USE_SESSIONS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'False').lower() == 'true'
+
 # https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-SESSION_COOKIE_DOMAIN
 SESSION_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
+
+# FIXME: we should be able to set default value for CSRF_COOKIE_DOMAIN to None
 # https://docs.djangoproject.com/en/3.2/ref/settings/#csrf-cookie-domain
 CSRF_COOKIE_DOMAIN = os.environ.get('CSRF_COOKIE_DOMAIN', '.idmcdb.org')
-
-CORS_ORIGIN_REGEX_WHITELIST = [
-    r'^https://[\w\-]+\.idmcdb\.org$'
-]
 CSRF_TRUSTED_ORIGINS = [
     'media-monitoring.idmcdb.org',
-    'https://media-monitoring.idmcdb.org',
     'http://media-monitoring.idmcdb.org',
+    'https://media-monitoring.idmcdb.org',
 ]
+
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^https://[\w\-]+\.idmcdb\.org$'
+]
+# FIXME: shouldn't  this be set only on development?
+CORS_ORIGIN_WHITELIST = [
+    "http://localhost:3080",
+    "http://127.0.0.1:3080"
+]
+CORS_ALLOW_CREDENTIALS = True
+# CORS_ORIGIN_ALLOW_ALL = False
 
 # Application definition
 
@@ -294,21 +304,6 @@ MEDIA_URL = 'media/'
 
 # https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-APPEND_SLASH
 APPEND_SLASH = False
-
-########
-# CORS #
-########
-
-CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3080",
-    "http://127.0.0.1:3080"
-]
-CORS_ALLOW_CREDENTIALS = True
-# CORS_ORIGIN_ALLOW_ALL = False
-# CORS_ORIGIN_REGEX_WHITELIST = [
-#     '^https://[\w\-]+\.idmcdb\.org$'
-# ]
-# CSRF_TRUSTED_ORIGINS = []
 
 #################
 # DEBUG TOOLBAR #

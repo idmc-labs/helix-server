@@ -248,6 +248,8 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     @property
     def qs(self):
+        # FIXME: using this prefetch_related results in calling count after a
+        # subquery. This has a severe performance penalty
         return super().qs.prefetch_related('review_comments').distinct()
 
 
@@ -465,6 +467,8 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
 
     @property
     def qs(self):
+        # FIXME: using this prefetch_related results in calling count after a
+        # subquery. This has a severe performance penalty
         return super().qs.prefetch_related('entry__review_comments').distinct()
 
 

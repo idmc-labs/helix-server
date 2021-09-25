@@ -156,7 +156,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                                     blank=True, null=True)
     glide_numbers = ArrayField(
         models.CharField(
-            verbose_name=_('Glide Number'), max_length=256, null=True, blank=True
+            verbose_name=_('Event Ids'), max_length=256, null=True, blank=True
         ),
         default=[],
         null=True, blank=True
