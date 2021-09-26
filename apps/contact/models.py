@@ -91,7 +91,7 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
             operating_countries='Operating Countries',
             created_at='Created At',
             created_by='Created By',
-            communications_count='Communications'
+            communications_count='Communications Count'
         )
         data = ContactFilter(
             data=filters,
