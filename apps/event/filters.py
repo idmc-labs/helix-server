@@ -16,7 +16,7 @@ class EventFilter(NameFilterMixin,
 
     # used in report entry table
     report = django_filters.CharFilter(method='filter_report')
-    disaster_categories = IDListFilter(method='filter_disaster_categories')
+    disaster_sub_types = IDListFilter(method='filter_disaster_sub_types')
     violence_types = IDListFilter(method='filter_violence_types')
     created_by_ids = IDListFilter(method='filter_created_by')
 
@@ -40,10 +40,10 @@ class EventFilter(NameFilterMixin,
             return qs
         return qs.filter(countries__in=value).distinct()
 
-    def filter_disaster_categories(self, qs, name, value):
+    def filter_disaster_sub_types(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_category__in=value)).distinct()
+        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_sub_type__in=value)).distinct()
 
     def filter_violence_types(self, qs, name, value):
         if not value:

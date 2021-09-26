@@ -2,6 +2,7 @@ from django.contrib.auth.models import Permission
 from django.db import models
 from django.db.models.functions import Lower, StrIndex, Concat, Coalesce
 import django_filters
+from django.db.models import Min
 
 from apps.users.models import User, Portfolio
 from apps.users.enums import USER_ROLE
@@ -40,9 +41,9 @@ class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
 
     def filter_role_in(self, queryset, name, value):
         roles = [USER_ROLE[role].value for role in value]
-        return queryset.filter(
-            portfolios__role__in=roles
-        )
+        return queryset.annotate(
+            highest_user_role=Min('portfolios__role')
+        ).filter(highest_user_role__in=roles)
 
     def filter_full_name(self, queryset, name, value):
         if not value:

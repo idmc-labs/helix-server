@@ -18,6 +18,8 @@ from utils.filters import IDListFilter, StringListFilter
 class ReportFilter(df.FilterSet):
     filter_figure_countries = IDListFilter(method='filter_countries')
     review_status = StringListFilter(method='filter_by_review_status')
+    start_date_after = df.DateFilter(method='filter_date_after')
+    end_date_before = df.DateFilter(method='filter_end_date_before')
 
     class Meta:
         model = Report
@@ -69,6 +71,16 @@ class ReportFilter(df.FilterSet):
             unapproved = qs.filter(_is_unapproved=True)
             _temp = _temp | unapproved
         return _temp
+
+    def filter_date_after(self, qs, name, value):
+        if value:
+            return qs.filter(filter_figure_start_after__gte=value)
+        return qs
+
+    def filter_end_date_before(self, qs, name, value):
+        if value:
+            return qs.filter(filter_figure_end_before__lte=value)
+        return qs
 
     @property
     def qs(self):

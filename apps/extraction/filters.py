@@ -126,7 +126,10 @@ class EntryExtractionFilterSet(df.FilterSet):
     def filter_filter_figure_category_types(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(figures__category__type__in=value).distinct()
+        # NOTE: category type is saved as 'Stock' and 'Flow' on database
+        # so, using capitalize on enum values 'STOCK' and 'FLOW'
+        figure_category_types = [category_type.capitalize() for category_type in value]
+        return qs.filter(figures__category__type__in=figure_category_types).distinct()
 
     def filter_time_frame_after(self, qs, name, value):
         if value:
@@ -244,6 +247,8 @@ class EntryExtractionFilterSet(df.FilterSet):
     def filter_has_review_comments(self, qs, name, value):
         if value is True:
             return qs.filter(review_comments__isnull=False)
+        if value is False:
+            return qs.filter(review_comments__isnull=True)
         return qs
 
     @property
@@ -358,7 +363,10 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     def filter_filter_figure_category_types(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(category__type__in=value).distinct()
+        # NOTE: category type is saved as 'Stock' and 'Flow' on database
+        # so, using capitalize on enum values 'STOCK' and 'FLOW'
+        figure_category_types = [category_type.capitalize() for category_type in value]
+        return qs.filter(category__type__in=figure_category_types).distinct()
 
     def filter_filter_figure_roles(self, qs, name, value):
         if value:
@@ -461,6 +469,8 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     def filter_has_review_comments(self, qs, name, value):
         if value is True:
             return qs.filter(entry__review_comments__isnull=False)
+        if value is False:
+            return qs.filter(entry__review_comments__isnull=True)
         return qs
 
     @property
