@@ -176,7 +176,8 @@ class Report(MetaInformationArchiveAbstractModel,
             # these are calculated in transformer ref: heavy
             total_flow_conflict_sum='ND Conflict',
             total_flow_disaster_sum='ND Disaster',
-            total_stock_conflict_sum='IDP Conflict',
+            total_stock_conflict_sum='IDPs Conflict',
+            total_stock_disaster_sum='IDPs Disaster',
         )
         data = ReportFilter(
             data=filters,
@@ -186,6 +187,7 @@ class Report(MetaInformationArchiveAbstractModel,
             total_flow_conflict_sum=Value(0, output_field=models.IntegerField()),
             total_flow_disaster_sum=Value(0, output_field=models.IntegerField()),
             total_stock_conflict_sum=Value(0, output_field=models.IntegerField()),
+            total_stock_disaster_sum=Value(0, output_field=models.IntegerField()),
         ).order_by('-created_at').select_related(
             'created_by',
         )
@@ -277,6 +279,7 @@ class Report(MetaInformationArchiveAbstractModel,
             total_stock_conflict_sum=Sum('total_stock_conflict'),
             total_flow_conflict_sum=Sum('total_flow_conflict'),
             total_flow_disaster_sum=Sum('total_flow_disaster'),
+            total_stock_disaster_sum=Sum('total_stock_disaster')
         )
 
     @cached_property
@@ -1022,15 +1025,15 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     @cached_property
     def disaster_event(self):
         headers = OrderedDict(dict(
-            event_id='Event ID',
+            event_id='Event Id',
             event_name='Event Name',
             event_year='Event Year',
             event_start_date='Start Date',
             event_end_date='End Date',
             event_category='Category',
-            event_sub_category='Sub-Category',
-            dtype='Hazard Type',
-            dsub_type='Hazard Sub-Type',
+            event_sub_category='Sub Category',
+            dtype='Disaster Type',
+            dsub_type='Disaster Sub Type',
             affected_iso3='Affected ISO3',
             affected_names='Affected Countries',
             affected_countries='Number of Affected Countries',
@@ -1073,7 +1076,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     def disaster_region(self):
         headers = OrderedDict(dict(
             region_name='Region',
-            events_count='Number of Events',
+            events_count='Events Count',
             region_population='Region Population',
             flow_total=f'ND {self.report.name}',
             flow_total_last_year='ND Last Year',
@@ -1165,7 +1168,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             country_iso3='ISO3',
             country_name='Name',
             country_region='Region',
-            events_count='Number of Events',
+            events_count='Events Count',
             country_population='Country Population',
             flow_total=f'ND {self.report.name}',
             flow_total_last_year='ND Last Year',

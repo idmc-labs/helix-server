@@ -5,6 +5,7 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
+from django.contrib.postgres.aggregates.general import ArrayAgg
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel, SoftDeleteModel
 
@@ -34,7 +35,7 @@ class Organization(MetaInformationArchiveAbstractModel,
     name = models.CharField(verbose_name=_('Title'), max_length=512)
     short_name = models.CharField(verbose_name=_('Short Name'), max_length=64,
                                   null=True)
-    category = enum.EnumField(ORGANIZATION_CATEGORY, verbose_name=_('Crisis Type'),
+    category = enum.EnumField(ORGANIZATION_CATEGORY, verbose_name=_('Category'),
                               default=ORGANIZATION_CATEGORY.UNKNOWN)
     countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
                                        related_name='organizations')
@@ -59,7 +60,7 @@ class Organization(MetaInformationArchiveAbstractModel,
         headers = OrderedDict(
             id='Id',
             name='Name',
-            short_name='Short name',
+            short_name='Short Name',
             organization_kind__name='Organization Type',
             countries_iso3='ISO3',
             methodology='Methodology',
@@ -70,6 +71,8 @@ class Organization(MetaInformationArchiveAbstractModel,
             created_at='Created At',
             last_modified_by__full_name='Modified By',
             modified_at='Modified At',
+            category='Category',
+            countries_name='Countries',
         )
         data = OrganizationFilter(
             data=filters,
@@ -78,6 +81,7 @@ class Organization(MetaInformationArchiveAbstractModel,
             countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
             sourced_entries_count=models.Count('sourced_entries', distinct=True),
             published_entries_count=models.Count('published_entries', distinct=True),
+            countries_name=ArrayAgg('countries__name', distinct=True),
         ).order_by('-created_at').select_related(
             'organization_kind'
             'created_by',
@@ -86,11 +90,19 @@ class Organization(MetaInformationArchiveAbstractModel,
             'countries'
         )
 
+        def transformer(datum):
+            return {
+                **datum,
+                **dict(
+                    category=getattr(Organization.ORGANIZATION_CATEGORY.get(datum['category']), 'name', ''),
+                )
+            }
+
         return {
             'headers': headers,
             'data': data.values(*[header for header in headers.keys()]),
             'formulae': None,
-            'transformer': None,
+            'transformer': transformer,
         }
 
     def __str__(self):

@@ -30,9 +30,9 @@ class Review(MetaInformationArchiveAbstractModel, models.Model):
                                related_name='figure_reviews', on_delete=models.SET_NULL)
     field = models.CharField(verbose_name=_('Field'), max_length=256)
     value = enum.EnumField(enum=ENTRY_REVIEW_STATUS, default=ENTRY_REVIEW_STATUS.GREY.value)
-    age_id = models.CharField(verbose_name=_('Age ID'), max_length=256,
+    age_id = models.CharField(verbose_name=_('Age Id'), max_length=256,
                               null=True, blank=True)
-    strata_id = models.CharField(verbose_name=_('Strata ID'), max_length=256,
+    strata_id = models.CharField(verbose_name=_('Strata Id'), max_length=256,
                                  null=True, blank=True)
     geo_location = models.ForeignKey('entry.OSMName', verbose_name=_('Geolocation/OSM'),
                                      null=True, blank=True,

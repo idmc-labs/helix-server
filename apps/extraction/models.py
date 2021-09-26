@@ -87,7 +87,7 @@ class QueryAbstractModel(models.Model):
         related_name='+'
     )
     filter_entry_article_title = models.TextField(
-        verbose_name=_('Article Title'),
+        verbose_name=_('Event Title'),
         blank=True,
         null=True
     )
@@ -102,7 +102,7 @@ class QueryAbstractModel(models.Model):
         null=True
     )
     filter_event_glide_number = models.TextField(
-        verbose_name=_('Glide Number'),
+        verbose_name=_('Event Ids'),
         blank=True,
         null=True
     )

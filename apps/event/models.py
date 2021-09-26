@@ -78,6 +78,7 @@ class Actor(MetaInformationAbstractModel, NameAttributedModels):
         headers = OrderedDict(
             id='Id',
             name='Name',
+            country__name='Country',
             country__iso3='ISO3',
             torg='TORG',
             created_at='Created At',
@@ -152,11 +153,11 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                                related_name='events', on_delete=models.CASCADE)
     name = models.CharField(verbose_name=_('Event Name'), max_length=256)
     event_type = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Event Type'))
-    other_sub_type = enum.EnumField(EVENT_OTHER_SUB_TYPE, verbose_name=_('Other subtypes'),
+    other_sub_type = enum.EnumField(EVENT_OTHER_SUB_TYPE, verbose_name=_('Other Event Sub Types'),
                                     blank=True, null=True)
     glide_numbers = ArrayField(
         models.CharField(
-            verbose_name=_('Glide Number'), max_length=256, null=True, blank=True
+            verbose_name=_('Event Ids'), max_length=256, null=True, blank=True
         ),
         default=[],
         null=True, blank=True
@@ -165,13 +166,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     trigger = models.ForeignKey('Trigger', verbose_name=_('Trigger'),
                                 blank=True, null=True,
                                 related_name='events', on_delete=models.SET_NULL)
-    trigger_sub_type = models.ForeignKey('TriggerSubType', verbose_name=_('Trigger Sub-Type'),
+    trigger_sub_type = models.ForeignKey('TriggerSubType', verbose_name=_('Trigger Sub Type'),
                                          blank=True, null=True,
                                          related_name='events', on_delete=models.SET_NULL)
     violence = models.ForeignKey('Violence', verbose_name=_('Violence'),
                                  blank=False, null=True,
                                  related_name='events', on_delete=models.SET_NULL)
-    violence_sub_type = models.ForeignKey('ViolenceSubType', verbose_name=_('Violence Sub-Type'),
+    violence_sub_type = models.ForeignKey('ViolenceSubType', verbose_name=_('Violence Sub Type'),
                                           blank=True, null=True,
                                           related_name='events', on_delete=models.SET_NULL)
     actor = models.ForeignKey('Actor', verbose_name=_('Actors'),
@@ -181,13 +182,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     disaster_category = models.ForeignKey('DisasterCategory', verbose_name=_('Disaster Category'),
                                           blank=True, null=True,
                                           related_name='events', on_delete=models.SET_NULL)
-    disaster_sub_category = models.ForeignKey('DisasterSubCategory', verbose_name=_('Disaster Sub-Type'),
+    disaster_sub_category = models.ForeignKey('DisasterSubCategory', verbose_name=_('Disaster Sub Category'),
                                               blank=True, null=True,
                                               related_name='events', on_delete=models.SET_NULL)
     disaster_type = models.ForeignKey('DisasterType', verbose_name=_('Disaster Type'),
                                       blank=True, null=True,
                                       related_name='events', on_delete=models.SET_NULL)
-    disaster_sub_type = models.ForeignKey('DisasterSubType', verbose_name=_('Disaster Sub-Type'),
+    disaster_sub_type = models.ForeignKey('DisasterSubType', verbose_name=_('Disaster Sub Type'),
                                           blank=True, null=True,
                                           related_name='events', on_delete=models.SET_NULL)
 
@@ -262,9 +263,10 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             end_date='End Date',
             end_date_accuracy='End Date Accuracy',
             countries_iso3='ISO3',
-            countries_name='Geo Names',
-            regions_name='Geo Regions',
+            countries_name='Countries',
+            regions_name='Regions',
             figures_count='Figures Count',
+            entries_count='Entries Count',
             **{
                 cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
                 cls.ND_FIGURES_ANNOTATE: 'ND Figure',
@@ -272,18 +274,19 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             created_at='Created At',
             created_by__full_name='Created By',
             event_type='Event Type',
-            other_sub_type='Other Sub Type',
+            other_sub_type='Other Event Sub Type',
             trigger__name='Trigger',
-            trigger_sub_type__name='Trigger Subtype',
+            trigger_sub_type__name='Trigger Sub Type',
             violence__name='Violence',
-            violence_sub_type__name='Violence Subtype',
+            violence_sub_type__name='Violence Sub Type',
             actor_id='Actor Id',
             actor__name='Actor',
             disaster_category__name='Disaster Category',
-            disaster_sub_category__name='Disaster Subcategory',
+            disaster_sub_category__name='Disaster Sub Category',
             disaster_type__name='Disaster Type',
             disaster_sub_type__name='Disaster Sub Type',
-            disaster_sub_type='Hazard Type ID',
+            disaster_sub_type='Diaster Sub Type Id',
+            glide_numbers='Event Ids (Glide Numbers)'
         )
         data = EventFilter(
             data=filters,
@@ -293,6 +296,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             countries_name=ArrayAgg('countries__name', distinct=True),
             regions_name=ArrayAgg('countries__region__name', distinct=True),
             figures_count=models.Count('entries__figures', distinct=True),
+            entries_count=models.Count('entries', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
         ).order_by('-created_at').select_related(
             'trigger',
