@@ -126,6 +126,8 @@ class EntryExtractionFilterSet(df.FilterSet):
     def filter_filter_figure_category_types(self, qs, name, value):
         if not value:
             return qs
+        # NOTE: category type is saved as 'Stock' and 'Flow' on database
+        # so, using capitalize on enum values 'STOCK' and 'FLOW'
         figure_category_types = [category_type.capitalize() for category_type in value]
         return qs.filter(figures__category__type__in=figure_category_types).distinct()
 
@@ -361,6 +363,8 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     def filter_filter_figure_category_types(self, qs, name, value):
         if not value:
             return qs
+        # NOTE: category type is saved as 'Stock' and 'Flow' on database
+        # so, using capitalize on enum values 'STOCK' and 'FLOW'
         figure_category_types = [category_type.capitalize() for category_type in value]
         return qs.filter(category__type__in=figure_category_types).distinct()
 
