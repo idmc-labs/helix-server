@@ -35,7 +35,7 @@ class Organization(MetaInformationArchiveAbstractModel,
     name = models.CharField(verbose_name=_('Title'), max_length=512)
     short_name = models.CharField(verbose_name=_('Short Name'), max_length=64,
                                   null=True)
-    category = enum.EnumField(ORGANIZATION_CATEGORY, verbose_name=_('Crisis Type'),
+    category = enum.EnumField(ORGANIZATION_CATEGORY, verbose_name=_('Category'),
                               default=ORGANIZATION_CATEGORY.UNKNOWN)
     countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
                                        related_name='organizations')
@@ -60,7 +60,7 @@ class Organization(MetaInformationArchiveAbstractModel,
         headers = OrderedDict(
             id='Id',
             name='Name',
-            short_name='Short name',
+            short_name='Short Name',
             organization_kind__name='Organization Type',
             countries_iso3='ISO3',
             methodology='Methodology',

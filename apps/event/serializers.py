@@ -45,7 +45,7 @@ class EventSerializer(MetaInformationSerializerMixin,
             getattr(self.instance, 'violence_sub_type', None)
         )
         if sub_type and sub_type.violence != _type:
-            errors['violence_sub_type'] = gettext('Violence sub-type does not match the violence type.')
+            errors['violence_sub_type'] = gettext('Violence sub type does not match the violence type.')
         return errors
 
     def validate_event_type_with_crisis_type(self, attrs):
@@ -67,7 +67,7 @@ class EventSerializer(MetaInformationSerializerMixin,
             'disaster_sub_type',
             getattr(self.instance, 'disaster_sub_type', None)
         ):
-            errors['disaster_sub_type'] = gettext('Please mention the sub-type of disaster.')
+            errors['disaster_sub_type'] = gettext('Please mention the sub type of disaster.')
         return errors
 
     def validate_event_type_against_crisis_type(self, event_type, attrs):

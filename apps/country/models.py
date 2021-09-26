@@ -294,7 +294,7 @@ class Country(models.Model):
             country_code='Country Code',
             idmc_short_name='IDMC Short Name',
             idmc_full_name='IDMC Full Name',
-            crises_count='Crisis Count',
+            crises_count='Crises Count',
             events_count='Events Count',
             entries_count='Entries Count',
             figures_count='Figures Count',
@@ -397,7 +397,7 @@ class ContextualAnalysis(MetaInformationArchiveAbstractModel, models.Model):
                                     blank=True,
                                     null=True)
     crisis_type = enum.EnumField(Crisis.CRISIS_TYPE,
-                                 verbose_name=_('Crisis Type'),
+                                 verbose_name=_('Cause'),
                                  blank=True,
                                  null=True)
 

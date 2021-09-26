@@ -29,7 +29,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
         }
 
     name = models.CharField(verbose_name=_('Name'), max_length=256)
-    crisis_type = enum.EnumField(CRISIS_TYPE, verbose_name=_('Crisis Type'))
+    crisis_type = enum.EnumField(CRISIS_TYPE, verbose_name=_('Cause'))
     crisis_narrative = models.TextField(_('Crisis Narrative/Summary'))
     countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
                                        related_name='crises')
@@ -97,8 +97,8 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             start_date_accuracy='Start Date Accuracy',
             end_date='End Date',
             end_date_accuracy='End Date Accuracy',
-            crisis_type='Crisis Type',
-            countries_iso3='ISO3',
+            crisis_type='Cause',
+            countries_iso3='ISO3s',
             countries_name='Countries',
             regions_name='Regions',
             events_count='Events Count',

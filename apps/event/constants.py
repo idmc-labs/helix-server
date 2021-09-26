@@ -13,6 +13,7 @@ VIOLENCES = {
 TRIGGERS = {
     "Violence against civilians",
     "Battle",
+    # FIXME: remove trailing whitespace
     "Explosions/remote violence ",
     "Riots",
     "Security operations and evictions",

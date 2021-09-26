@@ -90,6 +90,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Saved {} disaster types.'.format(
             DisasterType.objects.count(),
         )))
-        self.stdout.write(self.style.SUCCESS('Saved {} disaster subtypes.'.format(
+        self.stdout.write(self.style.SUCCESS('Saved {} disaster sub types.'.format(
             DisasterSubType.objects.count(),
         )))
