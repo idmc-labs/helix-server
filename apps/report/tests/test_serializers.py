@@ -1,5 +1,5 @@
-from datetime import date, timedelta
-
+from datetime import timedelta
+from django.utils import timezone
 from django.test import RequestFactory
 import mock
 
@@ -209,7 +209,7 @@ class TestReportSerializer(HelixTestCase):
         )
 
     def test_report_date_range(self):
-        ref = date.today()
+        ref = timezone.now()
         start = ref.strftime('%Y-%m-%d')
         end = (ref + timedelta(days=1)).strftime('%Y-%m-%d')
 

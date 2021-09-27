@@ -82,7 +82,7 @@ class Report(MetaInformationArchiveAbstractModel,
                         end_date__isnull=True,
                     ) | Q(
                         end_date__isnull=False,
-                        end_date__gte=self.filter_figure_end_before or timezone.now(),
+                        end_date__gte=self.filter_figure_end_before or timezone.now().date(),
                     ),
                     category=FigureCategory.stock_idp_id(),
                     role=Figure.ROLE.RECOMMENDED,
@@ -216,6 +216,7 @@ class Report(MetaInformationArchiveAbstractModel,
         # TODO: use generated_from after next migration
         return self.generated_from or not self.generated
 
+    # FIXME: we need to use dataloader
     @property
     def attached_figures(self):
         figures_ids = (Report.objects.filter(id=self.id) |
@@ -226,7 +227,7 @@ class Report(MetaInformationArchiveAbstractModel,
     def report_figures(self):
         if self.is_legacy:
             return self.attached_figures
-        return self.extract_figures
+        return self.extract_report_figures
 
     @property
     def countries_report(self) -> list:
@@ -564,7 +565,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                     end_date__isnull=True,
                 ) | Q(
                     end_date__isnull=False,
-                    end_date__gte=self.report.filter_figure_end_before or timezone.now(),
+                    end_date__gte=self.report.filter_figure_end_before or timezone.now().date(),
                 ),
                 category=FigureCategory.stock_idp_id(),
                 **global_filter
@@ -695,7 +696,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                     end_date__isnull=True,
                 ) | Q(
                     end_date__isnull=False,
-                    end_date__gte=self.report.filter_figure_end_before or timezone.now(),
+                    end_date__gte=self.report.filter_figure_end_before or timezone.now().date(),
                 ),
                 category=FigureCategory.stock_idp_id(),
                 **global_filter,
@@ -906,7 +907,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                             end_date__isnull=True,
                         ) | Q(
                             end_date__isnull=False,
-                            end_date__gte=self.report.filter_figure_end_before or timezone.now(),
+                            end_date__gte=self.report.filter_figure_end_before or timezone.now().date(),
                         ),
                         **conflict_filter,
                         category=FigureCategory.stock_idp_id(),

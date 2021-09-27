@@ -253,6 +253,8 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     @property
     def qs(self):
+        # FIXME: using this prefetch_related results in calling count after a
+        # subquery. This has a severe performance penalty
         return super().qs.prefetch_related('review_comments').distinct()
 
 
@@ -475,6 +477,8 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
 
     @property
     def qs(self):
+        # FIXME: using this prefetch_related results in calling count after a
+        # subquery. This has a severe performance penalty
         return super().qs.prefetch_related('entry__review_comments').distinct()
 
 
@@ -500,6 +504,34 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         )
         stock_qs = Figure.filtered_idp_figures(
             queryset, reference_point=timezone.now().date()
+        )
+        return flow_qs | stock_qs
+
+
+class ReportFigureExtractionFilterSet(BaseFigureExtractionFilterSet):
+    """
+    NOTE: Return queryset as it is, don't apply filter here,
+    filter is handled in qs method
+
+    NOTE: In report figures we have to pass end date as reference pont
+    """
+    filter_figure_start_after = df.DateFilter(method='noop')
+    filter_figure_end_before = df.DateFilter(method='noop')
+
+    def noop(self, qs, *args):
+        return qs
+
+    @property
+    def qs(self):
+        queryset = super().qs
+        start_date = self.data.get('filter_figure_start_after')
+        end_date = self.data.get('filter_figure_end_before')
+
+        flow_qs = Figure.filtered_nd_figures(
+            queryset, start_date, end_date
+        )
+        stock_qs = Figure.filtered_idp_figures(
+            queryset, reference_point=end_date
         )
         return flow_qs | stock_qs
 
