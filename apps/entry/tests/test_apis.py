@@ -735,7 +735,6 @@ class TestExportEntry(HelixGraphQLTestCase):
 
 
 class TestFigureDelete(HelixGraphQLTestCase):
-
     def setUp(self) -> None:
         self.country = CountryFactory.create()
         self.country_id = str(self.country.id)

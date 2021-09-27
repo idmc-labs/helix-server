@@ -1,8 +1,7 @@
 from django.utils import timezone
-from django.core.cache import cache
 from apps.users.enums import USER_ROLE
 from apps.report.models import ReportGeneration, Report
-from apps.entry.models import FigureCategory
+from apps.entry.models import FigureCategory, Figure
 from utils.factories import (
     CountryFactory,
     ReportFactory,
@@ -366,29 +365,32 @@ class TestReportFilter(HelixGraphQLTestCase):
             }
         }'''
         self.entries_report_query = '''
-        query MyQuery($id: ID!) {
-          report(id: $id) {
-            entriesReport {
-              results {
-                id
-                articleTitle
+          query MyQuery($id: ID!) {
+            report(id: $id) {
+              entriesReport {
+                results {
+                  id
+                  articleTitle
+                }
+                totalCount
               }
-              totalCount
             }
           }
-        }
         '''
         self.figures_report_query = '''
-        query MyQuery($id: ID!) {
-          report(id: $id) {
-            figuresReport {
-              results {
-                id
+          query MyQuery($id: ID!) {
+            report(id: $id) {
+              figuresReport {
+                results {
+                  id
+                  entry {
+                    id
+                  }
+                }
+                totalCount
               }
-              totalCount
             }
           }
-        }
         '''
         # Create 10 days grid report
         report_start_date = timezone.now() + timezone.timedelta(days=-20)
@@ -401,9 +403,6 @@ class TestReportFilter(HelixGraphQLTestCase):
         self.editor = create_user_with_role(USER_ROLE.ADMIN.name)
         self.category = FigureCategory.objects.get(name__iexact="idps", type=STOCK)
         self.force_login(self.editor)
-
-    def tearDown(self):
-        cache.clear()
 
     def test_report_should_list_entries_between_figure_start_date_and_figure_end_date(self):
         # Create entries such that report end date is between figure start
@@ -428,17 +427,18 @@ class TestReportFilter(HelixGraphQLTestCase):
                 category=self.category
             )
 
-        # Test for entries
         response = self.query(
             self.create_report,
             input_data=self.input,
         )
         report = response.json()
-        repot_id = report["data"]["createReport"]["result"]["id"]
+        report_id = report["data"]["createReport"]["result"]["id"]
+
+        # Test for entries
         response = self.query(
             self.entries_report_query,
             variables=dict(
-                id=str(repot_id),
+                id=str(report_id),
             )
         )
         entries = response.json()
@@ -449,12 +449,12 @@ class TestReportFilter(HelixGraphQLTestCase):
         response = self.query(
             self.figures_report_query,
             variables=dict(
-                id=str(repot_id),
+                id=str(report_id),
             )
         )
-        entries = response.json()
-        entries_count = entries["data"]["report"]["figuresReport"]["totalCount"]
-        self.assertEqual(entries_count, 3)
+        figures = response.json()
+        figures_count = figures["data"]["report"]["figuresReport"]["totalCount"]
+        self.assertEqual(figures_count, 3)
 
     def test_report_should_include_figures_without_end_date_in_range(self):
         for i in range(3):
@@ -465,7 +465,7 @@ class TestReportFilter(HelixGraphQLTestCase):
                 category=self.category
             )
 
-        # Creat reports where  reference point is not in renge
+        # Creat reports where reference point is not in renge
         # Should exclude these figures
         for i in range(2):
             entry = EntryFactory.create()
@@ -475,31 +475,44 @@ class TestReportFilter(HelixGraphQLTestCase):
                 end_date=timezone.now() + timezone.timedelta(days=50),
                 category=self.category
             )
+
         response = self.query(
             self.create_report,
             input_data=self.input,
         )
         report = response.json()
-        repot_id = report["data"]["createReport"]["result"]["id"]
+        report_id = report["data"]["createReport"]["result"]["id"]
+
+        saved_report = Report.objects.get(pk=report_id)
+        self.assertEqual(saved_report.report_figures.count(), 3)
+
+        self.assertEqual(
+            Figure.filtered_idp_figures(
+                Figure.objects.all(), self.input['filterFigureEndBefore'],
+            ).count(),
+            3,
+        )
 
         # Test for entries
         response = self.query(
             self.entries_report_query,
             variables=dict(
-                id=str(repot_id),
+                id=str(report_id),
             )
         )
         entries = response.json()
         entries_count = entries["data"]["report"]["entriesReport"]["totalCount"]
+        self.assertEqual(len(entries["data"]["report"]["entriesReport"]["results"]), 3)
         self.assertEqual(entries_count, 3)
 
         # Test for figures
         response = self.query(
             self.figures_report_query,
             variables=dict(
-                id=str(repot_id),
+                id=str(report_id),
             )
         )
-        entries = response.json()
-        entries_count = entries["data"]["report"]["figuresReport"]["totalCount"]
+        figures = response.json()
+        self.assertEqual(len(figures["data"]["report"]["figuresReport"]["results"]), 3)
+        entries_count = figures["data"]["report"]["figuresReport"]["totalCount"]
         self.assertEqual(entries_count, 3)

@@ -457,7 +457,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
-        end_date = end_date or timezone.now()
+        end_date = end_date or timezone.now().date()
         qs = qs.filter(
             models.Q(
                 end_date__isnull=True,
@@ -479,7 +479,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         qs: QuerySet,
         reference_point: Optional[date] = None,
     ):
-        reference_point = reference_point or timezone.now()
+        reference_point = reference_point or timezone.now().date()
         return qs.filter(
             Q(
                 # if end date does not exist, we must make sure that that figure started before given start date

@@ -82,7 +82,7 @@ class Report(MetaInformationArchiveAbstractModel,
                         end_date__isnull=True,
                     ) | Q(
                         end_date__isnull=False,
-                        end_date__gte=self.filter_figure_end_before or timezone.now(),
+                        end_date__gte=self.filter_figure_end_before or timezone.now().date(),
                     ),
                     category=FigureCategory.stock_idp_id(),
                     role=Figure.ROLE.RECOMMENDED,
@@ -565,7 +565,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                     end_date__isnull=True,
                 ) | Q(
                     end_date__isnull=False,
-                    end_date__gte=self.report.filter_figure_end_before or timezone.now(),
+                    end_date__gte=self.report.filter_figure_end_before or timezone.now().date(),
                 ),
                 category=FigureCategory.stock_idp_id(),
                 **global_filter
@@ -696,7 +696,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                     end_date__isnull=True,
                 ) | Q(
                     end_date__isnull=False,
-                    end_date__gte=self.report.filter_figure_end_before or timezone.now(),
+                    end_date__gte=self.report.filter_figure_end_before or timezone.now().date(),
                 ),
                 category=FigureCategory.stock_idp_id(),
                 **global_filter,
@@ -907,7 +907,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                             end_date__isnull=True,
                         ) | Q(
                             end_date__isnull=False,
-                            end_date__gte=self.report.filter_figure_end_before or timezone.now(),
+                            end_date__gte=self.report.filter_figure_end_before or timezone.now().date(),
                         ),
                         **conflict_filter,
                         category=FigureCategory.stock_idp_id(),
