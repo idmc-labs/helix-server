@@ -493,7 +493,7 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
             queryset, start_date, end_date
         )
         stock_qs = Figure.filtered_idp_figures(
-            queryset, reference_point=timezone.now().date(), report_end_date=end_date
+            queryset, reference_point=timezone.now().date()
         )
         return flow_qs | stock_qs
 

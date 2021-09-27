@@ -478,10 +478,9 @@ class Figure(MetaInformationArchiveAbstractModel,
         cls,
         qs: QuerySet,
         reference_point: Optional[date] = None,
-        report_end_date: Optional[date] = None
     ):
         reference_point = reference_point or timezone.now()
-        qs = qs.filter(
+        return qs.filter(
             Q(
                 # if end date does not exist, we must make sure that that figure started before given start date
                 end_date__isnull=True
@@ -495,9 +494,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             start_date__lte=reference_point,
             category=FigureCategory.stock_idp_id(),
         )
-        if report_end_date:
-            return qs.filter(start_date__lte=report_end_date, end_date__gte=report_end_date)
-        return qs
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
