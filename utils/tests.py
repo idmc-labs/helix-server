@@ -14,6 +14,7 @@ from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio
 from helix.settings import BASE_DIR
 from utils.factories import UserFactory, MonitoringSubRegionFactory, CountryFactory
+from django.core.cache import cache
 
 User = get_user_model()
 TEST_MEDIA_ROOT = 'media-temp'
@@ -40,24 +41,23 @@ class CommonSetupClassMixin:
         management.call_command('init_roles')
         # add necessary figure categories
         FigureCategory.objects.bulk_create([
-            FigureCategory(id=1, type=STOCK, name='IDPs'),
-            FigureCategory(id=2, type=FLOW, name='New Displacement'),
+            FigureCategory(type=STOCK, name='IDPs'),
+            FigureCategory(type=FLOW, name='New Displacement'),
         ])
         # Add the figure terms
         FigureTerm.objects.bulk_create([
             FigureTerm(
-                id=1,
                 is_housing_related=True,
                 name='destroyed housing',
                 identifier='DESTROYED_HOUSING',
             ),
             FigureTerm(
-                id=2,
                 is_housing_related=False,
                 name='Evacuated',
                 identifier='EVACUATED',
             ),
         ])
+        cache.clear()
 
     @classmethod
     def tearDownClass(cls):
