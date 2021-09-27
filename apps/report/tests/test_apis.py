@@ -393,13 +393,13 @@ class TestReportFilter(HelixGraphQLTestCase):
         # Create 10 days grid report
         report_start_date = timezone.now() + timezone.timedelta(days=-20)
         report_end_date = timezone.now() + timezone.timedelta(days=-10)
-        print(f"Report end date {report_end_date}")
         self.input = {
             "name": "disss",
             "filterFigureStartAfter": str(report_start_date.date()),
             "filterFigureEndBefore": str(report_end_date.date()),
         }
         self.editor = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.category = FigureCategory.objects.get(name__iexact="idps", type=STOCK)
         self.force_login(self.editor)
 
     def tearDown(self):
@@ -408,14 +408,24 @@ class TestReportFilter(HelixGraphQLTestCase):
     def test_report_should_list_entries_between_figure_start_date_and_figure_end_date(self):
         # Create entries such that report end date is between figure start
         # date and figure end date
-        category = FigureCategory.objects.create(name="Figure category", type=STOCK)
         for i in range(3):
             entry = EntryFactory.create()
             FigureFactory.create(
                 entry=entry,
                 start_date=timezone.now() + timezone.timedelta(days=-15),
                 end_date=timezone.now() + timezone.timedelta(days=20),
-                category=category
+                category=self.category
+            )
+
+        # Creat reports where  reference point is not in renge
+        # Should exclude these figures
+        for i in range(2):
+            entry = EntryFactory.create()
+            FigureFactory.create(
+                entry=entry,
+                start_date=timezone.now() + timezone.timedelta(days=50),
+                end_date=timezone.now() + timezone.timedelta(days=50),
+                category=self.category
             )
 
         # Test for entries
@@ -446,14 +456,24 @@ class TestReportFilter(HelixGraphQLTestCase):
         entries_count = entries["data"]["report"]["figuresReport"]["totalCount"]
         self.assertEqual(entries_count, 3)
 
-    def test_report_should_exclude_figures_without_end_date(self):
-        category = FigureCategory.objects.create(name="Figure category 2", type=STOCK)
+    def test_report_should_include_figures_without_end_date_in_range(self):
         for i in range(3):
             entry = EntryFactory.create()
             FigureFactory.create(
                 entry=entry,
                 start_date=timezone.now() + timezone.timedelta(days=-15),
-                category=category
+                category=self.category
+            )
+
+        # Creat reports where  reference point is not in renge
+        # Should exclude these figures
+        for i in range(2):
+            entry = EntryFactory.create()
+            FigureFactory.create(
+                entry=entry,
+                start_date=timezone.now() + timezone.timedelta(days=50),
+                end_date=timezone.now() + timezone.timedelta(days=50),
+                category=self.category
             )
         response = self.query(
             self.create_report,
@@ -471,7 +491,7 @@ class TestReportFilter(HelixGraphQLTestCase):
         )
         entries = response.json()
         entries_count = entries["data"]["report"]["entriesReport"]["totalCount"]
-        self.assertEqual(entries_count, 0)
+        self.assertEqual(entries_count, 3)
 
         # Test for figures
         response = self.query(
@@ -482,4 +502,4 @@ class TestReportFilter(HelixGraphQLTestCase):
         )
         entries = response.json()
         entries_count = entries["data"]["report"]["figuresReport"]["totalCount"]
-        self.assertEqual(entries_count, 0)
+        self.assertEqual(entries_count, 3)

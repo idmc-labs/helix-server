@@ -225,7 +225,7 @@ class Report(MetaInformationArchiveAbstractModel,
     def report_figures(self):
         if self.is_legacy:
             return self.attached_figures
-        return self.extract_figures
+        return self.extract_report_figures
 
     @property
     def countries_report(self) -> list:

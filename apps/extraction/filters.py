@@ -498,6 +498,34 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         return flow_qs | stock_qs
 
 
+class ReportFigureExtractionFilterSet(BaseFigureExtractionFilterSet):
+    """
+    NOTE: Return queryset as it is, don't apply filter here,
+    filter is handled in qs method
+
+    NOTE: In report figures we have to pass end date as reference pont
+    """
+    filter_figure_start_after = df.DateFilter(method='noop')
+    filter_figure_end_before = df.DateFilter(method='noop')
+
+    def noop(self, qs, *args):
+        return qs
+
+    @property
+    def qs(self):
+        queryset = super().qs
+        start_date = self.data.get('filter_figure_start_after')
+        end_date = self.data.get('filter_figure_end_before')
+
+        flow_qs = Figure.filtered_nd_figures(
+            queryset, start_date, end_date
+        )
+        stock_qs = Figure.filtered_idp_figures(
+            queryset, reference_point=end_date
+        )
+        return flow_qs | stock_qs
+
+
 class ExtractionQueryFilter(df.FilterSet):
     class Meta:
         model = ExtractionQuery

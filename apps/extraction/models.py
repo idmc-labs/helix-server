@@ -161,10 +161,8 @@ class QueryAbstractModel(models.Model):
     )
 
     @property
-    def extract_figures(self) -> ['Figure']:  # noqa
-        from apps.extraction.filters import FigureExtractionFilterSet
-
-        return FigureExtractionFilterSet(data=dict(
+    def get_filter_kwargs(self):
+        return dict(
             filter_figure_countries=self.filter_figure_countries.all(),
             filter_figure_regions=self.filter_figure_regions.all(),
             filter_figure_geographical_groups=self.filter_figure_geographical_groups.all(),
@@ -185,10 +183,21 @@ class QueryAbstractModel(models.Model):
             filter_event_disaster_sub_types=self.filter_event_disaster_sub_types,
             filter_figure_category_types=self.filter_figure_category_types,
             filter_entry_has_review_comments=self.filter_entry_has_review_comments
-            # NOTE: Implement this for report if required
-            # filter_entry_publishers=self.filter_entry_publishers,
-            # filter_entry_sources=self.filter_entry_sources,
-        )).qs
+        )
+
+    @property
+    def extract_figures(self) -> ['Figure']:  # noqa
+        from apps.extraction.filters import FigureExtractionFilterSet
+        return FigureExtractionFilterSet(data=self.get_filter_kwargs).qs
+
+    @property
+    def extract_report_figures(self) -> ['Figure']:  # noqa
+        """
+        Use this method in report only, end date is passed as reference point
+        in this method
+        """
+        from apps.extraction.filters import ReportFigureExtractionFilterSet
+        return ReportFigureExtractionFilterSet(data=self.get_filter_kwargs).qs
 
     @classmethod
     def get_entries(cls, data=None) -> ['Entry']:  # noqa
@@ -197,30 +206,7 @@ class QueryAbstractModel(models.Model):
 
     @property
     def entries(self) -> ['Entry']:  # noqa
-        return self.get_entries(data=dict(
-            filter_figure_countries=self.filter_figure_countries.all(),
-            filter_figure_regions=self.filter_figure_regions.all(),
-            filter_figure_geographical_groups=self.filter_figure_geographical_groups.all(),
-            filter_events=self.filter_events.all(),
-            filter_event_crises=self.filter_event_crises.all(),
-            filter_figure_categories=self.filter_figure_categories.all(),
-            filter_entry_tags=self.filter_entry_tags.all(),
-            filter_figure_roles=self.filter_figure_roles,
-            filter_figure_start_after=self.filter_figure_start_after,
-            filter_figure_end_before=self.filter_figure_end_before,
-            filter_entry_article_title=self.filter_entry_article_title,
-            filter_event_crisis_types=self.filter_event_crisis_types,
-            filter_entry_review_status=self.filter_entry_review_status,
-            filter_entry_publishers=self.filter_entry_publishers.all(),
-            filter_entry_sources=self.filter_entry_sources.all(),
-            filter_figure_displacement_types=self.filter_figure_displacement_types,
-            filter_event_disaster_categories=self.filter_event_disaster_categories,
-            filter_event_disaster_sub_categories=self.filter_event_disaster_sub_categories,
-            filter_event_disaster_types=self.filter_event_disaster_types,
-            filter_event_disaster_sub_types=self.filter_event_disaster_sub_types,
-            filter_figure_category_types=self.filter_figure_category_types,
-            filter_entry_has_review_comments=self.filter_entry_has_review_comments
-        ))
+        return self.get_entries(data=self.get_filter_kwargs)
 
     class Meta:
         abstract = True
