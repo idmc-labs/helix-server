@@ -59,8 +59,9 @@ CSRF_TRUSTED_ORIGINS = [
     'https://media-monitoring.idmcdb.org',
 ]
 
-CORS_ALLOWED_ORIGIN_REGEXES = [
-    r'^https://[\w\-]+\.idmcdb\.org$'
+
+CORS_ORIGIN_REGEX_WHITELIST = [
+    r"^https://[\w\-]+\.idmcdb\.org$"
 ]
 # FIXME: shouldn't  this be set only on development?
 CORS_ORIGIN_WHITELIST = [

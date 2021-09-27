@@ -147,3 +147,6 @@ deploy/eb/
 
 # git (using .git directory to get commit for sentry)
 # ./.git
+
+.mypy_cache
+.pytest_cache
