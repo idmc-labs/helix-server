@@ -7,7 +7,7 @@ import utils.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('entry', '0051_auto_20210726_0611'),
+        ('entry', '0053_merge_20210920_0622'),
     ]
 
     operations = [
