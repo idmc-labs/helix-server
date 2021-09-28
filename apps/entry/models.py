@@ -34,7 +34,7 @@ from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.constants import STOCK, FLOW
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
-
+from utils.common import add_prefix
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from apps.event.models import Event
@@ -824,6 +824,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             cloned_entry.pop('sources')
             cloned_entry.pop('publishers')
             cloned_entry.pop('tags')
+            cloned_entry['article_title'] = add_prefix(cloned_entry['article_title'])
             entries.append(Entry(**cloned_entry))
 
         entries = Entry.objects.bulk_create(entries)
