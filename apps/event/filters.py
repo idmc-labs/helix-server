@@ -5,7 +5,6 @@ from apps.crisis.models import Crisis
 from apps.report.models import Report
 from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
 from apps.event.constants import OSV
-from django.db.models import Q
 
 
 class EventFilter(NameFilterMixin,

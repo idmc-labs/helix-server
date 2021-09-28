@@ -188,6 +188,14 @@ class OsvSubObjectType(DjangoObjectType):
         }
 
 
+class OsvSubTypeList(CustomDjangoListObjectType):
+    class Meta:
+        model = OsvSubType
+        filter_fields = {
+            'name': ['icontains']
+        }
+
+
 class EventType(DjangoObjectType):
     class Meta:
         model = Event
@@ -263,3 +271,4 @@ class Query:
                                                 pagination=PageGraphqlPaginationWithoutCount(
                                                     page_size_query_param='pageSize'
                                                 ))
+    osv_sub_type_list = DjangoPaginatedListObjectField(OsvSubTypeList)
