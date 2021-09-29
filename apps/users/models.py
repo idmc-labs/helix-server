@@ -108,6 +108,7 @@ class Portfolio(models.Model):
     role = enum.EnumField(
         USER_ROLE,
         verbose_name=_('Role'),
+        default=USER_ROLE.GUEST,
         blank=False
     )
     monitoring_sub_region = models.ForeignKey(
