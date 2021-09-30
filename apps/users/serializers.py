@@ -1,4 +1,4 @@
-from datetime import datetime
+from django.utils import timezone
 import time
 from django.contrib.auth import get_user_model, authenticate
 from django.contrib.auth.password_validation import validate_password
@@ -94,7 +94,7 @@ class LoginSerializer(serializers.Serializer):
 
         def throttle_login_attempt():
             if attempts >= settings.MAX_CAPTCHA_LOGIN_ATTEMPTS:
-                now = time.mktime(datetime.now().timetuple())
+                now = time.mktime(timezone.now().timetuple())
                 last_tried = User._get_last_login_attempt(email)
                 if not last_tried:
                     User._set_last_login_attempt(email, now)
