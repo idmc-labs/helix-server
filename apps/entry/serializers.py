@@ -269,7 +269,6 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
     disaggregation_age_json = DisaggregatedAgeSerializer(many=True, required=False, allow_null=True)
     disaggregation_strata_json = DisaggregatedStratumSerializer(many=True, required=False)
     geo_locations = OSMNameSerializer(many=True, required=False, allow_null=False)
-    tags = FigureTagSerializer(many=True, required=False, allow_null=False)
 
     class Meta:
         model = Figure

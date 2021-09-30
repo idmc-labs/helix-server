@@ -197,7 +197,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "tags": [self.tag1.id, self.tag2.id, self.tag3.id],
                 'calculationLogic': 'test logics',
                 'caveats': 'caveats',
-                'source_excerpt': 'source excerpt'
+                'sourceExcerpt': 'source excerpt'
             }
         ]
 
