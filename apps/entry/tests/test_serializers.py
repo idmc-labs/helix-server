@@ -48,7 +48,6 @@ class TestEntrySerializer(HelixTestCase):
             "publishers": [self.publisher.id],
             "publish_date": "2020-09-09",
             "source_methodology": "method",
-            "source_excerpt": "excerpt one",
             "source_breakdown": "break down",
             "idmc_analysis": "analysis one",
             "methodology": "methoddddd",
@@ -446,21 +445,6 @@ class TestEntrySerializer(HelixTestCase):
         self.assertNotIn('idmc_analysis', serializer.errors)
         entry_obj = serializer.save()
         self.assertEqual(entry_obj.idmc_analysis, None)
-
-    def test_calculation_logic_should_be_required_field_in_create_entry(self):
-        self.data['calculation_logic'] = None
-        serializer = EntryCreateSerializer(data=self.data,
-                                           context={'request': self.request})
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('calculation_logic', serializer.errors)
-
-        self.data['calculation_logic'] = 'calculation logic text'
-        serializer = EntryCreateSerializer(data=self.data,
-                                           context={'request': self.request})
-        self.assertTrue(serializer.is_valid())
-        self.assertNotIn('calculation_logic', serializer.errors)
-        entry_obj = serializer.save()
-        self.assertEqual(entry_obj.calculation_logic, 'calculation logic text')
 
 
 class TestFigureSerializer(HelixTestCase):

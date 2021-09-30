@@ -257,12 +257,19 @@ class CommonFigureValidationMixin:
         return attrs
 
 
+class FigureTagSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
+    class Meta:
+        model = FigureTag
+        fields = '__all__'
+
+
 class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
                                    CommonFigureValidationMixin,
                                    serializers.ModelSerializer):
     disaggregation_age_json = DisaggregatedAgeSerializer(many=True, required=False, allow_null=True)
     disaggregation_strata_json = DisaggregatedStratumSerializer(many=True, required=False)
     geo_locations = OSMNameSerializer(many=True, required=False, allow_null=False)
+    tags = FigureTagSerializer(many=True, required=False, allow_null=False)
 
     class Meta:
         model = Figure
@@ -281,12 +288,14 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
 
     def create(self, validated_data: dict) -> Figure:
         geo_locations = validated_data.pop('geo_locations', [])
+        tags = validated_data.pop('tags', [])
         if geo_locations:
             geo_locations = OSMName.objects.bulk_create(
                 [OSMName(**each) for each in geo_locations]
             )
         instance = Figure.objects.create(**validated_data)
         instance.geo_locations.set(geo_locations)
+        instance.tags.set(tags)
         return instance
 
     def _update_locations(self, instance, attr: str, data: list):
@@ -312,11 +321,13 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
 
     def update(self, instance, validated_data):
         geo_locations = validated_data.pop('geo_locations', [])
+        tags = validated_data.pop('tags', [])
         with transaction.atomic():
             instance = super().update(instance, validated_data)
             self._update_locations(instance=instance,
                                    attr='geo_locations',
                                    data=geo_locations)
+            instance.tags.set(tags)
         return instance
 
 

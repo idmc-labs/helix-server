@@ -116,6 +116,12 @@ class FigureTermListType(CustomDjangoListObjectType):
         )
 
 
+class FigureTagType(DjangoObjectType):
+    class Meta:
+        model = FigureTag
+        exclude_fields = ('entry_set',)
+
+
 class FigureType(DjangoObjectType):
     class Meta:
         model = Figure
@@ -132,6 +138,10 @@ class FigureType(DjangoObjectType):
     )
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
+    tags = DjangoPaginatedListObjectField(
+        FigureTagType,
+        related_name='tags',
+    )
 
 
 class FigureListType(CustomDjangoListObjectType):
@@ -241,12 +251,6 @@ class EntryReviewerListType(CustomDjangoListObjectType):
     class Meta:
         model = EntryReviewer
         filterset_class = EntryReviewerFilter
-
-
-class FigureTagType(DjangoObjectType):
-    class Meta:
-        model = FigureTag
-        exclude_fields = ('entry_set',)
 
 
 class FigureTagListType(CustomDjangoListObjectType):

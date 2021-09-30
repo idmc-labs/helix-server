@@ -445,6 +445,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                                          blank=True, null=True)
     caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
     tags = models.ManyToManyField('FigureTag', blank=True)
+    source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
+                                      blank=True, null=True)
 
     class Meta:
         indexes = [
@@ -765,8 +767,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     publishers = models.ManyToManyField('organization.Organization', verbose_name=_('Publisher'),
                                         blank=True, related_name='published_entries')
     publish_date = models.DateField(verbose_name=_('Published Date'))
-    source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
-                                      blank=True, null=True)
     event = models.ForeignKey('event.Event', verbose_name=_('Event'),
                               related_name='entries', on_delete=models.CASCADE)
 

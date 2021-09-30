@@ -143,7 +143,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
             "sources": [str(OrganizationFactory.create().id)],
             "publishers": [str(OrganizationFactory.create().id)],
             "publishDate": "2020-09-09",
-            "sourceExcerpt": "excerpt one",
             "idmcAnalysis": "analysis one",
             "isConfidential": True,
             "reviewers": [],
@@ -197,7 +196,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "geoLocations": [source1],
                 "tags": [self.tag1.id, self.tag2.id, self.tag3.id],
                 'calculationLogic': 'test logics',
-                'caveats': 'caveats'
+                'caveats': 'caveats',
+                'source_excerpt': 'source excerpt'
             }
         ]
 
