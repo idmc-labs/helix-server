@@ -138,6 +138,10 @@ class FigureType(DjangoObjectType):
     )
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
+    tags = DjangoPaginatedListObjectField(
+        FigureTagType,
+        related_name='tags',
+    )
 
 
 class FigureListType(CustomDjangoListObjectType):
