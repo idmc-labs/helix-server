@@ -152,6 +152,7 @@ class Report(MetaInformationArchiveAbstractModel,
     is_signed_off_by = models.ForeignKey(User, verbose_name=_('Last signed off by'),
                                          blank=True, null=True,
                                          related_name='signed_off_reports', on_delete=models.CASCADE)
+    is_public = models.BooleanField(default=False)
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):

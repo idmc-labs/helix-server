@@ -516,3 +516,104 @@ class TestReportFilter(HelixGraphQLTestCase):
         self.assertEqual(len(figures["data"]["report"]["figuresReport"]["results"]), 3)
         entries_count = figures["data"]["report"]["figuresReport"]["totalCount"]
         self.assertEqual(entries_count, 3)
+
+
+class TestPrivatePublicReports(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.mutation = '''mutation MyMutation($input: ReportCreateInputType!) {
+            createReport(data: $input) {
+                result {
+                    id
+                    isPublic
+                }
+                ok
+                errors
+            }
+        }'''
+
+        self.report_query = '''
+
+
+        query reportList($isPublic: Boolean){
+          reportList(isPublic: $isPublic) {
+            results {
+              isPublic
+              id
+              createdBy {
+                id
+              }
+            }
+            totalCount
+          }
+        }
+        '''
+        self.user = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.user1 = create_user_with_role(USER_ROLE.ADMIN.name)
+
+    def test_should_return_private_reports_if_filter_is_not_applied(self) -> None:
+        self.force_login(self.user)
+        # Create report a private report
+        input = {
+            "name": "test private report",
+            "isPublic": False
+        }
+        create_response = self.query(
+            self.mutation,
+            input_data=input
+        )
+        content = create_response.json()
+        self.assertResponseNoErrors(create_response)
+        self.assertTrue(content['data']['createReport']['ok'], content)
+        self.assertEqual(content['data']['createReport']['result']['isPublic'], False)
+
+        # Test can list private reports reports
+        variables = {}
+        list_response = self.query(self.report_query, variables=variables)
+        content = list_response.json()
+        self.assertResponseNoErrors(list_response)
+        self.assertEqual(content['data']['reportList']['totalCount'], 1)
+        self.assertEqual(content['data']['reportList']['results'][0]['isPublic'], False)
+        self.assertEqual(content['data']['reportList']['results'][0]['createdBy']["id"], str(self.user.id))
+
+        # Test should not list other users private reports
+        self.force_login(self.user1)
+        variables = {}
+        list_response = self.query(self.report_query, variables=variables)
+        content = list_response.json()
+        self.assertResponseNoErrors(list_response)
+        self.assertEqual(content['data']['reportList']['results'], [])
+        self.assertEqual(content['data']['reportList']['totalCount'], 0)
+
+    def test_can_list_public_reports(self) -> None:
+        self.force_login(self.user)
+        # Create report a public report
+        input = {
+            "name": "test public report",
+            "isPublic": True
+        }
+        create_response = self.query(
+            self.mutation,
+            input_data=input
+        )
+        content = create_response.json()
+        self.assertResponseNoErrors(create_response)
+        self.assertTrue(content['data']['createReport']['ok'], content)
+        self.assertEqual(content['data']['createReport']['result']['isPublic'], True)
+
+        # Test can list public reports reports
+        variables = {"isPublic": True}
+        list_response = self.query(self.report_query, variables=variables)
+        content = list_response.json()
+        self.assertResponseNoErrors(list_response)
+        self.assertEqual(content['data']['reportList']['totalCount'], 1)
+        self.assertEqual(content['data']['reportList']['results'][0]['isPublic'], True)
+        self.assertEqual(content['data']['reportList']['results'][0]['createdBy']["id"], str(self.user.id))
+
+        # Test can list other users public report
+        self.force_login(self.user1)
+        list_response = self.query(self.report_query, variables=variables)
+        content = list_response.json()
+        self.assertResponseNoErrors(list_response)
+        self.assertEqual(content['data']['reportList']['totalCount'], 1)
+        self.assertEqual(content['data']['reportList']['results'][0]['isPublic'], True)
+        self.assertEqual(content['data']['reportList']['results'][0]['createdBy']["id"], str(self.user.id))

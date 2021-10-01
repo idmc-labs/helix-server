@@ -20,6 +20,7 @@ class ReportFilter(df.FilterSet):
     review_status = StringListFilter(method='filter_by_review_status')
     start_date_after = df.DateFilter(method='filter_date_after')
     end_date_before = df.DateFilter(method='filter_end_date_before')
+    is_public = df.BooleanFilter(method='filter_is_public', initial=False)
 
     class Meta:
         model = Report
@@ -82,8 +83,21 @@ class ReportFilter(df.FilterSet):
             return qs.filter(filter_figure_end_before__lte=value)
         return qs
 
+    def filter_is_public(self, qs, name, value):
+        if value is True:
+            return qs.filter(is_public=True)
+        if value is False:
+            user = self.request.user
+            return qs.filter(is_public=False, created_by=user)
+        return qs
+
     @property
     def qs(self):
+        # Return private reprots by default if filter is not applied
+        is_public = self.data.get('is_public')
+        if is_public is None:
+            user = self.request.user
+            return super().qs.filter(is_public=False, created_by=user)
         return super().qs.distinct()
 
 
