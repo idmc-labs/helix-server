@@ -80,7 +80,7 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_entry_tags = models.ManyToManyField(
+    filter_figure_tags = models.ManyToManyField(
         'entry.FigureTag',
         verbose_name=_('Figure Tags'),
         blank=True,
@@ -169,7 +169,7 @@ class QueryAbstractModel(models.Model):
             filter_events=self.filter_events.all(),
             filter_event_crises=self.filter_event_crises.all(),
             filter_figure_categories=self.filter_figure_categories.all(),
-            filter_entry_tags=self.filter_entry_tags.all(),
+            filter_figure_tags=self.filter_figure_tags.all(),
             filter_figure_roles=self.filter_figure_roles,
             filter_figure_start_after=self.filter_figure_start_after,
             filter_figure_end_before=self.filter_figure_end_before,
