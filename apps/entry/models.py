@@ -381,8 +381,10 @@ class Figure(MetaInformationArchiveAbstractModel,
     quantifier = enum.EnumField(enum=QUANTIFIER, verbose_name=_('Quantifier'))
     reported = models.PositiveIntegerField(verbose_name=_('Reported Figures'))
     unit = enum.EnumField(enum=UNIT, verbose_name=_('Unit of Figure'), default=UNIT.PERSON)
-    household_size = models.PositiveSmallIntegerField(verbose_name=_('Household Size'),
-                                                      blank=True, null=True)
+    household_size = models.FloatField(
+        verbose_name=_('Household Size'),
+        blank=True, null=True
+    )
     total_figures = models.PositiveIntegerField(verbose_name=_('Total Figures'), default=0,
                                                 editable=False)
     category = models.ForeignKey('FigureCategory', verbose_name=_('Figure category'),
