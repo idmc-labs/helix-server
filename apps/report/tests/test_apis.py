@@ -532,8 +532,6 @@ class TestPrivatePublicReports(HelixGraphQLTestCase):
         }'''
 
         self.report_query = '''
-
-
         query reportList($isPublic: Boolean){
           reportList(isPublic: $isPublic) {
             results {
@@ -566,7 +564,7 @@ class TestPrivatePublicReports(HelixGraphQLTestCase):
         self.assertTrue(content['data']['createReport']['ok'], content)
         self.assertEqual(content['data']['createReport']['result']['isPublic'], False)
 
-        # Test can list private reports reports
+        # Test can list private reports
         variables = {}
         list_response = self.query(self.report_query, variables=variables)
         content = list_response.json()
@@ -600,7 +598,7 @@ class TestPrivatePublicReports(HelixGraphQLTestCase):
         self.assertTrue(content['data']['createReport']['ok'], content)
         self.assertEqual(content['data']['createReport']['result']['isPublic'], True)
 
-        # Test can list public reports reports
+        # Test can list public reports
         variables = {"isPublic": True}
         list_response = self.query(self.report_query, variables=variables)
         content = list_response.json()

@@ -93,7 +93,7 @@ class ReportFilter(df.FilterSet):
 
     @property
     def qs(self):
-        # Return private reprots by default if filter is not applied
+        # Return private reports by default if filter is not applied
         is_public = self.data.get('is_public')
         if is_public is None:
             user = self.request.user
