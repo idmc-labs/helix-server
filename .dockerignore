@@ -150,3 +150,10 @@ deploy/eb/
 
 .mypy_cache
 .pytest_cache
+
+# testing
+/coverage
+.coverage
+coverage.xml
+htmlcov
+sitecus
