@@ -23,6 +23,10 @@ class Migration(migrations.Migration):
             model_name='entry',
             name='tags',
         ),
+        migrations.RemoveField(
+            model_name='entry',
+            name='source_excerpt',
+        ),
         migrations.AddField(
             model_name='figure',
             name='calculation_logic',
@@ -38,4 +42,9 @@ class Migration(migrations.Migration):
             name='tags',
             field=models.ManyToManyField(blank=True, to='entry.FigureTag'),
         ),
+        migrations.AddField(
+            model_name='figure',
+            name='source_excerpt',
+            field=utils.fields.BleachedTextField(blank=True, null=True, verbose_name='Excerpt from Source'),
+        )
     ]

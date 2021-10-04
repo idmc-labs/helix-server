@@ -575,6 +575,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             tags__name='Tags',
             calculation_logic='Calculation Logic',
             caveats='Caveats',
+            source_excerpt='Source Excerpt',
         )
         values = figures.order_by(
             '-created_at'
