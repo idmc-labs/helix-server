@@ -12,11 +12,6 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.AlterField(
-            model_name='entry',
-            name='article_title',
-            field=utils.fields.BleachedTextField(verbose_name='Event Title'),
-        ),
-        migrations.AlterField(
             model_name='figure',
             name='household_size',
             field=models.FloatField(blank=True, null=True, verbose_name='Household Size'),
