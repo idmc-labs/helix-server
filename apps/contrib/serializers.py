@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
+from django.utils import timezone
 import magic
 
 from django.conf import settings
@@ -88,7 +89,7 @@ class SourcePreviewSerializer(MetaInformationSerializerMixin,
             url=validated_data['url'],
             created_by=validated_data['created_by'],
             status=SourcePreview.PREVIEW_STATUS.IN_PROGRESS,
-            created_at__gte=datetime.now() - timedelta(seconds=PDF_TASK_TIMEOUT)
+            created_at__gte=timezone.now() - timedelta(seconds=PDF_TASK_TIMEOUT)
         )
 
         if SourcePreview.objects.filter(
