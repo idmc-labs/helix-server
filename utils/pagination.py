@@ -29,7 +29,7 @@ def nulls_last_order_queryset(qs, ordering_param, ordering, **kwargs):
         else:
             mod_ordering.append(F(o).asc(nulls_last=True))
 
-    return qs.order_by(*mod_ordering)
+    return qs.distinct().order_by(*mod_ordering)
 
 
 class OrderingOnlyArgumentPagination(BaseDjangoGraphqlPagination):
