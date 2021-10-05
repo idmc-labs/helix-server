@@ -1,5 +1,9 @@
 # Helix Server
 
+[![Build Status](https://github.com/idmc-labs/helix-server/actions/workflows/test_runner.yml/badge.svg)](https://github.com/idmc-labs/helix-server/actions)
+[![Maintainability](https://api.codeclimate.com/v1/badges/2322f4f0041caffe4742/maintainability)](https://codeclimate.com/github/idmc-labs/helix-server/maintainability)
+[![Test Coverage](https://api.codeclimate.com/v1/badges/2322f4f0041caffe4742/test_coverage)](https://codeclimate.com/github/idmc-labs/helix-server/test_coverage)
+
 ## Initialize environment
 
 Create a `.env` file in the project folder. (For development, blank file is fine)
@@ -33,7 +37,7 @@ Use `localhost:9000/graphql` to interact with the server from the client.
 
 ## One time commands
 
-### Save geojson for each country
+## Save geojson for each country
 
 docker-compose exec server python manage.py split_geojson
 
@@ -48,4 +52,10 @@ sh deploy/scripts/s3_bucket_setup.sh
 ## To enable two factor authentication (generate statictoken) of admin user from command line
 ```bash
 python manage.py addstatictoken -t 123456 "admin@idmcdb.org"
+```
+
+
+## Generate fresh graphql schema.
+```bash
+./manage.py graphql_schema --out schema.graphql
 ```

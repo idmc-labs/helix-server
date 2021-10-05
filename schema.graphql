@@ -1,0 +1,2909 @@
+schema {
+  query: Query
+  mutation: Mutation
+}
+
+type Activate {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+input ActivateInputType {
+  uid: String!
+  token: String!
+}
+
+input ActorCreateInputType {
+  versionId: String
+  name: String!
+  torg: String
+  country: ID
+}
+
+type ActorListType {
+  results: [ActorType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ActorType {
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  name: String!
+  id: ID!
+  country: CountryType
+  torg: String
+}
+
+input ActorUpdateInputType {
+  id: ID!
+  versionId: String
+  name: String
+  torg: String
+  country: ID
+}
+
+input AdminPortfolioInputType {
+  register: Boolean!
+  user: ID!
+}
+
+type ApproveReport {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ReportType
+}
+
+input AttachmentCreateInputType {
+  attachment: Upload!
+  attachmentFor: String!
+}
+
+type AttachmentType {
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  attachment: String!
+  attachmentFor: FOR_CHOICES
+  mimetype: String
+  encoding: String
+  filetypeDetail: String
+}
+
+input BulkMonitoringExpertPortfolioInputType {
+  portfolios: [MonitoringExpertPortfolioInputType!]!
+  region: ID!
+}
+
+enum CRISIS_TYPE {
+  CONFLICT
+  DISASTER
+  OTHER
+}
+
+type ChangeUserPassword {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: UserType
+}
+
+type CloneEntry {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: [EntryType!]
+}
+
+input CloneEntryInputType {
+  events: [ID!]!
+  entry: ID!
+}
+
+type CloneEvent {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: EventType
+}
+
+input CloneEventInputType {
+  event: ID!
+}
+
+input CommentCreateInputType {
+  body: String
+  entry: ID!
+}
+
+input CommentUpdateInputType {
+  id: ID!
+  body: String!
+}
+
+input CommunicationCreateInputType {
+  oldId: String
+  createdAt: DateTime
+  versionId: String
+  subject: String!
+  content: String!
+  date: Date
+  createdBy: ID
+  lastModifiedBy: ID
+  contact: ID!
+  country: ID
+  medium: ID
+  attachment: ID
+}
+
+type CommunicationListType {
+  results: [CommunicationType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type CommunicationMediumListType {
+  results: [CommunicationMediumType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type CommunicationMediumType {
+  id: ID!
+  name: String!
+}
+
+type CommunicationType {
+  id: ID!
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  contact: ContactType!
+  country: CountryType
+  subject: String!
+  content: String!
+  date: Date
+  medium: CommunicationMediumType
+  attachment: AttachmentType
+}
+
+input CommunicationUpdateInputType {
+  id: ID!
+  oldId: String
+  createdAt: DateTime
+  versionId: String
+  subject: String
+  content: String
+  date: Date
+  createdBy: ID
+  lastModifiedBy: ID
+  contact: ID
+  country: ID
+  medium: ID
+  attachment: ID
+}
+
+input ContactCreateInputType {
+  oldId: String
+  createdAt: DateTime
+  versionId: String
+  designation: DESIGNATION!
+  firstName: String!
+  lastName: String!
+  fullName: String
+  gender: GENDER!
+  jobTitle: String!
+  email: String
+  skype: String
+  phone: String
+  comment: String
+  createdBy: ID
+  lastModifiedBy: ID
+  organization: ID
+  country: ID
+  countriesOfOperation: [ID!]
+}
+
+type ContactListType {
+  results: [ContactType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ContactType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  designation: DESIGNATION
+  firstName: String!
+  lastName: String!
+  fullName: String
+  gender: GENDER
+  jobTitle: String!
+  organization: OrganizationType
+  countriesOfOperation: [CountryType!]!
+  country: CountryType
+  email: String
+  skype: String
+  phone: String
+  comment: String
+  communications(contact: ID, country: ID, id: String, subjectContains: String, page: Int = 1, ordering: String, pageSize: Int): CommunicationListType
+}
+
+input ContactUpdateInputType {
+  id: ID!
+  oldId: String
+  createdAt: DateTime
+  versionId: String
+  designation: DESIGNATION
+  firstName: String
+  lastName: String
+  fullName: String
+  gender: GENDER
+  jobTitle: String
+  email: String
+  skype: String
+  phone: String
+  comment: String
+  createdBy: ID
+  lastModifiedBy: ID
+  organization: ID
+  country: ID
+  countriesOfOperation: [ID!]
+}
+
+input ContextualAnalysisCreateInputType {
+  update: String!
+  country: ID!
+  publishDate: Date
+  crisisType: CRISIS_TYPE!
+}
+
+type ContextualAnalysisListType {
+  results: [ContextualAnalysisType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ContextualAnalysisType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  update: String!
+  publishDate: Date
+  crisisType: CRISIS_TYPE
+}
+
+input ContextualUpdateCreateInputType {
+  preview: ID
+  articleTitle: String
+  sources: [ID!]
+  publishers: [ID!]
+  publishDate: DateTime
+  sourceExcerpt: String
+  idmcAnalysis: String
+  isConfidential: Boolean
+  tags: [ID!]
+  countries: [ID!]
+  crisisTypes: [CRISIS_TYPE!]
+  url: String
+  document: ID
+}
+
+type ContextualUpdateListType {
+  results: [ContextualUpdateType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ContextualUpdateType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  url: String
+  preview: SourcePreviewType
+  document: AttachmentType
+  articleTitle: String!
+  sources(name_Unaccent_Icontains: String, ordering: String): OrganizationListType
+  publishers(name_Unaccent_Icontains: String, ordering: String): OrganizationListType
+  publishDate: DateTime
+  sourceExcerpt: String
+  excerptIdu: String
+  idmcAnalysis: String
+  caveats: String
+  isConfidential: Boolean!
+  tags: [FigureTagType!]!
+  countries: [CountryType!]!
+  crisisTypes: [CRISIS_TYPE!]
+}
+
+input ContextualUpdateUpdateInputType {
+  preview: ID
+  articleTitle: String
+  sources: [ID!]
+  publishers: [ID!]
+  publishDate: DateTime
+  sourceExcerpt: String
+  idmcAnalysis: String
+  isConfidential: Boolean
+  tags: [ID!]
+  countries: [ID!]
+  crisisTypes: [CRISIS_TYPE!]
+  id: ID!
+}
+
+type CountryHouseholdSizeType {
+  oldId: String
+  id: ID!
+  country: CountryType!
+  year: Int!
+  size: Float!
+}
+
+type CountryListType {
+  results: [CountryType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type CountryRegionListType {
+  results: [CountryRegionType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type CountryRegionType {
+  id: ID!
+  name: String!
+  countries: [CountryType!]!
+}
+
+type CountrySubRegionType {
+  id: ID!
+  name: String!
+  countries: [CountryType!]!
+}
+
+type CountryType {
+  id: ID!
+  name: String!
+  geographicalGroup: GeographicalGroupType
+  region: CountryRegionType!
+  subRegion: CountrySubRegionType
+  monitoringSubRegion: MonitoringSubRegionType
+  iso2: String
+  iso3: String
+  countryCode: Int
+  idmcShortName: String!
+  idmcFullName: String
+  centroid: [Float!]
+  boundingBox: [Float!]
+  idmcShortNameEs: String
+  idmcShortNameFr: String
+  idmcShortNameAr: String
+  parkedItems: [ParkedItemType!]!
+  portfolio: PortfolioType
+  figures(unit: String, startDate_Lte: Date, startDate_Gte: Date, page: Int = 1, ordering: String, pageSize: Int): FigureListType
+  crises(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], report: String, createdByIds: [ID!], page: Int = 1, ordering: String, pageSize: Int): CrisisListType
+  contextualAnalyses(createdAt_Lte: DateTime, createdAt_Gte: DateTime, page: Int = 1, ordering: String, pageSize: Int): ContextualAnalysisListType
+  summaries(createdAt_Lte: DateTime, createdAt_Gte: DateTime, page: Int = 1, ordering: String, pageSize: Int): SummaryListType
+  householdSizes: [CountryHouseholdSizeType!]!
+  organizations: [OrganizationType!]!
+  operatingContacts(country: ID, id: String, firstNameContains: String, lastNameContains: String, nameContains: String, countriesOfOperation: [String!], page: Int = 1, ordering: String, pageSize: Int): ContactListType
+  contacts(country: ID, id: String, firstNameContains: String, lastNameContains: String, nameContains: String, countriesOfOperation: [String!], page: Int = 1, ordering: String, pageSize: Int): ContactListType
+  communications: [CommunicationType!]!
+  actors: [ActorType!]!
+  events(createdAt_Lte: DateTime, createdAt_Lt: DateTime, createdAt_Gte: DateTime, createdAt_Gt: DateTime, startDate_Lte: Date, startDate_Lt: Date, startDate_Gte: Date, startDate_Gt: Date, endDate_Lte: Date, endDate_Lt: Date, endDate_Gte: Date, endDate_Gt: Date, name: String, crisisByIds: [ID!], eventTypes: [String!], countries: [ID!], glideNumbers: [String!], report: String, disasterSubTypes: [ID!], violenceTypes: [ID!], createdByIds: [ID!], page: Int = 1, ordering: String, pageSize: Int): EventListType
+  contextualupdateSet: [ContextualUpdateType!]!
+  lastSummary: SummaryType
+  lastContextualAnalysis: ContextualAnalysisType
+  entries(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  totalFlowConflict: Int
+  totalFlowDisaster: Int
+  totalStockConflict: Int
+  totalStockDisaster: Int
+  geojsonUrl: String
+  regionalCoordinator: PortfolioType
+  monitoringExpert: PortfolioType
+}
+
+type CreateActor {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ActorType
+}
+
+type CreateAttachment {
+  errors: [GenericScalar]
+  ok: Boolean
+  result: AttachmentType
+}
+
+type CreateComment {
+  ok: Boolean
+  errors: [GenericScalar!]
+  result: ReviewCommentType
+}
+
+type CreateCommunication {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: CommunicationType
+}
+
+type CreateContact {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ContactType
+}
+
+type CreateContextualAnalysis {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ContextualAnalysisType
+}
+
+type CreateContextualUpdate {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ContextualUpdateType
+}
+
+type CreateCrisis {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: CrisisType
+}
+
+type CreateEntry {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: EntryType
+}
+
+type CreateEvent {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: EventType
+}
+
+input CreateExtractInputType {
+  versionId: String
+  name: String!
+  filterFigureStartAfter: Date
+  filterFigureEndBefore: Date
+  filterFigureRoles: [ROLE!]
+  filterEntryArticleTitle: String
+  filterEventCrisisTypes: [CRISIS_TYPE!]
+  filterEntryReviewStatus: [REVIEW_STATUS!]
+  filterEventGlideNumber: String
+  filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
+  filterFigureSexTypes: [GENDER_TYPE!]
+  filterFigureCategoryTypes: [String!]
+  filterEntryHasReviewComments: Boolean
+  filterFigureGeographicalGroups: [ID!]
+  filterFigureRegions: [ID!]
+  filterFigureCountries: [ID!]
+  filterEvents: [ID!]
+  filterEventCrises: [ID!]
+  filterFigureCategories: [ID!]
+  filterEntrySources: [ID!]
+  filterEntryPublishers: [ID!]
+  filterEntryTags: [ID!]
+  filterEntryCreatedBy: [ID!]
+  filterFigureTerms: [ID!]
+  filterEventDisasterCategories: [ID!]
+  filterEventDisasterSubCategories: [ID!]
+  filterEventDisasterTypes: [ID!]
+  filterEventDisasterSubTypes: [ID!]
+}
+
+type CreateExtraction {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ExtractionQueryObjectType
+}
+
+type CreateFigureTag {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: FigureTagType
+}
+
+type CreateMonitoringExpertPortfolio {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: MonitoringSubRegionType
+}
+
+type CreateOrganization {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: OrganizationType
+}
+
+type CreateOrganizationKind {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: OrganizationKindObjectType
+}
+
+type CreateParkedItem {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ParkedItemType
+}
+
+type CreateReport {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ReportType
+}
+
+type CreateReportComment {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ReportCommentType
+}
+
+type CreateResource {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ResourceType
+}
+
+type CreateResourceGroup {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ResourceGroupType
+}
+
+type CreateReviewComment {
+  ok: Boolean
+  errors: [GenericScalar!]
+  result: ReviewCommentType
+}
+
+type CreateSourcePreview {
+  ok: Boolean
+  errors: [GenericScalar!]
+  result: SourcePreviewType
+}
+
+type CreateSummary {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: SummaryType
+}
+
+input CrisisCreateInputType {
+  createdAt: DateTime
+  versionId: String
+  name: String!
+  crisisType: CRISIS_TYPE!
+  crisisNarrative: String!
+  startDate: Date
+  startDateAccuracy: DATE_ACCURACY
+  endDate: Date
+  endDateAccuracy: DATE_ACCURACY
+  createdBy: ID
+  lastModifiedBy: ID
+  countries: [ID!]!
+}
+
+type CrisisListType {
+  results: [CrisisType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type CrisisReviewCountType {
+  underReviewCount: Int
+  signedOffCount: Int
+  reviewCompleteCount: Int
+  toBeReviewedCount: Int
+}
+
+type CrisisType {
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  name: String!
+  crisisType: CRISIS_TYPE
+  crisisNarrative: String!
+  countries: [CountryType!]!
+  startDate: Date
+  startDateAccuracy: DATE_ACCURACY
+  endDate: Date
+  endDateAccuracy: DATE_ACCURACY
+  events(createdAt_Lte: DateTime, createdAt_Lt: DateTime, createdAt_Gte: DateTime, createdAt_Gt: DateTime, startDate_Lte: Date, startDate_Lt: Date, startDate_Gte: Date, startDate_Gt: Date, endDate_Lte: Date, endDate_Lt: Date, endDate_Gte: Date, endDate_Gt: Date, name: String, crisisByIds: [ID!], eventTypes: [String!], countries: [ID!], glideNumbers: [String!], report: String, disasterSubTypes: [ID!], violenceTypes: [ID!], createdByIds: [ID!], page: Int = 1, ordering: String, pageSize: Int): EventListType
+  totalStockIdpFigures: Int
+  totalFlowNdFigures: Int
+  reviewCount: CrisisReviewCountType
+}
+
+input CrisisUpdateInputType {
+  id: ID!
+  createdAt: DateTime
+  versionId: String
+  name: String
+  crisisType: CRISIS_TYPE
+  crisisNarrative: String
+  startDate: Date
+  startDateAccuracy: DATE_ACCURACY
+  endDate: Date
+  endDateAccuracy: DATE_ACCURACY
+  createdBy: ID
+  lastModifiedBy: ID
+  countries: [ID!]
+}
+
+enum DATE_ACCURACY {
+  DAY
+  WEEK
+  MONTH
+  YEAR
+}
+
+enum DESIGNATION {
+  MR
+  MS
+  MRS
+}
+
+enum DISAGGREGATED_AGE_SEX_CHOICES {
+  MALE
+  FEMALE
+  UNSPECIFIED
+  OTHER
+}
+
+enum DISPLACEMENT_OCCURRED {
+  BEFORE
+  DURING
+  AFTER
+  UNKNOWN
+}
+
+enum DISPLACEMENT_TYPE {
+  RURAL
+  URBAN
+}
+
+enum DOWNLOAD_TYPES {
+  CRISIS
+  EVENT
+  COUNTRY
+  ENTRY
+  FIGURE
+  ORGANIZATION
+  CONTACT
+  REPORT
+  ACTOR
+}
+
+scalar Date
+
+scalar DateTime
+
+type DeleteActor {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ActorType
+}
+
+type DeleteCommunication {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: CommunicationType
+}
+
+type DeleteContact {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ContactType
+}
+
+type DeleteContextualUpdate {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ContextualUpdateType
+}
+
+type DeleteCrisis {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: CrisisType
+}
+
+type DeleteEntry {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: EntryType
+}
+
+type DeleteEvent {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: EventType
+}
+
+type DeleteExtraction {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ExtractionQueryObjectType
+}
+
+type DeleteFigure {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: FigureType
+}
+
+type DeleteFigureTag {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: FigureTagType
+}
+
+type DeleteOrganization {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: OrganizationType
+}
+
+type DeleteOrganizationKind {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: OrganizationKindObjectType
+}
+
+type DeleteParkedItem {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ParkedItemType
+}
+
+type DeletePortfolio {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: PortfolioType
+}
+
+type DeleteReport {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ReportType
+}
+
+type DeleteReportComment {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ReportCommentType
+}
+
+type DeleteResource {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ResourceType
+}
+
+type DeleteResourceGroup {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ResourceGroupType
+}
+
+type DeleteReviewComment {
+  ok: Boolean
+  errors: [GenericScalar!]
+  result: ReviewCommentType
+}
+
+type DisaggregatedAgeCategoryListType {
+  results: [DisaggregatedAgeCategoryType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type DisaggregatedAgeCategoryType {
+  id: ID!
+  name: String!
+  ageGroup: String
+  ageGroupFrom: Int
+  ageGroupTo: Int
+}
+
+input DisaggregatedAgeInputType {
+  uuid: String!
+  category: ID
+  sex: DISAGGREGATED_AGE_SEX_CHOICES
+  value: Int!
+}
+
+type DisaggregatedAgeType {
+  uuid: String!
+  category: DisaggregatedAgeCategoryType
+  sex: DISAGGREGATED_AGE_SEX_CHOICES
+  value: Int
+}
+
+input DisaggregatedStratumInputType {
+  uuid: String!
+  date: Date!
+  value: Int!
+}
+
+type DisaggregatedStratumType {
+  uuid: String!
+  date: String
+  value: Int
+}
+
+type DisasterCategoryListType {
+  results: [DisasterCategoryType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type DisasterCategoryType {
+  name: String!
+  id: ID!
+  subCategories(name_Unaccent_Icontains: String, ordering: String): DisasterSubCategoryListType
+  extractionquerySet: [ExtractionQueryObjectType!]!
+  reportSet: [ReportType!]!
+}
+
+type DisasterSubCategoryListType {
+  results: [DisasterSubCategoryType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type DisasterSubCategoryType {
+  name: String!
+  id: ID!
+  types(name_Unaccent_Icontains: String, ordering: String): DisasterTypeObjectListType
+  extractionquerySet: [ExtractionQueryObjectType!]!
+  reportSet: [ReportType!]!
+}
+
+type DisasterSubObjectListType {
+  results: [DisasterSubObjectType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type DisasterSubObjectType {
+  name: String!
+  id: ID!
+  extractionquerySet: [ExtractionQueryObjectType!]!
+  reportSet: [ReportType!]!
+}
+
+type DisasterTypeObjectListType {
+  results: [DisasterTypeObjectType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type DisasterTypeObjectType {
+  name: String!
+  id: ID!
+  subTypes(name_Unaccent_Icontains: String, ordering: String): DisasterSubObjectListType
+  extractionquerySet: [ExtractionQueryObjectType!]!
+  reportSet: [ReportType!]!
+}
+
+type DjangoDebug {
+  sql: [DjangoDebugSQL]
+}
+
+type DjangoDebugSQL {
+  vendor: String!
+  alias: String!
+  sql: String
+  duration: Float!
+  rawSql: String!
+  params: String!
+  startTime: Float!
+  stopTime: Float!
+  isSlow: Boolean!
+  isSelect: Boolean!
+  transId: String
+  transStatus: String
+  isoLevel: String
+  encoding: String
+}
+
+enum ENTRY_REVIEW_STATUS {
+  RED
+  GREEN
+  GREY
+}
+
+enum EVENT_OTHER_SUB_TYPE {
+  DEVELOPMENT
+  EVICTION
+  TECHNICAL_DISASTER
+}
+
+enum EXCEL_GENERATION_STATUS {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  KILLED
+}
+
+input EntryCreateInputType {
+  figures: [NestedFigureCreateInputType!]
+  reviewers: [ID!]
+  oldId: String
+  versionId: String
+  url: String
+  documentUrl: String
+  articleTitle: String!
+  publishDate: Date!
+  sourceExcerpt: String
+  idmcAnalysis: String
+  calculationLogic: String
+  isConfidential: Boolean
+  caveats: String
+  reviewStatus: REVIEW_STATUS
+  associatedParkedItem: ID
+  preview: ID
+  document: ID
+  event: ID!
+  sources: [ID!]
+  publishers: [ID!]
+  tags: [ID!]
+}
+
+type EntryListType {
+  results: [EntryType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+enum EntryReviewStatus {
+  A_0
+  A_1
+  A_2
+  A_3
+}
+
+input EntryReviewStatusInputType {
+  entry: ID!
+  status: REVIEW_STATUS!
+}
+
+type EntryReviewerListType {
+  results: [EntryReviewerType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type EntryReviewerType {
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  entry: EntryType!
+  reviewer: UserType!
+  status: REVIEW_STATUS
+}
+
+type EntryType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  url: String
+  associatedParkedItem: ParkedItemType
+  preview: SourcePreviewType
+  document: AttachmentType
+  documentUrl: String
+  articleTitle: String!
+  sources(name_Unaccent_Icontains: String, ordering: String): OrganizationListType
+  publishers(name_Unaccent_Icontains: String, ordering: String): OrganizationListType
+  publishDate: Date!
+  sourceExcerpt: String
+  event: EventType!
+  idmcAnalysis: String
+  calculationLogic: String
+  isConfidential: Boolean!
+  caveats: String
+  tags: [FigureTagType!]!
+  reviewers(email: String, isActive: Boolean, roleIn: [String!], roleNotIn: [String!], monitoringSubRegionIn: [ID!], monitoringSubRegionNotIn: [ID!], fullName: String, includeInactive: Boolean, id: String, ordering: String): UserListType
+  reviewStatus: EntryReviewStatus
+  reviewComments(entry: ID, page: Int = 1, ordering: String, pageSize: Int): ReviewCommentListType
+  figures: [FigureType!]!
+  reviewing: [EntryReviewerType!]!
+  latestReviews: [ReviewType]
+  totalStockIdpFigures(data: TotalFigureFilterInputType): Int
+  totalFlowNdFigures(data: TotalFigureFilterInputType): Int
+  sourceMethodology: String
+  isReviewed: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
+  isUnderReview: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
+  isSignedOff: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
+}
+
+input EntryUpdateInputType {
+  id: ID!
+  figures: [NestedFigureUpdateInputType!]
+  reviewers: [ID!]
+  oldId: String
+  versionId: String
+  url: String
+  documentUrl: String
+  articleTitle: String
+  publishDate: Date
+  sourceExcerpt: String
+  idmcAnalysis: String
+  calculationLogic: String
+  isConfidential: Boolean
+  caveats: String
+  reviewStatus: REVIEW_STATUS
+  associatedParkedItem: ID
+  preview: ID
+  document: ID
+  event: ID
+  sources: [ID!]
+  publishers: [ID!]
+  tags: [ID!]
+}
+
+type Enum {
+  reviewFilter: REPORT_REVIEW_FILTER
+}
+
+input EventCreateInputType {
+  oldId: String
+  versionId: String
+  name: String!
+  eventType: CRISIS_TYPE!
+  otherSubType: EVENT_OTHER_SUB_TYPE
+  glideNumbers: [String!]
+  startDate: Date!
+  startDateAccuracy: DATE_ACCURACY
+  endDate: Date!
+  endDateAccuracy: DATE_ACCURACY
+  eventNarrative: String
+  crisis: ID
+  trigger: ID
+  triggerSubType: ID
+  violence: ID
+  violenceSubType: ID
+  actor: ID
+  disasterCategory: ID
+  disasterSubCategory: ID
+  disasterType: ID
+  disasterSubType: ID
+  countries: [ID!]
+}
+
+type EventListType {
+  results: [EventType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type EventReviewCountType {
+  underReviewCount: Int
+  signedOffCount: Int
+  reviewCompleteCount: Int
+  toBeReviewedCount: Int
+}
+
+type EventType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  crisis: CrisisType
+  name: String!
+  eventType: CRISIS_TYPE
+  otherSubType: EVENT_OTHER_SUB_TYPE
+  glideNumbers: [String!]
+  trigger: TriggerType
+  triggerSubType: TriggerSubObjectType
+  violence: ViolenceType
+  violenceSubType: ViolenceSubObjectType
+  actor: ActorType
+  disasterCategory: DisasterCategoryType
+  disasterSubCategory: DisasterSubCategoryType
+  disasterType: DisasterTypeObjectType
+  disasterSubType: DisasterSubObjectType
+  countries: [CountryType!]!
+  startDate: Date!
+  startDateAccuracy: DATE_ACCURACY
+  endDate: Date!
+  endDateAccuracy: DATE_ACCURACY
+  eventNarrative: String
+  extractionquerySet: [ExtractionQueryObjectType!]!
+  reportSet: [ReportType!]!
+  totalStockIdpFigures: Int
+  totalFlowNdFigures: Int
+  reviewCount: EventReviewCountType
+  entryCount: Int
+}
+
+input EventUpdateInputType {
+  id: ID!
+  oldId: String
+  versionId: String
+  name: String
+  eventType: CRISIS_TYPE
+  otherSubType: EVENT_OTHER_SUB_TYPE
+  glideNumbers: [String!]
+  startDate: Date
+  startDateAccuracy: DATE_ACCURACY
+  endDate: Date
+  endDateAccuracy: DATE_ACCURACY
+  eventNarrative: String
+  crisis: ID
+  trigger: ID
+  triggerSubType: ID
+  violence: ID
+  violenceSubType: ID
+  actor: ID
+  disasterCategory: ID
+  disasterSubCategory: ID
+  disasterType: ID
+  disasterSubType: ID
+  countries: [ID!]
+}
+
+type ExcelExportType {
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  startedAt: DateTime
+  completedAt: DateTime
+  downloadType: DOWNLOAD_TYPES
+  status: EXCEL_GENERATION_STATUS
+  file: String
+  fileSize: Int
+  filters: JSONString
+}
+
+type ExcelExportsListType {
+  results: [ExcelExportType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ExportActors {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportContacts {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportCountries {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportCrises {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportEntries {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportEvents {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportFigures {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportOrganizations {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportReportFigures {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportReports {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExtractionQueryListType {
+  results: [ExtractionQueryObjectType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ExtractionQueryObjectType {
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  name: String!
+  filterFigureGeographicalGroups: [GeographicalGroupType!]!
+  filterFigureRegions: [CountryRegionType!]!
+  filterFigureCountries: [CountryType!]!
+  filterEvents: [EventType!]!
+  filterEventCrises: [CrisisType!]!
+  filterFigureCategories: [FigureCategoryObjectType!]!
+  filterEntrySources: [OrganizationType!]!
+  filterEntryPublishers: [OrganizationType!]!
+  filterFigureStartAfter: Date
+  filterFigureEndBefore: Date
+  filterFigureRoles: [ROLE!]
+  filterEntryTags: [FigureTagType!]!
+  filterEntryArticleTitle: String
+  filterEventCrisisTypes: [CRISIS_TYPE!]
+  filterEntryReviewStatus: [REVIEW_STATUS!]
+  filterEventGlideNumber: String
+  filterEntryCreatedBy: [UserType!]!
+  filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
+  filterFigureSexTypes: [GENDER_TYPE!]
+  filterFigureTerms: [FigureTermType!]!
+  filterEventDisasterCategories: [DisasterCategoryType!]!
+  filterEventDisasterSubCategories: [DisasterSubCategoryType!]!
+  filterEventDisasterTypes: [DisasterTypeObjectType!]!
+  filterEventDisasterSubTypes: [DisasterSubObjectType!]!
+  filterFigureCategoryTypes: [String]
+  filterEntryHasReviewComments: Boolean
+  entries(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+}
+
+enum FOR_CHOICES {
+  ENTRY
+  COMMUNICATION
+  CONTEXTUAL_UPDATE
+}
+
+type FigureCategoryListType {
+  results: [FigureCategoryObjectType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type FigureCategoryObjectType {
+  id: ID!
+  name: String!
+  type: FigureCategoryType!
+  figures: [FigureType!]!
+}
+
+enum FigureCategoryType {
+  STOCK
+  FLOW
+}
+
+type FigureListType {
+  results: [FigureType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+input FigureTagCreateInputType {
+  versionId: String
+  name: String!
+}
+
+type FigureTagListType {
+  results: [FigureTagType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type FigureTagType {
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  name: String!
+  contextualupdateSet: [ContextualUpdateType!]!
+}
+
+input FigureTagUpdateInputType {
+  id: ID!
+  versionId: String
+  name: String
+}
+
+type FigureTermListType {
+  results: [FigureTermType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type FigureTermType {
+  id: ID!
+  isHousingRelated: Boolean!
+  displacementOccur: Boolean!
+  identifier: String!
+  name: String!
+  extractionquerySet: [ExtractionQueryObjectType!]!
+  reportSet: [ReportType!]!
+}
+
+type FigureType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  disaggregationDisplacementUrban: Int
+  disaggregationDisplacementRural: Int
+  disaggregationLocationCamp: Int
+  disaggregationLocationNonCamp: Int
+  disaggregationLgbtiq: Int
+  disaggregationDisability: Int
+  disaggregationIndigenousPeople: Int
+  disaggregationSexMale: Int
+  disaggregationSexFemale: Int
+  disaggregationAgeJson: [DisaggregatedAgeType!]
+  disaggregationStrataJson: [DisaggregatedStratumType!]
+  disaggregationConflict: Int
+  disaggregationConflictPolitical: Int
+  disaggregationConflictCriminal: Int
+  disaggregationConflictCommunal: Int
+  disaggregationConflictOther: Int
+  uuid: UUID!
+  entry: EntryType!
+  wasSubfact: Boolean!
+  quantifier: QUANTIFIER
+  reported: Int!
+  unit: UNIT
+  householdSize: Float
+  totalFigures: Int!
+  category: FigureCategoryObjectType
+  term: FigureTermType
+  displacementOccurred: DISPLACEMENT_OCCURRED
+  role: ROLE
+  startDate: Date
+  startDateAccuracy: DATE_ACCURACY
+  endDate: Date
+  endDateAccuracy: DATE_ACCURACY
+  includeIdu: Boolean!
+  excerptIdu: String
+  country: CountryType
+  isDisaggregated: Boolean!
+  isHousingDestruction: Boolean
+  geoLocations(ordering: String): OSMNameListType
+  figureReviews: [ReviewType!]!
+  reportSet: [ReportType!]!
+}
+
+input FigureUpdateInputType {
+  id: ID
+  disaggregationAgeJson: [DisaggregatedAgeInputType!]
+  disaggregationStrataJson: [DisaggregatedStratumInputType!]
+  geoLocations: [OSMNameInputType!]
+  oldId: String
+  versionId: String
+  disaggregationDisplacementUrban: Int
+  disaggregationDisplacementRural: Int
+  disaggregationLocationCamp: Int
+  disaggregationLocationNonCamp: Int
+  disaggregationLgbtiq: Int
+  disaggregationDisability: Int
+  disaggregationIndigenousPeople: Int
+  disaggregationSexMale: Int
+  disaggregationSexFemale: Int
+  disaggregationConflict: Int
+  disaggregationConflictPolitical: Int
+  disaggregationConflictCriminal: Int
+  disaggregationConflictCommunal: Int
+  disaggregationConflictOther: Int
+  uuid: String
+  wasSubfact: Boolean
+  quantifier: QUANTIFIER
+  reported: Int
+  unit: UNIT
+  householdSize: Float
+  displacementOccurred: DISPLACEMENT_OCCURRED
+  role: ROLE
+  startDate: Date
+  startDateAccuracy: DATE_ACCURACY
+  endDate: Date
+  endDateAccuracy: DATE_ACCURACY
+  includeIdu: Boolean
+  excerptIdu: String
+  isDisaggregated: Boolean
+  isHousingDestruction: Boolean
+  category: ID
+  term: ID
+  country: ID
+}
+
+enum GENDER {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum GENDER_TYPE {
+  MALE
+  FEMALE
+  UNSPECIFIED
+  OTHER
+}
+
+type GenerateReport {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ReportType
+}
+
+type GenerateResetPasswordToken {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+input GenerateResetPasswordTokenType {
+  captcha: String!
+  email: String!
+  siteKey: String!
+}
+
+scalar GenericScalar
+
+type GeographicalGroupListType {
+  results: [GeographicalGroupType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type GeographicalGroupType {
+  id: ID!
+  name: String!
+  countrySet: [CountryType!]!
+}
+
+enum IDENTIFIER {
+  ORIGIN
+  DESTINATION
+}
+
+scalar JSONString
+
+type Login {
+  result: UserType
+  errors: [GenericScalar!]
+  ok: Boolean!
+  captchaRequired: Boolean!
+}
+
+input LoginInputType {
+  email: String!
+  password: String!
+  captcha: String
+  siteKey: String
+}
+
+type Logout {
+  ok: Boolean
+}
+
+input MonitoringExpertPortfolioInputType {
+  user: ID!
+  country: ID!
+}
+
+type MonitoringSubRegionListType {
+  results: [MonitoringSubRegionType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type MonitoringSubRegionType {
+  id: ID!
+  name: String!
+  countries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, page: Int = 1, ordering: String, pageSize: Int): CountryListType
+  regionalCoordinator: PortfolioType
+  monitoringExpertsCount: Int!
+  unmonitoredCountriesCount: Int!
+  unmonitoredCountriesNames: String!
+}
+
+type Mutation {
+  createContextualUpdate(data: ContextualUpdateCreateInputType!): CreateContextualUpdate
+  updateContextualUpdate(data: ContextualUpdateUpdateInputType!): UpdateContextualUpdate
+  deleteContextualUpdate(id: ID!): DeleteContextualUpdate
+  createParkedItem(data: ParkedItemCreateInputType!): CreateParkedItem
+  updateParkedItem(data: ParkedItemUpdateInputType!): UpdateParkedItem
+  deleteParkedItem(id: ID!): DeleteParkedItem
+  createComment(data: CommentCreateInputType!): CreateComment
+  createReviewComment(data: ReviewCommentCreateInputType!): CreateReviewComment
+  updateComment(data: CommentUpdateInputType!): UpdateComment
+  deleteReviewComment(id: ID!): DeleteReviewComment
+  createResource(data: ResourceCreateInputType!): CreateResource
+  updateResource(data: ResourceUpdateInputType!): UpdateResource
+  deleteResource(id: ID!): DeleteResource
+  createResourceGroup(data: ResourceGroupCreateInputType!): CreateResourceGroup
+  updateResourceGroup(data: ResourceGroupUpdateInputType!): UpdateResourceGroup
+  deleteResourceGroup(id: ID!): DeleteResourceGroup
+  createReport(data: ReportCreateInputType!): CreateReport
+  updateReport(data: ReportUpdateInputType!): UpdateReport
+  deleteReport(id: ID!): DeleteReport
+  createReportComment(data: ReportCommentCreateInputType!): CreateReportComment
+  updateReportComment(data: ReportCommentUpdateInputType!): UpdateReportComment
+  deleteReportComment(id: ID!): DeleteReportComment
+  approveReport(approve: Boolean!, id: ID!): ApproveReport
+  startReportGeneration(id: ID!): GenerateReport
+  signOffReport(id: ID!, includeHistory: Boolean): SignOffReport
+  exportReportFigures(report: ID!): ExportReportFigures
+  exportReports(name_Unaccent_Icontains: String, filterFigureCountries: [ID!], reviewStatus: [String!], startDateAfter: Date, endDateBefore: Date): ExportReports
+  createExtraction(data: CreateExtractInputType!): CreateExtraction
+  updateExtraction(data: UpdateExtractInputType!): UpdateExtraction
+  deleteExtraction(id: ID!): DeleteExtraction
+  createEntry(data: EntryCreateInputType!): CreateEntry
+  updateEntry(data: EntryUpdateInputType!): UpdateEntry
+  deleteEntry(id: ID!): DeleteEntry
+  createSourcePreview(data: SourcePreviewInputType!): CreateSourcePreview
+  updateEntryReview(data: EntryReviewStatusInputType!): UpdateEntryReview
+  createFigureTag(data: FigureTagCreateInputType!): CreateFigureTag
+  updateFigureTag(data: FigureTagUpdateInputType!): UpdateFigureTag
+  deleteFigureTag(id: ID!): DeleteFigureTag
+  exportEntries(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String): ExportEntries
+  exportFigures(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventCrisisTypes: [String!], filterEventGlideNumber: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], event: String, filterEntryHasReviewComments: Boolean, report: String): ExportFigures
+  cloneEntry(data: CloneEntryInputType!): CloneEntry
+  updateFigure(data: FigureUpdateInputType!): updateFigure
+  deleteFigure(id: ID!): DeleteFigure
+  createEvent(data: EventCreateInputType!): CreateEvent
+  updateEvent(data: EventUpdateInputType!): UpdateEvent
+  deleteEvent(id: ID!): DeleteEvent
+  createActor(data: ActorCreateInputType!): CreateActor
+  updateActor(data: ActorUpdateInputType!): UpdateActor
+  deleteActor(id: ID!): DeleteActor
+  exportEvents(createdAt_Lte: DateTime, createdAt_Lt: DateTime, createdAt_Gte: DateTime, createdAt_Gt: DateTime, startDate_Lte: Date, startDate_Lt: Date, startDate_Gte: Date, startDate_Gt: Date, endDate_Lte: Date, endDate_Lt: Date, endDate_Gte: Date, endDate_Gt: Date, name: String, crisisByIds: [ID!], eventTypes: [String!], countries: [ID!], glideNumbers: [String!], report: String, disasterSubTypes: [ID!], violenceTypes: [ID!], createdByIds: [ID!]): ExportEvents
+  exportActors(name_Unaccent_Icontains: String): ExportActors
+  cloneEvent(data: CloneEventInputType!): CloneEvent
+  createCrisis(data: CrisisCreateInputType!): CreateCrisis
+  updateCrisis(data: CrisisUpdateInputType!): UpdateCrisis
+  deleteCrisis(id: ID!): DeleteCrisis
+  exportCrises(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], report: String, createdByIds: [ID!]): ExportCrises
+  createOrganization(data: OrganizationCreateInputType!): CreateOrganization
+  updateOrganization(data: OrganizationUpdateInputType!): UpdateOrganization
+  deleteOrganization(id: ID!): DeleteOrganization
+  createOrganizationKind(data: OrganizationKindCreateInputType!): CreateOrganizationKind
+  updateOrganizationKind(data: OrganizationKindUpdateInputType!): UpdateOrganizationKind
+  deleteOrganizationKind(id: ID!): DeleteOrganizationKind
+  exportOrganizations(name: String): ExportOrganizations
+  createSummary(data: SummaryCreateInputType!): CreateSummary
+  createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
+  exportCountries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String): ExportCountries
+  createAttachment(data: AttachmentCreateInputType!): CreateAttachment
+  createContact(data: ContactCreateInputType!): CreateContact
+  updateContact(data: ContactUpdateInputType!): UpdateContact
+  deleteContact(id: ID!): DeleteContact
+  createCommunication(data: CommunicationCreateInputType!): CreateCommunication
+  updateCommunication(data: CommunicationUpdateInputType!): UpdateCommunication
+  deleteCommunication(id: ID!): DeleteCommunication
+  exportContacts(country: ID, id: String, firstNameContains: String, lastNameContains: String, nameContains: String, countriesOfOperation: [String!]): ExportContacts
+  login(data: LoginInputType!): Login
+  register(data: RegisterInputType!): Register
+  activate(data: ActivateInputType!): Activate
+  logout: Logout
+  updateUser(data: UserUpdateInputType!): UpdateUser
+  changePassword(data: UserPasswordInputType!): ChangeUserPassword
+  generateResetPasswordToken(data: GenerateResetPasswordTokenType!): GenerateResetPasswordToken
+  resetPassword(data: ResetPasswordType!): ResetPassword
+  createMonitoringExpertPortfolio(data: BulkMonitoringExpertPortfolioInputType!): CreateMonitoringExpertPortfolio
+  updateRegionalCoordinatorPortfolio(data: RegionalCoordinatorPortfolioInputType!): UpdateRegionalCoordinatorPortfolio
+  deletePortfolio(id: ID!): DeletePortfolio
+  updateAdminPortfolio(data: AdminPortfolioInputType!): UpdateAdminPortfolio
+}
+
+input NestedFigureCreateInputType {
+  createdAt: DateTime
+  modifiedAt: DateTime
+  createdBy: ID
+  lastModifiedBy: ID
+  disaggregationAgeJson: [DisaggregatedAgeInputType!]
+  disaggregationStrataJson: [DisaggregatedStratumInputType!]
+  geoLocations: [OSMNameInputType!]
+  oldId: String
+  versionId: String
+  disaggregationDisplacementUrban: Int
+  disaggregationDisplacementRural: Int
+  disaggregationLocationCamp: Int
+  disaggregationLocationNonCamp: Int
+  disaggregationLgbtiq: Int
+  disaggregationDisability: Int
+  disaggregationIndigenousPeople: Int
+  disaggregationSexMale: Int
+  disaggregationSexFemale: Int
+  disaggregationConflict: Int
+  disaggregationConflictPolitical: Int
+  disaggregationConflictCriminal: Int
+  disaggregationConflictCommunal: Int
+  disaggregationConflictOther: Int
+  uuid: String!
+  wasSubfact: Boolean
+  quantifier: QUANTIFIER!
+  reported: Int!
+  unit: UNIT
+  householdSize: Float
+  displacementOccurred: DISPLACEMENT_OCCURRED
+  role: ROLE
+  startDate: Date
+  startDateAccuracy: DATE_ACCURACY
+  endDate: Date
+  endDateAccuracy: DATE_ACCURACY
+  includeIdu: Boolean!
+  excerptIdu: String
+  isDisaggregated: Boolean
+  isHousingDestruction: Boolean
+  category: ID
+  term: ID
+  country: ID
+}
+
+input NestedFigureUpdateInputType {
+  id: ID
+  createdAt: DateTime
+  modifiedAt: DateTime
+  createdBy: ID
+  lastModifiedBy: ID
+  disaggregationAgeJson: [DisaggregatedAgeInputType!]
+  disaggregationStrataJson: [DisaggregatedStratumInputType!]
+  geoLocations: [OSMNameInputType!]
+  oldId: String
+  versionId: String
+  disaggregationDisplacementUrban: Int
+  disaggregationDisplacementRural: Int
+  disaggregationLocationCamp: Int
+  disaggregationLocationNonCamp: Int
+  disaggregationLgbtiq: Int
+  disaggregationDisability: Int
+  disaggregationIndigenousPeople: Int
+  disaggregationSexMale: Int
+  disaggregationSexFemale: Int
+  disaggregationConflict: Int
+  disaggregationConflictPolitical: Int
+  disaggregationConflictCriminal: Int
+  disaggregationConflictCommunal: Int
+  disaggregationConflictOther: Int
+  uuid: String
+  wasSubfact: Boolean
+  quantifier: QUANTIFIER
+  reported: Int
+  unit: UNIT
+  householdSize: Float
+  displacementOccurred: DISPLACEMENT_OCCURRED
+  role: ROLE
+  startDate: Date
+  startDateAccuracy: DATE_ACCURACY
+  endDate: Date
+  endDateAccuracy: DATE_ACCURACY
+  includeIdu: Boolean
+  excerptIdu: String
+  isDisaggregated: Boolean
+  isHousingDestruction: Boolean
+  category: ID
+  term: ID
+  country: ID
+}
+
+enum ORGANIZATION_CATEGORY {
+  UNKNOWN
+  REGIONAL
+  INTERNATIONAL
+}
+
+input OSMNameInputType {
+  id: ID
+  uuid: String!
+  wikipedia: String
+  rank: Int
+  country: String!
+  countryCode: String
+  street: String
+  wikiData: String
+  osmId: String!
+  osmType: String!
+  houseNumbers: String
+  identifier: IDENTIFIER!
+  city: String
+  displayName: String!
+  lon: Float!
+  lat: Float!
+  state: String
+  boundingBox: [Float!]
+  type: String
+  importance: Float
+  className: String
+  name: String!
+  nameSuffix: String
+  placeRank: Int
+  alternativeNames: String
+  accuracy: OSM_ACCURACY!
+  moved: Boolean
+}
+
+type OSMNameListType {
+  results: [OSMNameType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type OSMNameType {
+  id: ID!
+  uuid: UUID!
+  wikipedia: String
+  rank: Int
+  country: String!
+  countryCode: String
+  street: String
+  wikiData: String
+  osmId: String!
+  osmType: String!
+  houseNumbers: String
+  identifier: IDENTIFIER
+  city: String
+  displayName: String!
+  lon: Float!
+  lat: Float!
+  state: String
+  boundingBox: [Float!]
+  type: String
+  importance: Float
+  className: String
+  name: String!
+  nameSuffix: String
+  placeRank: Int
+  alternativeNames: String
+  accuracy: OSM_ACCURACY
+  moved: Boolean!
+  reviews: [ReviewType!]!
+  figures: [FigureType!]!
+}
+
+enum OSM_ACCURACY {
+  ADM0
+  ADM1
+  ADM2
+  ADM3
+  POINT
+}
+
+input OrganizationCreateInputType {
+  oldId: String
+  createdAt: DateTime
+  versionId: String
+  deletedOn: DateTime
+  name: String!
+  shortName: String
+  category: ORGANIZATION_CATEGORY
+  methodology: String
+  breakdown: String
+  createdBy: ID
+  lastModifiedBy: ID
+  organizationKind: ID
+  parent: ID
+  countries: [ID!]
+}
+
+input OrganizationKindCreateInputType {
+  oldId: String
+  createdAt: DateTime
+  versionId: String
+  name: String!
+  createdBy: ID
+  lastModifiedBy: ID
+}
+
+type OrganizationKindListType {
+  results: [OrganizationKindObjectType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type OrganizationKindObjectType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  name: String!
+  organizations(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
+}
+
+input OrganizationKindUpdateInputType {
+  id: ID!
+  oldId: String
+  createdAt: DateTime
+  versionId: String
+  name: String
+  createdBy: ID
+  lastModifiedBy: ID
+}
+
+type OrganizationListType {
+  results: [OrganizationType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type OrganizationType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  deletedOn: DateTime
+  name: String!
+  shortName: String
+  category: ORGANIZATION_CATEGORY
+  countries: [CountryType!]!
+  organizationKind: OrganizationKindObjectType
+  methodology: String
+  breakdown: String
+  parent: OrganizationType
+  sourcedEntries: [EntryType!]!
+  publishedEntries: [EntryType!]!
+  subOrganizations: [OrganizationType!]!
+  contacts(country: ID, id: String, firstNameContains: String, lastNameContains: String, nameContains: String, countriesOfOperation: [String!], page: Int = 1, ordering: String, pageSize: Int): ContactListType
+  sourcedExtractionquery: [ExtractionQueryObjectType!]!
+  publishedExtractionquery: [ExtractionQueryObjectType!]!
+  sourcedContextualUpdates: [ContextualUpdateType!]!
+  publishedContextualUpdates: [ContextualUpdateType!]!
+  sourcedReport: [ReportType!]!
+  publishedReport: [ReportType!]!
+}
+
+input OrganizationUpdateInputType {
+  id: ID!
+  oldId: String
+  createdAt: DateTime
+  versionId: String
+  deletedOn: DateTime
+  name: String
+  shortName: String
+  category: ORGANIZATION_CATEGORY
+  methodology: String
+  breakdown: String
+  createdBy: ID
+  lastModifiedBy: ID
+  organizationKind: ID
+  parent: ID
+  countries: [ID!]
+}
+
+enum PARKING_LOT_STATUS {
+  TO_BE_REVIEWED
+  REVIEWED
+  ON_GOING
+}
+
+enum PERMISSION_ACTION {
+  add
+  change
+  delete
+  sign_off
+  approve
+}
+
+enum PERMISSION_ENTITY {
+  crisis
+  event
+  entry
+  organization
+  organizationkind
+  contact
+  communication
+  figure
+  summary
+  contextualanalysis
+  resource
+  user
+  review
+  actor
+  parkeditem
+  reviewcomment
+  contextualupdate
+  report
+  reportcomment
+  portfolio
+}
+
+enum PREVIEW_STATUS {
+  PENDING
+  COMPLETED
+  FAILED
+  IN_PROGRESS
+  KILLED
+}
+
+input ParkedItemCreateInputType {
+  countryIso3: String
+  versionId: String
+  title: String!
+  url: String!
+  status: PARKING_LOT_STATUS
+  comments: String
+  source: String
+  sourceUuid: String
+  metaData: JSONString
+  country: ID
+  assignedTo: ID
+}
+
+type ParkedItemListType {
+  results: [ParkedItemType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+enum ParkedItemSource {
+  A_0
+  A_1
+  A_2
+}
+
+type ParkedItemType {
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  country: CountryType
+  title: String!
+  url: String!
+  assignedTo: UserType
+  status: PARKING_LOT_STATUS
+  comments: String
+  source: ParkedItemSource
+  sourceUuid: String
+  metaData: JSONString
+  entry: EntryType
+}
+
+input ParkedItemUpdateInputType {
+  id: ID!
+  countryIso3: String
+  versionId: String
+  title: String
+  url: String
+  status: PARKING_LOT_STATUS
+  comments: String
+  source: String
+  sourceUuid: String
+  metaData: JSONString
+  country: ID
+  assignedTo: ID
+}
+
+type PermissionsType {
+  action: PERMISSION_ACTION!
+  entities: [PERMISSION_ENTITY!]!
+}
+
+type PortfolioListType {
+  results: [PortfolioType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type PortfolioType {
+  id: ID!
+  user: UserType!
+  role: USER_ROLE!
+  monitoringSubRegion: MonitoringSubRegionType
+  country: CountryType
+  permissions: [PermissionsType!]
+}
+
+enum QUANTIFIER {
+  MORE_THAN
+  LESS_THAN
+  EXACT
+  APPROXIMATELY
+}
+
+type Query {
+  generation(id: ID!): ReportGenerationType
+  report(id: ID!): ReportType
+  reportList(name_Unaccent_Icontains: String, filterFigureCountries: [ID!], reviewStatus: [String!], startDateAfter: Date, endDateBefore: Date, page: Int = 1, ordering: String, pageSize: Int): ReportListType
+  reportComment(id: ID!): ReportCommentType
+  reportCommentList(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, body: String, report: ID, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
+  reportGeneration(id: ID!): ReportGenerationType
+  reportGenerationList(report: ID, page: Int = 1, ordering: String, pageSize: Int): ReportGenerationListType
+  contextualUpdate(id: ID!): ContextualUpdateType
+  contextualUpdateList(publishDate_Lte: DateTime, publishDate_Gte: DateTime, articleTitle: String, countries: [String!], sources: [String!], publishers: [String!], crisisTypes: [String!], page: Int = 1, ordering: String, pageSize: Int): ContextualUpdateListType
+  parkedItem(id: ID!): ParkedItemType
+  parkedItemList(title_Unaccent_Icontains: String, createdBy: ID, statusIn: [String!], assignedToIn: [String!], page: Int = 1, ordering: String, pageSize: Int): ParkedItemListType
+  reviewList(entry: ID, page: Int = 1, ordering: String, pageSize: Int): ReviewListType
+  reviewComment(id: ID!): ReviewCommentType
+  reviewComments(entry: ID, page: Int = 1, ordering: String, pageSize: Int): ReviewCommentListType
+  resource(id: ID!): ResourceType
+  resourceList(name_Unaccent_Icontains: String, countries: [String!], page: Int = 1, ordering: String, pageSize: Int): ResourceListType
+  resourceGroup(id: ID!): ResourceGroupType
+  resourceGroupList(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): ResourceGroupListType
+  extractionQuery(id: ID!): ExtractionQueryObjectType
+  extractionQueryList(id: Float, name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): ExtractionQueryListType
+  extractionEntryList(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  extractionFigureList(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventCrisisTypes: [String!], filterEventGlideNumber: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], event: String, filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): FigureListType
+  figureCategory(id: ID!): FigureCategoryObjectType
+  figureCategoryList(name_Unaccent_Icontains: String, ordering: String): FigureCategoryListType
+  figureTerm(id: ID!): FigureTermType
+  figureTermList(isHousingRelated: Boolean, ordering: String): FigureTermListType
+  figureTag(id: ID!): FigureTagType
+  figureTagList(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): FigureTagListType
+  figure(id: ID!): FigureType
+  figureList(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventCrisisTypes: [String!], filterEventGlideNumber: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], event: String, filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): FigureListType
+  sourcePreview(id: ID!): SourcePreviewType
+  entry(id: ID!): EntryType
+  entryList(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  disaggregatedAgeCategory(id: ID!): DisaggregatedAgeCategoryType
+  disaggregatedAgeCategoryList(name_Unaccent_Icontains: String, ordering: String): DisaggregatedAgeCategoryListType
+  triggerList(name_Unaccent_Icontains: String, ordering: String): TriggerListType
+  subTriggerList(name_Unaccent_Icontains: String, ordering: String): TriggerSubObjectListType
+  violenceList(id_Iexact: Float, ordering: String): ViolenceListType
+  actor(id: ID!): ActorType
+  actorList(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): ActorListType
+  disasterCategoryList(name_Unaccent_Icontains: String, ordering: String): DisasterCategoryListType
+  disasterSubCategoryList(name_Unaccent_Icontains: String, ordering: String): DisasterSubCategoryListType
+  disasterTypeList(name_Unaccent_Icontains: String, ordering: String): DisasterTypeObjectListType
+  disasterSubTypeList(name_Unaccent_Icontains: String, ordering: String): DisasterSubObjectListType
+  event(id: ID!): EventType
+  eventList(createdAt_Lte: DateTime, createdAt_Lt: DateTime, createdAt_Gte: DateTime, createdAt_Gt: DateTime, startDate_Lte: Date, startDate_Lt: Date, startDate_Gte: Date, startDate_Gt: Date, endDate_Lte: Date, endDate_Lt: Date, endDate_Gte: Date, endDate_Gt: Date, name: String, crisisByIds: [ID!], eventTypes: [String!], countries: [ID!], glideNumbers: [String!], report: String, disasterSubTypes: [ID!], violenceTypes: [ID!], createdByIds: [ID!], page: Int = 1, ordering: String, pageSize: Int): EventListType
+  crisis(id: ID!): CrisisType
+  crisisList(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], report: String, createdByIds: [ID!], page: Int = 1, ordering: String, pageSize: Int): CrisisListType
+  country(id: ID!): CountryType
+  countryList(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, page: Int = 1, ordering: String, pageSize: Int): CountryListType
+  countryRegionList(id_Iexact: Float, name: String, ordering: String): CountryRegionListType
+  geographicalGroupList(id_Iexact: Float, name: String, ordering: String): GeographicalGroupListType
+  householdSize(country: ID!, year: Int!): CountryHouseholdSizeType
+  monitoringSubRegion(id: ID!): MonitoringSubRegionType
+  monitoringSubRegionList(id: Float, name: String, page: Int = 1, ordering: String, pageSize: Int): MonitoringSubRegionListType
+  organization(id: ID!): OrganizationType
+  organizationList(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
+  organizationKind(id: ID!): OrganizationKindObjectType
+  organizationKindList(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, name: String, page: Int = 1, ordering: String, pageSize: Int): OrganizationKindListType
+  attachment(id: ID!): AttachmentType
+  excelExports(startedAt_Lt: DateTime, startedAt_Gt: DateTime, startedAt_Gte: DateTime, startedAt_Lte: DateTime, statusList: [String!], page: Int = 1, ordering: String, pageSize: Int): ExcelExportsListType
+  contact(id: ID!): ContactType
+  communication(id: ID!): CommunicationType
+  contactList(country: ID, id: String, firstNameContains: String, lastNameContains: String, nameContains: String, countriesOfOperation: [String!], page: Int = 1, ordering: String, pageSize: Int): ContactListType
+  communicationMediumList(ordering: String): CommunicationMediumListType
+  communicationList(contact: ID, country: ID, id: String, subjectContains: String, page: Int = 1, ordering: String, pageSize: Int): CommunicationListType
+  me: UserType
+  user(id: ID!): UserType
+  users(email: String, isActive: Boolean, roleIn: [String!], roleNotIn: [String!], monitoringSubRegionIn: [ID!], monitoringSubRegionNotIn: [ID!], fullName: String, includeInactive: Boolean, id: String, page: Int = 1, ordering: String, pageSize: Int): UserListType
+  portfolios(monitoringSubRegion_In: ID, country_In: ID, roleIn: [String!], page: Int = 1, ordering: String, pageSize: Int): PortfolioListType
+  reviewerUserList(email: String, isActive: Boolean, roleIn: [String!], roleNotIn: [String!], monitoringSubRegionIn: [ID!], monitoringSubRegionNotIn: [ID!], fullName: String, includeInactive: Boolean, id: String, page: Int = 1, ordering: String, pageSize: Int): UserListType
+  roleWithRegionAllowedMap: GenericScalar
+  _debug: DjangoDebug
+}
+
+enum REPORT_GENERATION_STATUS {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  KILLED
+}
+
+enum REPORT_REVIEW_FILTER {
+  SIGNED_OFF
+  APPROVED
+  UNAPPROVED
+}
+
+enum REPORT_TYPE {
+  GROUP
+  MASTERFACT
+}
+
+enum REVIEW_STATUS {
+  TO_BE_REVIEWED
+  UNDER_REVIEW
+  REVIEW_COMPLETED
+  SIGNED_OFF
+}
+
+enum ROLE {
+  RECOMMENDED
+  TRIANGULATION
+}
+
+input RegionalCoordinatorPortfolioInputType {
+  user: ID!
+  monitoringSubRegion: ID!
+}
+
+type Register {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: UserType
+  captchaRequired: Boolean!
+}
+
+input RegisterInputType {
+  email: String!
+  firstName: String
+  lastName: String
+  password: String!
+  captcha: String!
+  siteKey: String!
+}
+
+type ReportApprovalListType {
+  results: [ReportApprovalType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ReportApprovalType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  generation: ReportGenerationType!
+  createdBy: UserType!
+  isApproved: Boolean!
+}
+
+input ReportCommentCreateInputType {
+  body: String!
+  report: ID!
+}
+
+type ReportCommentListType {
+  results: [ReportCommentType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ReportCommentType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  body: String!
+  report: ReportType!
+}
+
+input ReportCommentUpdateInputType {
+  body: String!
+  id: ID!
+}
+
+input ReportCreateInputType {
+  name: String!
+  analysis: String
+  methodology: String
+  significantUpdates: String
+  challenges: String
+  summary: String
+  filterFigureRegions: [ID!]
+  filterFigureCountries: [ID!]
+  filterEventCrises: [ID!]
+  filterFigureCategories: [ID!]
+  filterFigureStartAfter: Date
+  filterFigureEndBefore: Date
+  filterEventCrisisTypes: [CRISIS_TYPE!]
+  filterFigureGeographicalGroups: [ID!]
+  filterEvents: [ID!]
+  filterEntryTags: [ID!]
+  filterEventDisasterCategories: [ID!]
+  filterEventDisasterSubCategories: [ID!]
+  filterEventDisasterTypes: [ID!]
+  filterEventDisasterSubTypes: [ID!]
+}
+
+type ReportGenerationListType {
+  results: [ReportGenerationType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ReportGenerationType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  report: ReportType!
+  isSignedOff: Boolean!
+  isSignedOffOn: DateTime
+  isSignedOffBy: UserType
+  fullReport: String
+  snapshot: String
+  status: REPORT_GENERATION_STATUS!
+  startedAt: DateTime
+  completedAt: DateTime
+  includeHistory: Boolean!
+  approvals(isApproved: Boolean, ordering: String): ReportApprovalListType
+  isApproved: Boolean
+}
+
+type ReportListType {
+  results: [ReportType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ReportTotalsType {
+  totalStockConflictSum: Int
+  totalFlowConflictSum: Int
+  totalStockDisasterSum: Int
+  totalFlowDisasterSum: Int
+}
+
+type ReportType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  disaggregationDisplacementUrban: Int
+  disaggregationDisplacementRural: Int
+  disaggregationLocationCamp: Int
+  disaggregationLocationNonCamp: Int
+  disaggregationLgbtiq: Int
+  disaggregationDisability: Int
+  disaggregationIndigenousPeople: Int
+  disaggregationSexMale: Int
+  disaggregationSexFemale: Int
+  disaggregationAgeJson: [JSONString!]
+  disaggregationStrataJson: [JSONString!]
+  disaggregationConflict: Int
+  disaggregationConflictPolitical: Int
+  disaggregationConflictCriminal: Int
+  disaggregationConflictCommunal: Int
+  disaggregationConflictOther: Int
+  name: String!
+  filterFigureGeographicalGroups: [GeographicalGroupType!]!
+  filterFigureRegions: [CountryRegionType!]!
+  filterFigureCountries: [CountryType!]!
+  filterEvents: [EventType!]!
+  filterEventCrises: [CrisisType!]!
+  filterFigureCategories: [FigureCategoryObjectType!]!
+  filterEntrySources: [OrganizationType!]!
+  filterEntryPublishers: [OrganizationType!]!
+  filterFigureRoles: [ROLE!]
+  filterEntryTags: [FigureTagType!]!
+  filterEntryArticleTitle: String
+  filterEventCrisisTypes: [CRISIS_TYPE!]
+  filterEntryReviewStatus: [Int!]
+  filterEventGlideNumber: String
+  filterEntryCreatedBy: [UserType!]!
+  filterFigureDisplacementTypes: [Int!]
+  filterFigureSexTypes: [Int!]
+  filterFigureTerms: [FigureTermType!]!
+  filterEventDisasterCategories: [DisasterCategoryType!]!
+  filterEventDisasterSubCategories: [DisasterSubCategoryType!]!
+  filterEventDisasterTypes: [DisasterTypeObjectType!]!
+  filterEventDisasterSubTypes: [DisasterSubObjectType!]!
+  filterFigureCategoryTypes: [String]
+  filterEntryHasReviewComments: Boolean
+  id: ID!
+  generatedFrom: REPORT_TYPE
+  generated: Boolean!
+  filterFigureStartAfter: Date
+  filterFigureEndBefore: Date
+  analysis: String
+  methodology: String
+  significantUpdates: String
+  challenges: String
+  reported: Int!
+  totalFigures: Int!
+  summary: String
+  isSignedOff: Boolean!
+  isSignedOffBy: UserType
+  comments(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, body: String, report: ID, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
+  generations(report: ID, ordering: String): ReportGenerationListType
+  countriesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): CountryListType
+  eventsReport(id: String, page: Int = 1, ordering: String, pageSize: Int): EventListType
+  entriesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  figuresReport(unit: String, startDate_Lte: Date, startDate_Gte: Date, page: Int = 1, ordering: String, pageSize: Int): FigureListType
+  crisesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): CrisisListType
+  totalDisaggregation: ReportTotalsType!
+  lastGeneration: ReportGenerationType
+}
+
+input ReportUpdateInputType {
+  id: ID!
+  name: String
+  analysis: String
+  methodology: String
+  significantUpdates: String
+  challenges: String
+  summary: String
+  filterFigureRegions: [ID!]
+  filterFigureCountries: [ID!]
+  filterEventCrises: [ID!]
+  filterFigureCategories: [ID!]
+  filterFigureStartAfter: Date
+  filterFigureEndBefore: Date
+  filterEventCrisisTypes: [CRISIS_TYPE!]
+  filterFigureGeographicalGroups: [ID!]
+  filterEvents: [ID!]
+  filterEntryTags: [ID!]
+  filterEventDisasterCategories: [ID!]
+  filterEventDisasterSubCategories: [ID!]
+  filterEventDisasterTypes: [ID!]
+  filterEventDisasterSubTypes: [ID!]
+}
+
+type ResetPassword {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+input ResetPasswordType {
+  passwordResetToken: String!
+  uid: String!
+  newPassword: String!
+}
+
+input ResourceCreateInputType {
+  oldId: String
+  versionId: String
+  name: String!
+  url: String!
+  lastAccessedOn: DateTime
+  group: ID
+  countries: [ID!]!
+}
+
+input ResourceGroupCreateInputType {
+  oldId: String
+  versionId: String
+  name: String!
+}
+
+type ResourceGroupListType {
+  results: [ResourceGroupType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ResourceGroupType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  name: String!
+  resources(name_Unaccent_Icontains: String, countries: [String!], page: Int = 1, ordering: String, pageSize: Int): ResourceListType
+}
+
+input ResourceGroupUpdateInputType {
+  id: ID!
+  oldId: String
+  versionId: String
+  name: String
+}
+
+type ResourceListType {
+  results: [ResourceType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ResourceType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  name: String!
+  url: String!
+  group: ResourceGroupType
+  countries: [CountryType!]!
+  lastAccessedOn: DateTime
+}
+
+input ResourceUpdateInputType {
+  id: ID!
+  oldId: String
+  versionId: String
+  name: String
+  url: String
+  lastAccessedOn: DateTime
+  group: ID
+  countries: [ID!]
+}
+
+input ReviewCommentCreateInputType {
+  reviews: [ReviewInputType!]
+  oldId: String
+  versionId: String
+  body: String
+  entry: ID!
+}
+
+type ReviewCommentListType {
+  results: [ReviewCommentType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ReviewCommentType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  body: String
+  entry: EntryType!
+  reviews(entry: ID, ordering: String): ReviewListType
+}
+
+input ReviewInputType {
+  id: Int
+  createdAt: DateTime
+  modifiedAt: DateTime
+  createdBy: ID
+  lastModifiedBy: ID
+  oldId: String
+  versionId: String
+  field: String!
+  value: ENTRY_REVIEW_STATUS
+  ageId: String
+  strataId: String
+  entry: ID!
+  figure: ID
+  geoLocation: ID
+  comment: ID
+}
+
+type ReviewListType {
+  results: [ReviewType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ReviewType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  entry: EntryType!
+  figure: FigureType
+  field: String!
+  value: ENTRY_REVIEW_STATUS!
+  ageId: String
+  strataId: String
+  geoLocation: OSMNameType
+  comment: ReviewCommentType
+}
+
+type SignOffReport {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ReportType
+}
+
+input SourcePreviewInputType {
+  versionId: String
+  url: String!
+  token: String
+  pdf: String
+  status: PREVIEW_STATUS
+  remark: String
+}
+
+type SourcePreviewType {
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  url: String!
+  pdf: String
+  status: PREVIEW_STATUS
+  remark: String
+  contextualUpdate: ContextualUpdateType
+}
+
+input SummaryCreateInputType {
+  summary: String!
+  country: ID!
+}
+
+type SummaryListType {
+  results: [SummaryType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type SummaryType {
+  oldId: String
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  id: ID!
+  summary: String!
+}
+
+input TotalFigureFilterInputType {
+  categories: [ID!]
+  filterFigureStartAfter: Date
+  filterFigureEndBefore: Date
+  roles: [String!]
+}
+
+type TriggerListType {
+  results: [TriggerType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type TriggerSubObjectListType {
+  results: [TriggerSubObjectType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type TriggerSubObjectType {
+  id: ID!
+  name: String!
+}
+
+type TriggerType {
+  name: String!
+  id: ID!
+}
+
+enum UNIT {
+  PERSON
+  HOUSEHOLD
+}
+
+enum USER_ROLE {
+  ADMIN
+  REGIONAL_COORDINATOR
+  MONITORING_EXPERT
+  GUEST
+}
+
+scalar UUID
+
+type UpdateActor {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ActorType
+}
+
+type UpdateAdminPortfolio {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: UserType
+}
+
+type UpdateComment {
+  ok: Boolean
+  errors: [GenericScalar!]
+  result: ReviewCommentType
+}
+
+type UpdateCommunication {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: CommunicationType
+}
+
+type UpdateContact {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ContactType
+}
+
+type UpdateContextualUpdate {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ContextualUpdateType
+}
+
+type UpdateCrisis {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: CrisisType
+}
+
+type UpdateEntry {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: EntryType
+}
+
+type UpdateEntryReview {
+  ok: Boolean
+  errors: [GenericScalar!]
+  result: EntryReviewerType
+}
+
+type UpdateEvent {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: EventType
+}
+
+input UpdateExtractInputType {
+  id: ID!
+  versionId: String
+  name: String
+  filterFigureStartAfter: Date
+  filterFigureEndBefore: Date
+  filterFigureRoles: [ROLE!]
+  filterEntryArticleTitle: String
+  filterEventCrisisTypes: [CRISIS_TYPE!]
+  filterEntryReviewStatus: [REVIEW_STATUS!]
+  filterEventGlideNumber: String
+  filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
+  filterFigureSexTypes: [GENDER_TYPE!]
+  filterFigureCategoryTypes: [String!]
+  filterEntryHasReviewComments: Boolean
+  filterFigureGeographicalGroups: [ID!]
+  filterFigureRegions: [ID!]
+  filterFigureCountries: [ID!]
+  filterEvents: [ID!]
+  filterEventCrises: [ID!]
+  filterFigureCategories: [ID!]
+  filterEntrySources: [ID!]
+  filterEntryPublishers: [ID!]
+  filterEntryTags: [ID!]
+  filterEntryCreatedBy: [ID!]
+  filterFigureTerms: [ID!]
+  filterEventDisasterCategories: [ID!]
+  filterEventDisasterSubCategories: [ID!]
+  filterEventDisasterTypes: [ID!]
+  filterEventDisasterSubTypes: [ID!]
+}
+
+type UpdateExtraction {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ExtractionQueryObjectType
+}
+
+type UpdateFigureTag {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: FigureTagType
+}
+
+type UpdateOrganization {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: OrganizationType
+}
+
+type UpdateOrganizationKind {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: OrganizationKindObjectType
+}
+
+type UpdateParkedItem {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ParkedItemType
+}
+
+type UpdateRegionalCoordinatorPortfolio {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: MonitoringSubRegionType
+}
+
+type UpdateReport {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ReportType
+}
+
+type UpdateReportComment {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ReportCommentType
+}
+
+type UpdateResource {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ResourceType
+}
+
+type UpdateResourceGroup {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ResourceGroupType
+}
+
+type UpdateUser {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: UserType
+}
+
+scalar Upload
+
+type UserListType {
+  results: [UserType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+input UserPasswordInputType {
+  oldPassword: String!
+  newPassword: String!
+}
+
+type UserType {
+  id: ID!
+  lastLogin: DateTime
+  firstName: String!
+  lastName: String!
+  isActive: Boolean!
+  dateJoined: DateTime!
+  email: String
+  username: String!
+  fullName: String!
+  reviewing(entry: ID, statusIn: [String!], page: Int = 1, ordering: String, pageSize: Int): EntryReviewerListType
+  createdEntry(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  portfolios(monitoringSubRegion_In: ID, country_In: ID, roleIn: [String!], page: Int = 1, ordering: String, pageSize: Int): PortfolioListType
+  highestRole: USER_ROLE
+  permissions: [PermissionsType!]
+}
+
+input UserUpdateInputType {
+  id: ID!
+  email: String
+  firstName: String
+  lastName: String
+  username: String
+  isActive: Boolean
+}
+
+type ViolenceListType {
+  results: [ViolenceType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ViolenceSubObjectListType {
+  results: [ViolenceSubObjectType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ViolenceSubObjectType {
+  name: String!
+  id: ID!
+}
+
+type ViolenceType {
+  name: String!
+  id: ID!
+  subTypes(id_Iexact: Float, ordering: String): ViolenceSubObjectListType
+}
+
+type updateFigure {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: EntryType
+}
