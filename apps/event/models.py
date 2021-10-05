@@ -16,7 +16,7 @@ from apps.entry.models import Figure
 from apps.users.models import User
 from django.contrib.postgres.fields import ArrayField
 from django.forms import model_to_dict
-from utils.common import add_prefix
+from utils.common import add_clone_prefix
 
 
 class NameAttributedModels(models.Model):
@@ -370,7 +370,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 event_data[field] = model.objects.get(pk=event_data[field])
 
         event_data['created_by'] = user
-        event_data['name'] = add_prefix(event_data['name'])
+        event_data['name'] = add_clone_prefix(event_data['name'])
         cloned_event = Event.objects.create(**event_data)
         # Add m2m contires
         cloned_event.countries.set(countries)

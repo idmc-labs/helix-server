@@ -643,7 +643,7 @@ class TestCloneEntry(HelixTestCase):
         entries = serializer.save()
         self.assertEqual(1, len(set([each.article_title for each in entries])))
         self.assertEqual(
-            f"Clone : {self.article_title}",
+            f"Clone: {self.article_title}",
             list(set([
                 each.article_title for each in entries
             ]))[0]

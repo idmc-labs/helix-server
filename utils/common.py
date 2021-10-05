@@ -12,21 +12,16 @@ def convert_date_object_to_string_in_dict(dictionary):
     return dictionary
 
 
-def add_prefix(sentence):
+def add_clone_prefix(sentence):
     """
     Add prefix in cloned objects
     """
-    def get_new_prefix(word):
-        digit = int(re.findall(r'\d+', word)[0]) + 1
-        return f"Clone {digit}:"
+    match = re.match(r"Clone\s*(\d+):\s+(.*)", sentence)
+    if match:
+        return f"Clone {int(match.group(1)) + 1}: {match.group(2)}"
 
-    matched_pattern_1 = re.search(r'Clone \d+:', sentence)
-    matched_pattern_2 = re.search(r'Clone :', sentence)
+    match = re.match(r"Clone\s*:\s+(.*)", sentence)
+    if match:
+        return f"Clone 2: {match.group(1)}"
 
-    if matched_pattern_1:
-        rx = r'(?<!\d){}(?!\d)'.format(matched_pattern_1.group())
-        return re.sub(rx, lambda x: get_new_prefix(x.group()), sentence)
-    if matched_pattern_2:
-        return re.sub("Clone :", "Clone 1:", sentence)
-
-    return f"Clone : {sentence}"
+    return f"Clone: {sentence}"
