@@ -243,28 +243,12 @@ class CommonFigureValidationMixin:
             attrs, ['disaggregation_displacement_urban', 'disaggregation_displacement_rural'], 'urban and rural'
         ))
         errors.update(self.validate_disaggregated_sum_against_reported(
-            attrs, ['disaggregation_sex_male', 'disaggregation_sex_female', 'disaggregation_lgbtiq'],
-            'male, female and other'
-        ))
-        errors.update(self.validate_disaggregated_sum_against_reported(
             attrs, ['disaggregation_disability'], 'Disability',
         ))
         errors.update(self.validate_disaggregated_sum_against_reported(
             attrs, ['disaggregation_indigenous_people'], 'Indigenous people',
         ))
-        errors.update(self.validate_disaggregated_sum_against_reported(
-            attrs,
-            [
-                'disaggregation_conflict',
-                'disaggregation_conflict_political',
-                'disaggregation_conflict_criminal',
-                'disaggregation_conflict_other',
-                'disaggregation_conflict_communal'
-            ],
-            'conflict'
-        ))
         errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'disaggregation_age_json', 'age'))
-        errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'disaggregation_strata_json', 'strata'))
         if errors:
             raise ValidationError(errors)
 
@@ -283,6 +267,11 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
     class Meta:
         model = Figure
         exclude = ('id', 'entry', 'total_figures')
+        read_only_fields = [
+            'disaggregation_conflict', 'disaggregation_strata_json', 'disaggregation_conflict_other',
+            'disaggregation_conflict_communal', 'disaggregation_conflict_criminal', 'disaggregation_conflict_political',
+            'disaggregation_sex_male', 'disaggregation_sex_female', 'disaggregation_lgbtiq'
+        ]
         extra_kwargs = {
             'uuid': {
                 'validators': [],

@@ -585,39 +585,6 @@ class TestFigureSerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('disaggregation_displacement_rural', serializer.errors)
 
-    def test_invalid_gender(self):
-        self.data['disaggregation_sex_male'] = 10
-        self.data['disaggregation_sex_female'] = 120
-        self.data['disaggregation_lgbtiq'] = 100
-        self.data['reported'] = (
-            self.data['disaggregation_sex_male'] +
-            self.data['disaggregation_sex_female'] +
-            self.data['disaggregation_lgbtiq'] - 1
-        )
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('disaggregation_sex_male', serializer.errors)
-        self.data['reported'] = (
-            self.data['disaggregation_sex_male'] +
-            self.data['disaggregation_sex_female'] +
-            self.data['disaggregation_lgbtiq']
-        )
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-
-    def test_invalid_conflict(self):
-        self.data['disaggregation_conflict'] = 12
-        self.data['disaggregation_conflict_communal'] = 23
-        self.data['disaggregation_conflict_criminal'] = 45
-        self.data['disaggregation_conflict_political'] = 50
-        self.data['disaggregation_conflict_other'] = 50
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('disaggregation_conflict', serializer.errors)
-
     def test_invalid_disaggregation_age_json(self):
         self.data['disaggregation_age_json'] = [
             {
@@ -646,17 +613,6 @@ class TestFigureSerializer(HelixTestCase):
             context={'request': self.request}
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
-
-    def test_invalid_disaggregation_strata_json(self):
-        self.data['disaggregation_strata_json'] = [
-            {"date": "2020-10-10", "value": 120, "uuid": "132acc8b-b7f7-4535-8c80-f6eb35bf9003"},
-            {"date": "2020-10-12", "value": 12, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
-        ]
-        self.data['reported'] = sum([item['value'] for item in self.data['disaggregation_strata_json']]) - 1
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('disaggregation_strata_json', serializer.errors)
 
 
 class TestCloneEntry(HelixTestCase):
@@ -687,7 +643,7 @@ class TestCloneEntry(HelixTestCase):
         entries = serializer.save()
         self.assertEqual(1, len(set([each.article_title for each in entries])))
         self.assertEqual(
-            self.article_title,
+            f"Clone: {self.article_title}",
             list(set([
                 each.article_title for each in entries
             ]))[0]

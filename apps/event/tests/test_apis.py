@@ -450,7 +450,7 @@ class CloneEventTest(HelixGraphQLTestCase):
         self.assertEqual(cloned_event["id"], str(self.event.id + 1))
         self.assertEqual(cloned_event["startDate"], str(self.event.start_date))
         self.assertEqual(cloned_event["endDate"], str(self.event.end_date))
-        self.assertEqual(cloned_event["name"], self.event.name)
+        self.assertEqual(cloned_event["name"], f"Clone: {self.event.name}")
         # Check data cloned properly in foreign key fields
         self.assertEqual(cloned_event["crisis"]["id"], str(self.event.crisis.id))
         self.assertEqual(cloned_event["trigger"]["id"], str(self.event.trigger.id))
