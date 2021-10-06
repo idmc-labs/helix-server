@@ -22,3 +22,10 @@ response.json
 *.swp
 secrets.yml
 celerybeat-schedule
+
+# testing
+/coverage
+.coverage
+coverage.xml
+htmlcov
+sitecus
