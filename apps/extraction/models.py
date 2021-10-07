@@ -102,7 +102,7 @@ class QueryAbstractModel(models.Model):
         null=True
     )
     filter_event_glide_number = models.TextField(
-        verbose_name=_('Event Ids'),
+        verbose_name=_('Event Code'),
         blank=True,
         null=True
     )

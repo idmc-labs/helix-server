@@ -7,7 +7,7 @@ import utils.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('entry', '0055_auto_20210930_1126'),
+        ('entry', '0054_auto_20210930_1312'),
         ('report', '0024_auto_20210921_1007'),
     ]
 

@@ -1026,7 +1026,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     @cached_property
     def disaster_event(self):
         headers = OrderedDict(dict(
-            event_id='Event Id',
+            event_id='Event Code',
             event_name='Event Name',
             event_year='Event Year',
             event_start_date='Start Date',

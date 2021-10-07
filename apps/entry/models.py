@@ -441,7 +441,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
                                            related_name='figures')
 
-    calculation_logic = models.TextField(verbose_name=_('Calculation Logic'),
+    calculation_logic = models.TextField(verbose_name=_('Analysis and Calculation Logic'),
                                          blank=True, null=True)
     caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
     tags = models.ManyToManyField('FigureTag', blank=True)
@@ -551,7 +551,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             is_housing_destruction='Is housing destruction',
             entry__url='Link',
             entry__event__crisis_id='Crisis Id',
-            entry__event_id='Event Id',
+            entry__event_id='Event Code',
             entry__event__crisis__name='Crisis Name',
             entry__event__name='Event Name',
             entry__article_title='Event Title',
@@ -573,7 +573,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             disaggregation_indigenous_people='Indigenous People',
             disaggregation_age_json='Displacement: Age',
             tags__name='Tags',
-            calculation_logic='Calculation Logic',
+            calculation_logic='Analysis and Calculation Logic',
             caveats='Caveats',
             source_excerpt='Source Excerpt',
         )
@@ -771,7 +771,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     event = models.ForeignKey('event.Event', verbose_name=_('Event'),
                               related_name='entries', on_delete=models.CASCADE)
 
-    idmc_analysis = models.TextField(verbose_name=_('IDMC Analysis'),
+    idmc_analysis = models.TextField(verbose_name=_('Trends and patterns of displacement to be highlighted'),
                                      blank=True, null=True)
     is_confidential = models.BooleanField(
         verbose_name=_('Confidential Source'),
@@ -887,7 +887,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             document__mimetype='Filetype',
             document__filetype_detail='Filetype Detail',
             event__event_type='Cause',
-            event_id='Event Id',
+            event_id='Event Code',
             event__name='Event Name',
             event__crisis_id='Crisis Id',
             event__crisis__name='Crisis Name',
@@ -902,7 +902,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             publisher_types='Publisher Types',
             created_at='Created at',
             created_by__full_name='Created by',
-            idmc_analysis='IDMC Analysis',
+            idmc_analysis='Trends and patterns of displacement to be highlighted',
             countries='Countries Affected',
             countries_iso3='ISO3s Affected',
             centroid_lat='Centroid Lat',
