@@ -30,7 +30,7 @@ class ReportSerializer(MetaInformationSerializerMixin,
             'filter_event_crisis_types', 'filter_figure_geographical_groups',
             'filter_events', 'filter_figure_tags', 'filter_event_disaster_categories',
             'filter_event_disaster_sub_categories', 'filter_event_disaster_types',
-            'filter_event_disaster_sub_types'
+            'filter_event_disaster_sub_types', 'filter_event_violence_types', 'filter_event_violence_sub_types',
         ]
 
     def validate_dates(self, attrs):
@@ -66,7 +66,7 @@ class ReportUpdateSerializer(UpdateSerializerMixin, ReportSerializer):
             'filter_event_crisis_types', 'filter_figure_geographical_groups',
             'filter_events', 'filter_figure_tags', 'filter_event_disaster_categories',
             'filter_event_disaster_sub_categories', 'filter_event_disaster_types',
-            'filter_event_disaster_sub_types'
+            'filter_event_disaster_sub_types', 'filter_event_violence_types', 'filter_event_violence_sub_types',
         ]
 
 

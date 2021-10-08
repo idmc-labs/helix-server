@@ -20,6 +20,7 @@ class EventFilter(NameFilterMixin,
     report = django_filters.CharFilter(method='filter_report')
     disaster_sub_types = IDListFilter(method='filter_disaster_sub_types')
     violence_types = IDListFilter(method='filter_violence_types')
+    violence_sub_types = IDListFilter(method='filter_violence_sub_types')
     created_by_ids = IDListFilter(method='filter_created_by')
 
     class Meta:
@@ -51,6 +52,11 @@ class EventFilter(NameFilterMixin,
         if not value:
             return qs
         return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence__in=value)).distinct()
+
+    def filter_violence_sub_types(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_sub_type__in=value)).distinct()
 
     def filter_crises(self, qs, name, value):
         if not value:

@@ -48,6 +48,8 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_event_disaster_sub_categories = IDListFilter(method='filter_event_disaster_sub_categories')
     filter_event_disaster_sub_types = IDListFilter(method='filter_event_disaster_sub_types')
     filter_event_disaster_types = IDListFilter(method='filter_event_disaster_types')
+    filter_event_violence_sub_types = IDListFilter(method='filter_event_violence_sub_types')
+    filter_event_violence_types = IDListFilter(method='filter_event_violence_types')
     filter_entry_has_review_comments = df.BooleanFilter(method='filter_has_review_comments', initial=False)
     filter_event_osv_sub_types = IDListFilter(method='filter_filter_event_osv_sub_types')
     # used in report entry table
@@ -243,6 +245,24 @@ class EntryExtractionFilterSet(df.FilterSet):
                 ~Q(
                     event__event_type=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(event__disaster_type__in=value)
+            ).distinct()
+        return qs
+
+    def filter_event_violence_sub_types(self, qs, name, value):
+        if value:
+            return qs.filter(
+                ~Q(
+                    event__event_type=Crisis.CRISIS_TYPE.CONFLICT.value
+                ) | Q(event__violence_sub_type__in=value)
+            ).distinct()
+        return qs
+
+    def filter_event_violence_types(self, qs, name, value):
+        if value:
+            return qs.filter(
+                ~Q(
+                    event__event_type=Crisis.CRISIS_TYPE.CONFLICT.value
+                ) | Q(event__violence_type__in=value)
             ).distinct()
         return qs
 
