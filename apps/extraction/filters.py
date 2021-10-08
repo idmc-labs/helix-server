@@ -44,11 +44,11 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
     filter_figure_sex_types = StringListFilter(method='filter_by_figure_sex_types')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
-    filter_event_disaster_categories = IDListFilter(method='filter_event_disaster_categories')
-    filter_event_disaster_sub_categories = IDListFilter(method='filter_event_disaster_sub_categories')
-    filter_event_disaster_sub_types = IDListFilter(method='filter_event_disaster_sub_types')
-    filter_event_disaster_types = IDListFilter(method='filter_event_disaster_types')
-    filter_event_violence_sub_types = IDListFilter(method='filter_event_violence_sub_types')
+    filter_event_disaster_categories = IDListFilter(method='filter_filter_event_disaster_categories')
+    filter_event_disaster_sub_categories = IDListFilter(method='filter_filter_event_disaster_sub_categories')
+    filter_event_disaster_sub_types = IDListFilter(method='filter_filter_event_disaster_sub_types')
+    filter_event_disaster_types = IDListFilter(method='filter_filter_event_disaster_types')
+    filter_event_violence_sub_types = IDListFilter(method='filter_filter_event_violence_sub_types')
     filter_event_violence_types = IDListFilter(method='filter_event_violence_types')
     filter_entry_has_review_comments = df.BooleanFilter(method='filter_has_review_comments', initial=False)
     filter_event_osv_sub_types = IDListFilter(method='filter_filter_event_osv_sub_types')
@@ -212,7 +212,7 @@ class EntryExtractionFilterSet(df.FilterSet):
             query_expr = query_expr | models.Q(figures__disaggregation_displacement_urban__gt=0)
         return qs.filter(query_expr).distinct()
 
-    def filter_event_disaster_categories(self, qs, name, value):
+    def filter_filter_event_disaster_categories(self, qs, name, value):
         if value:
             return qs.filter(
                 ~Q(
@@ -221,7 +221,7 @@ class EntryExtractionFilterSet(df.FilterSet):
             ).distinct()
         return qs
 
-    def filter_event_disaster_sub_categories(self, qs, name, value):
+    def filter_filter_event_disaster_sub_categories(self, qs, name, value):
         if value:
             return qs.filter(
                 ~Q(
@@ -230,7 +230,7 @@ class EntryExtractionFilterSet(df.FilterSet):
             ).distinct()
         return qs
 
-    def filter_event_disaster_sub_types(self, qs, name, value):
+    def filter_filter_event_disaster_sub_types(self, qs, name, value):
         if value:
             return qs.filter(
                 ~Q(
@@ -239,7 +239,7 @@ class EntryExtractionFilterSet(df.FilterSet):
             ).distinct()
         return qs
 
-    def filter_event_disaster_types(self, qs, name, value):
+    def filter_filter_event_disaster_types(self, qs, name, value):
         if value:
             return qs.filter(
                 ~Q(
@@ -248,7 +248,7 @@ class EntryExtractionFilterSet(df.FilterSet):
             ).distinct()
         return qs
 
-    def filter_event_violence_sub_types(self, qs, name, value):
+    def filter_filter_event_violence_sub_types(self, qs, name, value):
         if value:
             return qs.filter(
                 ~Q(
@@ -337,10 +337,10 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_sex_types = StringListFilter(method='filter_by_figure_sex_types')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
     event = df.CharFilter(field_name='entry__event', lookup_expr='exact')
-    filter_event_disaster_categories = IDListFilter(method='filter_event_disaster_categories')
-    filter_event_disaster_sub_categories = IDListFilter(method='filter_event_disaster_sub_categories')
-    filter_event_disaster_sub_types = IDListFilter(method='filter_event_disaster_sub_types')
-    filter_event_disaster_types = IDListFilter(method='filter_event_disaster_types')
+    filter_event_disaster_categories = IDListFilter(method='filter_filter_event_disaster_categories')
+    filter_event_disaster_sub_categories = IDListFilter(method='filter_filter_event_disaster_sub_categories')
+    filter_event_disaster_sub_types = IDListFilter(method='filter_filter_event_disaster_sub_types')
+    filter_event_disaster_types = IDListFilter(method='filter_filter_event_disaster_types')
     filter_entry_has_review_comments = df.BooleanFilter(method='filter_has_review_comments', initial=False)
     filter_event_osv_sub_types = IDListFilter(method='filter_filter_event_osv_sub_types')
     # used in report entry table
@@ -488,38 +488,38 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             return qs.filter(term__in=value).distinct()
         return qs
 
-    def filter_event_disaster_categories(self, qs, name, value):
+    def filter_filter_event_disaster_categories(self, qs, name, value):
         if value:
             return qs.filter(
                 ~Q(
-                    event__event_type=Crisis.CRISIS_TYPE.DISASTER.value
+                    entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(entry__event__disaster_category__in=value)
             ).distinct()
         return qs
 
-    def filter_event_disaster_sub_categories(self, qs, name, value):
+    def filter_filter_event_disaster_sub_categories(self, qs, name, value):
         if value:
             return qs.filter(
                 ~Q(
-                    event__event_type=Crisis.CRISIS_TYPE.DISASTER.value
+                    entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(entry__event__disaster_sub_category__in=value)
             ).distinct()
         return qs
 
-    def filter_event_disaster_sub_types(self, qs, name, value):
+    def filter_filter_event_disaster_sub_types(self, qs, name, value):
         if value:
             return qs.filter(
                 ~Q(
-                    event__event_type=Crisis.CRISIS_TYPE.DISASTER.value
+                    entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(entry__event__disaster_sub_type__in=value)
             ).distinct()
         return qs
 
-    def filter_event_disaster_types(self, qs, name, value):
+    def filter_filter_event_disaster_types(self, qs, name, value):
         if value:
             return qs.filter(
                 ~Q(
-                    event__event_type=Crisis.CRISIS_TYPE.DISASTER.value
+                    entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(entry__event__disaster_type__in=value)
             ).distinct()
         return qs
@@ -539,6 +539,15 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     def filter_filter_event_osv_sub_types(self, qs, name, value):
         if value:
             return qs.filter(~Q(entry__event__violence__name=OSV) | Q(entry__event__osv_sub_type__in=value)).distinct()
+        return qs
+
+    def filter_filter_event_violence_sub_types(self, qs, name, value):
+        if value:
+            return qs.filter(
+                ~Q(
+                    entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT.value
+                ) | Q(entry__event__violence_sub_type__in=value)
+            ).distinct()
         return qs
 
     @property
