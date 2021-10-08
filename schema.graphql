@@ -423,7 +423,7 @@ type CountryType {
   contextualupdateSet: [ContextualUpdateType!]!
   lastSummary: SummaryType
   lastContextualAnalysis: ContextualAnalysisType
-  entries(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  entries(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
   totalFlowConflict: Int
   totalFlowDisaster: Int
   totalStockConflict: Int
@@ -515,7 +515,7 @@ input CreateExtractInputType {
   filterFigureCategories: [ID!]
   filterEntrySources: [ID!]
   filterEntryPublishers: [ID!]
-  filterEntryTags: [ID!]
+  filterFigureTags: [ID!]
   filterEntryCreatedBy: [ID!]
   filterFigureTerms: [ID!]
   filterEventDisasterCategories: [ID!]
@@ -980,11 +980,8 @@ input EntryCreateInputType {
   documentUrl: String
   articleTitle: String!
   publishDate: Date!
-  sourceExcerpt: String
   idmcAnalysis: String
-  calculationLogic: String
   isConfidential: Boolean
-  caveats: String
   reviewStatus: REVIEW_STATUS
   associatedParkedItem: ID
   preview: ID
@@ -992,7 +989,6 @@ input EntryCreateInputType {
   event: ID!
   sources: [ID!]
   publishers: [ID!]
-  tags: [ID!]
 }
 
 type EntryListType {
@@ -1050,13 +1046,9 @@ type EntryType {
   sources(name_Unaccent_Icontains: String, ordering: String): OrganizationListType
   publishers(name_Unaccent_Icontains: String, ordering: String): OrganizationListType
   publishDate: Date!
-  sourceExcerpt: String
   event: EventType!
   idmcAnalysis: String
-  calculationLogic: String
   isConfidential: Boolean!
-  caveats: String
-  tags: [FigureTagType!]!
   reviewers(email: String, isActive: Boolean, roleIn: [String!], roleNotIn: [String!], monitoringSubRegionIn: [ID!], monitoringSubRegionNotIn: [ID!], fullName: String, includeInactive: Boolean, id: String, ordering: String): UserListType
   reviewStatus: EntryReviewStatus
   reviewComments(entry: ID, page: Int = 1, ordering: String, pageSize: Int): ReviewCommentListType
@@ -1081,11 +1073,8 @@ input EntryUpdateInputType {
   documentUrl: String
   articleTitle: String
   publishDate: Date
-  sourceExcerpt: String
   idmcAnalysis: String
-  calculationLogic: String
   isConfidential: Boolean
-  caveats: String
   reviewStatus: REVIEW_STATUS
   associatedParkedItem: ID
   preview: ID
@@ -1093,7 +1082,6 @@ input EntryUpdateInputType {
   event: ID
   sources: [ID!]
   publishers: [ID!]
-  tags: [ID!]
 }
 
 type Enum {
@@ -1300,7 +1288,7 @@ type ExtractionQueryObjectType {
   filterFigureStartAfter: Date
   filterFigureEndBefore: Date
   filterFigureRoles: [ROLE!]
-  filterEntryTags: [FigureTagType!]!
+  filterFigureTags: [FigureTagType!]!
   filterEntryArticleTitle: String
   filterEventCrisisTypes: [CRISIS_TYPE!]
   filterEntryReviewStatus: [REVIEW_STATUS!]
@@ -1315,7 +1303,7 @@ type ExtractionQueryObjectType {
   filterEventDisasterSubTypes: [DisasterSubObjectType!]!
   filterFigureCategoryTypes: [String]
   filterEntryHasReviewComments: Boolean
-  entries(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  entries(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
 }
 
 enum FOR_CHOICES {
@@ -1370,6 +1358,7 @@ type FigureTagType {
   versionId: String
   id: ID!
   name: String!
+  figureSet: [FigureType!]!
   contextualupdateSet: [ContextualUpdateType!]!
 }
 
@@ -1442,6 +1431,10 @@ type FigureType {
   isDisaggregated: Boolean!
   isHousingDestruction: Boolean
   geoLocations(ordering: String): OSMNameListType
+  calculationLogic: String
+  caveats: String
+  tags: [FigureTagType!]!
+  sourceExcerpt: String
   figureReviews: [ReviewType!]!
   reportSet: [ReportType!]!
 }
@@ -1483,9 +1476,13 @@ input FigureUpdateInputType {
   excerptIdu: String
   isDisaggregated: Boolean
   isHousingDestruction: Boolean
+  calculationLogic: String
+  caveats: String
+  sourceExcerpt: String
   category: ID
   term: ID
   country: ID
+  tags: [ID!]
 }
 
 enum GENDER {
@@ -1619,8 +1616,8 @@ type Mutation {
   createFigureTag(data: FigureTagCreateInputType!): CreateFigureTag
   updateFigureTag(data: FigureTagUpdateInputType!): UpdateFigureTag
   deleteFigureTag(id: ID!): DeleteFigureTag
-  exportEntries(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String): ExportEntries
-  exportFigures(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventCrisisTypes: [String!], filterEventGlideNumber: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], event: String, filterEntryHasReviewComments: Boolean, report: String): ExportFigures
+  exportEntries(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String): ExportEntries
+  exportFigures(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventCrisisTypes: [String!], filterEventGlideNumber: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], event: String, filterEntryHasReviewComments: Boolean, report: String): ExportFigures
   cloneEntry(data: CloneEntryInputType!): CloneEntry
   updateFigure(data: FigureUpdateInputType!): updateFigure
   deleteFigure(id: ID!): DeleteFigure
@@ -1709,9 +1706,13 @@ input NestedFigureCreateInputType {
   excerptIdu: String
   isDisaggregated: Boolean
   isHousingDestruction: Boolean
+  calculationLogic: String
+  caveats: String
+  sourceExcerpt: String
   category: ID
   term: ID
   country: ID
+  tags: [ID!]
 }
 
 input NestedFigureUpdateInputType {
@@ -1755,9 +1756,13 @@ input NestedFigureUpdateInputType {
   excerptIdu: String
   isDisaggregated: Boolean
   isHousingDestruction: Boolean
+  calculationLogic: String
+  caveats: String
+  sourceExcerpt: String
   category: ID
   term: ID
   country: ID
+  tags: [ID!]
 }
 
 enum ORGANIZATION_CATEGORY {
@@ -2107,8 +2112,8 @@ type Query {
   resourceGroupList(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): ResourceGroupListType
   extractionQuery(id: ID!): ExtractionQueryObjectType
   extractionQueryList(id: Float, name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): ExtractionQueryListType
-  extractionEntryList(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
-  extractionFigureList(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventCrisisTypes: [String!], filterEventGlideNumber: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], event: String, filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): FigureListType
+  extractionEntryList(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  extractionFigureList(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventCrisisTypes: [String!], filterEventGlideNumber: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], event: String, filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): FigureListType
   figureCategory(id: ID!): FigureCategoryObjectType
   figureCategoryList(name_Unaccent_Icontains: String, ordering: String): FigureCategoryListType
   figureTerm(id: ID!): FigureTermType
@@ -2116,10 +2121,10 @@ type Query {
   figureTag(id: ID!): FigureTagType
   figureTagList(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): FigureTagListType
   figure(id: ID!): FigureType
-  figureList(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventCrisisTypes: [String!], filterEventGlideNumber: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], event: String, filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): FigureListType
+  figureList(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventCrisisTypes: [String!], filterEventGlideNumber: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], event: String, filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): FigureListType
   sourcePreview(id: ID!): SourcePreviewType
   entry(id: ID!): EntryType
-  entryList(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  entryList(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
   disaggregatedAgeCategory(id: ID!): DisaggregatedAgeCategoryType
   disaggregatedAgeCategoryList(name_Unaccent_Icontains: String, ordering: String): DisaggregatedAgeCategoryListType
   triggerList(name_Unaccent_Icontains: String, ordering: String): TriggerListType
@@ -2278,7 +2283,7 @@ input ReportCreateInputType {
   filterEventCrisisTypes: [CRISIS_TYPE!]
   filterFigureGeographicalGroups: [ID!]
   filterEvents: [ID!]
-  filterEntryTags: [ID!]
+  filterFigureTags: [ID!]
   filterEventDisasterCategories: [ID!]
   filterEventDisasterSubCategories: [ID!]
   filterEventDisasterTypes: [ID!]
@@ -2361,7 +2366,7 @@ type ReportType {
   filterEntrySources: [OrganizationType!]!
   filterEntryPublishers: [OrganizationType!]!
   filterFigureRoles: [ROLE!]
-  filterEntryTags: [FigureTagType!]!
+  filterFigureTags: [FigureTagType!]!
   filterEntryArticleTitle: String
   filterEventCrisisTypes: [CRISIS_TYPE!]
   filterEntryReviewStatus: [Int!]
@@ -2418,7 +2423,7 @@ input ReportUpdateInputType {
   filterEventCrisisTypes: [CRISIS_TYPE!]
   filterFigureGeographicalGroups: [ID!]
   filterEvents: [ID!]
-  filterEntryTags: [ID!]
+  filterFigureTags: [ID!]
   filterEventDisasterCategories: [ID!]
   filterEventDisasterSubCategories: [ID!]
   filterEventDisasterTypes: [ID!]
@@ -2762,7 +2767,7 @@ input UpdateExtractInputType {
   filterFigureCategories: [ID!]
   filterEntrySources: [ID!]
   filterEntryPublishers: [ID!]
-  filterEntryTags: [ID!]
+  filterFigureTags: [ID!]
   filterEntryCreatedBy: [ID!]
   filterFigureTerms: [ID!]
   filterEventDisasterCategories: [ID!]
@@ -2862,7 +2867,7 @@ type UserType {
   username: String!
   fullName: String!
   reviewing(entry: ID, statusIn: [String!], page: Int = 1, ordering: String, pageSize: Int): EntryReviewerListType
-  createdEntry(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  createdEntry(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEntryHasReviewComments: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
   portfolios(monitoringSubRegion_In: ID, country_In: ID, roleIn: [String!], page: Int = 1, ordering: String, pageSize: Int): PortfolioListType
   highestRole: USER_ROLE
   permissions: [PermissionsType!]
