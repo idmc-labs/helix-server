@@ -823,7 +823,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         for cloned_entry in cloned_entries:
             cloned_entry.pop('sources')
             cloned_entry.pop('publishers')
-            cloned_entry.pop('tags')
             cloned_entry['article_title'] = add_clone_prefix(cloned_entry['article_title'])
             entries.append(Entry(**cloned_entry))
 
@@ -914,7 +913,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             max_fig_start='Latest figure start',
             min_fig_end='Earliest figure end',
             max_fig_end='Latest figure end',
-            tags__name='Tags',
         )
         entries = EntryExtractionFilterSet(
             data=filters,

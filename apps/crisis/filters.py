@@ -3,7 +3,7 @@ import django_filters
 from apps.crisis.models import Crisis
 from apps.report.models import Report
 from utils.filters import StringListFilter, NameFilterMixin, IDListFilter
-from django.db.models import Q
+from django.db.models import Q, Count
 
 
 class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
@@ -66,4 +66,5 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
     def qs(self):
         return super().qs.annotate(
             **Crisis._total_figure_disaggregation_subquery(),
-        )
+            event_count=Count('events')
+        ).prefetch_related('events')

@@ -1,5 +1,5 @@
 import django_filters
-from django.db.models import Q
+from django.db.models import Q, Count
 from apps.event.models import Actor, Event
 from apps.crisis.models import Crisis
 from apps.report.models import Report
@@ -79,7 +79,8 @@ class EventFilter(NameFilterMixin,
     def qs(self):
         return super().qs.annotate(
             **Event._total_figure_disaggregation_subquery(),
-        )
+            entry_count=Count("entries"),
+        ).prefetch_related("entries")
 
     def filter_created_by(self, qs, name, value):
         if not value:
