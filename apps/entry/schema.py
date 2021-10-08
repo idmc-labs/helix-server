@@ -116,6 +116,12 @@ class FigureTermListType(CustomDjangoListObjectType):
         )
 
 
+class FigureTagType(DjangoObjectType):
+    class Meta:
+        model = FigureTag
+        exclude_fields = ('entry_set',)
+
+
 class FigureType(DjangoObjectType):
     class Meta:
         model = Figure
@@ -241,12 +247,6 @@ class EntryReviewerListType(CustomDjangoListObjectType):
     class Meta:
         model = EntryReviewer
         filterset_class = EntryReviewerFilter
-
-
-class FigureTagType(DjangoObjectType):
-    class Meta:
-        model = FigureTag
-        exclude_fields = ('entry_set',)
 
 
 class FigureTagListType(CustomDjangoListObjectType):

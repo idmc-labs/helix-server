@@ -22,6 +22,7 @@ from utils.factories import (
     OrganizationFactory,
     CountryFactory,
     FigureCategoryFactory,
+    TagFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -142,14 +143,15 @@ class TestEntryCreation(HelixGraphQLTestCase):
             "sources": [str(OrganizationFactory.create().id)],
             "publishers": [str(OrganizationFactory.create().id)],
             "publishDate": "2020-09-09",
-            "sourceExcerpt": "excerpt one",
             "idmcAnalysis": "analysis one",
             "isConfidential": True,
-            "calculationLogic": "methoddddd",
             "reviewers": [],
             "event": self.event.id,
         }
         self.force_login(self.editor)
+        self.tag1 = TagFactory.create()
+        self.tag2 = TagFactory.create()
+        self.tag3 = TagFactory.create()
 
     def test_valid_create_entry_without_figures(self):
         response = self.query(
@@ -192,6 +194,10 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
                 "geoLocations": [source1],
+                "tags": [self.tag1.id, self.tag2.id, self.tag3.id],
+                'calculationLogic': 'test logics',
+                'caveats': 'caveats',
+                'sourceExcerpt': 'source excerpt'
             }
         ]
 

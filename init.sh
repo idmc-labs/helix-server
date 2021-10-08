@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/bash -xe
 # Run migrations
 docker-compose exec server python manage.py migrate
 
@@ -10,4 +10,3 @@ docker-compose exec server python manage.py init_roles
 docker-compose exec server python manage.py init_types_subtypes # event related
 docker-compose exec server python manage.py init_figure_types # figure related
 docker-compose exec server python manage.py init_figure_tags
-docker-compose exec server python manage.py split_geojson

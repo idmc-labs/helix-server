@@ -441,6 +441,13 @@ class Figure(MetaInformationArchiveAbstractModel,
     geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
                                            related_name='figures')
 
+    calculation_logic = models.TextField(verbose_name=_('Analysis and Calculation Logic'),
+                                         blank=True, null=True)
+    caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
+    tags = models.ManyToManyField('FigureTag', blank=True)
+    source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
+                                      blank=True, null=True)
+
     class Meta:
         indexes = [
             models.Index(fields=['start_date']),
@@ -451,7 +458,6 @@ class Figure(MetaInformationArchiveAbstractModel,
         ]
 
     # methods
-
     @classmethod
     def filtered_nd_figures(
         cls,
@@ -545,7 +551,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             is_housing_destruction='Is housing destruction',
             entry__url='Link',
             entry__event__crisis_id='Crisis Id',
-            entry__event_id='Event Id',
+            entry__event_id='Event Code',
             entry__event__crisis__name='Crisis Name',
             entry__event__name='Event Name',
             entry__article_title='Event Title',
@@ -566,7 +572,10 @@ class Figure(MetaInformationArchiveAbstractModel,
             disaggregation_disability='Disability',
             disaggregation_indigenous_people='Indigenous People',
             disaggregation_age_json='Displacement: Age',
-            entry__tags__name='Tags',
+            tags__name='Tags',
+            calculation_logic='Analysis and Calculation Logic',
+            caveats='Caveats',
+            source_excerpt='Source Excerpt',
         )
         values = figures.order_by(
             '-created_at'
@@ -759,23 +768,15 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     publishers = models.ManyToManyField('organization.Organization', verbose_name=_('Publisher'),
                                         blank=True, related_name='published_entries')
     publish_date = models.DateField(verbose_name=_('Published Date'))
-    source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
-                                      blank=True, null=True)
     event = models.ForeignKey('event.Event', verbose_name=_('Event'),
                               related_name='entries', on_delete=models.CASCADE)
 
-    idmc_analysis = models.TextField(verbose_name=_('IDMC Analysis'),
+    idmc_analysis = models.TextField(verbose_name=_('Trends and patterns of displacement to be highlighted'),
                                      blank=True, null=True)
-    calculation_logic = models.TextField(verbose_name=_('Calculation Logic'),
-                                         blank=True, null=True)
     is_confidential = models.BooleanField(
         verbose_name=_('Confidential Source'),
         default=False,
     )
-    caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
-    # TODO: grid
-    tags = models.ManyToManyField('FigureTag', blank=True)
-
     reviewers = models.ManyToManyField('users.User', verbose_name=_('Reviewers'),
                                        blank=True,
                                        related_name='review_entries',
@@ -817,7 +818,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
         sources = cloned_entries[0]['sources']
         publishers = cloned_entries[0]['publishers']
-        tags = cloned_entries[0]['tags']
 
         entries = []
         for cloned_entry in cloned_entries:
@@ -832,7 +832,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         for entry in entries:
             entry.sources.set(sources)
             entry.publishers.set(publishers)
-            entry.tags.set(tags)
 
         # end m2m hassle
 
@@ -888,7 +887,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             document__mimetype='Filetype',
             document__filetype_detail='Filetype Detail',
             event__event_type='Cause',
-            event_id='Event Id',
+            event_id='Event Code',
             event__name='Event Name',
             event__crisis_id='Crisis Id',
             event__crisis__name='Crisis Name',
@@ -903,7 +902,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             publisher_types='Publisher Types',
             created_at='Created at',
             created_by__full_name='Created by',
-            idmc_analysis='IDMC Analysis',
+            idmc_analysis='Trends and patterns of displacement to be highlighted',
             countries='Countries Affected',
             countries_iso3='ISO3s Affected',
             centroid_lat='Centroid Lat',

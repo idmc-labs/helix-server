@@ -158,7 +158,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                                     blank=True, null=True)
     glide_numbers = ArrayField(
         models.CharField(
-            verbose_name=_('Event Ids'), max_length=256, null=True, blank=True
+            verbose_name=_('Event Codes'), max_length=256, null=True, blank=True
         ),
         default=[],
         null=True, blank=True
@@ -287,7 +287,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             disaster_type__name='Disaster Type',
             disaster_sub_type__name='Disaster Sub Type',
             disaster_sub_type='Diaster Sub Type Id',
-            glide_numbers='Event Ids (Glide Numbers)'
+            glide_numbers='Event Codes'
         )
         data = EventFilter(
             data=filters,
