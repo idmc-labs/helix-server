@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='event',
             name='glide_numbers',
-            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(blank=True, max_length=256, null=True, verbose_name='Event Codes'), blank=True, default=[], null=True, size=None),
+            field=django.contrib.postgres.fields.ArrayField(base_field=models.CharField(blank=True, max_length=256, null=True, verbose_name='Event Codes'), blank=True, default=list, null=True, size=None),
         ),
         migrations.AlterField(
             model_name='event',

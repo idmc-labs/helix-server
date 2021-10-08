@@ -160,7 +160,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         models.CharField(
             verbose_name=_('Event Codes'), max_length=256, null=True, blank=True
         ),
-        default=[],
+        default=list,
         null=True, blank=True
     )
     # conflict related fields

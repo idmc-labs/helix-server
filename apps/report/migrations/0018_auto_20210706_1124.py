@@ -5,7 +5,6 @@ from django.conf import settings
 import django.contrib.postgres.fields
 from django.db import migrations, models
 import django_enumfield.db.fields
-import utils.fields
 
 
 class Migration(migrations.Migration):
@@ -24,7 +23,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='report',
             name='filter_event_glide_number',
-            field=utils.fields.BleachedTextField(blank=True, null=True, verbose_name='Glide Number'),
+            field=models.TextField(blank=True, null=True, verbose_name='Glide Number'),
         ),
         migrations.AddField(
             model_name='report',
