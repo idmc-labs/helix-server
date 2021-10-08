@@ -186,6 +186,7 @@ class EventFactory(DjangoModelFactory):
     disaster_category = factory.SubFactory(DisasterCategoryFactory)
     disaster_sub_category = factory.SubFactory(DisasterSubCategoryFactory)
     disaster_type = factory.SubFactory(DisasterTypeFactory)
+    disaster_sub_type = factory.SubFactory(DisasterSubTypeFactory)
 
 
 class EntryFactory(DjangoModelFactory):
