@@ -256,8 +256,7 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     @property
     def qs(self):
-        # FIXME: using this prefetch_related results in calling count after a
-        # subquery. This has a severe performance penalty
+        '''
         return super().qs.annotate(
             **Entry._total_figure_disaggregation_subquery(),
             total=models.Count('reviewing'),
@@ -279,6 +278,10 @@ class EntryExtractionFilterSet(df.FilterSet):
                 output_field=models.FloatField()
             )
         ).prefetch_related('review_comments', 'reviewing').distinct()
+        '''
+        # FIXME: using this prefetch_related results in calling count after a
+        # subquery. This has a severe performance penalty
+        return super().qs.prefetch_related('review_comments').distinct()
 
 
 class BaseFigureExtractionFilterSet(df.FilterSet):
