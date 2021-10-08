@@ -32,10 +32,10 @@ class CachedFileField(FileField):
 
 class BleachedTextField(TextField):
     def get_db_prep_value(self, *args, **kwargs):
-        value = super().get_db_prep_value(*args, **kwargs)
+        value = super(TextField, self).get_db_prep_value(*args, **kwargs)
         if isinstance(value, str):
             return unescape(bleach.clean(value, strip=True))
         return value
 
 
-django.db.models.TextField = BleachedTextField
+django.db.models.TextField.get_db_prep_value = BleachedTextField.get_db_prep_value
