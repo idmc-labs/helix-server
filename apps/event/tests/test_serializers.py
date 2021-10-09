@@ -231,27 +231,3 @@ class TestUpdateEventSerializer(HelixTestCase):
         )
         self.assertFalse(serializer.is_valid())
         self.assertIn('countries', serializer.errors)
-
-    def test_invalid_violence_type(self):
-        violence_sub_type = ViolenceSubTypeFactory.create()
-        violence2 = ViolenceFactory.create()
-        start_date = datetime.today() - timedelta(days=300)
-        data = dict(
-            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
-            violence=violence_sub_type.violence.pk,
-            violence_sub_type=violence_sub_type.pk,
-            name='one',
-            start_date=start_date.date(),
-            end_date=datetime.today().date(),
-            event_narrative="test event narrative"
-        )
-        self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.context['request'] = self.request
-        serializer = EventSerializer(data=data, context=self.context)
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-
-        # now put in a different violence keeping the sub type same
-        data['violence'] = violence2.id
-        serializer = EventSerializer(data=data, context=self.context)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('violence_sub_type', serializer.errors)

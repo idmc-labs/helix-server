@@ -212,6 +212,11 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         null=True,
     )
     event_narrative = models.TextField(verbose_name=_('Event Narrative'), null=True)
+    osv_sub_type = models.ForeignKey(
+        'OsvSubType', verbose_name=_('OSV sub type'),
+        blank=True, null=True, related_name='events',
+        on_delete=models.SET_NULL
+    )
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
@@ -287,7 +292,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             disaster_type__name='Disaster Type',
             disaster_sub_type__name='Disaster Sub Type',
             disaster_sub_type='Diaster Sub Type Id',
-            glide_numbers='Event Codes'
+            glide_numbers='Event Codes',
+            osv_sub_type__name="OSV Sub Type",
         )
         data = EventFilter(
             data=filters,
@@ -310,6 +316,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             'disaster_type',
             'disaster_sub_type',
             'created_at',
+            'osv_sub_type'
         ).prefetch_related(
             'countries',
         )
@@ -337,6 +344,15 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             self.disaster_type = self.disaster_sub_type.type
             self.disaster_sub_category = self.disaster_type.disaster_sub_category
             self.disaster_category = self.disaster_sub_category.category
+        else:
+            self.disaster_type = None
+            self.disaster_sub_category = None
+            self.disaster_category = None
+
+        if self.violence_sub_type:
+            self.violence = self.violence_sub_type.violence
+        else:
+            self.violence = None
         return super().save(*args, **kwargs)
 
     def __str__(self):
@@ -375,3 +391,9 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         # Add m2m contires
         cloned_event.countries.set(countries)
         return cloned_event
+
+
+class OsvSubType(NameAttributedModels):
+    """
+    Holds the possible OSV sub types
+    """

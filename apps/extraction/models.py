@@ -101,8 +101,8 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_event_glide_number = models.TextField(
-        verbose_name=_('Event Code'),
+    filter_event_glide_number = ArrayField(
+        base_field=models.CharField(verbose_name=_('Event Code'), max_length=100, null=True),
         blank=True,
         null=True
     )
@@ -146,6 +146,16 @@ class QueryAbstractModel(models.Model):
         verbose_name=_('Disaster Sub Type'),
         blank=True,
     )
+    filter_event_violence_types = models.ManyToManyField(
+        'event.Violence',
+        verbose_name=_('Violence Type'),
+        blank=True,
+    )
+    filter_event_violence_sub_types = models.ManyToManyField(
+        'event.ViolenceSubType',
+        verbose_name=_('Violence Sub Type'),
+        blank=True,
+    )
     filter_figure_category_types = models.CharField(
         verbose_name=_('Type'), max_length=8, null=True, blank=True
     )
@@ -177,10 +187,12 @@ class QueryAbstractModel(models.Model):
             filter_event_crisis_types=self.filter_event_crisis_types,
             filter_entry_review_status=self.filter_entry_review_status,
             filter_figure_displacement_types=self.filter_figure_displacement_types,
-            filter_event_disaster_categories=self.filter_event_disaster_categories,
-            filter_event_disaster_sub_categories=self.filter_event_disaster_sub_categories,
-            filter_event_disaster_types=self.filter_event_disaster_types,
-            filter_event_disaster_sub_types=self.filter_event_disaster_sub_types,
+            filter_event_disaster_categories=self.filter_event_disaster_categories.all(),
+            filter_event_disaster_sub_categories=self.filter_event_disaster_sub_categories.all(),
+            filter_event_disaster_types=self.filter_event_disaster_types.all(),
+            filter_event_disaster_sub_types=self.filter_event_disaster_sub_types.all(),
+            filter_event_violence_types=self.filter_event_violence_types.all(),
+            filter_event_violence_sub_types=self.filter_event_violence_sub_types.all(),
             filter_figure_category_types=self.filter_figure_category_types,
             filter_entry_has_review_comments=self.filter_entry_has_review_comments
         )

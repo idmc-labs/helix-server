@@ -4,6 +4,7 @@ from apps.event.models import Actor, Event
 from apps.crisis.models import Crisis
 from apps.report.models import Report
 from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
+from apps.event.constants import OSV
 
 
 class EventFilter(NameFilterMixin,
@@ -14,10 +15,12 @@ class EventFilter(NameFilterMixin,
     countries = IDListFilter(method='filter_countries')
     glide_numbers = StringListFilter(method='filter_glide_numbers')
 
+    osv_sub_type_by_ids = IDListFilter(method='filter_osv_sub_types')
     # used in report entry table
     report = django_filters.CharFilter(method='filter_report')
     disaster_sub_types = IDListFilter(method='filter_disaster_sub_types')
     violence_types = IDListFilter(method='filter_violence_types')
+    violence_sub_types = IDListFilter(method='filter_violence_sub_types')
     created_by_ids = IDListFilter(method='filter_created_by')
 
     class Meta:
@@ -25,7 +28,7 @@ class EventFilter(NameFilterMixin,
         fields = {
             'created_at': ['lte', 'lt', 'gte', 'gt'],
             'start_date': ['lte', 'lt', 'gte', 'gt'],
-            'end_date': ['lte', 'lt', 'gte', 'gt']
+            'end_date': ['lte', 'lt', 'gte', 'gt'],
         }
 
     def filter_report(self, qs, name, value):
@@ -49,6 +52,11 @@ class EventFilter(NameFilterMixin,
         if not value:
             return qs
         return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence__in=value)).distinct()
+
+    def filter_violence_sub_types(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_sub_type__in=value)).distinct()
 
     def filter_crises(self, qs, name, value):
         if not value:
@@ -74,6 +82,11 @@ class EventFilter(NameFilterMixin,
         if not value:
             return qs
         return qs.filter(name__unaccent__icontains=value).distinct()
+
+    def filter_osv_sub_types(self, qs, name, value):
+        if value:
+            return qs.filter(~Q(violence__name=OSV) | Q(osv_sub_type__in=value)).distinct()
+        return qs
 
     @property
     def qs(self):

@@ -1,13 +1,27 @@
-VIOLENCES = {
-    # TYPE: SUB_TYPE
-    "Military occupation": ["Military Occupation"],
-    "International state-based armed conflict": ["International state-based armed conflict"],
-    "Inter-communal violence": ["Agricultural/pastoralist", "Inter-religious violence",
-                                "Inter-ethnic violence", "Other inter-communal conflict"],
-    "Political and electoral violence ": ["Electoral violence", "Clashes between political groups", "Voter intimidation"],
-    "Criminal violence": ["Banditry", "Cattle-rustling", "Cartel violence", "Organised crime violence"],
-    "Rebel-rebel or rebel-government violence ": ["Intra-state", "Non-state"],
-    "Other": ["Private security companies violence"],
+OSV = "Other situations of violence (OSV)"
+
+CONFLICT_TYPES = {
+    "International armed conflict(IAC)": [
+        "Military Occupation",
+        "IAC (other than occupation)",
+        "Other",
+        "Unknown"
+    ],
+    "Non-International armed conflict (NIAC)": [
+        "NSAG(s) vs. State actor(s)",
+        "NSAG(s) vs. NSAG(s)",
+        "Other",
+        "Unknown"
+    ],
+    OSV: [
+        "Civilian-state violence",
+        "Crime-related",
+        "Communal violence",
+        "Other",
+        "Unknown"
+    ],
+    "Other": [],
+    "Unknown": []
 }
 
 TRIGGERS = {
@@ -66,3 +80,13 @@ DISASTERS = {
         }
     }
 }
+
+OSV_SUB_TYPE = [
+    "Religious tensions",
+    "Agricultural/Pastoralist tensions",
+    "Host/Displaced tensions",
+    "Elections",
+    "Demonstrations",
+    "Police operatins",
+    "Other"
+]

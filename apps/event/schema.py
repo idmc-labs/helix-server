@@ -15,7 +15,8 @@ from apps.event.models import (
     DisasterSubCategory,
     DisasterCategory,
     DisasterSubType,
-    DisasterType
+    DisasterType,
+    OsvSubType,
 )
 from apps.event.filters import ActorFilter, EventFilter
 from utils.graphene.types import CustomDjangoListObjectType
@@ -179,6 +180,22 @@ class EventReviewCountType(graphene.ObjectType):
     to_be_reviewed_count = graphene.Int(required=False)
 
 
+class OsvSubObjectType(DjangoObjectType):
+    class Meta:
+        model = OsvSubType
+        filter_fields = {
+            'name': ['icontains']
+        }
+
+
+class OsvSubTypeList(CustomDjangoListObjectType):
+    class Meta:
+        model = OsvSubType
+        filter_fields = {
+            'name': ['icontains']
+        }
+
+
 class EventType(DjangoObjectType):
     class Meta:
         model = Event
@@ -198,6 +215,7 @@ class EventType(DjangoObjectType):
     review_count = graphene.Field(EventReviewCountType)
     entry_count = graphene.Field(graphene.Int)
     glide_numbers = graphene.List(graphene.NonNull(graphene.String))
+    osv_sub_type = graphene.Field(OsvSubObjectType)
 
     def resolve_review_count(root, info, **kwargs):
         return info.context.event_event_review_count_dataloader.load(root.id)
@@ -253,3 +271,4 @@ class Query:
                                                 pagination=PageGraphqlPaginationWithoutCount(
                                                     page_size_query_param='pageSize'
                                                 ))
+    osv_sub_type_list = DjangoPaginatedListObjectField(OsvSubTypeList)
