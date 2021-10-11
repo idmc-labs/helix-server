@@ -55,7 +55,9 @@ class EventSerializer(MetaInformationSerializerMixin,
         )
         if crisis and crisis.crisis_type != event_type:
             errors['event_type'] = (
-                gettext('Event cause should be {} to match the crisis cause').format(gettext(crisis.crisis_type.label.lower()))
+                gettext('Event cause should be {} to match the crisis cause').format(
+                    gettext(crisis.crisis_type.label.lower())
+                )
             )
         return errors
 
