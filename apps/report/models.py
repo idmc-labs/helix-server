@@ -162,22 +162,26 @@ class Report(MetaInformationArchiveAbstractModel,
                 self.user = user
 
         headers = OrderedDict(
+            old_id='Old Id',
             id='Id',
             created_at='Created At',
             created_by__full_name='Created By',
             name='Name',
             filter_figure_start_after='Start Date',
             filter_figure_end_before='End Date',
-            analysis='Analysis',
-            methodology='Methodology',
-            significant_updates='Significant Updates',
-            challenges='Challenges',
-            summary='Summary',
+            filter_figure_categories__name="Figure Category",
+            total_figures='Masterfact Figures',
             # these are calculated in transformer ref: heavy
             total_flow_conflict_sum='ND Conflict',
             total_flow_disaster_sum='ND Disaster',
             total_stock_conflict_sum='IDPs Conflict',
             total_stock_disaster_sum='IDPs Disaster',
+
+            analysis='Analysis',
+            methodology='Methodology',
+            significant_updates='Significant Updates',
+            challenges='Challenges',
+            summary='Summary',
         )
         data = ReportFilter(
             data=filters,
@@ -190,6 +194,8 @@ class Report(MetaInformationArchiveAbstractModel,
             total_stock_disaster_sum=Value(0, output_field=models.IntegerField()),
         ).order_by('-created_at').select_related(
             'created_by',
+        ).prefetch_related(
+            'filter_figure_categories',
         )
 
         def transformer(datum):
@@ -1026,7 +1032,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
     @cached_property
     def disaster_event(self):
         headers = OrderedDict(dict(
-            event_id='Event Code',
+            event_id='Event Id',
             event_name='Event Name',
             event_year='Event Year',
             event_start_date='Start Date',

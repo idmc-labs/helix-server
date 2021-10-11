@@ -10,7 +10,6 @@ from utils.factories import (
     EntryFactory,
     FigureFactory,
     ViolenceSubTypeFactory,
-    ViolenceFactory,
     DisasterSubCategoryFactory,
     DisasterSubTypeFactory,
 )

@@ -32,6 +32,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.add: ALL_MODELS | {PERMISSION_ENTITY.portfolio},
         PERMISSION_ACTION.change: ALL_MODELS | {PERMISSION_ENTITY.portfolio},
         PERMISSION_ACTION.delete: ALL_MODELS | {PERMISSION_ENTITY.portfolio},
+        PERMISSION_ACTION.approve: {PERMISSION_ENTITY.report},
         PERMISSION_ACTION.sign_off: {PERMISSION_ENTITY.entry},
     },
     USER_ROLE.MONITORING_EXPERT: {
@@ -39,10 +40,13 @@ PERMISSIONS = {
         PERMISSION_ACTION.change: ALL_MODELS,
         PERMISSION_ACTION.delete: ALL_MODELS,
         PERMISSION_ACTION.approve: {PERMISSION_ENTITY.report},
+        PERMISSION_ACTION.sign_off: set(),
     },
     USER_ROLE.GUEST: {
         PERMISSION_ACTION.add: set(),
         PERMISSION_ACTION.change: set(),
         PERMISSION_ACTION.delete: set(),
+        PERMISSION_ACTION.approve: set(),
+        PERMISSION_ACTION.sign_off: set(),
     }
 }

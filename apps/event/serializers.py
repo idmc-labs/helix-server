@@ -55,7 +55,9 @@ class EventSerializer(MetaInformationSerializerMixin,
         )
         if crisis and crisis.crisis_type != event_type:
             errors['event_type'] = (
-                gettext('Event type should be {} to match the crisis type').format(gettext(crisis.crisis_type.label.lower()))
+                gettext('Event cause should be {} to match the crisis cause').format(
+                    gettext(crisis.crisis_type.label.lower())
+                )
             )
         return errors
 
@@ -71,7 +73,7 @@ class EventSerializer(MetaInformationSerializerMixin,
     def validate_event_type_against_crisis_type(self, event_type, attrs):
         crisis = attrs.get('crisis')
         if crisis and event_type != crisis.crisis_type.value:
-            raise serializers.ValidationError({'event_type': gettext('Event type and crisis type do not match.')})
+            raise serializers.ValidationError({'event_type': gettext('Event cause and crisis cause do not match.')})
 
     def validate_figures_countries(self, attrs):
         '''

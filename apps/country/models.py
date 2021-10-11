@@ -285,10 +285,10 @@ class Country(models.Model):
 
         headers = OrderedDict(
             id='Id',
-            name='Name',
             geographical_group__name='Geographical Group',
             region__name='Region',
-            sub_region='Sub Region',
+            sub_region__name='Sub Region',
+            name='Name',
             iso2='ISO2',
             iso3='ISO3',
             country_code='Country Code',
@@ -329,11 +329,13 @@ class Country(models.Model):
                 ).values('_count')[:1],
                 output_field=models.IntegerField()
             ),
-            contacts_count=Count('contacts', distinct=True),
-            operating_contacts_count=Count('operating_contacts', distinct=True),
+            # contacts_count=Count('contacts', distinct=True),
+            # operating_contacts_count=Count('operating_contacts', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
         ).select_related(
-            'geographical_group', 'region',
+            'geographical_group',
+            'region',
+            'sub_region',
         )
 
         return {

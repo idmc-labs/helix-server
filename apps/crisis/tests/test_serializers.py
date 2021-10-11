@@ -100,7 +100,7 @@ class TestCrisisUpdateSerializer(HelixTestCase):
             event_type=crisis.crisis_type,
         )
 
-        # update with the same crisis type, valid
+        # update with the same crisis cause, valid
         data = dict(
             crisis_type=crisis.crisis_type.value
         )
@@ -111,7 +111,7 @@ class TestCrisisUpdateSerializer(HelixTestCase):
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
-        # now try to put in a different crisis type
+        # now try to put in a different crisis cause
         data = dict(
             crisis_type=Crisis.CRISIS_TYPE.CONFLICT.value
         )

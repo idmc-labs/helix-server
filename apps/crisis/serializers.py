@@ -86,11 +86,11 @@ class CrisisSerializer(serializers.ModelSerializer):
             return errors
         if not self.instance.events.exists():
             return errors
-        # all events are bound to be the same as crisis type
+        # all events are bound to be the same as crisis cause
         event_type = self.instance.events.first().event_type.value
         if crisis_type != event_type:
             errors['crisis_type'] = gettext(
-                'There are events with different event type: %s'
+                'There are events with different event cause: %s'
             ) % Crisis.CRISIS_TYPE.get(event_type)
         return errors
 

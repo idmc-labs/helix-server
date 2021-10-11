@@ -78,12 +78,12 @@ class Actor(MetaInformationAbstractModel, NameAttributedModels):
 
         headers = OrderedDict(
             id='Id',
+            created_at='Created At',
+            created_by__full_name='Created By',
             name='Name',
             country__name='Country',
             country__iso3='ISO3',
             torg='TORG',
-            created_at='Created At',
-            created_by__full_name='Created By',
         )
         data = ActorFilter(
             data=filters,
@@ -153,7 +153,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                                blank=True, null=True,
                                related_name='events', on_delete=models.CASCADE)
     name = models.CharField(verbose_name=_('Event Name'), max_length=256)
-    event_type = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Event Type'))
+    event_type = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Event Cause'))
     other_sub_type = enum.EnumField(EVENT_OTHER_SUB_TYPE, verbose_name=_('Other Event Sub Types'),
                                     blank=True, null=True)
     glide_numbers = ArrayField(
@@ -260,10 +260,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 self.user = user
 
         headers = OrderedDict(
+            old_id='Old Id',
             id='Id',
-            name='Name',
+            created_at='Created At',
+            created_by__full_name='Created By',
             crisis='Crisis Id',
             crisis__name='Crisis',
+            name='Name',
             start_date='Start Date',
             start_date_accuracy='Start Date Accuracy',
             end_date='End Date',
@@ -277,23 +280,21 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
                 cls.ND_FIGURES_ANNOTATE: 'ND Figure',
             },
-            created_at='Created At',
-            created_by__full_name='Created By',
-            event_type='Event Type',
+            event_type='Event Cause',
             other_sub_type='Other Event Sub Type',
-            trigger__name='Trigger',
-            trigger_sub_type__name='Trigger Sub Type',
             violence__name='Violence',
             violence_sub_type__name='Violence Sub Type',
+            osv_sub_type__name="OSV Sub Type",
             actor_id='Actor Id',
             actor__name='Actor',
+            trigger__name='Trigger',
+            trigger_sub_type__name='Trigger Sub Type',
             disaster_category__name='Disaster Category',
             disaster_sub_category__name='Disaster Sub Category',
             disaster_type__name='Disaster Type',
             disaster_sub_type__name='Disaster Sub Type',
             disaster_sub_type='Diaster Sub Type Id',
             glide_numbers='Event Codes',
-            osv_sub_type__name="OSV Sub Type",
         )
         data = EventFilter(
             data=filters,
