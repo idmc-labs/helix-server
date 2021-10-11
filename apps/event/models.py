@@ -153,7 +153,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                                blank=True, null=True,
                                related_name='events', on_delete=models.CASCADE)
     name = models.CharField(verbose_name=_('Event Name'), max_length=256)
-    event_type = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Event Type'))
+    event_type = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Event Cause'))
     other_sub_type = enum.EnumField(EVENT_OTHER_SUB_TYPE, verbose_name=_('Other Event Sub Types'),
                                     blank=True, null=True)
     glide_numbers = ArrayField(
@@ -280,7 +280,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
                 cls.ND_FIGURES_ANNOTATE: 'ND Figure',
             },
-            event_type='Event Type',
+            event_type='Event Cause',
             other_sub_type='Other Event Sub Type',
             violence__name='Violence',
             violence_sub_type__name='Violence Sub Type',
