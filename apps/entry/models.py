@@ -519,6 +519,7 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     @classmethod
     def get_figure_excel_sheets_data(cls, figures):
+        from apps.crisis.models import Crisis
         headers = OrderedDict(
             old_id='Old Id',
             id='Id',
@@ -637,6 +638,9 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'role': getattr(Figure.ROLE.get(datum['role']), 'name', ''),
                 'displacement_occurred': getattr(
                     Figure.DISPLACEMENT_OCCURRED.get(datum['displacement_occurred']), 'name', ''
+                ),
+                'entry__event__event_type': getattr(Crisis.CRISIS_TYPE.get(
+                    datum['entry__event__event_type']), 'name', ''
                 ),
             }
 
