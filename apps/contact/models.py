@@ -81,28 +81,33 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
                 self.user = user
 
         headers = OrderedDict(
+            old_id='Old Id',
             id='Id',
+            created_at='Created At',
+            created_by__full_name='Created By',
             designation='Designation',
             full_name='Name',
             gender='Gender',
             job_title='Job Title',
-            country='Country',
+            country__name='Country',
             organization__name='Organization',
             operating_countries='Operating Countries',
-            created_at='Created At',
-            created_by='Created By',
             communications_count='Communications Count'
         )
         data = ContactFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            operating_countries=ArrayAgg('countries_of_operation__iso3'),
+            operating_countries=ArrayAgg('countries_of_operation__name', distinct=True),
             communications_count=models.Count('communications', distinct=True),
-        ).order_by('-created_at').select_related(
-            'organization'
+        ).order_by(
+            '-created_at',
+        ).select_related(
+            'organization',
+            'country',
+            'created_by',
         ).prefetch_related(
-            'countries_of_operation__iso3'
+            'countries_of_operation',
         )
 
         def transformer(datum):

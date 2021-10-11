@@ -92,6 +92,8 @@ class Crisis(MetaInformationAbstractModel, models.Model):
 
         headers = OrderedDict(
             id='Id',
+            created_at='Created At',
+            created_by__full_name='Created By',
             name='Name',
             start_date='Start Date',
             start_date_accuracy='Start Date Accuracy',
@@ -102,14 +104,13 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             countries_name='Countries',
             regions_name='Regions',
             events_count='Events Count',
+            figures_count='Figures Count',
             min_event_start='Earliest Event Start',
             max_event_end='Latest Event End',
-            figures_count='Figures Count',
             **{
                 cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
                 cls.ND_FIGURES_ANNOTATE: 'ND Figure',
             },
-            created_at='Date Created'
         )
         data = CrisisFilter(
             data=filters,
@@ -124,6 +125,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             figures_count=models.Count('events__entries__figures', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
         ).order_by('-created_at').select_related(
+            'created_by',
         ).prefetch_related(
             'countries'
         )

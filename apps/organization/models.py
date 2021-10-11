@@ -58,19 +58,20 @@ class Organization(MetaInformationArchiveAbstractModel,
                 self.user = user
 
         headers = OrderedDict(
+            old_id='Old Id',
             id='Id',
+            created_by__full_name='Created By',
+            created_at='Created At',
+            # last_modified_by__full_name='Modified By',
+            # modified_at='Modified At',
             name='Name',
             short_name='Short Name',
             organization_kind__name='Organization Type',
             countries_iso3='ISO3',
             methodology='Methodology',
             breakdown='Breakdown',
-            sourced_entries_count='Sourced Entries Count',
-            published_entries_count='Published Entries Count',
-            created_by__full_name='Created By',
-            created_at='Created At',
-            last_modified_by__full_name='Modified By',
-            modified_at='Modified At',
+            # sourced_entries_count='Sourced Entries Count',
+            # published_entries_count='Published Entries Count',
             category='Category',
             countries_name='Countries',
         )
@@ -79,8 +80,8 @@ class Organization(MetaInformationArchiveAbstractModel,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
             countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
-            sourced_entries_count=models.Count('sourced_entries', distinct=True),
-            published_entries_count=models.Count('published_entries', distinct=True),
+            # sourced_entries_count=models.Count('sourced_entries', distinct=True),
+            # published_entries_count=models.Count('published_entries', distinct=True),
             countries_name=ArrayAgg('countries__name', distinct=True),
         ).order_by('-created_at').select_related(
             'organization_kind'
@@ -88,6 +89,8 @@ class Organization(MetaInformationArchiveAbstractModel,
             'last_modified_by',
         ).prefetch_related(
             'countries'
+            # 'sourced_entries',
+            # 'published_entries',
         )
 
         def transformer(datum):
