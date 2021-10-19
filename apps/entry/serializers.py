@@ -18,36 +18,22 @@ from apps.entry.models import (
     OSMName,
     EntryReviewer,
     FigureTag,
-    DisaggregatedAgeCategory,
+    DisaggregatedAge,
 )
 from apps.entry.constants import STOCK
-from apps.entry.constants import (
-    DISAGGREGATED_AGE_SEX_CHOICES,
-)
 from apps.event.models import Event
 from apps.users.models import User
 from apps.users.enums import USER_ROLE
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
 
 
-class DisaggregatedAgeSerializer(serializers.Serializer):
-    uuid = serializers.UUIDField(required=True)
-    category = serializers.PrimaryKeyRelatedField(
-        queryset=DisaggregatedAgeCategory.objects.all(),
-        required=False
-    )
-    sex = serializers.ChoiceField(
-        choices=DISAGGREGATED_AGE_SEX_CHOICES.choices(),
-        required=False
-    )
-    value = serializers.IntegerField(validators=[MinValueValidator(0, _("Minimum value is 1. "))],
-                                     required=True)
+class DisaggregatedAgeSerializer(serializers.ModelSerializer):
+    # to allow updating
+    id = IntegerIDField(required=False)
 
-    def validate(self, attrs):
-        # because they are stored inside json
-        attrs['uuid'] = str(attrs['uuid'])
-        attrs['category'] = getattr(attrs.get('category'), 'id', None)
-        return attrs
+    class Meta:
+        model = DisaggregatedAge
+        fields = '__all__'
 
 
 class DisaggregatedStratumSerializer(serializers.Serializer):
@@ -94,7 +80,7 @@ class CommonFigureValidationMixin:
                 self.event = self.parent.parent.instance.event
         return self.event
 
-    def validate_disaggregation_age_json(self, age_groups):
+    def validate_disaggregation_age(self, age_groups):
         age_groups = age_groups or []
         values = []
         for each in age_groups:
@@ -168,11 +154,13 @@ class CommonFigureValidationMixin:
         errors = OrderedDict()
         reported = attrs.get('reported') or getattr(self.instance, 'reported', None) or 0
         json_field = attrs.get(field) or getattr(self.instance, field, None) or []
-        total = [item['value'] for item in json_field]
-        if sum(total) > reported:
-            errors.update({
-                field: f'Sum of {verbose_name} figures is greater than reported.'
-            })
+        if isinstance(json_field, list):
+            total = [item['value'] for item in json_field]
+            if sum(total) > reported:
+                errors.update({
+                    field: f'Sum of {verbose_name} figures is greater than reported.'
+                })
+            return errors
         return errors
 
     def _validate_geo_locations(self, geo_locations) -> list:
@@ -248,7 +236,7 @@ class CommonFigureValidationMixin:
         errors.update(self.validate_disaggregated_sum_against_reported(
             attrs, ['disaggregation_indigenous_people'], 'Indigenous people',
         ))
-        errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'disaggregation_age_json', 'age'))
+        errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'disaggregation_age', 'age'))
         if errors:
             raise ValidationError(errors)
 
@@ -266,7 +254,7 @@ class FigureTagSerializer(MetaInformationSerializerMixin, serializers.ModelSeria
 class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
                                    CommonFigureValidationMixin,
                                    serializers.ModelSerializer):
-    disaggregation_age_json = DisaggregatedAgeSerializer(many=True, required=False, allow_null=True)
+    disaggregation_age = DisaggregatedAgeSerializer(many=True, required=False, allow_null=False)
     disaggregation_strata_json = DisaggregatedStratumSerializer(many=True, required=False)
     geo_locations = OSMNameSerializer(many=True, required=False, allow_null=False)
 
@@ -288,13 +276,21 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
     def create(self, validated_data: dict) -> Figure:
         geo_locations = validated_data.pop('geo_locations', [])
         tags = validated_data.pop('tags', [])
+        disaggregation_ages = validated_data.pop('disaggregation_age', [])
         if geo_locations:
             geo_locations = OSMName.objects.bulk_create(
                 [OSMName(**each) for each in geo_locations]
             )
+
+        if disaggregation_ages:
+            disaggregation_ages = DisaggregatedAge.objects.bulk_create(
+                [DisaggregatedAge(**age_dict) for age_dict in disaggregation_ages]
+            )
+
         instance = Figure.objects.create(**validated_data)
         instance.geo_locations.set(geo_locations)
         instance.tags.set(tags)
+        instance.disaggregation_age.set(disaggregation_ages)
         return instance
 
     def _update_locations(self, instance, attr: str, data: list):
@@ -318,15 +314,43 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
                 osms.append(osm_serializer.save())
         getattr(instance, attr).set(osms)
 
+    def _update_disaggregation_age(self, instance, attr: str, data: list):
+        disaggregation_age = []
+        if data:
+            getattr(instance, attr).exclude(
+                id__in=[each['id'] for each in data if 'id' in each]
+            ).delete()
+            for each in data:
+                if not each.get('id'):
+                    age_serializer = DisaggregatedAgeSerializer()
+                    age_serializer._validated_data = {**each}
+                else:
+                    age_serializer = DisaggregatedAgeSerializer(
+                        instance=getattr(instance, attr).get(id=each['id']),
+                        partial=True
+                    )
+                    age_serializer._validated_data = {**each}
+                age_serializer._errors = {}
+                disaggregation_age.append(age_serializer.save())
+        getattr(instance, attr).set(disaggregation_age)
+
     def update(self, instance, validated_data):
         geo_locations = validated_data.pop('geo_locations', [])
         tags = validated_data.pop('tags', [])
+        disaggregation_age = validated_data.pop('disaggregation_age', [])
         with transaction.atomic():
             instance = super().update(instance, validated_data)
             self._update_locations(instance=instance,
                                    attr='geo_locations',
                                    data=geo_locations)
-            instance.tags.set(tags)
+            if disaggregation_age:
+                self._update_disaggregation_age(
+                    instance=instance,
+                    attr="disaggregation_age",
+                    data=disaggregation_age
+                )
+            if tags:
+                instance.tags.set(tags)
         return instance
 
 

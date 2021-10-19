@@ -326,6 +326,7 @@ class TestEntrySerializer(HelixTestCase):
                     start_date=event.start_date.strftime('%Y-%m-%d'),
                     end_date=event.end_date.strftime('%Y-%m-%d'),
                     geo_locations=[source1],
+                    disaggregation_age=[]
                 )
             ]
         )
@@ -570,8 +571,8 @@ class TestFigureSerializer(HelixTestCase):
         self.assertFalse(serializer.is_valid())
         self.assertIn('disaggregation_displacement_rural', serializer.errors)
 
-    def test_invalid_disaggregation_age_json(self):
-        self.data['disaggregation_age_json'] = [
+    def test_invalid_disaggregation_age(self):
+        self.data['disaggregation_age'] = [
             {
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                 "category": 1,
@@ -585,14 +586,14 @@ class TestFigureSerializer(HelixTestCase):
                 "value": 23
             }
         ]
-        self.data['reported'] = sum([item['value'] for item in self.data['disaggregation_age_json']]) - 1
+        self.data['reported'] = sum([item['value'] for item in self.data['disaggregation_age']]) - 1
         serializer = FigureSerializer(data=self.data,
                                       context={'request': self.request})
         self.assertFalse(serializer.is_valid())
-        self.assertIn('disaggregation_age_json', serializer.errors)
+        self.assertIn('disaggregation_age', serializer.errors)
 
-    def test_valid_disaggregation_age_json_can_be_null(self):
-        self.data['disaggregation_age_json'] = None
+    def test_valid_disaggregation_age_can_be_empty_list(self):
+        self.data['disaggregation_age'] = []
         serializer = FigureSerializer(
             data=self.data,
             context={'request': self.request}
