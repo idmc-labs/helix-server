@@ -844,7 +844,7 @@ type DisaggregatedAgeCategoryType {
 input DisaggregatedAgeInputType {
   id: ID
   sex: GENDER_TYPE!
-  uuid: String
+  uuid: String!
   value: Int
   category: ID
 }
@@ -2591,8 +2591,7 @@ input ReviewInputType {
   versionId: String
   field: String!
   value: ENTRY_REVIEW_STATUS
-  ageId: String
-  strataId: String
+  age: String
   entry: ID!
   figure: ID
   geoLocation: ID
@@ -2618,8 +2617,7 @@ type ReviewType {
   figure: FigureType
   field: String!
   value: ENTRY_REVIEW_STATUS!
-  ageId: String
-  strataId: String
+  age: String
   geoLocation: OSMNameType
   comment: ReviewCommentType
 }
