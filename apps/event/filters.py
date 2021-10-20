@@ -5,6 +5,8 @@ from apps.crisis.models import Crisis
 from apps.report.models import Report
 from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
 from apps.event.constants import OSV
+from apps.entry.models import EntryReviewer
+from django.db import models
 
 
 class EventFilter(NameFilterMixin,
@@ -93,7 +95,26 @@ class EventFilter(NameFilterMixin,
         return super().qs.annotate(
             **Event._total_figure_disaggregation_subquery(),
             entry_count=Count("entries"),
-        ).prefetch_related("entries")
+            total=models.Count('entries__reviewing'),
+            total_signed_off=models.Count(
+                'entries__reviewing',
+                filter=Q(entries__reviewing__status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF),
+                distinct=True
+            ),
+            total_review_completed=models.Count(
+                'entries__reviewing', filter=Q(
+                    entries__reviewing__status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
+                ),
+                distinct=True
+            ),
+            progress=models.Case(
+                models.When(total__gt=0, then=(
+                    models.F('total_signed_off') + models.F('total_review_completed')) / models.F('total')
+                ),
+                default=None,
+                output_field=models.FloatField()
+            )
+        ).prefetch_related("entries", "entries__reviewing")
 
     def filter_created_by(self, qs, name, value):
         if not value:
