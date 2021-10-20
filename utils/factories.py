@@ -7,6 +7,7 @@ from apps.contact.models import Contact
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 from apps.entry.constants import STOCK, FLOW
+from apps.common.enums import GENDER_TYPE
 
 
 class UserFactory(DjangoModelFactory):
@@ -84,7 +85,7 @@ class ContactFactory(DjangoModelFactory):
     designation = factory.Iterator(Contact.DESIGNATION)
     first_name = factory.Faker('first_name')
     last_name = factory.Faker('last_name')
-    gender = factory.Iterator(Contact.GENDER)
+    gender = factory.Iterator(GENDER_TYPE)
     job_title = factory.Faker('job')
     organization = factory.SubFactory(OrganizationFactory)
 

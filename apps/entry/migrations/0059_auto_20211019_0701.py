@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
             name='DisaggregatedAge',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('sex', django_enumfield.db.fields.EnumField(enum=apps.entry.models.FigureDisaggregationAbstractModel.GENDER_TYPE)),
+                ('sex', django_enumfield.db.fields.EnumField(enum=apps.common.enums.GENDER_TYPE)),
                 ('uuid', models.UUIDField(blank=True, default=uuid.uuid4, verbose_name='UUID')),
                 ('value', models.PositiveIntegerField(blank=True, null=True, verbose_name='Value')),
                 ('category', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='disaggregated_age_category', to='entry.DisaggregatedAgeCategory', verbose_name='Disaggregated age category')),

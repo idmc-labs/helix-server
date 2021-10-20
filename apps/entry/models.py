@@ -33,6 +33,7 @@ from apps.entry.constants import (
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
 from utils.common import add_clone_prefix
+from apps.common.enums import GENDER_TYPE
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from apps.event.models import Event
@@ -199,19 +200,6 @@ class FigureDisaggregationAbstractModel(models.Model):
             URBAN: _("Urban"),
         }
 
-    class GENDER_TYPE(enum.Enum):
-        MALE = 0
-        FEMALE = 1
-        UNSPECIFIED = 2
-        OTHER = 3
-
-        __labels__ = {
-            MALE: _("Male"),
-            FEMALE: _("Female"),
-            UNSPECIFIED: _("Unspecified"),
-            OTHER: _("Other"),
-        }
-
     # disaggregation information
     disaggregation_displacement_urban = models.PositiveIntegerField(
         verbose_name=_('Displacement/Urban'),
@@ -302,7 +290,7 @@ class FigureDisaggregationAbstractModel(models.Model):
 
 
 class DisaggregatedAge(models.Model):
-    sex = enum.EnumField(enum=FigureDisaggregationAbstractModel.GENDER_TYPE, verbose_name=_('Sex'))
+    sex = enum.EnumField(enum=GENDER_TYPE, verbose_name=_('Sex'))
     uuid = models.UUIDField(verbose_name='UUID', blank=True, default=uuid4)
     value = models.PositiveIntegerField(blank=True, null=True, verbose_name=_('Value'))
     category = models.ForeignKey(
@@ -642,7 +630,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_female_age_group_less_than_five=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[LESS_THAN_FIVE]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -650,7 +638,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_female_age_group_five_to_forteen=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[FIVE_TO_FOURTEEN]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -658,7 +646,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_female_age_group_fifteen_to_twenty_four=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[FIFTEEN_TO_TWENTRY_FOUR]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -666,7 +654,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_female_age_group_zero_to_seventeen=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[ZERO_TO_SEVENTEEN]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -674,7 +662,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_female_age_group_eighteen_to_fiftynine=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[EIGHTEEN_TO_FIFTYNINE]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -682,7 +670,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_female_age_group_sixty_plus=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[SIXTY_PLUS]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -690,7 +678,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_other_age_group_female=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[OTHER_AGES]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -698,7 +686,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_male_age_group_less_than_five=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[LESS_THAN_FIVE]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -706,7 +694,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_male_age_group_five_to_forteen=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[FIVE_TO_FOURTEEN]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -714,7 +702,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_male_age_group_fifteen_to_twenty_four=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[FIFTEEN_TO_TWENTRY_FOUR]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -722,7 +710,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_male_age_group_zero_to_seventeen=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[ZERO_TO_SEVENTEEN]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -730,7 +718,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_male_age_group_eighteen_to_fiftynine=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[EIGHTEEN_TO_FIFTYNINE]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -738,7 +726,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_male_age_group_sixty_plus=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[SIXTY_PLUS]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -746,7 +734,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_other_age_group_male=Sum(
                 Case(When(
                     Q(
-                        disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[OTHER_AGES]
                     ), then='disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -1115,7 +1103,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_female_age_group_less_than_five=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[LESS_THAN_FIVE]
                     ), then='figures__disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -1123,7 +1111,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_female_age_group_five_to_forteen=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[FIVE_TO_FOURTEEN]
                     ), then='figures__disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -1131,7 +1119,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_female_age_group_fifteen_to_twenty_four=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[
                             FIFTEEN_TO_TWENTRY_FOUR
@@ -1141,7 +1129,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_female_age_group_zero_to_seventeen=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[ZERO_TO_SEVENTEEN]
                     ), then='figures__disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -1149,7 +1137,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_female_age_group_eighteen_to_fiftynine=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[EIGHTEEN_TO_FIFTYNINE]
                     ), then='figures__disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -1157,7 +1145,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_female_age_group_sixty_plus=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[SIXTY_PLUS]
                     ), then='figures__disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -1165,7 +1153,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_other_age_group_female=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.FEMALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[OTHER_AGES]
                     ), then='figures__disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -1173,7 +1161,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_male_age_group_less_than_five=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[LESS_THAN_FIVE]
                     ), then='figures__disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -1181,7 +1169,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_male_age_group_five_to_forteen=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[FIVE_TO_FOURTEEN]
                     ), then='figures__disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -1189,7 +1177,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_male_age_group_fifteen_to_twenty_four=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[
                             FIFTEEN_TO_TWENTRY_FOUR
@@ -1199,7 +1187,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_male_age_group_zero_to_seventeen=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[ZERO_TO_SEVENTEEN]
                     ), then='figures__disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -1207,7 +1195,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_male_age_group_eighteen_to_fiftynine=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[EIGHTEEN_TO_FIFTYNINE]
                     ), then='figures__disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -1215,7 +1203,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_male_age_group_sixty_plus=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[SIXTY_PLUS]
                     ), then='figures__disaggregation_age__value'), output_field=models.IntegerField(), default=0)
@@ -1223,7 +1211,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_other_age_group_male=Sum(
                 Case(When(
                     Q(
-                        figures__disaggregation_age__sex=FigureDisaggregationAbstractModel.GENDER_TYPE.MALE
+                        figures__disaggregation_age__sex=GENDER_TYPE.MALE
                     ) & Q(
                         figures__disaggregation_age__category__age_group__in=AGE_CATEGORIES_TO_EXPORT[OTHER_AGES]
                     ), then='figures__disaggregation_age__value'), output_field=models.IntegerField(), default=0)

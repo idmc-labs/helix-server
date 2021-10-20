@@ -200,7 +200,7 @@ input ContactCreateInputType {
   firstName: String!
   lastName: String!
   fullName: String
-  gender: GENDER!
+  gender: GENDER_TYPE!
   jobTitle: String!
   email: String
   skype: String
@@ -232,7 +232,7 @@ type ContactType {
   firstName: String!
   lastName: String!
   fullName: String
-  gender: GENDER
+  gender: GENDER_TYPE
   jobTitle: String!
   organization: OrganizationType
   countriesOfOperation: [CountryType!]!
@@ -253,7 +253,7 @@ input ContactUpdateInputType {
   firstName: String
   lastName: String
   fullName: String
-  gender: GENDER
+  gender: GENDER_TYPE
   jobTitle: String
   email: String
   skype: String
@@ -1502,12 +1502,6 @@ input FigureUpdateInputType {
   term: ID
   country: ID
   tags: [ID!]
-}
-
-enum GENDER {
-  MALE
-  FEMALE
-  OTHER
 }
 
 enum GENDER_TYPE {

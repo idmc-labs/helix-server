@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
                 ('designation', django_enumfield.db.fields.EnumField(enum=apps.contact.models.Contact.DESIGNATION)),
                 ('first_name', models.CharField(max_length=256, verbose_name='First Name')),
                 ('last_name', models.CharField(max_length=256, verbose_name='Last Name')),
-                ('gender', django_enumfield.db.fields.EnumField(enum=apps.contact.models.Contact.GENDER)),
+                ('gender', django_enumfield.db.fields.EnumField(enum=apps.common.enums.GENDER_TYPE)),
                 ('job_title', models.CharField(max_length=256, verbose_name='Job Title')),
                 ('email', models.EmailField(blank=True, max_length=254, null=True, verbose_name='Email')),
                 ('phone', models.CharField(blank=True, max_length=32, null=True, verbose_name='Phone')),

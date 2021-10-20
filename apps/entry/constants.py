@@ -1,7 +1,3 @@
-from django_enumfield import enum
-from django.utils.translation import gettext_lazy as _
-
-
 # These will initialize the figure types and sub types
 STOCK = 'Stock'
 FLOW = 'Flow'
@@ -90,21 +86,6 @@ FIGURE_TERMS = dict(
     RETURNS=dict(name="Returns", housing=False),
     MULTIPLE_OR_OTHER=dict(name="Multiple/Other", housing=False),
 )
-
-
-class DISAGGREGATED_AGE_SEX_CHOICES(enum.Enum):
-    MALE = 0
-    FEMALE = 1
-    UNSPECIFIED = 2
-    OTHER = 3
-
-    __labels__ = {
-        MALE: _("Male"),
-        FEMALE: _("Female"),
-        UNSPECIFIED: _("Unspecified"),
-        OTHER: _("Other"),
-    }
-
 
 LESS_THAN_FIVE = "<5"
 FIVE_TO_FOURTEEN = "5-14"
