@@ -1,4 +1,5 @@
 import django_filters
+from datetime import datetime
 from django.db.models import (
     Value,
 )
@@ -45,6 +46,7 @@ class CountryFilter(django_filters.FilterSet):
 
     # used in report country table
     report = django_filters.CharFilter(method='filter_report')
+    year = django_filters.NumberFilter(method='filter_year')
 
     class Meta:
         model = Country
@@ -101,10 +103,22 @@ class CountryFilter(django_filters.FilterSet):
             return qs
         return qs.filter(geographical_group__in=value).distinct()
 
+    def filter_year(self, qs, name, value):
+        ''' Filter logic is applied in qs'''
+        return qs
+
     @property
     def qs(self):
+        year = int(self.data.get('year', None))
+        start_date, end_date = None, None
+        if year:
+            start_date = datetime(year=int(year), month=1, day=1)
+            end_date = datetime(year=year, month=12, day=31)
+
         qs = super().qs.annotate(
-            **Country._total_figure_disaggregation_subquery()
+            **Country._total_figure_disaggregation_subquery(
+                start_date=start_date, end_date=end_date
+            )
         )
         return qs
 
