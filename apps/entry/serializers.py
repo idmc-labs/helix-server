@@ -34,6 +34,12 @@ class DisaggregatedAgeSerializer(serializers.ModelSerializer):
     class Meta:
         model = DisaggregatedAge
         fields = '__all__'
+        extra_kwargs = {
+            'uuid': {
+                'validators': [],
+                'required': True
+            },
+        }
 
 
 class DisaggregatedStratumSerializer(serializers.Serializer):
