@@ -26,16 +26,20 @@ class Organization(MetaInformationArchiveAbstractModel,
         UNKNOWN = 0
         REGIONAL = 1
         INTERNATIONAL = 2
+        NATIONAL = 3
+        OTHER = 4
 
         __labels__ = {
             UNKNOWN: _("Unknown"),
             REGIONAL: _("Regional"),
             INTERNATIONAL: _("International"),
+            NATIONAL: _("National"),
+            OTHER: _("Other"),
         }
     name = models.CharField(verbose_name=_('Title'), max_length=512)
     short_name = models.CharField(verbose_name=_('Short Name'), max_length=64,
                                   null=True)
-    category = enum.EnumField(ORGANIZATION_CATEGORY, verbose_name=_('Category'),
+    category = enum.EnumField(ORGANIZATION_CATEGORY, verbose_name=_('Geographical Coverage'),
                               default=ORGANIZATION_CATEGORY.UNKNOWN)
     countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
                                        related_name='organizations')
@@ -72,7 +76,7 @@ class Organization(MetaInformationArchiveAbstractModel,
             breakdown='Breakdown',
             # sourced_entries_count='Sourced Entries Count',
             # published_entries_count='Published Entries Count',
-            category='Category',
+            category='Geographical Coverage',
             countries_name='Countries',
         )
         data = OrganizationFilter(
