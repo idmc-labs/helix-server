@@ -683,13 +683,6 @@ enum DESIGNATION {
   MRS
 }
 
-enum DISAGGREGATED_AGE_SEX_CHOICES {
-  MALE
-  FEMALE
-  UNSPECIFIED
-  OTHER
-}
-
 enum DISPLACEMENT_OCCURRED {
   BEFORE
   DURING
@@ -845,20 +838,39 @@ type DisaggregatedAgeCategoryType {
   ageGroup: String
   ageGroupFrom: Int
   ageGroupTo: Int
+  disaggregatedAgeCategory: [DisaggregatedAgeType!]!
 }
 
 input DisaggregatedAgeInputType {
-  uuid: String!
+  id: ID
+  sex: GENDER_TYPE!
+  uuid: String
+  value: Int
   category: ID
-  sex: DISAGGREGATED_AGE_SEX_CHOICES
-  value: Int!
+}
+
+type DisaggregatedAgeListType {
+  results: [DisaggregatedAgeType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+enum DisaggregatedAgeSex {
+  A_0
+  A_1
+  A_2
+  A_3
 }
 
 type DisaggregatedAgeType {
+  id: ID!
+  sex: DisaggregatedAgeSex!
   uuid: String!
-  category: DisaggregatedAgeCategoryType
-  sex: DISAGGREGATED_AGE_SEX_CHOICES
   value: Int
+  category: DisaggregatedAgeCategoryType
+  entryFigureRelated: [FigureType!]!
+  reportReportRelated: [ReportType!]!
 }
 
 input DisaggregatedStratumInputType {
@@ -1409,7 +1421,7 @@ type FigureType {
   disaggregationIndigenousPeople: Int
   disaggregationSexMale: Int
   disaggregationSexFemale: Int
-  disaggregationAgeJson: [DisaggregatedAgeType!]
+  disaggregationAge(sex_In: String, ordering: String): DisaggregatedAgeListType
   disaggregationStrataJson: [DisaggregatedStratumType!]
   disaggregationConflict: Int
   disaggregationConflictPolitical: Int
@@ -1448,7 +1460,7 @@ type FigureType {
 
 input FigureUpdateInputType {
   id: ID
-  disaggregationAgeJson: [DisaggregatedAgeInputType!]
+  disaggregationAge: [DisaggregatedAgeInputType!]
   disaggregationStrataJson: [DisaggregatedStratumInputType!]
   geoLocations: [OSMNameInputType!]
   oldId: String
@@ -1678,7 +1690,7 @@ input NestedFigureCreateInputType {
   modifiedAt: DateTime
   createdBy: ID
   lastModifiedBy: ID
-  disaggregationAgeJson: [DisaggregatedAgeInputType!]
+  disaggregationAge: [DisaggregatedAgeInputType!]
   disaggregationStrataJson: [DisaggregatedStratumInputType!]
   geoLocations: [OSMNameInputType!]
   oldId: String
@@ -1728,7 +1740,7 @@ input NestedFigureUpdateInputType {
   modifiedAt: DateTime
   createdBy: ID
   lastModifiedBy: ID
-  disaggregationAgeJson: [DisaggregatedAgeInputType!]
+  disaggregationAge: [DisaggregatedAgeInputType!]
   disaggregationStrataJson: [DisaggregatedStratumInputType!]
   geoLocations: [OSMNameInputType!]
   oldId: String
@@ -2149,6 +2161,8 @@ type Query {
   entryList(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: [String!], filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEventDisasterCategories: [ID!], filterEventDisasterSubCategories: [ID!], filterEventDisasterSubTypes: [ID!], filterEventDisasterTypes: [ID!], filterEventViolenceSubTypes: [ID!], filterEntryHasReviewComments: Boolean, filterEventOsvSubTypes: [ID!], report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
   disaggregatedAgeCategory(id: ID!): DisaggregatedAgeCategoryType
   disaggregatedAgeCategoryList(name_Unaccent_Icontains: String, ordering: String): DisaggregatedAgeCategoryListType
+  disaggregatedAge(id: ID!): DisaggregatedAgeType
+  disaggregatedAgeList(sex_In: String, ordering: String): DisaggregatedAgeListType
   triggerList(name_Unaccent_Icontains: String, ordering: String): TriggerListType
   subTriggerList(name_Unaccent_Icontains: String, ordering: String): TriggerSubObjectListType
   violenceList(id_Iexact: Float, ordering: String): ViolenceListType
@@ -2374,7 +2388,7 @@ type ReportType {
   disaggregationIndigenousPeople: Int
   disaggregationSexMale: Int
   disaggregationSexFemale: Int
-  disaggregationAgeJson: [JSONString!]
+  disaggregationAge: [DisaggregatedAgeType!]!
   disaggregationStrataJson: [JSONString!]
   disaggregationConflict: Int
   disaggregationConflictPolitical: Int
