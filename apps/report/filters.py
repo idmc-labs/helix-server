@@ -97,7 +97,10 @@ class ReportFilter(df.FilterSet):
         is_public = self.data.get('is_public')
         if is_public is None:
             user = self.request.user
-            return super().qs.filter(is_public=False, created_by=user)
+            return super().qs.filter(
+                Q(is_public=True) | Q(is_public=False, created_by=user)
+            )
+
         return super().qs.distinct()
 
 

@@ -466,9 +466,9 @@ class Figure(MetaInformationArchiveAbstractModel,
     ):
         end_date = end_date or timezone.now().date()
         qs = qs.filter(
-            models.Q(
+            Q(
                 end_date__isnull=True,
-            ) | models.Q(
+            ) | Q(
                 end_date__isnull=False,
                 end_date__lte=end_date,
             ),
