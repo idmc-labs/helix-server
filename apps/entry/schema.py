@@ -9,6 +9,7 @@ from graphene_django_extras import DjangoObjectField
 import logging
 
 from apps.entry.enums import (
+    GenderTypeGrapheneEnum,
     QuantifierGrapheneEnum,
     UnitGrapheneEnum,
     RoleGrapheneEnum,
@@ -65,6 +66,7 @@ class DisaggregatedAgeType(DjangoObjectType):
         model = DisaggregatedAge
     uuid = graphene.String(required=True)
     category = graphene.Field(DisaggregatedAgeCategoryType)
+    sex = graphene.Field(GenderTypeGrapheneEnum)
 
     def resolve_category(root, info):
         return DisaggregatedAgeCategory.objects.filter(id=root.category.id).first()
@@ -187,6 +189,7 @@ class EntryType(DjangoObjectType):
             related_name='reviewers',
             reverse_related_name='review_entries',
         ))
+    review_status = graphene.Field(EntryReviewerGrapheneEnum)
     review_comments = graphene.Dynamic(
         lambda: DjangoPaginatedListObjectField(
             get_type('apps.review.schema.ReviewCommentListType'),

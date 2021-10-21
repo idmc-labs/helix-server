@@ -1288,7 +1288,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'disaggregation_displacement_rural', 'disaggregation_location_camp',
                 'disaggregation_location_non_camp', 'disaggregation_sex_male',
                 'disaggregation_sex_female', 'disaggregation_lgbtiq', 'disaggregation_disability',
-                'disaggregation_indigenous_people', 'disaggregation_age_json',
+                'disaggregation_indigenous_people',
                 'disaggregation_strata_json', 'disaggregation_conflict',
                 'disaggregation_conflict_political', 'disaggregation_conflict_criminal',
                 'disaggregation_conflict_communal', 'disaggregation_conflict_other',

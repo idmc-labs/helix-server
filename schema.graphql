@@ -856,16 +856,9 @@ type DisaggregatedAgeListType {
   pageSize: Int
 }
 
-enum DisaggregatedAgeSex {
-  A_0
-  A_1
-  A_2
-  A_3
-}
-
 type DisaggregatedAgeType {
   id: ID!
-  sex: DisaggregatedAgeSex!
+  sex: GENDER_TYPE
   uuid: String!
   value: Int
   category: DisaggregatedAgeCategoryType
@@ -1012,13 +1005,6 @@ type EntryListType {
   pageSize: Int
 }
 
-enum EntryReviewStatus {
-  A_0
-  A_1
-  A_2
-  A_3
-}
-
 input EntryReviewStatusInputType {
   entry: ID!
   status: REVIEW_STATUS!
@@ -1064,7 +1050,7 @@ type EntryType {
   idmcAnalysis: String
   isConfidential: Boolean!
   reviewers(email: String, isActive: Boolean, roleIn: [String!], roleNotIn: [String!], monitoringSubRegionIn: [ID!], monitoringSubRegionNotIn: [ID!], fullName: String, includeInactive: Boolean, id: String, ordering: String): UserListType
-  reviewStatus: EntryReviewStatus
+  reviewStatus: REVIEW_STATUS
   reviewComments(entry: ID, page: Int = 1, ordering: String, pageSize: Int): ReviewCommentListType
   figures: [FigureType!]!
   reviewing: [EntryReviewerType!]!
@@ -1985,6 +1971,12 @@ type OsvSubTypeList {
   pageSize: Int
 }
 
+enum PARKING_LOT_SOURCE {
+  IDETECT
+  HAZARD_MONITORING
+  ACLED
+}
+
 enum PARKING_LOT_STATUS {
   TO_BE_REVIEWED
   REVIEWED
@@ -2037,7 +2029,7 @@ input ParkedItemCreateInputType {
   url: String!
   status: PARKING_LOT_STATUS
   comments: String
-  source: String
+  source: PARKING_LOT_SOURCE
   sourceUuid: String
   metaData: JSONString
   country: ID
@@ -2049,12 +2041,6 @@ type ParkedItemListType {
   totalCount: Int
   page: Int
   pageSize: Int
-}
-
-enum ParkedItemSource {
-  A_0
-  A_1
-  A_2
 }
 
 type ParkedItemType {
@@ -2070,7 +2056,7 @@ type ParkedItemType {
   assignedTo: UserType
   status: PARKING_LOT_STATUS
   comments: String
-  source: ParkedItemSource
+  source: PARKING_LOT_SOURCE
   sourceUuid: String
   metaData: JSONString
   entry: EntryType
@@ -2084,7 +2070,7 @@ input ParkedItemUpdateInputType {
   url: String
   status: PARKING_LOT_STATUS
   comments: String
-  source: String
+  source: PARKING_LOT_SOURCE
   sourceUuid: String
   metaData: JSONString
   country: ID
