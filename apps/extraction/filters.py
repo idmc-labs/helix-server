@@ -1,5 +1,4 @@
 from django_filters import rest_framework as df
-from django.db import models
 from django.db.models import Q
 from django.utils import timezone
 from apps.crisis.models import Crisis
@@ -195,22 +194,22 @@ class EntryExtractionFilterSet(df.FilterSet):
         if not value:
             return qs
 
-        query_expr = models.Q()
+        query_expr = Q()
         if MALE in value:
-            query_expr = query_expr | models.Q(figures__disaggregation_sex_male__gt=0)
+            query_expr = query_expr | Q(figures__disaggregation_sex_male__gt=0)
         if FEMALE in value:
-            query_expr = query_expr | models.Q(figures__disaggregation_sex_female__gt=0)
+            query_expr = query_expr | Q(figures__disaggregation_sex_female__gt=0)
         return qs.filter(query_expr).distinct()
 
     def filter_by_figure_displacement_types(self, qs, name, value):
         if not value:
             return qs
 
-        query_expr = models.Q()
+        query_expr = Q()
         if RURAL in value:
-            query_expr = query_expr | models.Q(figures__disaggregation_displacement_rural__gt=0)
+            query_expr = query_expr | Q(figures__disaggregation_displacement_rural__gt=0)
         if URBAN in value:
-            query_expr = query_expr | models.Q(figures__disaggregation_displacement_urban__gt=0)
+            query_expr = query_expr | Q(figures__disaggregation_displacement_urban__gt=0)
         return qs.filter(query_expr).distinct()
 
     def filter_filter_event_disaster_categories(self, qs, name, value):
@@ -466,22 +465,22 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         if not value:
             return qs
 
-        query_expr = models.Q()
+        query_expr = Q()
         if MALE in value:
-            query_expr = query_expr | models.Q(disaggregation_sex_male__gt=0)
+            query_expr = query_expr | Q(disaggregation_sex_male__gt=0)
         if FEMALE in value:
-            query_expr = query_expr | models.Q(disaggregation_sex_female__gt=0)
+            query_expr = query_expr | Q(disaggregation_sex_female__gt=0)
         return qs.filter(query_expr)
 
     def filter_by_figure_displacement_types(self, qs, name, value):
         if not value:
             return qs
 
-        query_expr = models.Q()
+        query_expr = Q()
         if RURAL in value:
-            query_expr = query_expr | models.Q(disaggregation_displacement_rural__gt=0)
+            query_expr = query_expr | Q(disaggregation_displacement_rural__gt=0)
         if URBAN in value:
-            query_expr = query_expr | models.Q(disaggregation_displacement_urban__gt=0)
+            query_expr = query_expr | Q(disaggregation_displacement_urban__gt=0)
         return qs.filter(query_expr)
 
     def filter_by_figure_terms(self, qs, name, value):
