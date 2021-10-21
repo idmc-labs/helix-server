@@ -33,6 +33,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='report',
             name='filter_figure_sex_types',
-            field=django.contrib.postgres.fields.ArrayField(base_field=django_enumfield.db.fields.EnumField(enum=apps.entry.models.FigureDisaggregationAbstractModel.GENDER_TYPE), blank=True, null=True, size=None),
+            field=django.contrib.postgres.fields.ArrayField(base_field=django_enumfield.db.fields.EnumField(enum=apps.common.enums.GENDER_TYPE), blank=True, null=True, size=None),
         ),
     ]

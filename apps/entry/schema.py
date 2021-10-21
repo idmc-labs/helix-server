@@ -9,6 +9,7 @@ from graphene_django_extras import DjangoObjectField
 import logging
 
 from apps.entry.enums import (
+    GenderTypeGrapheneEnum,
     QuantifierGrapheneEnum,
     UnitGrapheneEnum,
     RoleGrapheneEnum,
@@ -16,7 +17,6 @@ from apps.entry.enums import (
     EntryReviewerGrapheneEnum,
     OSMAccuracyGrapheneEnum,
     IdentifierGrapheneEnum,
-    DisaggregatedAgeSexGrapheneEnum,
 )
 from apps.entry.filters import EntryReviewerFilter, OSMNameFilter
 from apps.entry.models import (
@@ -28,6 +28,7 @@ from apps.entry.models import (
     FigureCategory,
     OSMName,
     DisaggregatedAgeCategory,
+    DisaggregatedAge,
 )
 from apps.contrib.models import SourcePreview
 from apps.contrib.enums import PreviewStatusGrapheneEnum
@@ -60,14 +61,23 @@ class DisaggregatedAgeCategoryListType(CustomDjangoListObjectType):
         }
 
 
-class DisaggregatedAgeType(ObjectType):
+class DisaggregatedAgeType(DjangoObjectType):
+    class Meta:
+        model = DisaggregatedAge
     uuid = graphene.String(required=True)
     category = graphene.Field(DisaggregatedAgeCategoryType)
-    sex = graphene.Field(DisaggregatedAgeSexGrapheneEnum)
-    value = graphene.Int()
+    sex = graphene.Field(GenderTypeGrapheneEnum)
 
     def resolve_category(root, info):
-        return DisaggregatedAgeCategory.objects.filter(id=root['category']).first()
+        return DisaggregatedAgeCategory.objects.filter(id=root.category.id).first()
+
+
+class DisaggregatedAgeListType(CustomDjangoListObjectType):
+    class Meta:
+        model = DisaggregatedAge
+        filter_fields = {
+            'sex': ('in',),
+        }
 
 
 class DisaggregatedStratumType(ObjectType):
@@ -130,7 +140,9 @@ class FigureType(DjangoObjectType):
     unit = graphene.Field(UnitGrapheneEnum)
     role = graphene.Field(RoleGrapheneEnum)
     displacement_occurred = graphene.Field(DisplacementOccurredGrapheneEnum)
-    disaggregation_age_json = graphene.List(graphene.NonNull(DisaggregatedAgeType))
+    disaggregation_age = DjangoPaginatedListObjectField(
+        DisaggregatedAgeListType, related_name="disaggregation_age"
+    )
     disaggregation_strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
     geo_locations = DjangoPaginatedListObjectField(
         OSMNameListType,
@@ -177,6 +189,7 @@ class EntryType(DjangoObjectType):
             related_name='reviewers',
             reverse_related_name='review_entries',
         ))
+    review_status = graphene.Field(EntryReviewerGrapheneEnum)
     review_comments = graphene.Dynamic(
         lambda: DjangoPaginatedListObjectField(
             get_type('apps.review.schema.ReviewCommentListType'),
@@ -281,3 +294,5 @@ class Query:
                                                 ))
     disaggregated_age_category = DjangoObjectField(DisaggregatedAgeCategoryType)
     disaggregated_age_category_list = DjangoPaginatedListObjectField(DisaggregatedAgeCategoryListType)
+    disaggregated_age = DjangoObjectField(DisaggregatedAgeType)
+    disaggregated_age_list = DjangoPaginatedListObjectField(DisaggregatedAgeListType)

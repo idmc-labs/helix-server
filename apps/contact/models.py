@@ -5,7 +5,7 @@ from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
-
+from apps.common.enums import GENDER_TYPE
 from apps.contrib.models import MetaInformationArchiveAbstractModel
 
 User = get_user_model()
@@ -23,24 +23,13 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
             MRS: _("Mrs"),
         }
 
-    class GENDER(enum.Enum):
-        MALE = 0
-        FEMALE = 1
-        OTHER = 2
-
-        __labels__ = {
-            MALE: _("Male"),
-            FEMALE: _("Female"),
-            OTHER: _("Other"),
-        }
-
     designation = enum.EnumField(DESIGNATION)
     first_name = models.CharField(verbose_name=_('First Name'), max_length=256)
     last_name = models.CharField(verbose_name=_('Last Name'), max_length=256)
     full_name = models.CharField(verbose_name=_('Full Name'), max_length=512,
                                  blank=True, null=True,
                                  help_text=_('Auto generated'))
-    gender = enum.EnumField(GENDER, verbose_name=_('Gender'))
+    gender = enum.EnumField(GENDER_TYPE, verbose_name=_('Gender'))
     job_title = models.CharField(verbose_name=_('Job Title'), max_length=256)
     organization = models.ForeignKey('organization.Organization', verbose_name=_('Organization'),
                                      blank=True, null=True,
@@ -115,7 +104,7 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
                 **datum,
                 **dict(
                     designation=getattr(Contact.DESIGNATION.get(datum['designation']), 'name', ''),
-                    gender=getattr(Contact.GENDER.get(datum['gender']), 'name', ''),
+                    gender=getattr(GENDER_TYPE.get(datum['gender']), 'name', ''),
                 )
             }
 

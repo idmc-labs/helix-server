@@ -1288,7 +1288,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'disaggregation_displacement_rural', 'disaggregation_location_camp',
                 'disaggregation_location_non_camp', 'disaggregation_sex_male',
                 'disaggregation_sex_female', 'disaggregation_lgbtiq', 'disaggregation_disability',
-                'disaggregation_indigenous_people', 'disaggregation_age_json',
+                'disaggregation_indigenous_people',
                 'disaggregation_strata_json', 'disaggregation_conflict',
                 'disaggregation_conflict_political', 'disaggregation_conflict_criminal',
                 'disaggregation_conflict_communal', 'disaggregation_conflict_other',
@@ -1296,6 +1296,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'household_size', 'total_figures', 'term', 'category__name', 'role',
                 'start_date', 'end_date', 'include_idu', 'excerpt_idu', 'country__name',
                 'country__region__name', 'is_disaggregated', 'is_housing_destruction',
+                'source_excerpt', 'calculation_logic', 'caveats'
             ),
             entries=Entry.objects.filter(
                 id__in=self.report.report_figures.values('entry')
@@ -1304,8 +1305,8 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             ).values(
                 'id', 'old_id', 'created_at', 'modified_at', 'created_by__email',
                 'last_modified_by__email', 'version_id', 'url',
-                'article_title', 'publish_date', 'source_excerpt',
-                'event', 'idmc_analysis', 'calculation_logic', 'is_confidential', 'caveats',
+                'article_title', 'publish_date',
+                'event', 'idmc_analysis', 'is_confidential',
             ),
             events=Event.objects.filter(
                 id__in=self.report.report_figures.values('entry__event')

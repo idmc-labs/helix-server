@@ -14,11 +14,12 @@ from apps.entry.models import (
 from apps.report.models import Report
 from utils.filters import StringListFilter, IDListFilter
 from apps.event.constants import OSV
+from apps.common.enums import GENDER_TYPE
 
 RURAL = FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE.RURAL.name
 URBAN = FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE.URBAN.name
-MALE = FigureDisaggregationAbstractModel.GENDER_TYPE.MALE.name
-FEMALE = FigureDisaggregationAbstractModel.GENDER_TYPE.FEMALE.name
+MALE = GENDER_TYPE.MALE.name
+FEMALE = GENDER_TYPE.FEMALE.name
 
 
 class EntryExtractionFilterSet(df.FilterSet):

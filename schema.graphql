@@ -200,7 +200,7 @@ input ContactCreateInputType {
   firstName: String!
   lastName: String!
   fullName: String
-  gender: GENDER!
+  gender: GENDER_TYPE!
   jobTitle: String!
   email: String
   skype: String
@@ -232,7 +232,7 @@ type ContactType {
   firstName: String!
   lastName: String!
   fullName: String
-  gender: GENDER
+  gender: GENDER_TYPE
   jobTitle: String!
   organization: OrganizationType
   countriesOfOperation: [CountryType!]!
@@ -253,7 +253,7 @@ input ContactUpdateInputType {
   firstName: String
   lastName: String
   fullName: String
-  gender: GENDER
+  gender: GENDER_TYPE
   jobTitle: String
   email: String
   skype: String
@@ -683,13 +683,6 @@ enum DESIGNATION {
   MRS
 }
 
-enum DISAGGREGATED_AGE_SEX_CHOICES {
-  MALE
-  FEMALE
-  UNSPECIFIED
-  OTHER
-}
-
 enum DISPLACEMENT_OCCURRED {
   BEFORE
   DURING
@@ -845,20 +838,32 @@ type DisaggregatedAgeCategoryType {
   ageGroup: String
   ageGroupFrom: Int
   ageGroupTo: Int
+  disaggregatedAgeCategory: [DisaggregatedAgeType!]!
 }
 
 input DisaggregatedAgeInputType {
+  id: ID
+  sex: GENDER_TYPE!
   uuid: String!
+  value: Int
   category: ID
-  sex: DISAGGREGATED_AGE_SEX_CHOICES
-  value: Int!
+}
+
+type DisaggregatedAgeListType {
+  results: [DisaggregatedAgeType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
 }
 
 type DisaggregatedAgeType {
+  id: ID!
+  sex: GENDER_TYPE
   uuid: String!
-  category: DisaggregatedAgeCategoryType
-  sex: DISAGGREGATED_AGE_SEX_CHOICES
   value: Int
+  category: DisaggregatedAgeCategoryType
+  entryFigureRelated: [FigureType!]!
+  reportReportRelated: [ReportType!]!
 }
 
 input DisaggregatedStratumInputType {
@@ -1000,13 +1005,6 @@ type EntryListType {
   pageSize: Int
 }
 
-enum EntryReviewStatus {
-  A_0
-  A_1
-  A_2
-  A_3
-}
-
 input EntryReviewStatusInputType {
   entry: ID!
   status: REVIEW_STATUS!
@@ -1052,7 +1050,7 @@ type EntryType {
   idmcAnalysis: String
   isConfidential: Boolean!
   reviewers(email: String, isActive: Boolean, roleIn: [String!], roleNotIn: [String!], monitoringSubRegionIn: [ID!], monitoringSubRegionNotIn: [ID!], fullName: String, includeInactive: Boolean, id: String, ordering: String): UserListType
-  reviewStatus: EntryReviewStatus
+  reviewStatus: REVIEW_STATUS
   reviewComments(entry: ID, page: Int = 1, ordering: String, pageSize: Int): ReviewCommentListType
   figures: [FigureType!]!
   reviewing: [EntryReviewerType!]!
@@ -1409,7 +1407,7 @@ type FigureType {
   disaggregationIndigenousPeople: Int
   disaggregationSexMale: Int
   disaggregationSexFemale: Int
-  disaggregationAgeJson: [DisaggregatedAgeType!]
+  disaggregationAge(sex_In: String, ordering: String): DisaggregatedAgeListType
   disaggregationStrataJson: [DisaggregatedStratumType!]
   disaggregationConflict: Int
   disaggregationConflictPolitical: Int
@@ -1448,7 +1446,7 @@ type FigureType {
 
 input FigureUpdateInputType {
   id: ID
-  disaggregationAgeJson: [DisaggregatedAgeInputType!]
+  disaggregationAge: [DisaggregatedAgeInputType!]
   disaggregationStrataJson: [DisaggregatedStratumInputType!]
   geoLocations: [OSMNameInputType!]
   oldId: String
@@ -1490,12 +1488,6 @@ input FigureUpdateInputType {
   term: ID
   country: ID
   tags: [ID!]
-}
-
-enum GENDER {
-  MALE
-  FEMALE
-  OTHER
 }
 
 enum GENDER_TYPE {
@@ -1678,7 +1670,7 @@ input NestedFigureCreateInputType {
   modifiedAt: DateTime
   createdBy: ID
   lastModifiedBy: ID
-  disaggregationAgeJson: [DisaggregatedAgeInputType!]
+  disaggregationAge: [DisaggregatedAgeInputType!]
   disaggregationStrataJson: [DisaggregatedStratumInputType!]
   geoLocations: [OSMNameInputType!]
   oldId: String
@@ -1728,7 +1720,7 @@ input NestedFigureUpdateInputType {
   modifiedAt: DateTime
   createdBy: ID
   lastModifiedBy: ID
-  disaggregationAgeJson: [DisaggregatedAgeInputType!]
+  disaggregationAge: [DisaggregatedAgeInputType!]
   disaggregationStrataJson: [DisaggregatedStratumInputType!]
   geoLocations: [OSMNameInputType!]
   oldId: String
@@ -1979,6 +1971,12 @@ type OsvSubTypeList {
   pageSize: Int
 }
 
+enum PARKING_LOT_SOURCE {
+  IDETECT
+  HAZARD_MONITORING
+  ACLED
+}
+
 enum PARKING_LOT_STATUS {
   TO_BE_REVIEWED
   REVIEWED
@@ -2031,7 +2029,7 @@ input ParkedItemCreateInputType {
   url: String!
   status: PARKING_LOT_STATUS
   comments: String
-  source: String
+  source: PARKING_LOT_SOURCE
   sourceUuid: String
   metaData: JSONString
   country: ID
@@ -2043,12 +2041,6 @@ type ParkedItemListType {
   totalCount: Int
   page: Int
   pageSize: Int
-}
-
-enum ParkedItemSource {
-  A_0
-  A_1
-  A_2
 }
 
 type ParkedItemType {
@@ -2064,7 +2056,7 @@ type ParkedItemType {
   assignedTo: UserType
   status: PARKING_LOT_STATUS
   comments: String
-  source: ParkedItemSource
+  source: PARKING_LOT_SOURCE
   sourceUuid: String
   metaData: JSONString
   entry: EntryType
@@ -2078,7 +2070,7 @@ input ParkedItemUpdateInputType {
   url: String
   status: PARKING_LOT_STATUS
   comments: String
-  source: String
+  source: PARKING_LOT_SOURCE
   sourceUuid: String
   metaData: JSONString
   country: ID
@@ -2149,6 +2141,8 @@ type Query {
   entryList(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventGlideNumber: [String!], filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureSexTypes: [String!], filterFigureTerms: [ID!], filterEventDisasterCategories: [ID!], filterEventDisasterSubCategories: [ID!], filterEventDisasterSubTypes: [ID!], filterEventDisasterTypes: [ID!], filterEventViolenceSubTypes: [ID!], filterEntryHasReviewComments: Boolean, filterEventOsvSubTypes: [ID!], report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
   disaggregatedAgeCategory(id: ID!): DisaggregatedAgeCategoryType
   disaggregatedAgeCategoryList(name_Unaccent_Icontains: String, ordering: String): DisaggregatedAgeCategoryListType
+  disaggregatedAge(id: ID!): DisaggregatedAgeType
+  disaggregatedAgeList(sex_In: String, ordering: String): DisaggregatedAgeListType
   triggerList(name_Unaccent_Icontains: String, ordering: String): TriggerListType
   subTriggerList(name_Unaccent_Icontains: String, ordering: String): TriggerSubObjectListType
   violenceList(id_Iexact: Float, ordering: String): ViolenceListType
@@ -2374,7 +2368,7 @@ type ReportType {
   disaggregationIndigenousPeople: Int
   disaggregationSexMale: Int
   disaggregationSexFemale: Int
-  disaggregationAgeJson: [JSONString!]
+  disaggregationAge: [DisaggregatedAgeType!]!
   disaggregationStrataJson: [JSONString!]
   disaggregationConflict: Int
   disaggregationConflictPolitical: Int
@@ -2583,8 +2577,7 @@ input ReviewInputType {
   versionId: String
   field: String!
   value: ENTRY_REVIEW_STATUS
-  ageId: String
-  strataId: String
+  age: String
   entry: ID!
   figure: ID
   geoLocation: ID
@@ -2610,8 +2603,7 @@ type ReviewType {
   figure: FigureType
   field: String!
   value: ENTRY_REVIEW_STATUS!
-  ageId: String
-  strataId: String
+  age: String
   geoLocation: OSMNameType
   comment: ReviewCommentType
 }

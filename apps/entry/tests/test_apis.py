@@ -334,19 +334,19 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "startDate": "2020-10-10",
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
-                "disaggregationAgeJson": [
+                "disaggregationAge": [
                     # invalid: category and sex is duplicated
                     {
                         "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
                         "category": DisaggregatedAgeCategory.objects.first().id,
-                        "sex": 'MALE',
+                        "sex": "MALE",
                         "value": 5
                     },
                     {
                         "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                         "category": DisaggregatedAgeCategory.objects.first().id,
-                        "sex": 'MALE',
-                        "value": 3
+                        "sex": "FEMALE",
+                        "value": 6
                     }
                 ]
             }
@@ -362,7 +362,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertFalse(content['data']['createEntry']['ok'], content)
-        self.assertIn('sex', json.dumps(content['data']['createEntry']['errors']))
+        self.assertIn('disaggregationAge', json.dumps(content['data']['createEntry']['errors']))
 
     def test_invalid_figures_household_size(self):
         figures = [
@@ -420,11 +420,13 @@ class TestEntryUpdate(HelixGraphQLTestCase):
               figures {
                 id
                 createdAt
-                disaggregationAgeJson {
-                  uuid
-                  category {
-                    id
-                    name
+                disaggregationAge {
+                 results {
+                      uuid
+                      category {
+                        id
+                        name
+                      }
                   }
                 }
               }
@@ -499,16 +501,18 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-09-09",
                 "includeIdu": False,
-                "disaggregationAgeJson": [
+                "disaggregationAge": [
                     {
                         "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
                         "category": DisaggregatedAgeCategory.objects.first().id,
-                        "value": 3
+                        "value": 3,
+                        "sex": "MALE",
                     },
                     {
                         "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                         "category": DisaggregatedAgeCategory.objects.last().id,
-                        "value": 3
+                        "value": 3,
+                        "sex": "FEMALE",
                     }
                 ],
                 "disaggregationStrataJson": [
@@ -529,16 +533,18 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-09-09",
                 "includeIdu": False,
-                "disaggregationAgeJson": [
+                "disaggregationAge": [
                     {
                         "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
                         "category": DisaggregatedAgeCategory.objects.first().id,
-                        "value": 3
+                        "value": 3,
+                        "sex": "MALE",
                     },
                     {
                         "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                         "category": DisaggregatedAgeCategory.objects.last().id,
-                        "value": 3
+                        "value": 3,
+                        "sex": "FEMALE",
                     }
                 ],
                 "disaggregationStrataJson": [
