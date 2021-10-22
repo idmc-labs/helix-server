@@ -106,26 +106,6 @@ class ReportSignoffSerializer(serializers.Serializer):
         return report
 
 
-def is_first_day(date):
-    if not date:
-        return False
-    return date.month == 1 and date.day == 1
-
-
-def is_last_day(date):
-    if not date:
-        return False
-    return date.month == 12 and date.day == 31
-
-
-def is_year_equal(foo, bar):
-    if not foo:
-        return False
-    if not bar:
-        return False
-    return foo.year == bar.year
-
-
 class ReportGenerationSerializer(MetaInformationSerializerMixin,
                                  serializers.ModelSerializer):
     class Meta:
@@ -133,13 +113,6 @@ class ReportGenerationSerializer(MetaInformationSerializerMixin,
         fields = ['report']
 
     def validate_report(self, report):
-        if (
-            report.generated_from == Report.REPORT_TYPE.MASTERFACT or
-            not is_first_day(report.filter_figure_start_after) or
-            not is_last_day(report.filter_figure_end_before) or
-            not is_year_equal(report.filter_figure_start_after, report.filter_figure_end_before)
-        ):
-            raise serializers.ValidationError(gettext('Cannot start generation for non-grid reports'))
         if ReportGeneration.objects.filter(
             report=report
         ).count() == settings.GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']:
