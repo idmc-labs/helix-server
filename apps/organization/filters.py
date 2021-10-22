@@ -1,18 +1,18 @@
 import django_filters
 from apps.organization.models import Organization
-from utils.filters import NameFilterMixin, IDListFilter
+from utils.filters import NameFilterMixin, IDListFilter, StringListFilter
 
 
 class OrganizationFilter(NameFilterMixin,
                          django_filters.FilterSet):
-    name = django_filters.CharFilter(method='_filter_name')
     countries = IDListFilter(method='filter_countries')
-    categories = IDListFilter(method='filter_categories')
+    categories = StringListFilter(method='filter_categories')
     organization_types = IDListFilter(method='filter_organization_types')
 
     class Meta:
         model = Organization
         fields = {
+            'name': ['unaccent__icontains'],
             'short_name': ['unaccent__icontains'],
         }
 
@@ -24,7 +24,8 @@ class OrganizationFilter(NameFilterMixin,
     def filter_categories(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(category__in=value).distinct()
+        categories = [Organization.ORGANIZATION_CATEGORY.get(item).value for item in value]
+        return qs.filter(category__in=categories)
 
     def filter_organization_types(self, qs, name, value):
         if not value:
@@ -33,4 +34,4 @@ class OrganizationFilter(NameFilterMixin,
 
     @property
     def qs(self):
-        return super().qs.select_related('countries', 'category', 'organization_kind')
+        return super().qs.select_related('organization_kind').prefetch_related("countries")
