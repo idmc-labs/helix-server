@@ -285,32 +285,9 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     @property
     def qs(self):
-        '''
         return super().qs.annotate(
             **Entry._total_figure_disaggregation_subquery(),
-            total=models.Count('reviewing'),
-            total_signed_off=models.Count(
-                'reviewing',
-                filter=Q(reviewing__status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF),
-                distinct=True
-            ),
-            total_review_completed=models.Count(
-                'reviewing', filter=Q(reviewing__status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED),
-                distinct=True
-            )
-        ).annotate(
-            progress=models.Case(
-                models.When(total__gt=0, then=(
-                    models.F('total_signed_off') + models.F('total_review_completed')) / models.F('total')
-                ),
-                default=0,
-                output_field=models.FloatField()
-            )
-        ).prefetch_related('review_comments', 'reviewing').distinct()
-        '''
-        # FIXME: using this prefetch_related results in calling count after a
-        # subquery. This has a severe performance penalty
-        return super().qs.prefetch_related('review_comments').distinct()
+        ).prefetch_related('review_comments').distinct()
 
 
 class BaseFigureExtractionFilterSet(df.FilterSet):

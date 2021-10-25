@@ -205,17 +205,19 @@ class Country(models.Model):
         cls,
         figures=None,
         ignore_dates=False,
+        start_date=None,
+        end_date=None,
     ):
         '''
         returns the subqueries for figures sum annotations
         '''
         figures = figures or Figure.objects.all()
+        if start_date and end_date is None:
+            start_date = datetime(year=timezone.now().year, month=1, day=1)
+            end_date = datetime(year=timezone.now().year, month=12, day=31)
         if ignore_dates:
             start_date = None
             end_date = None
-        else:
-            start_date = datetime(year=timezone.now().year, month=1, day=1)
-            end_date = datetime(year=timezone.now().year, month=12, day=31)
         return {
             cls.ND_CONFLICT_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(

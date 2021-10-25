@@ -8,6 +8,7 @@ from apps.organization.enums import OrganizationCategoryTypeGrapheneEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
+from apps.organization.filters import OrganizationFilter
 
 
 class OrganizationType(DjangoObjectType):
@@ -23,10 +24,8 @@ class OrganizationType(DjangoObjectType):
 
 class OrganizationListType(CustomDjangoListObjectType):
     class Meta:
+        filterset_class = OrganizationFilter
         model = Organization
-        filter_fields = {
-            'name': ['unaccent__icontains']
-        }
 
 
 class OrganizationKindObjectType(DjangoObjectType):

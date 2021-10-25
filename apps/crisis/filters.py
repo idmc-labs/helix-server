@@ -4,6 +4,8 @@ from apps.crisis.models import Crisis
 from apps.report.models import Report
 from utils.filters import StringListFilter, NameFilterMixin, IDListFilter
 from django.db.models import Q, Count
+from apps.entry.models import EntryReviewer
+from django.db import models
 
 
 class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
@@ -66,5 +68,24 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
     def qs(self):
         return super().qs.annotate(
             **Crisis._total_figure_disaggregation_subquery(),
-            event_count=Count('events')
-        ).prefetch_related('events')
+            event_count=Count('events'),
+            total=models.Count('events__entries__reviewing'),
+            total_signed_off=models.Count(
+                'events__entries__reviewing',
+                filter=Q(events__entries__reviewing__status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF),
+                distinct=True
+            ),
+            total_review_completed=models.Count(
+                'events__entries__reviewing', filter=Q(
+                    events__entries__reviewing__status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
+                ),
+                distinct=True
+            ),
+            progress=models.Case(
+                models.When(total__gt=0, then=(
+                    models.F('total_signed_off') + models.F('total_review_completed')) / models.F('total')
+                ),
+                default=None,
+                output_field=models.FloatField()
+            )
+        ).prefetch_related('events', 'events__entries', 'events__entries__reviewing')
