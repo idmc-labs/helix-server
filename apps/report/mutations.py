@@ -319,6 +319,37 @@ class ExportReports(graphene.Mutation):
         return ExportReports(errors=None, ok=True)
 
 
+class ExportReport(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(ReportType)
+
+    @staticmethod
+    def mutate(root, info, id):
+        from apps.contrib.models import ExcelDownload
+        try:
+            instance = Report.objects.get(id=id)
+        except Report.DoesNotExist:
+            return SignOffReport(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
+            ])
+        serializer = ExcelDownloadSerializer(
+            data=dict(
+                download_type=int(ExcelDownload.DOWNLOAD_TYPES.INDIVIDUAL_REPORT),
+                filters=dict(),
+                model_instance_id=instance.id
+            ),
+            context=dict(request=info.context.request)
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return ExportReports(errors=errors, ok=False)
+        serializer.save()
+        return ExportReports(errors=None, ok=True)
+
+
 class Mutation(object):
     create_report = CreateReport.Field()
     update_report = UpdateReport.Field()
@@ -334,3 +365,4 @@ class Mutation(object):
     # export
     export_report_figures = ExportReportFigures.Field()
     export_reports = ExportReports.Field()
+    export_report = ExportReport.Field()

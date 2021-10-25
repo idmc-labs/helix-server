@@ -106,6 +106,8 @@ class SourcePreviewSerializer(MetaInformationSerializerMixin,
 
 class ExcelDownloadSerializer(MetaInformationSerializerMixin,
                               serializers.ModelSerializer):
+    model_instance_id = serializers.IntegerField(required=False)
+
     class Meta:
         model = ExcelDownload
         fields = '__all__'
@@ -128,8 +130,9 @@ class ExcelDownloadSerializer(MetaInformationSerializerMixin,
         return attrs
 
     def create(self, validated_data):
+        model_instance_id = validated_data.pop("model_instance_id", None)
         instance = super().create(validated_data)
-        instance.trigger_excel_generation(self.context['request'])
+        instance.trigger_excel_generation(self.context['request'], model_instance_id=model_instance_id)
         return instance
 
 

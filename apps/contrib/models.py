@@ -196,6 +196,7 @@ class ExcelDownload(MetaInformationAbstractModel):
         CONTACT = 6
         REPORT = 7
         ACTOR = 8
+        INDIVIDUAL_REPORT = 9
 
     started_at = models.DateTimeField(
         verbose_name=_('Started at'),
@@ -244,6 +245,7 @@ class ExcelDownload(MetaInformationAbstractModel):
             self.DOWNLOAD_TYPES.CONTACT: apps.get_model('contact', 'Contact'),
             self.DOWNLOAD_TYPES.REPORT: apps.get_model('report', 'Report'),
             self.DOWNLOAD_TYPES.ACTOR: apps.get_model('event', 'Actor'),
+            self.DOWNLOAD_TYPES.INDIVIDUAL_REPORT: apps.get_model('report', 'Report'),
         }
         model = mapper.get(self.download_type)
         if not model:
@@ -252,7 +254,7 @@ class ExcelDownload(MetaInformationAbstractModel):
             raise AttributeError(f'Excel sheet data getter missing for {model.name}')
         return model.get_excel_sheets_data
 
-    def trigger_excel_generation(self, request):
+    def trigger_excel_generation(self, request, model_instance_id=None):
         '''
         This should trigger the excel file generation based on the
         given request. Filters are preserved within the instance.
@@ -260,5 +262,5 @@ class ExcelDownload(MetaInformationAbstractModel):
         Is called by serializer.create method
         '''
         transaction.on_commit(lambda: generate_excel_file.delay(
-            self.pk, request.user.id
+            self.pk, request.user.id, model_instance_id=model_instance_id
         ))
