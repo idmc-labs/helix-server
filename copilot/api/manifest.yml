@@ -55,7 +55,7 @@ environments:
       DJANGO_SECRET_KEY: /copilot/helix/nightly/secrets/DJANGO_SECRET_KEY
       FRONTEND_BASE_URL: /copilot/helix/nightly/secrets/FRONTEND_BASE_URL
       HCAPTCHA_SECRET: /copilot/helix/nightly/secrets/HCAPTCHA_SECRET
-      SENTRY_DNS: /copilot/helix/nightly/secrets/SENTRY_DNS
+      SENTRY_DSN: /copilot/helix/nightly/secrets/SENTRY_DSN
     variables:
       HELIX_ENVIRONMENT: nightly
   alpha:
@@ -68,6 +68,6 @@ environments:
       DJANGO_SECRET_KEY: /copilot/helix/alpha/secrets/DJANGO_SECRET_KEY
       FRONTEND_BASE_URL: /copilot/helix/alpha/secrets/FRONTEND_BASE_URL
       HCAPTCHA_SECRET: /copilot/helix/alpha/secrets/HCAPTCHA_SECRET
-      SENTRY_DNS: /copilot/helix/alpha/secrets/SENTRY_DNS
+      SENTRY_DSN: /copilot/helix/alpha/secrets/SENTRY_DSN
     variables:
       HELIX_ENVIRONMENT: alpha

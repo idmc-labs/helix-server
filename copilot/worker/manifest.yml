@@ -42,7 +42,7 @@ environments:
     secrets:
       DJANGO_SECRET_KEY: /copilot/helix/nightly/secrets/DJANGO_SECRET_KEY
       HCAPTCHA_SECRET: /copilot/helix/nightly/secrets/HCAPTCHA_SECRET
-      SENTRY_DNS: /copilot/helix/nightly/secrets/SENTRY_DNS
+      SENTRY_DSN: /copilot/helix/nightly/secrets/SENTRY_DSN
       HELIXDBCLUSTER_SECRET: helix-nightly-auroraSecret
     variables:
       HELIX_ENVIRONMENT: nightly
@@ -54,7 +54,7 @@ environments:
     secrets:
       DJANGO_SECRET_KEY: /copilot/helix/alpha/secrets/DJANGO_SECRET_KEY
       HCAPTCHA_SECRET: /copilot/helix/alpha/secrets/HCAPTCHA_SECRET
-      SENTRY_DNS: /copilot/helix/alpha/secrets/SENTRY_DNS
+      SENTRY_DSN: /copilot/helix/alpha/secrets/SENTRY_DSN
       HELIXDBCLUSTER_SECRET: helix-alpha-auroraSecret
     variables:
       HELIX_ENVIRONMENT: alpha
