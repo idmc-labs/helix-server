@@ -103,7 +103,6 @@ class EventSerializer(MetaInformationSerializerMixin,
             return errors
 
         start_date = attrs.get('start_date', getattr(self.instance, 'start_date', None))
-        end_date = attrs.get('end_date', getattr(self.instance, 'end_date', None))
 
         _ = Figure.objects.filter(
             entry__event=self.instance,
@@ -123,12 +122,8 @@ class EventSerializer(MetaInformationSerializerMixin,
             ),
         )
         min_start_date = _['min_date']
-        max_end_date = _['max_date']
-
         if start_date and (min_start_date and min_start_date < start_date):
             errors['start_date'] = gettext('Earliest start date of one of the figures is %s.') % min_start_date
-        if end_date and (max_end_date and max_end_date > end_date):
-            errors['end_date'] = gettext('Farthest end date of one of the figures is %s.') % max_end_date
         return errors
 
     def validate_empty_countries(self, attrs):
