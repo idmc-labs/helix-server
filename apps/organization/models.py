@@ -27,13 +27,15 @@ class Organization(MetaInformationArchiveAbstractModel,
         REGIONAL = 1
         INTERNATIONAL = 2
         NATIONAL = 3
-        OTHER = 4
+        LOCAL = 4
+        OTHER = 5
 
         __labels__ = {
             UNKNOWN: _("Unknown"),
             REGIONAL: _("Regional"),
             INTERNATIONAL: _("International"),
             NATIONAL: _("National"),
+            LOCAL: _("Local"),
             OTHER: _("Other"),
         }
     name = models.CharField(verbose_name=_('Title'), max_length=512)

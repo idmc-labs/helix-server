@@ -328,8 +328,8 @@ type ContextualUpdateType {
   preview: SourcePreviewType
   document: AttachmentType
   articleTitle: String!
-  sources(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!], ordering: String): OrganizationListType
-  publishers(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!], ordering: String): OrganizationListType
+  sources(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], ordering: String): OrganizationListType
+  publishers(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], ordering: String): OrganizationListType
   publishDate: DateTime
   sourceExcerpt: String
   excerptIdu: String
@@ -1043,8 +1043,8 @@ type EntryType {
   document: AttachmentType
   documentUrl: String
   articleTitle: String!
-  sources(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!], ordering: String): OrganizationListType
-  publishers(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!], ordering: String): OrganizationListType
+  sources(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], ordering: String): OrganizationListType
+  publishers(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], ordering: String): OrganizationListType
   publishDate: Date!
   event: EventType!
   idmcAnalysis: String
@@ -1639,7 +1639,7 @@ type Mutation {
   createOrganizationKind(data: OrganizationKindCreateInputType!): CreateOrganizationKind
   updateOrganizationKind(data: OrganizationKindUpdateInputType!): UpdateOrganizationKind
   deleteOrganizationKind(id: ID!): DeleteOrganizationKind
-  exportOrganizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!]): ExportOrganizations
+  exportOrganizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!]): ExportOrganizations
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
   exportCountries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, year: Float): ExportCountries
@@ -1769,6 +1769,7 @@ enum ORGANIZATION_CATEGORY {
   REGIONAL
   INTERNATIONAL
   NATIONAL
+  LOCAL
   OTHER
 }
 
@@ -1891,7 +1892,7 @@ type OrganizationKindObjectType {
   versionId: String
   id: ID!
   name: String!
-  organizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!], page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
+  organizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
 }
 
 input OrganizationKindUpdateInputType {
@@ -2165,7 +2166,7 @@ type Query {
   monitoringSubRegion(id: ID!): MonitoringSubRegionType
   monitoringSubRegionList(id: Float, name: String, page: Int = 1, ordering: String, pageSize: Int): MonitoringSubRegionListType
   organization(id: ID!): OrganizationType
-  organizationList(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!], page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
+  organizationList(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
   organizationKind(id: ID!): OrganizationKindObjectType
   organizationKindList(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, name: String, page: Int = 1, ordering: String, pageSize: Int): OrganizationKindListType
   attachment(id: ID!): AttachmentType

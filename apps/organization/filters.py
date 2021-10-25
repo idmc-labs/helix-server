@@ -7,7 +7,7 @@ class OrganizationFilter(NameFilterMixin,
                          django_filters.FilterSet):
     countries = IDListFilter(method='filter_countries')
     categories = StringListFilter(method='filter_categories')
-    organization_types = IDListFilter(method='filter_organization_types')
+    organization_kinds = IDListFilter(method='filter_organization_kinds')
 
     class Meta:
         model = Organization
@@ -27,7 +27,7 @@ class OrganizationFilter(NameFilterMixin,
         categories = [Organization.ORGANIZATION_CATEGORY.get(item).value for item in value]
         return qs.filter(category__in=categories)
 
-    def filter_organization_types(self, qs, name, value):
+    def filter_organization_kinds(self, qs, name, value):
         if not value:
             return qs
         return qs.filter(organization_kind__in=value).distinct()

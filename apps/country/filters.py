@@ -1,5 +1,6 @@
 import django_filters
 from datetime import datetime
+from django.utils import timezone
 from django.db.models import (
     Value,
 )
@@ -109,11 +110,12 @@ class CountryFilter(django_filters.FilterSet):
 
     @property
     def qs(self):
-        year = self.data.get('year', datetime.now().year)
+        year = self.data.get('year', timezone.now().year)
         start_date, end_date = None, None
         if year:
-            start_date = datetime(year=int(year), month=1, day=1)
-            end_date = datetime(year=year, month=12, day=31)
+            year_int = int(year)
+            start_date = datetime(year=year_int, month=1, day=1)
+            end_date = datetime(year=year_int, month=12, day=31)
 
         qs = super().qs.annotate(
             **Country._total_figure_disaggregation_subquery(
