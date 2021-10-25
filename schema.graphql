@@ -328,8 +328,8 @@ type ContextualUpdateType {
   preview: SourcePreviewType
   document: AttachmentType
   articleTitle: String!
-  sources(name_Unaccent_Icontains: String, ordering: String): OrganizationListType
-  publishers(name_Unaccent_Icontains: String, ordering: String): OrganizationListType
+  sources(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!], ordering: String): OrganizationListType
+  publishers(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!], ordering: String): OrganizationListType
   publishDate: DateTime
   sourceExcerpt: String
   excerptIdu: String
@@ -1043,8 +1043,8 @@ type EntryType {
   document: AttachmentType
   documentUrl: String
   articleTitle: String!
-  sources(name_Unaccent_Icontains: String, ordering: String): OrganizationListType
-  publishers(name_Unaccent_Icontains: String, ordering: String): OrganizationListType
+  sources(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!], ordering: String): OrganizationListType
+  publishers(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!], ordering: String): OrganizationListType
   publishDate: Date!
   event: EventType!
   idmcAnalysis: String
@@ -1569,7 +1569,7 @@ type MonitoringSubRegionListType {
 type MonitoringSubRegionType {
   id: ID!
   name: String!
-  countries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, page: Int = 1, ordering: String, pageSize: Int): CountryListType
+  countries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, year: Float, page: Int = 1, ordering: String, pageSize: Int): CountryListType
   regionalCoordinator: PortfolioType
   monitoringExpertsCount: Int!
   unmonitoredCountriesCount: Int!
@@ -1639,10 +1639,10 @@ type Mutation {
   createOrganizationKind(data: OrganizationKindCreateInputType!): CreateOrganizationKind
   updateOrganizationKind(data: OrganizationKindUpdateInputType!): UpdateOrganizationKind
   deleteOrganizationKind(id: ID!): DeleteOrganizationKind
-  exportOrganizations(name: String): ExportOrganizations
+  exportOrganizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!]): ExportOrganizations
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
-  exportCountries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String): ExportCountries
+  exportCountries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, year: Float): ExportCountries
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
   createContact(data: ContactCreateInputType!): CreateContact
   updateContact(data: ContactUpdateInputType!): UpdateContact
@@ -1891,7 +1891,7 @@ type OrganizationKindObjectType {
   versionId: String
   id: ID!
   name: String!
-  organizations(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
+  organizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!], page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
 }
 
 input OrganizationKindUpdateInputType {
@@ -2158,14 +2158,14 @@ type Query {
   crisis(id: ID!): CrisisType
   crisisList(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], report: String, createdByIds: [ID!], page: Int = 1, ordering: String, pageSize: Int): CrisisListType
   country(id: ID!): CountryType
-  countryList(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, page: Int = 1, ordering: String, pageSize: Int): CountryListType
+  countryList(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, year: Float, page: Int = 1, ordering: String, pageSize: Int): CountryListType
   countryRegionList(id_Iexact: Float, name: String, ordering: String): CountryRegionListType
   geographicalGroupList(id_Iexact: Float, name: String, ordering: String): GeographicalGroupListType
   householdSize(country: ID!, year: Int!): CountryHouseholdSizeType
   monitoringSubRegion(id: ID!): MonitoringSubRegionType
   monitoringSubRegionList(id: Float, name: String, page: Int = 1, ordering: String, pageSize: Int): MonitoringSubRegionListType
   organization(id: ID!): OrganizationType
-  organizationList(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
+  organizationList(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationTypes: [ID!], page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
   organizationKind(id: ID!): OrganizationKindObjectType
   organizationKindList(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, name: String, page: Int = 1, ordering: String, pageSize: Int): OrganizationKindListType
   attachment(id: ID!): AttachmentType
