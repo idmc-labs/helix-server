@@ -109,7 +109,7 @@ class CountryFilter(django_filters.FilterSet):
 
     @property
     def qs(self):
-        year = int(self.data.get('year', None))
+        year = self.data.get('year', datetime.now().year)
         start_date, end_date = None, None
         if year:
             start_date = datetime(year=int(year), month=1, day=1)
