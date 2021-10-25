@@ -42,7 +42,7 @@ from apps.extraction.models import QueryAbstractModel
 from apps.report.utils import excel_column_key
 from apps.report.tasks import trigger_report_generation
 from utils.fields import CachedFileField
-from utils.common import is_grid_or_ymu_report
+from utils.common import is_grid_or_myu_report
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -576,7 +576,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             )),
         )
 
-        if is_grid_or_ymu_report(self.filter_figure_start_after, self.filter_figure_end_before) and self.include_history:
+        if is_grid_or_myu_report(self.filter_figure_start_after, self.filter_figure_end_before) and self.include_history:
             data = data.annotate(
                 flow_total_last_year=Subquery(
                     Figure.objects.filter(
@@ -707,7 +707,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             )),
         )
 
-        if is_grid_or_ymu_report(self.filter_figure_start_after, self.filter_figure_end_before) and self.include_history:
+        if is_grid_or_myu_report(self.filter_figure_start_after, self.filter_figure_end_before) and self.include_history:
             data = data.annotate(
                 flow_total_last_year=Subquery(
                     Figure.objects.filter(
@@ -1130,7 +1130,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             )),
         )
 
-        if is_grid_or_ymu_report(self.filter_figure_start_after, self.filter_figure_end_before) and self.include_history:
+        if is_grid_or_myu_report(self.filter_figure_start_after, self.filter_figure_end_before) and self.include_history:
             data = data.annotate(
                 flow_total_last_year=Subquery(
                     Figure.objects.filter(
@@ -1219,7 +1219,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             )),
         )
 
-        if is_grid_or_ymu_report(self.filter_figure_start_after, self.filter_figure_end_before) and self.include_history:
+        if is_grid_or_myu_report(self.filter_figure_start_after, self.filter_figure_end_before) and self.include_history:
             data = data.annotate(
                 flow_total_last_year=Subquery(
                     Figure.objects.filter(

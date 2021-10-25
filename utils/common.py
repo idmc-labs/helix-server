@@ -27,12 +27,12 @@ def add_clone_prefix(sentence):
     return f"Clone: {sentence}"
 
 
-def is_grid_or_ymu_report(start_date, end_date):
+def is_grid_or_myu_report(start_date, end_date):
 
     def is_last_day_of_year(date):
-        if date.month == 12:
-            return date.replace(day=31)
-        return date.replace(month=date.month + 1, day=1) - datetime.timedelta(days=1)
+        if not date:
+            return False
+        return date.month == 12 and date.day == 31
 
     def is_first_day_of_year(date):
         if not date:
@@ -47,9 +47,9 @@ def is_grid_or_ymu_report(start_date, end_date):
         return start_date.year == end_date.year
 
     def is_last_day_of_sixth_month_in_year(date):
-        if date.month == 6:
-            return date.replace(day=30)
-        return date.replace(month=date.month + 1, day=1) - datetime.timedelta(days=1)
+        if not date:
+            return False
+        return date.month == 6 and date.day == 30
 
     is_grid_report = (is_first_day_of_year(
         start_date) and is_last_day_of_year(end_date) and is_year_equal(start_date, end_date)
