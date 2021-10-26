@@ -50,6 +50,16 @@ def get_excel_sheet_content(headers, data, **kwargs):
     return wb
 
 
+def save_download_file(download, workbook, path):
+    with NamedTemporaryFile(dir='/tmp') as tmp:
+        workbook.save(tmp.name)
+        workbook.close()
+        file = File(tmp)
+        download.file_size = file.size
+        download.file.save(path, file)
+        del workbook
+
+
 @celery_app.task(time_limit=settings.EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT)
 def generate_excel_file(download_id, user_id, model_instance_id=None):
     '''
@@ -77,24 +87,12 @@ def generate_excel_file(download_id, user_id, model_instance_id=None):
             report = Report.objects.get(id=model_instance_id)
             excel_sheet_data = report_get_excel_sheets_data(report).items()
             workbook = report_generate_excel_file(excel_sheet_data)
-            with NamedTemporaryFile(dir='/tmp') as tmp:
-                workbook.save(tmp.name)
-                workbook.close()
-                file = File(tmp)
-                download.file_size = file.size
-                download.file.save(path, file)
-                del workbook
+            save_download_file(download, workbook, path)
         else:
             sheet_data_getter = download.get_model_sheet_data_getter()
             sheet_data = sheet_data_getter(user_id=user_id, filters=download.filters)
             workbook = get_excel_sheet_content(**sheet_data)
-            with NamedTemporaryFile(dir='/tmp') as tmp:
-                workbook.save(tmp.name)
-                workbook.close()
-                file = File(tmp)
-                download.file_size = file.size
-                download.file.save(path, file)
-                del workbook
+            save_download_file(download, workbook, path)
         download.status = ExcelDownload.EXCEL_GENERATION_STATUS.COMPLETED
         download.completed_at = timezone.now()
         download.save()
