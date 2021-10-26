@@ -25,3 +25,37 @@ def add_clone_prefix(sentence):
         return f"Clone 2: {match.group(1)}"
 
     return f"Clone: {sentence}"
+
+
+def is_grid_or_myu_report(start_date, end_date):
+
+    def is_last_day_of_year(date):
+        if not date:
+            return False
+        return date.month == 12 and date.day == 31
+
+    def is_first_day_of_year(date):
+        if not date:
+            return False
+        return date.month == 1 and date.day == 1
+
+    def is_year_equal(start_date, end_date):
+        if not start_date:
+            return False
+        if not end_date:
+            return False
+        return start_date.year == end_date.year
+
+    def is_last_day_of_sixth_month_in_year(date):
+        if not date:
+            return False
+        return date.month == 6 and date.day == 30
+
+    is_grid_report = (is_first_day_of_year(
+        start_date) and is_last_day_of_year(end_date) and is_year_equal(start_date, end_date)
+    )
+    is_ymu_report = (
+        is_first_day_of_year(start_date) and is_last_day_of_sixth_month_in_year(end_date) and
+        is_year_equal(start_date, end_date)
+    )
+    return is_ymu_report or is_grid_report

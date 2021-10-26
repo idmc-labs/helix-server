@@ -705,6 +705,7 @@ enum DOWNLOAD_TYPES {
   CONTACT
   REPORT
   ACTOR
+  INDIVIDUAL_REPORT
 }
 
 scalar Date
@@ -1255,6 +1256,12 @@ type ExportOrganizations {
   ok: Boolean
 }
 
+type ExportReport {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ReportType
+}
+
 type ExportReportFigures {
   errors: [GenericScalar!]
   ok: Boolean
@@ -1604,6 +1611,7 @@ type Mutation {
   signOffReport(id: ID!, includeHistory: Boolean): SignOffReport
   exportReportFigures(report: ID!): ExportReportFigures
   exportReports(name_Unaccent_Icontains: String, filterFigureCountries: [ID!], reviewStatus: [String!], startDateAfter: Date, endDateBefore: Date, isPublic: Boolean): ExportReports
+  exportReport(id: ID!): ExportReport
   createExtraction(data: CreateExtractInputType!): CreateExtraction
   updateExtraction(data: UpdateExtractInputType!): UpdateExtraction
   deleteExtraction(id: ID!): DeleteExtraction

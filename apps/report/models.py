@@ -1,23 +1,15 @@
 from collections import OrderedDict
-from datetime import timedelta
 from functools import cached_property
 import logging
 from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.db import models, transaction
-from django.contrib.postgres.aggregates import StringAgg
-from django.db.models.functions import Extract, Coalesce
 from django.db.models import (
     Sum,
-    Count,
     Q,
-    F,
     Exists,
-    Subquery,
     OuterRef,
-    Min,
-    Max,
     Value,
 )
 from django.utils.translation import gettext_lazy as _
@@ -26,9 +18,7 @@ from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel
 from apps.country.models import (
-    CountryPopulation,
     Country,
-    CountryRegion,
 )
 from apps.crisis.models import Crisis
 from apps.entry.models import (
@@ -39,9 +29,20 @@ from apps.entry.models import (
 )
 from apps.event.models import Event
 from apps.extraction.models import QueryAbstractModel
-from apps.report.utils import excel_column_key
 from apps.report.tasks import trigger_report_generation
 from utils.fields import CachedFileField
+from apps.report.utils import (
+    report_global_numbers,
+    report_stat_flow_country,
+    report_stat_flow_region,
+    report_stat_conflict_country,
+    report_stat_conflict_region,
+    report_stat_conflict_typology,
+    report_disaster_event,
+    report_disaster_country,
+    report_disaster_region,
+)
+
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -213,10 +214,6 @@ class Report(MetaInformationArchiveAbstractModel,
             'formulae': None,
             'transformer': transformer,
         }
-
-    @property
-    def _ends_within_start_year(self):
-        return self.filter_figure_end_before.year == self.filter_figure_start_after.year
 
     @property
     def is_legacy(self):
@@ -435,830 +432,39 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
 
     @property
     def stat_flow_country(self):
-        headers = {
-            'id': 'ID',
-            'iso3': 'ISO3',
-            'name': 'Country',
-            'region__name': 'Region',
-            Country.ND_CONFLICT_ANNOTATE: f'Conflict ND {self.report.name}',
-            Country.ND_DISASTER_ANNOTATE: f'Disaster ND {self.report.name}',
-            'total': f'Total ND {self.report.name}'
-        }
-
-        def get_key(header):
-            return excel_column_key(headers, header)
-
-        formulae = {}
-        data = Country.objects.filter(
-            id__in=self.report.report_figures.values('country')
-        ).annotate(
-            **Country._total_figure_disaggregation_subquery(
-                self.report.report_figures,
-                ignore_dates=True,
-            )
-        ).annotate(
-            total=Coalesce(
-                F(Country.ND_CONFLICT_ANNOTATE), 0
-            ) + Coalesce(
-                F(Country.ND_DISASTER_ANNOTATE), 0
-            )
-        ).order_by('id').values(
-            *list(headers.keys())
-        )
-        return {
-            'headers': headers,
-            'data': data,
-            'formulae': formulae,
-        }
+        return report_stat_flow_country(self.report)
 
     @cached_property
     def stat_flow_region(self):
-        headers = {
-            'id': 'ID',
-            'name': 'Region',
-            CountryRegion.ND_CONFLICT_ANNOTATE: f'Conflict ND {self.report.name}',
-            CountryRegion.ND_DISASTER_ANNOTATE: f'Disaster ND {self.report.name}',
-            'total': f'Total ND {self.report.name}',
-        }
-
-        # NOTE: {{ }} turns into { } after the first .format
-        formulae = {}
-        data = CountryRegion.objects.filter(
-            id__in=self.report.report_figures.values('country__region')
-        ).annotate(
-            **CountryRegion._total_figure_disaggregation_subquery(
-                self.report.report_figures,
-                ignore_dates=True,
-            )
-        ).annotate(
-            total=Coalesce(
-                F(CountryRegion.ND_CONFLICT_ANNOTATE), 0
-            ) + Coalesce(
-                F(CountryRegion.ND_DISASTER_ANNOTATE), 0
-            )
-        ).values(
-            *list(headers.keys())
-        )
-        return {
-            'headers': headers,
-            'data': data,
-            'formulae': formulae,
-        }
+        return report_stat_flow_region(self.report)
 
     @cached_property
     def stat_conflict_country(self):
-        headers = OrderedDict(dict(
-            iso3='ISO3',
-            name='Country',
-            country_population='Population',
-            flow_total=f'ND {self.report.name}',
-            stock_total=f'IDPs {self.report.name}',
-            flow_total_last_year='ND Last Year',
-            stock_total_last_year='IDPs Last Year',
-            flow_historical_average='ND Historical Average',
-            stock_historical_average='IDPs Historical Average',
-            # provisional and returns
-            # historical average for flow an stock NOTE: coming from different db
-        ))
-
-        def get_key(header):
-            return excel_column_key(headers, header)
-
-        # NOTE: {{ }} turns into { } after the first .format
-        formulae = {
-            'ND per 100k population': EXCEL_FORMULAE['per_100k'].format(
-                key1=get_key('flow_total'), key2=get_key('country_population')
-            ),
-            'ND percent variation wrt last year':
-                EXCEL_FORMULAE['percent_variation'].format(
-                key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
-            ),
-            'ND percent variation wrt average':
-                EXCEL_FORMULAE['percent_variation'].format(
-                key1=get_key('flow_total'), key2=get_key('flow_historical_average')
-            ),
-            'IDPs per 100k population': EXCEL_FORMULAE['per_100k'].format(
-                key1=get_key('stock_total'), key2=get_key('country_population')
-            ),
-            'IDPs percent variation wrt last year':
-                EXCEL_FORMULAE['percent_variation'].format(
-                key1=get_key('stock_total'), key2=get_key('stock_total_last_year')
-            ),
-            'IDPs percent variation wrt average':
-                EXCEL_FORMULAE['percent_variation'].format(
-                key1=get_key('stock_total'), key2=get_key('stock_historical_average')
-            ),
-        }
-        global_filter = dict(
-            role=Figure.ROLE.RECOMMENDED,
-            entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT
-        )
-
-        data = self.report.report_figures.values('country').order_by().annotate(
-            country_population=Subquery(
-                CountryPopulation.objects.filter(
-                    year=int(self.report.filter_figure_start_after.year),
-                    country=OuterRef('country'),
-                ).values('population')
-            ),
-            iso3=F('country__iso3'),
-            name=F('country__name'),
-            flow_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.flow_new_displacement_id(),
-                **global_filter
-            )),
-            stock_total=Sum('total_figures', filter=Q(
-                Q(
-                    end_date__isnull=True,
-                ) | Q(
-                    end_date__isnull=False,
-                    end_date__gte=self.report.filter_figure_end_before or timezone.now().date(),
-                ),
-                category=FigureCategory.stock_idp_id(),
-                **global_filter
-            )),
-        )
-
-        if self.report._ends_within_start_year and self.include_history:
-            data = data.annotate(
-                flow_total_last_year=Subquery(
-                    Figure.objects.filter(
-                        start_date__gte=self.report.filter_figure_start_after - timedelta(days=365),
-                        end_date__lte=self.report.filter_figure_end_before - timedelta(days=365),
-                        country=OuterRef('country'),
-                        category=FigureCategory.flow_new_displacement_id(),
-                        **global_filter
-                    ).annotate(
-                        _total=Sum('total_figures')
-                    ).values('_total').annotate(total=F('_total')).values('total')
-                ),
-                flow_historical_average=Subquery(
-                    Figure.objects.filter(
-                        start_date__lt=self.report.filter_figure_start_after,
-                        # only consider the figures in the given month range
-                        start_date__month__gte=self.report.filter_figure_start_after.month,
-                        end_date__month__lte=self.report.filter_figure_end_before.month,
-                        country=OuterRef('country'),
-                        category=FigureCategory.flow_new_displacement_id(),
-                        **global_filter
-                    ).annotate(
-                        min_year=Min(Extract('start_date', 'year')),
-                        max_year=Max(Extract('start_date', 'year')),
-                    ).annotate(
-                        _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
-                    ).values('_total').annotate(total=F('_total')).values('total')
-                ),
-                stock_total_last_year=Subquery(
-                    Figure.objects.filter(
-                        start_date__lte=self.report.filter_figure_end_before - timedelta(days=365),
-                        country=OuterRef('country'),
-                        category=FigureCategory.stock_idp_id(),
-                        **global_filter
-                    ).filter(
-                        Q(
-                            end_date__isnull=False,
-                            end_date__gte=self.report.filter_figure_end_before - timedelta(days=365)
-                        ) | Q(
-                            end_date__isnull=True
-                        ),
-                    ).annotate(
-                        _total=Sum('total_figures')
-                    ).values('_total').annotate(total=F('_total')).values('total')
-                ),
-                # TODO: we will need to handle each year separately for idp figures to get the average
-                stock_historical_average=Value('...', output_field=models.CharField()),
-            )
-        return {
-            'headers': headers,
-            'data': data,
-            'formulae': formulae,
-            'aggregation': None,
-        }
+        return report_stat_conflict_country(self.report, self.include_history)
 
     @cached_property
     def stat_conflict_region(self):
-        headers = OrderedDict(dict(
-            name='Region',
-            region_population='Population',
-            flow_total=f'ND {self.report.name}',
-            stock_total=f'IDPs {self.report.name}',
-            flow_total_last_year='ND Last Year',
-            stock_total_last_year='IDPs Last Year',
-            flow_historical_average='ND Historical Average',
-            stock_historical_average='IDPs Historical Average',
-            # provisional and returns
-        ))
-
-        def get_key(header):
-            return excel_column_key(headers, header)
-
-        # NOTE: {{ }} turns into { } after the first .format
-        formulae = OrderedDict({
-            'ND per 100k population': EXCEL_FORMULAE['per_100k'].format(
-                key1=get_key('flow_total'), key2=get_key('region_population')
-            ),
-            'ND percent variation wrt last year':
-                EXCEL_FORMULAE['percent_variation'].format(
-                key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
-            ),
-            'ND percent variation wrt average':
-                EXCEL_FORMULAE['percent_variation'].format(
-                key1=get_key('flow_total'), key2=get_key('flow_historical_average')
-            ),
-            'IDPs per 100k population': EXCEL_FORMULAE['per_100k'].format(
-                key1=get_key('stock_total'), key2=get_key('region_population')
-            ),
-            'IDPs percent variation wrt last year':
-                EXCEL_FORMULAE['percent_variation'].format(
-                key1=get_key('stock_total'), key2=get_key('stock_total_last_year')
-            ),
-            'IDPs percent variation wrt average':
-                EXCEL_FORMULAE['percent_variation'].format(
-                key1=get_key('stock_total'), key2=get_key('stock_historical_average')
-            ),
-        })
-        global_filter = dict(
-            role=Figure.ROLE.RECOMMENDED,
-            entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT
-        )
-
-        data = self.report.report_figures.annotate(
-            region=F('country__region')
-        ).values('region').order_by().annotate(
-            region_population=Subquery(
-                CountryPopulation.objects.filter(
-                    year=int(self.report.filter_figure_start_after.year),
-                    country__region=OuterRef('region'),
-                ).annotate(
-                    total_population=Sum('population'),
-                ).values('total_population')[:1]
-            ),
-            name=F('country__region__name'),
-            flow_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.flow_new_displacement_id(),
-                **global_filter
-            )),
-            stock_total=Sum('total_figures', filter=Q(
-                Q(
-                    end_date__isnull=True,
-                ) | Q(
-                    end_date__isnull=False,
-                    end_date__gte=self.report.filter_figure_end_before or timezone.now().date(),
-                ),
-                category=FigureCategory.stock_idp_id(),
-                **global_filter,
-            )),
-        )
-
-        if self.report._ends_within_start_year and self.include_history:
-            data = data.annotate(
-                flow_total_last_year=Subquery(
-                    Figure.objects.filter(
-                        start_date__gte=self.report.filter_figure_start_after - timedelta(days=365),
-                        end_date__lte=self.report.filter_figure_end_before - timedelta(days=365),
-                        country__region=OuterRef('region'),
-                        category=FigureCategory.flow_new_displacement_id(),
-                        **global_filter
-                    ).annotate(
-                        _total=Sum('total_figures')
-                    ).values('_total').annotate(total=F('_total')).values('total')
-                ),
-                flow_historical_average=Subquery(
-                    Figure.objects.filter(
-                        start_date__lt=self.report.filter_figure_start_after,
-                        # only consider the figures in the given month range
-                        start_date__month__gte=self.report.filter_figure_start_after.month,
-                        country__region=OuterRef('region'),
-                        category=FigureCategory.flow_new_displacement_id(),
-                        **global_filter
-                    ).annotate(
-                        min_year=Min(Extract('start_date', 'year')),
-                        max_year=Max(Extract('start_date', 'year')),
-                    ).annotate(
-                        _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
-                    ).values('_total').annotate(total=F('_total')).values('total')
-                ),
-                stock_total_last_year=Subquery(
-                    Figure.objects.filter(
-                        start_date__lte=self.report.filter_figure_end_before - timedelta(days=365),
-                        country__region=OuterRef('region'),
-                        category=FigureCategory.stock_idp_id(),
-                        **global_filter
-                    ).filter(
-                        Q(
-                            end_date__isnull=False,
-                            end_date__gte=self.report.filter_figure_end_before - timedelta(days=365)
-                        ) | Q(
-                            end_date__isnull=True
-                        ),
-                    ).annotate(
-                        _total=Sum('total_figures')
-                    ).values('_total').annotate(total=F('_total')).values('total')
-                ),
-                # TODO: stock historical average must be pre-calculated for each year
-                stock_historical_average=Value('...', output_field=models.CharField()),
-            )
-        return {
-            'headers': headers,
-            'data': data,
-            'formulae': formulae,
-            'aggregation': None,
-        }
+        return report_stat_conflict_region(self.report, self.include_history)
 
     @cached_property
     def stat_conflict_typology(self):
-        headers = OrderedDict(dict(
-            iso3='ISO3',
-            name='IDMC Short Name',
-            typology='Conflict Typology',
-            total='Figure',
-        ))
-        filtered_report_figures = self.report.report_figures.filter(
-            role=Figure.ROLE.RECOMMENDED,
-            entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
-            category=FigureCategory.flow_new_displacement_id(),
-        ).values('country').order_by()
-
-        data = filtered_report_figures.filter(disaggregation_conflict__gt=0).annotate(
-            name=F('country__name'),
-            iso3=F('country__iso3'),
-            total=Sum('disaggregation_conflict', filter=Q(disaggregation_conflict__gt=0)),
-            typology=models.Value('Armed Conflict', output_field=models.CharField())
-        ).values('name', 'iso3', 'total', 'typology').union(
-            filtered_report_figures.filter(disaggregation_conflict_political__gt=0).annotate(
-                name=F('country__name'),
-                iso3=F('country__iso3'),
-                total=Sum(
-                    'disaggregation_conflict_political',
-                    filter=Q(disaggregation_conflict_political__gt=0)
-                ),
-                typology=models.Value('Violence - Political', output_field=models.CharField())
-            ).values('name', 'iso3', 'total', 'typology'),
-            filtered_report_figures.filter(disaggregation_conflict_criminal__gt=0).annotate(
-                name=F('country__name'),
-                iso3=F('country__iso3'),
-                total=Sum(
-                    'disaggregation_conflict_criminal',
-                    filter=Q(disaggregation_conflict_criminal__gt=0)
-                ),
-                typology=models.Value('Violence - Criminal', output_field=models.CharField())
-            ).values('name', 'iso3', 'total', 'typology'),
-            filtered_report_figures.filter(disaggregation_conflict_communal__gt=0).annotate(
-                name=F('country__name'),
-                iso3=F('country__iso3'),
-                total=Sum(
-                    'disaggregation_conflict_communal',
-                    filter=Q(disaggregation_conflict_communal__gt=0)
-                ),
-                typology=models.Value('Violence - Communal', output_field=models.CharField())
-            ).values('name', 'iso3', 'total', 'typology'),
-            filtered_report_figures.filter(disaggregation_conflict_other__gt=0).annotate(
-                name=F('country__name'),
-                iso3=F('country__iso3'),
-                total=Sum(
-                    'disaggregation_conflict_other',
-                    filter=Q(disaggregation_conflict_other__gt=0)
-                ),
-                typology=models.Value('Other', output_field=models.CharField())
-            ).values('name', 'iso3', 'total', 'typology')
-        ).values('name', 'iso3', 'typology', 'total').order_by('typology')
-
-        # further aggregation
-        aggregation_headers = OrderedDict(dict(
-            typology='Conflict Typology',
-            total='Sum of Figure',
-        ))
-        aggregation_formula = dict()
-
-        filtered_report_figures = self.report.report_figures.filter(
-            role=Figure.ROLE.RECOMMENDED,
-            entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
-            category=FigureCategory.flow_new_displacement_id(),
-        )
-
-        aggregation_data = filtered_report_figures.aggregate(
-            total_conflict=Sum('disaggregation_conflict'),
-            total_conflict_political=Sum('disaggregation_conflict_political'),
-            total_conflict_other=Sum('disaggregation_conflict_other'),
-            total_conflict_criminal=Sum('disaggregation_conflict_criminal'),
-            total_conflict_communal=Sum('disaggregation_conflict_communal'),
-        )
-        aggregation_data = [
-            dict(
-                typology='Armed Conflict',
-                total=aggregation_data['total_conflict'],
-            ),
-            dict(
-                typology='Violence - Political',
-                total=aggregation_data['total_conflict_political'],
-            ),
-            dict(
-                typology='Violence - Criminal',
-                total=aggregation_data['total_conflict_criminal'],
-            ),
-            dict(
-                typology='Violence - Communal',
-                total=aggregation_data['total_conflict_communal'],
-            ),
-            dict(
-                typology='Other',
-                total=aggregation_data['total_conflict_other'],
-            ),
-        ]
-
-        return {
-            'headers': headers,
-            'data': data,
-            'formulae': dict(),
-            'aggregation': dict(
-                headers=aggregation_headers,
-                formulae=aggregation_formula,
-                data=aggregation_data,
-            )
-        }
+        return report_stat_conflict_typology(self.report)
 
     @cached_property
     def global_numbers(self):
-        conflict_filter = dict(
-            role=Figure.ROLE.RECOMMENDED,
-            entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
-        )
-        disaster_filter = dict(
-            role=Figure.ROLE.RECOMMENDED,
-            entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
-        )
-        data = self.report.report_figures.aggregate(
-            flow_disaster_total=Coalesce(
-                Sum(
-                    'total_figures',
-                    filter=Q(
-                        **disaster_filter,
-                        category=FigureCategory.flow_new_displacement_id(),
-                    )
-                ), 0
-            ),
-            flow_conflict_total=Coalesce(
-                Sum(
-                    'total_figures',
-                    filter=Q(
-                        **conflict_filter,
-                        category=FigureCategory.flow_new_displacement_id(),
-                    )
-                ), 0
-            ),
-            stock_conflict_total=Coalesce(
-                Sum(
-                    'total_figures',
-                    filter=Q(
-                        Q(
-                            end_date__isnull=True,
-                        ) | Q(
-                            end_date__isnull=False,
-                            end_date__gte=self.report.filter_figure_end_before or timezone.now().date(),
-                        ),
-                        **conflict_filter,
-                        category=FigureCategory.stock_idp_id(),
-                    )
-                ), 0
-            ),
-            event_disaster_count=Coalesce(
-                Count(
-                    'entry__event',
-                    filter=Q(
-                        **disaster_filter,
-                    ),
-                    distinct=True
-                ), 0
-            ),
-            conflict_countries_count=Coalesce(
-                Count(
-                    'country',
-                    filter=Q(
-                        **conflict_filter,
-                    ),
-                    distinct=True
-                ), 0
-            ),
-            disaster_countries_count=Coalesce(
-                Count(
-                    'country',
-                    filter=Q(
-                        **disaster_filter,
-                    ),
-                    distinct=True
-                ), 0
-            ),
-        )
-        data['countries_count'] = data['conflict_countries_count'] + data['disaster_countries_count']
-        data['flow_total'] = data['flow_disaster_total'] + data['flow_conflict_total']
-        data['flow_conflict_percent'] = 100 * data['flow_conflict_total'] / data['flow_total'] if data['flow_total'] else 0
-        data['flow_disaster_percent'] = 100 * data['flow_disaster_total'] / data['flow_total'] if data['flow_total'] else 0
-
-        # this is simply for placeholder
-        formatted_headers = {
-            'one': '',
-            'two': '',
-            'three': '',
-        }
-        formatted_data = [
-            dict(
-                one='Conflict',
-            ),
-            dict(
-                one='Data',
-            ),
-            dict(
-                one=f'Sum of ND {self.report.name}',
-                two=f'Sum of IDPs {self.report.name}',
-            ),
-            dict(
-                one=data['flow_conflict_total'],
-                two=data['stock_conflict_total'],
-            ),
-            dict(
-                one='',
-            ),
-            dict(
-                one='Disaster',
-            ),
-            dict(
-                one='Data',
-            ),
-            dict(
-                one=f'Sum of ND {self.report.name}',
-                two=f'Number of Events of {self.report.name}',
-            ),
-            dict(
-                one=data['flow_disaster_total'],
-                two=data['event_disaster_count'],
-            ),
-            dict(
-                one='',
-            ),
-            dict(
-                one='Total New Displacement (Conflict + Disaster)',
-                two=data['flow_total']
-            ),
-            dict(
-                one='Conflict',
-                two=f"{data['flow_conflict_percent']}%",
-            ),
-            dict(
-                one='Disaster',
-                two=f"{data['flow_disaster_percent']}%",
-            ),
-            dict(
-                one='',
-            ),
-            dict(
-                one='Number of countries with figures',
-                two=data['countries_count']
-            ),
-            dict(
-                one='Conflict',
-                two=data['conflict_countries_count'],
-            ),
-            dict(
-                one='Disaster',
-                two=data['disaster_countries_count'],
-            ),
-        ]
-
-        return dict(
-            headers=formatted_headers,
-            data=formatted_data,
-            formulae=dict(),
-        )
+        return report_global_numbers(self.report)
 
     @cached_property
     def disaster_event(self):
-        headers = OrderedDict(dict(
-            event_id='Event Id',
-            event_name='Event Name',
-            event_year='Event Year',
-            event_start_date='Start Date',
-            event_end_date='End Date',
-            event_category='Category',
-            event_sub_category='Sub Category',
-            dtype='Disaster Type',
-            dsub_type='Disaster Sub Type',
-            affected_iso3='Affected ISO3',
-            affected_names='Affected Countries',
-            affected_countries='Number of Affected Countries',
-            flow_total='ND' + self.report.name,
-        ))
-
-        def get_key(header):
-            return excel_column_key(headers, header)
-
-        # NOTE: {{ }} turns into { } after the first .format
-        global_filter = dict(
-            role=Figure.ROLE.RECOMMENDED,
-            entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER
-        )
-
-        data = self.report.report_figures.filter(
-            **global_filter
-        ).values('entry__event').order_by().annotate(
-            event_id=F('entry__event_id'),
-            event_name=F('entry__event__name'),
-            event_year=Extract('entry__event__start_date', 'year'),
-            event_start_date=F('entry__event__start_date'),
-            event_end_date=F('entry__event__end_date'),
-            event_category=F('entry__event__disaster_category__name'),
-            event_sub_category=F('entry__event__disaster_sub_category__name'),
-            dtype=F('entry__event__disaster_type__name'),
-            dsub_type=F('entry__event__disaster_sub_type__name'),
-            flow_total=Sum('total_figures', filter=Q(category=FigureCategory.flow_new_displacement_id())),
-            affected_countries=Count('country', distinct=True),
-            affected_iso3=StringAgg('country__iso3', delimiter=', ', distinct=True),
-            affected_names=StringAgg('country__name', delimiter=' | ', distinct=True),
-        )
-        return {
-            'headers': headers,
-            'data': data,
-            'formulae': dict(),
-        }
+        return report_disaster_event(self.report)
 
     @cached_property
     def disaster_region(self):
-        headers = OrderedDict(dict(
-            region_name='Region',
-            events_count='Events Count',
-            region_population='Region Population',
-            flow_total=f'ND {self.report.name}',
-            flow_total_last_year='ND Last Year',
-            flow_historical_average='ND Historical Average',
-        ))
-
-        def get_key(header):
-            return excel_column_key(headers, header)
-
-        formulae = {
-            'ND per 100k population': EXCEL_FORMULAE['per_100k'].format(
-                key1=get_key('flow_total'), key2=get_key('region_population')
-            ),
-            'ND percent variation wrt last year':
-                EXCEL_FORMULAE['percent_variation'].format(
-                key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
-            ),
-            'ND percent variation wrt average':
-                EXCEL_FORMULAE['percent_variation'].format(
-                key1=get_key('flow_total'), key2=get_key('flow_historical_average')
-            ),
-        }
-        global_filter = dict(
-            role=Figure.ROLE.RECOMMENDED,
-            entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
-        )
-        data = self.report.report_figures.filter(
-            **global_filter
-        ).annotate(
-            region=F('country__region')
-        ).values('country__region').order_by().annotate(
-            region_name=F('country__region__name'),
-            country_region=F('country__region__name'),
-            events_count=Count('entry__event', distinct=True),
-            region_population=Subquery(
-                CountryPopulation.objects.filter(
-                    country__region=OuterRef('region'),
-                    year=int(self.report.filter_figure_start_after.year),
-                ).annotate(
-                    total_population=Sum('population')
-                ).values('total_population')[:1]
-            ),
-            flow_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.flow_new_displacement_id(),
-                **global_filter
-            )),
-        )
-
-        if self.report._ends_within_start_year and self.include_history:
-            data = data.annotate(
-                flow_total_last_year=Subquery(
-                    Figure.objects.filter(
-                        start_date__gte=self.report.filter_figure_start_after - timedelta(days=365),
-                        end_date__lte=self.report.filter_figure_end_before - timedelta(days=365),
-                        country__region=OuterRef('country__region'),
-                        category=FigureCategory.flow_new_displacement_id(),
-                        **global_filter
-                    ).annotate(
-                        _total=Sum('total_figures')
-                    ).values('_total').annotate(total=F('_total')).values('total')
-                ),
-                flow_historical_average=Subquery(
-                    Figure.objects.filter(
-                        start_date__lt=self.report.filter_figure_start_after,
-                        # only consider the figures in the given month range
-                        start_date__month__gte=self.report.filter_figure_start_after.month,
-                        end_date__month__lte=self.report.filter_figure_end_before.month,
-                        country__region=OuterRef('country__region'),
-                        category=FigureCategory.flow_new_displacement_id(),
-                        **global_filter
-                    ).annotate(
-                        min_year=Min(Extract('start_date', 'year')),
-                        max_year=Max(Extract('start_date', 'year')),
-                    ).annotate(
-                        _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
-                    ).values('_total').annotate(total=F('_total')).values('total')
-                ),
-            )
-
-        return {
-            'headers': headers,
-            'data': data,
-            'formulae': formulae,
-        }
+        return report_disaster_region(self.report, self.include_history)
 
     @cached_property
     def disaster_country(self):
-        headers = OrderedDict(dict(
-            country_iso3='ISO3',
-            country_name='Name',
-            country_region='Region',
-            events_count='Events Count',
-            country_population='Country Population',
-            flow_total=f'ND {self.report.name}',
-            flow_total_last_year='ND Last Year',
-            flow_historical_average='ND Historical Average',
-        ))
-
-        def get_key(header):
-            return excel_column_key(headers, header)
-
-        formulae = {
-            'ND per 100k population': EXCEL_FORMULAE['per_100k'].format(
-                key1=get_key('flow_total'), key2=get_key('country_population')
-            ),
-            'ND percent variation wrt last year':
-                EXCEL_FORMULAE['percent_variation'].format(
-                key1=get_key('flow_total'), key2=get_key('flow_total_last_year')
-            ),
-            'ND percent variation wrt average':
-                EXCEL_FORMULAE['percent_variation'].format(
-                key1=get_key('flow_total'), key2=get_key('flow_historical_average')
-            ),
-        }
-        global_filter = dict(
-            role=Figure.ROLE.RECOMMENDED,
-            entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
-        )
-        data = self.report.report_figures.filter(
-            **global_filter
-        ).values('country').order_by().annotate(
-            country_iso3=F('country__iso3'),
-            country_name=F('country__name'),
-            country_region=F('country__region__name'),
-            events_count=Count('entry__event', distinct=True),
-            country_population=Subquery(
-                CountryPopulation.objects.filter(
-                    year=int(self.report.filter_figure_start_after.year),
-                    country=OuterRef('country'),
-                ).values('population')
-            ),
-            flow_total=Sum('total_figures', filter=Q(
-                category=FigureCategory.flow_new_displacement_id(),
-                **global_filter
-            )),
-        )
-
-        if self.report._ends_within_start_year and self.include_history:
-            data = data.annotate(
-                flow_total_last_year=Subquery(
-                    Figure.objects.filter(
-                        start_date__gte=self.report.filter_figure_start_after - timedelta(days=365),
-                        end_date__lte=self.report.filter_figure_end_before - timedelta(days=365),
-                        country=OuterRef('country'),
-                        category=FigureCategory.flow_new_displacement_id(),
-                        **global_filter
-                    ).annotate(
-                        _total=Sum('total_figures')
-                    ).values('_total').annotate(total=F('_total')).values('total')
-                ),
-                flow_historical_average=Subquery(
-                    Figure.objects.filter(
-                        start_date__lt=self.report.filter_figure_start_after,
-                        # only consider the figures in the given month range
-                        start_date__month__gte=self.report.filter_figure_start_after.month,
-                        end_date__month__lte=self.report.filter_figure_end_before.month,
-                        country=OuterRef('country'),
-                        category=FigureCategory.flow_new_displacement_id(),
-                        **global_filter
-                    ).annotate(
-                        min_year=Min(Extract('start_date', 'year')),
-                        max_year=Max(Extract('start_date', 'year')),
-                    ).annotate(
-                        _total=Sum('total_figures') / (F('max_year') - F('min_year') + 1)
-                    ).values('_total').annotate(total=F('_total')).values('total')
-                ),
-            )
-
-        return {
-            'headers': headers,
-            'data': data,
-            'formulae': formulae,
-            'aggregation': None,
-        }
+        return report_disaster_country(self.report, self.include_history)
 
     def get_excel_sheets_data(self):
         '''

@@ -16,7 +16,6 @@ from helix.celery import app as celery_app
 from apps.entry.tasks import PDF_TASK_TIMEOUT
 from apps.report.tasks import REPORT_TIMEOUT
 
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -51,8 +50,18 @@ def get_excel_sheet_content(headers, data, **kwargs):
     return wb
 
 
+def save_download_file(download, workbook, path):
+    with NamedTemporaryFile(dir='/tmp') as tmp:
+        workbook.save(tmp.name)
+        workbook.close()
+        file = File(tmp)
+        download.file_size = file.size
+        download.file.save(path, file)
+        del workbook
+
+
 @celery_app.task(time_limit=settings.EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT)
-def generate_excel_file(download_id, user_id):
+def generate_excel_file(download_id, user_id, model_instance_id=None):
     '''
     Fetch the filter data from excel download
     Fetch the request from the task argument
@@ -68,16 +77,22 @@ def generate_excel_file(download_id, user_id):
         path = f'{download.download_type.name}-{download.started_at.isoformat()}.xlsx'
 
         logger.warn(f'Starting sheet generation for ExcelDownload={download_id}...')
-        sheet_data_getter = download.get_model_sheet_data_getter()
-        sheet_data = sheet_data_getter(user_id=user_id, filters=download.filters)
-        workbook = get_excel_sheet_content(**sheet_data)
-        with NamedTemporaryFile(dir='/tmp') as tmp:
-            workbook.save(tmp.name)
-            workbook.close()
-            file = File(tmp)
-            download.file_size = file.size
-            download.file.save(path, file)
-            del workbook
+        if (
+            ExcelDownload.DOWNLOAD_TYPES.INDIVIDUAL_REPORT == download.download_type and
+            model_instance_id is not None
+        ):
+            from apps.report.models import Report
+            from apps.report.utils import report_get_excel_sheets_data
+            from apps.report.tasks import generate_excel_file as report_generate_excel_file
+            report = Report.objects.get(id=model_instance_id)
+            excel_sheet_data = report_get_excel_sheets_data(report).items()
+            workbook = report_generate_excel_file(excel_sheet_data)
+            save_download_file(download, workbook, path)
+        else:
+            sheet_data_getter = download.get_model_sheet_data_getter()
+            sheet_data = sheet_data_getter(user_id=user_id, filters=download.filters)
+            workbook = get_excel_sheet_content(**sheet_data)
+            save_download_file(download, workbook, path)
         download.status = ExcelDownload.EXCEL_GENERATION_STATUS.COMPLETED
         download.completed_at = timezone.now()
         download.save()

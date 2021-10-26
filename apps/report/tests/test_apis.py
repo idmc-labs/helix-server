@@ -615,3 +615,52 @@ class TestPrivatePublicReports(HelixGraphQLTestCase):
         self.assertEqual(content['data']['reportList']['totalCount'], 1)
         self.assertEqual(content['data']['reportList']['results'][0]['isPublic'], True)
         self.assertEqual(content['data']['reportList']['results'][0]['createdBy']["id"], str(self.user.id))
+
+
+class TestIndividualReportExport(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.report = ReportFactory.create(
+            created_by=self.admin,
+            filter_figure_start_after='2020-01-01',
+            filter_figure_end_before='2021-01-01',
+            generated_from=Report.REPORT_TYPE.MASTERFACT,
+        )
+        self.export_mutation = '''
+        mutation exportReport($id: ID!) {
+          exportReport(id: $id) {
+            errors
+            ok
+            result {
+              id
+              name
+            }
+          }
+        }
+        '''
+        self.variables = {
+            'id': str(self.report.id),
+        }
+
+    def test_user_can_export_individual_report(self):
+        # Test admin user can export report
+        user = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.force_login(user)
+        response = self.query(
+            self.export_mutation,
+            variables=self.variables
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertIsNone(content['data']['exportReport']['errors'], content)
+
+        # Test non admin user can export report
+        user = create_user_with_role(USER_ROLE.GUEST.name)
+        self.force_login(user)
+        response = self.query(
+            self.export_mutation,
+            variables=self.variables
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertIsNone(content['data']['exportReport']['errors'], content)

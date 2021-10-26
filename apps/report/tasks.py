@@ -19,14 +19,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-def generate_report_excel(generation_id):
-    from apps.report.models import ReportGeneration
-    generation = ReportGeneration.objects.get(id=generation_id)
+def generate_excel_file(excel_sheet_data):
     wb = Workbook()
     active = wb.active.title
     del wb[active]
 
-    for sheet_name, sheet_data in generation.get_excel_sheets_data().items():
+    for sheet_name, sheet_data in excel_sheet_data:
         headers = sheet_data['headers']
         data = sheet_data['data']
         formulae = sheet_data['formulae']
@@ -74,6 +72,13 @@ def generate_report_excel(generation_id):
                 cell.value = formula.format(row=row)
 
     return wb
+
+
+def generate_report_excel(generation_id):
+    from apps.report.models import ReportGeneration
+    generation = ReportGeneration.objects.get(id=generation_id)
+    excel_sheet_data = generation.get_excel_sheets_data().items()
+    return generate_excel_file(excel_sheet_data)
 
 
 def generate_report_snapshot(generation_id):
