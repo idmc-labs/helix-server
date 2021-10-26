@@ -333,7 +333,7 @@ class ExportReport(graphene.Mutation):
         try:
             instance = Report.objects.get(id=id)
         except Report.DoesNotExist:
-            return SignOffReport(errors=[
+            return ExportReport(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
             ])
         serializer = ExcelDownloadSerializer(
@@ -345,9 +345,9 @@ class ExportReport(graphene.Mutation):
             context=dict(request=info.context.request)
         )
         if errors := mutation_is_not_valid(serializer):
-            return ExportReports(errors=errors, ok=False)
+            return ExportReport(errors=errors, ok=False)
         serializer.save()
-        return ExportReports(errors=None, ok=True)
+        return ExportReport(errors=None, ok=True)
 
 
 class Mutation(object):
