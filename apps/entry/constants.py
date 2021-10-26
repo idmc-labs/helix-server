@@ -25,7 +25,7 @@ UNVERIFIED_FLOW = 'Unverified'
 
 # constants for QA dashboard filter
 HAS_NO_RECOMMENDED_FIGURES = "Has no recommended figures"
-HAS_MULTIPLE_RECOMMENDED_FIGURES = "Has mutiple recommened figures"
+HAS_MULTIPLE_RECOMMENDED_FIGURES = "Has mutiple recommended figures"
 
 FIGURE_TYPE_SUB_TYPES = {
     STOCK: [IDPS, RETURNEES, LOCALLY_INTEGRATED_IDPS, IDPS_SETTLED_ELSEWHERE,

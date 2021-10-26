@@ -396,7 +396,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
     def test_event_has_mutiple_recommended_figures(self):
         # Create event without entries and figures
         event = EventFactory.create()
-        EventFactory.create()
+        event1 = EventFactory.create()
         for i in range(3):
             entry1 = EntryFactory.create(event=event)
             FigureFactory.create(
@@ -407,6 +407,19 @@ class TestEventListQuery(HelixGraphQLTestCase):
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
+                category=FigureCategory.flow_new_displacement_id()
+            )
+
+        for i in range(3):
+            entry1 = EntryFactory.create(event=event1)
+            FigureFactory.create(
+                entry=entry1,
+                role=Figure.ROLE.TRIANGULATION,
+                category=FigureCategory.stock_idp_id()
+            )
+            FigureFactory.create(
+                entry=entry1,
+                role=Figure.ROLE.TRIANGULATION,
                 category=FigureCategory.flow_new_displacement_id()
             )
 
@@ -450,7 +463,6 @@ class TestEventListQuery(HelixGraphQLTestCase):
                 category=FigureCategory.flow_new_displacement_id()
             )
 
-        # Test event has no figures
         variables = {
             "qaRules": [HAS_NO_RECOMMENDED_FIGURES]
         }
@@ -458,7 +470,6 @@ class TestEventListQuery(HelixGraphQLTestCase):
         content = response.json()
         self.assertEqual(content['data']['eventList']['totalCount'], 0)
 
-        # Test event with mutiple figures
         variables = {
             "qaRules": [HAS_MULTIPLE_RECOMMENDED_FIGURES]
         }

@@ -98,11 +98,13 @@ class EventFilter(NameFilterMixin,
         flow_qs = Event.objects.none()
         stock_qs = Event.objects.none()
         recommended_stock_figures_count = Count('entries__figures', filter=(
-            Q(entries__figures__role=Figure.ROLE.RECOMMENDED) |
+            Q(entries__figures__role=Figure.ROLE.RECOMMENDED) &
+            Q(ignore_qa=False) &
             Q(entries__figures__category=FigureCategory.stock_idp_id()))
         )
         recommended_flow_figures_count = Count('entries__figures', filter=(
-            Q(entries__figures__role=Figure.ROLE.RECOMMENDED) |
+            Q(entries__figures__role=Figure.ROLE.RECOMMENDED) &
+            Q(ignore_qa=False) &
             Q(entries__figures__category=FigureCategory.flow_new_displacement_id()))
         )
         annotated_fields = {
@@ -112,7 +114,6 @@ class EventFilter(NameFilterMixin,
         if HAS_NO_RECOMMENDED_FIGURES in value:
             flow_qs = qs.annotate(**annotated_fields).filter(
                 ignore_qa=False,
-                # entries__figures__role=Figure.ROLE.RECOMMENDED,
                 stock_figure_count=0, flow_figure_count=0
             )
         if HAS_MULTIPLE_RECOMMENDED_FIGURES in value:
