@@ -217,6 +217,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         blank=True, null=True, related_name='events',
         on_delete=models.SET_NULL
     )
+    ignore_qa = models.BooleanField(verbose_name=_('Ignore QA'), default=False)
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
