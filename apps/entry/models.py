@@ -13,7 +13,7 @@ from django.db.models.query import QuerySet
 from django.db.models import (
     Sum, Avg, F, Value, Min, Max, Q, Case, When,
 )
-from django.db.models.functions import Concat
+from django.db.models.functions import Concat, ExtractYear
 from django.forms import model_to_dict
 from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
@@ -595,6 +595,8 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_male_age_group_eighteen_to_fiftynine="M_18-59",
             total_male_age_group_sixty_plus="M_60+",
             total_other_age_group_male="M_other age group",
+            year="Year",
+            geo_locations__identifier="Type of point"
         )
         values = figures.order_by(
             '-created_at'
@@ -615,6 +617,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 filter=~Q(entry__publishers__name=''),
                 distinct=True
             ),
+            year=ExtractYear("start_date")
         ).annotate(
             centroid=models.Case(
                 models.When(
@@ -748,7 +751,8 @@ class Figure(MetaInformationArchiveAbstractModel,
         ).prefetch_related(
             'geo_locations',
             'disaggregation_age',
-            'disaggregation_age__category'
+            'disaggregation_age__category',
+            'geo_locations__identifier'
         ).order_by(
             '-entry',
             '-created_at',
@@ -768,6 +772,9 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 'entry__event__event_type': getattr(Crisis.CRISIS_TYPE.get(
                     datum['entry__event__event_type']), 'name', ''
+                ),
+                'geo_locations__identifier': getattr(OSMName.IDENTIFIER.get(
+                    datum['geo_locations__identifier']), 'name', ''
                 ),
             }
 
@@ -1067,6 +1074,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_male_age_group_eighteen_to_fiftynine="M_18-59",
             total_male_age_group_sixty_plus="M_60+",
             total_other_age_group_male="M_other age group",
+            figures__disaggregation_disability='Disability',
+            figures__disaggregation_indigenous_people='Indigenous People',
         )
         entries = EntryExtractionFilterSet(
             data=filters,
