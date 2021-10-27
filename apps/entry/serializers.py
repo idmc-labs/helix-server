@@ -117,9 +117,10 @@ class CommonFigureValidationMixin:
     def validate_figure_geo_locations(self, attrs):
         errors = OrderedDict()
         country = attrs.get('country')
+        geo_locations = attrs.get('geo_locations')
         if not country and self.instance:
             country = self.instance.country
-        if not attrs.get('geo_locations'):
+        if not geo_locations:
             errors.update({
                 'geo_locations': 'This field is required.'
             })
@@ -136,8 +137,10 @@ class CommonFigureValidationMixin:
             errors.update({
                 'geo_locations': 'Geolocations only support a single country under a figure.'
             })
-
-        if geo_locations_code.pop().lower() != location_code.lower():
+        moved = False
+        if len(geo_locations) == 1:
+            moved = geo_locations[0].get("moved")
+        if geo_locations_code.pop().lower() != location_code.lower() and not moved:
             errors.update({
                 'geo_locations': "Location should be inside the selected figure's country"
             })
