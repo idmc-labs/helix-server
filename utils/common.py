@@ -1,5 +1,6 @@
 import datetime
 import re
+from django.core.files.storage import get_storage_class
 
 
 def convert_date_object_to_string_in_dict(dictionary):
@@ -59,3 +60,9 @@ def is_grid_or_myu_report(start_date, end_date):
         is_year_equal(start_date, end_date)
     )
     return is_ymu_report or is_grid_report
+
+
+def get_s3_full_path(file_path):
+    # instance of the current storage class
+    media_storage = get_storage_class()()
+    return media_storage.url(file_path)

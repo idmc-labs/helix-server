@@ -16,6 +16,7 @@ from apps.entry.models import Entry, Figure
 from apps.crisis.models import Crisis
 from apps.users.models import User, Portfolio
 from apps.users.enums import USER_ROLE
+from utils.common import get_s3_full_path
 
 
 class GeographicalGroup(models.Model):
@@ -350,7 +351,8 @@ class Country(models.Model):
     @classmethod
     def geojson_path(cls, iso3):
         if iso3:
-            return f'{cls.GEOJSON_PATH}/{iso3.upper()}.json'
+            file_path = f'{cls.GEOJSON_PATH}/{iso3.upper()}.json'
+            return get_s3_full_path(file_path)
 
     @property
     def entries(self) -> QuerySet:
