@@ -187,8 +187,15 @@ class EntryExtractionFilterSet(df.FilterSet):
     def filter_by_review_status(self, qs, name, value):
         if not value:
             return qs
+        to_be_reviewed_qs = Entry.objects.none()
+        if EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.name in value:
+            value.remove(EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.name)
+            to_be_reviewed_qs = qs.filter(
+                Q(review_status__isnull=True) | Q(review_status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.value)
+            )
         db_values = [EntryReviewer.REVIEW_STATUS.get(item) for item in value]
-        return qs.filter(review_status__in=db_values)
+        qs = qs.filter(review_status__in=db_values) | to_be_reviewed_qs
+        return qs.distinct()
 
     def filter_by_figure_sex_types(self, qs, name, value):
         if not value:
