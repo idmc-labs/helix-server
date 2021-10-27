@@ -52,6 +52,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_event_violence_types = IDListFilter(method='filter_filter_event_violence_types')
     filter_entry_has_review_comments = df.BooleanFilter(method='filter_has_review_comments', initial=False)
     filter_event_osv_sub_types = IDListFilter(method='filter_filter_event_osv_sub_types')
+    filter_entry_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data', initial=False)
     # used in report entry table
     report = df.CharFilter(method='filter_report')
 
@@ -290,6 +291,13 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs.filter(~Q(event__violence__name=OSV) | Q(event__osv_sub_type__in=value)).distinct()
         return qs
 
+    def filter_has_disaggregated_data(self, qs, name, value):
+        if value is True:
+            return qs.filter(figures__disaggregation_age__isnull=False)
+        if value is False:
+            return qs.filter(figures__disaggregation_age__isnull=True)
+        return qs
+
     @property
     def qs(self):
         return super().qs.annotate(
@@ -329,6 +337,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_event_violence_types = IDListFilter(method='filter_filter_event_violence_types')
     filter_entry_has_review_comments = df.BooleanFilter(method='filter_has_review_comments', initial=False)
     filter_event_osv_sub_types = IDListFilter(method='filter_filter_event_osv_sub_types')
+    filter_entry_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data', initial=False)
     # used in report entry table
     report = df.CharFilter(method='filter_report')
 
@@ -551,6 +560,13 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     def filter_filter_event_osv_sub_types(self, qs, name, value):
         if value:
             return qs.filter(~Q(entry__event__violence__name=OSV) | Q(entry__event__osv_sub_type__in=value)).distinct()
+        return qs
+
+    def filter_has_disaggregated_data(self, qs, name, value):
+        if value is True:
+            return qs.filter(disaggregation_age__isnull=False)
+        if value is False:
+            return qs.filter(disaggregation_age__isnull=True)
         return qs
 
     @property
