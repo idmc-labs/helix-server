@@ -12,7 +12,7 @@ from apps.entry.models import (
 )
 
 from utils.enums import enum_description
-from apps.common.enums import GENDER_TYPE
+from apps.common.enums import GENDER_TYPE, QA_RECOMMENDED_FIGURE_TYPE
 
 DisplacementTypeGrapheneEnum = graphene.Enum.from_enum(
     FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE,
@@ -34,6 +34,7 @@ EntryReviewerGrapheneEnum = graphene.Enum.from_enum(EntryReviewer.REVIEW_STATUS,
 OSMAccuracyGrapheneEnum = graphene.Enum.from_enum(OSMName.OSM_ACCURACY,
                                                   description=enum_description)
 IdentifierGrapheneEnum = graphene.Enum.from_enum(OSMName.IDENTIFIER, description=enum_description)
+QaRecommendedFigureEnum = graphene.Enum.from_enum(QA_RECOMMENDED_FIGURE_TYPE, description=enum_description)
 
 enum_map = dict(
     DISPLACEMENT_TYPE=DisplacementTypeGrapheneEnum,
@@ -45,4 +46,5 @@ enum_map = dict(
     REVIEW_STATUS=EntryReviewerGrapheneEnum,
     OSM_ACCURACY=OSMAccuracyGrapheneEnum,
     IDENTIFIER=IdentifierGrapheneEnum,
+    QA_RECOMMENDED_FIGURE_TYPE=QaRecommendedFigureEnum
 )

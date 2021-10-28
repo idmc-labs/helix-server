@@ -17,9 +17,6 @@ from utils.factories import (
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
-from apps.entry.constants import (
-    HAS_NO_RECOMMENDED_FIGURES, HAS_MULTIPLE_RECOMMENDED_FIGURES
-)
 
 
 class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
@@ -425,7 +422,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
 
         # Test event has no figures
         variables = {
-            "qaRules": [HAS_NO_RECOMMENDED_FIGURES]
+            "qaRules": ['HAS_NO_RECOMMENDED_FIGURES']
         }
         response = self.query(self.q, variables=variables)
         content = response.json()
@@ -433,7 +430,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
 
         # Test event with mutiple figures
         variables = {
-            "qaRules": [HAS_MULTIPLE_RECOMMENDED_FIGURES]
+            "qaRules": ['HAS_MULTIPLE_RECOMMENDED_FIGURES']
         }
         response = self.query(self.q, variables=variables)
         content = response.json()
@@ -441,7 +438,10 @@ class TestEventListQuery(HelixGraphQLTestCase):
 
         # Test should return combined result if both filters passed
         variables = {
-            "qaRules": [HAS_MULTIPLE_RECOMMENDED_FIGURES, HAS_NO_RECOMMENDED_FIGURES]
+            "qaRules": [
+                'HAS_MULTIPLE_RECOMMENDED_FIGURES',
+                'HAS_NO_RECOMMENDED_FIGURES'
+            ]
         }
         response = self.query(self.q, variables=variables)
         content = response.json()
@@ -464,14 +464,14 @@ class TestEventListQuery(HelixGraphQLTestCase):
             )
 
         variables = {
-            "qaRules": [HAS_NO_RECOMMENDED_FIGURES]
+            "qaRules": ['HAS_NO_RECOMMENDED_FIGURES']
         }
         response = self.query(self.q, variables=variables)
         content = response.json()
         self.assertEqual(content['data']['eventList']['totalCount'], 0)
 
         variables = {
-            "qaRules": [HAS_MULTIPLE_RECOMMENDED_FIGURES]
+            "qaRules": ['HAS_MULTIPLE_RECOMMENDED_FIGURES']
         }
         response = self.query(self.q, variables=variables)
         content = response.json()
