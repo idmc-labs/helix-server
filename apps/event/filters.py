@@ -33,6 +33,7 @@ class EventFilter(NameFilterMixin,
             'created_at': ['lte', 'lt', 'gte', 'gt'],
             'start_date': ['lte', 'lt', 'gte', 'gt'],
             'end_date': ['lte', 'lt', 'gte', 'gt'],
+            'ignore_qa': ['exact']
         }
 
     def filter_report(self, qs, name, value):
