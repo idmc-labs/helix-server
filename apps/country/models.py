@@ -351,6 +351,11 @@ class Country(models.Model):
     @classmethod
     def geojson_path(cls, iso3):
         if iso3:
+            return f'{cls.GEOJSON_PATH}/{iso3.upper()}.json'
+
+    @classmethod
+    def geojson_full_path(cls, iso3):
+        if iso3:
             file_path = f'{cls.GEOJSON_PATH}/{iso3.upper()}.json'
             return get_s3_full_path(file_path)
 
