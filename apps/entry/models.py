@@ -13,7 +13,7 @@ from django.db.models.query import QuerySet
 from django.db.models import (
     Sum, Avg, F, Value, Min, Max, Q, Case, When,
 )
-from django.db.models.functions import Concat
+from django.db.models.functions import Concat, ExtractYear
 from django.forms import model_to_dict
 from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
@@ -536,6 +536,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             term__name='Figure Term',
             displacement_occurred='Displacement Occurred',
             role='Figure Role',
+            year='Year',
             start_date='Start Date',
             start_date_accuracy='Start Date Accuracy',
             end_date='End Date',
@@ -555,15 +556,27 @@ class Figure(MetaInformationArchiveAbstractModel,
             calculation_logic='Analysis and Calculation Logic',
             caveats='Caveats',
             source_excerpt='Source Excerpt',
+            geo_locations__identifier='Type of point',
             disaggregation_displacement_urban='Displacement: Urban',
             disaggregation_displacement_rural='Displacement: Rural',
             disaggregation_location_camp='Location: Camp',
             disaggregation_location_non_camp='Location: Non-Camp',
-            disaggregation_sex_male='Sex: Male',
-            disaggregation_sex_female='Sex: Female',
-            disaggregation_lgbtiq='LGBTIQ+',
             disaggregation_disability='Disability',
             disaggregation_indigenous_people='Indigenous People',
+            total_female_age_group_less_than_five='F_<5',
+            total_female_age_group_five_to_forteen='F_5-14',
+            total_female_age_group_fifteen_to_twenty_four="F_15-24",
+            total_female_age_group_zero_to_seventeen="F_0-17",
+            total_female_age_group_eighteen_to_fiftynine="F_18-59",
+            total_female_age_group_sixty_plus="F_60+",
+            total_other_age_group_female="F_other age group",
+            total_male_age_group_less_than_five='M_<5',
+            total_male_age_group_five_to_forteen='M_5-14',
+            total_male_age_group_fifteen_to_twenty_four="M_15-24",
+            total_male_age_group_zero_to_seventeen="M_0-17",
+            total_male_age_group_eighteen_to_fiftynine="M_18-59",
+            total_male_age_group_sixty_plus="M_60+",
+            total_other_age_group_male="M_other age group",
             entry__url='Link',
             entry__article_title='Event Title',
             entry__event__crisis_id='Crisis Id',
@@ -581,20 +594,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             entry__event__disaster_sub_category__name='Disaster Sub Category',
             entry__event__disaster_type__name='Disaster Type',
             entry__event__disaster_sub_type__name='Disaster Sub Type',
-            total_female_age_group_less_than_five='F_<5',
-            total_female_age_group_five_to_forteen='F_5-14',
-            total_female_age_group_fifteen_to_twenty_four="F_15-24",
-            total_female_age_group_zero_to_seventeen="F_0-17",
-            total_female_age_group_eighteen_to_fiftynine="F_18-59",
-            total_female_age_group_sixty_plus="F_60+",
-            total_other_age_group_female="F_other age group",
-            total_male_age_group_less_than_five='M_<5',
-            total_male_age_group_five_to_forteen='M_5-14',
-            total_male_age_group_fifteen_to_twenty_four="M_15-24",
-            total_male_age_group_zero_to_seventeen="M_0-17",
-            total_male_age_group_eighteen_to_fiftynine="M_18-59",
-            total_male_age_group_sixty_plus="M_60+",
-            total_other_age_group_male="M_other age group",
         )
         values = figures.order_by(
             '-created_at'
@@ -615,6 +614,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 filter=~Q(entry__publishers__name=''),
                 distinct=True
             ),
+            year=ExtractYear("start_date")
         ).annotate(
             centroid=models.Case(
                 models.When(
@@ -748,7 +748,8 @@ class Figure(MetaInformationArchiveAbstractModel,
         ).prefetch_related(
             'geo_locations',
             'disaggregation_age',
-            'disaggregation_age__category'
+            'disaggregation_age__category',
+            'geo_locations__identifier'
         ).order_by(
             '-entry',
             '-created_at',
@@ -768,6 +769,9 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 'entry__event__event_type': getattr(Crisis.CRISIS_TYPE.get(
                     datum['entry__event__event_type']), 'name', ''
+                ),
+                'geo_locations__identifier': getattr(OSMName.IDENTIFIER.get(
+                    datum['geo_locations__identifier']), 'name', ''
                 ),
             }
 
@@ -1047,12 +1051,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             max_fig_start='Latest figure start',
             min_fig_end='Earliest figure end',
             max_fig_end='Latest figure end',
-            event__event_type='Cause',
-            event__id='Event Id',
-            event__old_id='Event Old Id',
-            event__name='Event Name',
-            event__crisis_id='Crisis Id',
-            event__crisis__name='Crisis Name',
             total_female_age_group_less_than_five='F_<5',
             total_female_age_group_five_to_forteen='F_5-14',
             total_female_age_group_fifteen_to_twenty_four="F_15-24",
@@ -1067,6 +1065,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_male_age_group_eighteen_to_fiftynine="M_18-59",
             total_male_age_group_sixty_plus="M_60+",
             total_other_age_group_male="M_other age group",
+            event__event_type='Cause',
+            event__id='Event Id',
+            event__old_id='Event Old Id',
+            event__name='Event Name',
+            event__crisis_id='Crisis Id',
+            event__crisis__name='Crisis Name',
         )
         entries = EntryExtractionFilterSet(
             data=filters,
