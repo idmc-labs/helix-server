@@ -508,7 +508,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             return qs.filter(
                 ~Q(
                     entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT.value
-                )
+                ) | Q(entry__event__violence_sub_type__in=value)
             ).distinct()
         return qs
 
