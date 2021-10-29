@@ -4,24 +4,24 @@ CONFLICT_TYPES = {
     "International armed conflict(IAC)": [
         "Military Occupation",
         "IAC (other than occupation)",
-        "Other",
-        "Unknown"
+        "Other (IAC)",
+        "Unknown (IAC)"
     ],
     "Non-International armed conflict (NIAC)": [
         "NSAG(s) vs. State actor(s)",
         "NSAG(s) vs. NSAG(s)",
-        "Other",
-        "Unknown"
+        "Other (NIAC)",
+        "Unknown (NIAC)"
     ],
     OSV: [
         "Civilian-state violence",
         "Crime-related",
         "Communal violence",
-        "Other",
-        "Unknown"
+        "Other (OSV)",
+        "Unknown (OSV)"
     ],
-    "Other": [],
-    "Unknown": []
+    "Other": ["Other"],
+    "Unknown": ["Unknown"]
 }
 
 TRIGGERS = {
@@ -77,6 +77,11 @@ DISASTERS = {
             "Extreme Temperature": ["Cold wave", "Heat wave"],
             "Storm": ["Hailstorm", "Sand/dust storm", "Storm", "Storm surge",
                       "Tornado", "Typhoon/Hurricane/Cyclone", "Winter storm/Blizzard"]
+        }
+    },
+    "Unknown": {
+        "Unknown": {
+            "Unknown": ["Unknown"]
         }
     }
 }
