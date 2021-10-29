@@ -11,7 +11,6 @@ from apps.entry.models import (
 )
 from apps.crisis.models import Crisis
 from apps.entry.constants import STOCK, FLOW
-from apps.common.enums import GENDER_TYPE
 
 
 class QueryAbstractModel(models.Model):
@@ -114,11 +113,6 @@ class QueryAbstractModel(models.Model):
     )
     filter_figure_displacement_types = ArrayField(
         base_field=enum.EnumField(enum=FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE),
-        blank=True,
-        null=True
-    )
-    filter_figure_sex_types = ArrayField(
-        base_field=enum.EnumField(enum=GENDER_TYPE),
         blank=True,
         null=True
     )

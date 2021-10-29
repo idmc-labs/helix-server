@@ -42,7 +42,6 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_entry_review_status = StringListFilter(method='filter_by_review_status')
     filter_entry_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
-    filter_figure_sex_types = StringListFilter(method='filter_by_figure_sex_types')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
     filter_event_disaster_categories = IDListFilter(method='filter_filter_event_disaster_categories')
     filter_event_disaster_sub_categories = IDListFilter(method='filter_filter_event_disaster_sub_categories')
@@ -198,17 +197,6 @@ class EntryExtractionFilterSet(df.FilterSet):
         qs = qs.filter(review_status__in=db_values) | to_be_reviewed_qs
         return qs.distinct()
 
-    def filter_by_figure_sex_types(self, qs, name, value):
-        if not value:
-            return qs
-
-        query_expr = Q()
-        if MALE in value:
-            query_expr = query_expr | Q(figures__disaggregation_sex_male__gt=0)
-        if FEMALE in value:
-            query_expr = query_expr | Q(figures__disaggregation_sex_female__gt=0)
-        return qs.filter(query_expr).distinct()
-
     def filter_by_figure_displacement_types(self, qs, name, value):
         if not value:
             return qs
@@ -326,7 +314,6 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_entry_review_status = StringListFilter(method='filter_by_review_status')
     filter_entry_created_by = IDListFilter(field_name='entry__created_by', lookup_expr='in')
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
-    filter_figure_sex_types = StringListFilter(method='filter_by_figure_sex_types')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
     event = df.CharFilter(field_name='entry__event', lookup_expr='exact')
     filter_event_disaster_categories = IDListFilter(method='filter_filter_event_disaster_categories')
@@ -463,17 +450,6 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         db_values = [EntryReviewer.REVIEW_STATUS.get(item) for item in value]
         qs = qs.filter(entry__review_status__in=db_values) | to_be_reviewed_qs
         return qs.distinct()
-
-    def filter_by_figure_sex_types(self, qs, name, value):
-        if not value:
-            return qs
-
-        query_expr = Q()
-        if MALE in value:
-            query_expr = query_expr | Q(disaggregation_sex_male__gt=0)
-        if FEMALE in value:
-            query_expr = query_expr | Q(disaggregation_sex_female__gt=0)
-        return qs.filter(query_expr)
 
     def filter_by_figure_displacement_types(self, qs, name, value):
         if not value:
