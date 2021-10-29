@@ -130,11 +130,6 @@ class CommonFigureValidationMixin:
             # ignore iso2 validation if missing
             return errors
         for location in geo_locations:
-            # Should not allow multiple countries for single location
-            if location["country_code"].lower() != country_code.lower():
-                errors.update({
-                    'geo_locations': "Location should be inside the selected figure's country"
-                })
             # If location is moved manually allow to save location of other coutries
             # These locations are considered as problematic border issues
             moved = location["moved"]
