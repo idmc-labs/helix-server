@@ -16,6 +16,7 @@ from apps.entry.models import Entry, Figure
 from apps.crisis.models import Crisis
 from apps.users.models import User, Portfolio
 from apps.users.enums import USER_ROLE
+from utils.common import generate_storage_url_from_path
 
 
 class GeographicalGroup(models.Model):
@@ -351,6 +352,12 @@ class Country(models.Model):
     def geojson_path(cls, iso3):
         if iso3:
             return f'{cls.GEOJSON_PATH}/{iso3.upper()}.json'
+
+    @classmethod
+    def geojson_url(cls, iso3):
+        if iso3:
+            file_path = f'{cls.GEOJSON_PATH}/{iso3.upper()}.json'
+            return generate_storage_url_from_path(file_path)
 
     @property
     def entries(self) -> QuerySet:
