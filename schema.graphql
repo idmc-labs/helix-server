@@ -1166,6 +1166,7 @@ type EventType {
   totalFlowNdFigures: Int
   reviewCount: EventReviewCountType
   entryCount: Int
+  qaRecommendedFigureType: QA_RECOMMENDED_FIGURE_TYPE
 }
 
 input EventUpdateInputType {
@@ -2108,6 +2109,11 @@ type PortfolioType {
   monitoringSubRegion: MonitoringSubRegionType
   country: CountryType
   permissions: [PermissionsType!]
+}
+
+enum QA_RECOMMENDED_FIGURE_TYPE {
+  HAS_NO_RECOMMENDED_FIGURES
+  HAS_MULTIPLE_RECOMMENDED_FIGURES
 }
 
 enum QUANTIFIER {
