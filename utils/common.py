@@ -62,7 +62,7 @@ def is_grid_or_myu_report(start_date, end_date):
     return is_ymu_report or is_grid_report
 
 
-def get_s3_full_path(file_path):
+def generate_storage_url_from_path(file_path):
     # instance of the current storage class
     media_storage = get_storage_class()()
     return media_storage.url(file_path)

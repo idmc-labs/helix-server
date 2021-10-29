@@ -232,7 +232,7 @@ class CountryType(DjangoObjectType):
         return info.context.country_country_this_year_nd_disaster_loader.load(root.id)
 
     def resolve_geojson_url(root, info, **kwargs):
-        return info.context.request.build_absolute_uri(Country.geojson_s3_url(root.iso3))
+        return info.context.request.build_absolute_uri(Country.geojson_url(root.iso3))
 
 
 class CountryListType(CustomDjangoListObjectType):
