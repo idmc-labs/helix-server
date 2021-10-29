@@ -440,23 +440,24 @@ MAX_LOGIN_ATTEMPTS = 3
 # If login attempts exceed MAX_CAPTCHA_LOGIN_ATTEMPTS , users will need to wait LOGIN_TIMEOUT seconds
 
 MAX_CAPTCHA_LOGIN_ATTEMPTS = 10
-LOGIN_TIMEOUT = 10 * 60
+LOGIN_TIMEOUT = 10 * 60  # seconds
 
 # Frontend base url for email button link
 FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://localhost:3080')
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#password-reset-timeout
-PASSWORD_RESET_TIMEOUT = 15 * 60
+PASSWORD_RESET_TIMEOUT = 15 * 60  # seconds
 PASSWORD_RESET_CLIENT_URL = "{FRONTEND_BASE_URL}reset-password/{{uid}}/{{token}}".format(
     FRONTEND_BASE_URL=FRONTEND_BASE_URL
 )
 
 # TASKS TIMEOUTS
-OLD_JOB_EXECUTION_TTL = 259_200  # seconds
+OLD_JOB_EXECUTION_TTL = 72 * 60 * 60  # seconds
 # staying in pending for too long will be moved to killed
-EXCEL_EXPORT_PENDING_STATE_TIMEOUT = 18_000  # seconds
+EXCEL_EXPORT_PENDING_STATE_TIMEOUT = 5 * 60 * 60  # seconds
 # staying in progress for too long will be moved to killed
-EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT = 600  # seconds
+EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT = 10 * 60  # seconds
+
 EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT = 10
 
 OTP_TOTP_ISSUER = 'IDMC'
