@@ -1166,7 +1166,7 @@ type EventType {
   totalFlowNdFigures: Int
   reviewCount: EventReviewCountType
   entryCount: Int
-  qaRecommendedFigureType: QA_RULE_TYPE
+  QARuleType: QA_RULE_TYPE
 }
 
 input EventUpdateInputType {
