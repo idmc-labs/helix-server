@@ -216,7 +216,7 @@ class EventType(DjangoObjectType):
     entry_count = graphene.Field(graphene.Int)
     glide_numbers = graphene.List(graphene.NonNull(graphene.String))
     osv_sub_type = graphene.Field(OsvSubObjectType)
-    qa_recommended_figure_type = graphene.Field(QaRecommendedFigureEnum)
+    QA_RULE_TYPE = graphene.Field(QaRecommendedFigureEnum)
 
     def resolve_review_count(root, info, **kwargs):
         return info.context.event_event_review_count_dataloader.load(root.id)

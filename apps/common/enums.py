@@ -16,7 +16,7 @@ class GENDER_TYPE(enum.Enum):
     }
 
 
-class QA_RECOMMENDED_FIGURE_TYPE(enum.Enum):
+class QA_RULE_TYPE(enum.Enum):
     # constants for QA dashboard filter
     HAS_NO_RECOMMENDED_FIGURES = 0
     HAS_MULTIPLE_RECOMMENDED_FIGURES = 1

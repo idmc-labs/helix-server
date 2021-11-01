@@ -1166,7 +1166,7 @@ type EventType {
   totalFlowNdFigures: Int
   reviewCount: EventReviewCountType
   entryCount: Int
-  qaRecommendedFigureType: QA_RECOMMENDED_FIGURE_TYPE
+  qaRecommendedFigureType: QA_RULE_TYPE
 }
 
 input EventUpdateInputType {
@@ -2111,7 +2111,7 @@ type PortfolioType {
   permissions: [PermissionsType!]
 }
 
-enum QA_RECOMMENDED_FIGURE_TYPE {
+enum QA_RULE_TYPE {
   HAS_NO_RECOMMENDED_FIGURES
   HAS_MULTIPLE_RECOMMENDED_FIGURES
 }

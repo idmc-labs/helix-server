@@ -7,7 +7,7 @@ from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
 from apps.event.constants import OSV
 from apps.entry.models import EntryReviewer, FigureCategory
 from django.db import models
-from apps.common.enums import QA_RECOMMENDED_FIGURE_TYPE
+from apps.common.enums import QA_RULE_TYPE
 
 
 class EventFilter(NameFilterMixin,
@@ -110,12 +110,12 @@ class EventFilter(NameFilterMixin,
             'stock_figure_count': recommended_stock_figures_count,
             'flow_figure_count': recommended_flow_figures_count
         }
-        if QA_RECOMMENDED_FIGURE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name in value:
+        if QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name in value:
             flow_qs = qs.annotate(**annotated_fields).filter(
                 ignore_qa=False,
                 stock_figure_count=0, flow_figure_count=0
             )
-        if QA_RECOMMENDED_FIGURE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name in value:
+        if QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name in value:
             stock_qs = qs.annotate(**annotated_fields).filter(
                 ignore_qa=False,
                 entries__figures__role=Figure.ROLE.RECOMMENDED
