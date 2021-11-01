@@ -117,30 +117,26 @@ class CommonFigureValidationMixin:
     def validate_figure_geo_locations(self, attrs):
         errors = OrderedDict()
         country = attrs.get('country')
+        geo_locations = attrs.get('geo_locations')
         if not country and self.instance:
             country = self.instance.country
-        if not attrs.get('geo_locations'):
+        if not geo_locations:
             errors.update({
                 'geo_locations': 'This field is required.'
             })
             return errors
-        location_code = country.iso2
-        if not location_code:
+        country_code = country.iso2
+        if not country_code:
             # ignore iso2 validation if missing
             return errors
-        geo_locations_code = set([
-            location['country_code'] for location in attrs['geo_locations']
-        ])
-
-        if len(geo_locations_code) != 1:
-            errors.update({
-                'geo_locations': 'Geolocations only support a single country under a figure.'
-            })
-
-        if geo_locations_code.pop().lower() != location_code.lower():
-            errors.update({
-                'geo_locations': "Location should be inside the selected figure's country"
-            })
+        for location in geo_locations:
+            # If location is moved manually allow to save location of other coutries
+            # These locations are considered as problematic border issues
+            moved = location["moved"]
+            if location["country_code"].lower() != country_code.lower() and not moved:
+                errors.update({
+                    'geo_locations': "Location should be inside the selected figure's country"
+                })
         return errors
 
     def validate_disaggregated_sum_against_reported(self, attrs, fields, verbose_names):
