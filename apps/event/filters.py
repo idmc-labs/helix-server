@@ -94,8 +94,8 @@ class EventFilter(NameFilterMixin,
         return qs
 
     def filter_qa_rules(self, qs, name, value):
-        flow_qs = Event.objects.none()
-        stock_qs = Event.objects.none()
+        flow_qs_ids = []
+        stock_qs_ids = []
         recommended_stock_figures_count = Count('entries__figures', filter=(
             Q(entries__figures__role=Figure.ROLE.RECOMMENDED) &
             Q(ignore_qa=False) &
@@ -111,19 +111,19 @@ class EventFilter(NameFilterMixin,
             'flow_figure_count': recommended_flow_figures_count
         }
         if QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name in value:
-            flow_qs = qs.annotate(**annotated_fields).filter(
+            flow_qs_ids = qs.annotate(**annotated_fields).filter(
                 ignore_qa=False,
                 stock_figure_count=0, flow_figure_count=0
-            )
+            ).values_list("id", flat=True)
         if QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name in value:
-            stock_qs = qs.annotate(**annotated_fields).filter(
+            stock_qs_ids = qs.annotate(**annotated_fields).filter(
                 ignore_qa=False,
                 entries__figures__role=Figure.ROLE.RECOMMENDED
             ).filter(
                 Q(stock_figure_count__gt=1) | Q(flow_figure_count__gt=1)
-            )
-        qs = flow_qs | stock_qs
-        return qs.distinct()
+            ).values_list("id", flat=True)
+        event_ids = list(flow_qs_ids) + list(stock_qs_ids)
+        return qs.filter(id__in=event_ids)
 
     @property
     def qs(self):
