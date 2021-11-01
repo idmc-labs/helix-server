@@ -4,7 +4,7 @@ from graphene_django_extras import DjangoObjectField
 
 from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.event.enums import EventOtherSubTypeEnum
+from apps.event.enums import EventOtherSubTypeEnum, QaRecommendedFigureEnum
 from apps.event.models import (
     Event,
     Trigger,
@@ -216,6 +216,7 @@ class EventType(DjangoObjectType):
     entry_count = graphene.Field(graphene.Int)
     glide_numbers = graphene.List(graphene.NonNull(graphene.String))
     osv_sub_type = graphene.Field(OsvSubObjectType)
+    QA_RULE_TYPE = graphene.Field(QaRecommendedFigureEnum)
 
     def resolve_review_count(root, info, **kwargs):
         return info.context.event_event_review_count_dataloader.load(root.id)

@@ -4,6 +4,8 @@ import json
 from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
+from apps.entry.models import Figure, FigureCategory
+
 from utils.factories import (
     CountryFactory,
     DisasterSubTypeFactory,
@@ -11,6 +13,7 @@ from utils.factories import (
     ViolenceSubTypeFactory,
     EventFactory,
     EntryFactory,
+    FigureFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -282,8 +285,8 @@ class TestEventListQuery(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.event1_name = 'blaone'
         self.q = '''
-            query EventList($crisisByIds: [ID!], $name: String){
-              eventList(crisisByIds: $crisisByIds, name: $name) {
+            query EventList($crisisByIds: [ID!], $name: String, $qaRules: [String!]){
+              eventList(crisisByIds: $crisisByIds, name: $name, qaRules: $qaRules) {
                 results {
                   id
                   reviewCount {
@@ -293,6 +296,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
                     underReviewCount
                   }
                 }
+                totalCount
               }
             }
         '''
@@ -385,6 +389,93 @@ class TestEventListQuery(HelixGraphQLTestCase):
             data['eventList']['results'][0]['reviewCount']['reviewCompleteCount'],
             None
         )
+
+    def test_event_has_mutiple_recommended_figures(self):
+        # Create event without entries and figures
+        event = EventFactory.create()
+        event1 = EventFactory.create()
+        for i in range(3):
+            entry1 = EntryFactory.create(event=event)
+            FigureFactory.create(
+                entry=entry1,
+                role=Figure.ROLE.RECOMMENDED,
+                category=FigureCategory.stock_idp_id()
+            )
+            FigureFactory.create(
+                entry=entry1,
+                role=Figure.ROLE.RECOMMENDED,
+                category=FigureCategory.flow_new_displacement_id()
+            )
+
+        for i in range(3):
+            entry1 = EntryFactory.create(event=event1)
+            FigureFactory.create(
+                entry=entry1,
+                role=Figure.ROLE.TRIANGULATION,
+                category=FigureCategory.stock_idp_id()
+            )
+            FigureFactory.create(
+                entry=entry1,
+                role=Figure.ROLE.TRIANGULATION,
+                category=FigureCategory.flow_new_displacement_id()
+            )
+
+        # Test event has no figures
+        variables = {
+            "qaRules": ['HAS_NO_RECOMMENDED_FIGURES']
+        }
+        response = self.query(self.q, variables=variables)
+        content = response.json()
+        self.assertEqual(content['data']['eventList']['totalCount'], 1)
+
+        # Test event with mutiple figures
+        variables = {
+            "qaRules": ['HAS_MULTIPLE_RECOMMENDED_FIGURES']
+        }
+        response = self.query(self.q, variables=variables)
+        content = response.json()
+        self.assertEqual(content['data']['eventList']['totalCount'], 1)
+
+        # Test should return combined result if both filters passed
+        variables = {
+            "qaRules": [
+                'HAS_MULTIPLE_RECOMMENDED_FIGURES',
+                'HAS_NO_RECOMMENDED_FIGURES'
+            ]
+        }
+        response = self.query(self.q, variables=variables)
+        content = response.json()
+        self.assertEqual(content['data']['eventList']['totalCount'], 2)
+
+    def test_should_ignore_events_form_qa_if_ignore_qs_flag_is_true(self):
+        # Create events with ignore_qa true
+        event = EventFactory.create(ignore_qa=True)
+        for i in range(3):
+            entry1 = EntryFactory.create(event=event)
+            FigureFactory.create(
+                entry=entry1,
+                role=Figure.ROLE.RECOMMENDED,
+                category=FigureCategory.stock_idp_id()
+            )
+            FigureFactory.create(
+                entry=entry1,
+                role=Figure.ROLE.RECOMMENDED,
+                category=FigureCategory.flow_new_displacement_id()
+            )
+
+        variables = {
+            "qaRules": ['HAS_NO_RECOMMENDED_FIGURES']
+        }
+        response = self.query(self.q, variables=variables)
+        content = response.json()
+        self.assertEqual(content['data']['eventList']['totalCount'], 0)
+
+        variables = {
+            "qaRules": ['HAS_MULTIPLE_RECOMMENDED_FIGURES']
+        }
+        response = self.query(self.q, variables=variables)
+        content = response.json()
+        self.assertEqual(content['data']['eventList']['totalCount'], 0)
 
 
 class CloneEventTest(HelixGraphQLTestCase):

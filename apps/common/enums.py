@@ -14,3 +14,14 @@ class GENDER_TYPE(enum.Enum):
         UNSPECIFIED: _("Unspecified"),
         OTHER: _("Other"),
     }
+
+
+class QA_RULE_TYPE(enum.Enum):
+    # constants for QA dashboard filter
+    HAS_NO_RECOMMENDED_FIGURES = 0
+    HAS_MULTIPLE_RECOMMENDED_FIGURES = 1
+
+    __labels__ = {
+        HAS_NO_RECOMMENDED_FIGURES: _("Has no recommended figures"),
+        HAS_MULTIPLE_RECOMMENDED_FIGURES: _("Has mutiple recommended figures"),
+    }

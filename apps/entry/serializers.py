@@ -132,7 +132,7 @@ class CommonFigureValidationMixin:
         for location in geo_locations:
             # If location is moved manually allow to save location of other coutries
             # These locations are considered as problematic border issues
-            moved = location["moved"]
+            moved = location.get("moved", False)
             if location["country_code"].lower() != country_code.lower() and not moved:
                 errors.update({
                     'geo_locations': "Location should be inside the selected figure's country"

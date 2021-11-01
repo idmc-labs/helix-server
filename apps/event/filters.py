@@ -1,12 +1,13 @@
 import django_filters
 from django.db.models import Q, Count
-from apps.event.models import Actor, Event
+from apps.event.models import Actor, Event, Figure
 from apps.crisis.models import Crisis
 from apps.report.models import Report
 from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
 from apps.event.constants import OSV
-from apps.entry.models import EntryReviewer
+from apps.entry.models import EntryReviewer, FigureCategory
 from django.db import models
+from apps.common.enums import QA_RULE_TYPE
 
 
 class EventFilter(NameFilterMixin,
@@ -24,6 +25,7 @@ class EventFilter(NameFilterMixin,
     violence_types = IDListFilter(method='filter_violence_types')
     violence_sub_types = IDListFilter(method='filter_violence_sub_types')
     created_by_ids = IDListFilter(method='filter_created_by')
+    qa_rules = StringListFilter(method='filter_qa_rules')
 
     class Meta:
         model = Event
@@ -31,6 +33,7 @@ class EventFilter(NameFilterMixin,
             'created_at': ['lte', 'lt', 'gte', 'gt'],
             'start_date': ['lte', 'lt', 'gte', 'gt'],
             'end_date': ['lte', 'lt', 'gte', 'gt'],
+            'ignore_qa': ['exact']
         }
 
     def filter_report(self, qs, name, value):
@@ -90,6 +93,38 @@ class EventFilter(NameFilterMixin,
             return qs.filter(~Q(violence__name=OSV) | Q(osv_sub_type__in=value)).distinct()
         return qs
 
+    def filter_qa_rules(self, qs, name, value):
+        flow_qs_ids = []
+        stock_qs_ids = []
+        recommended_stock_figures_count = Count('entries__figures', filter=(
+            Q(entries__figures__role=Figure.ROLE.RECOMMENDED) &
+            Q(ignore_qa=False) &
+            Q(entries__figures__category=FigureCategory.stock_idp_id()))
+        )
+        recommended_flow_figures_count = Count('entries__figures', filter=(
+            Q(entries__figures__role=Figure.ROLE.RECOMMENDED) &
+            Q(ignore_qa=False) &
+            Q(entries__figures__category=FigureCategory.flow_new_displacement_id()))
+        )
+        annotated_fields = {
+            'stock_figure_count': recommended_stock_figures_count,
+            'flow_figure_count': recommended_flow_figures_count
+        }
+        if QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name in value:
+            flow_qs_ids = qs.annotate(**annotated_fields).filter(
+                ignore_qa=False,
+                stock_figure_count=0, flow_figure_count=0
+            ).values_list("id", flat=True)
+        if QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name in value:
+            stock_qs_ids = qs.annotate(**annotated_fields).filter(
+                ignore_qa=False,
+                entries__figures__role=Figure.ROLE.RECOMMENDED
+            ).filter(
+                Q(stock_figure_count__gt=1) | Q(flow_figure_count__gt=1)
+            ).values_list("id", flat=True)
+        event_ids = list(flow_qs_ids) + list(stock_qs_ids)
+        return qs.filter(id__in=event_ids)
+
     @property
     def qs(self):
         return super().qs.annotate(
@@ -114,7 +149,7 @@ class EventFilter(NameFilterMixin,
                 default=None,
                 output_field=models.FloatField()
             )
-        ).prefetch_related("entries", "entries__reviewing")
+        ).prefetch_related("entries", "entries__reviewing", "entries__figures")
 
     def filter_created_by(self, qs, name, value):
         if not value:
