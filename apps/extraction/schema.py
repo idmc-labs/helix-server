@@ -11,7 +11,6 @@ from apps.entry.schema import EntryListType, FigureListType
 
 from apps.entry.enums import (
     RoleGrapheneEnum,
-    GenderTypeGrapheneEnum,
     DisplacementTypeGrapheneEnum,
     EntryReviewerGrapheneEnum,
 )
@@ -33,7 +32,6 @@ class ExtractionQueryObjectType(DjangoObjectType):
                                              ), accessor='entries')
     filter_figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
     filter_event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
-    filter_figure_sex_types = graphene.List(graphene.NonNull(GenderTypeGrapheneEnum))
     filter_figure_displacement_types = graphene.List(graphene.NonNull(DisplacementTypeGrapheneEnum))
     filter_entry_review_status = graphene.List(graphene.NonNull(EntryReviewerGrapheneEnum))
 

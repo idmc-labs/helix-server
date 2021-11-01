@@ -11,7 +11,6 @@ from apps.entry.models import (
 )
 from apps.crisis.models import Crisis
 from apps.entry.constants import STOCK, FLOW
-from apps.common.enums import GENDER_TYPE
 
 
 class QueryAbstractModel(models.Model):
@@ -117,11 +116,6 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_figure_sex_types = ArrayField(
-        base_field=enum.EnumField(enum=GENDER_TYPE),
-        blank=True,
-        null=True
-    )
     filter_figure_terms = models.ManyToManyField(
         'entry.FigureTerm',
         verbose_name=_('Figure Term'),
@@ -170,6 +164,10 @@ class QueryAbstractModel(models.Model):
         verbose_name=_('Has review comments'),
         default=None,
     )
+    filter_entry_has_disaggregated_data = models.NullBooleanField(
+        verbose_name=_('Has disaggregated data'),
+        default=None,
+    )
 
     @property
     def get_filter_kwargs(self):
@@ -195,7 +193,8 @@ class QueryAbstractModel(models.Model):
             filter_event_violence_types=self.filter_event_violence_types.all(),
             filter_event_violence_sub_types=self.filter_event_violence_sub_types.all(),
             filter_figure_category_types=self.filter_figure_category_types,
-            filter_entry_has_review_comments=self.filter_entry_has_review_comments
+            filter_entry_has_review_comments=self.filter_entry_has_review_comments,
+            filter_entry_has_disaggregated_data=self.filter_entry_has_disaggregated_data,
         )
 
     @property

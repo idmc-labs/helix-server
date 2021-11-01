@@ -42,16 +42,16 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_entry_review_status = StringListFilter(method='filter_by_review_status')
     filter_entry_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
-    filter_figure_sex_types = StringListFilter(method='filter_by_figure_sex_types')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
     filter_event_disaster_categories = IDListFilter(method='filter_filter_event_disaster_categories')
     filter_event_disaster_sub_categories = IDListFilter(method='filter_filter_event_disaster_sub_categories')
     filter_event_disaster_sub_types = IDListFilter(method='filter_filter_event_disaster_sub_types')
     filter_event_disaster_types = IDListFilter(method='filter_filter_event_disaster_types')
     filter_event_violence_sub_types = IDListFilter(method='filter_filter_event_violence_sub_types')
-    filter_event_violence_types = IDListFilter(method='filter_event_violence_types')
+    filter_event_violence_types = IDListFilter(method='filter_filter_event_violence_types')
     filter_entry_has_review_comments = df.BooleanFilter(method='filter_has_review_comments', initial=False)
     filter_event_osv_sub_types = IDListFilter(method='filter_filter_event_osv_sub_types')
+    filter_entry_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data', initial=False)
     # used in report entry table
     report = df.CharFilter(method='filter_report')
 
@@ -187,19 +187,15 @@ class EntryExtractionFilterSet(df.FilterSet):
     def filter_by_review_status(self, qs, name, value):
         if not value:
             return qs
+        to_be_reviewed_qs = Entry.objects.none()
+        if EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.name in value:
+            value.remove(EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.name)
+            to_be_reviewed_qs = qs.filter(
+                Q(review_status__isnull=True) | Q(review_status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.value)
+            )
         db_values = [EntryReviewer.REVIEW_STATUS.get(item) for item in value]
-        return qs.filter(review_status__in=db_values)
-
-    def filter_by_figure_sex_types(self, qs, name, value):
-        if not value:
-            return qs
-
-        query_expr = Q()
-        if MALE in value:
-            query_expr = query_expr | Q(figures__disaggregation_sex_male__gt=0)
-        if FEMALE in value:
-            query_expr = query_expr | Q(figures__disaggregation_sex_female__gt=0)
-        return qs.filter(query_expr).distinct()
+        qs = qs.filter(review_status__in=db_values) | to_be_reviewed_qs
+        return qs.distinct()
 
     def filter_by_figure_displacement_types(self, qs, name, value):
         if not value:
@@ -257,7 +253,7 @@ class EntryExtractionFilterSet(df.FilterSet):
             ).distinct()
         return qs
 
-    def filter_event_violence_types(self, qs, name, value):
+    def filter_filter_event_violence_types(self, qs, name, value):
         if value:
             return qs.filter(
                 ~Q(
@@ -281,6 +277,13 @@ class EntryExtractionFilterSet(df.FilterSet):
     def filter_filter_event_osv_sub_types(self, qs, name, value):
         if value:
             return qs.filter(~Q(event__violence__name=OSV) | Q(event__osv_sub_type__in=value)).distinct()
+        return qs
+
+    def filter_has_disaggregated_data(self, qs, name, value):
+        if value is True:
+            return qs.filter(figures__disaggregation_age__isnull=False)
+        if value is False:
+            return qs.filter(figures__disaggregation_age__isnull=True)
         return qs
 
     @property
@@ -311,15 +314,17 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_entry_review_status = StringListFilter(method='filter_by_review_status')
     filter_entry_created_by = IDListFilter(field_name='entry__created_by', lookup_expr='in')
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
-    filter_figure_sex_types = StringListFilter(method='filter_by_figure_sex_types')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
     event = df.CharFilter(field_name='entry__event', lookup_expr='exact')
     filter_event_disaster_categories = IDListFilter(method='filter_filter_event_disaster_categories')
     filter_event_disaster_sub_categories = IDListFilter(method='filter_filter_event_disaster_sub_categories')
     filter_event_disaster_sub_types = IDListFilter(method='filter_filter_event_disaster_sub_types')
     filter_event_disaster_types = IDListFilter(method='filter_filter_event_disaster_types')
+    filter_event_violence_sub_types = IDListFilter(method='filter_filter_event_violence_sub_types')
+    filter_event_violence_types = IDListFilter(method='filter_filter_event_violence_types')
     filter_entry_has_review_comments = df.BooleanFilter(method='filter_has_review_comments', initial=False)
     filter_event_osv_sub_types = IDListFilter(method='filter_filter_event_osv_sub_types')
+    filter_entry_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data', initial=False)
     # used in report entry table
     report = df.CharFilter(method='filter_report')
 
@@ -435,19 +440,16 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     def filter_by_review_status(self, qs, name, value):
         if not value:
             return qs
+        to_be_reviewed_qs = Figure.objects.none()
+        if EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.name in value:
+            value.remove(EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.name)
+            to_be_reviewed_qs = qs.filter(
+                Q(entry__review_status__isnull=True) |
+                Q(entry__review_status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.value)
+            )
         db_values = [EntryReviewer.REVIEW_STATUS.get(item) for item in value]
-        return qs.filter(entry__review_status__in=db_values)
-
-    def filter_by_figure_sex_types(self, qs, name, value):
-        if not value:
-            return qs
-
-        query_expr = Q()
-        if MALE in value:
-            query_expr = query_expr | Q(disaggregation_sex_male__gt=0)
-        if FEMALE in value:
-            query_expr = query_expr | Q(disaggregation_sex_female__gt=0)
-        return qs.filter(query_expr)
+        qs = qs.filter(entry__review_status__in=db_values) | to_be_reviewed_qs
+        return qs.distinct()
 
     def filter_by_figure_displacement_types(self, qs, name, value):
         if not value:
@@ -501,6 +503,24 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             ).distinct()
         return qs
 
+    def filter_filter_event_violence_sub_types(self, qs, name, value):
+        if value:
+            return qs.filter(
+                ~Q(
+                    entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT.value
+                ) | Q(entry__event__violence_sub_type__in=value)
+            ).distinct()
+        return qs
+
+    def filter_filter_event_violence_types(self, qs, name, value):
+        if value:
+            return qs.filter(
+                ~Q(
+                    entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT.value
+                ) | Q(entry__event__violence_type__in=value)
+            ).distinct()
+        return qs
+
     def filter_has_review_comments(self, qs, name, value):
         if value is True:
             return qs.filter(entry__review_comments__isnull=False)
@@ -518,13 +538,11 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             return qs.filter(~Q(entry__event__violence__name=OSV) | Q(entry__event__osv_sub_type__in=value)).distinct()
         return qs
 
-    def filter_filter_event_violence_sub_types(self, qs, name, value):
-        if value:
-            return qs.filter(
-                ~Q(
-                    entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT.value
-                ) | Q(entry__event__violence_sub_type__in=value)
-            ).distinct()
+    def filter_has_disaggregated_data(self, qs, name, value):
+        if value is True:
+            return qs.filter(disaggregation_age__isnull=False)
+        if value is False:
+            return qs.filter(disaggregation_age__isnull=True)
         return qs
 
     @property
