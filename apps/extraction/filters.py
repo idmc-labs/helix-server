@@ -303,8 +303,10 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     @property
     def qs(self):
+        figure_ids = super().qs.values_list('figures', flat=True)
+        figures = Figure.objects.filter(id__in=figure_ids)
         return super().qs.annotate(
-            **Entry._total_figure_disaggregation_subquery(),
+            **Entry._total_figure_disaggregation_subquery(figures=figures),
         ).prefetch_related('review_comments').distinct()
 
 
