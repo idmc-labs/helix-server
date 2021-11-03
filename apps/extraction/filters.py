@@ -37,7 +37,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
     filter_figure_tags = IDListFilter(method='filter_tags')
     filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='unaccent__icontains')
-    filter_event_glide_number = StringListFilter(method='filter_filter_event_glide_number')
+    filter_event_name_or_code = df.CharFilter(method='filter_filter_event_name_or_code')
     filter_event_crisis_types = StringListFilter(method='filter_crisis_types')
     filter_entry_review_status = StringListFilter(method='filter_by_review_status')
     filter_entry_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
@@ -269,10 +269,13 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs.filter(review_comments__isnull=True)
         return qs
 
-    def filter_filter_event_glide_number(self, qs, name, value):
+    def filter_filter_event_name_or_code(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(event__glide_numbers__overlap=value).distinct()
+        return qs.filter(
+            Q(event__glide_numbers__overlap=[value]) |
+            Q(event__name__unaccent__icontains=value)
+        ).distinct()
 
     def filter_filter_event_osv_sub_types(self, qs, name, value):
         if value:
@@ -310,7 +313,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_entry_article_title = df.CharFilter(field_name='entry__article_title', lookup_expr='unaccent__icontains')
     filter_figure_tags = IDListFilter(method='filter_tags')
     filter_event_crisis_types = StringListFilter(method='filter_crisis_types')
-    filter_event_glide_number = StringListFilter(method='filter_filter_event_glide_number')
+    filter_event_name_or_code = df.CharFilter(method='filter_filter_event_name_or_code')
     filter_entry_review_status = StringListFilter(method='filter_by_review_status')
     filter_entry_created_by = IDListFilter(field_name='entry__created_by', lookup_expr='in')
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
@@ -528,10 +531,14 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             return qs.filter(entry__review_comments__isnull=True)
         return qs
 
-    def filter_filter_event_glide_number(self, qs, name, value):
+    def filter_filter_event_name_or_code(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(entry__event__glide_numbers__overlap=value).distinct()
+        qs = qs.filter(
+            Q(entry__event__glide_numbers__overlap=[value]) |
+            Q(entry__event__name__unaccent__icontains=value)
+        ).distinct()
+        return qs
 
     def filter_filter_event_osv_sub_types(self, qs, name, value):
         if value:

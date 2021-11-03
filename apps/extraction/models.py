@@ -101,8 +101,8 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_event_glide_number = ArrayField(
-        base_field=models.CharField(verbose_name=_('Event Code'), max_length=100, null=True),
+    filter_event_name_or_code = ArrayField(
+        base_field=models.CharField(verbose_name=_('Event Name / Code'), max_length=100, null=True),
         blank=True,
         null=True
     )
@@ -195,6 +195,7 @@ class QueryAbstractModel(models.Model):
             filter_figure_category_types=self.filter_figure_category_types,
             filter_entry_has_review_comments=self.filter_entry_has_review_comments,
             filter_entry_has_disaggregated_data=self.filter_entry_has_disaggregated_data,
+            filter_event_name_or_code=self.filter_event_name_or_code,
         )
 
     @property
