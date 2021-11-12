@@ -200,20 +200,12 @@ class EntryFactory(DjangoModelFactory):
     event = factory.SubFactory(EventFactory)
 
 
-class FigureCategoryFactory(DjangoModelFactory):
-    class Meta:
-        model = 'entry.FigureCategory'
-
-    type = factory.Iterator([STOCK, FLOW])
-
-
 class FigureFactory(DjangoModelFactory):
     class Meta:
         model = 'entry.Figure'
 
     entry = factory.SubFactory(EntryFactory)
     country = factory.SubFactory(CountryFactory)
-    category = factory.SubFactory(FigureCategoryFactory)
     quantifier = factory.Iterator(Figure.QUANTIFIER)
     reported = factory.Sequence(lambda n: n + 2)
     unit = factory.Iterator(Figure.UNIT)

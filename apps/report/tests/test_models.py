@@ -9,10 +9,7 @@ from apps.report.models import (
     ReportApproval,
 )
 from apps.crisis.models import Crisis
-from apps.entry.models import (
-    Figure,
-    FigureCategory,
-)
+from apps.entry.models import Figure
 from apps.users.enums import USER_ROLE
 from utils.tests import HelixTestCase, create_user_with_role
 from utils.factories import (
@@ -24,8 +21,6 @@ from utils.factories import (
 
 
 class TestReportModel(HelixTestCase):
-    def setUp(self):
-        FigureCategory._invalidate_category_ids_cache()
 
     def test_002_appropriate_figures_are_summed_up(self):
         c = CountryFactory.create()
@@ -40,7 +35,7 @@ class TestReportModel(HelixTestCase):
                                   unit=Figure.UNIT.PERSON,
                                   start_date=datetime.today(),
                                   end_date=datetime.today() + timedelta(days=3))
-        f1.category = FigureCategory.stock_idp_id()
+        f1.category = Figure.FIGURE_CATEGORY_TYPES.IDPS
         f1.save()
         f2 = FigureFactory.create(entry=entry,
                                   country=c,
@@ -49,7 +44,7 @@ class TestReportModel(HelixTestCase):
                                   unit=Figure.UNIT.PERSON,
                                   start_date=f1.start_date + timedelta(days=10),
                                   end_date=f1.start_date + timedelta(days=16))
-        f2.category = FigureCategory.stock_idp_id()
+        f2.category = Figure.FIGURE_CATEGORY_TYPES.IDPS
         f2.save()
         r = Report(filter_figure_start_after=f1.start_date,
                    filter_figure_end_before=f1.end_date - timedelta(days=1))
@@ -63,7 +58,7 @@ class TestReportModel(HelixTestCase):
     def test_001_appropriate_typology_checks(self):
         figure = FigureFactory.create(
             reported=200,
-            category=FigureCategory.flow_new_displacement_id(),
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             role=Figure.ROLE.RECOMMENDED,
             country=CountryFactory.create(),
             disaggregation_conflict=100,
@@ -80,7 +75,7 @@ class TestReportModel(HelixTestCase):
         filtered_report_figures = report.report_figures.filter(
             role=Figure.ROLE.RECOMMENDED,
             entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
-            category=FigureCategory.flow_new_displacement_id().id,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
         ).values('country').order_by()
 
         data = filtered_report_figures.filter(disaggregation_conflict__gt=0).annotate(

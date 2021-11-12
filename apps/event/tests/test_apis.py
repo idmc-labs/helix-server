@@ -4,7 +4,7 @@ import json
 from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
-from apps.entry.models import Figure, FigureCategory
+from apps.entry.models import Figure
 
 from utils.factories import (
     CountryFactory,
@@ -399,12 +399,12 @@ class TestEventListQuery(HelixGraphQLTestCase):
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
-                category=FigureCategory.stock_idp_id()
+                category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
             )
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
-                category=FigureCategory.flow_new_displacement_id()
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
             )
 
         for i in range(3):
@@ -412,12 +412,12 @@ class TestEventListQuery(HelixGraphQLTestCase):
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.TRIANGULATION,
-                category=FigureCategory.stock_idp_id()
+                category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
             )
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.TRIANGULATION,
-                category=FigureCategory.flow_new_displacement_id()
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
             )
 
         # Test event has no figures
@@ -455,12 +455,12 @@ class TestEventListQuery(HelixGraphQLTestCase):
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
-                category=FigureCategory.stock_idp_id()
+                category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
             )
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
-                category=FigureCategory.flow_new_displacement_id()
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
             )
 
         variables = {

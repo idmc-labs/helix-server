@@ -18,7 +18,6 @@ from apps.entry.models import (
     EntryReviewer,
     OSMName,
     Figure,
-    FigureCategory,
     FigureTerm,
 )
 from utils.factories import (
@@ -27,7 +26,6 @@ from utils.factories import (
     OrganizationFactory,
     CountryFactory,
     FigureFactory,
-    FigureCategoryFactory
 )
 from utils.tests import HelixTestCase, create_user_with_role
 
@@ -184,14 +182,12 @@ class TestEntrySerializer(HelixTestCase):
         source3 = copy(source1)
         source3['lon'] = 45.9
         source3['uuid'] = str(uuid4())
-
-        FigureCategory._invalidate_category_ids_cache()
-        flow = FigureCategory.flow_new_displacement_id()
+        flow = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         figures = [{
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
-            "category": flow.id,
+            "category": flow.value,
             "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
             "term": FigureTerm.objects.first().id,
@@ -290,9 +286,8 @@ class TestEntrySerializer(HelixTestCase):
         c2 = CountryFactory.create()
         ref = timezone.now()
 
-        FigureCategory._invalidate_category_ids_cache()
-        flow = FigureCategory.flow_new_displacement_id()
-        stock = FigureCategory.stock_idp_id()
+        flow = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
+        stock = Figure.FIGURE_CATEGORY_TYPES.IDPS
 
         event = EventFactory.create(start_date=ref, end_date=ref + timedelta(days=1))
         event.countries.set([c1])
@@ -392,12 +387,12 @@ class TestEntrySerializer(HelixTestCase):
             accuracy=OSMName.OSM_ACCURACY.ADM0.value,
             identifier=OSMName.IDENTIFIER.ORIGIN.value,
         )
-        flow = FigureCategory.flow_new_displacement_id()
+        flow = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         figures = [{
             "uuid": str(uuid4()),
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
-            "category": flow.id,
+            "category": flow.value,
             "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
             "term": FigureTerm.objects.first().id,
@@ -421,7 +416,7 @@ class TestEntrySerializer(HelixTestCase):
             "uuid": str(uuid4()),
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
-            "category": flow.id,
+            "category": flow.value,
             "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
             "term": FigureTerm.objects.first().id,
@@ -460,7 +455,7 @@ class TestFigureSerializer(HelixTestCase):
             created_by=self.creator,
             event=self.event
         )
-        self.fig_cat = FigureCategoryFactory.create()
+        self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.country = country1
         source1 = dict(
             uuid=str(uuid4()),
@@ -483,7 +478,7 @@ class TestFigureSerializer(HelixTestCase):
             "reported": 100,
             "unit": Figure.UNIT.PERSON.value,
             "term": FigureTerm.objects.first().id,
-            "category": self.fig_cat.id,
+            "category": self.fig_cat.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-10-10",
             "include_idu": True,

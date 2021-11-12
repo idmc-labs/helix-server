@@ -11,6 +11,7 @@ from apps.event.dataloaders import (
 )
 from apps.crisis.dataloaders import CrisisReviewCountLoader
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
+from apps.entry.models import Figure
 
 
 class GQLContext:
@@ -69,37 +70,33 @@ class GQLContext:
 
     @cached_property
     def country_country_this_year_idps_disaster_loader(self):
-        from apps.entry.models import FigureCategory
         from apps.crisis.models import Crisis
         return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category=FigureCategory.stock_idp_id(),
+            category__in=Figure.stock_ids(),
             event_type=Crisis.CRISIS_TYPE.DISASTER.value,
         )
 
     @cached_property
     def country_country_this_year_idps_conflict_loader(self):
-        from apps.entry.models import FigureCategory
         from apps.crisis.models import Crisis
         return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category=FigureCategory.stock_idp_id(),
+            category__in=Figure.stock_ids(),
             event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
         )
 
     @cached_property
     def country_country_this_year_nd_conflict_loader(self):
-        from apps.entry.models import FigureCategory
         from apps.crisis.models import Crisis
         return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category=FigureCategory.flow_new_displacement_id(),
+            category__in=Figure.flow_list(),
             event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
         )
 
     @cached_property
     def country_country_this_year_nd_disaster_loader(self):
-        from apps.entry.models import FigureCategory
         from apps.crisis.models import Crisis
         return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category=FigureCategory.flow_new_displacement_id(),
+            category__in=Figure.flow_list(),
             event_type=Crisis.CRISIS_TYPE.DISASTER.value,
         )
 

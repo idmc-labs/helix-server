@@ -3,8 +3,6 @@ from datetime import date
 import logging
 from typing import Optional, List
 from uuid import uuid4
-
-from django.core.cache import cache
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.aggregates.general import ArrayAgg, StringAgg
 from django.contrib.postgres.fields import ArrayField, JSONField
@@ -26,7 +24,7 @@ from apps.contrib.models import (
 )
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.constants import (
-    STOCK, FLOW, LESS_THAN_FIVE, FIVE_TO_FOURTEEN, FIFTEEN_TO_TWENTRY_FOUR,
+    LESS_THAN_FIVE, FIVE_TO_FOURTEEN, FIFTEEN_TO_TWENTRY_FOUR,
     ZERO_TO_SEVENTEEN, EIGHTEEN_TO_FIFTYNINE, SIXTY_PLUS, OTHER_AGES,
     AGE_CATEGORIES_TO_EXPORT
 )
@@ -148,46 +146,6 @@ class OSMName(UUIDAbstractModel, models.Model):
                               enum=OSM_ACCURACY)
     moved = models.BooleanField(verbose_name=_('Moved'),
                                 default=False)
-
-
-class FigureCategory(models.Model):
-    name = models.CharField(verbose_name=_('Name'), max_length=256)
-    type = models.CharField(verbose_name=_('Type'), max_length=8, choices=(
-        (STOCK, STOCK),
-        (FLOW, FLOW),
-    ), default=STOCK)
-
-    @classmethod
-    def stock_idp_id(cls):
-        _stock_idp_id = cache.get('_stock_idp_id')
-        if not _stock_idp_id:
-            _stock_idp_id = cls.objects.get(
-                type=STOCK,
-                name__iexact='idps'
-            )
-            cache.set('_stock_idp_id', _stock_idp_id, 2 * 60 * 60)
-        return _stock_idp_id
-
-    @classmethod
-    def flow_new_displacement_id(cls):
-        _flow_new_displacement_id = cache.get('_flow_new_displacement_id')
-        if not _flow_new_displacement_id:
-            _flow_new_displacement_id = cls.objects.get(
-                type=FLOW,
-                name__iexact='new displacement'
-            )
-            cache.set('_flow_new_displacement_id', _flow_new_displacement_id, 2 * 60 * 60)
-        return _flow_new_displacement_id
-
-    @classmethod
-    def _invalidate_category_ids_cache(cls):
-        '''
-        Invalidate the figure categories idp and nd cache
-        '''
-        cache.delete_many([
-            '_stock_idp_id',
-            '_flow_new_displacement_id',
-        ])
 
 
 class FigureDisaggregationAbstractModel(models.Model):
@@ -371,6 +329,51 @@ class Figure(MetaInformationArchiveAbstractModel,
             UNKNOWN: _('Unknown'),
         }
 
+    class FIGURE_CATEGORY_TYPES(enum.Enum):
+        IDPS = 0
+        RETURNEES = 1
+        RETURN = 2
+        LOCALLY_INTEGRATED_IDPS = 3
+        IDPS_SETTLED_ELSEWHERE = 4
+        PEOPLE_DISPLACED_ACROSS_BORDERS = 5
+        NEW_DISPLACEMENT = 6
+        MULTIPLE_DISPLACEMENT = 7
+        PARTIAL_STOCK = 8
+        PARTIAL_FLOW = 9
+        CROSS_BORDER_FLIGHT = 10
+        CROSS_BORDER_RETURN = 11
+        RELOCATION_ELSEWHERE = 12
+        DEATHS = 13
+        PROVISIONAL_SOLUTIONS = 14
+        FAILED_LOCAL_INTEGRATION = 15
+        LOCAL_INTEGRATION = 16
+        FAILED_RETURN_RETURNEE_DISPLACEMENT = 17
+        UNVERIFIED_STOCK = 18
+        UNVERIFIED_FLOW = 19
+
+        __labels__ = {
+            IDPS: _('IDPs'),
+            RETURNEES: _('Returnees'),
+            RETURN: _('Return'),
+            LOCALLY_INTEGRATED_IDPS: _('Locally Integrated IDPs'),
+            IDPS_SETTLED_ELSEWHERE: _('IDPs Settled Elsewhere'),
+            PEOPLE_DISPLACED_ACROSS_BORDERS: _('People displaced across borders'),
+            NEW_DISPLACEMENT: _('New Displacement'),
+            MULTIPLE_DISPLACEMENT: _('Multiple Displacement'),
+            PARTIAL_STOCK: _('Partial stock'),
+            PARTIAL_FLOW: _('Partial flow'),
+            CROSS_BORDER_FLIGHT: _('Cross-border Flight'),
+            CROSS_BORDER_RETURN: _('Cross-border Return'),
+            RELOCATION_ELSEWHERE: _('Relocation Elsewhere'),
+            DEATHS: _('Deaths'),
+            PROVISIONAL_SOLUTIONS: _('Provisional Solutions'),
+            FAILED_LOCAL_INTEGRATION: _('Failed Local Integration'),
+            LOCAL_INTEGRATION: _('Local Integration'),
+            FAILED_RETURN_RETURNEE_DISPLACEMENT: _('Failed Return / Returnee Displacement'),
+            UNVERIFIED_STOCK: _('Unverified stock'),
+            UNVERIFIED_FLOW: _('Unverified flow')
+        }
+
     uuid = models.UUIDField(verbose_name='UUID',
                             blank=True, default=uuid4)
     entry = models.ForeignKey('Entry', verbose_name=_('Entry'),
@@ -386,9 +389,12 @@ class Figure(MetaInformationArchiveAbstractModel,
     )
     total_figures = models.PositiveIntegerField(verbose_name=_('Total Figures'), default=0,
                                                 editable=False)
-    category = models.ForeignKey('FigureCategory', verbose_name=_('Figure category'),
-                                 related_name='figures', on_delete=models.PROTECT,
-                                 blank=False, null=True)
+    category = enum.EnumField(
+        enum=FIGURE_CATEGORY_TYPES,
+        verbose_name=_('Figure Category'),
+        null=True,
+        blank=True,
+    )
     term = models.ForeignKey('FigureTerm', verbose_name=_('Figure term'),
                              related_name='+', on_delete=models.SET_NULL,
                              blank=False, null=True)
@@ -472,13 +478,42 @@ class Figure(MetaInformationArchiveAbstractModel,
                 end_date__isnull=False,
                 end_date__lte=end_date,
             ),
-            category=FigureCategory.flow_new_displacement_id(),
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
         )
         if start_date:
             qs = qs.filter(
                 end_date__gte=start_date,
             )
         return qs
+
+    @classmethod
+    def stock_list(cls):
+        return [
+            Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
+            Figure.FIGURE_CATEGORY_TYPES.RETURNEES.value,
+            Figure.FIGURE_CATEGORY_TYPES.LOCALLY_INTEGRATED_IDPS.value,
+            Figure.FIGURE_CATEGORY_TYPES.IDPS_SETTLED_ELSEWHERE.value,
+            Figure.FIGURE_CATEGORY_TYPES.PEOPLE_DISPLACED_ACROSS_BORDERS.value,
+            Figure.FIGURE_CATEGORY_TYPES.PARTIAL_STOCK.value,
+            Figure.FIGURE_CATEGORY_TYPES.UNVERIFIED_STOCK.value
+        ]
+
+    @classmethod
+    def flow_list(cls):
+        return [
+            Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+            Figure.FIGURE_CATEGORY_TYPES.MULTIPLE_DISPLACEMENT.value,
+            Figure.FIGURE_CATEGORY_TYPES.PARTIAL_FLOW.value,
+            Figure.FIGURE_CATEGORY_TYPES.CROSS_BORDER_FLIGHT.value,
+            Figure.FIGURE_CATEGORY_TYPES.CROSS_BORDER_RETURN.value,
+            Figure.FIGURE_CATEGORY_TYPES.RELOCATION_ELSEWHERE.value,
+            Figure.FIGURE_CATEGORY_TYPES.DEATHS.value,
+            Figure.FIGURE_CATEGORY_TYPES.PROVISIONAL_SOLUTIONS.value,
+            Figure.FIGURE_CATEGORY_TYPES.FAILED_LOCAL_INTEGRATION.value,
+            Figure.FIGURE_CATEGORY_TYPES.LOCAL_INTEGRATION.value,
+            Figure.FIGURE_CATEGORY_TYPES.FAILED_RETURN_RETURNEE_DISPLACEMENT.value,
+            Figure.FIGURE_CATEGORY_TYPES.UNVERIFIED_FLOW.value
+        ]
 
     @classmethod
     def filtered_idp_figures(
@@ -499,7 +534,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             ),
             start_date__isnull=False,
             start_date__lte=reference_point,
-            category=FigureCategory.stock_idp_id(),
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
         )
 
     @classmethod
@@ -787,7 +822,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         from apps.extraction.filters import FigureExtractionFilterSet
         return FigureExtractionFilterSet(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
-            category=FigureCategory.stock_idp_id()
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
         ).aggregate(total=Sum('total_figures'))['total']
 
     @classmethod
@@ -795,7 +830,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         from apps.extraction.filters import FigureExtractionFilterSet
         return FigureExtractionFilterSet(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
-            category=FigureCategory.flow_new_displacement_id()
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
         ).aggregate(total=Sum('total_figures'))['total']
 
     @classmethod

@@ -17,6 +17,7 @@ from apps.entry.enums import (
     EntryReviewerGrapheneEnum,
     OSMAccuracyGrapheneEnum,
     IdentifierGrapheneEnum,
+    FigureCategoryTypeEnum,
 )
 from apps.entry.filters import EntryReviewerFilter, OSMNameFilter
 from apps.entry.models import (
@@ -25,7 +26,6 @@ from apps.entry.models import (
     FigureTerm,
     Entry,
     EntryReviewer,
-    FigureCategory,
     OSMName,
     DisaggregatedAgeCategory,
     DisaggregatedAge,
@@ -100,19 +100,6 @@ class OSMNameListType(CustomDjangoListObjectType):
         filterset_class = OSMNameFilter
 
 
-class FigureCategoryObjectType(DjangoObjectType):
-    class Meta:
-        model = FigureCategory
-
-
-class FigureCategoryListType(CustomDjangoListObjectType):
-    class Meta:
-        model = FigureCategory
-        filter_fields = {
-            'name': ('unaccent__icontains',),
-        }
-
-
 class FigureTermType(DjangoObjectType):
     class Meta:
         model = FigureTerm
@@ -150,6 +137,7 @@ class FigureType(DjangoObjectType):
     )
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
+    category = graphene.Field(FigureCategoryTypeEnum)
 
 
 class FigureListType(CustomDjangoListObjectType):
@@ -271,8 +259,6 @@ class FigureTagListType(CustomDjangoListObjectType):
 
 
 class Query:
-    figure_category = DjangoObjectField(FigureCategoryObjectType)
-    figure_category_list = DjangoPaginatedListObjectField(FigureCategoryListType)
     figure_term = DjangoObjectField(FigureTermType)
     figure_term_list = DjangoPaginatedListObjectField(FigureTermListType)
     figure_tag = DjangoObjectField(FigureTagType)
