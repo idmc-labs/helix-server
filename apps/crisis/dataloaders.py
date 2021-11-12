@@ -95,7 +95,7 @@ class TotalIDPFigureByCrisisLoader(DataLoader):
     def batch_load_fn(self, keys):
         return batch_load_fn_by_category(
             keys,
-            Figure.FIGURE_CATEGORY_TYPES>IDPS,
+            Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
         )
 
 
@@ -103,5 +103,5 @@ class TotalNDFigureByCrisisLoader(DataLoader):
     def batch_load_fn(self, keys):
         return batch_load_fn_by_category(
             keys,
-            Figure,FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
         )

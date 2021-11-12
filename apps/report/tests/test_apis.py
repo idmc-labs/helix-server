@@ -11,7 +11,6 @@ from utils.factories import (
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
-from apps.entry.constants import STOCK
 
 
 class TestCreateReport(HelixGraphQLTestCase):
