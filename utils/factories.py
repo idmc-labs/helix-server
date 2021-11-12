@@ -6,7 +6,6 @@ from factory.django import DjangoModelFactory
 from apps.contact.models import Contact
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
-from apps.entry.constants import STOCK, FLOW
 from apps.common.enums import GENDER_TYPE
 
 
