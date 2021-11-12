@@ -15,7 +15,7 @@ from django.db.models import (
 from django.contrib.postgres.aggregates import StringAgg
 from collections import OrderedDict
 from datetime import timedelta
-from apps.entry.models import Figure, FigureCategory
+from apps.entry.models import Figure
 from apps.crisis.models import Crisis
 from apps.country.models import (
     CountryPopulation,
@@ -49,7 +49,7 @@ def report_global_numbers(report):
                 'total_figures',
                 filter=Q(
                     **disaster_filter,
-                    category=FigureCategory.flow_new_displacement_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                 )
             ), 0
         ),
@@ -58,7 +58,7 @@ def report_global_numbers(report):
                 'total_figures',
                 filter=Q(
                     **conflict_filter,
-                    category=FigureCategory.flow_new_displacement_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                 )
             ), 0
         ),
@@ -73,7 +73,7 @@ def report_global_numbers(report):
                         end_date__gte=report.filter_figure_end_before or timezone.now().date(),
                     ),
                     **conflict_filter,
-                    category=FigureCategory.stock_idp_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
                 )
             ), 0
         ),
@@ -317,7 +317,7 @@ def report_stat_conflict_country(report, include_history):
         iso3=F('country__iso3'),
         name=F('country__name'),
         flow_total=Sum('total_figures', filter=Q(
-            category=FigureCategory.flow_new_displacement_id(),
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             **global_filter
         )),
         stock_total=Sum('total_figures', filter=Q(
@@ -327,7 +327,7 @@ def report_stat_conflict_country(report, include_history):
                 end_date__isnull=False,
                 end_date__gte=report.filter_figure_end_before or timezone.now().date(),
             ),
-            category=FigureCategory.stock_idp_id(),
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             **global_filter
         )),
     )
@@ -339,7 +339,7 @@ def report_stat_conflict_country(report, include_history):
                     start_date__gte=report.filter_figure_start_after - timedelta(days=365),
                     end_date__lte=report.filter_figure_end_before - timedelta(days=365),
                     country=OuterRef('country'),
-                    category=FigureCategory.flow_new_displacement_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                     **global_filter
                 ).annotate(
                     _total=Sum('total_figures')
@@ -352,7 +352,7 @@ def report_stat_conflict_country(report, include_history):
                     start_date__month__gte=report.filter_figure_start_after.month,
                     end_date__month__lte=report.filter_figure_end_before.month,
                     country=OuterRef('country'),
-                    category=FigureCategory.flow_new_displacement_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                     **global_filter
                 ).annotate(
                     min_year=Min(Extract('start_date', 'year')),
@@ -365,7 +365,7 @@ def report_stat_conflict_country(report, include_history):
                 Figure.objects.filter(
                     start_date__lte=report.filter_figure_end_before - timedelta(days=365),
                     country=OuterRef('country'),
-                    category=FigureCategory.stock_idp_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
                     **global_filter
                 ).filter(
                     Q(
@@ -448,7 +448,7 @@ def report_stat_conflict_region(report, include_history):
         ),
         name=F('country__region__name'),
         flow_total=Sum('total_figures', filter=Q(
-            category=FigureCategory.flow_new_displacement_id(),
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             **global_filter
         )),
         stock_total=Sum('total_figures', filter=Q(
@@ -458,7 +458,7 @@ def report_stat_conflict_region(report, include_history):
                 end_date__isnull=False,
                 end_date__gte=report.filter_figure_end_before or timezone.now().date(),
             ),
-            category=FigureCategory.stock_idp_id(),
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             **global_filter,
         )),
     )
@@ -470,7 +470,7 @@ def report_stat_conflict_region(report, include_history):
                     start_date__gte=report.filter_figure_start_after - timedelta(days=365),
                     end_date__lte=report.filter_figure_end_before - timedelta(days=365),
                     country__region=OuterRef('region'),
-                    category=FigureCategory.flow_new_displacement_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                     **global_filter
                 ).annotate(
                     _total=Sum('total_figures')
@@ -482,7 +482,7 @@ def report_stat_conflict_region(report, include_history):
                     # only consider the figures in the given month range
                     start_date__month__gte=report.filter_figure_start_after.month,
                     country__region=OuterRef('region'),
-                    category=FigureCategory.flow_new_displacement_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                     **global_filter
                 ).annotate(
                     min_year=Min(Extract('start_date', 'year')),
@@ -495,7 +495,7 @@ def report_stat_conflict_region(report, include_history):
                 Figure.objects.filter(
                     start_date__lte=report.filter_figure_end_before - timedelta(days=365),
                     country__region=OuterRef('region'),
-                    category=FigureCategory.stock_idp_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
                     **global_filter
                 ).filter(
                     Q(
@@ -529,7 +529,7 @@ def report_stat_conflict_typology(report):
     filtered_report_figures = report.report_figures.filter(
         role=Figure.ROLE.RECOMMENDED,
         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
-        category=FigureCategory.flow_new_displacement_id(),
+        category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
     ).values('country').order_by()
 
     data = filtered_report_figures.filter(disaggregation_conflict__gt=0).annotate(
@@ -586,7 +586,7 @@ def report_stat_conflict_typology(report):
     filtered_report_figures = report.report_figures.filter(
         role=Figure.ROLE.RECOMMENDED,
         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
-        category=FigureCategory.flow_new_displacement_id(),
+        category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
     )
 
     aggregation_data = filtered_report_figures.aggregate(
@@ -669,7 +669,7 @@ def report_disaster_event(report):
         event_sub_category=F('entry__event__disaster_sub_category__name'),
         dtype=F('entry__event__disaster_type__name'),
         dsub_type=F('entry__event__disaster_sub_type__name'),
-        flow_total=Sum('total_figures', filter=Q(category=FigureCategory.flow_new_displacement_id())),
+        flow_total=Sum('total_figures', filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT)),
         affected_countries=Count('country', distinct=True),
         affected_iso3=StringAgg('country__iso3', delimiter=', ', distinct=True),
         affected_names=StringAgg('country__name', delimiter=' | ', distinct=True),
@@ -727,7 +727,7 @@ def report_disaster_country(report, include_history):
             ).values('population')
         ),
         flow_total=Sum('total_figures', filter=Q(
-            category=FigureCategory.flow_new_displacement_id(),
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             **global_filter
         )),
     )
@@ -739,7 +739,7 @@ def report_disaster_country(report, include_history):
                     start_date__gte=report.filter_figure_start_after - timedelta(days=365),
                     end_date__lte=report.filter_figure_end_before - timedelta(days=365),
                     country=OuterRef('country'),
-                    category=FigureCategory.flow_new_displacement_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                     **global_filter
                 ).annotate(
                     _total=Sum('total_figures')
@@ -752,7 +752,7 @@ def report_disaster_country(report, include_history):
                     start_date__month__gte=report.filter_figure_start_after.month,
                     end_date__month__lte=report.filter_figure_end_before.month,
                     country=OuterRef('country'),
-                    category=FigureCategory.flow_new_displacement_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                     **global_filter
                 ).annotate(
                     min_year=Min(Extract('start_date', 'year')),
@@ -818,7 +818,7 @@ def report_disaster_region(report, include_history):
             ).values('total_population')[:1]
         ),
         flow_total=Sum('total_figures', filter=Q(
-            category=FigureCategory.flow_new_displacement_id(),
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             **global_filter
         )),
     )
@@ -830,7 +830,7 @@ def report_disaster_region(report, include_history):
                     start_date__gte=report.filter_figure_start_after - timedelta(days=365),
                     end_date__lte=report.filter_figure_end_before - timedelta(days=365),
                     country__region=OuterRef('country__region'),
-                    category=FigureCategory.flow_new_displacement_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                     **global_filter
                 ).annotate(
                     _total=Sum('total_figures')
@@ -843,7 +843,7 @@ def report_disaster_region(report, include_history):
                     start_date__month__gte=report.filter_figure_start_after.month,
                     end_date__month__lte=report.filter_figure_end_before.month,
                     country__region=OuterRef('country__region'),
-                    category=FigureCategory.flow_new_displacement_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                     **global_filter
                 ).annotate(
                     min_year=Min(Extract('start_date', 'year')),

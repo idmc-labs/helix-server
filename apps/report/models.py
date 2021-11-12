@@ -25,7 +25,6 @@ from apps.entry.models import (
     FigureDisaggregationAbstractModel,
     Figure,
     Entry,
-    FigureCategory,
 )
 from apps.event.models import Event
 from apps.extraction.models import QueryAbstractModel
@@ -85,20 +84,20 @@ class Report(MetaInformationArchiveAbstractModel,
                         end_date__isnull=False,
                         end_date__gte=self.filter_figure_end_before or timezone.now().date(),
                     ),
-                    category=FigureCategory.stock_idp_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
                     role=Figure.ROLE.RECOMMENDED,
                     entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
                 )
             ),
             total_flow_conflict=Sum(
                 'total_figures',
-                filter=Q(category=FigureCategory.flow_new_displacement_id(),
+                filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                          role=Figure.ROLE.RECOMMENDED,
                          entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
             ),
             total_flow_disaster=Sum(
                 'total_figures',
-                filter=Q(category=FigureCategory.flow_new_displacement_id(),
+                filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                          role=Figure.ROLE.RECOMMENDED,
                          entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
             ),
@@ -111,7 +110,7 @@ class Report(MetaInformationArchiveAbstractModel,
                         end_date__isnull=False,
                         end_date__gte=self.filter_figure_end_before or timezone.now().date(),
                     ),
-                    category=FigureCategory.stock_idp_id(),
+                    category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
                     role=Figure.ROLE.RECOMMENDED,
                     entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
                 )

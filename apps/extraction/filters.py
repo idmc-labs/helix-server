@@ -132,8 +132,13 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs
         # NOTE: category type is saved as 'Stock' and 'Flow' on database
         # so, using capitalize on enum values 'STOCK' and 'FLOW'
-        figure_category_types = [category_type.capitalize() for category_type in value]
-        return qs.filter(figures__category__type__in=figure_category_types).distinct()
+        category_enums_to_filter = []
+        for category_type in value:
+            if category_type.capitalize() == 'Stock':
+                category_enums_to_filter = category_enums_to_filter + Figure.stock_list()
+            if category_type.capitalize() == 'Flow':
+                category_enums_to_filter = category_enums_to_filter + Figure.flow_list()
+        return qs.filter(figures__category__in=category_enums_to_filter).distinct()
 
     def filter_time_frame_after(self, qs, name, value):
         if value:
@@ -303,7 +308,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_entry_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
     filter_figure_categories = IDListFilter(method='filter_filter_figure_categories')
-    filter_figure_category_types = StringListFilter(field_name='category__type', lookup_expr='in')
+    filter_figure_category_types = StringListFilter(method='filter_filter_figure_category_types')
     filter_figure_start_after = df.DateFilter(method='filter_time_frame_after')
     filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
@@ -405,8 +410,13 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             return qs
         # NOTE: category type is saved as 'Stock' and 'Flow' on database
         # so, using capitalize on enum values 'STOCK' and 'FLOW'
-        figure_category_types = [category_type.capitalize() for category_type in value]
-        return qs.filter(category__type__in=figure_category_types).distinct()
+        category_enums_to_filter = []
+        for category_type in value:
+            if category_type.capitalize() == 'Stock':
+                category_enums_to_filter = category_enums_to_filter + Figure.stock_list()
+            if category_type.capitalize() == 'Flow':
+                category_enums_to_filter = category_enums_to_filter + Figure.flow_list()
+        return qs.filter(category__in=category_enums_to_filter).distinct()
 
     def filter_filter_figure_roles(self, qs, name, value):
         if value:

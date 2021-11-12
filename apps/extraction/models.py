@@ -47,11 +47,10 @@ class QueryAbstractModel(models.Model):
         blank=True,
         related_name='+'
     )
-    filter_figure_categories = models.ManyToManyField(
-        'entry.FigureCategory',
-        verbose_name=_('figure categories'),
-        related_name='+',
-        blank=True
+    filter_figure_categories = ArrayField(
+        base_field=enum.EnumField(enum=Figure.FIGURE_CATEGORY_TYPES),
+        blank=True,
+        null=True
     )
     filter_entry_sources = models.ManyToManyField(
         'organization.Organization',
@@ -177,7 +176,7 @@ class QueryAbstractModel(models.Model):
             filter_figure_geographical_groups=self.filter_figure_geographical_groups.all(),
             filter_events=self.filter_events.all(),
             filter_event_crises=self.filter_event_crises.all(),
-            filter_figure_categories=self.filter_figure_categories.all(),
+            filter_figure_categories=self.filter_figure_categories,
             filter_figure_tags=self.filter_figure_tags.all(),
             filter_figure_roles=self.filter_figure_roles,
             filter_figure_start_after=self.filter_figure_start_after,

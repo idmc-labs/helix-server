@@ -5,7 +5,7 @@ from apps.crisis.models import Crisis
 from apps.report.models import Report
 from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
 from apps.event.constants import OSV
-from apps.entry.models import EntryReviewer, FigureCategory
+from apps.entry.models import EntryReviewer
 from django.db import models
 from apps.common.enums import QA_RULE_TYPE
 
@@ -100,12 +100,12 @@ class EventFilter(NameFilterMixin,
         recommended_stock_figures_count = Count('entries__figures', filter=(
             Q(entries__figures__role=Figure.ROLE.RECOMMENDED) &
             Q(ignore_qa=False) &
-            Q(entries__figures__category=FigureCategory.stock_idp_id()))
+            Q(entries__figures__category=Figure.FIGURE_CATEGORY_TYPES.IDPS))
         )
         recommended_flow_figures_count = Count('entries__figures', filter=(
             Q(entries__figures__role=Figure.ROLE.RECOMMENDED) &
             Q(ignore_qa=False) &
-            Q(entries__figures__category=FigureCategory.flow_new_displacement_id()))
+            Q(entries__figures__category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT))
         )
         annotated_fields = {
             'stock_figure_count': recommended_stock_figures_count,

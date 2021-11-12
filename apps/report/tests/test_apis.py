@@ -1,7 +1,7 @@
 from django.utils import timezone
 from apps.users.enums import USER_ROLE
 from apps.report.models import ReportGeneration, Report
-from apps.entry.models import FigureCategory, Figure
+from apps.entry.models import Figure
 from utils.factories import (
     CountryFactory,
     ReportFactory,
@@ -401,7 +401,7 @@ class TestReportFilter(HelixGraphQLTestCase):
             "filterFigureEndBefore": str(report_end_date.date()),
         }
         self.editor = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.category = FigureCategory.objects.get(name__iexact="idps", type=STOCK)
+        self.category = Figure.FIGURE_CATEGORY_TYPES.IDPS
         self.force_login(self.editor)
 
     def test_report_should_list_entries_between_figure_start_date_and_figure_end_date(self):

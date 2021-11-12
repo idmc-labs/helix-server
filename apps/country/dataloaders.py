@@ -1,10 +1,9 @@
 from django.db import models
 from promise import Promise
 from promise.dataloader import DataLoader
-
-from apps.entry.models import FigureCategory
 from apps.crisis.models import Crisis
 from apps.country.models import Country
+from apps.entry.models import Figure
 
 
 class TotalFigureThisYearByCountryCategoryEventTypeLoader(DataLoader):
@@ -28,7 +27,7 @@ class TotalFigureThisYearByCountryCategoryEventTypeLoader(DataLoader):
             **Country._total_figure_disaggregation_subquery()
         )
 
-        if self.category == FigureCategory.flow_new_displacement_id():
+        if self.category == Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT:
             if self.event_type == Crisis.CRISIS_TYPE.CONFLICT:
                 qs = qs.annotate(_total=models.F(Country.ND_CONFLICT_ANNOTATE))
             else:

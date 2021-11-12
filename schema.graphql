@@ -496,6 +496,7 @@ type CreateEvent {
 input CreateExtractInputType {
   versionId: String
   name: String!
+  filterFigureCategories: [FIGURE_CATEGORY_TYPES!]
   filterFigureStartAfter: Date
   filterFigureEndBefore: Date
   filterFigureRoles: [ROLE!]
@@ -512,7 +513,6 @@ input CreateExtractInputType {
   filterFigureCountries: [ID!]
   filterEvents: [ID!]
   filterEventCrises: [ID!]
-  filterFigureCategories: [ID!]
   filterEntrySources: [ID!]
   filterEntryPublishers: [ID!]
   filterFigureTags: [ID!]
@@ -1296,7 +1296,7 @@ type ExtractionQueryObjectType {
   filterFigureCountries: [CountryType!]!
   filterEvents: [EventType!]!
   filterEventCrises: [CrisisType!]!
-  filterFigureCategories: [FigureCategoryObjectType!]!
+  filterFigureCategories: [Int!]
   filterEntrySources: [OrganizationType!]!
   filterEntryPublishers: [OrganizationType!]!
   filterFigureStartAfter: Date
@@ -1322,29 +1322,33 @@ type ExtractionQueryObjectType {
   entries(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventNameOrCode: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterEventDisasterCategories: [ID!], filterEventDisasterSubCategories: [ID!], filterEventDisasterSubTypes: [ID!], filterEventDisasterTypes: [ID!], filterEventViolenceSubTypes: [ID!], filterEventViolenceTypes: [ID!], filterEntryHasReviewComments: Boolean, filterEventOsvSubTypes: [ID!], filterEntryHasDisaggregatedData: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
 }
 
+enum FIGURE_CATEGORY_TYPES {
+  IDPS
+  RETURNEES
+  RETURN
+  LOCALLY_INTEGRATED_IDPS
+  IDPS_SETTLED_ELSEWHERE
+  PEOPLE_DISPLACED_ACROSS_BORDERS
+  NEW_DISPLACEMENT
+  MULTIPLE_DISPLACEMENT
+  PARTIAL_STOCK
+  PARTIAL_FLOW
+  CROSS_BORDER_FLIGHT
+  CROSS_BORDER_RETURN
+  RELOCATION_ELSEWHERE
+  DEATHS
+  PROVISIONAL_SOLUTIONS
+  FAILED_LOCAL_INTEGRATION
+  LOCAL_INTEGRATION
+  FAILED_RETURN_RETURNEE_DISPLACEMENT
+  UNVERIFIED_STOCK
+  UNVERIFIED_FLOW
+}
+
 enum FOR_CHOICES {
   ENTRY
   COMMUNICATION
   CONTEXTUAL_UPDATE
-}
-
-type FigureCategoryListType {
-  results: [FigureCategoryObjectType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
-type FigureCategoryObjectType {
-  id: ID!
-  name: String!
-  type: FigureCategoryType!
-  figures: [FigureType!]!
-}
-
-enum FigureCategoryType {
-  STOCK
-  FLOW
 }
 
 type FigureListType {
@@ -1433,7 +1437,7 @@ type FigureType {
   unit: UNIT
   householdSize: Float
   totalFigures: Int!
-  category: FigureCategoryObjectType
+  category: FIGURE_CATEGORY_TYPES
   term: FigureTermType
   displacementOccurred: DISPLACEMENT_OCCURRED
   role: ROLE
@@ -1482,6 +1486,7 @@ input FigureUpdateInputType {
   reported: Int
   unit: UNIT
   householdSize: Float
+  category: FIGURE_CATEGORY_TYPES
   displacementOccurred: DISPLACEMENT_OCCURRED
   role: ROLE
   startDate: Date
@@ -1495,7 +1500,6 @@ input FigureUpdateInputType {
   calculationLogic: String
   caveats: String
   sourceExcerpt: String
-  category: ID
   term: ID
   country: ID
   tags: [ID!]
@@ -1707,6 +1711,7 @@ input NestedFigureCreateInputType {
   reported: Int!
   unit: UNIT
   householdSize: Float
+  category: FIGURE_CATEGORY_TYPES
   displacementOccurred: DISPLACEMENT_OCCURRED
   role: ROLE
   startDate: Date
@@ -1720,7 +1725,6 @@ input NestedFigureCreateInputType {
   calculationLogic: String
   caveats: String
   sourceExcerpt: String
-  category: ID
   term: ID
   country: ID
   tags: [ID!]
@@ -1757,6 +1761,7 @@ input NestedFigureUpdateInputType {
   reported: Int
   unit: UNIT
   householdSize: Float
+  category: FIGURE_CATEGORY_TYPES
   displacementOccurred: DISPLACEMENT_OCCURRED
   role: ROLE
   startDate: Date
@@ -1770,7 +1775,6 @@ input NestedFigureUpdateInputType {
   calculationLogic: String
   caveats: String
   sourceExcerpt: String
-  category: ID
   term: ID
   country: ID
   tags: [ID!]
@@ -2146,8 +2150,6 @@ type Query {
   extractionQueryList(id: Float, name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): ExtractionQueryListType
   extractionEntryList(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventNameOrCode: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterEventDisasterCategories: [ID!], filterEventDisasterSubCategories: [ID!], filterEventDisasterSubTypes: [ID!], filterEventDisasterTypes: [ID!], filterEventViolenceSubTypes: [ID!], filterEventViolenceTypes: [ID!], filterEntryHasReviewComments: Boolean, filterEventOsvSubTypes: [ID!], filterEntryHasDisaggregatedData: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
   extractionFigureList(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterEventCrisisTypes: [String!], filterEventNameOrCode: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], event: String, filterEventDisasterCategories: [ID!], filterEventDisasterSubCategories: [ID!], filterEventDisasterSubTypes: [ID!], filterEventDisasterTypes: [ID!], filterEventViolenceSubTypes: [ID!], filterEventViolenceTypes: [ID!], filterEntryHasReviewComments: Boolean, filterEventOsvSubTypes: [ID!], filterEntryHasDisaggregatedData: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): FigureListType
-  figureCategory(id: ID!): FigureCategoryObjectType
-  figureCategoryList(name_Unaccent_Icontains: String, ordering: String): FigureCategoryListType
   figureTerm(id: ID!): FigureTermType
   figureTermList(isHousingRelated: Boolean, ordering: String): FigureTermListType
   figureTag(id: ID!): FigureTagType
@@ -2312,7 +2314,7 @@ input ReportCreateInputType {
   filterFigureRegions: [ID!]
   filterFigureCountries: [ID!]
   filterEventCrises: [ID!]
-  filterFigureCategories: [ID!]
+  filterFigureCategories: [FIGURE_CATEGORY_TYPES!]
   filterFigureStartAfter: Date
   filterFigureEndBefore: Date
   filterEventCrisisTypes: [CRISIS_TYPE!]
@@ -2400,7 +2402,7 @@ type ReportType {
   filterFigureCountries: [CountryType!]!
   filterEvents: [EventType!]!
   filterEventCrises: [CrisisType!]!
-  filterFigureCategories: [FigureCategoryObjectType!]!
+  filterFigureCategories: [Int!]
   filterEntrySources: [OrganizationType!]!
   filterEntryPublishers: [OrganizationType!]!
   filterFigureRoles: [ROLE!]
@@ -2458,7 +2460,7 @@ input ReportUpdateInputType {
   filterFigureRegions: [ID!]
   filterFigureCountries: [ID!]
   filterEventCrises: [ID!]
-  filterFigureCategories: [ID!]
+  filterFigureCategories: [FIGURE_CATEGORY_TYPES!]
   filterFigureStartAfter: Date
   filterFigureEndBefore: Date
   filterEventCrisisTypes: [CRISIS_TYPE!]
@@ -2790,6 +2792,7 @@ input UpdateExtractInputType {
   id: ID!
   versionId: String
   name: String
+  filterFigureCategories: [FIGURE_CATEGORY_TYPES!]
   filterFigureStartAfter: Date
   filterFigureEndBefore: Date
   filterFigureRoles: [ROLE!]
@@ -2806,7 +2809,6 @@ input UpdateExtractInputType {
   filterFigureCountries: [ID!]
   filterEvents: [ID!]
   filterEventCrises: [ID!]
-  filterFigureCategories: [ID!]
   filterEntrySources: [ID!]
   filterEntryPublishers: [ID!]
   filterFigureTags: [ID!]

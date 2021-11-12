@@ -13,7 +13,6 @@ from apps.contrib.serializers import (
 from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
-from apps.entry.constants import FLOW
 from apps.event.models import Event, Actor
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
 
@@ -117,7 +116,7 @@ class EventSerializer(MetaInformationSerializerMixin,
                 'end_date',
                 filter=Q(
                     end_date__isnull=False,
-                    category__type=FLOW
+                    category__in=Figure.flow_list()
                 )
             ),
         )

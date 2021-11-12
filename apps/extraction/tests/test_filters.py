@@ -6,7 +6,6 @@ from utils.factories import (
     EventFactory,
     EntryFactory,
     TagFactory,
-    FigureCategoryFactory,
     FigureFactory,
     OrganizationFactory,
 )
@@ -20,9 +19,9 @@ class TestExtractionFilter(HelixTestCase):
         self.reg1 = CountryRegionFactory.create()
         self.reg2 = CountryRegionFactory.create()
         self.reg3 = CountryRegionFactory.create()
-        self.fig_cat1 = FigureCategoryFactory.create()
-        self.fig_cat2 = FigureCategoryFactory.create()
-        self.fig_cat3 = FigureCategoryFactory.create()
+        self.fig_cat1 = Figure.FIGURE_CATEGORY_TYPES.IDPS
+        self.fig_cat2 = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
+        self.fig_cat3 = Figure.FIGURE_CATEGORY_TYPES.IDPS
         self.country1reg1 = CountryFactory.create(region=self.reg1)
         self.country2reg2 = CountryFactory.create(region=self.reg2)
         self.country3reg3 = CountryFactory.create(region=self.reg3)
@@ -135,12 +134,12 @@ class TestExtractionFilter(HelixTestCase):
 
     def test_filter_by_categories(self):
         data = dict(
-            filter_figure_categories=[self.fig_cat2.id]
+            filter_figure_categories=[self.fig_cat2.value]
         )
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
         data = dict(
-            filter_figure_categories=[self.fig_cat1.id, self.fig_cat3.id]
+            filter_figure_categories=[self.fig_cat1.value, self.fig_cat3.value]
         )
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1ev1, self.entry3ev2})
