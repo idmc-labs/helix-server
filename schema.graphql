@@ -505,6 +505,7 @@ input CreateExtractInputType {
   filterEntryReviewStatus: [REVIEW_STATUS!]
   filterEventNameOrCode: [String!]
   filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
+  filterFigureTerms: [FIGURE_TERMS!]
   filterFigureCategoryTypes: [String!]
   filterEntryHasReviewComments: Boolean
   filterEntryHasDisaggregatedData: Boolean
@@ -517,7 +518,6 @@ input CreateExtractInputType {
   filterEntryPublishers: [ID!]
   filterFigureTags: [ID!]
   filterEntryCreatedBy: [ID!]
-  filterFigureTerms: [ID!]
   filterEventDisasterCategories: [ID!]
   filterEventDisasterSubCategories: [ID!]
   filterEventDisasterTypes: [ID!]
@@ -1309,7 +1309,7 @@ type ExtractionQueryObjectType {
   filterEventNameOrCode: [String]
   filterEntryCreatedBy: [UserType!]!
   filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
-  filterFigureTerms: [FigureTermType!]!
+  filterFigureTerms: [Int!]
   filterEventDisasterCategories: [DisasterCategoryType!]!
   filterEventDisasterSubCategories: [DisasterSubCategoryType!]!
   filterEventDisasterTypes: [DisasterTypeObjectType!]!
@@ -1343,6 +1343,22 @@ enum FIGURE_CATEGORY_TYPES {
   FAILED_RETURN_RETURNEE_DISPLACEMENT
   UNVERIFIED_STOCK
   UNVERIFIED_FLOW
+}
+
+enum FIGURE_TERMS {
+  EVACUATED
+  DISPLACED
+  FORCED_TO_FLEE
+  RELOCATED
+  SHELTERED
+  IN_RELIEF_CAMP
+  DESTROYED_HOUSING
+  PARTIALLY_DESTROYED_HOUSING
+  UNINHABITABLE_HOUSING
+  HOMELESS
+  AFFECTED
+  RETURNS
+  MULTIPLE_OR_OTHER
 }
 
 enum FOR_CHOICES {
@@ -1388,21 +1404,20 @@ input FigureTagUpdateInputType {
   name: String
 }
 
-type FigureTermListType {
-  results: [FigureTermType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
-type FigureTermType {
-  id: ID!
-  isHousingRelated: Boolean!
-  displacementOccur: Boolean!
-  identifier: String!
-  name: String!
-  extractionquerySet: [ExtractionQueryObjectType!]!
-  reportSet: [ReportType!]!
+enum FigureTerm {
+  A_0
+  A_1
+  A_2
+  A_3
+  A_4
+  A_5
+  A_6
+  A_7
+  A_8
+  A_9
+  A_10
+  A_11
+  A_12
 }
 
 type FigureType {
@@ -1438,7 +1453,7 @@ type FigureType {
   householdSize: Float
   totalFigures: Int!
   category: FIGURE_CATEGORY_TYPES
-  term: FigureTermType
+  term: FigureTerm
   displacementOccurred: DISPLACEMENT_OCCURRED
   role: ROLE
   startDate: Date
@@ -1487,6 +1502,7 @@ input FigureUpdateInputType {
   unit: UNIT
   householdSize: Float
   category: FIGURE_CATEGORY_TYPES
+  term: FIGURE_TERMS
   displacementOccurred: DISPLACEMENT_OCCURRED
   role: ROLE
   startDate: Date
@@ -1500,7 +1516,6 @@ input FigureUpdateInputType {
   calculationLogic: String
   caveats: String
   sourceExcerpt: String
-  term: ID
   country: ID
   tags: [ID!]
 }
@@ -1712,6 +1727,7 @@ input NestedFigureCreateInputType {
   unit: UNIT
   householdSize: Float
   category: FIGURE_CATEGORY_TYPES
+  term: FIGURE_TERMS
   displacementOccurred: DISPLACEMENT_OCCURRED
   role: ROLE
   startDate: Date
@@ -1725,7 +1741,6 @@ input NestedFigureCreateInputType {
   calculationLogic: String
   caveats: String
   sourceExcerpt: String
-  term: ID
   country: ID
   tags: [ID!]
 }
@@ -1762,6 +1777,7 @@ input NestedFigureUpdateInputType {
   unit: UNIT
   householdSize: Float
   category: FIGURE_CATEGORY_TYPES
+  term: FIGURE_TERMS
   displacementOccurred: DISPLACEMENT_OCCURRED
   role: ROLE
   startDate: Date
@@ -1775,7 +1791,6 @@ input NestedFigureUpdateInputType {
   calculationLogic: String
   caveats: String
   sourceExcerpt: String
-  term: ID
   country: ID
   tags: [ID!]
 }
@@ -2150,8 +2165,6 @@ type Query {
   extractionQueryList(id: Float, name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): ExtractionQueryListType
   extractionEntryList(event: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterEntryArticleTitle: String, filterEventNameOrCode: String, filterEventCrisisTypes: [String!], filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterEventDisasterCategories: [ID!], filterEventDisasterSubCategories: [ID!], filterEventDisasterSubTypes: [ID!], filterEventDisasterTypes: [ID!], filterEventViolenceSubTypes: [ID!], filterEventViolenceTypes: [ID!], filterEntryHasReviewComments: Boolean, filterEventOsvSubTypes: [ID!], filterEntryHasDisaggregatedData: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
   extractionFigureList(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterEventCrises: [ID!], filterEntrySources: [ID!], filterEntryPublishers: [ID!], filterFigureCategories: [ID!], filterFigureCategoryTypes: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterEventCrisisTypes: [String!], filterEventNameOrCode: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], event: String, filterEventDisasterCategories: [ID!], filterEventDisasterSubCategories: [ID!], filterEventDisasterSubTypes: [ID!], filterEventDisasterTypes: [ID!], filterEventViolenceSubTypes: [ID!], filterEventViolenceTypes: [ID!], filterEntryHasReviewComments: Boolean, filterEventOsvSubTypes: [ID!], filterEntryHasDisaggregatedData: Boolean, report: String, page: Int = 1, ordering: String, pageSize: Int): FigureListType
-  figureTerm(id: ID!): FigureTermType
-  figureTermList(isHousingRelated: Boolean, ordering: String): FigureTermListType
   figureTag(id: ID!): FigureTagType
   figureTagList(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): FigureTagListType
   figure(id: ID!): FigureType
@@ -2413,7 +2426,7 @@ type ReportType {
   filterEventNameOrCode: [String]
   filterEntryCreatedBy: [UserType!]!
   filterFigureDisplacementTypes: [Int!]
-  filterFigureTerms: [FigureTermType!]!
+  filterFigureTerms: [Int!]
   filterEventDisasterCategories: [DisasterCategoryType!]!
   filterEventDisasterSubCategories: [DisasterSubCategoryType!]!
   filterEventDisasterTypes: [DisasterTypeObjectType!]!
@@ -2801,6 +2814,7 @@ input UpdateExtractInputType {
   filterEntryReviewStatus: [REVIEW_STATUS!]
   filterEventNameOrCode: [String!]
   filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
+  filterFigureTerms: [FIGURE_TERMS!]
   filterFigureCategoryTypes: [String!]
   filterEntryHasReviewComments: Boolean
   filterEntryHasDisaggregatedData: Boolean
@@ -2813,7 +2827,6 @@ input UpdateExtractInputType {
   filterEntryPublishers: [ID!]
   filterFigureTags: [ID!]
   filterEntryCreatedBy: [ID!]
-  filterFigureTerms: [ID!]
   filterEventDisasterCategories: [ID!]
   filterEventDisasterSubCategories: [ID!]
   filterEventDisasterTypes: [ID!]

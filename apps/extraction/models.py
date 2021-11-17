@@ -115,10 +115,10 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_figure_terms = models.ManyToManyField(
-        'entry.FigureTerm',
-        verbose_name=_('Figure Term'),
+    filter_figure_terms = ArrayField(
+        base_field=enum.EnumField(enum=Figure.FIGURE_TERMS),
         blank=True,
+        null=True
     )
     filter_event_disaster_categories = models.ManyToManyField(
         'event.DisasterCategory',
@@ -185,6 +185,7 @@ class QueryAbstractModel(models.Model):
             filter_event_crisis_types=self.filter_event_crisis_types,
             filter_entry_review_status=self.filter_entry_review_status,
             filter_figure_displacement_types=self.filter_figure_displacement_types,
+            filter_figure_terms=self.filter_figure_terms,
             filter_event_disaster_categories=self.filter_event_disaster_categories.all(),
             filter_event_disaster_sub_categories=self.filter_event_disaster_sub_categories.all(),
             filter_event_disaster_types=self.filter_event_disaster_types.all(),

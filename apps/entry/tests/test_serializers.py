@@ -18,7 +18,6 @@ from apps.entry.models import (
     EntryReviewer,
     OSMName,
     Figure,
-    FigureTerm,
 )
 from utils.factories import (
     EventFactory,
@@ -190,7 +189,7 @@ class TestEntrySerializer(HelixTestCase):
             "category": flow.value,
             "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
-            "term": FigureTerm.objects.first().id,
+            "term": Figure.FIGURE_TERMS.EVACUATED.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
@@ -238,7 +237,7 @@ class TestEntrySerializer(HelixTestCase):
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
             "unit": Figure.UNIT.PERSON.value,
-            "term": FigureTerm.objects.first().id,
+            "term": Figure.FIGURE_TERMS.EVACUATED.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
@@ -395,7 +394,7 @@ class TestEntrySerializer(HelixTestCase):
             "category": flow.value,
             "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
-            "term": FigureTerm.objects.first().id,
+            "term": Figure.FIGURE_TERMS.EVACUATED.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
@@ -419,7 +418,7 @@ class TestEntrySerializer(HelixTestCase):
             "category": flow.value,
             "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
-            "term": FigureTerm.objects.first().id,
+            "term": Figure.FIGURE_TERMS.EVACUATED.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
@@ -477,7 +476,7 @@ class TestFigureSerializer(HelixTestCase):
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 100,
             "unit": Figure.UNIT.PERSON.value,
-            "term": FigureTerm.objects.first().id,
+            "term": Figure.FIGURE_TERMS.EVACUATED.value,
             "category": self.fig_cat.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-10-10",
@@ -491,10 +490,8 @@ class TestFigureSerializer(HelixTestCase):
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
 
     def test_displacement_occur_only_allowed_for_specific_terms(self):
-        term = FigureTerm.objects.first()
-        term.displacement_occur = True
-        term.save()
-        self.data['term'] = term.id
+        term = Figure.FIGURE_TERMS.DISPLACED.value
+        self.data['term'] = term
         self.data['displacement_occurred'] = 0
 
         serializer = FigureSerializer(data=self.data,
@@ -505,14 +502,10 @@ class TestFigureSerializer(HelixTestCase):
             self.data['displacement_occurred']
         )
 
-        term.displacement_occur = False
-        term.save()
-        term.refresh_from_db()
-
         serializer = FigureSerializer(data=self.data,
                                       context={'request': self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        self.assertIsNone(serializer.data['displacement_occurred'])
+        self.assertIsNotNone(serializer.data['displacement_occurred'])
 
     def test_invalid_geo_locations_country_codes(self):
         self.data['geo_locations'] = [

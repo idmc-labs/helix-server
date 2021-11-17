@@ -210,7 +210,7 @@ class CommonFigureValidationMixin:
     def clean_term_with_displacement_occur(self, attrs):
         _attrs = copy(attrs)
         term = attrs.get('term')
-        if not term or (term and not term.displacement_occur):
+        if not term or term in Figure.housing_list():
             _attrs['displacement_occurred'] = None
         return _attrs
 

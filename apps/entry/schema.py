@@ -23,7 +23,6 @@ from apps.entry.filters import EntryReviewerFilter, OSMNameFilter
 from apps.entry.models import (
     Figure,
     FigureTag,
-    FigureTerm,
     Entry,
     EntryReviewer,
     OSMName,
@@ -98,20 +97,6 @@ class OSMNameListType(CustomDjangoListObjectType):
     class Meta:
         model = OSMName
         filterset_class = OSMNameFilter
-
-
-class FigureTermType(DjangoObjectType):
-    class Meta:
-        model = FigureTerm
-
-
-class FigureTermListType(CustomDjangoListObjectType):
-    class Meta:
-        model = FigureTerm
-        filter_fields = (
-            'is_housing_related',
-        )
-
 
 class FigureTagType(DjangoObjectType):
     class Meta:
@@ -259,8 +244,6 @@ class FigureTagListType(CustomDjangoListObjectType):
 
 
 class Query:
-    figure_term = DjangoObjectField(FigureTermType)
-    figure_term_list = DjangoPaginatedListObjectField(FigureTermListType)
     figure_tag = DjangoObjectField(FigureTagType)
     figure_tag_list = DjangoPaginatedListObjectField(FigureTagListType,
                                                      pagination=PageGraphqlPaginationWithoutCount(

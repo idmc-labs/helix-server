@@ -260,27 +260,6 @@ class DisaggregatedAge(models.Model):
         return str(self.id)
 
 
-class FigureTerm(models.Model):
-    is_housing_related = models.BooleanField(
-        verbose_name=_('Is housing related'),
-        default=False,
-    )
-    displacement_occur = models.BooleanField(
-        verbose_name=_('Displacement can occur?'),
-        default=False,
-    )
-    # NOTE: We are using identifier as searchable candidate over name
-    # primarily during migration
-    identifier = models.CharField(
-        verbose_name=_('Identifier'),
-        max_length=32,
-    )
-    name = models.CharField(
-        verbose_name=_('Name'),
-        max_length=32,
-    )
-
-
 class Figure(MetaInformationArchiveAbstractModel,
              UUIDAbstractModel,
              FigureDisaggregationAbstractModel,
@@ -374,6 +353,37 @@ class Figure(MetaInformationArchiveAbstractModel,
             UNVERIFIED_FLOW: _('Unverified flow')
         }
 
+    class FIGURE_TERMS(enum.Enum):
+        EVACUATED = 0
+        DISPLACED = 1
+        FORCED_TO_FLEE = 2
+        RELOCATED = 3
+        SHELTERED = 4
+        IN_RELIEF_CAMP = 5
+        DESTROYED_HOUSING = 6
+        PARTIALLY_DESTROYED_HOUSING = 7
+        UNINHABITABLE_HOUSING = 8
+        HOMELESS = 9
+        AFFECTED = 10
+        RETURNS = 11
+        MULTIPLE_OR_OTHER = 12
+
+        __labels__ = {
+            EVACUATED: _('Evacuated'),
+            DISPLACED: _('Displaced'),
+            FORCED_TO_FLEE: _('Forced to flee'),
+            RELOCATED: _('Relocated'),
+            SHELTERED: _('Sheltered'),
+            IN_RELIEF_CAMP: _('In relief camp'),
+            DESTROYED_HOUSING: _('Destroyed housing'),
+            PARTIALLY_DESTROYED_HOUSING: _('Partially destroyed housing'),
+            UNINHABITABLE_HOUSING: _('Uninhabitable housing'),
+            HOMELESS: _('Homeless'),
+            AFFECTED: _('Affected'),
+            RETURNS: _('Returns'),
+            MULTIPLE_OR_OTHER: _('Multiple/Other'),
+        }
+
     uuid = models.UUIDField(verbose_name='UUID',
                             blank=True, default=uuid4)
     entry = models.ForeignKey('Entry', verbose_name=_('Entry'),
@@ -395,9 +405,12 @@ class Figure(MetaInformationArchiveAbstractModel,
         null=True,
         blank=True,
     )
-    term = models.ForeignKey('FigureTerm', verbose_name=_('Figure term'),
-                             related_name='+', on_delete=models.SET_NULL,
-                             blank=False, null=True)
+    term = enum.EnumField(
+        enum=FIGURE_TERMS,
+        verbose_name=_('Figure Term'),
+        null=True,
+        blank=True,
+    )
     displacement_occurred = enum.EnumField(
         enum=DISPLACEMENT_OCCURRED,
         verbose_name=_('Displacement Occurred'),
@@ -513,6 +526,29 @@ class Figure(MetaInformationArchiveAbstractModel,
             Figure.FIGURE_CATEGORY_TYPES.LOCAL_INTEGRATION.value,
             Figure.FIGURE_CATEGORY_TYPES.FAILED_RETURN_RETURNEE_DISPLACEMENT.value,
             Figure.FIGURE_CATEGORY_TYPES.UNVERIFIED_FLOW.value
+        ]
+
+    @classmethod
+    def displacement_occur_list(cls):
+        return [
+            Figure.FIGURE_TERMS.EVACUATED.value,
+            Figure.FIGURE_TERMS.DISPLACED.value,
+            Figure.FIGURE_TERMS.FORCED_TO_FLEE.value,
+            Figure.FIGURE_TERMS.RELOCATED.value,
+            Figure.FIGURE_TERMS.SHELTERED.value,
+            Figure.FIGURE_TERMS.IN_RELIEF_CAMP.value
+        ]
+
+    @classmethod
+    def housing_list(cls):
+        return [
+            Figure.FIGURE_TERMS.DESTROYED_HOUSING.value,
+            Figure.FIGURE_TERMS.PARTIALLY_DESTROYED_HOUSING.value,
+            Figure.FIGURE_TERMS.UNINHABITABLE_HOUSING.value,
+            Figure.FIGURE_TERMS.HOMELESS.value,
+            Figure.FIGURE_TERMS.AFFECTED.value,
+            Figure.FIGURE_TERMS.RETURNS.value,
+            Figure.FIGURE_TERMS.MULTIPLE_OR_OTHER.value,
         ]
 
     @classmethod

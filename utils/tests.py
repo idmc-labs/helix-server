@@ -8,7 +8,6 @@ from django.test import TestCase, override_settings
 from graphene_django.utils import GraphQLTestCase
 from rest_framework.test import APITestCase
 
-from apps.entry.models import FigureTerm
 from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio
 from helix.settings import BASE_DIR
@@ -38,20 +37,6 @@ class CommonSetupClassMixin:
         super().setUpClass()
         # initialize roles
         management.call_command('init_roles')
-        # Add the figure terms
-        FigureTerm.objects.bulk_create([
-            FigureTerm(
-                is_housing_related=True,
-                name='destroyed housing',
-                identifier='DESTROYED_HOUSING',
-            ),
-            FigureTerm(
-                is_housing_related=False,
-                name='Evacuated',
-                identifier='EVACUATED',
-            ),
-        ])
-        cache.clear()
 
     @classmethod
     def tearDownClass(cls):
