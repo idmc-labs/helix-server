@@ -1,9 +1,8 @@
 from django.core.management.base import BaseCommand
 
-from apps.entry.constants import FIGURE_TAGS, FIGURE_TERMS
+from apps.entry.constants import FIGURE_TAGS
 from apps.entry.models import (
     FigureTag,
-    FigureTerm,
 )
 
 
@@ -16,15 +15,5 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             'Saved {} figure tags.'.format(
                 FigureTag.objects.count(),
-            )
-        ))
-        for identifier, item in FIGURE_TERMS.items():
-            ft, _ = FigureTerm.objects.get_or_create(identifier=identifier, name=item['name'])
-            ft.is_housing_related = item.get('housing', False)
-            ft.displacement_occur = item.get('displacement_occur', False)
-            ft.save()
-        self.stdout.write(self.style.SUCCESS(
-            'Saved {} figure terms.'.format(
-                FigureTerm.objects.count(),
             )
         ))

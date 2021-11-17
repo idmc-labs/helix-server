@@ -35,6 +35,8 @@ OSMAccuracyGrapheneEnum = graphene.Enum.from_enum(OSMName.OSM_ACCURACY,
                                                   description=enum_description)
 IdentifierGrapheneEnum = graphene.Enum.from_enum(OSMName.IDENTIFIER, description=enum_description)
 FigureCategoryTypeEnum = graphene.Enum.from_enum(Figure.FIGURE_CATEGORY_TYPES, description=enum_description)
+FigureTermsEnum = graphene.Enum.from_enum(Figure.FIGURE_TERMS, description=enum_description)
+
 
 enum_map = dict(
     DISPLACEMENT_TYPE=DisplacementTypeGrapheneEnum,
@@ -47,4 +49,5 @@ enum_map = dict(
     OSM_ACCURACY=OSMAccuracyGrapheneEnum,
     IDENTIFIER=IdentifierGrapheneEnum,
     FIGURE_CATEGORY_TYPES=FigureCategoryTypeEnum,
+    FIGURE_TERMS=FigureTermsEnum,
 )

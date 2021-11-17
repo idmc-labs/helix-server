@@ -13,48 +13,6 @@ FIGURE_TAGS = [
     'Chronic/repeated displacement',
 ]
 
-FIGURE_TERMS = dict(
-    # With displacement occurred option
-    EVACUATED=dict(
-        name="Evacuated",
-        housing=False,
-        displacement_occur=True,
-    ),
-    DISPLACED=dict(
-        name="Displaced",
-        housing=False,
-        displacement_occur=True,
-    ),
-    FORCED_TO_FLEE=dict(
-        name="Forced to flee",
-        housing=False,
-        displacement_occur=True,
-    ),
-    RELOCATED=dict(
-        name="Relocated",
-        housing=False,
-        displacement_occur=True,
-    ),
-    SHELTERED=dict(
-        name="Sheltered",
-        housing=False,
-        displacement_occur=True,
-    ),
-    IN_RELIEF_CAMP=dict(
-        name="In relief camp",
-        housing=False,
-        displacement_occur=True,
-    ),
-    # END
-    DESTROYED_HOUSING=dict(name="Destroyed housing", housing=True),
-    PARTIALLY_DESTROYED_HOUSING=dict(name="Partially destroyed housing", housing=True),
-    UNINHABITABLE_HOUSING=dict(name="Uninhabitable housing", housing=True),
-    HOMELESS=dict(name="Homeless", housing=False),
-    AFFECTED=dict(name="Affected", housing=False),
-    RETURNS=dict(name="Returns", housing=False),
-    MULTIPLE_OR_OTHER=dict(name="Multiple/Other", housing=False),
-)
-
 LESS_THAN_FIVE = "<5"
 FIVE_TO_FOURTEEN = "5-14"
 FIFTEEN_TO_TWENTRY_FOUR = "15-24"
