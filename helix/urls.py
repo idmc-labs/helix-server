@@ -25,6 +25,8 @@ from graphene_file_upload.django import FileUploadGraphQLView
 from . import api_urls as rest_urls
 from utils.graphene.context import GQLContext
 from django_otp.admin import OTPAdminSite
+from django.http import HttpRequest
+from sentry_sdk.api import start_transaction
 
 
 class CustomGraphQLView(FileUploadGraphQLView):
@@ -46,6 +48,25 @@ class CustomGraphQLView(FileUploadGraphQLView):
         except:  # noqa: E722
             self.batch = False
         return super().parse_body(request)
+
+    def execute_graphql_request(
+        self,
+        request: HttpRequest,
+        data,
+        query,
+        variables,
+        operation_name,
+        show_graphiql,
+    ):
+        operation_type = (
+            self.get_backend(request)
+            .document_from_string(self.schema, query)
+            .get_operation_type(operation_name)
+        )
+        with start_transaction(op=operation_type, name=operation_name):
+            return super().execute_graphql_request(
+                request, data, query, variables, operation_name, show_graphiql
+            )
 
 
 CustomGraphQLView.graphiql_template = "graphene_graphiql_explorer/graphiql.html"
