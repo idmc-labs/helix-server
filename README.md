@@ -59,3 +59,8 @@ python manage.py addstatictoken -t 123456 "admin@idmcdb.org"
 ```bash
 ./manage.py graphql_schema --out schema.graphql
 ```
+
+## Find bugs in database
+```bash
+./find_bugs.sh
+```
