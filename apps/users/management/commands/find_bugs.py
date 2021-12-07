@@ -85,8 +85,10 @@ class Command(BaseCommand):
 
         # Masterfacts with flow figures not included in report
         problematic_reports = Report.objects.filter(
-            Q(filter_figure_start_after__gte=F('figures__start_date')),
-            Q(filter_figure_end_before__lte=F('figures__end_date'))
+            filter_figure_start_after__gte=F('figures__start_date'),
+            filter_figure_end_before__lte=F('figures__end_date'),
+            figures__category__type='Flow',
+            figures__role=Figure.ROLE.RECOMMENDED,
         ).distinct()
         file.write(f'8. Problematic reports where date range is not valid for figures=> {problematic_reports.count()}\n')
         ids = list(problematic_reports.values('old_id', 'id'))
