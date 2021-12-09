@@ -20,8 +20,19 @@ class Command(BaseCommand):
         ws6 = wb.create_sheet('E6')
         ws7 = wb.create_sheet('E7')
         ws8 = wb.create_sheet('E8')
+        ws9 = wb.create_sheet('E9')
+        ws10 = wb.create_sheet('E10')
+        ws11 = wb.create_sheet('E11')
+        ws12 = wb.create_sheet('E12')
+        ws13 = wb.create_sheet('E13')
+        ws14 = wb.create_sheet('E14')
+
         wb.active.title = "summary"
         wb.active.append(["SN", "Error title", "Counts"])
+
+        #-----------------------------------------------------------------------------------------------------------------
+        # Recommended figures report
+        #-----------------------------------------------------------------------------------------------------------------
 
         # Recommended stock and flow figures without start date
         start_date_null_figures = Figure.objects.filter(
@@ -170,7 +181,7 @@ class Command(BaseCommand):
             figures__category__type='Flow',
             figures__role=Figure.ROLE.RECOMMENDED,
         ).distinct()
-        error_title = 'Problematic reports where date range is not valid for figures'
+        error_title = 'Problematic reports where date range is not valid for recommended flow figures'
         wb.active.append([8, error_title, problematic_reports.count()])
         ws8.append([error_title])
         ws8.append(["Old ID", "Old Report URL", "Problematic figure"])
@@ -182,11 +193,128 @@ class Command(BaseCommand):
             )
             problematic_figures_links = []
             for problematic_figure in problematic_figures:
-                report_url = f'https://helix.idmcdb.org/facts/{obj.old_id}' if obj.old_id else ""
-                problematic_figure_url = f'https://helix.idmcdb.org/facts/{problematic_figure.old_id}' if problematic_figure.old_id else ""
-                ws8.cell(row=row, column=1).value = (obj.old_id)
-                ws8.cell(row=row, column=2).hyperlink = (report_url)
-                ws8.cell(row=row, column=3).hyperlink = (problematic_figure_url)
-                row = row + 1
+                if obj.old_id.isnumeric():
+                    report_url = f'https://helix.idmcdb.org/facts/{obj.old_id}' if obj.old_id else ""
+                    problematic_figure_url = f'https://helix.idmcdb.org/facts/{problematic_figure.old_id}' if problematic_figure.old_id else ""
+                    ws8.cell(row=row, column=1).value = (obj.old_id)
+                    ws8.cell(row=row, column=2).hyperlink = (report_url)
+                    ws8.cell(row=row, column=3).hyperlink = (problematic_figure_url)
+                    row = row + 1
+
+        #-----------------------------------------------------------------------------------------------------------------
+        # Trangulated figures report
+        #-----------------------------------------------------------------------------------------------------------------
+
+        # Recommended stock and flow figures without start date
+        start_date_null_figures = Figure.objects.filter(
+            start_date__isnull=True,
+            role=Figure.ROLE.TRIANGULATION
+        )
+        error_title = f'Triangulated stock/flow figures without start date'
+        wb.active.append([9, error_title, start_date_null_figures.count()])
+        old_ids = list(start_date_null_figures.values_list('old_id', flat=True))
+        ws9.append([error_title])
+        ws9.append(["Fact ID", "Fact URL"])
+        row = 3
+        for id in old_ids:
+            link = f'https://helix.idmcdb.org/facts/{id}'
+            ws9.cell(row=row, column=1).value = (id)
+            ws9.cell(row=row, column=2).hyperlink = (link)
+            row = row + 1
+
+        # Recommended flow figures without end date
+        flow_figures_without_end_date = Figure.objects.filter(
+            end_date__isnull=True,
+            category__type='Flow',
+            role=Figure.ROLE.TRIANGULATION
+        )
+        old_ids = list(flow_figures_without_end_date.values_list('old_id', flat=True))
+        error_title = 'Triangulated flow figures without end date'
+        wb.active.append([10, error_title, flow_figures_without_end_date.count()])
+        ws10.append([error_title])
+        ws10.append(["Fact ID", "Fact URL"])
+        row = 3
+        for id in old_ids:
+            link = f'https://helix.idmcdb.org/facts/{id}'
+            ws10.cell(row=row, column=1).value = (id)
+            ws10.cell(row=row, column=2).hyperlink = (link)
+            row = row + 1
+
+
+        # Recommended stock figures without end date
+        stock_figures_without_end_date = Figure.objects.filter(
+            end_date__isnull=True,
+            category__type='Stock',
+            role=Figure.ROLE.TRIANGULATION
+        )
+        old_ids = list(stock_figures_without_end_date.values_list('old_id', flat=True))
+        error_title = 'Triangulated stock figures without end reporting date'
+        wb.active.append([11, error_title, stock_figures_without_end_date.count()])
+        ws11.append([error_title])
+        ws11.append(["Fact ID", "Fact URL"])
+        row = 3
+        for id in old_ids:
+            link = f'https://helix.idmcdb.org/facts/{id}'
+            ws11.cell(row=row, column=1).value = (id)
+            ws11.cell(row=row, column=2).hyperlink = (link)
+            row = row + 1
+
+        # Recommended flow figures where start date is greater than end date
+        stock_figures_with_start_date_gte_end_date = Figure.objects.filter(
+            start_date__gte=F('end_date'),
+            category__type='Flow',
+            role=Figure.ROLE.TRIANGULATION
+        )
+        old_ids = list(stock_figures_with_start_date_gte_end_date.values_list('old_id', flat=True))
+        error_title = 'Triangulated flow figures where start date greater than end date'
+        wb.active.append([12, error_title, stock_figures_with_start_date_gte_end_date.count()])
+        ws12.append([error_title])
+        ws12.append(["Fact ID", "Fact URL"])
+        row = 3
+        for id in old_ids:
+            link = f'https://helix.idmcdb.org/facts/{id}'
+            ws12.cell(row=row, column=1).value = (id)
+            ws12.cell(row=row, column=2).hyperlink = (link)
+            row = row + 1
+
+        # Recommended stock figures where start date is greater than end date
+        stock_figures_with_start_date_gte_end_date = Figure.objects.filter(
+            start_date__gte=F('end_date'),
+            category__type='Stock',
+            role=Figure.ROLE.TRIANGULATION
+        )
+        old_ids = list(stock_figures_with_start_date_gte_end_date.values_list('old_id', flat=True))
+        error_title = 'Triangulated stock figures where start date greater than end date'
+        wb.active.append([13, error_title, stock_figures_with_start_date_gte_end_date.count()])
+        ws13.append([error_title])
+        ws13.append(["Fact ID", "Fact URL"])
+        row = 3
+        for id in old_ids:
+            link = f'https://helix.idmcdb.org/facts/{id}'
+            ws13.cell(row=row, column=1).value = (id)
+            ws13.cell(row=row, column=2).hyperlink = (link)
+            row = row + 1
+
+        # Recommended stock and flow figures with small or large dates
+        small_and_large_figure_date = Figure.objects.filter(
+            Q(start_date__gte=largest_date) |
+            Q(start_date__lte=smallest_date) |
+            Q(end_date__gte=largest_date),
+            Q(end_date__lte=smallest_date),
+            Q(start_date__isnull=False) |
+            Q(start_date__isnull=False),
+            role=Figure.ROLE.TRIANGULATION
+        ).distinct()
+        old_ids = list(small_and_large_figure_date.values_list('old_id', flat=True))
+        error_title = f'Triangulated figures with small and large start/end dates ({smallest_date} to {largest_date})'
+        wb.active.append([14, error_title, small_and_large_figure_date.count()])
+        ws14.append([error_title])
+        ws14.append(["Fact ID", "Fact URL"])
+        row = 3
+        for id in old_ids:
+            link = f'https://helix.idmcdb.org/facts/{id}'
+            ws14.cell(row=row, column=1).value = (id)
+            ws14.cell(row=row, column=2).hyperlink = (link)
+            row = row + 1
 
         wb.save(filename="data-errors.xlsx")
