@@ -171,15 +171,22 @@ class Command(BaseCommand):
             figures__role=Figure.ROLE.RECOMMENDED,
         ).distinct()
         error_title = 'Problematic reports where date range is not valid for figures'
-        report_ids = list(problematic_reports.values_list('old_id', flat=True))
         wb.active.append([8, error_title, problematic_reports.count()])
         ws8.append([error_title])
-        ws8.append(["Report ID", "Report URL"])
+        ws8.append(["Old ID", "Old Report URL", "Problematic figure"])
         row = 3
         for obj in problematic_reports:
-            link = f'https://helix.idmcdb.org/facts/{obj.id}'
-            ws8.cell(row=row, column=1).value = (obj.id)
-            ws8.cell(row=row, column=2).hyperlink = (link)
-            row = row + 1
+            problematic_figures = obj.figures.filter(
+                start_date__lte=obj.filter_figure_start_after,
+                end_date__gte=obj.filter_figure_end_before
+            )
+            problematic_figures_links = []
+            for problematic_figure in problematic_figures:
+                report_url = f'https://helix.idmcdb.org/facts/{obj.old_id}' if obj.old_id else ""
+                problematic_figure_url = f'https://helix.idmcdb.org/facts/{problematic_figure.old_id}' if problematic_figure.old_id else ""
+                ws8.cell(row=row, column=1).value = (obj.old_id)
+                ws8.cell(row=row, column=2).hyperlink = (report_url)
+                ws8.cell(row=row, column=3).hyperlink = (problematic_figure_url)
+                row = row + 1
 
         wb.save(filename="data-errors.xlsx")
