@@ -158,7 +158,7 @@ class Command(BaseCommand):
             Q(end_date__gte=largest_date),
             Q(end_date__lte=smallest_date),
             Q(start_date__isnull=False) |
-            Q(start_date__isnull=False),
+            Q(end_date__isnull=False),
             role=Figure.ROLE.RECOMMENDED
         ).distinct()
         old_ids = list(small_and_large_figure_date.values_list('old_id', flat=True))
@@ -302,7 +302,7 @@ class Command(BaseCommand):
             Q(end_date__gte=largest_date),
             Q(end_date__lte=smallest_date),
             Q(start_date__isnull=False) |
-            Q(start_date__isnull=False),
+            Q(end_date__isnull=False),
             role=Figure.ROLE.TRIANGULATION
         ).distinct()
         old_ids = list(small_and_large_figure_date.values_list('old_id', flat=True))
@@ -316,5 +316,32 @@ class Command(BaseCommand):
             ws14.cell(row=row, column=1).value = (id)
             ws14.cell(row=row, column=2).hyperlink = (link)
             row = row + 1
+
+        # Masterfacts with flow figures not included in report
+        problematic_reports = Report.objects.filter(
+            filter_figure_start_after__gte=F('figures__start_date'),
+            filter_figure_end_before__lte=F('figures__end_date'),
+            figures__category__type='Flow',
+            figures__role=Figure.ROLE.TRIANGULATION,
+        ).distinct()
+        error_title = 'Problematic reports where date range is not valid for triangulated flow figures'
+        wb.active.append([15, error_title, problematic_reports.count()])
+        ws8.append([error_title])
+        ws8.append(["Old ID", "Old Report URL", "Problematic figure"])
+        row = 3
+        for obj in problematic_reports:
+            problematic_figures = obj.figures.filter(
+                start_date__lte=obj.filter_figure_start_after,
+                end_date__gte=obj.filter_figure_end_before
+            )
+            problematic_figures_links = []
+            for problematic_figure in problematic_figures:
+                if obj.old_id.isnumeric():
+                    report_url = f'https://helix.idmcdb.org/facts/{obj.old_id}' if obj.old_id else ""
+                    problematic_figure_url = f'https://helix.idmcdb.org/facts/{problematic_figure.old_id}' if problematic_figure.old_id else ""
+                    ws8.cell(row=row, column=1).value = (obj.old_id)
+                    ws8.cell(row=row, column=2).hyperlink = (report_url)
+                    ws8.cell(row=row, column=3).hyperlink = (problematic_figure_url)
+                    row = row + 1
 
         wb.save(filename="data-errors.xlsx")
