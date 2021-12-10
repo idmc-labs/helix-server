@@ -6,9 +6,9 @@ from apps.event.models import Event
 from apps.report.models import Report
 
 # TODO:
-# 1. Use distinct
-# 2. Check for and/or conditions
-# 3. Add triangulation
+# 1. Add stats for triangulation
+# 2. Add stats for reports and stock figures
+# 3. Add stats for GRID and MYU reports
 
 largest_date = '2022-01-01'
 smallest_date = '1995-01-01'
@@ -74,8 +74,12 @@ settings = {
         'code': 'E7',
     },
     'ws8': {
-        'title': 'Problematic reports where date range is not valid for recommended flow figures',
+        'title': 'Recommended flow figures not included in reports',
         'code': 'E8',
+    },
+    'ws9': {
+        'title': 'Recommended flow figures added in reports',
+        'code': 'E9',
     },
 }
 
@@ -144,7 +148,7 @@ class Command(BaseCommand):
         old_ids = list(flow_figures_without_end_date_qs.values_list('old_id', flat=True))
         for row, id in enumerate(old_ids):
             add_row(
-                ws2,
+                ws3,
                 row + 3,
                 id,
                 get_fact_url(id),
@@ -176,8 +180,8 @@ class Command(BaseCommand):
         ws5.append(["Fact ID", "Fact URL"])
 
         flow_figures_with_start_date_gt_end_date_qs = Figure.objects.filter(
-            start_date__is_null=False,
-            end_date__is_null=False,
+            start_date__isnull=False,
+            end_date__isnull=False,
             start_date__gt=F('end_date'),
             category__type='Flow',
             role=Figure.ROLE.RECOMMENDED
@@ -198,8 +202,8 @@ class Command(BaseCommand):
         ws6.append(["Fact ID", "Fact URL"])
 
         stock_figures_with_start_date_gt_end_date_qs = Figure.objects.filter(
-            start_date__is_null=False,
-            end_date__is_null=False,
+            start_date__isnull=False,
+            end_date__isnull=False,
             start_date__gt=F('end_date'),
             category__type='Stock',
             role=Figure.ROLE.RECOMMENDED
@@ -214,7 +218,7 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
-        # Recommended stock and flow figures with small or large dates
+        # Recommended stock and flow figures with small/large start/end dates
         ws7 = wb.create_sheet(settings['ws7']['code'])
         ws7.append([settings['ws7']['title']])
         ws7.append(["Fact ID", "Fact URL"])
@@ -236,33 +240,55 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
-        # Masterfacts with flow figures not included in report
+        # Recommended flow figures not included in reports
         ws8 = wb.create_sheet(settings['ws8']['code'])
         ws8.append([settings['ws8']['title']])
-        ws8.append(["Fact ID", "Fact URL"])
+        ws8.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL"])
 
-        problematic_reports_qs = Report.objects.filter(
-            filter_figure_start_after__gt=F('figures__start_date'),
-            filter_figure_end_before__lt=F('figures__end_date'),
-            figures__category__type='Flow',
-            figures__role=Figure.ROLE.RECOMMENDED,
-        ).distinct()
+        # Recommended flow figures added in reports
+        ws9 = wb.create_sheet(settings['ws9']['code'])
+        ws9.append([settings['ws9']['title']])
+        ws9.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL"])
 
-        row = 3
-        for obj in problematic_reports_qs:
-            problematic_figures = obj.figures.filter(
-                start_date__lt=obj.filter_figure_start_after,
-                end_date__gt=obj.filter_figure_end_before
-            )
-            for problematic_figure in problematic_figures:
+        missing_row = 0
+        added_row = 0
+        all_reports = Report.objects.all()
+        for report in all_reports:
+            if not report.old_id.isnumeric():
+                continue
+
+            linked_figures = report.attached_figures.filter(
+                role=Figure.ROLE.RECOMMENDED,
+                category__type='Flow',
+            ).values_list('old_id', flat=True)
+            extracted_figures = report.extract_report_figures.filter(
+                role=Figure.ROLE.RECOMMENDED,
+                category__type='Flow',
+            ).values_list('old_id', flat=True)
+
+            missing = set(linked_figures) - set(extracted_figures)
+            for id in missing:
                 add_row(
                     ws8,
-                    row,
-                    obj.old_id,
-                    get_fact_url(obj.old_id) if obj.old_id.isnumeric() else '',
-                    get_fact_url(problematic_figure.old_id),
+                    missing_row + 3,
+                    report.old_id,
+                    get_fact_url(report.old_id),
+                    id,
+                    get_fact_url(id),
                 )
-                row = row + 1
+                missing_row = missing_row + 1
+
+            added = set(extracted_figures) - set(linked_figures)
+            for id in added:
+                add_row(
+                    ws9,
+                    added_row + 3,
+                    report.old_id,
+                    get_fact_url(report.old_id),
+                    id,
+                    get_fact_url(id),
+                )
+                added_row = added_row + 1
 
         # Summary page
         ws0.title = "summary"
@@ -274,6 +300,7 @@ class Command(BaseCommand):
         ws0.append([settings['ws5']['code'], settings['ws5']['title'], flow_figures_with_start_date_gt_end_date_qs.count()])
         ws0.append([settings['ws6']['code'], settings['ws6']['title'], stock_figures_with_start_date_gt_end_date_qs.count()])
         ws0.append([settings['ws7']['code'], settings['ws7']['title'], small_and_large_figure_date_qs.count()])
-        ws0.append([settings['ws8']['code'], settings['ws8']['title'], problematic_reports_qs.count()])
+        ws0.append([settings['ws8']['code'], settings['ws8']['title'], missing_row])
+        ws0.append([settings['ws9']['code'], settings['ws9']['title'], added_row])
 
         wb.save(filename="data-errors.xlsx")
