@@ -48,38 +48,58 @@ settings = {
     'ws1': {
         'title': f'Events with small/large event dates ({smallest_date} to {largest_date})',
         'code': 'E1',
+        'remarks': '',
     },
     'ws2': {
         'title': 'Recommended stock/flow figures without start date',
         'code': 'E2',
+        'remarks': '',
     },
     'ws3': {
         'title': 'Recommended flow figures without end date',
         'code': 'E3',
+        'remarks': '',
     },
     'ws4': {
-        'title': 'Recommended stock figures without end reporting date',
+        'title': 'Recommended stock figures without stock reporting date',
         'code': 'E4',
+        'remarks': 'There are zero figures because we are automatically setting the stock reporting date',
     },
     'ws5': {
         'title': 'Recommended flow figures where start date greater than end date',
         'code': 'E5',
+        'remarks': '',
     },
     'ws6': {
-        'title': 'Recommended stock figures where start date greater than end date',
+        'title': 'Recommended stock figures where start date greater than stock reporting date',
         'code': 'E6',
+        'remarks': 'We are generating the stock reporting date using groups',
     },
     'ws7': {
         'title': f'Recommended figures with small/large start/end dates ({smallest_date} to {largest_date})',
         'code': 'E7',
+        'remarks': '',
     },
     'ws8': {
-        'title': 'Recommended flow figures not included in reports',
+        'title': 'Recommended new displacement figures not included in reports (but included in masterfacts)',
         'code': 'E8',
+        'remarks': '',
     },
     'ws9': {
-        'title': 'Recommended flow figures added in reports',
+        'title': 'Recommended new displacement figures added in reports (but not included in masterfacts)',
         'code': 'E9',
+        'remarks': '',
+    },
+
+    'ws10': {
+        'title': 'Recommended idps stock figures not included in reports (but included in masterfacts)',
+        'code': 'E10',
+        'remarks': 'Not calculated',
+    },
+    'ws11': {
+        'title': 'Recommended idps stock figures added in reports (but not included in masterfacts)',
+        'code': 'E11',
+        'remarks': 'Not calculated',
     },
 }
 
@@ -259,12 +279,13 @@ class Command(BaseCommand):
 
             linked_figures = report.attached_figures.filter(
                 role=Figure.ROLE.RECOMMENDED,
-                category__type='Flow', category__name='New Displacement'
+                category__type='Flow',
+                category__name='New Displacement',
             ).values_list('old_id', flat=True)
             extracted_figures = report.extract_report_figures.filter(
                 role=Figure.ROLE.RECOMMENDED,
                 category__type='Flow',
-                category__name='New Displacement'
+                category__name='New Displacement',
             ).values_list('old_id', flat=True)
 
             missing = set(linked_figures) - set(extracted_figures)
@@ -293,15 +314,17 @@ class Command(BaseCommand):
 
         # Summary page
         ws0.title = "summary"
-        ws0.append(["Code", "Title", "Count"])
-        ws0.append([settings['ws1']['code'], settings['ws1']['title'], small_and_large_event_date_qs.count()])
-        ws0.append([settings['ws2']['code'], settings['ws2']['title'], start_date_null_figures_qs.count()])
-        ws0.append([settings['ws3']['code'], settings['ws3']['title'], flow_figures_without_end_date_qs.count()])
-        ws0.append([settings['ws4']['code'], settings['ws4']['title'], stock_figures_without_end_date_qs.count()])
-        ws0.append([settings['ws5']['code'], settings['ws5']['title'], flow_figures_with_start_date_gt_end_date_qs.count()])
-        ws0.append([settings['ws6']['code'], settings['ws6']['title'], stock_figures_with_start_date_gt_end_date_qs.count()])
-        ws0.append([settings['ws7']['code'], settings['ws7']['title'], small_and_large_figure_date_qs.count()])
-        ws0.append([settings['ws8']['code'], settings['ws8']['title'], missing_row])
-        ws0.append([settings['ws9']['code'], settings['ws9']['title'], added_row])
+        ws0.append(["Code", "Title", "Count", "Remarks"])
+        ws0.append([settings['ws1']['code'], settings['ws1']['title'], small_and_large_event_date_qs.count(), settings['ws1']['remarks']])
+        ws0.append([settings['ws2']['code'], settings['ws2']['title'], start_date_null_figures_qs.count(), settings['ws2']['remarks']])
+        ws0.append([settings['ws3']['code'], settings['ws3']['title'], flow_figures_without_end_date_qs.count(), settings['ws3']['remarks']])
+        ws0.append([settings['ws4']['code'], settings['ws4']['title'], stock_figures_without_end_date_qs.count(), settings['ws4']['remarks']])
+        ws0.append([settings['ws5']['code'], settings['ws5']['title'], flow_figures_with_start_date_gt_end_date_qs.count(), settings['ws5']['remarks']])
+        ws0.append([settings['ws6']['code'], settings['ws6']['title'], stock_figures_with_start_date_gt_end_date_qs.count(), settings['ws6']['remarks']])
+        ws0.append([settings['ws7']['code'], settings['ws7']['title'], small_and_large_figure_date_qs.count(), settings['ws7']['remarks']])
+        ws0.append([settings['ws8']['code'], settings['ws8']['title'], missing_row, settings['ws8']['remarks']])
+        ws0.append([settings['ws9']['code'], settings['ws9']['title'], added_row, settings['ws9']['remarks']])
+        ws0.append([settings['ws10']['code'], settings['ws10']['title'], '', settings['ws10']['remarks']])
+        ws0.append([settings['ws11']['code'], settings['ws11']['title'], '', settings['ws11']['remarks']])
 
         wb.save(filename="data-errors.xlsx")
