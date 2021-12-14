@@ -101,6 +101,36 @@ settings = {
         'code': 'E11',
         'remarks': '',
     },
+    'ws12': {
+        'title': 'Triangulated stock/flow figures without start date',
+        'code': 'E12',
+        'remarks': '',
+    },
+    'ws13': {
+        'title': 'Triangulated flow figures without end date',
+        'code': 'E13',
+        'remarks': '',
+    },
+    'ws14': {
+        'title': 'Triangulated stock figures without stock reporting date',
+        'code': 'E14',
+        'remarks': 'We are not automatically setting the stock reporting date',
+    },
+    'ws15': {
+        'title': 'Triangulated flow figures where start date greater than end date',
+        'code': 'E15',
+        'remarks': '',
+    },
+    'ws16': {
+        'title': 'Triangulated stock figures where start date greater than stock reporting date',
+        'code': 'E16',
+        'remarks': 'We are generating the stock reporting date using groups',
+    },
+    'ws17': {
+        'title': f'Triangulated figures with small/large start/end dates ({smallest_date} to {largest_date})',
+        'code': 'E17',
+        'remarks': '',
+    },
 }
 
 
@@ -364,6 +394,133 @@ class Command(BaseCommand):
                 )
                 added_stock_row = added_stock_row + 1
 
+        # Triangulated stock and flow figures without start date
+        ws12 = wb.create_sheet(settings['ws12']['code'])
+        ws12.append([settings['ws12']['title']])
+        ws12.append(["Fact ID", "Fact URL"])
+
+        trangulated_start_date_null_figures_qs = Figure.objects.filter(
+            start_date__isnull=True,
+            role=Figure.ROLE.TRIANGULATION
+        )
+
+        old_ids = trangulated_start_date_null_figures_qs.values_list('old_id', flat=True)
+        for row, id in enumerate(old_ids):
+            add_row(
+                ws12,
+                row + 3,
+                id,
+                get_fact_url(id),
+            )
+
+        # Triangulated flow figures without end date
+        ws13 = wb.create_sheet(settings['ws13']['code'])
+        ws13.append([settings['ws13']['title']])
+        ws13.append(["Fact ID", "Fact URL"])
+
+        trangulated_flow_figures_without_end_date_qs = Figure.objects.filter(
+            end_date__isnull=True,
+            category__type='Flow',
+            role=Figure.ROLE.TRIANGULATION
+        )
+
+        old_ids = trangulated_flow_figures_without_end_date_qs.values_list('old_id', flat=True)
+        for row, id in enumerate(old_ids):
+            add_row(
+                ws13,
+                row + 3,
+                id,
+                get_fact_url(id),
+            )
+
+        # Triangulated stock figures without end date
+        ws14 = wb.create_sheet(settings['ws14']['code'])
+        ws14.append([settings['ws14']['title']])
+        ws14.append(["Fact ID", "Fact URL"])
+
+        trangulated_stock_figures_without_end_date_qs = Figure.objects.filter(
+            end_date__isnull=True,
+            category__type='Stock',
+            role=Figure.ROLE.TRIANGULATION
+        )
+
+        old_ids = trangulated_stock_figures_without_end_date_qs.values_list('old_id', flat=True)
+        for row, id in enumerate(old_ids):
+            add_row(
+                ws14,
+                row + 3,
+                id,
+                get_fact_url(id),
+            )
+
+        # Triangulated flow figures where start date is greater than end date
+        ws15 = wb.create_sheet(settings['ws15']['code'])
+        ws15.append([settings['ws15']['title']])
+        ws15.append(["Fact ID", "Fact URL"])
+
+        trangulated_flow_figures_with_start_date_gt_end_date_qs = Figure.objects.filter(
+            start_date__isnull=False,
+            end_date__isnull=False,
+            start_date__gt=F('end_date'),
+            category__type='Flow',
+            role=Figure.ROLE.TRIANGULATION
+        )
+
+        old_ids = trangulated_flow_figures_with_start_date_gt_end_date_qs.values_list('old_id', flat=True)
+        for row, id in enumerate(old_ids):
+            add_row(
+                ws15,
+                row + 3,
+                id,
+                get_fact_url(id),
+            )
+
+        # Triangulated stock figures where start date is greater than end date
+        ws16 = wb.create_sheet(settings['ws16']['code'])
+        ws16.append([settings['ws16']['title']])
+        ws16.append(["Fact ID", "Fact URL"])
+
+        trangulated_stock_figures_with_start_date_gt_end_date_qs = Figure.objects.filter(
+            start_date__isnull=False,
+            end_date__isnull=False,
+            start_date__gt=F('end_date'),
+            category__type='Stock',
+            role=Figure.ROLE.TRIANGULATION
+        )
+
+        old_ids = trangulated_stock_figures_with_start_date_gt_end_date_qs.values_list('old_id', flat=True)
+        for row, id in enumerate(old_ids):
+            add_row(
+                ws16,
+                row + 3,
+                id,
+                get_fact_url(id),
+            )
+
+        # Triangulated stock and flow figures with small/large start/end dates
+        ws17 = wb.create_sheet(settings['ws17']['code'])
+        ws17.append([settings['ws17']['title']])
+        ws17.append(["Fact ID", "Fact URL"])
+
+        trangulated_small_and_large_figure_date_qs = Figure.objects.filter(
+            Q(start_date__gt=largest_date) |
+            Q(start_date__lt=smallest_date) |
+            Q(end_date__gt=largest_date) |
+            Q(end_date__lt=smallest_date),
+            role=Figure.ROLE.TRIANGULATION
+        ).distinct()
+
+        old_ids = trangulated_small_and_large_figure_date_qs.values_list('old_id', flat=True)
+        for row, id in enumerate(old_ids):
+            add_row(
+                ws17,
+                row + 3,
+                id,
+                get_fact_url(id),
+            )
+
+        all_reports = Report.objects.all()
+
         # Summary page
         ws0.title = "summary"
         ws0.append(["Code", "Title", "Count", "Remarks"])
@@ -378,5 +535,11 @@ class Command(BaseCommand):
         ws0.append([settings['ws9']['code'], settings['ws9']['title'], added_flow_row, settings['ws9']['remarks']])
         ws0.append([settings['ws10']['code'], settings['ws10']['title'], missing_stock_row, settings['ws10']['remarks']])
         ws0.append([settings['ws11']['code'], settings['ws11']['title'], added_stock_row, settings['ws11']['remarks']])
+        ws0.append([settings['ws12']['code'], settings['ws12']['title'], trangulated_start_date_null_figures_qs.count(), settings['ws12']['remarks']])
+        ws0.append([settings['ws13']['code'], settings['ws13']['title'], trangulated_flow_figures_without_end_date_qs.count(), settings['ws13']['remarks']])
+        ws0.append([settings['ws14']['code'], settings['ws14']['title'], trangulated_stock_figures_without_end_date_qs.count(), settings['ws14']['remarks']])
+        ws0.append([settings['ws15']['code'], settings['ws15']['title'], trangulated_flow_figures_with_start_date_gt_end_date_qs.count(), settings['ws15']['remarks']])
+        ws0.append([settings['ws16']['code'], settings['ws16']['title'], trangulated_stock_figures_with_start_date_gt_end_date_qs.count(), settings['ws16']['remarks']])
+        ws0.append([settings['ws17']['code'], settings['ws17']['title'], trangulated_small_and_large_figure_date_qs.count(), settings['ws17']['remarks']])
 
         wb.save(filename="data-errors.xlsx")
