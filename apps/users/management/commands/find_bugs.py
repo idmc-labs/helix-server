@@ -83,7 +83,7 @@ settings = {
     'ws8': {
         'title': 'Recommended new displacement figures not included in reports (but included in masterfacts)',
         'code': 'E8',
-        'remarks': '',
+        'remarks': 'Figures are not included in reports when figure type does not match',
     },
     'ws9': {
         'title': 'Recommended new displacement figures added in reports (but not included in masterfacts)',
@@ -94,12 +94,12 @@ settings = {
     'ws10': {
         'title': 'Recommended idps stock figures not included in reports (but included in masterfacts)',
         'code': 'E10',
-        'remarks': 'Not calculated',
+        'remarks': 'Figures are not included in reports when figure type does not match',
     },
     'ws11': {
         'title': 'Recommended idps stock figures added in reports (but not included in masterfacts)',
         'code': 'E11',
-        'remarks': 'Not calculated',
+        'remarks': '',
     },
 }
 
@@ -260,6 +260,8 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
+        all_reports = Report.objects.all()
+
         # Recommended flow figures not included in reports
         ws8 = wb.create_sheet(settings['ws8']['code'])
         ws8.append([settings['ws8']['title']])
@@ -270,9 +272,8 @@ class Command(BaseCommand):
         ws9.append([settings['ws9']['title']])
         ws9.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL"])
 
-        missing_row = 0
-        added_row = 0
-        all_reports = Report.objects.all()
+        missing_flow_row = 0
+        added_flow_row = 0
         for report in all_reports:
             if not report.old_id.isnumeric():
                 continue
@@ -292,25 +293,76 @@ class Command(BaseCommand):
             for id in missing:
                 add_row(
                     ws8,
-                    missing_row + 3,
+                    missing_flow_row + 3,
                     report.old_id,
                     get_fact_url(report.old_id),
                     id,
                     get_fact_url(id),
                 )
-                missing_row = missing_row + 1
+                missing_flow_row = missing_flow_row + 1
 
             added = set(extracted_figures) - set(linked_figures)
             for id in added:
                 add_row(
                     ws9,
-                    added_row + 3,
+                    added_flow_row + 3,
                     report.old_id,
                     get_fact_url(report.old_id),
                     id,
                     get_fact_url(id),
                 )
-                added_row = added_row + 1
+                added_flow_row = added_flow_row + 1
+
+        # Recommended flow figures not included in reports
+        ws10 = wb.create_sheet(settings['ws10']['code'])
+        ws10.append([settings['ws10']['title']])
+        ws10.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL"])
+
+        # Recommended flow figures added in reports
+        ws11 = wb.create_sheet(settings['ws11']['code'])
+        ws11.append([settings['ws11']['title']])
+        ws11.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL"])
+
+        missing_stock_row = 0
+        added_stock_row = 0
+        for report in all_reports:
+            if not report.old_id.isnumeric():
+                continue
+
+            linked_figures = report.attached_figures.filter(
+                role=Figure.ROLE.RECOMMENDED,
+                category__type='Stock',
+                category__name='IDPs',
+            ).values_list('old_id', flat=True)
+            extracted_figures = report.extract_report_figures.filter(
+                role=Figure.ROLE.RECOMMENDED,
+                category__type='Stock',
+                category__name='IDPs',
+            ).values_list('old_id', flat=True)
+
+            missing = set(linked_figures) - set(extracted_figures)
+            for id in missing:
+                add_row(
+                    ws10,
+                    missing_stock_row + 3,
+                    report.old_id,
+                    get_fact_url(report.old_id),
+                    id,
+                    get_fact_url(id),
+                )
+                missing_stock_row = missing_stock_row + 1
+
+            added = set(extracted_figures) - set(linked_figures)
+            for id in added:
+                add_row(
+                    ws11,
+                    added_stock_row + 3,
+                    report.old_id,
+                    get_fact_url(report.old_id),
+                    id,
+                    get_fact_url(id),
+                )
+                added_stock_row = added_stock_row + 1
 
         # Summary page
         ws0.title = "summary"
@@ -322,9 +374,9 @@ class Command(BaseCommand):
         ws0.append([settings['ws5']['code'], settings['ws5']['title'], flow_figures_with_start_date_gt_end_date_qs.count(), settings['ws5']['remarks']])
         ws0.append([settings['ws6']['code'], settings['ws6']['title'], stock_figures_with_start_date_gt_end_date_qs.count(), settings['ws6']['remarks']])
         ws0.append([settings['ws7']['code'], settings['ws7']['title'], small_and_large_figure_date_qs.count(), settings['ws7']['remarks']])
-        ws0.append([settings['ws8']['code'], settings['ws8']['title'], missing_row, settings['ws8']['remarks']])
-        ws0.append([settings['ws9']['code'], settings['ws9']['title'], added_row, settings['ws9']['remarks']])
-        ws0.append([settings['ws10']['code'], settings['ws10']['title'], '', settings['ws10']['remarks']])
-        ws0.append([settings['ws11']['code'], settings['ws11']['title'], '', settings['ws11']['remarks']])
+        ws0.append([settings['ws8']['code'], settings['ws8']['title'], missing_flow_row, settings['ws8']['remarks']])
+        ws0.append([settings['ws9']['code'], settings['ws9']['title'], added_flow_row, settings['ws9']['remarks']])
+        ws0.append([settings['ws10']['code'], settings['ws10']['title'], missing_stock_row, settings['ws10']['remarks']])
+        ws0.append([settings['ws11']['code'], settings['ws11']['title'], added_stock_row, settings['ws11']['remarks']])
 
         wb.save(filename="data-errors.xlsx")
