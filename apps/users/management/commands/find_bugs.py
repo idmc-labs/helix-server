@@ -104,7 +104,7 @@ class Command(BaseCommand):
             Q(end_date__gt=largest_date),
         ).distinct()
 
-        events = list(small_and_large_event_date_qs.values('old_id', 'id'))
+        events = small_and_large_event_date_qs.values('old_id', 'id')
         for row, event in enumerate(events):
             add_row(
                 ws1,
@@ -125,7 +125,7 @@ class Command(BaseCommand):
             role=Figure.ROLE.RECOMMENDED
         )
 
-        old_ids = list(start_date_null_figures_qs.values_list('old_id', flat=True))
+        old_ids = start_date_null_figures_qs.values_list('old_id', flat=True)
         for row, id in enumerate(old_ids):
             add_row(
                 ws2,
@@ -145,7 +145,7 @@ class Command(BaseCommand):
             role=Figure.ROLE.RECOMMENDED
         )
 
-        old_ids = list(flow_figures_without_end_date_qs.values_list('old_id', flat=True))
+        old_ids = flow_figures_without_end_date_qs.values_list('old_id', flat=True)
         for row, id in enumerate(old_ids):
             add_row(
                 ws3,
@@ -165,7 +165,7 @@ class Command(BaseCommand):
             role=Figure.ROLE.RECOMMENDED
         )
 
-        old_ids = list(stock_figures_without_end_date_qs.values_list('old_id', flat=True))
+        old_ids = stock_figures_without_end_date_qs.values_list('old_id', flat=True)
         for row, id in enumerate(old_ids):
             add_row(
                 ws4,
@@ -187,7 +187,7 @@ class Command(BaseCommand):
             role=Figure.ROLE.RECOMMENDED
         )
 
-        old_ids = list(flow_figures_with_start_date_gt_end_date_qs.values_list('old_id', flat=True))
+        old_ids = flow_figures_with_start_date_gt_end_date_qs.values_list('old_id', flat=True)
         for row, id in enumerate(old_ids):
             add_row(
                 ws5,
@@ -209,7 +209,7 @@ class Command(BaseCommand):
             role=Figure.ROLE.RECOMMENDED
         )
 
-        old_ids = list(stock_figures_with_start_date_gt_end_date_qs.values_list('old_id', flat=True))
+        old_ids = stock_figures_with_start_date_gt_end_date_qs.values_list('old_id', flat=True)
         for row, id in enumerate(old_ids):
             add_row(
                 ws6,
@@ -231,7 +231,7 @@ class Command(BaseCommand):
             role=Figure.ROLE.RECOMMENDED
         ).distinct()
 
-        old_ids = list(small_and_large_figure_date_qs.values_list('old_id', flat=True))
+        old_ids = small_and_large_figure_date_qs.values_list('old_id', flat=True)
         for row, id in enumerate(old_ids):
             add_row(
                 ws7,
