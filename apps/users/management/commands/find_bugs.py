@@ -259,11 +259,12 @@ class Command(BaseCommand):
 
             linked_figures = report.attached_figures.filter(
                 role=Figure.ROLE.RECOMMENDED,
-                category__type='Flow',
+                category__type='Flow', category__name='New Displacement'
             ).values_list('old_id', flat=True)
             extracted_figures = report.extract_report_figures.filter(
                 role=Figure.ROLE.RECOMMENDED,
                 category__type='Flow',
+                category__name='New Displacement'
             ).values_list('old_id', flat=True)
 
             missing = set(linked_figures) - set(extracted_figures)
