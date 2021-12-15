@@ -24,9 +24,11 @@ secrets.yml
 celerybeat-schedule
 
 # testing
-/coverage
+coverage/
 .coverage
 coverage.xml
 htmlcov
 sitecus
-data-errors.xlsx
+
+# generated files
+generated/

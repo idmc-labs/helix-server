@@ -5,12 +5,8 @@ from apps.entry.models import Figure
 from apps.event.models import Event
 from apps.report.models import Report
 
-# TODO:
-# 1. Add stats for triangulation
-# 2. Add stats for reports and stock figures
-# 3. Add stats for GRID and MYU reports
 
-largest_date = '2022-01-01'
+largest_date = '2023-01-01'
 smallest_date = '1995-01-01'
 
 
@@ -73,7 +69,7 @@ settings = {
     'ws6': {
         'title': 'Recommended stock figures where start date greater than stock reporting date',
         'code': 'E6',
-        'remarks': 'We are generating the stock reporting date using groups',
+        'remarks': 'We are generating the stock reporting date using groups from facts/masterfacts',
     },
     'ws7': {
         'title': f'Recommended figures with small/large start/end dates ({smallest_date} to {largest_date})',
@@ -102,32 +98,32 @@ settings = {
         'remarks': '',
     },
     'ws12': {
-        'title': 'Triangulated stock/flow figures without start date',
+        'title': 'Triangulation stock/flow figures without start date',
         'code': 'E12',
         'remarks': '',
     },
     'ws13': {
-        'title': 'Triangulated flow figures without end date',
+        'title': 'Triangulation flow figures without end date',
         'code': 'E13',
         'remarks': '',
     },
     'ws14': {
-        'title': 'Triangulated stock figures without stock reporting date',
+        'title': 'Triangulation stock figures without stock reporting date',
         'code': 'E14',
-        'remarks': 'We are not automatically setting the stock reporting date',
+        'remarks': 'We are generating the stock reporting date using groups from facts/masterfacts',
     },
     'ws15': {
-        'title': 'Triangulated flow figures where start date greater than end date',
+        'title': 'Triangulation flow figures where start date greater than end date',
         'code': 'E15',
         'remarks': '',
     },
     'ws16': {
-        'title': 'Triangulated stock figures where start date greater than stock reporting date',
+        'title': 'Triangulation stock figures where start date greater than stock reporting date',
         'code': 'E16',
-        'remarks': 'We are generating the stock reporting date using groups',
+        'remarks': 'We are generating the stock reporting date using groups from facts/masterfacts',
     },
     'ws17': {
-        'title': f'Triangulated figures with small/large start/end dates ({smallest_date} to {largest_date})',
+        'title': f'Triangulation figures with small/large start/end dates ({smallest_date} to {largest_date})',
         'code': 'E17',
         'remarks': '',
     },
@@ -394,17 +390,17 @@ class Command(BaseCommand):
                 )
                 added_stock_row = added_stock_row + 1
 
-        # Triangulated stock and flow figures without start date
+        # Triangulation stock and flow figures without start date
         ws12 = wb.create_sheet(settings['ws12']['code'])
         ws12.append([settings['ws12']['title']])
         ws12.append(["Fact ID", "Fact URL"])
 
-        trangulated_start_date_null_figures_qs = Figure.objects.filter(
+        triangulation_start_date_null_figures_qs = Figure.objects.filter(
             start_date__isnull=True,
             role=Figure.ROLE.TRIANGULATION
         )
 
-        old_ids = trangulated_start_date_null_figures_qs.values_list('old_id', flat=True)
+        old_ids = triangulation_start_date_null_figures_qs.values_list('old_id', flat=True)
         for row, id in enumerate(old_ids):
             add_row(
                 ws12,
@@ -413,18 +409,18 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
-        # Triangulated flow figures without end date
+        # Triangulation flow figures without end date
         ws13 = wb.create_sheet(settings['ws13']['code'])
         ws13.append([settings['ws13']['title']])
         ws13.append(["Fact ID", "Fact URL"])
 
-        trangulated_flow_figures_without_end_date_qs = Figure.objects.filter(
+        triangulation_flow_figures_without_end_date_qs = Figure.objects.filter(
             end_date__isnull=True,
             category__type='Flow',
             role=Figure.ROLE.TRIANGULATION
         )
 
-        old_ids = trangulated_flow_figures_without_end_date_qs.values_list('old_id', flat=True)
+        old_ids = triangulation_flow_figures_without_end_date_qs.values_list('old_id', flat=True)
         for row, id in enumerate(old_ids):
             add_row(
                 ws13,
@@ -433,18 +429,18 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
-        # Triangulated stock figures without end date
+        # Triangulation stock figures without end date
         ws14 = wb.create_sheet(settings['ws14']['code'])
         ws14.append([settings['ws14']['title']])
         ws14.append(["Fact ID", "Fact URL"])
 
-        trangulated_stock_figures_without_end_date_qs = Figure.objects.filter(
+        triangulation_stock_figures_without_end_date_qs = Figure.objects.filter(
             end_date__isnull=True,
             category__type='Stock',
             role=Figure.ROLE.TRIANGULATION
         )
 
-        old_ids = trangulated_stock_figures_without_end_date_qs.values_list('old_id', flat=True)
+        old_ids = triangulation_stock_figures_without_end_date_qs.values_list('old_id', flat=True)
         for row, id in enumerate(old_ids):
             add_row(
                 ws14,
@@ -453,12 +449,12 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
-        # Triangulated flow figures where start date is greater than end date
+        # Triangulation flow figures where start date is greater than end date
         ws15 = wb.create_sheet(settings['ws15']['code'])
         ws15.append([settings['ws15']['title']])
         ws15.append(["Fact ID", "Fact URL"])
 
-        trangulated_flow_figures_with_start_date_gt_end_date_qs = Figure.objects.filter(
+        triangulation_flow_figures_with_start_date_gt_end_date_qs = Figure.objects.filter(
             start_date__isnull=False,
             end_date__isnull=False,
             start_date__gt=F('end_date'),
@@ -466,7 +462,7 @@ class Command(BaseCommand):
             role=Figure.ROLE.TRIANGULATION
         )
 
-        old_ids = trangulated_flow_figures_with_start_date_gt_end_date_qs.values_list('old_id', flat=True)
+        old_ids = triangulation_flow_figures_with_start_date_gt_end_date_qs.values_list('old_id', flat=True)
         for row, id in enumerate(old_ids):
             add_row(
                 ws15,
@@ -475,12 +471,12 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
-        # Triangulated stock figures where start date is greater than end date
+        # Triangulation stock figures where start date is greater than end date
         ws16 = wb.create_sheet(settings['ws16']['code'])
         ws16.append([settings['ws16']['title']])
         ws16.append(["Fact ID", "Fact URL"])
 
-        trangulated_stock_figures_with_start_date_gt_end_date_qs = Figure.objects.filter(
+        triangulation_stock_figures_with_start_date_gt_end_date_qs = Figure.objects.filter(
             start_date__isnull=False,
             end_date__isnull=False,
             start_date__gt=F('end_date'),
@@ -488,7 +484,7 @@ class Command(BaseCommand):
             role=Figure.ROLE.TRIANGULATION
         )
 
-        old_ids = trangulated_stock_figures_with_start_date_gt_end_date_qs.values_list('old_id', flat=True)
+        old_ids = triangulation_stock_figures_with_start_date_gt_end_date_qs.values_list('old_id', flat=True)
         for row, id in enumerate(old_ids):
             add_row(
                 ws16,
@@ -497,12 +493,12 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
-        # Triangulated stock and flow figures with small/large start/end dates
+        # Triangulation stock and flow figures with small/large start/end dates
         ws17 = wb.create_sheet(settings['ws17']['code'])
         ws17.append([settings['ws17']['title']])
         ws17.append(["Fact ID", "Fact URL"])
 
-        trangulated_small_and_large_figure_date_qs = Figure.objects.filter(
+        triangulation_small_and_large_figure_date_qs = Figure.objects.filter(
             Q(start_date__gt=largest_date) |
             Q(start_date__lt=smallest_date) |
             Q(end_date__gt=largest_date) |
@@ -510,7 +506,7 @@ class Command(BaseCommand):
             role=Figure.ROLE.TRIANGULATION
         ).distinct()
 
-        old_ids = trangulated_small_and_large_figure_date_qs.values_list('old_id', flat=True)
+        old_ids = triangulation_small_and_large_figure_date_qs.values_list('old_id', flat=True)
         for row, id in enumerate(old_ids):
             add_row(
                 ws17,
@@ -525,6 +521,7 @@ class Command(BaseCommand):
         ws0.title = "summary"
         ws0.append(["Code", "Title", "Count", "Remarks"])
         ws0.append([settings['ws1']['code'], settings['ws1']['title'], small_and_large_event_date_qs.count(), settings['ws1']['remarks']])
+
         ws0.append([settings['ws2']['code'], settings['ws2']['title'], start_date_null_figures_qs.count(), settings['ws2']['remarks']])
         ws0.append([settings['ws3']['code'], settings['ws3']['title'], flow_figures_without_end_date_qs.count(), settings['ws3']['remarks']])
         ws0.append([settings['ws4']['code'], settings['ws4']['title'], stock_figures_without_end_date_qs.count(), settings['ws4']['remarks']])
@@ -533,13 +530,15 @@ class Command(BaseCommand):
         ws0.append([settings['ws7']['code'], settings['ws7']['title'], small_and_large_figure_date_qs.count(), settings['ws7']['remarks']])
         ws0.append([settings['ws8']['code'], settings['ws8']['title'], missing_flow_row, settings['ws8']['remarks']])
         ws0.append([settings['ws9']['code'], settings['ws9']['title'], added_flow_row, settings['ws9']['remarks']])
+
         ws0.append([settings['ws10']['code'], settings['ws10']['title'], missing_stock_row, settings['ws10']['remarks']])
         ws0.append([settings['ws11']['code'], settings['ws11']['title'], added_stock_row, settings['ws11']['remarks']])
-        ws0.append([settings['ws12']['code'], settings['ws12']['title'], trangulated_start_date_null_figures_qs.count(), settings['ws12']['remarks']])
-        ws0.append([settings['ws13']['code'], settings['ws13']['title'], trangulated_flow_figures_without_end_date_qs.count(), settings['ws13']['remarks']])
-        ws0.append([settings['ws14']['code'], settings['ws14']['title'], trangulated_stock_figures_without_end_date_qs.count(), settings['ws14']['remarks']])
-        ws0.append([settings['ws15']['code'], settings['ws15']['title'], trangulated_flow_figures_with_start_date_gt_end_date_qs.count(), settings['ws15']['remarks']])
-        ws0.append([settings['ws16']['code'], settings['ws16']['title'], trangulated_stock_figures_with_start_date_gt_end_date_qs.count(), settings['ws16']['remarks']])
-        ws0.append([settings['ws17']['code'], settings['ws17']['title'], trangulated_small_and_large_figure_date_qs.count(), settings['ws17']['remarks']])
 
-        wb.save(filename="data-errors.xlsx")
+        ws0.append([settings['ws12']['code'], settings['ws12']['title'], triangulation_start_date_null_figures_qs.count(), settings['ws12']['remarks']])
+        ws0.append([settings['ws13']['code'], settings['ws13']['title'], triangulation_flow_figures_without_end_date_qs.count(), settings['ws13']['remarks']])
+        ws0.append([settings['ws14']['code'], settings['ws14']['title'], triangulation_stock_figures_without_end_date_qs.count(), settings['ws14']['remarks']])
+        ws0.append([settings['ws15']['code'], settings['ws15']['title'], triangulation_flow_figures_with_start_date_gt_end_date_qs.count(), settings['ws15']['remarks']])
+        ws0.append([settings['ws16']['code'], settings['ws16']['title'], triangulation_stock_figures_with_start_date_gt_end_date_qs.count(), settings['ws16']['remarks']])
+        ws0.append([settings['ws17']['code'], settings['ws17']['title'], triangulation_small_and_large_figure_date_qs.count(), settings['ws17']['remarks']])
+
+        wb.save(filename="generated/potential-problems.xlsx")
