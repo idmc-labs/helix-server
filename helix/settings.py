@@ -77,6 +77,7 @@ LOCAL_APPS = [
     'parking_lot',
     'contextualupdate',
     'report',
+    'helixmigration',
 ]
 
 THIRD_PARTY_APPS = [
@@ -212,6 +213,14 @@ else:
             'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'postgres'),
             'HOST': os.environ.get('POSTGRES_HOST', 'db'),
             'PORT': os.environ.get('POSTGRES_PORT', 5432),
+        },
+        'helixmigration': {
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'NAME': os.environ.get('HELIX_MIGRATION_POSTGRES_DB', 'backend_production'),
+            'USER': os.environ.get('HELIX_MIGRATION_POSTGRES_USER', 'postgres'),
+            'PASSWORD': os.environ.get('HELIX_MIGRATION_POSTGRES_PASSWORD', 'postgres'),
+            'HOST': os.environ.get('HELIX_MIGRATION_POSTGRES_HOST', '192.168.88.252'),
+            'PORT': os.environ.get('HELIX_MIGRATION_POSTGRES_PORT', 3211),
         }
     }
 

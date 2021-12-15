@@ -1,9 +1,10 @@
 from django.core.management.base import BaseCommand
-from django.db.models import F, Q
+from django.db.models import F, Q, Count
 from openpyxl.workbook import Workbook
 from apps.entry.models import Figure
 from apps.event.models import Event
 from apps.report.models import Report
+from apps.helixmigration.models import Documents, Facts, Events as OldEvents
 
 
 largest_date = '2023-01-01'
@@ -127,12 +128,38 @@ settings = {
         'code': 'E17',
         'remarks': '',
     },
+    'ws18': {
+        'title': 'Old facts Delete and do not include items',
+        'code': 'E18',
+        'remarks': '',
+    },
+    'ws19': {
+        'title': f'Old documents Delete and do not include items',
+        'code': 'E19',
+        'remarks': '',
+    },
+    'ws20': {
+        'title': 'Old events Delete and do not include items',
+        'code': 'E20',
+        'remarks': '',
+    },
+    'ws21': {
+        'title': 'Old Named GRID and MYU but not tagged as one (https://github.com/idmc-labs/Helix2.0/issues/243#issuecomment-974207507)',
+        'code': 'E21',
+        'remarks': '',
+    },
+    'ws22': {
+        'title': 'Old Facts that are both masterfact and subfact at the same time',
+        'code': 'E22',
+        'remarks': '',
+    },
 }
 
 
 class Command(BaseCommand):
 
     def handle(self, *args, **options):
+
         wb = Workbook()
 
         ws0 = wb.active
@@ -517,6 +544,114 @@ class Command(BaseCommand):
 
         all_reports = Report.objects.all()
 
+        # Old facts Delete and do not include items
+        ws18 = wb.create_sheet(settings['ws18']['code'])
+        ws18.append([settings['ws18']['title']])
+        ws18.append(["Fact ID", "Fact URL"])
+
+        old_facts_qs = Facts.objects.using('helixmigration').filter(
+            Q(name__icontains="ignore") |
+            Q(name__icontains="not include") |
+            Q(name__icontains="delete")
+        )
+
+        old_ids = old_facts_qs.values_list('id', flat=True)
+        for row, id in enumerate(old_ids):
+            add_row(
+                ws18,
+                row + 3,
+                id,
+                get_fact_url(id),
+            )
+
+        # Old documents Delete and do not include items
+        ws19 = wb.create_sheet(settings['ws19']['code'])
+        ws19.append([settings['ws19']['title']])
+        ws19.append(["Fact ID", "Fact URL"])
+
+        old_documents_qs = Documents.objects.using('helixmigration').filter(
+            Q(name__icontains="ignore") |
+            Q(name__icontains="not include") |
+            Q(name__icontains="delete")
+        )
+
+        old_ids = old_documents_qs.values_list('id', flat=True)
+        for row, id in enumerate(old_ids):
+            add_row(
+                ws19,
+                row + 3,
+                id,
+                get_fact_url(id),
+            )
+
+        # Old events Delete and do not include items
+        ws20 = wb.create_sheet(settings['ws20']['code'])
+        ws20.append([settings['ws20']['title']])
+        ws20.append(["Event ID", "Event URL"])
+
+        old_events_qs = OldEvents.objects.using('helixmigration').filter(
+            Q(name__icontains="ignore") |
+            Q(name__icontains="not include") |
+            Q(name__icontains="delete")
+        )
+
+        old_ids = old_events_qs.values_list('id', flat=True)
+        for row, id in enumerate(old_ids):
+            add_row(
+                ws20,
+                row + 3,
+                id,
+                get_event_url(id),
+            )
+
+        # Old Named GRID and MYU but not tagged as one (https://github.com/idmc-labs/Helix2.0/issues/243#issuecomment-974207507)
+        ws21 = wb.create_sheet(settings['ws21']['code'])
+        ws21.append([settings['ws21']['title']])
+        ws21.append(["Fact ID", "Fact URL"])
+
+        masterfact_stats_qs = Facts.objects.using('helixmigration').order_by().values('parent_id').annotate(count=Count('*')).filter(
+            count__gt=0,
+        ).values_list('parent_id')
+
+        old_grid_and_myu_qs = Facts.objects.using('helixmigration').filter(
+            document_id__isnull=True,
+            parent_id__isnull=True,
+            displacement_type='Disaster',
+            data__isnull=False,
+            groups__len=0,
+            id__in=masterfact_stats_qs,
+        ).filter(
+            Q(name__contains='MYU') |
+            Q(name__contains='GRID')
+        ).annotate(subfact=F('parent_id'))
+        old_ids = old_grid_and_myu_qs.values_list('id', flat=True)
+        for row, id in enumerate(old_ids):
+            add_row(
+                ws21,
+                row + 3,
+                id,
+                get_fact_url(id),
+            )
+
+        # Old Facts that are both masterfact and subfact at the same time
+        ws22 = wb.create_sheet(settings['ws22']['code'])
+        ws22.append([settings['ws22']['title']])
+        ws22.append(["Fact ID", "Fact URL"])
+
+        master_facts_qs = Facts.objects.using('helixmigration').filter(
+             parent_id__isnull=False, document_id__isnull=True
+        )
+
+        old_ids = master_facts_qs.values_list('id', flat=True)
+        for row, id in enumerate(old_ids):
+            add_row(
+                ws22,
+                row + 3,
+                id,
+                get_fact_url(id),
+            )
+
+
         # Summary page
         ws0.title = "summary"
         ws0.append(["Code", "Title", "Count", "Remarks"])
@@ -533,12 +668,16 @@ class Command(BaseCommand):
 
         ws0.append([settings['ws10']['code'], settings['ws10']['title'], missing_stock_row, settings['ws10']['remarks']])
         ws0.append([settings['ws11']['code'], settings['ws11']['title'], added_stock_row, settings['ws11']['remarks']])
-
         ws0.append([settings['ws12']['code'], settings['ws12']['title'], triangulation_start_date_null_figures_qs.count(), settings['ws12']['remarks']])
         ws0.append([settings['ws13']['code'], settings['ws13']['title'], triangulation_flow_figures_without_end_date_qs.count(), settings['ws13']['remarks']])
         ws0.append([settings['ws14']['code'], settings['ws14']['title'], triangulation_stock_figures_without_end_date_qs.count(), settings['ws14']['remarks']])
         ws0.append([settings['ws15']['code'], settings['ws15']['title'], triangulation_flow_figures_with_start_date_gt_end_date_qs.count(), settings['ws15']['remarks']])
         ws0.append([settings['ws16']['code'], settings['ws16']['title'], triangulation_stock_figures_with_start_date_gt_end_date_qs.count(), settings['ws16']['remarks']])
         ws0.append([settings['ws17']['code'], settings['ws17']['title'], triangulation_small_and_large_figure_date_qs.count(), settings['ws17']['remarks']])
+        ws0.append([settings['ws18']['code'], settings['ws18']['title'], old_facts_qs.count(), settings['ws18']['remarks']])
+        ws0.append([settings['ws19']['code'], settings['ws19']['title'], old_documents_qs.count(), settings['ws19']['remarks']])
+        ws0.append([settings['ws20']['code'], settings['ws20']['title'], old_events_qs.count(), settings['ws20']['remarks']])
+        ws0.append([settings['ws21']['code'], settings['ws21']['title'], old_grid_and_myu_qs.count(), settings['ws21']['remarks']])
+        ws0.append([settings['ws22']['code'], settings['ws22']['title'], master_facts_qs.count(), settings['ws22']['remarks']])
 
-        wb.save(filename="generated/potential-problems.xlsx")
+        wb.save(filename="generated/data-errors.xlsx")
