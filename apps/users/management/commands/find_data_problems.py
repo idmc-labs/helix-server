@@ -1,3 +1,4 @@
+import os
 from django.core.management.base import BaseCommand
 from django.db.models import F, Q, Count
 from openpyxl.workbook import Workbook
@@ -5,7 +6,6 @@ from apps.entry.models import Figure
 from apps.event.models import Event
 from apps.report.models import Report
 from apps.helixmigration.models import Documents, Facts, Events as OldEvents
-
 
 largest_date = '2023-01-01'
 smallest_date = '1995-01-01'
@@ -129,29 +129,29 @@ settings = {
         'remarks': '',
     },
     'ws18': {
-        'title': 'Old facts Delete and do not include items',
+        'title': 'Facts with titles that contain "DELETE", "NOT INCLUDE" or "IGNORE"',
         'code': 'E18',
         'remarks': '',
     },
     'ws19': {
-        'title': f'Old documents Delete and do not include items',
+        'title': f'Documents with titles that contain "DELETE", "NOT INCLUDE" or "IGNORE"',
         'code': 'E19',
         'remarks': '',
     },
     'ws20': {
-        'title': 'Old events Delete and do not include items',
+        'title': 'Events with title that contain "DELETE", "NOT INCLUDE" or "IGNORE"',
         'code': 'E20',
         'remarks': '',
     },
     'ws21': {
-        'title': 'Old Named GRID and MYU but not tagged as one (https://github.com/idmc-labs/Helix2.0/issues/243#issuecomment-974207507)',
+        'title': 'Masterfacts with title that start with GRID/MYU but without "GRID" or "MYU" groups',
         'code': 'E21',
         'remarks': '',
     },
     'ws22': {
-        'title': 'Old Facts that are both masterfact and subfact at the same time',
+        'title': 'Subfacts without any documents / Masterfacts as subfact of other masterfact',
         'code': 'E22',
-        'remarks': '',
+        'remarks': 'The document is not defined, but the parent is defined in the database',
     },
 }
 
@@ -547,47 +547,45 @@ class Command(BaseCommand):
         # Old facts Delete and do not include items
         ws18 = wb.create_sheet(settings['ws18']['code'])
         ws18.append([settings['ws18']['title']])
-        ws18.append(["Fact ID", "Fact URL"])
+        ws18.append(["Fact ID", "Fact URL", "Fact Name"])
 
         old_facts_qs = Facts.objects.using('helixmigration').filter(
             Q(name__icontains="ignore") |
             Q(name__icontains="not include") |
             Q(name__icontains="delete")
         )
-
-        old_ids = old_facts_qs.values_list('id', flat=True)
-        for row, id in enumerate(old_ids):
+        for row, fact_obj in enumerate(old_facts_qs):
             add_row(
                 ws18,
                 row + 3,
-                id,
-                get_fact_url(id),
+                fact_obj.id,
+                get_fact_url(fact_obj.id),
+                fact_obj.name
             )
 
         # Old documents Delete and do not include items
         ws19 = wb.create_sheet(settings['ws19']['code'])
         ws19.append([settings['ws19']['title']])
-        ws19.append(["Fact ID", "Fact URL"])
+        ws19.append(["Fact ID", "Fact URL", "Fact Name"])
 
         old_documents_qs = Documents.objects.using('helixmigration').filter(
             Q(name__icontains="ignore") |
             Q(name__icontains="not include") |
             Q(name__icontains="delete")
         )
-
-        old_ids = old_documents_qs.values_list('id', flat=True)
-        for row, id in enumerate(old_ids):
+        for row, document_obj in enumerate(old_documents_qs):
             add_row(
                 ws19,
                 row + 3,
-                id,
-                get_fact_url(id),
+                document_obj.id,
+                get_fact_url(document_obj.id),
+                document_obj.name
             )
 
         # Old events Delete and do not include items
         ws20 = wb.create_sheet(settings['ws20']['code'])
         ws20.append([settings['ws20']['title']])
-        ws20.append(["Event ID", "Event URL"])
+        ws20.append(["Event ID", "Event URL", "Event Name"])
 
         old_events_qs = OldEvents.objects.using('helixmigration').filter(
             Q(name__icontains="ignore") |
@@ -595,19 +593,19 @@ class Command(BaseCommand):
             Q(name__icontains="delete")
         )
 
-        old_ids = old_events_qs.values_list('id', flat=True)
-        for row, id in enumerate(old_ids):
+        for row, event_obj in enumerate(old_events_qs):
             add_row(
                 ws20,
                 row + 3,
-                id,
-                get_event_url(id),
+                event_obj.id,
+                get_event_url(event_obj.id),
+                event_obj.name,
             )
 
         # Old Named GRID and MYU but not tagged as one (https://github.com/idmc-labs/Helix2.0/issues/243#issuecomment-974207507)
         ws21 = wb.create_sheet(settings['ws21']['code'])
         ws21.append([settings['ws21']['title']])
-        ws21.append(["Fact ID", "Fact URL"])
+        ws21.append(["Fact ID", "Fact URL", "Fact Name"])
 
         masterfact_stats_qs = Facts.objects.using('helixmigration').order_by().values('parent_id').annotate(count=Count('*')).filter(
             count__gt=0,
@@ -624,13 +622,14 @@ class Command(BaseCommand):
             Q(name__contains='MYU') |
             Q(name__contains='GRID')
         ).annotate(subfact=F('parent_id'))
-        old_ids = old_grid_and_myu_qs.values_list('id', flat=True)
-        for row, id in enumerate(old_ids):
+
+        for row, fact_obj in enumerate(old_grid_and_myu_qs):
             add_row(
                 ws21,
                 row + 3,
-                id,
-                get_fact_url(id),
+                fact_obj.id,
+                get_fact_url(fact_obj.id),
+                fact_obj.name
             )
 
         # Old Facts that are both masterfact and subfact at the same time
@@ -639,18 +638,17 @@ class Command(BaseCommand):
         ws22.append(["Fact ID", "Fact URL"])
 
         master_facts_qs = Facts.objects.using('helixmigration').filter(
-             parent_id__isnull=False, document_id__isnull=True
+             parent_id__isnull=False,
+             document_id__isnull=True
         )
-
-        old_ids = master_facts_qs.values_list('id', flat=True)
-        for row, id in enumerate(old_ids):
+        ids = master_facts_qs.values_list('id', flat=True)
+        for row, id in enumerate(ids):
             add_row(
                 ws22,
                 row + 3,
                 id,
                 get_fact_url(id),
             )
-
 
         # Summary page
         ws0.title = "summary"
@@ -679,5 +677,9 @@ class Command(BaseCommand):
         ws0.append([settings['ws20']['code'], settings['ws20']['title'], old_events_qs.count(), settings['ws20']['remarks']])
         ws0.append([settings['ws21']['code'], settings['ws21']['title'], old_grid_and_myu_qs.count(), settings['ws21']['remarks']])
         ws0.append([settings['ws22']['code'], settings['ws22']['title'], master_facts_qs.count(), settings['ws22']['remarks']])
-
+        # Make sure generated directory exists
+        try:
+            os.makedirs("generated")
+        except FileExistsError:
+            pass
         wb.save(filename="generated/data-errors.xlsx")
