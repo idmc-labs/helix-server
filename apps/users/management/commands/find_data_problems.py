@@ -100,57 +100,57 @@ settings = {
     },
     'ws12': {
         'title': 'Triangulation stock/flow figures without start date',
-        'code': 'E12',
+        'code': 'W1',
         'remarks': '',
     },
     'ws13': {
         'title': 'Triangulation flow figures without end date',
-        'code': 'E13',
+        'code': 'W2',
         'remarks': '',
     },
     'ws14': {
         'title': 'Triangulation stock figures without stock reporting date',
-        'code': 'E14',
+        'code': 'W3',
         'remarks': 'We are generating the stock reporting date using groups from facts/masterfacts',
     },
     'ws15': {
         'title': 'Triangulation flow figures where start date greater than end date',
-        'code': 'E15',
+        'code': 'W4',
         'remarks': '',
     },
     'ws16': {
         'title': 'Triangulation stock figures where start date greater than stock reporting date',
-        'code': 'E16',
+        'code': 'W5',
         'remarks': 'We are generating the stock reporting date using groups from facts/masterfacts',
     },
     'ws17': {
         'title': f'Triangulation figures with small/large start/end dates ({smallest_date} to {largest_date})',
-        'code': 'E17',
+        'code': 'W6',
         'remarks': '',
     },
     'ws18': {
         'title': 'Facts with titles that contain "DELETE", "NOT INCLUDE" or "IGNORE"',
-        'code': 'E18',
+        'code': 'W7',
         'remarks': '',
     },
     'ws19': {
         'title': f'Documents with titles that contain "DELETE", "NOT INCLUDE" or "IGNORE"',
-        'code': 'E19',
+        'code': 'W8',
         'remarks': '',
     },
     'ws20': {
         'title': 'Events with title that contain "DELETE", "NOT INCLUDE" or "IGNORE"',
-        'code': 'E20',
+        'code': 'W9',
         'remarks': '',
     },
     'ws21': {
         'title': 'Masterfacts with title that start with GRID/MYU but without "GRID" or "MYU" groups',
-        'code': 'E21',
+        'code': 'E12',
         'remarks': '',
     },
     'ws22': {
         'title': 'Subfacts without any documents / Masterfacts as subfact of other masterfact',
-        'code': 'E22',
+        'code': 'E13',
         'remarks': 'The document is not defined, but the parent is defined in the database',
     },
 }
@@ -175,6 +175,7 @@ class Command(BaseCommand):
             Q(start_date__lt=smallest_date) |
             Q(end_date__lt=smallest_date) |
             Q(end_date__gt=largest_date),
+            Q(old_id__isnull=False)
         ).distinct()
 
         events = small_and_large_event_date_qs.values('old_id', 'id')
