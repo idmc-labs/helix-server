@@ -14,6 +14,7 @@ from apps.report.models import Report
 from utils.filters import StringListFilter, IDListFilter
 from apps.event.constants import OSV
 from apps.common.enums import GENDER_TYPE
+from entry.constants import STOCK, FLOW
 
 RURAL = FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE.RURAL.name
 URBAN = FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE.URBAN.name
@@ -134,9 +135,9 @@ class EntryExtractionFilterSet(df.FilterSet):
         # so, using capitalize on enum values 'STOCK' and 'FLOW'
         category_enums_to_filter = []
         for category_type in value:
-            if category_type.capitalize() == 'Stock':
+            if category_type == STOCK:
                 category_enums_to_filter = category_enums_to_filter + Figure.stock_list()
-            if category_type.capitalize() == 'Flow':
+            if category_type == FLOW:
                 category_enums_to_filter = category_enums_to_filter + Figure.flow_list()
         return qs.filter(figures__category__in=category_enums_to_filter).distinct()
 
@@ -412,9 +413,9 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         # so, using capitalize on enum values 'STOCK' and 'FLOW'
         category_enums_to_filter = []
         for category_type in value:
-            if category_type == 'STOCK':
+            if category_type == STOCK:
                 category_enums_to_filter = category_enums_to_filter + Figure.stock_list()
-            if category_type == 'FLOW':
+            if category_type == FLOW:
                 category_enums_to_filter = category_enums_to_filter + Figure.flow_list()
         return qs.filter(category__in=category_enums_to_filter).distinct()
 
