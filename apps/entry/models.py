@@ -523,7 +523,11 @@ class Figure(MetaInformationArchiveAbstractModel,
             Figure.FIGURE_CATEGORY_TYPES.FAILED_LOCAL_INTEGRATION.value,
             Figure.FIGURE_CATEGORY_TYPES.LOCAL_INTEGRATION.value,
             Figure.FIGURE_CATEGORY_TYPES.FAILED_RETURN_RETURNEE_DISPLACEMENT.value,
-            Figure.FIGURE_CATEGORY_TYPES.UNVERIFIED_FLOW.value
+            Figure.FIGURE_CATEGORY_TYPES.UNVERIFIED_FLOW.value,
+            Figure.FIGURE_TERMS.HOMELESS.value,
+            Figure.FIGURE_TERMS.AFFECTED.value,
+            Figure.FIGURE_TERMS.RETURNS.value,
+            Figure.FIGURE_TERMS.MULTIPLE_OR_OTHER.value,
         ]
 
     @classmethod
@@ -535,10 +539,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             Figure.FIGURE_TERMS.RELOCATED.value,
             Figure.FIGURE_TERMS.SHELTERED.value,
             Figure.FIGURE_TERMS.IN_RELIEF_CAMP.value,
-            Figure.FIGURE_TERMS.HOMELESS.value,
-            Figure.FIGURE_TERMS.AFFECTED.value,
-            Figure.FIGURE_TERMS.RETURNS.value,
-            Figure.FIGURE_TERMS.MULTIPLE_OR_OTHER.value,
         ]
 
     @classmethod
