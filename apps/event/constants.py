@@ -5,12 +5,14 @@ CONFLICT_TYPES = {
         "Military Occupation",
         "IAC (other than occupation)",
         "Other (IAC)",
+        "Unclear (IAC)",
         "Unknown (IAC)"
     ],
     "Non-International armed conflict (NIAC)": [
         "NSAG(s) vs. State actor(s)",
         "NSAG(s) vs. NSAG(s)",
         "Other (NIAC)",
+        "Unclear (NIAC)",
         "Unknown (NIAC)"
     ],
     OSV: [
@@ -18,10 +20,11 @@ CONFLICT_TYPES = {
         "Crime-related",
         "Communal violence",
         "Other (OSV)",
+        "Unclear (OSV)",
         "Unknown (OSV)"
     ],
-    "Other": ["Other"],
-    "Unknown": ["Unknown"]
+    "Other": ["Other (Other)", "Unclear (Other)", "Unknown (Other)"],
+    "Unknown": ["Unclear (Unknown)", "Unknown (Unknown)"]
 }
 
 TRIGGERS = {
