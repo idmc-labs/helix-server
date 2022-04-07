@@ -504,11 +504,11 @@ class TestFigureSerializer(HelixTestCase):
             serializer.data['displacement_occurred'],
             self.data['displacement_occurred']
         )
-
+        self.data['displacement_occurred'] = None
         serializer = FigureSerializer(data=self.data,
                                       context={'request': self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        self.assertIsNotNone(serializer.data['displacement_occurred'])
+        self.assertIsNone(serializer.data['displacement_occurred'])
 
     def test_invalid_geo_locations_country_codes(self):
         self.data['geo_locations'] = [

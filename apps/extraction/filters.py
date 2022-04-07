@@ -14,7 +14,7 @@ from apps.report.models import Report
 from utils.filters import StringListFilter, IDListFilter
 from apps.event.constants import OSV
 from apps.common.enums import GENDER_TYPE
-from entry.constants import STOCK, FLOW
+from apps.entry.constants import STOCK, FLOW
 
 RURAL = FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE.RURAL.name
 URBAN = FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE.URBAN.name
