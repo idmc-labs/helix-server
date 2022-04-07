@@ -18,6 +18,7 @@ from apps.entry.enums import (
     OSMAccuracyGrapheneEnum,
     IdentifierGrapheneEnum,
     FigureCategoryTypeEnum,
+    FigureTermsEnum,
 )
 from apps.entry.filters import EntryReviewerFilter, OSMNameFilter
 from apps.entry.models import (
@@ -98,6 +99,7 @@ class OSMNameListType(CustomDjangoListObjectType):
         model = OSMName
         filterset_class = OSMNameFilter
 
+
 class FigureTagType(DjangoObjectType):
     class Meta:
         model = FigureTag
@@ -123,6 +125,7 @@ class FigureType(DjangoObjectType):
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     category = graphene.Field(FigureCategoryTypeEnum)
+    term = graphene.Field(FigureTermsEnum)
 
 
 class FigureListType(CustomDjangoListObjectType):

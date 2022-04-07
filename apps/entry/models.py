@@ -402,13 +402,11 @@ class Figure(MetaInformationArchiveAbstractModel,
     category = enum.EnumField(
         enum=FIGURE_CATEGORY_TYPES,
         verbose_name=_('Figure Category'),
-        null=True,
         blank=True,
     )
     term = enum.EnumField(
         enum=FIGURE_TERMS,
         verbose_name=_('Figure Term'),
-        null=True,
         blank=True,
     )
     displacement_occurred = enum.EnumField(
@@ -536,7 +534,11 @@ class Figure(MetaInformationArchiveAbstractModel,
             Figure.FIGURE_TERMS.FORCED_TO_FLEE.value,
             Figure.FIGURE_TERMS.RELOCATED.value,
             Figure.FIGURE_TERMS.SHELTERED.value,
-            Figure.FIGURE_TERMS.IN_RELIEF_CAMP.value
+            Figure.FIGURE_TERMS.IN_RELIEF_CAMP.value,
+            Figure.FIGURE_TERMS.HOMELESS.value,
+            Figure.FIGURE_TERMS.AFFECTED.value,
+            Figure.FIGURE_TERMS.RETURNS.value,
+            Figure.FIGURE_TERMS.MULTIPLE_OR_OTHER.value,
         ]
 
     @classmethod
@@ -545,10 +547,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             Figure.FIGURE_TERMS.DESTROYED_HOUSING.value,
             Figure.FIGURE_TERMS.PARTIALLY_DESTROYED_HOUSING.value,
             Figure.FIGURE_TERMS.UNINHABITABLE_HOUSING.value,
-            Figure.FIGURE_TERMS.HOMELESS.value,
-            Figure.FIGURE_TERMS.AFFECTED.value,
-            Figure.FIGURE_TERMS.RETURNS.value,
-            Figure.FIGURE_TERMS.MULTIPLE_OR_OTHER.value,
         ]
 
     @classmethod

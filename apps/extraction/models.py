@@ -49,8 +49,8 @@ class QueryAbstractModel(models.Model):
     )
     filter_figure_categories = ArrayField(
         base_field=enum.EnumField(enum=Figure.FIGURE_CATEGORY_TYPES),
+        null=True,
         blank=True,
-        null=True
     )
     filter_entry_sources = models.ManyToManyField(
         'organization.Organization',

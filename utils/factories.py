@@ -212,6 +212,8 @@ class FigureFactory(DjangoModelFactory):
     role = factory.Iterator(Figure.ROLE)
     start_date = factory.LazyFunction(today().date)
     include_idu = False
+    term = factory.Iterator(Figure.FIGURE_TERMS)
+    category = factory.Iterator(Figure.FIGURE_CATEGORY_TYPES)
 
 
 class ResourceGroupFactory(DjangoModelFactory):

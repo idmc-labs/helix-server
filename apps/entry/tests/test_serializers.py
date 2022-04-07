@@ -232,17 +232,20 @@ class TestEntrySerializer(HelixTestCase):
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
             "id": figure.id,
             "geo_locations": [new_source, old_source],
+            "term": Figure.FIGURE_TERMS.EVACUATED.value,
+            "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
         }, {
             "uuid": "f1b42e79-da44-4032-8cb6-0dd4b7b97b57",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
             "unit": Figure.UNIT.PERSON.value,
-            "term": Figure.FIGURE_TERMS.EVACUATED.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
             "country": str(self.country.id),
             "geo_locations": [new_source2],
+            "term": Figure.FIGURE_TERMS.EVACUATED.value,
+            "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
         }]
         self.data['figures'] = figures
         serializer = EntryUpdateSerializer(instance=entry,

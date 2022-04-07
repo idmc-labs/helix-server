@@ -412,9 +412,9 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         # so, using capitalize on enum values 'STOCK' and 'FLOW'
         category_enums_to_filter = []
         for category_type in value:
-            if category_type.capitalize() == 'Stock':
+            if category_type == 'STOCK':
                 category_enums_to_filter = category_enums_to_filter + Figure.stock_list()
-            if category_type.capitalize() == 'Flow':
+            if category_type == 'FLOW':
                 category_enums_to_filter = category_enums_to_filter + Figure.flow_list()
         return qs.filter(category__in=category_enums_to_filter).distinct()
 
