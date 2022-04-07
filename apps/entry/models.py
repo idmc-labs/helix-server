@@ -402,12 +402,12 @@ class Figure(MetaInformationArchiveAbstractModel,
     category = enum.EnumField(
         enum=FIGURE_CATEGORY_TYPES,
         verbose_name=_('Figure Category'),
-        blank=True,
+        blank=True, null=True
     )
     term = enum.EnumField(
         enum=FIGURE_TERMS,
         verbose_name=_('Figure Term'),
-        blank=True,
+        blank=True, null=True
     )
     displacement_occurred = enum.EnumField(
         enum=DISPLACEMENT_OCCURRED,
