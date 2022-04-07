@@ -86,7 +86,8 @@ class EventFilter(NameFilterMixin,
     def filter_name(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(name__unaccent__icontains=value).distinct()
+        # NOTE: glide_numbers is arrayfield we have to pass List of string to filter
+        return qs.filter(Q(name__unaccent__icontains=value) | Q(glide_numbers__overlap=[value])).distinct()
 
     def filter_osv_sub_types(self, qs, name, value):
         if value:
