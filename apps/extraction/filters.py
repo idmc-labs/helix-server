@@ -31,7 +31,6 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_event_crises = IDListFilter(method='filter_crises')
     filter_entry_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
-    filter_figure_categories = IDListFilter(method='filter_filter_figure_categories')
     filter_figure_category_types = StringListFilter(method='filter_filter_figure_category_types')
     filter_figure_start_after = df.DateFilter(method='filter_time_frame_after')
     filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
@@ -118,14 +117,13 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     def filter_by_figure_terms(self, qs, name, value):
         if value:
-            return qs.filter(figures__term__in=value).distinct()
-        return qs
+            if isinstance(value[0], int):
+                # coming from saved query
+                return qs.filter(figures__in=Figure.objects.filter(term__in=value))
 
-    def filter_filter_figure_categories(self, qs, name, value):
-        if value:
-            return qs.filter(
-                id__in=Figure.objects.filter(category__in=value).values('entry')
-            )
+            return qs.filter(figures__term__in=[
+                Figure.FIGURE_TERMS.get(item).value for item in value
+            ]).distinct()
         return qs
 
     def filter_filter_figure_category_types(self, qs, name, value):
@@ -308,7 +306,6 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_event_crises = IDListFilter(method='filter_crises')
     filter_entry_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
-    filter_figure_categories = IDListFilter(method='filter_filter_figure_categories')
     filter_figure_category_types = StringListFilter(method='filter_filter_figure_category_types')
     filter_figure_start_after = df.DateFilter(method='filter_time_frame_after')
     filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
@@ -401,11 +398,6 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             return qs.filter(entry__publishers__in=value).distinct()
         return qs
 
-    def filter_filter_figure_categories(self, qs, name, value):
-        if value:
-            return qs.filter(category__in=value).distinct()
-        return qs
-
     def filter_filter_figure_category_types(self, qs, name, value):
         if not value:
             return qs
@@ -475,7 +467,12 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
 
     def filter_by_figure_terms(self, qs, name, value):
         if value:
-            return qs.filter(term__in=value).distinct()
+            if isinstance(value[0], int):
+                # coming from saved query
+                return qs.filter(term__in=value)
+            return qs.filter(term__in=[
+                Figure.FIGURE_TERMS.get(item).value for item in value
+            ])
         return qs
 
     def filter_filter_event_disaster_categories(self, qs, name, value):
