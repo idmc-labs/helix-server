@@ -12,7 +12,6 @@ from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio
 from helix.settings import BASE_DIR
 from utils.factories import UserFactory, MonitoringSubRegionFactory, CountryFactory
-from django.core.cache import cache
 
 User = get_user_model()
 TEST_MEDIA_ROOT = 'media-temp'
