@@ -132,18 +132,6 @@ class TestExtractionFilter(HelixTestCase):
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
 
-    def test_filter_by_categories(self):
-        data = dict(
-            filter_figure_categories=[self.fig_cat2.value]
-        )
-        fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
-        data = dict(
-            filter_figure_categories=[self.fig_cat1.value, self.fig_cat3.value]
-        )
-        fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry1ev1, self.entry3ev2})
-
     def test_filter_by_displacement_types(self):
         data = dict(
             filter_figure_displacement_types=['RURAL']
