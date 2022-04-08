@@ -329,6 +329,8 @@ class Figure(MetaInformationArchiveAbstractModel,
         FAILED_RETURN_RETURNEE_DISPLACEMENT = 17
         UNVERIFIED_STOCK = 18
         UNVERIFIED_FLOW = 19
+        BIRTH = 20
+        FAILED_RELOCATION_ELSEWHERE = 21
 
         __labels__ = {
             IDPS: _('IDPs'),
@@ -350,7 +352,10 @@ class Figure(MetaInformationArchiveAbstractModel,
             LOCAL_INTEGRATION: _('Local Integration'),
             FAILED_RETURN_RETURNEE_DISPLACEMENT: _('Failed Return / Returnee Displacement'),
             UNVERIFIED_STOCK: _('Unverified stock'),
-            UNVERIFIED_FLOW: _('Unverified flow')
+            UNVERIFIED_FLOW: _('Unverified flow'),
+            BIRTH: _('Birth'),
+            FAILED_RELOCATION_ELSEWHERE: _('Failed relocation elsewhere')
+
         }
 
     class FIGURE_TERMS(enum.Enum):
