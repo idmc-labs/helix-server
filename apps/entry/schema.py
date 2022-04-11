@@ -138,7 +138,7 @@ class FigureListType(CustomDjangoListObjectType):
 
 
 class TotalFigureFilterInputType(graphene.InputObjectType):
-    categories = graphene.List(graphene.NonNull(graphene.ID))
+    categories = graphene.List(graphene.NonNull(graphene.String))
     filter_figure_start_after = graphene.Date()
     filter_figure_end_before = graphene.Date()
     roles = graphene.List(graphene.NonNull(graphene.String))
