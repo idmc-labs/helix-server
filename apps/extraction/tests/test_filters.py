@@ -48,17 +48,20 @@ class TestExtractionFilter(HelixTestCase):
         self.org2 = OrganizationFactory.create()
         self.org3 = OrganizationFactory.create()
 
-        self.entry1ev1 = EntryFactory.create(event=self.event1crisis1)
+        self.entry1ev1 = EntryFactory.create(article_title="one")
         FigureFactory.create(entry=self.entry1ev1,
                              country=self.country2reg2,
-                             disaggregation_displacement_rural=100)
-        self.entry2ev1 = EntryFactory.create(event=self.event1crisis1)
+                             disaggregation_displacement_rural=100,
+                             event=self.event1crisis1,)
+        self.entry2ev1 = EntryFactory.create(article_title="two")
         FigureFactory.create(entry=self.entry2ev1,
                              country=self.country2reg2,
-                             disaggregation_displacement_urban=100)
-        self.entry3ev2 = EntryFactory.create(event=self.event2crisis1)
+                             disaggregation_displacement_urban=100,
+                             event=self.event1crisis1,)
+        self.entry3ev2 = EntryFactory.create(article_title="three")
         FigureFactory.create(entry=self.entry3ev2,
-                             country=self.country3reg3)
+                             country=self.country3reg3,
+                             event=self.event2crisis1,)
         self.mid_sep = '2020-09-15'
         self.end_sep = '2020-09-29'
         self.mid_oct = '2020-10-15'
@@ -66,15 +69,16 @@ class TestExtractionFilter(HelixTestCase):
         self.mid_nov = '2020-11-16'
         self.end_nov = '2020-11-29'
         self.fig1cat1entry1 = FigureFactory.create(entry=self.entry1ev1, category=self.fig_cat1,
-                                                   start_date=self.mid_oct, end_date=self.end_oct)
+                                                   start_date=self.mid_oct, end_date=self.end_oct, event=None)
         self.fig2cat2entry1 = FigureFactory.create(entry=self.entry1ev1, category=self.fig_cat2,
-                                                   start_date=self.end_oct, end_date=self.end_nov)
+                                                   start_date=self.end_oct, end_date=self.end_nov, event=None)
         self.fig3cat2entry2 = FigureFactory.create(entry=self.entry2ev1, category=self.fig_cat2,
-                                                   start_date=self.mid_sep, end_date=self.end_oct)
+                                                   start_date=self.mid_sep, end_date=self.end_oct, event=None)
         self.fig4cat1entry3 = FigureFactory.create(entry=self.entry3ev2, category=self.fig_cat1,
-                                                   start_date=self.mid_nov, end_date=None)
+                                                   start_date=self.mid_nov, end_date=None, event=None)
         self.fig5cat3entry3 = FigureFactory.create(entry=self.entry3ev2, category=self.fig_cat3,
-                                                   start_date=self.mid_nov, end_date=self.end_nov)
+                                                   start_date=self.mid_nov, end_date=self.end_nov, event=None)
+
         self.fig1cat1entry1.tags.set([self.tag1])
         self.fig2cat2entry1.tags.set([self.tag2])
         self.fig3cat2entry2.tags.set([self.tag3])
