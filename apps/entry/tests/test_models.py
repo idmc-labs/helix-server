@@ -24,9 +24,11 @@ class TestFigureModel(HelixTestCase):
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.event = EventFactory.create(start_date=(timezone.now() + timedelta(days=10)).strftime('%Y-%m-%d'),
                                          end_date=(timezone.now() + timedelta(days=25)).strftime('%Y-%m-%d'))
-        self.entry = EntryFactory.create(created_by=self.editor, event=self.event)
+        self.entry = EntryFactory.create(created_by=self.editor,)
         self.figure_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
-        self.figure = FigureFactory.create(entry=self.entry, created_by=self.editor, category=self.figure_cat)
+        self.figure = FigureFactory.create(
+            entry=self.entry, created_by=self.editor, category=self.figure_cat, event=self.event
+        )
 
     def test_figure_can_be_updated_by(self):
         editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
@@ -117,7 +119,8 @@ class TestFigureModel(HelixTestCase):
         ref = datetime.today()
         # TODO: Add test for DISASTER as well, once the logic arrives
         event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT)
-        entry = EntryFactory.create(event=event)
+
+        entry = EntryFactory.create()
         nd_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         idp_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS
         f1 = FigureFactory.create(
@@ -126,6 +129,7 @@ class TestFigureModel(HelixTestCase):
             end_date=ref,
             category=idp_cat,
             role=Figure.ROLE.RECOMMENDED,
+            event=event,
         )
         FigureFactory.create(
             entry=entry,
@@ -133,6 +137,7 @@ class TestFigureModel(HelixTestCase):
             end_date=None,
             category=idp_cat,
             role=Figure.ROLE.RECOMMENDED,
+            event=event,
         )
         f3 = FigureFactory.create(
             entry=entry,
@@ -140,6 +145,7 @@ class TestFigureModel(HelixTestCase):
             end_date=ref + timedelta(days=60),
             category=idp_cat,
             role=Figure.ROLE.RECOMMENDED,
+            event=event,
         )
         f4 = FigureFactory.create(
             entry=entry,
@@ -147,6 +153,7 @@ class TestFigureModel(HelixTestCase):
             end_date=ref + timedelta(days=2),
             category=nd_cat,  # THIS IS nd
             role=Figure.ROLE.RECOMMENDED,
+            event=event,
         )
 
         idp = Figure.filtered_idp_figures(
@@ -348,38 +355,3 @@ class TestEntryModel(HelixTestCase):
         e.save()
         e.refresh_from_db()
         self.assertEqual(e.calculation_logic, markup_and_html_mixed_data_cleaned)
-
-
-class TestCloneEntry(HelixTestCase):
-    def test_clone_relevant_fields_only(self):
-        user = create_user_with_role(USER_ROLE.ADMIN.name)
-        event = EventFactory.create()
-        entry = EntryFactory.create(
-            created_by=user,
-            event=event,
-        )
-
-        # lets clone to following events
-        new_events = EventFactory.create_batch(3)
-        duplicated_entries = entry.clone_across_events(new_events)
-
-        self.assertEqual(len(new_events), len(duplicated_entries))
-        self.assertNotIn(event.id,
-                         [each['event'] for each in duplicated_entries])
-        self.assertEqual(
-            {None},
-            set([each.get('id') for each in duplicated_entries])
-        )
-        self.assertEqual(
-            {None},
-            set([each.get('created_by') for each in duplicated_entries])
-        )
-        self.assertEqual(
-            {None},
-            set([each.get('created_at') for each in duplicated_entries])
-        )
-        self.assertEqual(
-            1,
-            len(set([each.get('article_title') for each in duplicated_entries]))
-        )
-        self.assertIsNotNone(duplicated_entries[0].get('article_title'))
