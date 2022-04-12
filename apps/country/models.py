@@ -58,7 +58,7 @@ class CountryRegion(models.Model):
                     figures.filter(
                         country__region=OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
-                        entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                        event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
                     ),
                     # TODO: what about date range
                     start_date=start_date,
@@ -73,7 +73,7 @@ class CountryRegion(models.Model):
                     figures.filter(
                         country__region=OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
-                        entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                        event__event_type=Crisis.CRISIS_TYPE.DISASTER,
                     ),
                     # TODO: what about date range
                     start_date=start_date,
@@ -88,7 +88,7 @@ class CountryRegion(models.Model):
                     figures.filter(
                         country__region=OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
-                        entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                        event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
                     ),
                     reference_point=end_date,
                 ).order_by().values('country__region').annotate(
@@ -101,7 +101,7 @@ class CountryRegion(models.Model):
                     figures.filter(
                         country__region=OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
-                        entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                        event__event_type=Crisis.CRISIS_TYPE.DISASTER,
                     ),
                     reference_point=end_date,
                 ).order_by().values('country__region').annotate(
@@ -225,7 +225,7 @@ class Country(models.Model):
                     figures.filter(
                         country=OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
-                        entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                        event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
                     ),
                     # TODO: what about date range
                     start_date=start_date,
@@ -240,7 +240,7 @@ class Country(models.Model):
                     figures.filter(
                         country=OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
-                        entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                        event__event_type=Crisis.CRISIS_TYPE.DISASTER,
                     ),
                     # TODO: what about date range
                     start_date=start_date,
@@ -255,7 +255,7 @@ class Country(models.Model):
                     figures.filter(
                         country=OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
-                        entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                        event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
                     ),
                     reference_point=end_date,
                 ).order_by().values('country').annotate(
@@ -268,7 +268,7 @@ class Country(models.Model):
                     figures.filter(
                         country=OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
-                        entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                        event__event_type=Crisis.CRISIS_TYPE.DISASTER,
                     ),
                     reference_point=end_date,
                 ).order_by().values('country').annotate(
