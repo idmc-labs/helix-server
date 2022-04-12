@@ -20,7 +20,6 @@ from apps.entry.models import (
     FigureTag,
     DisaggregatedAge,
 )
-from apps.event.models import Event
 from apps.users.models import User
 from apps.users.enums import USER_ROLE
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
@@ -70,20 +69,6 @@ class OSMNameSerializer(serializers.ModelSerializer):
 
 
 class CommonFigureValidationMixin:
-    def get_event(self):
-        if not self.parent:
-            # this will be the case when we will be using this serializer directly,
-            # which will not be the case when in use in the application.
-            # this if block currently only is for directly testing this serializer which does not use event
-            return None
-
-        if not hasattr(self, 'event'):
-            self.event_id = self.parent.parent.initial_data.get('event', None)
-            if self.event_id:
-                self.event = Event.objects.filter(id=self.event_id).first()
-            else:
-                self.event = self.parent.parent.instance.event
-        return self.event
 
     def validate_disaggregation_age(self, age_groups):
         age_groups = age_groups or []
@@ -177,32 +162,32 @@ class CommonFigureValidationMixin:
     def validate_figure_country(self, attrs):
         _attrs = copy(attrs)
         errors = OrderedDict()
-        if self.get_event():
-            _attrs.update({'entry': {'event': self.event}})
+        if attrs.get('event'):
             errors.update(is_child_parent_inclusion_valid(
                 _attrs,
                 self.instance,
                 'country',
-                'entry.event.countries',
+                'event.countries',
             ))
         return errors
 
     def validate_dates(self, attrs):
         errors = OrderedDict()
-        if self.get_event():
+        event = attrs.get('event')
+        if event:
             category = attrs.get('category', getattr(self.instance, 'category', None))
             if category in Figure.stock_list():
                 errors.update(is_child_parent_dates_valid(
                     attrs.get('start_date', getattr(self.instance, 'start_date', None)),
                     attrs.get('end_date', getattr(self.instance, 'end_date', None)),
-                    self.event.start_date,
+                    event.start_date,
                     'event',
                 ))
             else:
                 errors.update(is_child_parent_dates_valid(
                     attrs.get('start_date', getattr(self.instance, 'start_date', None)),
                     attrs.get('end_date', getattr(self.instance, 'end_date', None)),
-                    self.event.start_date,
+                    event.start_date,
                     'event',
                 ))
         return errors
@@ -225,6 +210,7 @@ class CommonFigureValidationMixin:
         errors.update(self.validate_dates(attrs))
         errors.update(self.validate_figure_country(attrs))
         errors.update(self.validate_figure_geo_locations(attrs))
+
         errors.update(self.validate_disaggregated_sum_against_reported(
             attrs, ['disaggregation_location_camp', 'disaggregation_location_non_camp'], 'camp and non-camp'
         ))
@@ -238,6 +224,7 @@ class CommonFigureValidationMixin:
             attrs, ['disaggregation_indigenous_people'], 'Indigenous people',
         ))
         errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'disaggregation_age', 'age'))
+
         if errors:
             raise ValidationError(errors)
 
@@ -486,16 +473,3 @@ class FigureTagCreateSerializer(MetaInformationSerializerMixin,
 class FigureTagUpdateSerializer(UpdateSerializerMixin,
                                 FigureTagCreateSerializer):
     id = IntegerIDField(required=True)
-
-
-class CloneEntrySerializer(serializers.Serializer):
-    events = serializers.PrimaryKeyRelatedField(queryset=Event.objects.all(), many=True)
-    entry = serializers.PrimaryKeyRelatedField(queryset=Entry.objects.all())
-
-    def save(self, *args, **kwargs):
-        entry: Entry = self.validated_data['entry']
-
-        return entry.clone_and_save_entries(
-            event_list=self.validated_data['events'],
-            user=self.context['request'].user,
-        )
