@@ -6,12 +6,10 @@ from unittest.mock import patch
 
 from django.test import RequestFactory
 
-from apps.contrib.models import SourcePreview, Attachment
 from apps.entry.serializers import (
     EntryCreateSerializer,
     EntryUpdateSerializer,
     NestedFigureCreateSerializer as FigureSerializer,
-    CloneEntrySerializer,
 )
 from apps.users.enums import USER_ROLE
 from apps.entry.models import (
@@ -35,8 +33,6 @@ class TestEntrySerializer(HelixTestCase):
         r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.factory = RequestFactory()
         self.country = CountryFactory.create(country_code=123, iso2='ak')
-        self.event = EventFactory.create()
-        self.event.countries.add(self.country)
         self.publisher = OrganizationFactory.create()
         self.data = {
             "url": "https://yoko-onos-blog.com",
@@ -48,7 +44,6 @@ class TestEntrySerializer(HelixTestCase):
             "source_breakdown": "break down",
             "idmc_analysis": "analysis one",
             "methodology": "methoddddd",
-            "event": self.event.id,
             "reviewers": [r1.id, r2.id],
             "calculation_logic": "calculation logic 1"
         }
@@ -296,8 +291,8 @@ class TestEntrySerializer(HelixTestCase):
         event2 = EventFactory.create(start_date=ref - timedelta(days=10), end_date=ref - timedelta(days=5))
         event2.countries.set([c2])
 
-        entry = EntryFactory.create(event=event)
-        figure = FigureFactory.create(entry=entry, category=flow, country=c1)
+        entry = EntryFactory.create()
+        figure = FigureFactory.create(entry=entry, category=flow, country=c1, event=event)
 
         source1 = dict(
             uuid=str(uuid4()),
@@ -334,20 +329,17 @@ class TestEntrySerializer(HelixTestCase):
             partial=True
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
-
-        data['event'] = event2.id
         serializer = EntryUpdateSerializer(
             instance=entry,
             data=data,
             context={'request': self.request},
             partial=True
         )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('figures', serializer.errors)
-        self.assertIn('country', serializer.errors['figures'][0])
+        # Because we don't have event in entry this should not raise error
+        self.assertTrue(serializer.is_valid())
 
         # however it will be valid for stock end date to go beyond event date
-        figure = FigureFactory.create(entry=entry, category=stock, country=c1)
+        figure = FigureFactory.create(entry=entry, category=stock, country=c1, event=event)
 
         data = dict(
             event=event.id,
@@ -455,7 +447,6 @@ class TestFigureSerializer(HelixTestCase):
         self.event.countries.set([country1, country2])
         self.entry = EntryFactory.create(
             created_by=self.creator,
-            event=self.event
         )
         self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.country = country1
@@ -590,76 +581,3 @@ class TestFigureSerializer(HelixTestCase):
             context={'request': self.request}
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
-
-
-class TestCloneEntry(HelixTestCase):
-    def setUp(self):
-        self.article_title = 'title1'
-        self.preview = SourcePreview.objects.create()
-        self.attachment = Attachment.objects.create()
-        self.entry = EntryFactory.create(
-            article_title=self.article_title,
-            preview=self.preview,
-            document=self.attachment,
-        )
-        self.events = EventFactory.create_batch(3)
-        self.request = RequestFactory().get('/graphql')
-
-    def test_same_entry_attributes_copied_across_given_events(self):
-        data = dict(
-            entry=self.entry.id,
-            events=[each.id for each in self.events]
-        )
-        self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
-        context = dict(request=self.request)
-        serializer = CloneEntrySerializer(
-            data=data,
-            context=context
-        )
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        entries = serializer.save()
-        self.assertEqual(1, len(set([each.article_title for each in entries])))
-        self.assertEqual(
-            f"Clone: {self.article_title}",
-            list(set([
-                each.article_title for each in entries
-            ]))[0]
-        )
-
-    def test_cloning_entry_references_to_same_attachment(self):
-        data = dict(
-            entry=self.entry.id,
-            events=[each.id for each in self.events]
-        )
-        self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
-        context = dict(request=self.request)
-        serializer = CloneEntrySerializer(
-            data=data,
-            context=context
-        )
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        entries = serializer.save()
-        self.assertEqual(1, len(set([each.preview_id for each in entries])), [each.preview_id for each in entries])
-        self.assertIsNotNone(entries[0].preview_id)
-        self.assertEqual(1, len(set([each.document_id for each in entries])), [each.document_id for each in entries])
-        self.assertIsNotNone(entries[0].document_id)
-
-    def test_cloning_does_not_clone_figures(self):
-        FigureFactory.create(
-            entry=self.entry
-        )
-        data = dict(
-            entry=self.entry.id,
-            events=[each.id for each in self.events]
-        )
-        self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
-        context = dict(request=self.request)
-        serializer = CloneEntrySerializer(
-            data=data,
-            context=context
-        )
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        entries = serializer.save()
-        self.assertNotEqual(self.entry.figures.count(), 0)
-        new_entry = entries[0]
-        self.assertEqual(new_entry.figures.count(), 0)
