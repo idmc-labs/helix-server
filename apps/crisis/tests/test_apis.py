@@ -8,6 +8,7 @@ from utils.factories import (
     CrisisFactory,
     EntryFactory,
     EventFactory,
+    FigureFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -212,21 +213,15 @@ class TestCrisisList(HelixGraphQLTestCase):
         r2 = create_user_with_role(
             USER_ROLE.MONITORING_EXPERT.name,
         )
-        entry1 = EntryFactory.create(
-            event=event,
-        )
+        entry1 = EntryFactory.create()
+        FigureFactory.create(entry=entry1, event=event)
         entry1.reviewers.set([r1, r2])
 
-        event2 = EventFactory.create(
-            crisis=crisis
-        )
         r3 = create_user_with_role(
             USER_ROLE.MONITORING_EXPERT.name,
         )
-        entry2 = EntryFactory.create(
-            event=event2,
-        )
-
+        entry2 = EntryFactory.create()
+        FigureFactory.create(entry=entry2, event=event)
         # see that r2 is duplicated across entries
         # so crisis must show 4 not 3
         entry2.reviewers.set([r3, r2])
