@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from datetime import date
 import logging
-from typing import Optional, List
+from typing import Optional
 from uuid import uuid4
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.aggregates.general import ArrayAgg, StringAgg
@@ -12,7 +12,6 @@ from django.db.models import (
     Sum, Avg, F, Value, Min, Max, Q, Case, When,
 )
 from django.db.models.functions import Concat, ExtractYear
-from django.forms import model_to_dict
 from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
 from django_enumfield import enum
@@ -30,11 +29,7 @@ from apps.entry.constants import (
 )
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
-from utils.common import add_clone_prefix
 from apps.common.enums import GENDER_TYPE
-from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from apps.event.models import Event
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -468,6 +463,10 @@ class Figure(MetaInformationArchiveAbstractModel,
     tags = models.ManyToManyField('FigureTag', blank=True)
     source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
                                       blank=True, null=True)
+    event = models.ForeignKey(
+        'event.Event', verbose_name=_('Event'),
+        related_name='figures', on_delete=models.CASCADE, null=True, blank=True
+    )
 
     class Meta:
         indexes = [
@@ -476,6 +475,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             models.Index(fields=['country']),
             models.Index(fields=['category']),
             models.Index(fields=['role']),
+            models.Index(fields=['event']),
         ]
 
     # methods
@@ -649,21 +649,21 @@ class Figure(MetaInformationArchiveAbstractModel,
             total_other_age_group_male="M_other age group",
             entry__url='Link',
             entry__article_title='Event Title',
-            entry__event__crisis_id='Crisis Id',
-            entry__event__id='Event Id',
-            entry__event__old_id='Event Old Id',
-            entry__event__crisis__name='Crisis Name',
-            entry__event__name='Event Name',
-            entry__event__start_date='Event Start Date',
-            entry__event__event_type='Event Cause',
-            entry__event__other_sub_type='Other Event Sub Type',
-            entry__event__violence__name='Violence',
-            entry__event__violence_sub_type__name='Violence Sub Type',
-            entry__event__osv_sub_type__name="OSV Sub Type",
-            entry__event__disaster_category__name='Disaster Category',
-            entry__event__disaster_sub_category__name='Disaster Sub Category',
-            entry__event__disaster_type__name='Disaster Type',
-            entry__event__disaster_sub_type__name='Disaster Sub Type',
+            event__crisis_id='Crisis Id',
+            event__id='Event Id',
+            event__old_id='Event Old Id',
+            event__crisis__name='Crisis Name',
+            event__name='Event Name',
+            event__start_date='Event Start Date',
+            event__event_type='Event Cause',
+            event__other_sub_type='Other Event Sub Type',
+            event__violence__name='Violence',
+            event__violence_sub_type__name='Violence Sub Type',
+            event__osv_sub_type__name="OSV Sub Type",
+            event__disaster_category__name='Disaster Category',
+            event__disaster_sub_category__name='Disaster Sub Category',
+            event__disaster_type__name='Disaster Type',
+            event__disaster_sub_type__name='Disaster Sub Type',
         )
         values = figures.order_by(
             '-created_at'
@@ -811,7 +811,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             )
         ).select_related(
             'entry',
-            'entry__event',
+            'event',
             'category',
             'term',
             'created_by',
@@ -837,8 +837,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'displacement_occurred': getattr(
                     Figure.DISPLACEMENT_OCCURRED.get(datum['displacement_occurred']), 'name', ''
                 ),
-                'entry__event__event_type': getattr(Crisis.CRISIS_TYPE.get(
-                    datum['entry__event__event_type']), 'name', ''
+                'event__event_type': getattr(Crisis.CRISIS_TYPE.get(
+                    datum['event__event_type']), 'name', ''
                 ),
                 'geo_locations__identifier': getattr(OSMName.IDENTIFIER.get(
                     datum['geo_locations__identifier']), 'name', ''
@@ -979,8 +979,10 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     publishers = models.ManyToManyField('organization.Organization', verbose_name=_('Publisher'),
                                         blank=True, related_name='published_entries')
     publish_date = models.DateField(verbose_name=_('Published Date'))
-    event = models.ForeignKey('event.Event', verbose_name=_('Event'),
-                              related_name='entries', on_delete=models.CASCADE)
+
+    # TODO: Remove this field
+    # event = models.ForeignKey('event.Event', verbose_name=_('Event'),
+    #                           related_name='entries', on_delete=models.CASCADE)
 
     idmc_analysis = models.TextField(verbose_name=_('Trends and patterns of displacement to be highlighted'),
                                      blank=True, null=True)
@@ -995,57 +997,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                                        through_fields=('entry', 'reviewer'))
     review_status = enum.EnumField(enum=EntryReviewer.REVIEW_STATUS, verbose_name=_('Review Status'),
                                    null=True, blank=True)
-
-    def clone_across_events(self, event_list: List['Event'], **detail) -> List[dict]:
-        cloned = model_to_dict(
-            self,
-            exclude=[
-                'id', 'created_at', 'created_by', 'last_modified_by',
-                'reviewers', 'review_status', 'associated_parked_item'
-            ]
-        )
-        cloned_entries = []
-        # we need to clean few fields
-        cloned['preview_id'] = cloned.pop('preview', None)
-        cloned['document_id'] = cloned.pop('document', None)
-        for event in event_list:
-            cloned_entries.append(
-                {
-                    **cloned,
-                    'event': event,
-                    **detail
-                }
-            )
-        return cloned_entries
-
-    def clone_and_save_entries(self, event_list: List['Event'], user: 'User'):
-        cloned_entries = self.clone_across_events(
-            event_list=event_list,
-            created_at=timezone.now(),
-            created_by=user,
-        )
-
-        # m2m hassle
-
-        sources = cloned_entries[0]['sources']
-        publishers = cloned_entries[0]['publishers']
-
-        entries = []
-        for cloned_entry in cloned_entries:
-            cloned_entry.pop('sources')
-            cloned_entry.pop('publishers')
-            cloned_entry['article_title'] = add_clone_prefix(cloned_entry['article_title'])
-            entries.append(Entry(**cloned_entry))
-
-        entries = Entry.objects.bulk_create(entries)
-
-        for entry in entries:
-            entry.sources.set(sources)
-            entry.publishers.set(publishers)
-
-        # end m2m hassle
-
-        return entries
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
@@ -1082,7 +1033,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
         from apps.extraction.filters import EntryExtractionFilterSet
-        from apps.crisis.models import Crisis
 
         class DummyRequest:
             def __init__(self, user):
@@ -1135,12 +1085,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_male_age_group_eighteen_to_fiftynine="M_18-59",
             total_male_age_group_sixty_plus="M_60+",
             total_other_age_group_male="M_other age group",
-            event__event_type='Cause',
-            event__id='Event Id',
-            event__old_id='Event Old Id',
-            event__name='Event Name',
-            event__crisis_id='Crisis Id',
-            event__crisis__name='Crisis Name',
         )
         entries = EntryExtractionFilterSet(
             data=filters,
@@ -1291,8 +1235,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                     ), then='figures__disaggregation_age__value'), output_field=models.IntegerField(), default=0)
             )
         ).order_by('-created_at').select_related(
-            'event',
-            'event__crisis',
             'created_by',
         ).prefetch_related(
             'figures',
@@ -1305,9 +1247,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         def transformer(datum):
             return {
                 **datum,
-                'event__event_type': getattr(Crisis.CRISIS_TYPE.get(
-                    datum['event__event_type']), 'name', ''
-                ),
             }
 
         return {
@@ -1381,9 +1320,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         return super().save(*args, **kwargs)
 
     class Meta:
-        indexes = [
-            models.Index(fields=['event']),
-        ]
         permissions = (('sign_off_entry', 'Can sign off the entry'),)
 
     # Dunders
