@@ -87,7 +87,7 @@ class EventSerializer(MetaInformationSerializerMixin,
             return errors
         figures_countries = Figure.objects.filter(
             country__isnull=False,
-            entry__event=self.instance
+            event=self.instance
         ).values_list('country', flat=True)
         if diffs := set(figures_countries).difference(countries):
             errors['countries'] = gettext(
@@ -104,7 +104,7 @@ class EventSerializer(MetaInformationSerializerMixin,
         start_date = attrs.get('start_date', getattr(self.instance, 'start_date', None))
 
         _ = Figure.objects.filter(
-            entry__event=self.instance,
+            event=self.instance,
         ).aggregate(
             min_date=Min(
                 'start_date',
