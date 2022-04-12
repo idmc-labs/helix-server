@@ -340,9 +340,8 @@ class TestEventListQuery(HelixGraphQLTestCase):
         r2 = create_user_with_role(
             USER_ROLE.MONITORING_EXPERT.name,
         )
-        entry = EntryFactory.create(
-            event=event,
-        )
+        entry = EntryFactory.create()
+        FigureFactory.create(event=event, entry=entry)
         entry.reviewers.set([r1, r2])
 
         response = self.query(
@@ -395,20 +394,22 @@ class TestEventListQuery(HelixGraphQLTestCase):
         event = EventFactory.create()
         event1 = EventFactory.create()
         for i in range(3):
-            entry1 = EntryFactory.create(event=event)
+            entry1 = EntryFactory.create()
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
-                category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
+                category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
+                event=event
             )
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
-                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+                event=event
             )
 
         for i in range(3):
-            entry1 = EntryFactory.create(event=event1)
+            entry1 = EntryFactory.create()
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.TRIANGULATION,
@@ -417,7 +418,8 @@ class TestEventListQuery(HelixGraphQLTestCase):
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.TRIANGULATION,
-                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+                event=event1,
             )
 
         # Test event has no figures
@@ -449,9 +451,8 @@ class TestEventListQuery(HelixGraphQLTestCase):
 
     def test_should_ignore_events_form_qa_if_ignore_qs_flag_is_true(self):
         # Create events with ignore_qa true
-        event = EventFactory.create(ignore_qa=True)
         for i in range(3):
-            entry1 = EntryFactory.create(event=event)
+            entry1 = EntryFactory.create()
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
