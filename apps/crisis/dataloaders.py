@@ -8,7 +8,7 @@ from django.db.models import (
 from promise import Promise
 from promise.dataloader import DataLoader
 
-from apps.entry.models import Entry, EntryReviewer, Figure
+from apps.entry.models import Figure, EntryReviewer
 from apps.crisis.models import Crisis
 
 
@@ -21,30 +21,30 @@ class CrisisReviewCountLoader(DataLoader):
             id__in=keys
         ).annotate(
             under_review_count=Subquery(
-                Entry.objects.filter(
+                Figure.objects.filter(
                     event__crisis=OuterRef('pk'),
-                    review_status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
+                    entry__review_status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
                 ).order_by().values('event__crisis').annotate(c=Count('id')).values('c'),
                 output_field=IntegerField()
             ),
             signed_off_count=Subquery(
-                Entry.objects.filter(
+                Figure.objects.filter(
                     event__crisis=OuterRef('pk'),
-                    review_status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
+                    entry__review_status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
                 ).order_by().values('event__crisis').annotate(c=Count('id')).values('c'),
                 output_field=IntegerField()
             ),
             review_complete_count=Subquery(
-                Entry.objects.filter(
+                Figure.objects.filter(
                     event__crisis=OuterRef('pk'),
-                    review_status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
+                    entry__review_status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
                 ).order_by().values('event__crisis').annotate(c=Count('id')).values('c'),
                 output_field=IntegerField()
             ),
             to_be_reviewed_count=Subquery(
-                Entry.objects.filter(
+                Figure.objects.filter(
                     event__crisis=OuterRef('pk'),
-                    review_status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
+                    entry__review_status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
                 ).order_by().values('event__crisis').annotate(c=Count('id')).values('c'),
                 output_field=IntegerField()
             ),
