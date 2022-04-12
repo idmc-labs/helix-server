@@ -86,20 +86,20 @@ class Report(MetaInformationArchiveAbstractModel,
                     ),
                     category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
                     role=Figure.ROLE.RECOMMENDED,
-                    entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                    event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
                 )
             ),
             total_flow_conflict=Sum(
                 'total_figures',
                 filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                          role=Figure.ROLE.RECOMMENDED,
-                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+                         event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
             ),
             total_flow_disaster=Sum(
                 'total_figures',
                 filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                          role=Figure.ROLE.RECOMMENDED,
-                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+                         event__event_type=Crisis.CRISIS_TYPE.DISASTER)
             ),
             total_stock_disaster=Sum(
                 'total_figures',
@@ -112,7 +112,7 @@ class Report(MetaInformationArchiveAbstractModel,
                     ),
                     category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
                     role=Figure.ROLE.RECOMMENDED,
-                    entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                    event__event_type=Crisis.CRISIS_TYPE.DISASTER,
                 )
             )
         )
@@ -234,7 +234,7 @@ class Report(MetaInformationArchiveAbstractModel,
 
     @property
     def countries_report(self) -> list:
-        return Country.objects.filter(
+        result = Country.objects.filter(
             id__in=self.report_figures.values(
                 'country'
             )
@@ -244,12 +244,13 @@ class Report(MetaInformationArchiveAbstractModel,
                 ignore_dates=True,
             )
         )
+        return result
 
     @property
     def events_report(self) -> list:
         return Event.objects.filter(
             id__in=self.report_figures.values(
-                'entry__event'
+                'event'
             )
         ).annotate(
             **Event._total_figure_disaggregation_subquery(self.report_figures),
@@ -269,7 +270,7 @@ class Report(MetaInformationArchiveAbstractModel,
     def crises_report(self) -> list:
         return Crisis.objects.filter(
             id__in=self.report_figures.values(
-                'entry__event__crisis'
+                'event__crisis'
             )
         ).annotate(
             **Crisis._total_figure_disaggregation_subquery(self.report_figures),
@@ -515,7 +516,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'event', 'idmc_analysis', 'is_confidential',
             ),
             events=Event.objects.filter(
-                id__in=self.report.report_figures.values('entry__event')
+                id__in=self.report.report_figures.values('event')
             ).select_related(
                 'created_by', 'last_modified_by', 'trigger', 'trigger_sub_type', 'violence',
                 'violence_sub_type', 'actor', 'disaster_category', 'disaster_sub_category',
