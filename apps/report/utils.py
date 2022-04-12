@@ -37,11 +37,11 @@ def excel_column_key(headers, header) -> str:
 def report_global_numbers(report):
     conflict_filter = dict(
         role=Figure.ROLE.RECOMMENDED,
-        entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+        event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
     )
     disaster_filter = dict(
         role=Figure.ROLE.RECOMMENDED,
-        entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+        event__event_type=Crisis.CRISIS_TYPE.DISASTER,
     )
     data = report.report_figures.aggregate(
         flow_disaster_total=Coalesce(
@@ -79,7 +79,7 @@ def report_global_numbers(report):
         ),
         event_disaster_count=Coalesce(
             Count(
-                'entry__event',
+                'event',
                 filter=Q(
                     **disaster_filter,
                 ),
@@ -304,7 +304,7 @@ def report_stat_conflict_country(report, include_history):
     }
     global_filter = dict(
         role=Figure.ROLE.RECOMMENDED,
-        entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT
+        event__event_type=Crisis.CRISIS_TYPE.CONFLICT
     )
 
     data = report.report_figures.values('country').order_by().annotate(
@@ -432,7 +432,7 @@ def report_stat_conflict_region(report, include_history):
     })
     global_filter = dict(
         role=Figure.ROLE.RECOMMENDED,
-        entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT
+        event__event_type=Crisis.CRISIS_TYPE.CONFLICT
     )
 
     data = report.report_figures.annotate(
@@ -528,7 +528,7 @@ def report_stat_conflict_typology(report):
     ))
     filtered_report_figures = report.report_figures.filter(
         role=Figure.ROLE.RECOMMENDED,
-        entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+        event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
         category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
     ).values('country').order_by()
 
@@ -585,7 +585,7 @@ def report_stat_conflict_typology(report):
 
     filtered_report_figures = report.report_figures.filter(
         role=Figure.ROLE.RECOMMENDED,
-        entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+        event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
         category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
     )
 
@@ -654,21 +654,21 @@ def report_disaster_event(report):
     # NOTE: {{ }} turns into { } after the first .format
     global_filter = dict(
         role=Figure.ROLE.RECOMMENDED,
-        entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER
+        event__event_type=Crisis.CRISIS_TYPE.DISASTER
     )
 
     data = report.report_figures.filter(
         **global_filter
-    ).values('entry__event').order_by().annotate(
-        event_id=F('entry__event_id'),
-        event_name=F('entry__event__name'),
-        event_year=Extract('entry__event__start_date', 'year'),
-        event_start_date=F('entry__event__start_date'),
-        event_end_date=F('entry__event__end_date'),
-        event_category=F('entry__event__disaster_category__name'),
-        event_sub_category=F('entry__event__disaster_sub_category__name'),
-        dtype=F('entry__event__disaster_type__name'),
-        dsub_type=F('entry__event__disaster_sub_type__name'),
+    ).values('event').order_by().annotate(
+        event_id=F('event_id'),
+        event_name=F('event__name'),
+        event_year=Extract('event__start_date', 'year'),
+        event_start_date=F('event__start_date'),
+        event_end_date=F('event__end_date'),
+        event_category=F('event__disaster_category__name'),
+        event_sub_category=F('event__disaster_sub_category__name'),
+        dtype=F('event__disaster_type__name'),
+        dsub_type=F('event__disaster_sub_type__name'),
         flow_total=Sum('total_figures', filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT)),
         affected_countries=Count('country', distinct=True),
         affected_iso3=StringAgg('country__iso3', delimiter=', ', distinct=True),
@@ -711,7 +711,7 @@ def report_disaster_country(report, include_history):
     }
     global_filter = dict(
         role=Figure.ROLE.RECOMMENDED,
-        entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+        event__event_type=Crisis.CRISIS_TYPE.DISASTER,
     )
     data = report.report_figures.filter(
         **global_filter
@@ -719,7 +719,7 @@ def report_disaster_country(report, include_history):
         country_iso3=F('country__iso3'),
         country_name=F('country__name'),
         country_region=F('country__region__name'),
-        events_count=Count('entry__event', distinct=True),
+        events_count=Count('event', distinct=True),
         country_population=Subquery(
             CountryPopulation.objects.filter(
                 year=int(report.filter_figure_start_after.year),
@@ -799,7 +799,7 @@ def report_disaster_region(report, include_history):
     }
     global_filter = dict(
         role=Figure.ROLE.RECOMMENDED,
-        entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+        event__event_type=Crisis.CRISIS_TYPE.DISASTER,
     )
     data = report.report_figures.filter(
         **global_filter
@@ -808,7 +808,7 @@ def report_disaster_region(report, include_history):
     ).values('country__region').order_by().annotate(
         region_name=F('country__region__name'),
         country_region=F('country__region__name'),
-        events_count=Count('entry__event', distinct=True),
+        events_count=Count('event', distinct=True),
         region_population=Subquery(
             CountryPopulation.objects.filter(
                 country__region=OuterRef('region'),
