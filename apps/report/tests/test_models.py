@@ -55,6 +55,7 @@ class TestReportModel(HelixTestCase):
                          r.countries_report)
 
     def test_001_appropriate_typology_checks(self):
+        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT)
         figure = FigureFactory.create(
             reported=200,
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
@@ -62,9 +63,8 @@ class TestReportModel(HelixTestCase):
             country=CountryFactory.create(),
             disaggregation_conflict=100,
             disaggregation_conflict_political=100,
+            event=event,
         )
-        figure.event.event_type = Crisis.CRISIS_TYPE.CONFLICT
-        figure.event.save()
         report = ReportFactory.create(generated=False)
         report.figures.add(figure)
         gen = ReportGeneration.objects.create(report=report)

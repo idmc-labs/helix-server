@@ -44,6 +44,7 @@ class TestEntryQuery(HelixGraphQLTestCase):
 
     def test_figure_count_filtered_resolvers(self):
         self.stock_fig_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS
+        self.random_fig_cat2 = Figure.FIGURE_CATEGORY_TYPES.CROSS_BORDER_FLIGHT
         self.flow_fig_cat3 = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.event = EventFactory.create()
         self.event.countries.add(self.country)
