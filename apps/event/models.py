@@ -305,7 +305,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             countries_name=ArrayAgg('countries__name', distinct=True),
             regions_name=ArrayAgg('countries__region__name', distinct=True),
             figures_count=models.Count('figures', distinct=True),
-            entries_count=models.Count('entries', distinct=True),
+            entries_count=models.Count('figures__entry', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
         ).order_by('-created_at').select_related(
             'trigger',

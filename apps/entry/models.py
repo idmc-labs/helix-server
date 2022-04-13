@@ -601,9 +601,8 @@ class Figure(MetaInformationArchiveAbstractModel,
             unit='Unit',
             household_size='Household Size',
             total_figures='Total Figures',
-            category__name='Figure Category',
-            category__type='Figure Category Type',
-            term__name='Figure Term',
+            category='Figure Category',
+            term='Figure Term',
             displacement_occurred='Displacement Occurred',
             role='Figure Role',
             year='Year',
@@ -1092,8 +1091,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         ).qs.annotate(
             countries=ArrayAgg('figures__country__name', distinct=True),
             countries_iso3=StringAgg('figures__country__iso3', delimiter='; ', distinct=True),
-            categories=StringAgg('figures__category__name', delimiter='; ', distinct=True),
-            terms=StringAgg('figures__term__name', delimiter='; ', distinct=True),
+            categories=ArrayAgg('figures__category', distinct=True),
+            terms=ArrayAgg('figures__term', distinct=True),
             min_fig_start=Min('figures__start_date'),
             min_fig_end=Min('figures__end_date'),
             max_fig_start=Max('figures__start_date'),
@@ -1247,6 +1246,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         def transformer(datum):
             return {
                 **datum,
+                'categories': '; '.join([category.name if category else "" for category in datum['categories']]),
+                'terms': '; '.join([term.name if term else "" for term in datum['terms']]),
             }
 
         return {

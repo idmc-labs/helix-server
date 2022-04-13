@@ -100,12 +100,12 @@ class EventFilter(NameFilterMixin,
         recommended_stock_figures_count = Count('figures', filter=(
             Q(figures__role=Figure.ROLE.RECOMMENDED) &
             Q(ignore_qa=False) &
-            Q(entries__figures__category=Figure.FIGURE_CATEGORY_TYPES.IDPS))
+            Q(figures__category=Figure.FIGURE_CATEGORY_TYPES.IDPS))
         )
         recommended_flow_figures_count = Count('figures', filter=(
             Q(figures__role=Figure.ROLE.RECOMMENDED) &
             Q(ignore_qa=False) &
-            Q(entries__figures__category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT))
+            Q(figures__category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT))
         )
         annotated_fields = {
             'stock_figure_count': recommended_stock_figures_count,
