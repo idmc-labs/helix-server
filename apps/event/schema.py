@@ -17,6 +17,7 @@ from apps.event.models import (
     DisasterSubType,
     DisasterType,
     OsvSubType,
+    ContextOfViolence,
 )
 from apps.event.filters import ActorFilter, EventFilter
 from utils.graphene.types import CustomDjangoListObjectType
@@ -253,6 +254,22 @@ class EventListType(CustomDjangoListObjectType):
         filterset_class = EventFilter
 
 
+class ContextOfViolenceType(DjangoObjectType):
+    class Meta:
+        model = ContextOfViolence
+        filter_fields = {
+            'name': ['icontains']
+        }
+
+
+class ContextOfViolenceListType(CustomDjangoListObjectType):
+    class Meta:
+        model = ContextOfViolence
+        filter_fields = {
+            'name': ['icontains']
+        }
+
+
 class Query:
     trigger_list = DjangoPaginatedListObjectField(TriggerListType)
     sub_trigger_list = DjangoPaginatedListObjectField(TriggerSubObjectListType)
@@ -273,3 +290,5 @@ class Query:
                                                     page_size_query_param='pageSize'
                                                 ))
     osv_sub_type_list = DjangoPaginatedListObjectField(OsvSubTypeList)
+    context_of_violence = DjangoObjectField(ContextOfViolenceType)
+    context_of_violence_list = DjangoPaginatedListObjectField(ContextOfViolenceListType)
