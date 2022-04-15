@@ -58,6 +58,12 @@ class ViolenceSubType(NameAttributedModels):
                                  related_name='sub_types', on_delete=models.CASCADE)
 
 
+class ContextOfViolence(MetaInformationAbstractModel, NameAttributedModels):
+    """
+    Holds the context of violence
+    """
+
+
 class Actor(MetaInformationAbstractModel, NameAttributedModels):
     """
     Conflict related actors
@@ -218,6 +224,9 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         on_delete=models.SET_NULL
     )
     ignore_qa = models.BooleanField(verbose_name=_('Ignore QA'), default=False)
+    context_of_violence = models.ManyToManyField(
+        'ContextOfViolence', verbose_name=_('Context of violence'), blank=True, related_name='events'
+    )
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
