@@ -44,6 +44,7 @@ class PERMISSION_ENTITY(enum.Enum):
     report = 17
     reportcomment = 18
     portfolio = 19
+    contextofviolence = 20
 
     __labels__ = {
         crisis: _('Crisis'),
@@ -66,6 +67,7 @@ class PERMISSION_ENTITY(enum.Enum):
         report: _('Report'),
         reportcomment: _('Report Comment'),
         portfolio: _('Portfolio'),
+        contextofviolence: _('Context of violence')
     }
 
 
