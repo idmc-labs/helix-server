@@ -470,6 +470,9 @@ class Figure(MetaInformationArchiveAbstractModel,
     context_of_violence = models.ManyToManyField(
         'event.ContextOfViolence', verbose_name=_('Context of violence'), blank=True, related_name='figures'
     )
+    context_of_violence = models.ManyToManyField(
+        'event.ContextOfViolence', verbose_name=_('Context of violence'), blank=True, related_name='figures'
+    )
 
     class Meta:
         indexes = [
