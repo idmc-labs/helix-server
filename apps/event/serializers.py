@@ -13,7 +13,7 @@ from apps.contrib.serializers import (
 from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
-from apps.event.models import Event, Actor
+from apps.event.models import Event, Actor, ContextOfViolence
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
 
 
@@ -196,3 +196,14 @@ class CloneEventSerializer(serializers.Serializer):
         return event.clone_and_save_event(
             user=self.context['request'].user,
         )
+
+
+class ContextOfViolenceSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
+    class Meta:
+        model = ContextOfViolence
+        fields = '__all__'
+
+
+class ContextOfViolenceUpdateSerializer(UpdateSerializerMixin, ContextOfViolenceSerializer):
+    """Just to create input type"""
+    id = IntegerIDField(required=True)
