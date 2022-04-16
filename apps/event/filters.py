@@ -26,6 +26,7 @@ class EventFilter(NameFilterMixin,
     violence_sub_types = IDListFilter(method='filter_violence_sub_types')
     created_by_ids = IDListFilter(method='filter_created_by')
     qa_rules = StringListFilter(method='filter_qa_rules')
+    context_of_violences = IDListFilter(method='filter_context_of_violences')
 
     class Meta:
         model = Event
@@ -126,6 +127,11 @@ class EventFilter(NameFilterMixin,
         event_ids = list(flow_qs_ids) + list(stock_qs_ids)
         return qs.filter(id__in=event_ids)
 
+    def filter_context_of_violences(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(context_of_violence__in=value).distinct()
+
     @property
     def qs(self):
         return super().qs.annotate(
@@ -171,7 +177,7 @@ class EventFilter(NameFilterMixin,
                 default=None,
                 output_field=models.FloatField()
             )
-        ).prefetch_related('figures')
+        ).prefetch_related("figures", 'context_of_violence')
 
     def filter_created_by(self, qs, name, value):
         if not value:

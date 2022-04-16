@@ -264,6 +264,7 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
     def create(self, validated_data: dict) -> Figure:
         geo_locations = validated_data.pop('geo_locations', [])
         tags = validated_data.pop('tags', [])
+        context_of_violence = validated_data.pop('context_of_violence', [])
         disaggregation_ages = validated_data.pop('disaggregation_age', [])
         if geo_locations:
             geo_locations = OSMName.objects.bulk_create(
@@ -278,6 +279,7 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
         instance = Figure.objects.create(**validated_data)
         instance.geo_locations.set(geo_locations)
         instance.tags.set(tags)
+        instance.context_of_violence.set(context_of_violence)
         instance.disaggregation_age.set(disaggregation_ages)
         return instance
 
@@ -325,6 +327,7 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
     def update(self, instance, validated_data):
         geo_locations = validated_data.pop('geo_locations', [])
         tags = validated_data.pop('tags', [])
+        context_of_violence = validated_data.pop('context_of_violence', [])
         disaggregation_age = validated_data.pop('disaggregation_age', [])
         with transaction.atomic():
             instance = super().update(instance, validated_data)
@@ -339,6 +342,8 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
                 )
             if tags:
                 instance.tags.set(tags)
+            if context_of_violence:
+                instance.context_of_violence.set(context_of_violence)
         return instance
 
 

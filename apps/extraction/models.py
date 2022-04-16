@@ -167,6 +167,11 @@ class QueryAbstractModel(models.Model):
         verbose_name=_('Has disaggregated data'),
         default=None,
     )
+    filter_context_of_violence = models.ManyToManyField(
+        'event.ContextOfViolence',
+        verbose_name=_('Context of violence'),
+        blank=True,
+    )
 
     @property
     def get_filter_kwargs(self):
@@ -195,6 +200,7 @@ class QueryAbstractModel(models.Model):
             filter_figure_category_types=self.filter_figure_category_types,
             filter_entry_has_review_comments=self.filter_entry_has_review_comments,
             filter_entry_has_disaggregated_data=self.filter_entry_has_disaggregated_data,
+            filter_context_of_violence=self.filter_context_of_violence.all(),
         )
 
     @property
