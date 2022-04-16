@@ -18,6 +18,7 @@ from utils.factories import (
     OrganizationFactory,
     CountryFactory,
     TagFactory,
+    ContextOfViolenceFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -142,6 +143,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.tag1 = TagFactory.create()
         self.tag2 = TagFactory.create()
         self.tag3 = TagFactory.create()
+        self.context_of_violence = ContextOfViolenceFactory.create()
 
     def test_valid_create_entry_without_figures(self):
         response = self.query(
@@ -189,6 +191,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 'caveats': 'caveats',
                 'sourceExcerpt': 'source excerpt',
                 'event': self.event.id,
+                "contextOfViolence": [self.context_of_violence.id],
             }
         ]
 

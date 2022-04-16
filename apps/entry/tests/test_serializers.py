@@ -486,6 +486,7 @@ class TestFigureSerializer(HelixTestCase):
             "geo_locations": [source1],
             "tags": [],
             "event": self.event.id,
+            "context_of_violence": []
         }
         self.request = self.factory.get('/graphql')
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)

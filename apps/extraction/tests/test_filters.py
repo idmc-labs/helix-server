@@ -8,6 +8,7 @@ from utils.factories import (
     TagFactory,
     FigureFactory,
     OrganizationFactory,
+    ContextOfViolenceFactory,
 )
 from apps.extraction.filters import EntryExtractionFilterSet as f
 from apps.crisis.models import Crisis
@@ -100,6 +101,15 @@ class TestExtractionFilter(HelixTestCase):
         cls.fig1cat1entry1.tags.set([cls.tag1])
         cls.fig2cat2entry1.tags.set([cls.tag2])
         cls.fig3cat2entry2.tags.set([cls.tag3])
+
+        self.context_of_violence = ContextOfViolenceFactory.create()
+        self.figure = FigureFactory.create(
+            entry=self.entry3ev2,
+            country=self.country3reg3,
+            event=self.event2crisis1,
+        )
+        self.event1crisis1.context_of_violence.set([self.context_of_violence])
+        self.figure.context_of_violence.set([self.context_of_violence])
 
     def test_filter_by_region(self):
         regions = [self.reg3.id]
@@ -248,3 +258,10 @@ class TestExtractionFilter(HelixTestCase):
         )
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1ev1, self.entry3ev2})
+
+    def test_filter_by_context_of_violences(self):
+        data = dict(
+            filter_context_of_violences=[self.context_of_violence]
+        )
+        fqs = f(data=data).qs
+        self.assertEqual(set(fqs), {self.entry3ev2})
