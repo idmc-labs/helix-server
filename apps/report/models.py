@@ -170,7 +170,7 @@ class Report(MetaInformationArchiveAbstractModel,
             name='Name',
             filter_figure_start_after='Start Date',
             filter_figure_end_before='End Date',
-            filter_figure_categories__name="Figure Category",
+            filter_figure_categories="Figure Category",
             total_figures='Masterfact Figures',
             # these are calculated in transformer ref: heavy
             total_flow_conflict_sum='ND Conflict',
@@ -199,12 +199,18 @@ class Report(MetaInformationArchiveAbstractModel,
             'filter_figure_categories',
         )
 
+        def transform_filter_figure_category(figure_categories):
+            if figure_categories:
+                return '; '.join([category.name if category else "" for category in figure_categories])
+            return ''
+
         def transformer(datum):
             return {
                 **datum,
                 # ref: heavy
                 # NOTE: there must be a better way
-                **Report.objects.get(id=datum['id']).total_disaggregation
+                **Report.objects.get(id=datum['id']).total_disaggregation,
+                'filter_figure_categories': transform_filter_figure_category(datum['filter_figure_categories'])
             }
 
         return {
