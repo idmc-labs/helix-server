@@ -111,6 +111,15 @@ class TestExtractionFilter(HelixTestCase):
         cls.event1crisis1.context_of_violence.set([cls.context_of_violence])
         cls.figure.context_of_violence.set([cls.context_of_violence])
 
+        cls.context_of_violence = ContextOfViolenceFactory.create()
+        cls.figure = FigureFactory.create(
+            entry=cls.entry3ev2,
+            country=cls.country3reg3,
+            event=cls.event2crisis1,
+        )
+        cls.event1crisis1.context_of_violence.set([cls.context_of_violence])
+        cls.figure.context_of_violence.set([cls.context_of_violence])
+
     def test_filter_by_region(self):
         regions = [self.reg3.id]
         fqs = f(data=dict(filter_figure_regions=regions)).qs
