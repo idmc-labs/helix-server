@@ -666,6 +666,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__disaster_sub_category__name='Disaster Sub Category',
             event__disaster_type__name='Disaster Type',
             event__disaster_sub_type__name='Disaster Sub Type',
+            context_of_violence__name='Context of violences',
         )
         values = figures.order_by(
             '-created_at'
@@ -821,7 +822,8 @@ class Figure(MetaInformationArchiveAbstractModel,
             'geo_locations',
             'disaggregation_age',
             'disaggregation_age__category',
-            'geo_locations__identifier'
+            'geo_locations__identifier',
+            'context_of_violence'
         ).order_by(
             '-entry',
             '-created_at',
