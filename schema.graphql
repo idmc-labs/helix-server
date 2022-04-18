@@ -430,8 +430,8 @@ type CountryType {
   idmcShortNameAr: String
   parkedItems: [ParkedItemType!]!
   portfolio: PortfolioType
-  figures(unit: String, startDate_Lte: Date, startDate_Gte: Date, page: Int = 1, ordering: String, pageSize: Int): FigureListType
   crises(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], report: String, createdByIds: [ID!], page: Int = 1, ordering: String, pageSize: Int): CrisisListType
+  figures(unit: String, startDate_Lte: Date, startDate_Gte: Date, page: Int = 1, ordering: String, pageSize: Int): FigureListType
   contextualAnalyses(createdAt_Lte: DateTime, createdAt_Gte: DateTime, page: Int = 1, ordering: String, pageSize: Int): ContextualAnalysisListType
   summaries(createdAt_Lte: DateTime, createdAt_Gte: DateTime, page: Int = 1, ordering: String, pageSize: Int): SummaryListType
   householdSizes: [CountryHouseholdSizeType!]!
@@ -923,6 +923,7 @@ type DisasterCategoryListType {
 type DisasterCategoryType {
   name: String!
   id: ID!
+  figures: [FigureType!]!
   subCategories(name_Unaccent_Icontains: String, ordering: String): DisasterSubCategoryListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -938,6 +939,7 @@ type DisasterSubCategoryListType {
 type DisasterSubCategoryType {
   name: String!
   id: ID!
+  figures: [FigureType!]!
   types(name_Unaccent_Icontains: String, ordering: String): DisasterTypeObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -953,6 +955,7 @@ type DisasterSubObjectListType {
 type DisasterSubObjectType {
   name: String!
   id: ID!
+  figures: [FigureType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
 }
@@ -967,6 +970,7 @@ type DisasterTypeObjectListType {
 type DisasterTypeObjectType {
   name: String!
   id: ID!
+  figures: [FigureType!]!
   subTypes(name_Unaccent_Icontains: String, ordering: String): DisasterSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -1487,6 +1491,14 @@ type FigureType {
   sourceExcerpt: String
   event: EventType!
   contextOfViolence: [ContextOfViolenceType!]!
+  figureCause: CRISIS_TYPE
+  violence: ViolenceType
+  violenceSubType: ViolenceSubObjectType
+  disasterCategory: DisasterCategoryType
+  disasterSubCategory: DisasterSubCategoryType
+  disasterType: DisasterTypeObjectType
+  disasterSubType: DisasterSubObjectType
+  osvSubType: OsvSubObjectType
   figureReviews: [ReviewType!]!
   reportSet: [ReportType!]!
 }
@@ -1533,8 +1545,16 @@ input FigureUpdateInputType {
   calculationLogic: String
   caveats: String
   sourceExcerpt: String
+  figureCause: CRISIS_TYPE
   country: ID
   event: ID
+  violence: ID
+  violenceSubType: ID
+  disasterCategory: ID
+  disasterSubCategory: ID
+  disasterType: ID
+  disasterSubType: ID
+  osvSubType: ID
   tags: [ID!]
   contextOfViolence: [ID!]
 }
@@ -1762,8 +1782,16 @@ input NestedFigureCreateInputType {
   calculationLogic: String
   caveats: String
   sourceExcerpt: String
+  figureCause: CRISIS_TYPE!
   country: ID
   event: ID!
+  violence: ID
+  violenceSubType: ID
+  disasterCategory: ID
+  disasterSubCategory: ID
+  disasterType: ID
+  disasterSubType: ID
+  osvSubType: ID
   tags: [ID!]
   contextOfViolence: [ID!]
 }
@@ -1814,8 +1842,16 @@ input NestedFigureUpdateInputType {
   calculationLogic: String
   caveats: String
   sourceExcerpt: String
+  figureCause: CRISIS_TYPE
   country: ID
   event: ID
+  violence: ID
+  violenceSubType: ID
+  disasterCategory: ID
+  disasterSubCategory: ID
+  disasterType: ID
+  disasterSubType: ID
+  osvSubType: ID
   tags: [ID!]
   contextOfViolence: [ID!]
 }
@@ -2018,6 +2054,7 @@ input OrganizationUpdateInputType {
 type OsvSubObjectType {
   name: String!
   id: ID!
+  figures: [FigureType!]!
   events: [EventType!]!
 }
 
@@ -2968,6 +3005,7 @@ type ViolenceSubObjectListType {
 type ViolenceSubObjectType {
   id: ID!
   name: String!
+  figures: [FigureType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
 }
@@ -2975,6 +3013,7 @@ type ViolenceSubObjectType {
 type ViolenceType {
   name: String!
   id: ID!
+  figures: [FigureType!]!
   subTypes(id_Iexact: Float, ordering: String): ViolenceSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
