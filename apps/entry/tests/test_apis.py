@@ -22,6 +22,7 @@ from utils.factories import (
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from apps.crisis.models import Crisis
 
 
 class TestEntryQuery(HelixGraphQLTestCase):
@@ -192,6 +193,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 'sourceExcerpt': 'source excerpt',
                 'event': self.event.id,
                 "contextOfViolence": [self.context_of_violence.id],
+                "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
             }
         ]
 
@@ -249,6 +251,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "excerptIdu": "excerpt abc",
                 "geoLocations": [source1],
                 "event": self.event.id,
+                "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
             },
             # invalid now
             {
@@ -265,6 +268,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "excerptIdu": "excerpt abc",
                 "geoLocations": [source2],
                 "event": self.event.id,
+                "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
             }
         ]
         self.input.update({
@@ -346,6 +350,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     }
                 ],
                 "event": self.event.id,
+                "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
             }
         ]
         self.input.update({
@@ -376,6 +381,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
                 "event": self.event.id,
+                "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
             }
         ]
         self.input.update({
@@ -518,6 +524,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 ],
                 "geoLocations": [source1],
                 "event": self.event.id,
+                "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
             },
             {
                 "id": figure.id,
@@ -551,6 +558,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 ],
                 "geoLocations": [source2],
                 "event": self.event.id,
+                "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
             },
         ]
         old_figures_count = self.entry.figures.count()
@@ -583,6 +591,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
                 "event": self.event.id,
+                "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
             }
         ]
         self.input.update({

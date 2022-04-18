@@ -206,6 +206,7 @@ class FigureFactory(DjangoModelFactory):
     include_idu = False
     term = factory.Iterator(Figure.FIGURE_TERMS)
     category = factory.Iterator(Figure.FIGURE_CATEGORY_TYPES)
+    figure_cause = factory.Iterator(Crisis.CRISIS_TYPE)
 
 
 class ResourceGroupFactory(DjangoModelFactory):

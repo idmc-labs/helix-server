@@ -25,6 +25,7 @@ from utils.factories import (
     FigureFactory,
 )
 from utils.tests import HelixTestCase, create_user_with_role
+from apps.crisis.models import Crisis
 
 
 class TestEntrySerializer(HelixTestCase):
@@ -192,6 +193,7 @@ class TestEntrySerializer(HelixTestCase):
             "include_idu": False,
             "geo_locations": [source1, source2, source3],
             "event": self.event.id,
+            "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
         }]
         self.data['figures'] = figures
 
@@ -233,6 +235,7 @@ class TestEntrySerializer(HelixTestCase):
             "term": Figure.FIGURE_TERMS.EVACUATED.value,
             "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
             "event": self.event.id,
+            "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
         }, {
             "uuid": "f1b42e79-da44-4032-8cb6-0dd4b7b97b57",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
@@ -246,6 +249,7 @@ class TestEntrySerializer(HelixTestCase):
             "term": Figure.FIGURE_TERMS.EVACUATED.value,
             "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
             "event": self.event.id,
+            "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
         }]
         self.data['figures'] = figures
         serializer = EntryUpdateSerializer(instance=entry,
@@ -323,7 +327,8 @@ class TestEntrySerializer(HelixTestCase):
                     start_date=event.start_date.strftime('%Y-%m-%d'),
                     end_date=event.end_date.strftime('%Y-%m-%d'),
                     geo_locations=[source1],
-                    disaggregation_age=[]
+                    disaggregation_age=[],
+                    figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value,
                 )
             ]
         )
@@ -356,6 +361,7 @@ class TestEntrySerializer(HelixTestCase):
                     start_date=event.start_date.strftime('%Y-%m-%d'),
                     end_date=(event.end_date + timedelta(days=1)).strftime('%Y-%m-%d'),
                     geo_locations=[source1],
+                    figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value,
                 )
             ]
         )
@@ -399,7 +405,8 @@ class TestEntrySerializer(HelixTestCase):
             "start_date": "2020-09-09",
             "include_idu": False,
             "geo_locations": [source1],
-            "event": self.event.id
+            "event": self.event.id,
+            "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
         }]
         self.data['figures'] = figures
 
@@ -424,6 +431,7 @@ class TestEntrySerializer(HelixTestCase):
             "start_date": "2020-09-09",
             "include_idu": False,
             "geo_locations": [source1],
+            "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
         })
         self.data['figures'] = figures
 
@@ -486,7 +494,8 @@ class TestFigureSerializer(HelixTestCase):
             "geo_locations": [source1],
             "tags": [],
             "event": self.event.id,
-            "context_of_violence": []
+            "context_of_violence": [],
+            "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
         }
         self.request = self.factory.get('/graphql')
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
