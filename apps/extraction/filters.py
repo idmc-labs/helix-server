@@ -32,6 +32,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_entry_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
     filter_figure_category_types = StringListFilter(method='filter_filter_figure_category_types')
+    filter_figure_categories = StringListFilter(method='filter_filter_figure_categories')
     filter_figure_start_after = df.DateFilter(method='filter_time_frame_after')
     filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
@@ -138,6 +139,15 @@ class EntryExtractionFilterSet(df.FilterSet):
             if category_type == FLOW:
                 category_enums_to_filter = category_enums_to_filter + Figure.flow_list()
         return qs.filter(figures__category__in=category_enums_to_filter).distinct()
+
+    def filter_filter_figure_categories(self, qs, name, value):
+        if value:
+            if isinstance(value[0], int):
+                # coming from saved query
+                return qs.filter(figures__in=Figure.objects.filter(category__in=value))
+            else:
+                return qs.filter(figures__category__in=value).distinct()
+        return qs
 
     def filter_time_frame_after(self, qs, name, value):
         if value:
@@ -307,6 +317,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_entry_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
     filter_figure_category_types = StringListFilter(method='filter_filter_figure_category_types')
+    filter_figure_categories = StringListFilter(method='filter_filter_figure_categories')
     filter_figure_start_after = df.DateFilter(method='filter_time_frame_after')
     filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
@@ -410,6 +421,11 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             if category_type == FLOW:
                 category_enums_to_filter = category_enums_to_filter + Figure.flow_list()
         return qs.filter(category__in=category_enums_to_filter).distinct()
+
+    def filter_filter_figure_categories(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(figures__category__in=value).distinct()
 
     def filter_filter_figure_roles(self, qs, name, value):
         if value:
