@@ -1134,8 +1134,6 @@ input EventCreateInputType {
   eventNarrative: String
   ignoreQa: Boolean
   crisis: ID
-  trigger: ID
-  triggerSubType: ID
   violence: ID
   violenceSubType: ID
   actor: ID
@@ -1175,8 +1173,6 @@ type EventType {
   eventType: CRISIS_TYPE
   otherSubType: EVENT_OTHER_SUB_TYPE
   glideNumbers: [String!]
-  trigger: TriggerType
-  triggerSubType: TriggerSubObjectType
   violence: ViolenceType
   violenceSubType: ViolenceSubObjectType
   actor: ActorType
@@ -1217,8 +1213,6 @@ input EventUpdateInputType {
   eventNarrative: String
   ignoreQa: Boolean
   crisis: ID
-  trigger: ID
-  triggerSubType: ID
   violence: ID
   violenceSubType: ID
   actor: ID
@@ -2208,8 +2202,6 @@ type Query {
   disaggregatedAgeCategoryList(name_Unaccent_Icontains: String, ordering: String): DisaggregatedAgeCategoryListType
   disaggregatedAge(id: ID!): DisaggregatedAgeType
   disaggregatedAgeList(sex_In: String, ordering: String): DisaggregatedAgeListType
-  triggerList(name_Unaccent_Icontains: String, ordering: String): TriggerListType
-  subTriggerList(name_Unaccent_Icontains: String, ordering: String): TriggerSubObjectListType
   violenceList(id_Iexact: Float, ordering: String): ViolenceListType
   actor(id: ID!): ActorType
   actorList(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): ActorListType
@@ -2738,30 +2730,6 @@ input TotalFigureFilterInputType {
   roles: [String!]
 }
 
-type TriggerListType {
-  results: [TriggerType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
-type TriggerSubObjectListType {
-  results: [TriggerSubObjectType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
-type TriggerSubObjectType {
-  id: ID!
-  name: String!
-}
-
-type TriggerType {
-  name: String!
-  id: ID!
-}
-
 enum UNIT {
   PERSON
   HOUSEHOLD
@@ -2998,8 +2966,8 @@ type ViolenceSubObjectListType {
 }
 
 type ViolenceSubObjectType {
-  name: String!
   id: ID!
+  name: String!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
 }

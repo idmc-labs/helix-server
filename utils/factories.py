@@ -160,16 +160,6 @@ class ActorFactory(DjangoModelFactory):
     country = factory.SubFactory(CountryFactory)
 
 
-class TriggerFactory(DjangoModelFactory):
-    class Meta:
-        model = "event.Trigger"
-
-
-class TriggerSubTypeFactory(DjangoModelFactory):
-    class Meta:
-        model = "event.TriggerSubType"
-
-
 class ContextOfViolenceFactory(DjangoModelFactory):
     class Meta:
         model = 'event.ContextOfViolence'
@@ -183,8 +173,6 @@ class EventFactory(DjangoModelFactory):
     event_type = factory.Iterator(Crisis.CRISIS_TYPE)
     start_date = factory.LazyFunction(lambda: date(2010, 1, 1))
     end_date = factory.LazyFunction(today().date)
-    trigger = factory.SubFactory(TriggerFactory)
-    trigger_sub_type = factory.SubFactory(TriggerSubTypeFactory)
     violence = factory.SubFactory(ViolenceFactory)
     violence_sub_type = factory.SubFactory(ViolenceSubTypeFactory)
     actor = factory.SubFactory(ActorFactory)

@@ -50,12 +50,6 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
                     violence {
                         name
                     }
-                    triggerSubType {
-                        name
-                    }
-                    trigger {
-                        name
-                    }
                     violenceSubType {
                         name
                     }
@@ -150,12 +144,6 @@ class TestUpdateEvent(HelixGraphQLTestCase):
                     violence {
                         name
                     }
-                    triggerSubType {
-                        name
-                    }
-                    trigger {
-                        name
-                    }
                     violenceSubType {
                         name
                     }
@@ -233,12 +221,6 @@ class TestDeleteEvent(HelixGraphQLTestCase):
                     name
                     eventType
                     violence {
-                        name
-                    }
-                    triggerSubType {
-                        name
-                    }
-                    trigger {
                         name
                     }
                     violenceSubType {
@@ -501,12 +483,6 @@ class CloneEventTest(HelixGraphQLTestCase):
                     violenceSubType {
                         id
                     }
-                    trigger {
-                        id
-                    }
-                    triggerSubType {
-                        id
-                    }
                     actor {
                         id
                     }
@@ -547,8 +523,6 @@ class CloneEventTest(HelixGraphQLTestCase):
         self.assertEqual(cloned_event["name"], f"Clone: {self.event.name}")
         # Check data cloned properly in foreign key fields
         self.assertEqual(cloned_event["crisis"]["id"], str(self.event.crisis.id))
-        self.assertEqual(cloned_event["trigger"]["id"], str(self.event.trigger.id))
-        self.assertEqual(cloned_event["triggerSubType"]["id"], str(self.event.trigger_sub_type.id))
         self.assertEqual(cloned_event["violence"]["id"], str(self.event.violence.id))
         self.assertEqual(cloned_event["violenceSubType"]["id"], str(self.event.violence_sub_type.id))
         self.assertEqual(cloned_event["actor"]["id"], str(self.event.actor.id))

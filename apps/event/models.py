@@ -32,18 +32,6 @@ class NameAttributedModels(models.Model):
 # Models related to displacement caused by conflict
 
 
-class Trigger(NameAttributedModels):
-    """
-    Holds the possible trigger choices
-    """
-
-
-class TriggerSubType(NameAttributedModels):
-    """
-    Holds the possible trigger sub types
-    """
-
-
 class Violence(NameAttributedModels):
     """
     Holds the possible violence choices
@@ -169,13 +157,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         default=list,
         null=True, blank=True
     )
-    # conflict related fields
-    trigger = models.ForeignKey('Trigger', verbose_name=_('Trigger'),
-                                blank=True, null=True,
-                                related_name='events', on_delete=models.SET_NULL)
-    trigger_sub_type = models.ForeignKey('TriggerSubType', verbose_name=_('Trigger Sub Type'),
-                                         blank=True, null=True,
-                                         related_name='events', on_delete=models.SET_NULL)
     violence = models.ForeignKey('Violence', verbose_name=_('Violence'),
                                  blank=False, null=True,
                                  related_name='events', on_delete=models.SET_NULL)
@@ -297,8 +278,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             osv_sub_type__name="OSV Sub Type",
             actor_id='Actor Id',
             actor__name='Actor',
-            trigger__name='Trigger',
-            trigger_sub_type__name='Trigger Sub Type',
             disaster_category__name='Disaster Category',
             disaster_sub_category__name='Disaster Sub Category',
             disaster_type__name='Disaster Type',
@@ -318,8 +297,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             entries_count=models.Count('figures__entry', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
         ).order_by('-created_at').select_related(
-            'trigger',
-            'trigger_sub_type',
             'violence',
             'violence_sub_type',
             'actor',
@@ -383,8 +360,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         # Clone foreigh key fields
         foreign_key_fields_dict = {
             "crisis": Crisis,
-            "trigger": Trigger,
-            "trigger_sub_type": TriggerSubType,
             "violence": Violence,
             "violence_sub_type": ViolenceSubType,
             "actor": Actor,

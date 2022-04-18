@@ -1,12 +1,10 @@
 
 from django.core.management.base import BaseCommand
 
-from apps.event.constants import CONFLICT_TYPES, TRIGGERS, SUB_TRIGGERS, DISASTERS
+from apps.event.constants import CONFLICT_TYPES, DISASTERS
 from apps.event.models import (
     Violence,
     ViolenceSubType,
-    Trigger,
-    TriggerSubType,
     DisasterCategory,
     DisasterSubCategory,
     DisasterType,
@@ -34,22 +32,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('Saved {} violences with {} violences sub types.'.format(
             Violence.objects.count(),
             ViolenceSubType.objects.count()
-        )))
-        for trigger_name in TRIGGERS:
-            if Trigger.objects.filter(name__iexact=trigger_name).exists():
-                Trigger.objects.get(name__iexact=trigger_name)
-            else:
-                Trigger.objects.create(name=trigger_name)
-        self.stdout.write(self.style.SUCCESS('Saved {} triggers.'.format(
-            Trigger.objects.count(),
-        )))
-        for sub_trigger_name in SUB_TRIGGERS:
-            if TriggerSubType.objects.filter(name__iexact=sub_trigger_name).exists():
-                TriggerSubType.objects.get(name__iexact=sub_trigger_name)
-            else:
-                TriggerSubType.objects.create(name=sub_trigger_name)
-        self.stdout.write(self.style.SUCCESS('Saved {} trigger sub types.'.format(
-            TriggerSubType.objects.count(),
         )))
 
         # disasters

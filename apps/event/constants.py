@@ -27,33 +27,6 @@ CONFLICT_TYPES = {
     "Unknown": ["Unclear (Unknown)", "Unknown (Unknown)"]
 }
 
-TRIGGERS = {
-    "Violence against civilians",
-    "Battle",
-    # FIXME: remove trailing whitespace
-    "Explosions/remote violence ",
-    "Riots",
-    "Security operations and evictions",
-    "Other",
-}
-
-SUB_TRIGGERS = {
-    "Looting",
-    "Vandalism",
-    "Raid/clearance/search operations",
-    "Demolitions/evictions",
-    "Burning/torching of homes/housing destruction",
-    "[Perceived] threat of attack/Intimidation",
-    "Mob violence/lynching",
-    "Knife/Machetes",
-    "Shooting",
-    "Shelling",
-    "Chemical weapons",
-    "Biological weapons",
-    "Other",
-    "Threat of attack",
-}
-
 DISASTERS = {
     "Geophysical": {
         "Geophysical": {
