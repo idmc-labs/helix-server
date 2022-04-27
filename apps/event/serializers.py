@@ -177,10 +177,10 @@ class EventSerializer(MetaInformationSerializerMixin,
     def create(self, validated_data):
         validated_data["created_by"] = self.context['request'].user
         countries = validated_data.pop("countries", None)
+        context_of_violence = validated_data.pop("context_of_violence", None)
         event = Event.objects.create(**validated_data)
         if countries:
             event.countries.set(countries)
-        context_of_violence = validated_data.pop("context_of_violence", None)
         if context_of_violence:
             event.context_of_violence.set(context_of_violence)
         return event
