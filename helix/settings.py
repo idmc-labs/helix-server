@@ -116,7 +116,7 @@ MIDDLEWARE = [
     'utils.middleware.HealthCheckMiddleware',
     'django.middleware.common.CommonMiddleware',
     # NOTE: DebugToolbarMiddleware will cause mutation to execute twice for the client, works fine with graphiql
-    # 'utils.middleware.DebugToolbarMiddleware',
+    'utils.middleware.DebugToolbarMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django_otp.middleware.OTPMiddleware',
