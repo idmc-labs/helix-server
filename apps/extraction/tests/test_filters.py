@@ -205,7 +205,7 @@ class TestExtractionFilter(HelixTestCase):
             filter_figure_category_types=['FLOW']
         )
         fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
+        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1, self.entry3ev2})
         data = dict(
             filter_figure_category_types=['STOCK']
         )
