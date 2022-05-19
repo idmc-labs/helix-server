@@ -8,7 +8,7 @@ from django.db.models import (
 from promise import Promise
 from promise.dataloader import DataLoader
 
-from apps.entry.models import FigureCategory, Entry, EntryReviewer
+from apps.entry.models import Entry, EntryReviewer, Figure
 from apps.crisis.models import Crisis
 
 
@@ -76,7 +76,7 @@ def batch_load_fn_by_category(keys, category):
         **Crisis._total_figure_disaggregation_subquery()
     )
 
-    if category == FigureCategory.flow_new_displacement_id():
+    if category == Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT:
         qs = qs.annotate(_total=models.F(Crisis.ND_FIGURES_ANNOTATE))
     else:
         qs = qs.annotate(_total=models.F(Crisis.IDP_FIGURES_ANNOTATE))
@@ -95,7 +95,7 @@ class TotalIDPFigureByCrisisLoader(DataLoader):
     def batch_load_fn(self, keys):
         return batch_load_fn_by_category(
             keys,
-            FigureCategory.stock_idp_id(),
+            Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
         )
 
 
@@ -103,5 +103,5 @@ class TotalNDFigureByCrisisLoader(DataLoader):
     def batch_load_fn(self, keys):
         return batch_load_fn_by_category(
             keys,
-            FigureCategory.flow_new_displacement_id(),
+            Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
         )

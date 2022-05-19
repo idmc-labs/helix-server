@@ -12,8 +12,8 @@ from utils.factories import (
     EntryFactory,
     TagFactory,
     FigureFactory,
-    FigureCategoryFactory,
 )
+from apps.entry.models import Figure
 
 
 class TestCreateExtraction(HelixGraphQLTestCase):
@@ -132,7 +132,7 @@ class TestExtractionFigureList(HelixGraphQLTestCase):
             end_date = (timezone.now() + timedelta(days=30)).strftime('%Y-%m-%d')
             event = EventFactory.create(start_date=start_date, end_date=end_date)
             entry = EntryFactory.create(created_by=admin, event=event)
-            figure_category = FigureCategoryFactory.create(type='STOCK')
+            figure_category = Figure.FIGURE_CATEGORY_TYPES.IDPS
             FigureFactory.create(entry=entry, created_by=admin, category=figure_category)
 
         self.figure_query = '''

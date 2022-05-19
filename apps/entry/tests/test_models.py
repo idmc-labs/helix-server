@@ -8,14 +8,12 @@ from apps.review.models import Review
 from apps.entry.models import (
     Figure,
     EntryReviewer,
-    FigureCategory,
 )
 from utils.factories import (
     EntryFactory,
     FigureFactory,
     ReviewCommentFactory,
     EventFactory,
-    FigureCategoryFactory
 )
 from utils.tests import HelixTestCase, create_user_with_role
 
@@ -27,7 +25,7 @@ class TestFigureModel(HelixTestCase):
         self.event = EventFactory.create(start_date=(timezone.now() + timedelta(days=10)).strftime('%Y-%m-%d'),
                                          end_date=(timezone.now() + timedelta(days=25)).strftime('%Y-%m-%d'))
         self.entry = EntryFactory.create(created_by=self.editor, event=self.event)
-        self.figure_cat = FigureCategoryFactory.create(type='FLOW')
+        self.figure_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.figure = FigureFactory.create(entry=self.entry, created_by=self.editor, category=self.figure_cat)
 
     def test_figure_can_be_updated_by(self):
@@ -62,9 +60,8 @@ class TestFigureModel(HelixTestCase):
 
     def test_figure_nd_filtering(self):
         ref = datetime.today()
-        FigureCategory._invalidate_category_ids_cache()
-        nd_cat = FigureCategory.flow_new_displacement_id()
-        idp_cat = FigureCategory.stock_idp_id()
+        nd_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
+        idp_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS.value
         f1 = FigureFactory.create(
             start_date=ref - timedelta(days=30),
             end_date=ref,
@@ -95,7 +92,8 @@ class TestFigureModel(HelixTestCase):
             start_date=None,
             end_date=ref + timedelta(days=360),
         )
-        self.assertEqual(nd.count(), 3)
+
+        self.assertEqual(nd.count(), 4)
         self.assertNotIn(f4, nd)
 
         nd = Figure.filtered_nd_figures(
@@ -117,12 +115,11 @@ class TestFigureModel(HelixTestCase):
 
     def test_figure_idp_filtering(self):
         ref = datetime.today()
-        FigureCategory._invalidate_category_ids_cache()
         # TODO: Add test for DISASTER as well, once the logic arrives
         event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT)
         entry = EntryFactory.create(event=event)
-        nd_cat = FigureCategory.flow_new_displacement_id()
-        idp_cat = FigureCategory.stock_idp_id()
+        nd_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
+        idp_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS
         f1 = FigureFactory.create(
             entry=entry,
             start_date=ref - timedelta(days=30),

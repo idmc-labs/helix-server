@@ -20,7 +20,6 @@ from apps.entry.models import (
     FigureTag,
     DisaggregatedAge,
 )
-from apps.entry.constants import STOCK
 from apps.event.models import Event
 from apps.users.models import User
 from apps.users.enums import USER_ROLE
@@ -192,7 +191,7 @@ class CommonFigureValidationMixin:
         errors = OrderedDict()
         if self.get_event():
             category = attrs.get('category', getattr(self.instance, 'category', None))
-            if category.type == STOCK:
+            if category in Figure.stock_list():
                 errors.update(is_child_parent_dates_valid(
                     attrs.get('start_date', getattr(self.instance, 'start_date', None)),
                     attrs.get('end_date', getattr(self.instance, 'end_date', None)),
@@ -211,7 +210,7 @@ class CommonFigureValidationMixin:
     def clean_term_with_displacement_occur(self, attrs):
         _attrs = copy(attrs)
         term = attrs.get('term')
-        if not term or (term and not term.displacement_occur):
+        if not term or term in Figure.housing_list():
             _attrs['displacement_occurred'] = None
         return _attrs
 

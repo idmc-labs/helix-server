@@ -47,11 +47,10 @@ class QueryAbstractModel(models.Model):
         blank=True,
         related_name='+'
     )
-    filter_figure_categories = models.ManyToManyField(
-        'entry.FigureCategory',
-        verbose_name=_('figure categories'),
-        related_name='+',
-        blank=True
+    filter_figure_categories = ArrayField(
+        base_field=enum.EnumField(enum=Figure.FIGURE_CATEGORY_TYPES),
+        null=True,
+        blank=True,
     )
     filter_entry_sources = models.ManyToManyField(
         'organization.Organization',
@@ -116,10 +115,10 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_figure_terms = models.ManyToManyField(
-        'entry.FigureTerm',
-        verbose_name=_('Figure Term'),
+    filter_figure_terms = ArrayField(
+        base_field=enum.EnumField(enum=Figure.FIGURE_TERMS),
         blank=True,
+        null=True
     )
     filter_event_disaster_categories = models.ManyToManyField(
         'event.DisasterCategory',
@@ -177,7 +176,7 @@ class QueryAbstractModel(models.Model):
             filter_figure_geographical_groups=self.filter_figure_geographical_groups.all(),
             filter_events=self.filter_events.all(),
             filter_event_crises=self.filter_event_crises.all(),
-            filter_figure_categories=self.filter_figure_categories.all(),
+            filter_figure_categories=self.filter_figure_categories,
             filter_figure_tags=self.filter_figure_tags.all(),
             filter_figure_roles=self.filter_figure_roles,
             filter_figure_start_after=self.filter_figure_start_after,
@@ -186,6 +185,7 @@ class QueryAbstractModel(models.Model):
             filter_event_crisis_types=self.filter_event_crisis_types,
             filter_entry_review_status=self.filter_entry_review_status,
             filter_figure_displacement_types=self.filter_figure_displacement_types,
+            filter_figure_terms=self.filter_figure_terms,
             filter_event_disaster_categories=self.filter_event_disaster_categories.all(),
             filter_event_disaster_sub_categories=self.filter_event_disaster_sub_categories.all(),
             filter_event_disaster_types=self.filter_event_disaster_types.all(),

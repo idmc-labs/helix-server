@@ -2,7 +2,7 @@ from django.db import models
 from promise import Promise
 from promise.dataloader import DataLoader
 
-from apps.entry.models import Entry, FigureCategory
+from apps.entry.models import Entry, Figure
 
 
 def batch_load_fn_by_category(keys, category):
@@ -12,7 +12,7 @@ def batch_load_fn_by_category(keys, category):
         **Entry._total_figure_disaggregation_subquery()
     )
 
-    if category == FigureCategory.flow_new_displacement_id():
+    if category == Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT:
         qs = qs.annotate(_total=models.F(Entry.ND_FIGURES_ANNOTATE))
     else:
         qs = qs.annotate(_total=models.F(Entry.IDP_FIGURES_ANNOTATE))
@@ -30,12 +30,12 @@ def batch_load_fn_by_category(keys, category):
 class TotalIDPFigureByEntryLoader(DataLoader):
     def batch_load_fn(self, keys):
         return batch_load_fn_by_category(
-            keys, FigureCategory.stock_idp_id()
+            keys, Figure.FIGURE_CATEGORY_TYPES.IDPS
         )
 
 
 class TotalNDFigureByEntryLoader(DataLoader):
     def batch_load_fn(self, keys):
         return batch_load_fn_by_category(
-            keys, FigureCategory.flow_new_displacement_id()
+            keys, Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         )

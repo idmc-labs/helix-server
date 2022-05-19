@@ -4,7 +4,7 @@ from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.entry.enums import RoleGrapheneEnum
+from apps.entry.enums import RoleGrapheneEnum, FigureTermsEnum, FigureCategoryTypeEnum
 from apps.entry.schema import FigureListType
 from apps.report.models import (
     Report,
@@ -132,6 +132,8 @@ class ReportType(DjangoObjectType):
         ReportGenerationListType,
     )
     generated_from = graphene.Field(ReportTypeEnum)
+    filter_figure_categories = graphene.List(graphene.NonNull(FigureCategoryTypeEnum))
+    filter_figure_terms = graphene.List(graphene.NonNull(FigureTermsEnum))
 
 
 class ReportListType(CustomDjangoListObjectType):

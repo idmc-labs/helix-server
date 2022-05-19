@@ -18,8 +18,6 @@ from apps.entry.models import (
     EntryReviewer,
     OSMName,
     Figure,
-    FigureCategory,
-    FigureTerm,
 )
 from utils.factories import (
     EventFactory,
@@ -27,7 +25,6 @@ from utils.factories import (
     OrganizationFactory,
     CountryFactory,
     FigureFactory,
-    FigureCategoryFactory
 )
 from utils.tests import HelixTestCase, create_user_with_role
 
@@ -184,17 +181,15 @@ class TestEntrySerializer(HelixTestCase):
         source3 = copy(source1)
         source3['lon'] = 45.9
         source3['uuid'] = str(uuid4())
-
-        FigureCategory._invalidate_category_ids_cache()
-        flow = FigureCategory.flow_new_displacement_id()
+        flow = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         figures = [{
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
-            "category": flow.id,
+            "category": flow.value,
             "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
-            "term": FigureTerm.objects.first().id,
+            "term": Figure.FIGURE_TERMS.EVACUATED.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
@@ -237,17 +232,20 @@ class TestEntrySerializer(HelixTestCase):
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
             "id": figure.id,
             "geo_locations": [new_source, old_source],
+            "term": Figure.FIGURE_TERMS.EVACUATED.value,
+            "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
         }, {
             "uuid": "f1b42e79-da44-4032-8cb6-0dd4b7b97b57",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
             "unit": Figure.UNIT.PERSON.value,
-            "term": FigureTerm.objects.first().id,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
             "country": str(self.country.id),
             "geo_locations": [new_source2],
+            "term": Figure.FIGURE_TERMS.EVACUATED.value,
+            "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
         }]
         self.data['figures'] = figures
         serializer = EntryUpdateSerializer(instance=entry,
@@ -290,9 +288,8 @@ class TestEntrySerializer(HelixTestCase):
         c2 = CountryFactory.create()
         ref = timezone.now()
 
-        FigureCategory._invalidate_category_ids_cache()
-        flow = FigureCategory.flow_new_displacement_id()
-        stock = FigureCategory.stock_idp_id()
+        flow = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
+        stock = Figure.FIGURE_CATEGORY_TYPES.IDPS
 
         event = EventFactory.create(start_date=ref, end_date=ref + timedelta(days=1))
         event.countries.set([c1])
@@ -392,15 +389,15 @@ class TestEntrySerializer(HelixTestCase):
             accuracy=OSMName.OSM_ACCURACY.ADM0.value,
             identifier=OSMName.IDENTIFIER.ORIGIN.value,
         )
-        flow = FigureCategory.flow_new_displacement_id()
+        flow = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         figures = [{
             "uuid": str(uuid4()),
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
-            "category": flow.id,
+            "category": flow.value,
             "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
-            "term": FigureTerm.objects.first().id,
+            "term": Figure.FIGURE_TERMS.EVACUATED.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
@@ -421,10 +418,10 @@ class TestEntrySerializer(HelixTestCase):
             "uuid": str(uuid4()),
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 10,
-            "category": flow.id,
+            "category": flow.value,
             "country": str(self.country.id),
             "unit": Figure.UNIT.PERSON.value,
-            "term": FigureTerm.objects.first().id,
+            "term": Figure.FIGURE_TERMS.EVACUATED.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-09-09",
             "include_idu": False,
@@ -460,7 +457,7 @@ class TestFigureSerializer(HelixTestCase):
             created_by=self.creator,
             event=self.event
         )
-        self.fig_cat = FigureCategoryFactory.create()
+        self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.country = country1
         source1 = dict(
             uuid=str(uuid4()),
@@ -482,8 +479,8 @@ class TestFigureSerializer(HelixTestCase):
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
             "reported": 100,
             "unit": Figure.UNIT.PERSON.value,
-            "term": FigureTerm.objects.first().id,
-            "category": self.fig_cat.id,
+            "term": Figure.FIGURE_TERMS.EVACUATED.value,
+            "category": self.fig_cat.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-10-10",
             "include_idu": True,
@@ -496,10 +493,8 @@ class TestFigureSerializer(HelixTestCase):
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
 
     def test_displacement_occur_only_allowed_for_specific_terms(self):
-        term = FigureTerm.objects.first()
-        term.displacement_occur = True
-        term.save()
-        self.data['term'] = term.id
+        term = Figure.FIGURE_TERMS.DISPLACED.value
+        self.data['term'] = term
         self.data['displacement_occurred'] = 0
 
         serializer = FigureSerializer(data=self.data,
@@ -509,11 +504,7 @@ class TestFigureSerializer(HelixTestCase):
             serializer.data['displacement_occurred'],
             self.data['displacement_occurred']
         )
-
-        term.displacement_occur = False
-        term.save()
-        term.refresh_from_db()
-
+        self.data['displacement_occurred'] = None
         serializer = FigureSerializer(data=self.data,
                                       context={'request': self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)

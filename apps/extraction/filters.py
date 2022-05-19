@@ -14,6 +14,7 @@ from apps.report.models import Report
 from utils.filters import StringListFilter, IDListFilter
 from apps.event.constants import OSV
 from apps.common.enums import GENDER_TYPE
+from apps.entry.constants import STOCK, FLOW
 
 RURAL = FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE.RURAL.name
 URBAN = FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE.URBAN.name
@@ -30,8 +31,8 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_event_crises = IDListFilter(method='filter_crises')
     filter_entry_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
-    filter_figure_categories = IDListFilter(method='filter_filter_figure_categories')
     filter_figure_category_types = StringListFilter(method='filter_filter_figure_category_types')
+    filter_figure_categories = StringListFilter(method='filter_filter_figure_categories')
     filter_figure_start_after = df.DateFilter(method='filter_time_frame_after')
     filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
@@ -117,14 +118,13 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     def filter_by_figure_terms(self, qs, name, value):
         if value:
-            return qs.filter(figures__term__in=value).distinct()
-        return qs
+            if isinstance(value[0], int):
+                # coming from saved query
+                return qs.filter(figures__in=Figure.objects.filter(term__in=value))
 
-    def filter_filter_figure_categories(self, qs, name, value):
-        if value:
-            return qs.filter(
-                id__in=Figure.objects.filter(category__in=value).values('entry')
-            )
+            return qs.filter(figures__term__in=[
+                Figure.FIGURE_TERMS.get(item).value for item in value
+            ]).distinct()
         return qs
 
     def filter_filter_figure_category_types(self, qs, name, value):
@@ -132,8 +132,23 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs
         # NOTE: category type is saved as 'Stock' and 'Flow' on database
         # so, using capitalize on enum values 'STOCK' and 'FLOW'
-        figure_category_types = [category_type.capitalize() for category_type in value]
-        return qs.filter(figures__category__type__in=figure_category_types).distinct()
+        category_enums_to_filter = []
+        for category_type in value:
+            if category_type == STOCK:
+                category_enums_to_filter = category_enums_to_filter + Figure.stock_list()
+            if category_type == FLOW:
+                category_enums_to_filter = category_enums_to_filter + Figure.flow_list()
+        return qs.filter(figures__category__in=category_enums_to_filter).distinct()
+
+    def filter_filter_figure_categories(self, qs, name, value):
+        if value:
+            if isinstance(value[0], int):
+                # coming from saved query
+                return qs.filter(figures__category__in=value)
+            return qs.filter(figures__category__in=[
+                Figure.FIGURE_CATEGORY_TYPES.get(item).value for item in value
+            ])
+        return qs
 
     def filter_time_frame_after(self, qs, name, value):
         if value:
@@ -302,8 +317,8 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_event_crises = IDListFilter(method='filter_crises')
     filter_entry_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
-    filter_figure_categories = IDListFilter(method='filter_filter_figure_categories')
-    filter_figure_category_types = StringListFilter(field_name='category__type', lookup_expr='in')
+    filter_figure_category_types = StringListFilter(method='filter_filter_figure_category_types')
+    filter_figure_categories = StringListFilter(method='filter_filter_figure_categories')
     filter_figure_start_after = df.DateFilter(method='filter_time_frame_after')
     filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
@@ -395,18 +410,28 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             return qs.filter(entry__publishers__in=value).distinct()
         return qs
 
-    def filter_filter_figure_categories(self, qs, name, value):
-        if value:
-            return qs.filter(category__in=value).distinct()
-        return qs
-
     def filter_filter_figure_category_types(self, qs, name, value):
         if not value:
             return qs
         # NOTE: category type is saved as 'Stock' and 'Flow' on database
         # so, using capitalize on enum values 'STOCK' and 'FLOW'
-        figure_category_types = [category_type.capitalize() for category_type in value]
-        return qs.filter(category__type__in=figure_category_types).distinct()
+        category_enums_to_filter = []
+        for category_type in value:
+            if category_type == STOCK:
+                category_enums_to_filter = category_enums_to_filter + Figure.stock_list()
+            if category_type == FLOW:
+                category_enums_to_filter = category_enums_to_filter + Figure.flow_list()
+        return qs.filter(category__in=category_enums_to_filter).distinct()
+
+    def filter_filter_figure_categories(self, qs, name, value):
+        if value:
+            if isinstance(value[0], int):
+                # coming from saved query
+                return qs.filter(category__in=value)
+            return qs.filter(category__in=[
+                Figure.FIGURE_CATEGORY_TYPES.get(item).value for item in value
+            ])
+        return qs
 
     def filter_filter_figure_roles(self, qs, name, value):
         if value:
@@ -464,7 +489,12 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
 
     def filter_by_figure_terms(self, qs, name, value):
         if value:
-            return qs.filter(term__in=value).distinct()
+            if isinstance(value[0], int):
+                # coming from saved query
+                return qs.filter(term__in=value)
+            return qs.filter(term__in=[
+                Figure.FIGURE_TERMS.get(item).value for item in value
+            ])
         return qs
 
     def filter_filter_event_disaster_categories(self, qs, name, value):

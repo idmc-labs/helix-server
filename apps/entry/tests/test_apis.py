@@ -5,15 +5,12 @@ from uuid import uuid4
 from apps.crisis.models import Crisis
 from apps.entry.models import (
     Figure,
-    FigureTerm,
     OSMName,
     Entry,
     EntryReviewer,
     CANNOT_UPDATE_MESSAGE,
-    FigureCategory,
 )
 from apps.entry.models import DisaggregatedAgeCategory
-from apps.entry.constants import FLOW
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     EventFactory,
@@ -21,7 +18,6 @@ from utils.factories import (
     FigureFactory,
     OrganizationFactory,
     CountryFactory,
-    FigureCategoryFactory,
     TagFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
@@ -48,41 +44,28 @@ class TestEntryQuery(HelixGraphQLTestCase):
         self.force_login(guest)
 
     def test_figure_count_filtered_resolvers(self):
-        FigureCategory._invalidate_category_ids_cache()
-        self.stock_fig_cat = FigureCategory.stock_idp_id()
-        self.stock_fig_cat_id = str(self.stock_fig_cat.id)
-        self.random_fig_cat2 = FigureCategoryFactory.create(
-            type=FLOW,
-            name='lool',
-        )
-        self.random_fig_cat_id2 = str(self.random_fig_cat2.id)
-        self.flow_fig_cat3 = FigureCategory.flow_new_displacement_id()
-        self.flow_fig_cat_id3 = str(self.flow_fig_cat3.id)
+        self.stock_fig_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS
+        self.flow_fig_cat2 = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         # XXX: only conflict figures are considered in stock (as of now)
         self.entry.event.event_type = Crisis.CRISIS_TYPE.CONFLICT
         self.entry.event.save()
         figure1 = FigureFactory.create(entry=self.entry,
-                                       category=self.stock_fig_cat,
+                                       category=self.stock_fig_cat.value,
                                        reported=101,
                                        role=Figure.ROLE.RECOMMENDED,
                                        unit=Figure.UNIT.PERSON)
         FigureFactory.create(entry=self.entry,
-                             category=self.stock_fig_cat,
+                             category=self.stock_fig_cat.value,
                              reported=102,
                              role=Figure.ROLE.TRIANGULATION,
                              unit=Figure.UNIT.PERSON)
         figure3 = FigureFactory.create(entry=self.entry,
-                                       category=self.stock_fig_cat,
+                                       category=self.stock_fig_cat.value,
                                        reported=103,
                                        role=Figure.ROLE.RECOMMENDED,
                                        unit=Figure.UNIT.PERSON)
-        FigureFactory.create(entry=self.entry,
-                             category=self.random_fig_cat2,
-                             reported=50,
-                             role=Figure.ROLE.RECOMMENDED,
-                             unit=Figure.UNIT.PERSON)
         figure5 = FigureFactory.create(entry=self.entry,
-                                       category=self.flow_fig_cat3,
+                                       category=self.flow_fig_cat2.value,
                                        reported=70,
                                        role=Figure.ROLE.RECOMMENDED,
                                        unit=Figure.UNIT.PERSON)
@@ -113,8 +96,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         DisaggregatedAgeCategory.objects.create(name='three')
         self.country = CountryFactory.create(iso2='lo', iso3='lol')
         self.country_id = str(self.country.id)
-        self.fig_cat = FigureCategoryFactory.create()
-        self.fig_cat_id = str(self.fig_cat.id)
+        self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.event = EventFactory.create()
         self.event.countries.add(self.country)
@@ -187,8 +169,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
-                "term": str(FigureTerm.objects.first().id),
-                "category": self.fig_cat_id,
+                "term": Figure.FIGURE_TERMS.EVACUATED.name,
+                "category": self.fig_cat.name,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
                 "includeIdu": True,
@@ -247,8 +229,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
-                "term": str(FigureTerm.objects.first().id),
-                "category": self.fig_cat_id,
+                "term": Figure.FIGURE_TERMS.EVACUATED.name,
+                "category": self.fig_cat.name,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
                 "includeIdu": True,
@@ -262,8 +244,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "reported": -1,  # this cannot be negative
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "unit": Figure.UNIT.PERSON.name,
-                "term": str(FigureTerm.objects.first().id),
-                "category": self.fig_cat_id,
+                "term": Figure.FIGURE_TERMS.EVACUATED.name,
+                "category": self.fig_cat.name,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
                 "includeIdu": True,
@@ -328,8 +310,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
                 "householdSize": 1,
-                "term": str(FigureTerm.objects.first().id),
-                "category": self.fig_cat_id,
+                "term": Figure.FIGURE_TERMS.EVACUATED.name,
+                "category": self.fig_cat.name,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
                 "includeIdu": True,
@@ -372,8 +354,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.HOUSEHOLD.name,  # missing household_size
-                "term": str(FigureTerm.objects.first().id),
-                "category": self.fig_cat_id,
+                "term": Figure.FIGURE_TERMS.EVACUATED.name,
+                "category": self.fig_cat.name,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
                 "includeIdu": True,
@@ -398,9 +380,9 @@ class TestEntryUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.country = CountryFactory.create()
         self.country_id = str(self.country.id)
-        self.fig_cat = FigureCategoryFactory.create()
-        self.fig_cat_id = str(self.fig_cat.id)
-        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT)
+        self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.event = EventFactory.create(name='myevent')
         self.event.countries.add(self.country)
         DisaggregatedAgeCategory.objects.create(name='one')
@@ -442,7 +424,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         }
 
     def test_valid_update_entry(self):
-        self.force_login(self.editor)
+        self.force_login(self.admin)
         response = self.query(
             self.mutation,
             input_data=self.input
@@ -453,8 +435,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.assertTrue(content['data']['updateEntry']['ok'], content)
 
     def test_valid_entry_update_by_admins(self):
-        admin = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.force_login(admin)
+        self.force_login(self.admin)
         response = self.query(
             self.mutation,
             input_data=self.input
@@ -496,8 +477,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
-                "term": str(FigureTerm.objects.first().id),
-                "category": self.fig_cat_id,
+                "term": Figure.FIGURE_TERMS.EVACUATED.name,
+                "category": self.fig_cat.name,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-09-09",
                 "includeIdu": False,
@@ -528,8 +509,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.PERSON.name,
-                "term": str(FigureTerm.objects.first().id),
-                "category": self.fig_cat_id,
+                "term": Figure.FIGURE_TERMS.EVACUATED.name,
+                "category": self.fig_cat.name,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-09-09",
                 "includeIdu": False,
@@ -555,8 +536,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
             },
         ]
         old_figures_count = self.entry.figures.count()
-
-        self.force_login(self.editor)
+        self.force_login(self.admin)
         self.input['figures'] = figures
         response = self.query(
             self.mutation,
@@ -578,8 +558,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
                 "reported": 10,
                 "unit": Figure.UNIT.HOUSEHOLD.name,  # missing household_size
-                "term": str(FigureTerm.objects.first().id),
-                "category": self.fig_cat_id,
+                "term": Figure.FIGURE_TERMS.EVACUATED.name,
+                "category": self.fig_cat.name,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
                 "includeIdu": True,
@@ -589,7 +569,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.input.update({
             'figures': figures
         })
-        self.force_login(self.editor)
+        admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.force_login(admin)
         response = self.query(
             self.mutation,
             input_data=self.input
