@@ -1,5 +1,5 @@
-STOCK = 'Stock'
-FLOW = 'Flow'
+STOCK = 'STOCK'
+FLOW = 'FLOW'
 
 # FIGURE TAGS
 FIGURE_TAGS = [
