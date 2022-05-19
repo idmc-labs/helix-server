@@ -144,9 +144,10 @@ class EntryExtractionFilterSet(df.FilterSet):
         if value:
             if isinstance(value[0], int):
                 # coming from saved query
-                return qs.filter(figures__in=Figure.objects.filter(category__in=value))
-            else:
-                return qs.filter(figures__category__in=value).distinct()
+                return qs.filter(figures__category__in=value)
+            return qs.filter(figures__category__in=[
+                Figure.FIGURE_CATEGORY_TYPES.get(item).value for item in value
+            ])
         return qs
 
     def filter_time_frame_after(self, qs, name, value):
@@ -423,9 +424,14 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         return qs.filter(category__in=category_enums_to_filter).distinct()
 
     def filter_filter_figure_categories(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(figures__category__in=value).distinct()
+        if value:
+            if isinstance(value[0], int):
+                # coming from saved query
+                return qs.filter(category__in=value)
+            return qs.filter(category__in=[
+                Figure.FIGURE_CATEGORY_TYPES.get(item).value for item in value
+            ])
+        return qs
 
     def filter_filter_figure_roles(self, qs, name, value):
         if value:
