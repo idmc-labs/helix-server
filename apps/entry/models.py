@@ -979,10 +979,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                                         blank=True, related_name='published_entries')
     publish_date = models.DateField(verbose_name=_('Published Date'))
 
-    # TODO: Remove this field
-    # event = models.ForeignKey('event.Event', verbose_name=_('Event'),
-    #                           related_name='entries', on_delete=models.CASCADE)
-
     idmc_analysis = models.TextField(verbose_name=_('Trends and patterns of displacement to be highlighted'),
                                      blank=True, null=True)
     is_confidential = models.BooleanField(
