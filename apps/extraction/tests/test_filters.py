@@ -15,73 +15,90 @@ from apps.entry.models import Figure
 
 
 class TestExtractionFilter(HelixTestCase):
-    def setUp(self) -> None:
-        self.reg1 = CountryRegionFactory.create()
-        self.reg2 = CountryRegionFactory.create()
-        self.reg3 = CountryRegionFactory.create()
-        self.fig_cat1 = Figure.FIGURE_CATEGORY_TYPES.IDPS
-        self.fig_cat2 = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
-        self.fig_cat3 = Figure.FIGURE_CATEGORY_TYPES.IDPS
-        self.country1reg1 = CountryFactory.create(region=self.reg1)
-        self.country2reg2 = CountryFactory.create(region=self.reg2)
-        self.country3reg3 = CountryFactory.create(region=self.reg3)
-        self.crisis1 = CrisisFactory.create()
-        self.crisis1.countries.set([self.country1reg1, self.country2reg2])
-        self.crisis2 = CrisisFactory.create()
-        self.crisis2.countries.set([self.country3reg3, self.country2reg2])
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.reg1 = CountryRegionFactory.create()
+        cls.reg2 = CountryRegionFactory.create()
+        cls.reg3 = CountryRegionFactory.create()
+        cls.fig_cat1 = Figure.FIGURE_CATEGORY_TYPES.IDPS
+        cls.fig_cat2 = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
+        cls.fig_cat3 = Figure.FIGURE_CATEGORY_TYPES.IDPS
+        cls.country1reg1 = CountryFactory.create(region=cls.reg1)
+        cls.country2reg2 = CountryFactory.create(region=cls.reg2)
+        cls.country3reg3 = CountryFactory.create(region=cls.reg3)
+        cls.crisis1 = CrisisFactory.create()
+        cls.crisis1.countries.set([cls.country1reg1, cls.country2reg2])
+        cls.crisis2 = CrisisFactory.create()
+        cls.crisis2.countries.set([cls.country3reg3, cls.country2reg2])
 
-        self.event1crisis1 = EventFactory.create(crisis=self.crisis1,
-                                                 event_type=Crisis.CRISIS_TYPE.CONFLICT)
-        self.event1crisis1.countries.set([self.country2reg2])
-        self.event2crisis1 = EventFactory.create(crisis=self.crisis1,
-                                                 event_type=Crisis.CRISIS_TYPE.DISASTER)
-        self.event2crisis1.countries.set([self.country1reg1])
-        self.event3crisis2 = EventFactory.create(crisis=self.crisis2,
-                                                 event_type=Crisis.CRISIS_TYPE.CONFLICT)
-        self.event3crisis2.countries.set([self.country2reg2, self.country3reg3])
+        cls.event1crisis1 = EventFactory.create(
+            crisis=cls.crisis1,
+            event_type=Crisis.CRISIS_TYPE.CONFLICT
+        )
+        cls.event1crisis1.countries.set([cls.country2reg2])
+        cls.event2crisis1 = EventFactory.create(
+            crisis=cls.crisis1,
+            event_type=Crisis.CRISIS_TYPE.DISASTER
+        )
+        cls.event2crisis1.countries.set([cls.country1reg1])
+        cls.event3crisis2 = EventFactory.create(
+            crisis=cls.crisis2,
+            event_type=Crisis.CRISIS_TYPE.CONFLICT
+        )
+        cls.event3crisis2.countries.set([cls.country2reg2, cls.country3reg3])
 
-        self.tag1 = TagFactory.create()
-        self.tag2 = TagFactory.create()
-        self.tag3 = TagFactory.create()
+        cls.tag1 = TagFactory.create()
+        cls.tag2 = TagFactory.create()
+        cls.tag3 = TagFactory.create()
 
-        self.org1 = OrganizationFactory.create()
-        self.org2 = OrganizationFactory.create()
-        self.org3 = OrganizationFactory.create()
+        cls.org1 = OrganizationFactory.create()
+        cls.org2 = OrganizationFactory.create()
+        cls.org3 = OrganizationFactory.create()
 
-        self.entry1ev1 = EntryFactory.create(article_title="one")
-        FigureFactory.create(entry=self.entry1ev1,
-                             country=self.country2reg2,
+        cls.entry1ev1 = EntryFactory.create(article_title="one")
+        FigureFactory.create(entry=cls.entry1ev1,
+                             country=cls.country2reg2,
                              disaggregation_displacement_rural=100,
-                             event=self.event1crisis1,)
-        self.entry2ev1 = EntryFactory.create(article_title="two")
-        FigureFactory.create(entry=self.entry2ev1,
-                             country=self.country2reg2,
+                             event=cls.event1crisis1,)
+        cls.entry2ev1 = EntryFactory.create(article_title="two")
+        FigureFactory.create(entry=cls.entry2ev1,
+                             country=cls.country2reg2,
                              disaggregation_displacement_urban=100,
-                             event=self.event1crisis1,)
-        self.entry3ev2 = EntryFactory.create(article_title="three")
-        FigureFactory.create(entry=self.entry3ev2,
-                             country=self.country3reg3,
-                             event=self.event2crisis1,)
-        self.mid_sep = '2020-09-15'
-        self.end_sep = '2020-09-29'
-        self.mid_oct = '2020-10-15'
-        self.end_oct = '2020-10-29'
-        self.mid_nov = '2020-11-16'
-        self.end_nov = '2020-11-29'
-        self.fig1cat1entry1 = FigureFactory.create(entry=self.entry1ev1, category=self.fig_cat1,
-                                                   start_date=self.mid_oct, end_date=self.end_oct, event=None)
-        self.fig2cat2entry1 = FigureFactory.create(entry=self.entry1ev1, category=self.fig_cat2,
-                                                   start_date=self.end_oct, end_date=self.end_nov, event=None)
-        self.fig3cat2entry2 = FigureFactory.create(entry=self.entry2ev1, category=self.fig_cat2,
-                                                   start_date=self.mid_sep, end_date=self.end_oct, event=None)
-        self.fig4cat1entry3 = FigureFactory.create(entry=self.entry3ev2, category=self.fig_cat1,
-                                                   start_date=self.mid_nov, end_date=None, event=None)
-        self.fig5cat3entry3 = FigureFactory.create(entry=self.entry3ev2, category=self.fig_cat3,
-                                                   start_date=self.mid_nov, end_date=self.end_nov, event=None)
+                             event=cls.event1crisis1,)
+        cls.entry3ev2 = EntryFactory.create(article_title="three")
+        FigureFactory.create(entry=cls.entry3ev2,
+                             country=cls.country3reg3,
+                             event=cls.event2crisis1,)
+        cls.mid_sep = '2020-09-15'
+        cls.end_sep = '2020-09-29'
+        cls.mid_oct = '2020-10-15'
+        cls.end_oct = '2020-10-29'
+        cls.mid_nov = '2020-11-16'
+        cls.end_nov = '2020-11-29'
+        cls.fig1cat1entry1 = FigureFactory.create(
+            entry=cls.entry1ev1, category=cls.fig_cat1,
+            start_date=cls.mid_oct, end_date=cls.end_oct, event=None
+        )
+        cls.fig2cat2entry1 = FigureFactory.create(
+            entry=cls.entry1ev1, category=cls.fig_cat2,
+            start_date=cls.end_oct, end_date=cls.end_nov, event=None
+        )
+        cls.fig3cat2entry2 = FigureFactory.create(
+            entry=cls.entry2ev1, category=cls.fig_cat2,
+            start_date=cls.mid_sep, end_date=cls.end_oct, event=None
+        )
+        cls.fig4cat1entry3 = FigureFactory.create(
+            entry=cls.entry3ev2, category=cls.fig_cat3,
+            start_date=cls.mid_nov, end_date=None, event=None
+        )
+        cls.fig5cat3entry3 = FigureFactory.create(
+            entry=cls.entry3ev2, category=cls.fig_cat3,
+            start_date=cls.mid_nov, end_date=cls.end_nov, event=None
+        )
 
-        self.fig1cat1entry1.tags.set([self.tag1])
-        self.fig2cat2entry1.tags.set([self.tag2])
-        self.fig3cat2entry2.tags.set([self.tag3])
+        cls.fig1cat1entry1.tags.set([cls.tag1])
+        cls.fig2cat2entry1.tags.set([cls.tag2])
+        cls.fig3cat2entry2.tags.set([cls.tag3])
 
     def test_filter_by_region(self):
         regions = [self.reg3.id]
@@ -209,9 +226,9 @@ class TestExtractionFilter(HelixTestCase):
             filter_figure_category_types=['FLOW']
         )
         fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1, self.entry3ev2})
+        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
         data = dict(
             filter_figure_category_types=['STOCK']
         )
         fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1, self.entry3ev2})
+        self.assertEqual(set(fqs), {self.entry1ev1, self.entry3ev2})
