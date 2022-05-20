@@ -1443,7 +1443,7 @@ type FigureType {
   caveats: String
   tags: [FigureTagType!]!
   sourceExcerpt: String
-  event: EventType
+  event: EventType!
   figureReviews: [ReviewType!]!
   reportSet: [ReportType!]!
 }
@@ -1716,7 +1716,7 @@ input NestedFigureCreateInputType {
   caveats: String
   sourceExcerpt: String
   country: ID
-  event: ID
+  event: ID!
   tags: [ID!]
 }
 
