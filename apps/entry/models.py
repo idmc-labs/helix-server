@@ -465,7 +465,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                                       blank=True, null=True)
     event = models.ForeignKey(
         'event.Event', verbose_name=_('Event'),
-        related_name='figures', on_delete=models.CASCADE, null=True, blank=True
+        related_name='figures', on_delete=models.CASCADE
     )
 
     class Meta:

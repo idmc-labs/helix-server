@@ -75,25 +75,26 @@ class TestExtractionFilter(HelixTestCase):
         cls.end_oct = '2020-10-29'
         cls.mid_nov = '2020-11-16'
         cls.end_nov = '2020-11-29'
+        cls.random_event = EventFactory.create(crisis=None)
         cls.fig1cat1entry1 = FigureFactory.create(
             entry=cls.entry1ev1, category=cls.fig_cat1,
-            start_date=cls.mid_oct, end_date=cls.end_oct, event=None
+            start_date=cls.mid_oct, end_date=cls.end_oct, event=cls.random_event,
         )
         cls.fig2cat2entry1 = FigureFactory.create(
             entry=cls.entry1ev1, category=cls.fig_cat2,
-            start_date=cls.end_oct, end_date=cls.end_nov, event=None
+            start_date=cls.end_oct, end_date=cls.end_nov, event=cls.random_event,
         )
         cls.fig3cat2entry2 = FigureFactory.create(
             entry=cls.entry2ev1, category=cls.fig_cat2,
-            start_date=cls.mid_sep, end_date=cls.end_oct, event=None
+            start_date=cls.mid_sep, end_date=cls.end_oct, event=cls.random_event,
         )
         cls.fig4cat1entry3 = FigureFactory.create(
             entry=cls.entry3ev2, category=cls.fig_cat3,
-            start_date=cls.mid_nov, end_date=None, event=None
+            start_date=cls.mid_nov, end_date=None, event=cls.random_event,
         )
         cls.fig5cat3entry3 = FigureFactory.create(
             entry=cls.entry3ev2, category=cls.fig_cat3,
-            start_date=cls.mid_nov, end_date=cls.end_nov, event=None
+            start_date=cls.mid_nov, end_date=cls.end_nov, event=cls.random_event,
         )
 
         cls.fig1cat1entry1.tags.set([cls.tag1])
@@ -177,16 +178,31 @@ class TestExtractionFilter(HelixTestCase):
 
     def test_filter_by_time_frame(self):
         Figure.objects.all().delete()
-        self.fig1cat1entry1 = FigureFactory.create(entry=self.entry1ev1, category=self.fig_cat1,
-                                                   start_date=self.mid_oct, end_date=self.end_oct)
-        self.fig2cat2entry1 = FigureFactory.create(entry=self.entry1ev1, category=self.fig_cat2,
-                                                   start_date=self.end_oct, end_date=self.end_nov)
-        self.fig3cat2entry2 = FigureFactory.create(entry=self.entry2ev1, category=self.fig_cat2,
-                                                   start_date=self.mid_sep, end_date=self.end_oct)
-        self.fig4cat1entry3 = FigureFactory.create(entry=self.entry3ev2, category=self.fig_cat1,
-                                                   start_date=self.mid_nov, end_date=None)
-        self.fig5cat3entry3 = FigureFactory.create(entry=self.entry3ev2, category=self.fig_cat3,
-                                                   start_date=self.mid_nov, end_date=self.end_nov)
+        self.fig1cat1entry1 = FigureFactory.create(
+            entry=self.entry1ev1, category=self.fig_cat1,
+            start_date=self.mid_oct, end_date=self.end_oct,
+            event=self.random_event,
+        )
+        self.fig2cat2entry1 = FigureFactory.create(
+            entry=self.entry1ev1, category=self.fig_cat2,
+            start_date=self.end_oct, end_date=self.end_nov,
+            event=self.random_event,
+        )
+        self.fig3cat2entry2 = FigureFactory.create(
+            entry=self.entry2ev1, category=self.fig_cat2,
+            start_date=self.mid_sep, end_date=self.end_oct,
+            event=self.random_event,
+        )
+        self.fig4cat1entry3 = FigureFactory.create(
+            entry=self.entry3ev2, category=self.fig_cat1,
+            start_date=self.mid_nov, end_date=None,
+            event=self.random_event,
+        )
+        self.fig5cat3entry3 = FigureFactory.create(
+            entry=self.entry3ev2, category=self.fig_cat3,
+            start_date=self.mid_nov, end_date=self.end_nov,
+            event=self.random_event,
+        )
         data = dict(
             filter_figure_start_after=self.mid_oct,
             figure_end_befor=self.mid_nov,

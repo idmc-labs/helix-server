@@ -105,6 +105,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
         DisaggregatedAgeCategory.objects.create(name='three')
         self.country = CountryFactory.create(iso2='lo', iso3='lol')
         self.country_id = str(self.country.id)
+        self.event = EventFactory.create()
+        self.event.countries.add(self.country)
         self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.mutation = """
@@ -185,7 +187,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "tags": [self.tag1.id, self.tag2.id, self.tag3.id],
                 'calculationLogic': 'test logics',
                 'caveats': 'caveats',
-                'sourceExcerpt': 'source excerpt'
+                'sourceExcerpt': 'source excerpt',
+                'event': self.event.id,
             }
         ]
 
@@ -242,6 +245,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
                 "geoLocations": [source1],
+                "event": self.event.id,
             },
             # invalid now
             {
@@ -257,6 +261,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
                 "geoLocations": [source2],
+                "event": self.event.id,
             }
         ]
         self.input.update({
@@ -336,7 +341,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
                         "sex": "FEMALE",
                         "value": 6
                     }
-                ]
+                ],
+                "event": self.event.id,
             }
         ]
         self.input.update({
@@ -366,6 +372,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "startDate": "2020-10-10",
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
+                "event": self.event.id,
             }
         ]
         self.input.update({

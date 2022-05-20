@@ -33,6 +33,8 @@ class TestEntrySerializer(HelixTestCase):
         r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.factory = RequestFactory()
         self.country = CountryFactory.create(country_code=123, iso2='ak')
+        self.event = EventFactory.create()
+        self.event.countries.add(self.country)
         self.publisher = OrganizationFactory.create()
         self.data = {
             "url": "https://yoko-onos-blog.com",
@@ -189,6 +191,7 @@ class TestEntrySerializer(HelixTestCase):
             "start_date": "2020-09-09",
             "include_idu": False,
             "geo_locations": [source1, source2, source3],
+            "event": self.event.id,
         }]
         self.data['figures'] = figures
 
@@ -229,6 +232,7 @@ class TestEntrySerializer(HelixTestCase):
             "geo_locations": [new_source, old_source],
             "term": Figure.FIGURE_TERMS.EVACUATED.value,
             "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+            "event": self.event.id,
         }, {
             "uuid": "f1b42e79-da44-4032-8cb6-0dd4b7b97b57",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
@@ -241,6 +245,7 @@ class TestEntrySerializer(HelixTestCase):
             "geo_locations": [new_source2],
             "term": Figure.FIGURE_TERMS.EVACUATED.value,
             "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+            "event": self.event.id,
         }]
         self.data['figures'] = figures
         serializer = EntryUpdateSerializer(instance=entry,
@@ -394,6 +399,7 @@ class TestEntrySerializer(HelixTestCase):
             "start_date": "2020-09-09",
             "include_idu": False,
             "geo_locations": [source1],
+            "event": self.event.id
         }]
         self.data['figures'] = figures
 
@@ -478,7 +484,8 @@ class TestFigureSerializer(HelixTestCase):
             "excerpt_idu": "excerpt abc",
             "country": country1.id,
             "geo_locations": [source1],
-            "tags": []
+            "tags": [],
+            "event": self.event.id,
         }
         self.request = self.factory.get('/graphql')
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
@@ -516,6 +523,7 @@ class TestFigureSerializer(HelixTestCase):
                 "accuracy": OSMName.OSM_ACCURACY.ADM0.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                 "bounding_box": [1.2],
+                "event": self.event.id,
             },
             {
                 "country": "Nepal",
@@ -530,6 +538,7 @@ class TestFigureSerializer(HelixTestCase):
                 "accuracy": OSMName.OSM_ACCURACY.ADM0.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                 "bounding_box": [1.2],
+                "event": self.event.id,
             },
         ]
         serializer = FigureSerializer(data=self.data,
