@@ -8,6 +8,7 @@ from utils.factories import (
     ReportCommentFactory,
     EntryFactory,
     FigureFactory,
+    EventFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -402,6 +403,7 @@ class TestReportFilter(HelixGraphQLTestCase):
         self.editor = create_user_with_role(USER_ROLE.ADMIN.name)
         self.category = Figure.FIGURE_CATEGORY_TYPES.IDPS
         self.force_login(self.editor)
+        self.event = EventFactory.create()
 
     def test_report_should_list_entries_between_figure_start_date_and_figure_end_date(self):
         # Create entries such that report end date is between figure start
@@ -412,7 +414,8 @@ class TestReportFilter(HelixGraphQLTestCase):
                 entry=entry,
                 start_date=timezone.now() + timezone.timedelta(days=-15),
                 end_date=timezone.now() + timezone.timedelta(days=20),
-                category=self.category
+                category=self.category,
+                event=self.event
             )
 
         # Creat reports where  reference point is not in renge
@@ -423,7 +426,8 @@ class TestReportFilter(HelixGraphQLTestCase):
                 entry=entry,
                 start_date=timezone.now() + timezone.timedelta(days=50),
                 end_date=timezone.now() + timezone.timedelta(days=50),
-                category=self.category
+                category=self.category,
+                event=self.event,
             )
 
         response = self.query(
@@ -461,7 +465,8 @@ class TestReportFilter(HelixGraphQLTestCase):
             FigureFactory.create(
                 entry=entry,
                 start_date=timezone.now() + timezone.timedelta(days=-15),
-                category=self.category
+                category=self.category,
+                event=self.event,
             )
 
         # Creat reports where reference point is not in renge
@@ -472,7 +477,8 @@ class TestReportFilter(HelixGraphQLTestCase):
                 entry=entry,
                 start_date=timezone.now() + timezone.timedelta(days=50),
                 end_date=timezone.now() + timezone.timedelta(days=50),
-                category=self.category
+                category=self.category,
+                event=self.event,
             )
 
         response = self.query(

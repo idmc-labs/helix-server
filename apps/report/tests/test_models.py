@@ -22,6 +22,9 @@ from utils.factories import (
 
 
 class TestReportModel(HelixTestCase):
+    def setUp(self) -> None:
+        self.event_conflict = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT)
+        self.event_disaster = EventFactory.create(event_type=Crisis.CRISIS_TYPE.DISASTER)
 
     def test_002_appropriate_figures_are_summed_up(self):
         c = CountryFactory.create()
@@ -34,7 +37,8 @@ class TestReportModel(HelixTestCase):
                                   unit=Figure.UNIT.PERSON,
                                   start_date=datetime.today(),
                                   end_date=datetime.today() + timedelta(days=3),
-                                  event=EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT))
+                                  event=self.event_conflict,
+                                  )
         f1.category = Figure.FIGURE_CATEGORY_TYPES.IDPS
         f1.save()
         f2 = FigureFactory.create(entry=entry,
@@ -43,7 +47,9 @@ class TestReportModel(HelixTestCase):
                                   reported=55,
                                   unit=Figure.UNIT.PERSON,
                                   start_date=f1.start_date + timedelta(days=10),
-                                  end_date=f1.start_date + timedelta(days=16))
+                                  end_date=f1.start_date + timedelta(days=16),
+                                  event=self.event_disaster,
+                                  )
         f2.category = Figure.FIGURE_CATEGORY_TYPES.IDPS
         f2.save()
         r = Report(filter_figure_start_after=f1.start_date,
@@ -55,7 +61,6 @@ class TestReportModel(HelixTestCase):
                          r.countries_report)
 
     def test_001_appropriate_typology_checks(self):
-        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT)
         figure = FigureFactory.create(
             reported=200,
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
@@ -63,7 +68,7 @@ class TestReportModel(HelixTestCase):
             country=CountryFactory.create(),
             disaggregation_conflict=100,
             disaggregation_conflict_political=100,
-            event=event,
+            event=self.event_conflict,
         )
         report = ReportFactory.create(generated=False)
         report.figures.add(figure)

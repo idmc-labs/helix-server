@@ -4,7 +4,7 @@ import json
 from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
-from apps.entry.models import Figure
+from apps.entry.models import Figure, EntryReviewer
 
 from utils.factories import (
     CountryFactory,
@@ -301,6 +301,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
             }
         '''
         guest = create_user_with_role(USER_ROLE.GUEST.name)
+        self.event = EventFactory.create()
         self.force_login(guest)
 
     def test_event_list_filter(self):
@@ -340,10 +341,9 @@ class TestEventListQuery(HelixGraphQLTestCase):
         r2 = create_user_with_role(
             USER_ROLE.MONITORING_EXPERT.name,
         )
-        entry = EntryFactory.create()
-        FigureFactory.create(event=event, entry=entry)
+        entry = EntryFactory.create(review_status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED)
+        FigureFactory.create(event=event, entry=entry,)
         entry.reviewers.set([r1, r2])
-
         response = self.query(
             self.q,
         )
@@ -351,11 +351,11 @@ class TestEventListQuery(HelixGraphQLTestCase):
         # check the counts
         data = content['data']
         self.assertEqual(
-            data['eventList']['results'][0]['reviewCount']['toBeReviewedCount'],
+            data['eventList']['results'][1]['reviewCount']['toBeReviewedCount'],
             1
         )
         self.assertEqual(
-            data['eventList']['results'][0]['reviewCount']['underReviewCount'],
+            data['eventList']['results'][1]['reviewCount']['underReviewCount'],
             None
         )
 
@@ -373,25 +373,24 @@ class TestEventListQuery(HelixGraphQLTestCase):
         # check the counts
         data = content['data']
         self.assertEqual(
-            data['eventList']['results'][0]['reviewCount']['toBeReviewedCount'],
+            data['eventList']['results'][1]['reviewCount']['toBeReviewedCount'],
             None
         )
         self.assertEqual(
-            data['eventList']['results'][0]['reviewCount']['underReviewCount'],
+            data['eventList']['results'][1]['reviewCount']['underReviewCount'],
             1
         )
         self.assertEqual(
-            data['eventList']['results'][0]['reviewCount']['signedOffCount'],
+            data['eventList']['results'][1]['reviewCount']['signedOffCount'],
             None
         )
         self.assertEqual(
-            data['eventList']['results'][0]['reviewCount']['reviewCompleteCount'],
+            data['eventList']['results'][1]['reviewCount']['reviewCompleteCount'],
             None
         )
 
     def test_event_has_mutiple_recommended_figures(self):
         # Create event without entries and figures
-        event = EventFactory.create()
         event1 = EventFactory.create()
         for i in range(3):
             entry1 = EntryFactory.create()
@@ -399,13 +398,13 @@ class TestEventListQuery(HelixGraphQLTestCase):
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
                 category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
-                event=event
+                event=self.event
             )
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
                 category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-                event=event
+                event=self.event
             )
 
         for i in range(3):
@@ -413,7 +412,8 @@ class TestEventListQuery(HelixGraphQLTestCase):
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.TRIANGULATION,
-                category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
+                category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
+                event=self.event,
             )
             FigureFactory.create(
                 entry=entry1,
@@ -456,12 +456,14 @@ class TestEventListQuery(HelixGraphQLTestCase):
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
-                category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
+                category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
+                event=self.event,
             )
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
-                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+                event=self.event,
             )
 
         variables = {
@@ -476,7 +478,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
         }
         response = self.query(self.q, variables=variables)
         content = response.json()
-        self.assertEqual(content['data']['eventList']['totalCount'], 0)
+        self.assertEqual(content['data']['eventList']['totalCount'], 1)
 
 
 class CloneEventTest(HelixGraphQLTestCase):
