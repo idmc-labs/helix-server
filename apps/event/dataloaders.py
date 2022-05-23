@@ -111,7 +111,7 @@ class EventEntryCountLoader(DataLoader):
     def batch_load_fn(self, keys):
         qs = Event.objects.filter(
             id__in=keys
-        ).annotate(entry_count=Count('figures__entries', distinct=True))
+        ).annotate(entry_count=Count('figures__entry', distinct=True))
 
         batch_load = {
             item['id']: item['entry_count']
