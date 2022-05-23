@@ -133,7 +133,7 @@ class EventFilter(NameFilterMixin,
             entry_count=models.Subquery(
                 Figure.objects.filter(
                     event=models.OuterRef('pk')
-                ).order_by().values('entry').annotate(
+                ).order_by().values('event').annotate(
                     count=models.Count('entry', distinct=True)
                 ).values('count')[:1],
                 output_field=models.IntegerField()
@@ -141,7 +141,7 @@ class EventFilter(NameFilterMixin,
             total=models.Subquery(
                 Figure.objects.filter(
                     event=models.OuterRef('pk')
-                ).order_by().values('entry').annotate(
+                ).order_by().values('event').annotate(
                     count=models.Count('entry__reviewing', distinct=True)
                 ).values('count')[:1],
                 output_field=models.IntegerField()
@@ -150,7 +150,7 @@ class EventFilter(NameFilterMixin,
                 Figure.objects.filter(
                     event=models.OuterRef('pk'),
                     entry__reviewing__status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF,
-                ).order_by().values('entry').annotate(
+                ).order_by().values('event').annotate(
                     count=models.Count('entry__reviewing', distinct=True)
                 ).values('count')[:1],
                 output_field=models.IntegerField()
@@ -159,7 +159,7 @@ class EventFilter(NameFilterMixin,
                 Figure.objects.filter(
                     event=models.OuterRef('pk'),
                     entry__reviewing__status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED,
-                ).order_by().values('entry').annotate(
+                ).order_by().values('event').annotate(
                     count=models.Count('entry__reviewing', distinct=True)
                 ).values('count')[:1],
                 output_field=models.IntegerField()
@@ -171,7 +171,7 @@ class EventFilter(NameFilterMixin,
                 default=None,
                 output_field=models.FloatField()
             )
-        ).prefetch_related("figures")
+        ).prefetch_related('figures')
 
     def filter_created_by(self, qs, name, value):
         if not value:
