@@ -109,7 +109,7 @@ class TestExtractionFilter(HelixTestCase):
     def test_filter_by_filter_event_crisis_types(self):
         crisis_types = [Crisis.CRISIS_TYPE.DISASTER]
         fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
-        self.assertEqual(set(fqs), {self.entry3ev2})
+        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1, self.entry3ev2})
 
         crisis_types = [Crisis.CRISIS_TYPE.CONFLICT]
         fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
