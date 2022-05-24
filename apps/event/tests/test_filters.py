@@ -9,6 +9,7 @@ from utils.factories import (
     CountryFactory,
     EventFactory,
     CrisisFactory,
+    ContextOfViolenceFactory,
 )
 from utils.tests import HelixTestCase
 
@@ -121,5 +122,15 @@ class TestEventFilter(HelixTestCase):
         expected = [e1, e2]
         self.assertQuerySetEqual(
             expected,
+            obtained
+        )
+
+    def test_filter_by_context_of_violences(self):
+        event = EventFactory.create()
+        context_of_violence = ContextOfViolenceFactory.create()
+        event.context_of_violence.set([context_of_violence])
+        obtained = self.filter_class(data=dict(context_of_violences=[context_of_violence])).qs
+        self.assertQuerySetEqual(
+            [event],
             obtained
         )

@@ -22,9 +22,18 @@ ALL_MODELS = {PERMISSION_ENTITY.crisis, PERMISSION_ENTITY.event,
 # NOTE: To add custom permissions, add `bla_model` like `sign_off_model`.
 PERMISSIONS = {
     USER_ROLE.ADMIN: {
-        PERMISSION_ACTION.add: ALL_MODELS | {PERMISSION_ENTITY.user, PERMISSION_ENTITY.report, PERMISSION_ENTITY.portfolio},
-        PERMISSION_ACTION.change: ALL_MODELS | {PERMISSION_ENTITY.user, PERMISSION_ENTITY.report, PERMISSION_ENTITY.portfolio},  # noqa
-        PERMISSION_ACTION.delete: ALL_MODELS | {PERMISSION_ENTITY.user, PERMISSION_ENTITY.report, PERMISSION_ENTITY.portfolio},  # noqa
+        PERMISSION_ACTION.add: ALL_MODELS | {
+            PERMISSION_ENTITY.user, PERMISSION_ENTITY.report, PERMISSION_ENTITY.portfolio,
+            PERMISSION_ENTITY.contextofviolence,
+        },
+        PERMISSION_ACTION.change: ALL_MODELS | {
+            PERMISSION_ENTITY.user, PERMISSION_ENTITY.report, PERMISSION_ENTITY.portfolio,
+            PERMISSION_ENTITY.contextofviolence,
+        },
+        PERMISSION_ACTION.delete: ALL_MODELS | {
+            PERMISSION_ENTITY.user, PERMISSION_ENTITY.report, PERMISSION_ENTITY.portfolio,
+            PERMISSION_ENTITY.contextofviolence,
+        },
         PERMISSION_ACTION.approve: {PERMISSION_ENTITY.report},
         PERMISSION_ACTION.sign_off: {PERMISSION_ENTITY.entry, PERMISSION_ENTITY.report},
     },

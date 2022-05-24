@@ -121,7 +121,6 @@ class EventEntryCountLoader(DataLoader):
                 output_field=models.IntegerField()
             )
         )
-
         batch_load = {
             item['id']: item['entry_count']
             for item in qs.values('id', 'entry_count')

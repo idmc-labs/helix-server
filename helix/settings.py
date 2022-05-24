@@ -123,6 +123,12 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
 
+ENABLE_DEBUG = os.environ.get('ENABLE_DEBUG', False)
+if ENABLE_DEBUG:
+    MIDDLEWARE.append(
+        'utils.middleware.DebugToolbarMiddleware',
+    )
+
 if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
     MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
 

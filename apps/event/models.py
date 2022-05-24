@@ -58,6 +58,12 @@ class ViolenceSubType(NameAttributedModels):
                                  related_name='sub_types', on_delete=models.CASCADE)
 
 
+class ContextOfViolence(MetaInformationAbstractModel, NameAttributedModels):
+    """
+    Holds the context of violence
+    """
+
+
 class Actor(MetaInformationAbstractModel, NameAttributedModels):
     """
     Conflict related actors
@@ -218,6 +224,9 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         on_delete=models.SET_NULL
     )
     ignore_qa = models.BooleanField(verbose_name=_('Ignore QA'), default=False)
+    context_of_violence = models.ManyToManyField(
+        'ContextOfViolence', verbose_name=_('Context of violence'), blank=True, related_name='events'
+    )
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
@@ -296,6 +305,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             disaster_sub_type__name='Disaster Sub Type',
             disaster_sub_type='Diaster Sub Type Id',
             glide_numbers='Event Codes',
+            context_of_violence__name='Context of violences',
         )
         data = EventFilter(
             data=filters,
@@ -368,8 +378,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             ]
         )
         # Clone m2m keys fields
-        countries = event_data['countries']
-        event_data.pop('countries')
+        countries = event_data.pop('countries')
+        context_of_violence = event_data.pop('context_of_violence')
         # Clone foreigh key fields
         foreign_key_fields_dict = {
             "crisis": Crisis,
@@ -392,6 +402,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         cloned_event = Event.objects.create(**event_data)
         # Add m2m contires
         cloned_event.countries.set(countries)
+        cloned_event.context_of_violence.set(context_of_violence)
         return cloned_event
 
 

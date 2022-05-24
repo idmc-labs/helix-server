@@ -170,6 +170,11 @@ class TriggerSubTypeFactory(DjangoModelFactory):
         model = "event.TriggerSubType"
 
 
+class ContextOfViolenceFactory(DjangoModelFactory):
+    class Meta:
+        model = 'event.ContextOfViolence'
+
+
 class EventFactory(DjangoModelFactory):
     class Meta:
         model = 'event.Event'

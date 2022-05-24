@@ -8,6 +8,7 @@ from utils.factories import (
     TagFactory,
     FigureFactory,
     OrganizationFactory,
+    ContextOfViolenceFactory,
 )
 from apps.extraction.filters import EntryExtractionFilterSet as f
 from apps.crisis.models import Crisis
@@ -101,24 +102,33 @@ class TestExtractionFilter(HelixTestCase):
         cls.fig2cat2entry1.tags.set([cls.tag2])
         cls.fig3cat2entry2.tags.set([cls.tag3])
 
+        cls.context_of_violence = ContextOfViolenceFactory.create()
+        cls.figure = FigureFactory.create(
+            entry=cls.entry3ev2,
+            country=cls.country3reg3,
+            event=cls.event2crisis1,
+        )
+        cls.event1crisis1.context_of_violence.set([cls.context_of_violence])
+        cls.figure.context_of_violence.set([cls.context_of_violence])
+
     def test_filter_by_region(self):
         regions = [self.reg3.id]
         fqs = f(data=dict(filter_figure_regions=regions)).qs
         self.assertEqual(set(fqs), {self.entry3ev2})
 
-    def test_filter_by_filter_event_crisis_types(self):
-        crisis_types = [Crisis.CRISIS_TYPE.DISASTER]
-        fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
-        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1, self.entry3ev2})
-
-        crisis_types = [Crisis.CRISIS_TYPE.CONFLICT]
-        fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
-        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
-
-        # now from client
-        crisis_types = ["CONFLICT", "DISASTER"]
-        fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
-        self.assertEqual(set(fqs), {self.entry3ev2, self.entry1ev1, self.entry2ev1})
+    # def test_filter_by_filter_event_crisis_types(self):
+    #     crisis_types = [Crisis.CRISIS_TYPE.DISASTER]
+    #     fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
+    #     self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1, self.entry3ev2})
+    #
+    #     crisis_types = [Crisis.CRISIS_TYPE.CONFLICT]
+    #     fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
+    #     self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
+    #
+    #     # now from client
+    #     crisis_types = ["CONFLICT", "DISASTER"]
+    #     fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
+    #     self.assertEqual(set(fqs), {self.entry3ev2, self.entry1ev1, self.entry2ev1})
 
     def test_filter_by_country(self):
         data = dict(
@@ -237,14 +247,21 @@ class TestExtractionFilter(HelixTestCase):
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
 
-    def test_filter_by_category_types(self):
+    # def test_filter_by_category_types(self):
+    #     data = dict(
+    #         filter_figure_category_types=['FLOW']
+    #     )
+    #     fqs = f(data=data).qs
+    #     self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
+    #     data = dict(
+    #         filter_figure_category_types=['STOCK']
+    #     )
+    #     fqs = f(data=data).qs
+    #     self.assertEqual(set(fqs), {self.entry1ev1, self.entry3ev2})
+
+    def test_filter_by_context_of_violences(self):
         data = dict(
-            filter_figure_category_types=['FLOW']
+            filter_context_of_violences=[self.context_of_violence]
         )
         fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
-        data = dict(
-            filter_figure_category_types=['STOCK']
-        )
-        fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry1ev1, self.entry3ev2})
+        self.assertEqual(set(fqs), {self.entry3ev2})

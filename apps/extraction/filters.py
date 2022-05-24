@@ -55,6 +55,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_entry_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data', initial=False)
     # used in report entry table
     report = df.CharFilter(method='filter_report')
+    filter_context_of_violences = IDListFilter(method='filter_filter_context_of_violences')
 
     class Meta:
         model = Entry
@@ -300,13 +301,18 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs.filter(figures__disaggregation_age__isnull=True)
         return qs
 
+    def filter_filter_context_of_violences(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(figures__context_of_violence__in=value).distinct()
+
     @property
     def qs(self):
         figure_ids = super().qs.values_list('figures', flat=True)
         figures = Figure.objects.filter(id__in=figure_ids)
         return super().qs.annotate(
             **Entry._total_figure_disaggregation_subquery(figures=figures),
-        ).prefetch_related('review_comments').distinct()
+        ).prefetch_related('review_comments', 'figures', 'figures__context_of_violence').distinct()
 
 
 class BaseFigureExtractionFilterSet(df.FilterSet):
@@ -343,6 +349,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_entry_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data', initial=False)
     # used in report entry table
     report = df.CharFilter(method='filter_report')
+    filter_context_of_violences = IDListFilter(method='filter_context_of_violences')
 
     class Meta:
         model = Figure
@@ -576,11 +583,16 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             return qs.filter(disaggregation_age__isnull=True)
         return qs
 
+    def filter_filter_context_of_violences(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(context_of_violence__in=value).distinct()
+
     @property
     def qs(self):
         # FIXME: using this prefetch_related results in calling count after a
         # subquery. This has a severe performance penalty
-        return super().qs.prefetch_related('entry__review_comments').distinct()
+        return super().qs.prefetch_related('entry__review_comments', 'context_of_violence').distinct()
 
 
 class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):

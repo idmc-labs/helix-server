@@ -3,15 +3,17 @@ from graphene_django.filter.utils import get_filtering_args_from_filterset
 from django.utils.translation import gettext
 
 from apps.contrib.serializers import ExcelDownloadSerializer
-from apps.event.models import Event, Actor
+from apps.event.models import Event, Actor, ContextOfViolence
 from apps.event.filters import ActorFilter, EventFilter
-from apps.event.schema import EventType, ActorType
+from apps.event.schema import EventType, ActorType, ContextOfViolenceType
 from apps.event.serializers import (
     EventSerializer,
     EventUpdateSerializer,
     ActorSerializer,
     ActorUpdateSerializer,
     CloneEventSerializer,
+    ContextOfViolenceSerializer,
+    ContextOfViolenceUpdateSerializer
 )
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
@@ -254,6 +256,84 @@ class CloneEvent(graphene.Mutation):
         return CloneEvent(result=cloned_entries, errors=None, ok=True)
 
 
+ContextOfViolenceCreateInputType = generate_input_type_for_serializer(
+    'ContextOfViolenceCreateInputType',
+    ContextOfViolenceSerializer
+)
+
+ContextOfViolenceUpdateInputType = generate_input_type_for_serializer(
+    'ContextOfViolenceUpdateInputType',
+    ContextOfViolenceUpdateSerializer
+)
+
+
+class CreateContextOfViolence(graphene.Mutation):
+    class Arguments:
+        data = ContextOfViolenceCreateInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(ContextOfViolenceType)
+
+    @staticmethod
+    @permission_checker(['event.add_contextofviolence'])
+    def mutate(root, info, data):
+        serializer = ContextOfViolenceSerializer(data=data, context=dict(request=info.context.request))
+        if errors := mutation_is_not_valid(serializer):
+            return CreateContextOfViolence(errors=errors, ok=False)
+        instance = serializer.save()
+        return CreateContextOfViolence(result=instance, errors=None, ok=True)
+
+
+class UpdateContextOfViolence(graphene.Mutation):
+    class Arguments:
+        data = ContextOfViolenceUpdateInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(ContextOfViolenceType)
+
+    @staticmethod
+    @permission_checker(['event.update_contextofviolence'])
+    def mutate(root, info, data):
+        try:
+            instance = ContextOfViolence.objects.get(id=data['id'])
+        except ContextOfViolence.DoesNotExist:
+            return UpdateContextOfViolence(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Context of violence does not exist.'))
+            ])
+        serializer = ContextOfViolenceUpdateSerializer(
+            instance=instance, data=data,
+            context=dict(request=info.context.request), partial=True
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return UpdateContextOfViolence(errors=errors, ok=False)
+        instance = serializer.save()
+        return UpdateContextOfViolence(result=instance, errors=None, ok=True)
+
+
+class DeleteContextOfViolence(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(ContextOfViolenceType)
+
+    @staticmethod
+    @permission_checker(['event.delete_contextofviolence'])
+    def mutate(root, info, id):
+        try:
+            instance = ContextOfViolence.objects.get(id=id)
+        except ContextOfViolence.DoesNotExist:
+            return DeleteContextOfViolence(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Context of violence does not exist.'))
+            ])
+        instance.delete()
+        instance.id = id
+        return DeleteContextOfViolence(result=instance, errors=None, ok=True)
+
+
 class Mutation(object):
     create_event = CreateEvent.Field()
     update_event = UpdateEvent.Field()
@@ -261,6 +341,10 @@ class Mutation(object):
     create_actor = CreateActor.Field()
     update_actor = UpdateActor.Field()
     delete_actor = DeleteActor.Field()
+    create_context_of_violence = CreateContextOfViolence.Field()
+    update_context_of_violence = UpdateContextOfViolence.Field()
+    delete_context_of_violence = DeleteContextOfViolence.Field()
+
     # exports
     export_events = ExportEvents.Field()
     export_actors = ExportActors.Field()
