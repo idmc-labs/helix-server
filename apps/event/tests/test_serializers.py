@@ -104,10 +104,11 @@ class TestUpdateEventSerializer(HelixTestCase):
             event_narrative="test event narrative"
         )
         event.countries.set([c1, c2, c3])
-        entry = EntryFactory.create(event=event)
+        entry = EntryFactory.create()
         FigureFactory.create(
             entry=entry,
-            country=c3
+            country=c3,
+            event=event,
         )
 
         # validate keeping countries intact, is valid

@@ -86,20 +86,20 @@ class Report(MetaInformationArchiveAbstractModel,
                     ),
                     category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
                     role=Figure.ROLE.RECOMMENDED,
-                    entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                    event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
                 )
             ),
             total_flow_conflict=Sum(
                 'total_figures',
                 filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                          role=Figure.ROLE.RECOMMENDED,
-                         entry__event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+                         event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
             ),
             total_flow_disaster=Sum(
                 'total_figures',
                 filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                          role=Figure.ROLE.RECOMMENDED,
-                         entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+                         event__event_type=Crisis.CRISIS_TYPE.DISASTER)
             ),
             total_stock_disaster=Sum(
                 'total_figures',
@@ -112,7 +112,7 @@ class Report(MetaInformationArchiveAbstractModel,
                     ),
                     category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
                     role=Figure.ROLE.RECOMMENDED,
-                    entry__event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                    event__event_type=Crisis.CRISIS_TYPE.DISASTER,
                 )
             )
         )
@@ -170,7 +170,7 @@ class Report(MetaInformationArchiveAbstractModel,
             name='Name',
             filter_figure_start_after='Start Date',
             filter_figure_end_before='End Date',
-            filter_figure_categories__name="Figure Category",
+            filter_figure_categories="Figure Category",
             total_figures='Masterfact Figures',
             # these are calculated in transformer ref: heavy
             total_flow_conflict_sum='ND Conflict',
@@ -199,12 +199,18 @@ class Report(MetaInformationArchiveAbstractModel,
             'filter_figure_categories',
         )
 
+        def transform_filter_figure_category(figure_categories):
+            if figure_categories:
+                return '; '.join([category.name if category else "" for category in figure_categories])
+            return ''
+
         def transformer(datum):
             return {
                 **datum,
                 # ref: heavy
                 # NOTE: there must be a better way
-                **Report.objects.get(id=datum['id']).total_disaggregation
+                **Report.objects.get(id=datum['id']).total_disaggregation,
+                'filter_figure_categories': transform_filter_figure_category(datum['filter_figure_categories'])
             }
 
         return {
@@ -234,7 +240,7 @@ class Report(MetaInformationArchiveAbstractModel,
 
     @property
     def countries_report(self) -> list:
-        return Country.objects.filter(
+        result = Country.objects.filter(
             id__in=self.report_figures.values(
                 'country'
             )
@@ -244,12 +250,13 @@ class Report(MetaInformationArchiveAbstractModel,
                 ignore_dates=True,
             )
         )
+        return result
 
     @property
     def events_report(self) -> list:
         return Event.objects.filter(
             id__in=self.report_figures.values(
-                'entry__event'
+                'event'
             )
         ).annotate(
             **Event._total_figure_disaggregation_subquery(self.report_figures),
@@ -269,7 +276,7 @@ class Report(MetaInformationArchiveAbstractModel,
     def crises_report(self) -> list:
         return Crisis.objects.filter(
             id__in=self.report_figures.values(
-                'entry__event__crisis'
+                'event__crisis'
             )
         ).annotate(
             **Crisis._total_figure_disaggregation_subquery(self.report_figures),
@@ -515,7 +522,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'event', 'idmc_analysis', 'is_confidential',
             ),
             events=Event.objects.filter(
-                id__in=self.report.report_figures.values('entry__event')
+                id__in=self.report.report_figures.values('event')
             ).select_related(
                 'created_by', 'last_modified_by', 'trigger', 'trigger_sub_type', 'violence',
                 'violence_sub_type', 'actor', 'disaster_category', 'disaster_sub_category',

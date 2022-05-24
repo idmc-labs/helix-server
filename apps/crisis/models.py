@@ -57,13 +57,13 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
                     figures.filter(
-                        entry__event__crisis=models.OuterRef('pk'),
+                        event__crisis=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     # TODO: what about date range
                     start_date=None,
                     end_date=None,
-                ).order_by().values('entry__event__crisis').annotate(
+                ).order_by().values('event__crisis').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
                 output_field=models.IntegerField()
@@ -71,11 +71,11 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             cls.IDP_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_idp_figures(
                     figures.filter(
-                        entry__event__crisis=models.OuterRef('pk'),
+                        event__crisis=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     reference_point=timezone.now().date(),
-                ).order_by().values('entry__event__crisis').annotate(
+                ).order_by().values('event__crisis').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
                 output_field=models.IntegerField()
@@ -122,7 +122,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             events_count=models.Count('events', distinct=True),
             min_event_start=models.Min('events__start_date'),
             max_event_end=models.Max('events__end_date'),
-            figures_count=models.Count('events__entries__figures', distinct=True),
+            figures_count=models.Count('events__figures', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
         ).order_by('-created_at').select_related(
             'created_by',

@@ -196,7 +196,6 @@ class EntryFactory(DjangoModelFactory):
     article_title = factory.Sequence(lambda n: f'long title {n}')
     url = 'https://www.example.com'
     publish_date = factory.LazyFunction(today().date)
-    event = factory.SubFactory(EventFactory)
 
 
 class FigureFactory(DjangoModelFactory):

@@ -2,7 +2,6 @@ from copy import copy
 import json
 from uuid import uuid4
 
-from apps.crisis.models import Crisis
 from apps.entry.models import (
     Figure,
     OSMName,
@@ -45,17 +44,19 @@ class TestEntryQuery(HelixGraphQLTestCase):
 
     def test_figure_count_filtered_resolvers(self):
         self.stock_fig_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS
-        self.flow_fig_cat2 = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
-        # XXX: only conflict figures are considered in stock (as of now)
-        self.entry.event.event_type = Crisis.CRISIS_TYPE.CONFLICT
-        self.entry.event.save()
+        self.random_fig_cat2 = Figure.FIGURE_CATEGORY_TYPES.CROSS_BORDER_FLIGHT
+        self.flow_fig_cat3 = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
+        self.event = EventFactory.create()
+        self.event.countries.add(self.country)
         figure1 = FigureFactory.create(entry=self.entry,
+                                       event=self.event,
                                        category=self.stock_fig_cat.value,
                                        reported=101,
                                        role=Figure.ROLE.RECOMMENDED,
                                        unit=Figure.UNIT.PERSON)
         FigureFactory.create(entry=self.entry,
                              category=self.stock_fig_cat.value,
+                             event=self.event,
                              reported=102,
                              role=Figure.ROLE.TRIANGULATION,
                              unit=Figure.UNIT.PERSON)
@@ -63,9 +64,17 @@ class TestEntryQuery(HelixGraphQLTestCase):
                                        category=self.stock_fig_cat.value,
                                        reported=103,
                                        role=Figure.ROLE.RECOMMENDED,
-                                       unit=Figure.UNIT.PERSON)
+                                       unit=Figure.UNIT.PERSON,
+                                       event=self.event)
+        FigureFactory.create(entry=self.entry,
+                             event=self.event,
+                             category=self.random_fig_cat2,
+                             reported=50,
+                             role=Figure.ROLE.RECOMMENDED,
+                             unit=Figure.UNIT.PERSON)
         figure5 = FigureFactory.create(entry=self.entry,
-                                       category=self.flow_fig_cat2.value,
+                                       event=self.event,
+                                       category=self.flow_fig_cat3,
                                        reported=70,
                                        role=Figure.ROLE.RECOMMENDED,
                                        unit=Figure.UNIT.PERSON)
@@ -96,10 +105,10 @@ class TestEntryCreation(HelixGraphQLTestCase):
         DisaggregatedAgeCategory.objects.create(name='three')
         self.country = CountryFactory.create(iso2='lo', iso3='lol')
         self.country_id = str(self.country.id)
-        self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
-        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.event = EventFactory.create()
         self.event.countries.add(self.country)
+        self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.mutation = """
             mutation CreateEntry($input: EntryCreateInputType!) {
                 createEntry(data: $input) {
@@ -128,7 +137,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
             "idmcAnalysis": "analysis one",
             "isConfidential": True,
             "reviewers": [],
-            "event": self.event.id,
         }
         self.force_login(self.editor)
         self.tag1 = TagFactory.create()
@@ -179,7 +187,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "tags": [self.tag1.id, self.tag2.id, self.tag3.id],
                 'calculationLogic': 'test logics',
                 'caveats': 'caveats',
-                'sourceExcerpt': 'source excerpt'
+                'sourceExcerpt': 'source excerpt',
+                'event': self.event.id,
             }
         ]
 
@@ -236,6 +245,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
                 "geoLocations": [source1],
+                "event": self.event.id,
             },
             # invalid now
             {
@@ -251,6 +261,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
                 "geoLocations": [source2],
+                "event": self.event.id,
             }
         ]
         self.input.update({
@@ -330,7 +341,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
                         "sex": "FEMALE",
                         "value": 6
                     }
-                ]
+                ],
+                "event": self.event.id,
             }
         ]
         self.input.update({
@@ -360,6 +372,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "startDate": "2020-10-10",
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
+                "event": self.event.id,
             }
         ]
         self.input.update({
@@ -378,7 +391,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
 
 class TestEntryUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.country = CountryFactory.create()
+        self.country = CountryFactory.create(iso2='np')
         self.country_id = str(self.country.id)
         self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT)
@@ -390,7 +403,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         DisaggregatedAgeCategory.objects.create(name='three')
         self.entry = EntryFactory.create(
             created_by=self.editor,
-            event=self.event,
         )
         self.mutation = """
         mutation MyMutation($input: EntryUpdateInputType!) {
@@ -449,10 +461,11 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         assert DisaggregatedAgeCategory.objects.count() > 1
         figure = FigureFactory.create(
             entry=self.entry,
-            country=self.country
+            country=self.country,
+            event=self.event,
         )
         # this figure will be deleted
-        deleted_figure = FigureFactory.create(entry=self.entry)
+        deleted_figure = FigureFactory.create(entry=self.entry, event=self.event)
         source1 = dict(
             uuid=str(uuid4()),
             rank=101,
@@ -501,6 +514,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                     {"date": "2020-10-12", "value": 2, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
                 ],
                 "geoLocations": [source1],
+                "event": self.event.id,
             },
             {
                 "id": figure.id,
@@ -533,6 +547,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                     {"date": "2020-10-12", "value": 2, "uuid": "bf2b1415-2fc5-42b7-9180-a5b440e5f6d1"}
                 ],
                 "geoLocations": [source2],
+                "event": self.event.id,
             },
         ]
         old_figures_count = self.entry.figures.count()
@@ -564,6 +579,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "startDate": "2020-10-10",
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
+                "event": self.event.id,
             }
         ]
         self.input.update({
@@ -735,11 +751,14 @@ class TestFigureDelete(HelixGraphQLTestCase):
         self.entry = EntryFactory.create(
             created_by=self.editor
         )
+        self.event = EventFactory.create()
+        self.event.countries.add(self.country)
         self.figure = FigureFactory.create(
             entry=self.entry,
             reported=101,
             role=Figure.ROLE.RECOMMENDED,
-            unit=Figure.UNIT.PERSON
+            unit=Figure.UNIT.PERSON,
+            event=self.event,
         )
         self.mutation = """
             mutation DeleteFigure($id: ID!) {

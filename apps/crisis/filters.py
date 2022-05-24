@@ -51,7 +51,7 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
         if not value:
             return qs
         return qs.filter(
-            id__in=Report.objects.get(id=value).report_figures.values('entry__event__crisis')
+            id__in=Report.objects.get(id=value).report_figures.values('event__crisis')
         )
 
     def filter_name(self, qs, name, value):
@@ -66,20 +66,35 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
 
     @property
     def qs(self):
+        from apps.entry.models import Figure
         return super().qs.annotate(
-            **Crisis._total_figure_disaggregation_subquery(),
+            # **Crisis._total_figure_disaggregation_subquery(),
             event_count=Count('events'),
-            total=models.Count('events__entries__reviewing'),
-            total_signed_off=models.Count(
-                'events__entries__reviewing',
-                filter=Q(events__entries__reviewing__status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF),
-                distinct=True
+            total=models.Subquery(
+                Figure.objects.filter(
+                    event__crisis=models.OuterRef('pk')
+                ).order_by().values('entry').annotate(
+                    count=models.Count('entry__reviewing', distinct=True)
+                ).values('count')[:1],
+                output_field=models.IntegerField()
             ),
-            total_review_completed=models.Count(
-                'events__entries__reviewing', filter=Q(
-                    events__entries__reviewing__status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
-                ),
-                distinct=True
+            total_signed_off=models.Subquery(
+                Figure.objects.filter(
+                    event__crisis=models.OuterRef('pk'),
+                    entry__reviewing__status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF,
+                ).order_by().values('entry').annotate(
+                    count=models.Count('entry__reviewing', distinct=True)
+                ).values('count')[:1],
+                output_field=models.IntegerField()
+            ),
+            total_review_completed=models.Subquery(
+                Figure.objects.filter(
+                    event__crisis=models.OuterRef('pk'),
+                    entry__reviewing__status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED,
+                ).order_by().values('entry').annotate(
+                    count=models.Count('entry__reviewing', distinct=True)
+                ).values('count')[:1],
+                output_field=models.IntegerField()
             ),
             progress=models.Case(
                 models.When(total__gt=0, then=(
@@ -88,4 +103,4 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
                 default=None,
                 output_field=models.FloatField()
             )
-        ).prefetch_related('events', 'events__entries', 'events__entries__reviewing')
+        ).prefetch_related('events')

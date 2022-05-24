@@ -39,15 +39,24 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         self.tag1 = TagFactory.create()
         self.tag2 = TagFactory.create()
         self.tag3 = TagFactory.create()
-        self.entry1ev1 = EntryFactory.create(event=self.event1crisis1)
-        FigureFactory.create(entry=self.entry1ev1,
-                             country=self.country1reg1)
-        self.entry2ev1 = EntryFactory.create(event=self.event1crisis1)
-        FigureFactory.create(entry=self.entry2ev1,
-                             country=self.country1reg1)
-        self.entry3ev2 = EntryFactory.create(event=self.event2crisis1)
-        self.fig1entry3 = FigureFactory.create(entry=self.entry2ev1,
-                                               country=self.country3reg3)
+        self.entry1ev1 = EntryFactory.create()
+        FigureFactory.create(
+            entry=self.entry1ev1,
+            country=self.country1reg1,
+            event=self.event1crisis1,
+        )
+        self.entry2ev1 = EntryFactory.create()
+        FigureFactory.create(
+            entry=self.entry2ev1,
+            country=self.country1reg1,
+            event=self.event1crisis1,
+        )
+        self.entry3ev2 = EntryFactory.create()
+        self.fig1entry3 = FigureFactory.create(
+            entry=self.entry2ev1,
+            country=self.country3reg3,
+            event=self.event2crisis1,
+        )
         self.fig1entry3.tags.set([self.tag1, self.tag2, self.tag3])
 
         self.mutation = '''
@@ -131,9 +140,9 @@ class TestExtractionFigureList(HelixGraphQLTestCase):
             start_date = (timezone.now() - timedelta(days=30)).strftime('%Y-%m-%d')
             end_date = (timezone.now() + timedelta(days=30)).strftime('%Y-%m-%d')
             event = EventFactory.create(start_date=start_date, end_date=end_date)
-            entry = EntryFactory.create(created_by=admin, event=event)
+            entry = EntryFactory.create(created_by=admin)
             figure_category = Figure.FIGURE_CATEGORY_TYPES.IDPS
-            FigureFactory.create(entry=entry, created_by=admin, category=figure_category)
+            FigureFactory.create(entry=entry, created_by=admin, category=figure_category, event=event)
 
         self.figure_query = '''
         query MyQuery {

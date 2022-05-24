@@ -40,7 +40,7 @@ class EventFilter(NameFilterMixin,
         if not value:
             return qs
         return qs.filter(
-            id__in=Report.objects.get(id=value).report_figures.values('entry__event')
+            id__in=Report.objects.get(id=value).report_figures.values('event')
         )
 
     def filter_countries(self, qs, name, value):
@@ -97,15 +97,15 @@ class EventFilter(NameFilterMixin,
     def filter_qa_rules(self, qs, name, value):
         flow_qs_ids = []
         stock_qs_ids = []
-        recommended_stock_figures_count = Count('entries__figures', filter=(
-            Q(entries__figures__role=Figure.ROLE.RECOMMENDED) &
+        recommended_stock_figures_count = Count('figures', filter=(
+            Q(figures__role=Figure.ROLE.RECOMMENDED) &
             Q(ignore_qa=False) &
-            Q(entries__figures__category=Figure.FIGURE_CATEGORY_TYPES.IDPS))
+            Q(figures__category=Figure.FIGURE_CATEGORY_TYPES.IDPS))
         )
-        recommended_flow_figures_count = Count('entries__figures', filter=(
-            Q(entries__figures__role=Figure.ROLE.RECOMMENDED) &
+        recommended_flow_figures_count = Count('figures', filter=(
+            Q(figures__role=Figure.ROLE.RECOMMENDED) &
             Q(ignore_qa=False) &
-            Q(entries__figures__category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT))
+            Q(figures__category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT))
         )
         annotated_fields = {
             'stock_figure_count': recommended_stock_figures_count,
@@ -119,7 +119,7 @@ class EventFilter(NameFilterMixin,
         if QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name in value:
             stock_qs_ids = qs.annotate(**annotated_fields).filter(
                 ignore_qa=False,
-                entries__figures__role=Figure.ROLE.RECOMMENDED
+                figures__role=Figure.ROLE.RECOMMENDED
             ).filter(
                 Q(stock_figure_count__gt=1) | Q(flow_figure_count__gt=1)
             ).values_list("id", flat=True)
@@ -130,18 +130,39 @@ class EventFilter(NameFilterMixin,
     def qs(self):
         return super().qs.annotate(
             **Event._total_figure_disaggregation_subquery(),
-            entry_count=Count("entries"),
-            total=models.Count('entries__reviewing'),
-            total_signed_off=models.Count(
-                'entries__reviewing',
-                filter=Q(entries__reviewing__status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF),
-                distinct=True
+            entry_count=models.Subquery(
+                Figure.objects.filter(
+                    event=models.OuterRef('pk')
+                ).order_by().values('event').annotate(
+                    count=models.Count('entry', distinct=True)
+                ).values('count')[:1],
+                output_field=models.IntegerField()
             ),
-            total_review_completed=models.Count(
-                'entries__reviewing', filter=Q(
-                    entries__reviewing__status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
-                ),
-                distinct=True
+            total=models.Subquery(
+                Figure.objects.filter(
+                    event=models.OuterRef('pk')
+                ).order_by().values('event').annotate(
+                    count=models.Count('entry__reviewing', distinct=True)
+                ).values('count')[:1],
+                output_field=models.IntegerField()
+            ),
+            total_signed_off=models.Subquery(
+                Figure.objects.filter(
+                    event=models.OuterRef('pk'),
+                    entry__reviewing__status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF,
+                ).order_by().values('event').annotate(
+                    count=models.Count('entry__reviewing', distinct=True)
+                ).values('count')[:1],
+                output_field=models.IntegerField()
+            ),
+            total_review_completed=models.Subquery(
+                Figure.objects.filter(
+                    event=models.OuterRef('pk'),
+                    entry__reviewing__status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED,
+                ).order_by().values('event').annotate(
+                    count=models.Count('entry__reviewing', distinct=True)
+                ).values('count')[:1],
+                output_field=models.IntegerField()
             ),
             progress=models.Case(
                 models.When(total__gt=0, then=(
@@ -150,7 +171,7 @@ class EventFilter(NameFilterMixin,
                 default=None,
                 output_field=models.FloatField()
             )
-        ).prefetch_related("entries", "entries__reviewing", "entries__figures")
+        ).prefetch_related('figures')
 
     def filter_created_by(self, qs, name, value):
         if not value:

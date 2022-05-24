@@ -227,13 +227,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
                     figures.filter(
-                        entry__event=models.OuterRef('pk'),
+                        event=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     # TODO: what about date range
                     start_date=None,
                     end_date=None,
-                ).order_by().values('entry__event').annotate(
+                ).order_by().values('event').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
                 output_field=models.IntegerField()
@@ -241,11 +241,11 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             cls.IDP_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_idp_figures(
                     figures.filter(
-                        entry__event=models.OuterRef('pk'),
+                        event=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     reference_point=timezone.now().date(),
-                ).order_by().values('entry__event').annotate(
+                ).order_by().values('event').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
                 output_field=models.IntegerField()
@@ -304,8 +304,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             countries_iso3=ArrayAgg('countries__iso3', distinct=True),
             countries_name=ArrayAgg('countries__name', distinct=True),
             regions_name=ArrayAgg('countries__region__name', distinct=True),
-            figures_count=models.Count('entries__figures', distinct=True),
-            entries_count=models.Count('entries', distinct=True),
+            figures_count=models.Count('figures', distinct=True),
+            entries_count=models.Count('figures__entry', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
         ).order_by('-created_at').select_related(
             'trigger',

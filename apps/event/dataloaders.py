@@ -8,7 +8,7 @@ from django.db.models import (
 from promise import Promise
 from promise.dataloader import DataLoader
 
-from apps.entry.models import Figure, EntryReviewer, Entry
+from apps.entry.models import Figure, EntryReviewer
 from apps.event.models import Event
 
 
@@ -59,30 +59,30 @@ class EventReviewCountLoader(DataLoader):
             id__in=keys
         ).annotate(
             under_review_count=Subquery(
-                Entry.objects.filter(
+                Figure.objects.filter(
                     event=OuterRef('pk'),
-                    review_status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
+                    entry__review_status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
                 ).order_by().values('event').annotate(c=Count('id')).values('c'),
                 output_field=IntegerField()
             ),
             signed_off_count=Subquery(
-                Entry.objects.filter(
+                Figure.objects.filter(
                     event=OuterRef('pk'),
-                    review_status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
+                    entry__review_status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
                 ).order_by().values('event').annotate(c=Count('id')).values('c'),
                 output_field=IntegerField()
             ),
             review_complete_count=Subquery(
-                Entry.objects.filter(
+                Figure.objects.filter(
                     event=OuterRef('pk'),
-                    review_status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
+                    entry__review_status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
                 ).order_by().values('event').annotate(c=Count('id')).values('c'),
                 output_field=IntegerField()
             ),
             to_be_reviewed_count=Subquery(
-                Entry.objects.filter(
+                Figure.objects.filter(
                     event=OuterRef('pk'),
-                    review_status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
+                    entry__review_status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
                 ).order_by().values('event').annotate(c=Count('id')).values('c'),
                 output_field=IntegerField()
             ),
@@ -111,7 +111,16 @@ class EventEntryCountLoader(DataLoader):
     def batch_load_fn(self, keys):
         qs = Event.objects.filter(
             id__in=keys
-        ).annotate(entry_count=Count('entries'))
+        ).annotate(
+            entry_count=models.Subquery(
+                Figure.objects.filter(
+                    event=models.OuterRef('pk')
+                ).order_by().values('event').annotate(
+                    count=models.Count('entry', distinct=True)
+                ).values('count')[:1],
+                output_field=models.IntegerField()
+            )
+        )
 
         batch_load = {
             item['id']: item['entry_count']
