@@ -276,7 +276,7 @@ class CreateContextOfViolence(graphene.Mutation):
     result = graphene.Field(ContextOfViolenceType)
 
     @staticmethod
-    @permission_checker(['contextofviolence.add_contextofviolence'])
+    @permission_checker(['event.add_contextofviolence'])
     def mutate(root, info, data):
         serializer = ContextOfViolenceSerializer(data=data, context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
@@ -294,7 +294,7 @@ class UpdateContextOfViolence(graphene.Mutation):
     result = graphene.Field(ContextOfViolenceType)
 
     @staticmethod
-    @permission_checker(['contextofviolence.update_contextofviolence'])
+    @permission_checker(['event.update_contextofviolence'])
     def mutate(root, info, data):
         try:
             instance = ContextOfViolence.objects.get(id=data['id'])
@@ -321,7 +321,7 @@ class DeleteContextOfViolence(graphene.Mutation):
     result = graphene.Field(ContextOfViolenceType)
 
     @staticmethod
-    @permission_checker(['contextofviolence.delete_contextofviolence'])
+    @permission_checker(['event.delete_contextofviolence'])
     def mutate(root, info, id):
         try:
             instance = ContextOfViolence.objects.get(id=id)
