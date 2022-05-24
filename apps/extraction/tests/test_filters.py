@@ -102,14 +102,14 @@ class TestExtractionFilter(HelixTestCase):
         cls.fig2cat2entry1.tags.set([cls.tag2])
         cls.fig3cat2entry2.tags.set([cls.tag3])
 
-        self.context_of_violence = ContextOfViolenceFactory.create()
-        self.figure = FigureFactory.create(
-            entry=self.entry3ev2,
-            country=self.country3reg3,
-            event=self.event2crisis1,
+        cls.context_of_violence = ContextOfViolenceFactory.create()
+        cls.figure = FigureFactory.create(
+            entry=cls.entry3ev2,
+            country=cls.country3reg3,
+            event=cls.event2crisis1,
         )
-        self.event1crisis1.context_of_violence.set([self.context_of_violence])
-        self.figure.context_of_violence.set([self.context_of_violence])
+        cls.event1crisis1.context_of_violence.set([cls.context_of_violence])
+        cls.figure.context_of_violence.set([cls.context_of_violence])
 
     def test_filter_by_region(self):
         regions = [self.reg3.id]
