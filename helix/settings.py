@@ -123,7 +123,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
 
-if DEBUG:
+ENABLE_DEBUG = os.environ.get('ENABLE_DEBUG', False)
+if ENABLE_DEBUG:
     MIDDLEWARE.append(
         'utils.middleware.DebugToolbarMiddleware',
     )
