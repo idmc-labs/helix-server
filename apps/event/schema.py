@@ -7,8 +7,6 @@ from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.enums import EventOtherSubTypeEnum, QaRecommendedFigureEnum
 from apps.event.models import (
     Event,
-    Trigger,
-    TriggerSubType,
     Violence,
     ViolenceSubType,
     Actor,
@@ -23,35 +21,6 @@ from apps.event.filters import ActorFilter, EventFilter
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
-
-
-class TriggerSubObjectType(DjangoObjectType):
-    class Meta:
-        model = TriggerSubType
-        exclude_fields = ('events',)
-        filter_fields = {}
-
-
-class TriggerSubObjectListType(CustomDjangoListObjectType):
-    class Meta:
-        model = TriggerSubType
-        filter_fields = {
-            'name': ['unaccent__icontains']
-        }
-
-
-class TriggerType(DjangoObjectType):
-    class Meta:
-        model = Trigger
-        exclude_fields = ('events',)
-
-
-class TriggerListType(CustomDjangoListObjectType):
-    class Meta:
-        model = Trigger
-        filter_fields = {
-            'name': ['unaccent__icontains']
-        }
 
 
 class ViolenceSubObjectType(DjangoObjectType):
@@ -204,8 +173,6 @@ class EventType(DjangoObjectType):
 
     event_type = graphene.Field(CrisisTypeGrapheneEnum)
     other_sub_type = graphene.Field(EventOtherSubTypeEnum)
-    trigger = graphene.Field(TriggerType)
-    trigger_sub_type = graphene.Field(TriggerSubObjectType)
     violence = graphene.Field(ViolenceType)
     violence_sub_type = graphene.Field(ViolenceSubObjectType)
     actor = graphene.Field(ActorType)
@@ -271,8 +238,6 @@ class ContextOfViolenceListType(CustomDjangoListObjectType):
 
 
 class Query:
-    trigger_list = DjangoPaginatedListObjectField(TriggerListType)
-    sub_trigger_list = DjangoPaginatedListObjectField(TriggerSubObjectListType)
     violence_list = DjangoPaginatedListObjectField(ViolenceListType)
     actor = DjangoObjectField(ActorType)
     actor_list = DjangoPaginatedListObjectField(ActorListType,

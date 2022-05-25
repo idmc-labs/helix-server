@@ -524,13 +524,13 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
             events=Event.objects.filter(
                 id__in=self.report.report_figures.values('event')
             ).select_related(
-                'created_by', 'last_modified_by', 'trigger', 'trigger_sub_type', 'violence',
+                'created_by', 'last_modified_by', 'violence',
                 'violence_sub_type', 'actor', 'disaster_category', 'disaster_sub_category',
                 'disaster_type', 'disaster_sub_type'
             ).values(
                 'id', 'old_id', 'created_at', 'modified_at', 'created_by__email',
                 'last_modified_by__email', 'crisis', 'name', 'event_type',
-                'other_sub_type', 'trigger__name', 'trigger_sub_type__name', 'violence__name',
+                'other_sub_type', 'violence__name',
                 'violence_sub_type__name', 'actor__name', 'disaster_category__name',
                 'disaster_sub_category__name', 'disaster_type__name', 'disaster_sub_type__name',
                 'start_date', 'end_date', 'event_narrative',

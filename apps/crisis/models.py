@@ -7,7 +7,6 @@ from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
-from apps.entry.models import Figure
 from apps.contrib.commons import DATE_ACCURACY
 from apps.users.models import User
 
@@ -52,6 +51,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
+        from apps.entry.models import Figure
         figures = figures or Figure.objects.all()
         return {
             cls.ND_FIGURES_ANNOTATE: models.Subquery(

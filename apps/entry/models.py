@@ -29,7 +29,7 @@ from apps.entry.constants import (
 )
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
-from apps.common.enums import GENDER_TYPE
+from apps.common.enums import GENDER_TYPE, EVENT_OTHER_SUB_TYPE
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -259,6 +259,8 @@ class Figure(MetaInformationArchiveAbstractModel,
              UUIDAbstractModel,
              FigureDisaggregationAbstractModel,
              models.Model):
+    from apps.crisis.models import Crisis
+
     class QUANTIFIER(enum.Enum):
         MORE_THAN = 0
         LESS_THAN = 1
@@ -469,6 +471,46 @@ class Figure(MetaInformationArchiveAbstractModel,
     )
     context_of_violence = models.ManyToManyField(
         'event.ContextOfViolence', verbose_name=_('Context of violence'), blank=True, related_name='figures'
+    )
+    figure_cause = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Figure Cause'))
+    violence = models.ForeignKey(
+        'event.Violence', verbose_name=_('Figure Violence'),
+        blank=False, null=True,
+        related_name='figures', on_delete=models.SET_NULL
+    )
+    violence_sub_type = models.ForeignKey(
+        'event.ViolenceSubType', verbose_name=_('Figure Violence Sub Type'),
+        blank=True, null=True,
+        related_name='figures', on_delete=models.SET_NULL
+    )
+    disaster_category = models.ForeignKey(
+        'event.DisasterCategory', verbose_name=_('Figure Disaster Category'),
+        blank=True, null=True,
+        related_name='figures', on_delete=models.SET_NULL
+    )
+    disaster_sub_category = models.ForeignKey(
+        'event.DisasterSubCategory', verbose_name=_('Figure Disaster Sub Category'),
+        blank=True, null=True,
+        related_name='figures', on_delete=models.SET_NULL
+    )
+    disaster_type = models.ForeignKey(
+        'event.DisasterType', verbose_name=_('Figure Disaster Type'),
+        blank=True, null=True,
+        related_name='figures', on_delete=models.SET_NULL
+    )
+    disaster_sub_type = models.ForeignKey(
+        'event.DisasterSubType', verbose_name=_('Figure Disaster Sub Type'),
+        blank=True, null=True,
+        related_name='figures', on_delete=models.SET_NULL
+    )
+    other_sub_type = enum.EnumField(
+        EVENT_OTHER_SUB_TYPE, verbose_name=_('Other Event Sub Types'),
+        blank=True, null=True
+    )
+    osv_sub_type = models.ForeignKey(
+        'event.OsvSubType', verbose_name=_('Figure OSV sub type'),
+        blank=True, null=True, related_name='figures',
+        on_delete=models.SET_NULL
     )
 
     class Meta:

@@ -430,8 +430,8 @@ type CountryType {
   idmcShortNameAr: String
   parkedItems: [ParkedItemType!]!
   portfolio: PortfolioType
-  figures(unit: String, startDate_Lte: Date, startDate_Gte: Date, page: Int = 1, ordering: String, pageSize: Int): FigureListType
   crises(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], report: String, createdByIds: [ID!], page: Int = 1, ordering: String, pageSize: Int): CrisisListType
+  figures(unit: String, startDate_Lte: Date, startDate_Gte: Date, page: Int = 1, ordering: String, pageSize: Int): FigureListType
   contextualAnalyses(createdAt_Lte: DateTime, createdAt_Gte: DateTime, page: Int = 1, ordering: String, pageSize: Int): ContextualAnalysisListType
   summaries(createdAt_Lte: DateTime, createdAt_Gte: DateTime, page: Int = 1, ordering: String, pageSize: Int): SummaryListType
   householdSizes: [CountryHouseholdSizeType!]!
@@ -923,6 +923,7 @@ type DisasterCategoryListType {
 type DisasterCategoryType {
   name: String!
   id: ID!
+  figures: [FigureType!]!
   subCategories(name_Unaccent_Icontains: String, ordering: String): DisasterSubCategoryListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -938,6 +939,7 @@ type DisasterSubCategoryListType {
 type DisasterSubCategoryType {
   name: String!
   id: ID!
+  figures: [FigureType!]!
   types(name_Unaccent_Icontains: String, ordering: String): DisasterTypeObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -953,6 +955,7 @@ type DisasterSubObjectListType {
 type DisasterSubObjectType {
   name: String!
   id: ID!
+  figures: [FigureType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
 }
@@ -967,6 +970,7 @@ type DisasterTypeObjectListType {
 type DisasterTypeObjectType {
   name: String!
   id: ID!
+  figures: [FigureType!]!
   subTypes(name_Unaccent_Icontains: String, ordering: String): DisasterSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -1134,8 +1138,6 @@ input EventCreateInputType {
   eventNarrative: String
   ignoreQa: Boolean
   crisis: ID
-  trigger: ID
-  triggerSubType: ID
   violence: ID
   violenceSubType: ID
   actor: ID
@@ -1175,8 +1177,6 @@ type EventType {
   eventType: CRISIS_TYPE
   otherSubType: EVENT_OTHER_SUB_TYPE
   glideNumbers: [String!]
-  trigger: TriggerType
-  triggerSubType: TriggerSubObjectType
   violence: ViolenceType
   violenceSubType: ViolenceSubObjectType
   actor: ActorType
@@ -1217,8 +1217,6 @@ input EventUpdateInputType {
   eventNarrative: String
   ignoreQa: Boolean
   crisis: ID
-  trigger: ID
-  triggerSubType: ID
   violence: ID
   violenceSubType: ID
   actor: ID
@@ -1493,6 +1491,15 @@ type FigureType {
   sourceExcerpt: String
   event: EventType!
   contextOfViolence: [ContextOfViolenceType!]!
+  figureCause: CRISIS_TYPE
+  violence: ViolenceType
+  violenceSubType: ViolenceSubObjectType
+  disasterCategory: DisasterCategoryType
+  disasterSubCategory: DisasterSubCategoryType
+  disasterType: DisasterTypeObjectType
+  disasterSubType: DisasterSubObjectType
+  otherSubType: EVENT_OTHER_SUB_TYPE
+  osvSubType: OsvSubObjectType
   figureReviews: [ReviewType!]!
   reportSet: [ReportType!]!
 }
@@ -1539,8 +1546,17 @@ input FigureUpdateInputType {
   calculationLogic: String
   caveats: String
   sourceExcerpt: String
+  figureCause: CRISIS_TYPE
+  otherSubType: EVENT_OTHER_SUB_TYPE
   country: ID
   event: ID
+  violence: ID
+  violenceSubType: ID
+  disasterCategory: ID
+  disasterSubCategory: ID
+  disasterType: ID
+  disasterSubType: ID
+  osvSubType: ID
   tags: [ID!]
   contextOfViolence: [ID!]
 }
@@ -1768,8 +1784,17 @@ input NestedFigureCreateInputType {
   calculationLogic: String
   caveats: String
   sourceExcerpt: String
+  figureCause: CRISIS_TYPE!
+  otherSubType: EVENT_OTHER_SUB_TYPE
   country: ID
   event: ID!
+  violence: ID
+  violenceSubType: ID
+  disasterCategory: ID
+  disasterSubCategory: ID
+  disasterType: ID
+  disasterSubType: ID
+  osvSubType: ID
   tags: [ID!]
   contextOfViolence: [ID!]
 }
@@ -1820,8 +1845,17 @@ input NestedFigureUpdateInputType {
   calculationLogic: String
   caveats: String
   sourceExcerpt: String
+  figureCause: CRISIS_TYPE
+  otherSubType: EVENT_OTHER_SUB_TYPE
   country: ID
   event: ID
+  violence: ID
+  violenceSubType: ID
+  disasterCategory: ID
+  disasterSubCategory: ID
+  disasterType: ID
+  disasterSubType: ID
+  osvSubType: ID
   tags: [ID!]
   contextOfViolence: [ID!]
 }
@@ -2024,6 +2058,7 @@ input OrganizationUpdateInputType {
 type OsvSubObjectType {
   name: String!
   id: ID!
+  figures: [FigureType!]!
   events: [EventType!]!
 }
 
@@ -2208,8 +2243,6 @@ type Query {
   disaggregatedAgeCategoryList(name_Unaccent_Icontains: String, ordering: String): DisaggregatedAgeCategoryListType
   disaggregatedAge(id: ID!): DisaggregatedAgeType
   disaggregatedAgeList(sex_In: String, ordering: String): DisaggregatedAgeListType
-  triggerList(name_Unaccent_Icontains: String, ordering: String): TriggerListType
-  subTriggerList(name_Unaccent_Icontains: String, ordering: String): TriggerSubObjectListType
   violenceList(id_Iexact: Float, ordering: String): ViolenceListType
   actor(id: ID!): ActorType
   actorList(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): ActorListType
@@ -2738,30 +2771,6 @@ input TotalFigureFilterInputType {
   roles: [String!]
 }
 
-type TriggerListType {
-  results: [TriggerType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
-type TriggerSubObjectListType {
-  results: [TriggerSubObjectType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
-type TriggerSubObjectType {
-  id: ID!
-  name: String!
-}
-
-type TriggerType {
-  name: String!
-  id: ID!
-}
-
 enum UNIT {
   PERSON
   HOUSEHOLD
@@ -2998,8 +3007,9 @@ type ViolenceSubObjectListType {
 }
 
 type ViolenceSubObjectType {
-  name: String!
   id: ID!
+  name: String!
+  figures: [FigureType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
 }
@@ -3007,6 +3017,7 @@ type ViolenceSubObjectType {
 type ViolenceType {
   name: String!
   id: ID!
+  figures: [FigureType!]!
   subTypes(id_Iexact: Float, ordering: String): ViolenceSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!

@@ -17,6 +17,7 @@ from apps.users.models import User
 from django.contrib.postgres.fields import ArrayField
 from django.forms import model_to_dict
 from utils.common import add_clone_prefix
+from apps.common.enums import EVENT_OTHER_SUB_TYPE
 
 
 class NameAttributedModels(models.Model):
@@ -30,18 +31,6 @@ class NameAttributedModels(models.Model):
 
 
 # Models related to displacement caused by conflict
-
-
-class Trigger(NameAttributedModels):
-    """
-    Holds the possible trigger choices
-    """
-
-
-class TriggerSubType(NameAttributedModels):
-    """
-    Holds the possible trigger sub types
-    """
 
 
 class Violence(NameAttributedModels):
@@ -142,19 +131,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
     IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
-
-    class EVENT_OTHER_SUB_TYPE(enum.Enum):
-        DEVELOPMENT = 0
-        EVICTION = 1
-        TECHNICAL_DISASTER = 2
-        # TODO: add more based on IDMC inputs
-
-        __labels__ = {
-            DEVELOPMENT: _('Development'),
-            EVICTION: _('Eviction'),
-            TECHNICAL_DISASTER: _('Technical disaster'),
-        }
-
     crisis = models.ForeignKey('crisis.Crisis', verbose_name=_('Crisis'),
                                blank=True, null=True,
                                related_name='events', on_delete=models.CASCADE)
@@ -169,13 +145,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         default=list,
         null=True, blank=True
     )
-    # conflict related fields
-    trigger = models.ForeignKey('Trigger', verbose_name=_('Trigger'),
-                                blank=True, null=True,
-                                related_name='events', on_delete=models.SET_NULL)
-    trigger_sub_type = models.ForeignKey('TriggerSubType', verbose_name=_('Trigger Sub Type'),
-                                         blank=True, null=True,
-                                         related_name='events', on_delete=models.SET_NULL)
     violence = models.ForeignKey('Violence', verbose_name=_('Violence'),
                                  blank=False, null=True,
                                  related_name='events', on_delete=models.SET_NULL)
@@ -297,8 +266,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             osv_sub_type__name="OSV Sub Type",
             actor_id='Actor Id',
             actor__name='Actor',
-            trigger__name='Trigger',
-            trigger_sub_type__name='Trigger Sub Type',
             disaster_category__name='Disaster Category',
             disaster_sub_category__name='Disaster Sub Category',
             disaster_type__name='Disaster Type',
@@ -318,8 +285,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             entries_count=models.Count('figures__entry', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
         ).order_by('-created_at').select_related(
-            'trigger',
-            'trigger_sub_type',
             'violence',
             'violence_sub_type',
             'actor',
@@ -340,7 +305,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
                     event_type=getattr(Crisis.CRISIS_TYPE.get(datum['event_type']), 'name', ''),
-                    other_sub_type=getattr(Event.EVENT_OTHER_SUB_TYPE.get(datum['other_sub_type']), 'name', ''),
+                    other_sub_type=getattr(EVENT_OTHER_SUB_TYPE.get(datum['other_sub_type']), 'name', ''),
                 )
             }
 
@@ -383,8 +348,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         # Clone foreigh key fields
         foreign_key_fields_dict = {
             "crisis": Crisis,
-            "trigger": Trigger,
-            "trigger_sub_type": TriggerSubType,
             "violence": Violence,
             "violence_sub_type": ViolenceSubType,
             "actor": Actor,

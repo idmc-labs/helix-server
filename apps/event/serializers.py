@@ -183,6 +183,7 @@ class EventSerializer(MetaInformationSerializerMixin,
             event.countries.set(countries)
         if context_of_violence:
             event.context_of_violence.set(context_of_violence)
+        context_of_violence = validated_data.pop("context_of_violence", None)
         return event
 
 
