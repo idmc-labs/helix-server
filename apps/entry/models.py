@@ -472,9 +472,6 @@ class Figure(MetaInformationArchiveAbstractModel,
     context_of_violence = models.ManyToManyField(
         'event.ContextOfViolence', verbose_name=_('Context of violence'), blank=True, related_name='figures'
     )
-    context_of_violence = models.ManyToManyField(
-        'event.ContextOfViolence', verbose_name=_('Context of violence'), blank=True, related_name='figures'
-    )
     figure_cause = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Figure Cause'))
     violence = models.ForeignKey(
         'event.Violence', verbose_name=_('Figure Violence'),
