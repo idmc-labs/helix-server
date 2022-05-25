@@ -115,8 +115,6 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'utils.middleware.HealthCheckMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # NOTE: DebugToolbarMiddleware will cause mutation to execute twice for the client, works fine with graphiql
-    'utils.middleware.DebugToolbarMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django_otp.middleware.OTPMiddleware',
@@ -126,6 +124,7 @@ MIDDLEWARE = [
 ENABLE_DEBUG = os.environ.get('ENABLE_DEBUG', False)
 if ENABLE_DEBUG:
     MIDDLEWARE.append(
+        # NOTE: DebugToolbarMiddleware will cause mutation to execute twice for the client, works fine with graphiql
         'utils.middleware.DebugToolbarMiddleware',
     )
 
