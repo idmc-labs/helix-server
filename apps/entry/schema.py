@@ -130,7 +130,7 @@ class FigureType(DjangoObjectType):
     category = graphene.Field(FigureCategoryTypeEnum)
     term = graphene.Field(FigureTermsEnum)
     figure_cause = graphene.Field(CrisisTypeGrapheneEnum)
-    other_sub_type = figure_cause = graphene.Field(EventOtherSubTypeEnum)
+    other_sub_type = graphene.Field(EventOtherSubTypeEnum)
 
 
 class FigureListType(CustomDjangoListObjectType):

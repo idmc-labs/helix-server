@@ -1491,7 +1491,7 @@ type FigureType {
   sourceExcerpt: String
   event: EventType!
   contextOfViolence: [ContextOfViolenceType!]!
-  figureCause: EVENT_OTHER_SUB_TYPE
+  figureCause: CRISIS_TYPE
   violence: ViolenceType
   violenceSubType: ViolenceSubObjectType
   disasterCategory: DisasterCategoryType
