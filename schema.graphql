@@ -1491,13 +1491,14 @@ type FigureType {
   sourceExcerpt: String
   event: EventType!
   contextOfViolence: [ContextOfViolenceType!]!
-  figureCause: CRISIS_TYPE
+  figureCause: EVENT_OTHER_SUB_TYPE
   violence: ViolenceType
   violenceSubType: ViolenceSubObjectType
   disasterCategory: DisasterCategoryType
   disasterSubCategory: DisasterSubCategoryType
   disasterType: DisasterTypeObjectType
   disasterSubType: DisasterSubObjectType
+  otherSubType: EVENT_OTHER_SUB_TYPE
   osvSubType: OsvSubObjectType
   figureReviews: [ReviewType!]!
   reportSet: [ReportType!]!
@@ -1546,6 +1547,7 @@ input FigureUpdateInputType {
   caveats: String
   sourceExcerpt: String
   figureCause: CRISIS_TYPE
+  otherSubType: EVENT_OTHER_SUB_TYPE
   country: ID
   event: ID
   violence: ID
@@ -1783,6 +1785,7 @@ input NestedFigureCreateInputType {
   caveats: String
   sourceExcerpt: String
   figureCause: CRISIS_TYPE!
+  otherSubType: EVENT_OTHER_SUB_TYPE
   country: ID
   event: ID!
   violence: ID
@@ -1843,6 +1846,7 @@ input NestedFigureUpdateInputType {
   caveats: String
   sourceExcerpt: String
   figureCause: CRISIS_TYPE
+  otherSubType: EVENT_OTHER_SUB_TYPE
   country: ID
   event: ID
   violence: ID

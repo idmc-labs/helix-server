@@ -25,3 +25,16 @@ class QA_RULE_TYPE(enum.Enum):
         HAS_NO_RECOMMENDED_FIGURES: _("Has no recommended figures"),
         HAS_MULTIPLE_RECOMMENDED_FIGURES: _("Has mutiple recommended figures"),
     }
+
+
+class EVENT_OTHER_SUB_TYPE(enum.Enum):
+    DEVELOPMENT = 0
+    EVICTION = 1
+    TECHNICAL_DISASTER = 2
+    # TODO: add more based on IDMC inputs
+
+    __labels__ = {
+        DEVELOPMENT: _('Development'),
+        EVICTION: _('Eviction'),
+        TECHNICAL_DISASTER: _('Technical disaster'),
+    }

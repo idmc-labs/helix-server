@@ -29,7 +29,7 @@ from apps.entry.constants import (
 )
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
-from apps.common.enums import GENDER_TYPE
+from apps.common.enums import GENDER_TYPE, EVENT_OTHER_SUB_TYPE
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -502,6 +502,10 @@ class Figure(MetaInformationArchiveAbstractModel,
         'event.DisasterSubType', verbose_name=_('Figure Disaster Sub Type'),
         blank=True, null=True,
         related_name='figures', on_delete=models.SET_NULL
+    )
+    other_sub_type = enum.EnumField(
+        EVENT_OTHER_SUB_TYPE, verbose_name=_('Other Event Sub Types'),
+        blank=True, null=True
     )
     osv_sub_type = models.ForeignKey(
         'event.OsvSubType', verbose_name=_('Figure OSV sub type'),

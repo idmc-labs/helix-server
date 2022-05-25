@@ -17,6 +17,7 @@ from apps.users.models import User
 from django.contrib.postgres.fields import ArrayField
 from django.forms import model_to_dict
 from utils.common import add_clone_prefix
+from apps.common.enums import EVENT_OTHER_SUB_TYPE
 
 
 class NameAttributedModels(models.Model):
@@ -130,19 +131,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
     IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
-
-    class EVENT_OTHER_SUB_TYPE(enum.Enum):
-        DEVELOPMENT = 0
-        EVICTION = 1
-        TECHNICAL_DISASTER = 2
-        # TODO: add more based on IDMC inputs
-
-        __labels__ = {
-            DEVELOPMENT: _('Development'),
-            EVICTION: _('Eviction'),
-            TECHNICAL_DISASTER: _('Technical disaster'),
-        }
-
     crisis = models.ForeignKey('crisis.Crisis', verbose_name=_('Crisis'),
                                blank=True, null=True,
                                related_name='events', on_delete=models.CASCADE)
@@ -317,7 +305,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
                     event_type=getattr(Crisis.CRISIS_TYPE.get(datum['event_type']), 'name', ''),
-                    other_sub_type=getattr(Event.EVENT_OTHER_SUB_TYPE.get(datum['other_sub_type']), 'name', ''),
+                    other_sub_type=getattr(EVENT_OTHER_SUB_TYPE.get(datum['other_sub_type']), 'name', ''),
                 )
             }
 

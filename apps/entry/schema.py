@@ -39,6 +39,8 @@ from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
 from apps.extraction.filters import BaseFigureExtractionFilterSet, EntryExtractionFilterSet
 from apps.crisis.enums import CrisisTypeGrapheneEnum
+from apps.event.enums import EventOtherSubTypeEnum
+
 
 logger = logging.getLogger(__name__)
 
@@ -128,6 +130,7 @@ class FigureType(DjangoObjectType):
     category = graphene.Field(FigureCategoryTypeEnum)
     term = graphene.Field(FigureTermsEnum)
     figure_cause = graphene.Field(CrisisTypeGrapheneEnum)
+    other_sub_type = figure_cause = graphene.Field(EventOtherSubTypeEnum)
 
 
 class FigureListType(CustomDjangoListObjectType):
