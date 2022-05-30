@@ -68,7 +68,10 @@ class Communications(models.Model):
     content = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='created_by')
     created_at = models.DateTimeField()
-    updated_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='communication_updated_by')
+    updated_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='updated_by',
+        blank=True, null=True, related_name='communication_updated_by'
+    )
     updated_at = models.DateTimeField(blank=True, null=True)
     gsn = models.TextField(unique=True, blank=True, null=True)
 
@@ -86,7 +89,9 @@ class ContactCommunication(models.Model):
     content = models.TextField()
     medium = models.ForeignKey('ContactCommunicationmedium', models.DO_NOTHING, blank=True, null=True)
     contact = models.ForeignKey('ContactContact', models.DO_NOTHING)
-    created_by = models.ForeignKey('UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='contact_communication_created_by')
+    created_by = models.ForeignKey(
+        'UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='contact_communication_created_by'
+    )
     last_modified_by = models.ForeignKey('UsersUser', models.DO_NOTHING, blank=True, null=True)
     old_id = models.CharField(max_length=32, blank=True, null=True)
     attachment = models.ForeignKey('ContribAttachment', models.DO_NOTHING, blank=True, null=True)
@@ -119,8 +124,12 @@ class ContactContact(models.Model):
     phone = models.CharField(unique=True, max_length=256, blank=True, null=True)
     comment = models.TextField(blank=True, null=True)
     country = models.ForeignKey('CountryCountry', models.DO_NOTHING, blank=True, null=True)
-    created_by = models.ForeignKey('UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='contact_contact_created_by')
-    last_modified_by = models.ForeignKey('UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='contact_last_modifield_by')
+    created_by = models.ForeignKey(
+        'UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='contact_contact_created_by'
+    )
+    last_modified_by = models.ForeignKey(
+        'UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='contact_last_modifield_by'
+    )
     organization = models.ForeignKey('OrganizationOrganization', models.DO_NOTHING, blank=True, null=True)
     old_id = models.CharField(max_length=32, blank=True, null=True)
     skype = models.CharField(max_length=32, blank=True, null=True)
@@ -154,7 +163,9 @@ class Contacts(models.Model):
     comment = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='created_by', related_name="contact_created_by")
     created_at = models.DateTimeField()
-    updated_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='contact_updated_by')
+    updated_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='contact_updated_by'
+    )
     updated_at = models.DateTimeField(blank=True, null=True)
     gsn = models.TextField(unique=True, blank=True, null=True)
 
@@ -172,7 +183,9 @@ class ContextualAnalysis(models.Model):
     group = models.TextField(blank=True, null=True)
     created_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='created_by', related_name='contextual_created_by')
     created_at = models.DateTimeField()
-    updated_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='contextual_updated_by')
+    updated_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='contextual_updated_by'
+    )
     updated_at = models.DateTimeField(blank=True, null=True)
     gsn = models.TextField(unique=True, blank=True, null=True)
 
@@ -187,8 +200,12 @@ class ContribAttachment(models.Model):
     version_id = models.CharField(max_length=16, blank=True, null=True)
     attachment = models.CharField(max_length=100)
     attachment_for = models.IntegerField(blank=True, null=True)
-    created_by = models.ForeignKey('UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='contrib_attachment_created_by')
-    last_modified_by = models.ForeignKey('UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='contrib_attachment_modifield_by')
+    created_by = models.ForeignKey(
+        'UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='contrib_attachment_created_by'
+    )
+    last_modified_by = models.ForeignKey(
+        'UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='contrib_attachment_modifield_by'
+    )
     encoding = models.CharField(max_length=256, blank=True, null=True)
     filetype_detail = models.CharField(max_length=256, blank=True, null=True)
     mimetype = models.CharField(max_length=256, blank=True, null=True)
@@ -204,8 +221,12 @@ class CountryContextualupdate(models.Model):
     version_id = models.CharField(max_length=16, blank=True, null=True)
     update = models.TextField()
     country = models.ForeignKey('CountryCountry', models.DO_NOTHING)
-    created_by = models.ForeignKey('UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='country_contextual_update_created_by')
-    last_modified_by = models.ForeignKey('UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='country_contextualupdate_modified_by')
+    created_by = models.ForeignKey(
+        'UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='country_contextual_update_created_by'
+    )
+    last_modified_by = models.ForeignKey(
+        'UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='country_contextualupdate_modified_by'
+    )
     old_id = models.CharField(max_length=32, blank=True, null=True)
 
     class Meta:
@@ -268,8 +289,12 @@ class CountrySummary(models.Model):
     version_id = models.CharField(max_length=16, blank=True, null=True)
     summary = models.TextField()
     country = models.ForeignKey(CountryCountry, models.DO_NOTHING)
-    created_by = models.ForeignKey('UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='country_summary_created_by')
-    last_modified_by = models.ForeignKey('UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='country_summary_last_modifield_by')
+    created_by = models.ForeignKey(
+        'UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='country_summary_created_by'
+    )
+    last_modified_by = models.ForeignKey(
+        'UsersUser', models.DO_NOTHING, blank=True, null=True, related_name='country_summary_last_modifield_by'
+    )
     old_id = models.CharField(max_length=32, blank=True, null=True)
 
     class Meta:
@@ -329,7 +354,9 @@ class Documents(models.Model):
     publishers = django.contrib.postgres.fields.JSONField()
     created_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='created_by', related_name='document_created_by')
     created_at = models.DateTimeField()
-    updated_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='document_updated_by')
+    updated_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='document_updated_by'
+    )
     updated_at = models.DateTimeField(blank=True, null=True)
     gsn = models.TextField(unique=True, blank=True, null=True)
     sources_old = django.contrib.postgres.fields.JSONField(blank=True, null=True)
@@ -372,7 +399,9 @@ class Events(models.Model):
     glide_numbers = django.contrib.postgres.fields.JSONField(blank=True, null=True)
     created_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='created_by', related_name='event_created_by')
     created_at = models.DateTimeField()
-    updated_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='event_updated_by')
+    updated_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='event_updated_by'
+    )
     updated_at = models.DateTimeField(blank=True, null=True)
     gsn = models.TextField(unique=True, blank=True, null=True)
     data_included = models.BooleanField(blank=True, null=True)
@@ -387,7 +416,9 @@ class EventsGeneric(models.Model):
     source_id = models.TextField()
     data = models.TextField(blank=True, null=True)  # This field type is a guess.
     event = models.ForeignKey(Events, models.DO_NOTHING, blank=True, null=True)
-    imported_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='imported_by', blank=True, null=True, related_name='events_generic_imported_by')
+    imported_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='imported_by', blank=True, null=True, related_name='events_generic_imported_by'
+    )
     imported_at = models.DateTimeField(blank=True, null=True)
     rejected = models.BooleanField(blank=True, null=True)
     rejected_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='rejected_by', blank=True, null=True)
@@ -417,7 +448,7 @@ class Facts(models.Model):
     parent = models.ForeignKey('self', models.DO_NOTHING, blank=True, null=True)
     parent_role = models.TextField(blank=True, null=True)
     groups = django.contrib.postgres.fields.ArrayField(
-        models.CharField(max_length=255,blank=True),
+        models.CharField(max_length=255, blank=True),
         size=8,
     )
     themes = models.TextField(blank=True, null=True)  # This field type is a guess.
@@ -432,7 +463,9 @@ class Facts(models.Model):
     locations = django.contrib.postgres.fields.JSONField(blank=True, null=True)
     created_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='created_by', related_name='fact_created_by')
     created_at = models.DateTimeField()
-    updated_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='fact_updated_by')
+    updated_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='fact_updated_by'
+    )
     updated_at = models.DateTimeField(blank=True, null=True)
     idu = models.BooleanField()
     gsn = models.TextField(unique=True, blank=True, null=True)
@@ -475,7 +508,9 @@ class Groups(models.Model):
     end_date = django.contrib.postgres.fields.JSONField(blank=True, null=True)
     created_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='created_by', related_name='groups_created_by')
     created_at = models.DateTimeField()
-    updated_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='groups_updated_by')
+    updated_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='groups_updated_by'
+    )
     updated_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
@@ -523,9 +558,14 @@ class MonitoringChallenges(models.Model):
     date = models.DateField()
     title = models.TextField(unique=True)
     content = models.TextField(blank=True, null=True)
-    created_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='created_by', related_name='monitoring_challenges_created_by')
+    created_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='created_by', related_name='monitoring_challenges_created_by'
+    )
     created_at = models.DateTimeField()
-    updated_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='monitoring_challenges_updated_by')
+    updated_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='updated_by', blank=True,
+        null=True, related_name='monitoring_challenges_updated_by'
+    )
     updated_at = models.DateTimeField(blank=True, null=True)
     gsn = models.TextField(unique=True, blank=True, null=True)
 
@@ -589,7 +629,9 @@ class Publishers(models.Model):
     type = models.TextField()
     created_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='created_by', related_name='publisher_created_by')
     created_at = models.DateTimeField()
-    updated_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='publisher_updated_by')
+    updated_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='publisher_updated_by'
+    )
     updated_at = models.DateTimeField(blank=True, null=True)
     gsn = models.TextField(unique=True, blank=True, null=True)
     iso3 = models.ForeignKey(GeoEntities, models.DO_NOTHING, db_column='iso3', blank=True, null=True)
@@ -620,9 +662,14 @@ class SignificantUpdates(models.Model):
     title = models.TextField()
     content = models.TextField(blank=True, null=True)
     source = models.TextField(blank=True, null=True)
-    created_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='created_by', related_name='significant_updates_created_by')
+    created_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='created_by', related_name='significant_updates_created_by'
+    )
     created_at = models.DateTimeField()
-    updated_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='updated_by', blank=True, null=True, related_name='significant_updates_updated_by')
+    updated_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='updated_by',
+        blank=True, null=True, related_name='significant_updates_updated_by'
+    )
     updated_at = models.DateTimeField(blank=True, null=True)
     gsn = models.TextField(unique=True, blank=True, null=True)
 
@@ -651,7 +698,9 @@ class TabularDatasets(models.Model):
     url = models.TextField(blank=True, null=True)
     age_class = models.TextField(blank=True, null=True)
     comments = models.TextField(blank=True, null=True)
-    created_by = models.ForeignKey('Users', models.DO_NOTHING, db_column='created_by', related_name='tabular_dataset_created_by')
+    created_by = models.ForeignKey(
+        'Users', models.DO_NOTHING, db_column='created_by', related_name='tabular_dataset_created_by'
+    )
     created_at = models.DateTimeField()
     locked_at = models.DateTimeField(blank=True, null=True)
 
@@ -735,18 +784,20 @@ class TempGeoentitiesOtherLang(models.Model):
     geographical_group = models.CharField(max_length=255, blank=True, null=True)
     region = models.CharField(max_length=255, blank=True, null=True)
     sub_region = models.CharField(max_length=255, blank=True, null=True)
-    centroid_001 = models.CharField(db_column='centroid__001', max_length=255, blank=True, null=True)  # Field renamed because it contained more than one '_' in a row.
-    centroid_002 = models.CharField(db_column='centroid__002', max_length=255, blank=True, null=True)  # Field renamed because it contained more than one '_' in a row.
-    boundingbox_001 = models.CharField(db_column='boundingbox__001', max_length=255, blank=True, null=True)  # Field renamed because it contained more than one '_' in a row.
-    boundingbox_002 = models.CharField(db_column='boundingbox__002', max_length=255, blank=True, null=True)  # Field renamed because it contained more than one '_' in a row.
-    boundingbox_003 = models.CharField(db_column='boundingbox__003', max_length=255, blank=True, null=True)  # Field renamed because it contained more than one '_' in a row.
-    boundingbox_004 = models.CharField(db_column='boundingbox__004', max_length=255, blank=True, null=True)  # Field renamed because it contained more than one '_' in a row.
+    centroid_001 = models.CharField(db_column='centroid__001', max_length=255, blank=True, null=True)
+    centroid_002 = models.CharField(
+        db_column='centroid__002', max_length=255, blank=True, null=True
+    )
+    boundingbox_001 = models.CharField(db_column='boundingbox__001', max_length=255, blank=True, null=True)
+    boundingbox_002 = models.CharField(db_column='boundingbox__002', max_length=255, blank=True, null=True)
+    boundingbox_003 = models.CharField(db_column='boundingbox__003', max_length=255, blank=True, null=True)
+    boundingbox_004 = models.CharField(db_column='boundingbox__004', max_length=255, blank=True, null=True)
     kampala_signed = models.CharField(max_length=255, blank=True, null=True)
     kampala_ratified = models.CharField(max_length=255, blank=True, null=True)
     sub_region_au = models.CharField(max_length=255, blank=True, null=True)
-    es = models.CharField(db_column='ES', max_length=255, blank=True, null=True)  # Field name made lowercase.
-    fr = models.CharField(db_column='FR', max_length=255, blank=True, null=True)  # Field name made lowercase.
-    ar = models.CharField(db_column='AR', max_length=255, blank=True, null=True)  # Field name made lowercase.
+    es = models.CharField(db_column='ES', max_length=255, blank=True, null=True)
+    fr = models.CharField(db_column='FR', max_length=255, blank=True, null=True)
+    ar = models.CharField(db_column='AR', max_length=255, blank=True, null=True)
 
     class Meta:
         managed = False

@@ -134,7 +134,7 @@ settings = {
         'remarks': '',
     },
     'ws19': {
-        'title': f'Documents with titles that contain "DELETE", "NOT INCLUDE" or "IGNORE"',
+        'title': 'Documents with titles that contain "DELETE", "NOT INCLUDE" or "IGNORE"',
         'code': 'W8',
         'remarks': '',
     },
@@ -603,12 +603,15 @@ class Command(BaseCommand):
                 event_obj.name,
             )
 
-        # Old Named GRID and MYU but not tagged as one (https://github.com/idmc-labs/Helix2.0/issues/243#issuecomment-974207507)
+        # Old Named GRID and MYU but not tagged as one
+        # (https://github.com/idmc-labs/Helix2.0/issues/243#issuecomment-974207507)
         ws21 = wb.create_sheet(settings['ws21']['code'])
         ws21.append([settings['ws21']['title']])
         ws21.append(["Fact ID", "Fact URL", "Fact Name"])
 
-        masterfact_stats_qs = Facts.objects.using('helixmigration').order_by().values('parent_id').annotate(count=Count('*')).filter(
+        masterfact_stats_qs = Facts.objects.using(
+            'helixmigration'
+        ).order_by().values('parent_id').annotate(count=Count('*')).filter(
             count__gt=0,
         ).values_list('parent_id')
 
@@ -639,8 +642,8 @@ class Command(BaseCommand):
         ws22.append(["Fact ID", "Fact URL"])
 
         master_facts_qs = Facts.objects.using('helixmigration').filter(
-             parent_id__isnull=False,
-             document_id__isnull=True
+            parent_id__isnull=False,
+            document_id__isnull=True
         )
         ids = master_facts_qs.values_list('id', flat=True)
         for row, id in enumerate(ids):
@@ -654,30 +657,126 @@ class Command(BaseCommand):
         # Summary page
         ws0.title = "summary"
         ws0.append(["Code", "Title", "Count", "Remarks"])
-        ws0.append([settings['ws1']['code'], settings['ws1']['title'], small_and_large_event_date_qs.count(), settings['ws1']['remarks']])
+        ws0.append(
+            [
+                settings['ws1']['code'], settings['ws1']['title'],
+                small_and_large_event_date_qs.count(), settings['ws1']['remarks']
+            ]
+        )
 
-        ws0.append([settings['ws2']['code'], settings['ws2']['title'], start_date_null_figures_qs.count(), settings['ws2']['remarks']])
-        ws0.append([settings['ws3']['code'], settings['ws3']['title'], flow_figures_without_end_date_qs.count(), settings['ws3']['remarks']])
-        ws0.append([settings['ws4']['code'], settings['ws4']['title'], stock_figures_without_end_date_qs.count(), settings['ws4']['remarks']])
-        ws0.append([settings['ws5']['code'], settings['ws5']['title'], flow_figures_with_start_date_gt_end_date_qs.count(), settings['ws5']['remarks']])
-        ws0.append([settings['ws6']['code'], settings['ws6']['title'], stock_figures_with_start_date_gt_end_date_qs.count(), settings['ws6']['remarks']])
-        ws0.append([settings['ws7']['code'], settings['ws7']['title'], small_and_large_figure_date_qs.count(), settings['ws7']['remarks']])
-        ws0.append([settings['ws8']['code'], settings['ws8']['title'], missing_flow_row, settings['ws8']['remarks']])
+        ws0.append(
+            [
+                settings['ws2']['code'], settings['ws2']['title'],
+                start_date_null_figures_qs.count(), settings['ws2']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws3']['code'], settings['ws3']['title'],
+                flow_figures_without_end_date_qs.count(), settings['ws3']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws4']['code'], settings['ws4']['title'],
+                stock_figures_without_end_date_qs.count(), settings['ws4']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws5']['code'], settings['ws5']['title'],
+                flow_figures_with_start_date_gt_end_date_qs.count(), settings['ws5']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws6']['code'], settings['ws6']['title'],
+                stock_figures_with_start_date_gt_end_date_qs.count(), settings['ws6']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws7']['code'], settings['ws7']['title'],
+                small_and_large_figure_date_qs.count(), settings['ws7']['remarks']
+            ]
+        )
+        ws0.append(
+            [settings['ws8']['code'], settings['ws8']['title'], missing_flow_row, settings['ws8']['remarks']]
+        )
         ws0.append([settings['ws9']['code'], settings['ws9']['title'], added_flow_row, settings['ws9']['remarks']])
 
-        ws0.append([settings['ws10']['code'], settings['ws10']['title'], missing_stock_row, settings['ws10']['remarks']])
-        ws0.append([settings['ws11']['code'], settings['ws11']['title'], added_stock_row, settings['ws11']['remarks']])
-        ws0.append([settings['ws12']['code'], settings['ws12']['title'], triangulation_start_date_null_figures_qs.count(), settings['ws12']['remarks']])
-        ws0.append([settings['ws13']['code'], settings['ws13']['title'], triangulation_flow_figures_without_end_date_qs.count(), settings['ws13']['remarks']])
-        ws0.append([settings['ws14']['code'], settings['ws14']['title'], triangulation_stock_figures_without_end_date_qs.count(), settings['ws14']['remarks']])
-        ws0.append([settings['ws15']['code'], settings['ws15']['title'], triangulation_flow_figures_with_start_date_gt_end_date_qs.count(), settings['ws15']['remarks']])
-        ws0.append([settings['ws16']['code'], settings['ws16']['title'], triangulation_stock_figures_with_start_date_gt_end_date_qs.count(), settings['ws16']['remarks']])
-        ws0.append([settings['ws17']['code'], settings['ws17']['title'], triangulation_small_and_large_figure_date_qs.count(), settings['ws17']['remarks']])
-        ws0.append([settings['ws18']['code'], settings['ws18']['title'], old_facts_qs.count(), settings['ws18']['remarks']])
-        ws0.append([settings['ws19']['code'], settings['ws19']['title'], old_documents_qs.count(), settings['ws19']['remarks']])
-        ws0.append([settings['ws20']['code'], settings['ws20']['title'], old_events_qs.count(), settings['ws20']['remarks']])
-        ws0.append([settings['ws21']['code'], settings['ws21']['title'], old_grid_and_myu_qs.count(), settings['ws21']['remarks']])
-        ws0.append([settings['ws22']['code'], settings['ws22']['title'], master_facts_qs.count(), settings['ws22']['remarks']])
+        ws0.append(
+            [settings['ws10']['code'], settings['ws10']['title'], missing_stock_row, settings['ws10']['remarks']]
+        )
+        ws0.append(
+            [settings['ws11']['code'], settings['ws11']['title'], added_stock_row, settings['ws11']['remarks']]
+        )
+        ws0.append(
+            [
+                settings['ws12']['code'], settings['ws12']['title'],
+                triangulation_start_date_null_figures_qs.count(), settings['ws12']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws13']['code'], settings['ws13']['title'],
+                triangulation_flow_figures_without_end_date_qs.count(), settings['ws13']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws14']['code'], settings['ws14']['title'],
+                triangulation_stock_figures_without_end_date_qs.count(), settings['ws14']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws15']['code'], settings['ws15']['title'],
+                triangulation_flow_figures_with_start_date_gt_end_date_qs.count(), settings['ws15']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws16']['code'], settings['ws16']['title'],
+                triangulation_stock_figures_with_start_date_gt_end_date_qs.count(), settings['ws16']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws17']['code'], settings['ws17']['title'],
+                triangulation_small_and_large_figure_date_qs.count(), settings['ws17']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws18']['code'], settings['ws18']['title'],
+                old_facts_qs.count(), settings['ws18']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws19']['code'], settings['ws19']['title'],
+                old_documents_qs.count(), settings['ws19']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws20']['code'], settings['ws20']['title'],
+                old_events_qs.count(), settings['ws20']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws21']['code'], settings['ws21']['title'],
+                old_grid_and_myu_qs.count(), settings['ws21']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws22']['code'], settings['ws22']['title'],
+                master_facts_qs.count(), settings['ws22']['remarks']
+            ]
+        )
         # Make sure generated directory exists
         try:
             os.makedirs("generated")
