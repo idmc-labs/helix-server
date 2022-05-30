@@ -213,16 +213,22 @@ else:
             'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'postgres'),
             'HOST': os.environ.get('POSTGRES_HOST', 'db'),
             'PORT': os.environ.get('POSTGRES_PORT', 5432),
-        },
-        'helixmigration': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': os.environ.get('HELIX_MIGRATION_POSTGRES_DB', 'backend_production'),
-            'USER': os.environ.get('HELIX_MIGRATION_POSTGRES_USER', 'postgres'),
-            'PASSWORD': os.environ.get('HELIX_MIGRATION_POSTGRES_PASSWORD', 'postgres'),
-            'HOST': os.environ.get('HELIX_MIGRATION_POSTGRES_HOST', '192.168.88.252'),
-            'PORT': os.environ.get('HELIX_MIGRATION_POSTGRES_PORT', 3211),
         }
     }
+
+if os.environ.get('ENABLE_DATA_PROBLEM_CHECKER', False):
+    DATABASES.update(
+        {
+            'helixmigration': {
+                'ENGINE': 'django.db.backends.postgresql_psycopg2',
+                'NAME': os.environ.get('HELIX_MIGRATION_POSTGRES_DB', 'backend_production'),
+                'USER': os.environ.get('HELIX_MIGRATION_POSTGRES_USER', 'postgres'),
+                'PASSWORD': os.environ.get('HELIX_MIGRATION_POSTGRES_PASSWORD', 'postgres'),
+                'HOST': os.environ.get('HELIX_MIGRATION_POSTGRES_HOST', '192.168.88.252'),
+                'PORT': os.environ.get('HELIX_MIGRATION_POSTGRES_PORT', 3211),
+            }
+        }
+    )
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
