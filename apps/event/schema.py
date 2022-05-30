@@ -4,7 +4,7 @@ from graphene_django_extras import DjangoObjectField
 
 from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.event.enums import EventOtherSubTypeEnum, QaRecommendedFigureEnum
+from apps.event.enums import QaRecommendedFigureEnum
 from apps.event.models import (
     Event,
     Violence,
@@ -16,6 +16,7 @@ from apps.event.models import (
     DisasterType,
     OsvSubType,
     ContextOfViolence,
+    OtherSubType,
 )
 from apps.event.filters import ActorFilter, EventFilter
 from utils.graphene.types import CustomDjangoListObjectType
@@ -166,13 +167,29 @@ class OsvSubTypeList(CustomDjangoListObjectType):
         }
 
 
+class OtherSubTypeObjectType(DjangoObjectType):
+    class Meta:
+        model = OtherSubType
+        filter_fields = {
+            'name': ['icontains']
+        }
+
+
+class OtherSubTypeList(CustomDjangoListObjectType):
+    class Meta:
+        model = OtherSubType
+        filter_fields = {
+            'name': ['icontains']
+        }
+
+
 class EventType(DjangoObjectType):
     class Meta:
         model = Event
         exclude_fields = ('figures',)
 
     event_type = graphene.Field(CrisisTypeGrapheneEnum)
-    other_sub_type = graphene.Field(EventOtherSubTypeEnum)
+    other_sub_type = graphene.Field(OtherSubTypeObjectType)
     violence = graphene.Field(ViolenceType)
     violence_sub_type = graphene.Field(ViolenceSubObjectType)
     actor = graphene.Field(ActorType)
@@ -185,6 +202,8 @@ class EventType(DjangoObjectType):
     glide_numbers = graphene.List(graphene.NonNull(graphene.String))
     osv_sub_type = graphene.Field(OsvSubObjectType)
     QA_RULE_TYPE = graphene.Field(QaRecommendedFigureEnum)
+    event_typology = graphene.String()
+    figure_typology = graphene.List(graphene.String)
 
     def resolve_review_count(root, info, **kwargs):
         return info.context.event_event_review_count_dataloader.load(root.id)
@@ -192,27 +211,11 @@ class EventType(DjangoObjectType):
     def resolve_entry_count(root, info, **kwargs):
         return info.context.event_entry_count_dataloader.load(root.id)
 
-    # def resolve_total_stock_idp_figures(root, info, **kwargs):
-    #     NULL = 'null'
-    #     value = getattr(
-    #         root,
-    #         Event.IDP_FIGURES_ANNOTATE,
-    #         NULL
-    #     )
-    #     if value != NULL:
-    #         return value
-    #     return info.context.event_event_total_stock_idp_figures.load(root.id)
-    #
-    # def resolve_total_flow_nd_figures(root, info, **kwargs):
-    #     NULL = 'null'
-    #     value = getattr(
-    #         root,
-    #         Event.ND_FIGURES_ANNOTATE,
-    #         NULL
-    #     )
-    #     if value != NULL:
-    #         return value
-    #     return info.context.event_event_total_flow_nd_figures.load(root.id)
+    def resolve_event_typology(root, info, **kwargs):
+        return info.context.event_typology_dataloader.load(root.id)
+
+    def resolve_figure_typology(root, info, **kwargs):
+        return info.context.event_figure_typology_dataloader.load(root.id)
 
 
 class EventListType(CustomDjangoListObjectType):

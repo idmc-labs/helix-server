@@ -2,12 +2,16 @@ from django.utils.functional import cached_property
 
 from apps.country.dataloaders import TotalFigureThisYearByCountryCategoryEventTypeLoader
 from apps.crisis.dataloaders import TotalIDPFigureByCrisisLoader, TotalNDFigureByCrisisLoader
-from apps.entry.dataloaders import TotalIDPFigureByEntryLoader, TotalNDFigureByEntryLoader
+from apps.entry.dataloaders import (
+    TotalIDPFigureByEntryLoader, TotalNDFigureByEntryLoader, FigureTypologyLoader
+)
 from apps.event.dataloaders import (
     TotalIDPFigureByEventLoader,
     TotalNDFigureByEventLoader,
     EventReviewCountLoader,
     EventEntryCountLoader,
+    EventTypologyLoader,
+    EventFigureTypologyLoader,
 )
 from apps.crisis.dataloaders import CrisisReviewCountLoader
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
@@ -111,3 +115,15 @@ class GQLContext:
     @cached_property
     def crisis_crisis_review_count_dataloader(self):
         return CrisisReviewCountLoader()
+
+    @cached_property
+    def event_typology_dataloader(self):
+        return EventTypologyLoader()
+
+    @cached_property
+    def event_figure_typology_dataloader(self):
+        return EventFigureTypologyLoader()
+
+    @cached_property
+    def figure_typology_dataloader(self):
+        return FigureTypologyLoader()
