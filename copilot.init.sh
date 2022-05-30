@@ -1,4 +1,5 @@
 #! /bin/bash -xe
+
 # Run migrations
 python manage.py migrate
 

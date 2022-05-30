@@ -1,6 +1,9 @@
 #! /bin/bash -xe
+
 # Run migrations
 docker-compose exec server python manage.py migrate
+
+# No need to collect static init.sh
 
 # Init roles
 docker-compose exec server python manage.py remove_stale_contenttypes
