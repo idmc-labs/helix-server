@@ -2066,6 +2066,13 @@ type OsvSubTypeList {
   pageSize: Int
 }
 
+type OtherSubTypeList {
+  results: [OtherSubTypeObjectType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
 type OtherSubTypeObjectType {
   createdAt: DateTime!
   modifiedAt: DateTime!
@@ -2264,6 +2271,7 @@ type Query {
   osvSubTypeList(name_Icontains: String, ordering: String): OsvSubTypeList
   contextOfViolence(id: ID!): ContextOfViolenceType
   contextOfViolenceList(name_Icontains: String, ordering: String): ContextOfViolenceListType
+  otherSubTypeList(name_Icontains: String, ordering: String): OtherSubTypeList
   crisis(id: ID!): CrisisType
   crisisList(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], report: String, createdByIds: [ID!], page: Int = 1, ordering: String, pageSize: Int): CrisisListType
   country(id: ID!): CountryType

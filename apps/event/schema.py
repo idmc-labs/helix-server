@@ -260,3 +260,4 @@ class Query:
     osv_sub_type_list = DjangoPaginatedListObjectField(OsvSubTypeList)
     context_of_violence = DjangoObjectField(ContextOfViolenceType)
     context_of_violence_list = DjangoPaginatedListObjectField(ContextOfViolenceListType)
+    other_sub_type_list = DjangoPaginatedListObjectField(OtherSubTypeList)
