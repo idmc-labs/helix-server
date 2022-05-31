@@ -14,6 +14,7 @@ from utils.factories import (
     EventFactory,
     EntryFactory,
     FigureFactory,
+    OtherSubtypeFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -46,7 +47,10 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
                     endDate
                     name
                     eventType
-                    otherSubType
+                    otherSubType {
+                        id
+                        name
+                    }
                     violence {
                         name
                     }
@@ -66,7 +70,8 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
             "countries": [each.id for each in countries],
             "startDate": "2014-01-01",
             "endDate": "2016-01-01",
-            "eventNarrative": "event narrative"
+            "eventNarrative": "event narrative",
+            "otherSubType": OtherSubtypeFactory().id
         }
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor)
@@ -86,7 +91,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
 
     def test_valid_event_creation_with_other_sub_type(self) -> None:
         self.input['eventType'] = "DISASTER"
-        self.input['otherSubType'] = "DEVELOPMENT"  # this will not be set
+        self.input['otherSubType'] = OtherSubtypeFactory.create().id
         response = self.query(
             self.mutation,
             input_data=self.input

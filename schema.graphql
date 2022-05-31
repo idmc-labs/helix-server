@@ -1003,12 +1003,6 @@ enum ENTRY_REVIEW_STATUS {
   GREY
 }
 
-enum EVENT_OTHER_SUB_TYPE {
-  DEVELOPMENT
-  EVICTION
-  TECHNICAL_DISASTER
-}
-
 enum EXCEL_GENERATION_STATUS {
   PENDING
   IN_PROGRESS
@@ -1129,7 +1123,6 @@ input EventCreateInputType {
   versionId: String
   name: String!
   eventType: CRISIS_TYPE!
-  otherSubType: EVENT_OTHER_SUB_TYPE
   glideNumbers: [String!]
   startDate: Date!
   startDateAccuracy: DATE_ACCURACY
@@ -1138,6 +1131,7 @@ input EventCreateInputType {
   eventNarrative: String
   ignoreQa: Boolean
   crisis: ID
+  otherSubType: ID
   violence: ID
   violenceSubType: ID
   actor: ID
@@ -1175,7 +1169,7 @@ type EventType {
   crisis: CrisisType
   name: String!
   eventType: CRISIS_TYPE
-  otherSubType: EVENT_OTHER_SUB_TYPE
+  otherSubType: OtherSubTypeObjectType
   glideNumbers: [String!]
   violence: ViolenceType
   violenceSubType: ViolenceSubObjectType
@@ -1200,6 +1194,8 @@ type EventType {
   reviewCount: EventReviewCountType
   entryCount: Int
   QARuleType: QA_RULE_TYPE
+  eventTypology: String
+  figureTypology: [String]
 }
 
 input EventUpdateInputType {
@@ -1208,7 +1204,6 @@ input EventUpdateInputType {
   versionId: String
   name: String
   eventType: CRISIS_TYPE
-  otherSubType: EVENT_OTHER_SUB_TYPE
   glideNumbers: [String!]
   startDate: Date
   startDateAccuracy: DATE_ACCURACY
@@ -1217,6 +1212,7 @@ input EventUpdateInputType {
   eventNarrative: String
   ignoreQa: Boolean
   crisis: ID
+  otherSubType: ID
   violence: ID
   violenceSubType: ID
   actor: ID
@@ -1498,10 +1494,11 @@ type FigureType {
   disasterSubCategory: DisasterSubCategoryType
   disasterType: DisasterTypeObjectType
   disasterSubType: DisasterSubObjectType
-  otherSubType: EVENT_OTHER_SUB_TYPE
+  otherSubType: OtherSubTypeObjectType
   osvSubType: OsvSubObjectType
   figureReviews: [ReviewType!]!
   reportSet: [ReportType!]!
+  figureTypology: String
 }
 
 input FigureUpdateInputType {
@@ -1547,7 +1544,6 @@ input FigureUpdateInputType {
   caveats: String
   sourceExcerpt: String
   figureCause: CRISIS_TYPE
-  otherSubType: EVENT_OTHER_SUB_TYPE
   country: ID
   event: ID
   violence: ID
@@ -1556,6 +1552,7 @@ input FigureUpdateInputType {
   disasterSubCategory: ID
   disasterType: ID
   disasterSubType: ID
+  otherSubType: ID
   osvSubType: ID
   tags: [ID!]
   contextOfViolence: [ID!]
@@ -1785,7 +1782,6 @@ input NestedFigureCreateInputType {
   caveats: String
   sourceExcerpt: String
   figureCause: CRISIS_TYPE!
-  otherSubType: EVENT_OTHER_SUB_TYPE
   country: ID
   event: ID!
   violence: ID
@@ -1794,6 +1790,7 @@ input NestedFigureCreateInputType {
   disasterSubCategory: ID
   disasterType: ID
   disasterSubType: ID
+  otherSubType: ID
   osvSubType: ID
   tags: [ID!]
   contextOfViolence: [ID!]
@@ -1846,7 +1843,6 @@ input NestedFigureUpdateInputType {
   caveats: String
   sourceExcerpt: String
   figureCause: CRISIS_TYPE
-  otherSubType: EVENT_OTHER_SUB_TYPE
   country: ID
   event: ID
   violence: ID
@@ -1855,6 +1851,7 @@ input NestedFigureUpdateInputType {
   disasterSubCategory: ID
   disasterType: ID
   disasterSubType: ID
+  otherSubType: ID
   osvSubType: ID
   tags: [ID!]
   contextOfViolence: [ID!]
@@ -2069,6 +2066,25 @@ type OsvSubTypeList {
   pageSize: Int
 }
 
+type OtherSubTypeList {
+  results: [OtherSubTypeObjectType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type OtherSubTypeObjectType {
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  name: String!
+  id: ID!
+  figures: [FigureType!]!
+  events: [EventType!]!
+}
+
 enum PARKING_LOT_SOURCE {
   IDETECT
   HAZARD_MONITORING
@@ -2255,6 +2271,7 @@ type Query {
   osvSubTypeList(name_Icontains: String, ordering: String): OsvSubTypeList
   contextOfViolence(id: ID!): ContextOfViolenceType
   contextOfViolenceList(name_Icontains: String, ordering: String): ContextOfViolenceListType
+  otherSubTypeList(name_Icontains: String, ordering: String): OtherSubTypeList
   crisis(id: ID!): CrisisType
   crisisList(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], report: String, createdByIds: [ID!], page: Int = 1, ordering: String, pageSize: Int): CrisisListType
   country(id: ID!): CountryType

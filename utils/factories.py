@@ -269,3 +269,8 @@ class ReportCommentFactory(DjangoModelFactory):
         model = 'report.ReportComment'
 
     report = factory.SubFactory(ReportFactory)
+
+
+class OtherSubtypeFactory(DjangoModelFactory):
+    class Meta:
+        model = 'event.otherSubType'

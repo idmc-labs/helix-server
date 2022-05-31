@@ -5,6 +5,8 @@ from django.db.models import (
     OuterRef,
     IntegerField,
 )
+from django.db.models import Case, F, When, CharField
+
 from promise import Promise
 from promise.dataloader import DataLoader
 
@@ -125,6 +127,50 @@ class EventEntryCountLoader(DataLoader):
             item['id']: item['entry_count']
             for item in qs.values('id', 'entry_count')
         }
+        return Promise.resolve([
+            batch_load.get(key) for key in keys
+        ])
+
+
+class EventTypologyLoader(DataLoader):
+    def batch_load_fn(self, keys: list):
+        qs = Event.objects.filter(
+            id__in=keys
+        ).annotate(
+            event_typology=Case(
+                When(other_sub_type__isnull=False, then=F('other_sub_type__name')),
+                When(violence_sub_type__isnull=False, then=F('violence_sub_type__name')),
+                When(disaster_sub_type__isnull=False, then=F('disaster_sub_type__name')),
+                output_field=CharField(),
+            )
+        ).values('id', 'event_typology')
+        batch_load = {
+            item['id']: item['event_typology']
+            for item in qs
+        }
+        return Promise.resolve([
+            batch_load.get(key) for key in keys
+        ])
+
+
+class EventFigureTypologyLoader(DataLoader):
+    def batch_load_fn(self, keys: list):
+        qs = Event.objects.filter(
+            id__in=keys
+        ).annotate(
+            event_typology=Case(
+                When(figures__other_sub_type__isnull=False, then=F('figures__other_sub_type__name')),
+                When(figures__violence_sub_type__isnull=False, then=F('figures__violence_sub_type__name')),
+                When(figures__disaster_sub_type__isnull=False, then=F('figures__disaster_sub_type__name')),
+                output_field=CharField(),
+            )
+        )
+        batch_load = {}
+        for key in keys:
+            batch_load[key] = qs.filter(
+                id=key, event_typology__isnull=False
+            ).values_list('event_typology', flat=True).distinct('event_typology')
+
         return Promise.resolve([
             batch_load.get(key) for key in keys
         ])

@@ -17,7 +17,6 @@ from apps.users.models import User
 from django.contrib.postgres.fields import ArrayField
 from django.forms import model_to_dict
 from utils.common import add_clone_prefix
-from apps.common.enums import EVENT_OTHER_SUB_TYPE
 
 
 class NameAttributedModels(models.Model):
@@ -50,6 +49,12 @@ class ViolenceSubType(NameAttributedModels):
 class ContextOfViolence(MetaInformationAbstractModel, NameAttributedModels):
     """
     Holds the context of violence
+    """
+
+
+class OtherSubType(MetaInformationAbstractModel, NameAttributedModels):
+    """
+    Holds the other sub type
     """
 
 
@@ -136,8 +141,11 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                                related_name='events', on_delete=models.CASCADE)
     name = models.CharField(verbose_name=_('Event Name'), max_length=256)
     event_type = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Event Cause'))
-    other_sub_type = enum.EnumField(EVENT_OTHER_SUB_TYPE, verbose_name=_('Other Event Sub Types'),
-                                    blank=True, null=True)
+
+    other_sub_type = models.ForeignKey(
+        'OtherSubType', verbose_name=_('Other sub type'),
+        blank=True, null=True,
+        related_name='events', on_delete=models.SET_NULL)
     glide_numbers = ArrayField(
         models.CharField(
             verbose_name=_('Event Codes'), max_length=256, null=True, blank=True
@@ -260,7 +268,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 cls.ND_FIGURES_ANNOTATE: 'ND Figure',
             },
             event_type='Event Cause',
-            other_sub_type='Other Event Sub Type',
+            other_sub_type__name='Other Event Sub Type',
             violence__name='Violence',
             violence_sub_type__name='Violence Sub Type',
             osv_sub_type__name="OSV Sub Type",
@@ -305,7 +313,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
                     event_type=getattr(Crisis.CRISIS_TYPE.get(datum['event_type']), 'name', ''),
-                    other_sub_type=getattr(EVENT_OTHER_SUB_TYPE.get(datum['other_sub_type']), 'name', ''),
                 )
             }
 
