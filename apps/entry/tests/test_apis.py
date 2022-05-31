@@ -189,7 +189,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "geoLocations": [source1],
                 "tags": [self.tag1.id, self.tag2.id, self.tag3.id],
                 'calculationLogic': 'test logics',
-                'caveats': 'caveats',
                 'sourceExcerpt': 'source excerpt',
                 'event': self.event.id,
                 "contextOfViolence": [self.context_of_violence.id],

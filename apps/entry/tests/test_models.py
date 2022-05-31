@@ -309,13 +309,11 @@ class TestEntryModel(HelixTestCase):
         e = FigureFactory.create(created_by=self.editor, event=self.event,)
         e.source_excerpt = html_data
         e.calculation_logic = '~!@#$%^&*<>?/'
-        e.caveats = markup_text
         e.save()
         e.refresh_from_db()
 
         self.assertEqual(e.source_excerpt, 'test test test')
         self.assertEqual(e.calculation_logic, '~!@#$%^&*<>?/')
-        self.assertEqual(e.caveats, markup_text)
 
         markup_and_html_mixed_data = """
         # H1 heading 1

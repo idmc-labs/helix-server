@@ -509,7 +509,7 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'household_size', 'total_figures', 'term', 'category__name', 'role',
                 'start_date', 'end_date', 'include_idu', 'excerpt_idu', 'country__name',
                 'country__region__name', 'is_disaggregated', 'is_housing_destruction',
-                'source_excerpt', 'calculation_logic', 'caveats'
+                'source_excerpt', 'calculation_logic'
             ),
             entries=Entry.objects.filter(
                 id__in=self.report.report_figures.values('entry')
