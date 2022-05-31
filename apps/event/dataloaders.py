@@ -167,7 +167,9 @@ class EventFigureTypologyLoader(DataLoader):
         )
         batch_load = {}
         for key in keys:
-            batch_load[key] = qs.filter(id=key, event_typology__isnull=False).values_list('event_typology', flat=True)
+            batch_load[key] = qs.filter(
+                id=key, event_typology__isnull=False
+            ).values_list('event_typology', flat=True).distinct('event_typology')
 
         return Promise.resolve([
             batch_load.get(key) for key in keys
