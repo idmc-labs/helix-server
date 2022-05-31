@@ -1486,7 +1486,6 @@ type FigureType {
   isHousingDestruction: Boolean
   geoLocations(ordering: String): OSMNameListType
   calculationLogic: String
-  caveats: String
   tags: [FigureTagType!]!
   sourceExcerpt: String
   event: EventType!
@@ -1544,7 +1543,6 @@ input FigureUpdateInputType {
   isDisaggregated: Boolean
   isHousingDestruction: Boolean
   calculationLogic: String
-  caveats: String
   sourceExcerpt: String
   figureCause: CRISIS_TYPE
   otherSubType: EVENT_OTHER_SUB_TYPE
@@ -1782,7 +1780,6 @@ input NestedFigureCreateInputType {
   isDisaggregated: Boolean
   isHousingDestruction: Boolean
   calculationLogic: String
-  caveats: String
   sourceExcerpt: String
   figureCause: CRISIS_TYPE!
   otherSubType: EVENT_OTHER_SUB_TYPE
@@ -1843,7 +1840,6 @@ input NestedFigureUpdateInputType {
   isDisaggregated: Boolean
   isHousingDestruction: Boolean
   calculationLogic: String
-  caveats: String
   sourceExcerpt: String
   figureCause: CRISIS_TYPE
   otherSubType: EVENT_OTHER_SUB_TYPE
