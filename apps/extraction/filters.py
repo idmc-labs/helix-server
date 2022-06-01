@@ -312,9 +312,7 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     @property
     def qs(self):
-        return super().qs.annotate(
-            **Entry._total_figure_disaggregation_subquery(),
-        ).distinct()
+        return super().qs.distinct()
 
 
 class BaseFigureExtractionFilterSet(df.FilterSet):

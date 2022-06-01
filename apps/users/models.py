@@ -193,12 +193,10 @@ class Portfolio(models.Model):
 
     class Meta:
         constraints = [
-            UniqueConstraint(fields=['role', 'monitoring_sub_region', 'country'],
-                             name='unique_with_country'),
-            UniqueConstraint(fields=['user', 'role'],
-                             condition=models.Q(monitoring_sub_region=None),
-                             name='unique_without_region'),
             UniqueConstraint(fields=['role', 'monitoring_sub_region'],
-                             condition=models.Q(country=None),
-                             name='unique_without_country'),
+                             condition=models.Q(role=USER_ROLE.REGIONAL_COORDINATOR),
+                             name='unique_for_monitoring_sub_region'),
+            UniqueConstraint(fields=['role', 'country'],
+                             condition=models.Q(role=USER_ROLE.MONITORING_EXPERT),
+                             name='unique_for_country'),
         ]

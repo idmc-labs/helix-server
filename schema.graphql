@@ -1086,8 +1086,6 @@ type EntryType {
   figures: [FigureType!]!
   reviewing: [EntryReviewerType!]!
   latestReviews: [ReviewType]
-  totalStockIdpFigures(data: TotalFigureFilterInputType): Int
-  totalFlowNdFigures(data: TotalFigureFilterInputType): Int
   sourceMethodology: String
   isReviewed: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
   isUnderReview: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
@@ -2775,13 +2773,6 @@ type SummaryType {
   versionId: String
   id: ID!
   summary: String!
-}
-
-input TotalFigureFilterInputType {
-  categories: [String!]
-  filterFigureStartAfter: Date
-  filterFigureEndBefore: Date
-  roles: [String!]
 }
 
 enum UNIT {
