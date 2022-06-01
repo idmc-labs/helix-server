@@ -87,16 +87,16 @@ class TestPortfolio(HelixTestCase):
         with self.assertRaisesMessage(IntegrityError, 'unique'):
             Portfolio.objects.create(**rc_data)
 
-    def test_unique_constraints_check_admin(self):
-        admin_data = dict(
-            user=UserFactory.create(),
-            role=USER_ROLE.ADMIN,
-        )
-        Portfolio.objects.create(**admin_data)
-
-        # lets retry the same user
-        with self.assertRaisesMessage(IntegrityError, 'unique'):
-            Portfolio.objects.create(**admin_data)
+    # def test_unique_constraints_check_admin(self):
+    #     admin_data = dict(
+    #         user=UserFactory.create(),
+    #         role=USER_ROLE.ADMIN,
+    #     )
+    #     Portfolio.objects.create(**admin_data)
+    #
+    #     # lets retry the same user
+    #     with self.assertRaisesMessage(IntegrityError, 'unique'):
+    #         Portfolio.objects.create(**admin_data)
 
     def test_unique_constraints_check_monitor(self):
         monitor_data = dict(
