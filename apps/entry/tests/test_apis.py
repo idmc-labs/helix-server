@@ -608,6 +608,40 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.assertFalse(content['data']['updateEntry']['ok'], content)
         self.assertIn('householdSize', json.dumps(content['data']['updateEntry']['errors']))
 
+    def test_figure_cause_should_be_same_as_event_type(self):
+        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT)
+        # Pass incorrect figure cause
+        figures = [
+            {
+                'figureCause': Crisis.CRISIS_TYPE.OTHER.name,
+                'event': event.id,
+            }
+        ]
+        self.input.update({
+            'figures': figures
+        })
+        admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.force_login(admin)
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['updateEntry']['ok'], content)
+        self.assertIn('figureCause', json.dumps(content['data']['updateEntry']['errors']))
+
+        # Pass correct figure cause
+        figures[0]['figureCause'] = Crisis.CRISIS_TYPE.CONFLICT.name
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertFalse(content['data']['updateEntry']['ok'], content)
+        self.assertNotIn('figureCause', json.dumps(content['data']['updateEntry']['errors']))
+
 
 class TestEntryDelete(HelixGraphQLTestCase):
     def setUp(self) -> None:

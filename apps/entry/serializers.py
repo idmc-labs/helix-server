@@ -99,6 +99,7 @@ class CommonFigureValidationMixin:
         return errors
 
     def validate_figure_geo_locations(self, attrs):
+        pass
         errors = OrderedDict()
         country = attrs.get('country')
         geo_locations = attrs.get('geo_locations')
@@ -199,6 +200,19 @@ class CommonFigureValidationMixin:
             _attrs['displacement_occurred'] = None
         return _attrs
 
+    def clean_figure_cause(self, attrs):
+        errors = OrderedDict()
+        event = attrs.get('event')
+        figure_cause = attrs.get('figure_cause')
+        if self.instance:
+            event = self.instance.event
+        if figure_cause is not None and event:
+            if event.event_type.value != figure_cause:
+                errors.update({
+                    'figure_cause': f'Figure cause should be {event.event_type.label}'
+                })
+        return errors
+
     def validate(self, attrs: dict) -> dict:
         if not self.instance and attrs.get('id'):
             self.instance = Figure.objects.get(id=attrs['id'])
@@ -224,6 +238,7 @@ class CommonFigureValidationMixin:
             attrs, ['disaggregation_indigenous_people'], 'Indigenous people',
         ))
         errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'disaggregation_age', 'age'))
+        errors.update(self.clean_figure_cause(attrs))
 
         if errors:
             raise ValidationError(errors)
