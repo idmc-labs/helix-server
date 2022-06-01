@@ -288,24 +288,6 @@ class TestEntryModel(HelixTestCase):
 
     def test_text_field_should_accept_markup_and_speicial_should_remove_html_tags(self):
         html_data = '<html><body><h2>test</h2><p> test</p><p id="demo"> test</p><script></script></body></html>'
-        markup_text = """
-        # H1 heading 1
-        ## H2 heading 2
-        ### H3 heading 3
-        **bold text**
-        *italicized text*
-        > blockquote
-        1. First item
-        2. Second item
-        3. Third item
-        - First item
-        - Second item
-        - Third item
-        `code`
-        ---
-        [title](https://www.example.com)
-        ![alt text](image.jpg)
-        """
         e = FigureFactory.create(created_by=self.editor, event=self.event,)
         e.source_excerpt = html_data
         e.calculation_logic = '~!@#$%^&*<>?/'
