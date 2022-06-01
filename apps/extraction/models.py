@@ -41,7 +41,7 @@ class QueryAbstractModel(models.Model):
         verbose_name=_('Events'),
         blank=True,
     )
-    filter_event_crises = models.ManyToManyField(
+    filter_figure_crises = models.ManyToManyField(
         'crisis.Crisis',
         verbose_name=_('Crises'),
         blank=True,
@@ -90,7 +90,7 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_event_crisis_types = ArrayField(
+    filter_figure_crisis_types = ArrayField(
         base_field=enum.EnumField(enum=Crisis.CRISIS_TYPE),
         blank=True,
         null=True
@@ -100,7 +100,7 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_event_glide_number = ArrayField(
+    filter_figure_glide_number = ArrayField(
         base_field=models.CharField(verbose_name=_('Event Code'), max_length=100, null=True),
         blank=True,
         null=True
@@ -120,32 +120,32 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_event_disaster_categories = models.ManyToManyField(
+    filter_figure_disaster_categories = models.ManyToManyField(
         'event.DisasterCategory',
         verbose_name=_('Disaster Category'),
         blank=True,
     )
-    filter_event_disaster_sub_categories = models.ManyToManyField(
+    filter_figure_disaster_sub_categories = models.ManyToManyField(
         'event.DisasterSubCategory',
         verbose_name=_('Disaster Sub Category'),
         blank=True,
     )
-    filter_event_disaster_types = models.ManyToManyField(
+    filter_figure_disaster_types = models.ManyToManyField(
         'event.DisasterType',
         verbose_name=_('Disaster Type'),
         blank=True,
     )
-    filter_event_disaster_sub_types = models.ManyToManyField(
+    filter_figure_disaster_sub_types = models.ManyToManyField(
         'event.DisasterSubType',
         verbose_name=_('Disaster Sub Type'),
         blank=True,
     )
-    filter_event_violence_types = models.ManyToManyField(
+    filter_figure_violence_types = models.ManyToManyField(
         'event.Violence',
         verbose_name=_('Violence Type'),
         blank=True,
     )
-    filter_event_violence_sub_types = models.ManyToManyField(
+    filter_figure_violence_sub_types = models.ManyToManyField(
         'event.ViolenceSubType',
         verbose_name=_('Violence Sub Type'),
         blank=True,
@@ -180,23 +180,23 @@ class QueryAbstractModel(models.Model):
             filter_figure_regions=self.filter_figure_regions.all(),
             filter_figure_geographical_groups=self.filter_figure_geographical_groups.all(),
             filter_events=self.filter_events.all(),
-            filter_event_crises=self.filter_event_crises.all(),
+            filter_figure_crises=self.filter_figure_crises.all(),
             filter_figure_categories=self.filter_figure_categories,
             filter_figure_tags=self.filter_figure_tags.all(),
             filter_figure_roles=self.filter_figure_roles,
             filter_figure_start_after=self.filter_figure_start_after,
             filter_figure_end_before=self.filter_figure_end_before,
             filter_entry_article_title=self.filter_entry_article_title,
-            filter_event_crisis_types=self.filter_event_crisis_types,
+            filter_figure_crisis_types=self.filter_figure_crisis_types,
             filter_entry_review_status=self.filter_entry_review_status,
             filter_figure_displacement_types=self.filter_figure_displacement_types,
             filter_figure_terms=self.filter_figure_terms,
-            filter_event_disaster_categories=self.filter_event_disaster_categories.all(),
-            filter_event_disaster_sub_categories=self.filter_event_disaster_sub_categories.all(),
-            filter_event_disaster_types=self.filter_event_disaster_types.all(),
-            filter_event_disaster_sub_types=self.filter_event_disaster_sub_types.all(),
-            filter_event_violence_types=self.filter_event_violence_types.all(),
-            filter_event_violence_sub_types=self.filter_event_violence_sub_types.all(),
+            filter_figure_disaster_categories=self.filter_figure_disaster_categories.all(),
+            filter_figure_disaster_sub_categories=self.filter_figure_disaster_sub_categories.all(),
+            filter_figure_disaster_types=self.filter_figure_disaster_types.all(),
+            filter_figure_disaster_sub_types=self.filter_figure_disaster_sub_types.all(),
+            filter_figure_violence_types=self.filter_figure_violence_types.all(),
+            filter_figure_violence_sub_types=self.filter_figure_violence_sub_types.all(),
             filter_figure_category_types=self.filter_figure_category_types,
             filter_entry_has_review_comments=self.filter_entry_has_review_comments,
             filter_figure_has_disaggregated_data=self.filter_figure_has_disaggregated_data,

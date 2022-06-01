@@ -33,7 +33,7 @@ class ExtractionQueryObjectType(DjangoObjectType):
                                                  page_size_query_param='pageSize'
                                              ), accessor='entries')
     filter_figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
-    filter_event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
+    filter_figure_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
     filter_figure_displacement_types = graphene.List(graphene.NonNull(DisplacementTypeGrapheneEnum))
     filter_entry_review_status = graphene.List(graphene.NonNull(EntryReviewerGrapheneEnum))
     filter_figure_categories = graphene.List(graphene.NonNull(FigureCategoryTypeEnum))

@@ -125,18 +125,18 @@ class TestExtractionFilter(HelixTestCase):
         fqs = f(data=dict(filter_figure_regions=regions)).qs
         self.assertEqual(set(fqs), {self.entry3ev2})
 
-    # def test_filter_by_filter_event_crisis_types(self):
+    # def test_filter_by_filter_figure_crisis_types(self):
     #     crisis_types = [Crisis.CRISIS_TYPE.DISASTER]
-    #     fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
+    #     fqs = f(data=dict(filter_figure_crisis_types=crisis_types)).qs
     #     self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1, self.entry3ev2})
     #
     #     crisis_types = [Crisis.CRISIS_TYPE.CONFLICT]
-    #     fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
+    #     fqs = f(data=dict(filter_figure_crisis_types=crisis_types)).qs
     #     self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
     #
     #     # now from client
     #     crisis_types = ["CONFLICT", "DISASTER"]
-    #     fqs = f(data=dict(filter_event_crisis_types=crisis_types)).qs
+    #     fqs = f(data=dict(filter_figure_crisis_types=crisis_types)).qs
     #     self.assertEqual(set(fqs), {self.entry3ev2, self.entry1ev1, self.entry2ev1})
 
     def test_filter_by_country(self):
@@ -148,12 +148,12 @@ class TestExtractionFilter(HelixTestCase):
 
     def test_filter_by_crises(self):
         data = dict(
-            filter_event_crises=[self.crisis1.id]
+            filter_figure_crises=[self.crisis1.id]
         )
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1, self.entry3ev2})
 
-        data['filter_event_crises'] = [self.crisis2.id]
+        data['filter_figure_crises'] = [self.crisis2.id]
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), set())
 

@@ -87,7 +87,7 @@ class ReportType(DjangoObjectType):
                                                   page_size_query_param='pageSize'
                                               ))
     filter_figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
-    filter_event_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
+    filter_figure_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
     countries_report = graphene.Dynamic(lambda: CustomPaginatedListObjectField(
         get_type('apps.country.schema.CountryListType'),
         accessor='countries_report',
