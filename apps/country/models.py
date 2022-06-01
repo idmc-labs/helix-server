@@ -318,8 +318,8 @@ class Country(models.Model):
             # entries_count=Count('events__entries', distinct=True),
             entries_count=models.Subquery(
                 Entry.objects.filter(
-                    event__countries=OuterRef('pk')
-                ).order_by().values('event__countries').annotate(
+                    figures__event__countries=OuterRef('pk')
+                ).order_by().values('figures__event__countries').annotate(
                     _count=Count('pk')
                 ).values('_count')[:1],
                 output_field=models.IntegerField()
@@ -361,7 +361,7 @@ class Country(models.Model):
 
     @property
     def entries(self) -> QuerySet:
-        return Entry.objects.filter(event__countries=self.id).distinct()
+        return Entry.objects.filter(figures__event__countries=self.id).distinct()
 
     @property
     def last_contextual_analysis(self):
