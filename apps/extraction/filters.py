@@ -180,9 +180,9 @@ class EntryExtractionFilterSet(df.FilterSet):
         if value:
             if isinstance(value[0], int):
                 # coming from saved query
-                return qs.filter(id__in=Figure.objects.filter(role__in=value))
+                return qs.filter(figures__in=Figure.objects.filter(role__in=value))
             return qs.filter(
-                id__in=Figure.objects.filter(role__in=[
+                figures__in=Figure.objects.filter(role__in=[
                     Figure.ROLE.get(item).value for item in value
                 ]))
         return qs
