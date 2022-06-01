@@ -206,10 +206,11 @@ class CommonFigureValidationMixin:
         figure_cause = attrs.get('figure_cause')
         if self.instance:
             event = self.instance.event
-        if figure_cause and event.event_type.value != figure_cause:
-            errors.update({
-                'figure_cause': f'Figure cause should be {event.event_type.label}'
-            })
+        if figure_cause is not None and event:
+            if event.event_type.value != figure_cause:
+                errors.update({
+                    'figure_cause': f'Figure cause should be {event.event_type.label}'
+                })
         return errors
 
     def validate(self, attrs: dict) -> dict:
