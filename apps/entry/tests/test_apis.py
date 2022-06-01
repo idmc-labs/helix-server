@@ -48,7 +48,9 @@ class TestEntryQuery(HelixGraphQLTestCase):
         self.stock_fig_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS
         self.random_fig_cat2 = Figure.FIGURE_CATEGORY_TYPES.CROSS_BORDER_FLIGHT
         self.flow_fig_cat3 = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
-        self.event = EventFactory.create()
+        self.event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         self.event.countries.add(self.country)
         figure1 = FigureFactory.create(entry=self.entry,
                                        event=self.event,
@@ -796,7 +798,9 @@ class TestFigureDelete(HelixGraphQLTestCase):
         self.entry = EntryFactory.create(
             created_by=self.editor
         )
-        self.event = EventFactory.create()
+        self.event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         self.event.countries.add(self.country)
         self.figure = FigureFactory.create(
             entry=self.entry,

@@ -34,7 +34,9 @@ class TestEntrySerializer(HelixTestCase):
         r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.factory = RequestFactory()
         self.country = CountryFactory.create(country_code=123, iso2='ak')
-        self.event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT.value)
+        self.event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
+        )
         self.event.countries.add(self.country)
         self.publisher = OrganizationFactory.create()
         self.data = {
@@ -296,13 +298,27 @@ class TestEntrySerializer(HelixTestCase):
         flow = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         stock = Figure.FIGURE_CATEGORY_TYPES.IDPS
 
-        event = EventFactory.create(start_date=ref, end_date=ref + timedelta(days=1))
+        event = EventFactory.create(
+            start_date=ref,
+            end_date=ref + timedelta(days=1),
+            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
+        )
         event.countries.set([c1])
-        event2 = EventFactory.create(start_date=ref - timedelta(days=10), end_date=ref - timedelta(days=5))
+        event2 = EventFactory.create(
+            start_date=ref - timedelta(days=10),
+            end_date=ref - timedelta(days=5),
+            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
+        )
         event2.countries.set([c2])
 
         entry = EntryFactory.create()
-        figure = FigureFactory.create(entry=entry, category=flow, country=c1, event=event)
+        figure = FigureFactory.create(
+            entry=entry,
+            category=flow,
+            country=c1,
+            event=event,
+            figure_cause=event.event_type,
+        )
 
         source1 = dict(
             uuid=str(uuid4()),
@@ -350,7 +366,13 @@ class TestEntrySerializer(HelixTestCase):
         self.assertTrue(serializer.is_valid())
 
         # however it will be valid for stock end date to go beyond event date
-        figure = FigureFactory.create(entry=entry, category=stock, country=c1, event=event)
+        figure = FigureFactory.create(
+            entry=entry,
+            category=stock,
+            country=c1,
+            event=event,
+            figure_cause=event.event_type,
+        )
 
         data = dict(
             event=event.id,
@@ -458,7 +480,10 @@ class TestFigureSerializer(HelixTestCase):
         self.factory = RequestFactory()
         country1 = CountryFactory.create(country_code=123, iso2='lo')
         country2 = CountryFactory.create(name='Nepal', iso2='bo')
-        self.event = EventFactory.create(name="hahaha", event_type=Crisis.CRISIS_TYPE.DISASTER.value)
+        self.event = EventFactory.create(
+            name="hahaha",
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
+        )
         self.event.countries.set([country1, country2])
         self.entry = EntryFactory.create(
             created_by=self.creator,
@@ -534,7 +559,6 @@ class TestFigureSerializer(HelixTestCase):
                 "accuracy": OSMName.OSM_ACCURACY.ADM0.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                 "bounding_box": [1.2],
-                "event": self.event.id,
             },
             {
                 "country": "Nepal",
@@ -549,7 +573,6 @@ class TestFigureSerializer(HelixTestCase):
                 "accuracy": OSMName.OSM_ACCURACY.ADM0.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                 "bounding_box": [1.2],
-                "event": self.event.id,
             },
         ]
         serializer = FigureSerializer(data=self.data,

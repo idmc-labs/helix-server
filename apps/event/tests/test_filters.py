@@ -23,8 +23,14 @@ class TestEventFilter(HelixTestCase):
         self.filter_class = EventFilter
 
     def test_event_name_filter(self):
-        EventFactory.create(name='one')
-        e2 = EventFactory.create(name='two')
+        EventFactory.create(
+            name='one',
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
+        e2 = EventFactory.create(
+            name='two',
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         obtained = self.filter_class(data=dict(
             name='w'
         )).qs
@@ -37,8 +43,14 @@ class TestEventFilter(HelixTestCase):
     def test_crisis_filter(self):
         c1 = CrisisFactory.create()
         c2 = CrisisFactory.create()
-        e1 = EventFactory.create(crisis=c1)
-        EventFactory.create(crisis=c2)
+        e1 = EventFactory.create(
+            crisis=c1,
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
+        EventFactory.create(
+            crisis=c2,
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         obtained = self.filter_class(data=dict(
             crisis_by_ids=[str(c1.id)]
         )).qs
@@ -75,8 +87,14 @@ class TestEventFilter(HelixTestCase):
 
     def test_start_date_filter(self):
         now = datetime.today()
-        e1 = EventFactory.create(start_date=now)
-        e2 = EventFactory.create(start_date=now + timedelta(days=1))
+        e1 = EventFactory.create(
+            start_date=now,
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
+        e2 = EventFactory.create(
+            start_date=now + timedelta(days=1),
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         expected = [e2]
         check_against = str(now).split(' ')[0]
         self.assertQuerySetEqual(
@@ -103,9 +121,13 @@ class TestEventFilter(HelixTestCase):
         c1 = CountryFactory.create()
         c2 = CountryFactory.create()
         c3 = CountryFactory.create()
-        e1 = EventFactory.create()
+        e1 = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         e1.countries.set([c1, c2])
-        e2 = EventFactory.create()
+        e2 = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         e2.countries.set([c3, c2])
         obtained = self.filter_class(data=dict(
             countries=[str(c1.id)]
@@ -126,7 +148,9 @@ class TestEventFilter(HelixTestCase):
         )
 
     def test_filter_by_context_of_violences(self):
-        event = EventFactory.create()
+        event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         context_of_violence = ContextOfViolenceFactory.create()
         event.context_of_violence.set([context_of_violence])
         obtained = self.filter_class(data=dict(context_of_violences=[context_of_violence])).qs

@@ -156,7 +156,10 @@ class TestUpdateEvent(HelixGraphQLTestCase):
                 ok
                 }
             }'''
-        self.event = EventFactory.create(crisis=None)
+        self.event = EventFactory.create(
+            crisis=None,
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         v_sub_type = ViolenceSubTypeFactory.create()
         self.input = {
             "id": self.event.id,
@@ -235,7 +238,9 @@ class TestDeleteEvent(HelixGraphQLTestCase):
                 ok
                 }
             }'''
-        self.event = EventFactory.create()
+        self.event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         self.variables = {
             "id": self.event.id,
         }
@@ -288,12 +293,20 @@ class TestEventListQuery(HelixGraphQLTestCase):
             }
         '''
         guest = create_user_with_role(USER_ROLE.GUEST.name)
-        self.event = EventFactory.create()
+        self.event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         self.force_login(guest)
 
     def test_event_list_filter(self):
-        event1 = EventFactory.create(name=self.event1_name)
-        EventFactory.create(name='blatwo')
+        event1 = EventFactory.create(
+            name=self.event1_name,
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
+        EventFactory.create(
+            name='blatwo',
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         variables = {
             "crisisByIds": [str(event1.crisis.id)]
         }
@@ -321,7 +334,9 @@ class TestEventListQuery(HelixGraphQLTestCase):
         )
 
     def test_event_review_count_with_dataloader(self):
-        event = EventFactory.create()
+        event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         r1 = create_user_with_role(
             USER_ROLE.MONITORING_EXPERT.name,
         )
@@ -378,7 +393,9 @@ class TestEventListQuery(HelixGraphQLTestCase):
 
     def test_event_has_mutiple_recommended_figures(self):
         # Create event without entries and figures
-        event1 = EventFactory.create()
+        event1 = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         for i in range(3):
             entry1 = EntryFactory.create()
             FigureFactory.create(
@@ -505,7 +522,10 @@ class CloneEventTest(HelixGraphQLTestCase):
                 errors
                 }
             }'''
-        self.event = EventFactory.create(name='test event')
+        self.event = EventFactory.create(
+            name='test event',
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         self.country = CountryFactory.create()
         self.event.countries.add(self.country)
         self.variables = {

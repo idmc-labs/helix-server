@@ -76,7 +76,10 @@ class TestExtractionFilter(HelixTestCase):
         cls.end_oct = '2020-10-29'
         cls.mid_nov = '2020-11-16'
         cls.end_nov = '2020-11-29'
-        cls.random_event = EventFactory.create(crisis=None)
+        cls.random_event = EventFactory.create(
+            crisis=None,
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         cls.fig1cat1entry1 = FigureFactory.create(
             entry=cls.entry1ev1, category=cls.fig_cat1,
             start_date=cls.mid_oct, end_date=cls.end_oct, event=cls.random_event,

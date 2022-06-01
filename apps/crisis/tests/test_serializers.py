@@ -29,6 +29,7 @@ class TestCrisisUpdateSerializer(HelixTestCase):
         countries = CountryFactory.create_batch(3)
         crisis.countries.set(countries)
         event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
             crisis=crisis,
             start_date=start + timedelta(days=1),
         )
@@ -62,6 +63,7 @@ class TestCrisisUpdateSerializer(HelixTestCase):
         crisis = CrisisFactory.create()
         crisis.countries.set([c1])
         event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
             crisis=crisis
         )
         event.countries.set([c1])
