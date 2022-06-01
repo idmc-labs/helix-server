@@ -44,60 +44,60 @@ class TestEntryQuery(HelixGraphQLTestCase):
         guest = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(guest)
 
-    def test_figure_count_filtered_resolvers(self):
-        self.stock_fig_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS
-        self.random_fig_cat2 = Figure.FIGURE_CATEGORY_TYPES.CROSS_BORDER_FLIGHT
-        self.flow_fig_cat3 = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
-        self.event = EventFactory.create(
-            event_type=Crisis.CRISIS_TYPE.OTHER.value,
-        )
-        self.event.countries.add(self.country)
-        figure1 = FigureFactory.create(entry=self.entry,
-                                       event=self.event,
-                                       category=self.stock_fig_cat.value,
-                                       reported=101,
-                                       role=Figure.ROLE.RECOMMENDED,
-                                       unit=Figure.UNIT.PERSON)
-        FigureFactory.create(entry=self.entry,
-                             category=self.stock_fig_cat.value,
-                             event=self.event,
-                             reported=102,
-                             role=Figure.ROLE.TRIANGULATION,
-                             unit=Figure.UNIT.PERSON)
-        figure3 = FigureFactory.create(entry=self.entry,
-                                       category=self.stock_fig_cat.value,
-                                       reported=103,
-                                       role=Figure.ROLE.RECOMMENDED,
-                                       unit=Figure.UNIT.PERSON,
-                                       event=self.event)
-        FigureFactory.create(entry=self.entry,
-                             event=self.event,
-                             category=self.random_fig_cat2,
-                             reported=50,
-                             role=Figure.ROLE.RECOMMENDED,
-                             unit=Figure.UNIT.PERSON)
-        figure5 = FigureFactory.create(entry=self.entry,
-                                       event=self.event,
-                                       category=self.flow_fig_cat3,
-                                       reported=70,
-                                       role=Figure.ROLE.RECOMMENDED,
-                                       unit=Figure.UNIT.PERSON)
-        response = self.query(
-            self.entry_query,
-            variables=dict(
-                id=str(self.entry.id),
-            )
-        )
-        content = json.loads(response.content)
-        self.assertResponseNoErrors(response)
-        self.assertEqual(
-            content['data']['entry']['totalStockIdpFigures'],
-            figure1.total_figures + figure3.total_figures
-        )
-        self.assertEqual(
-            content['data']['entry']['totalFlowNdFigures'],
-            figure5.total_figures
-        )
+    # def test_figure_count_filtered_resolvers(self):
+    #     self.stock_fig_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS
+    #     self.random_fig_cat2 = Figure.FIGURE_CATEGORY_TYPES.CROSS_BORDER_FLIGHT
+    #     self.flow_fig_cat3 = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
+    #     self.event = EventFactory.create(
+    #         event_type=Crisis.CRISIS_TYPE.OTHER.value,
+    #     )
+    #     self.event.countries.add(self.country)
+    #     figure1 = FigureFactory.create(entry=self.entry,
+    #                                    event=self.event,
+    #                                    category=self.stock_fig_cat.value,
+    #                                    reported=101,
+    #                                    role=Figure.ROLE.RECOMMENDED,
+    #                                    unit=Figure.UNIT.PERSON)
+    #     FigureFactory.create(entry=self.entry,
+    #                          category=self.stock_fig_cat.value,
+    #                          event=self.event,
+    #                          reported=102,
+    #                          role=Figure.ROLE.TRIANGULATION,
+    #                          unit=Figure.UNIT.PERSON)
+    #     figure3 = FigureFactory.create(entry=self.entry,
+    #                                    category=self.stock_fig_cat.value,
+    #                                    reported=103,
+    #                                    role=Figure.ROLE.RECOMMENDED,
+    #                                    unit=Figure.UNIT.PERSON,
+    #                                    event=self.event)
+    #     FigureFactory.create(entry=self.entry,
+    #                          event=self.event,
+    #                          category=self.random_fig_cat2,
+    #                          reported=50,
+    #                          role=Figure.ROLE.RECOMMENDED,
+    #                          unit=Figure.UNIT.PERSON)
+    #     figure5 = FigureFactory.create(entry=self.entry,
+    #                                    event=self.event,
+    #                                    category=self.flow_fig_cat3,
+    #                                    reported=70,
+    #                                    role=Figure.ROLE.RECOMMENDED,
+    #                                    unit=Figure.UNIT.PERSON)
+    #     response = self.query(
+    #         self.entry_query,
+    #         variables=dict(
+    #             id=str(self.entry.id),
+    #         )
+    #     )
+    #     content = json.loads(response.content)
+    #     self.assertResponseNoErrors(response)
+    #     self.assertEqual(
+    #         content['data']['entry']['totalStockIdpFigures'],
+    #         figure1.total_figures + figure3.total_figures
+    #     )
+    #     self.assertEqual(
+    #         content['data']['entry']['totalFlowNdFigures'],
+    #         figure5.total_figures
+    #     )
         # category based filter for entry stock/flow figures will not be used,
         # since it is directly filtered by IDP or NEW DISPLACEMENT
 
