@@ -101,6 +101,7 @@ class TestUpdateEventSerializer(HelixTestCase):
             disaster_sub_type=DisasterSubTypeFactory.create(),
             start_date=start_date.date(),
             end_date=end_date.date(),
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
             event_narrative="test event narrative"
         )
         event.countries.set([c1, c2, c3])

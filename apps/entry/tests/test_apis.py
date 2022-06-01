@@ -48,7 +48,9 @@ class TestEntryQuery(HelixGraphQLTestCase):
         self.stock_fig_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS
         self.random_fig_cat2 = Figure.FIGURE_CATEGORY_TYPES.CROSS_BORDER_FLIGHT
         self.flow_fig_cat3 = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
-        self.event = EventFactory.create()
+        self.event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         self.event.countries.add(self.country)
         figure1 = FigureFactory.create(entry=self.entry,
                                        event=self.event,
@@ -107,7 +109,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         DisaggregatedAgeCategory.objects.create(name='three')
         self.country = CountryFactory.create(iso2='lo', iso3='lol')
         self.country_id = str(self.country.id)
-        self.event = EventFactory.create()
+        self.event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT.value)
         self.event.countries.add(self.country)
         self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
@@ -404,7 +406,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT)
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.event = EventFactory.create(name='myevent')
+        self.event = EventFactory.create(name='myevent', event_type=Crisis.CRISIS_TYPE.CONFLICT.value)
         self.event.countries.add(self.country)
         DisaggregatedAgeCategory.objects.create(name='one')
         DisaggregatedAgeCategory.objects.create(name='two')
@@ -796,7 +798,9 @@ class TestFigureDelete(HelixGraphQLTestCase):
         self.entry = EntryFactory.create(
             created_by=self.editor
         )
-        self.event = EventFactory.create()
+        self.event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         self.event.countries.add(self.country)
         self.figure = FigureFactory.create(
             entry=self.entry,

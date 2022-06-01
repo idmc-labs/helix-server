@@ -183,36 +183,36 @@ class EntryType(DjangoObjectType):
             )
         )
     )
-    total_stock_idp_figures = graphene.Field(graphene.Int,
-                                             data=TotalFigureFilterInputType())
-    total_flow_nd_figures = graphene.Field(graphene.Int,
-                                           data=TotalFigureFilterInputType())
+    # total_stock_idp_figures = graphene.Field(graphene.Int,
+    #                                          data=TotalFigureFilterInputType())
+    # total_flow_nd_figures = graphene.Field(graphene.Int,
+    #                                        data=TotalFigureFilterInputType())
     source_methodology = graphene.Field(graphene.String)
     is_reviewed = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
     is_under_review = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
     is_signed_off = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
 
-    def resolve_total_stock_idp_figures(root, info, **kwargs):
-        NULL = 'null'
-        value = getattr(
-            root,
-            Entry.IDP_FIGURES_ANNOTATE,
-            NULL
-        )
-        if value != NULL:
-            return value
-        return info.context.entry_entry_total_stock_idp_figures.load(root.id)
-
-    def resolve_total_flow_nd_figures(root, info, **kwargs):
-        NULL = 'null'
-        value = getattr(
-            root,
-            Entry.ND_FIGURES_ANNOTATE,
-            NULL
-        )
-        if value != NULL:
-            return value
-        return info.context.entry_entry_total_flow_nd_figures.load(root.id)
+    # def resolve_total_stock_idp_figures(root, info, **kwargs):
+    #     NULL = 'null'
+    #     value = getattr(
+    #         root,
+    #         Entry.IDP_FIGURES_ANNOTATE,
+    #         NULL
+    #     )
+    #     if value != NULL:
+    #         return value
+    #     return info.context.entry_entry_total_stock_idp_figures.load(root.id)
+    #
+    # def resolve_total_flow_nd_figures(root, info, **kwargs):
+    #     NULL = 'null'
+    #     value = getattr(
+    #         root,
+    #         Entry.ND_FIGURES_ANNOTATE,
+    #         NULL
+    #     )
+    #     if value != NULL:
+    #         return value
+    #     return info.context.entry_entry_total_flow_nd_figures.load(root.id)
 
 
 class EntryListType(CustomDjangoListObjectType):

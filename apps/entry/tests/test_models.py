@@ -22,8 +22,11 @@ class TestFigureModel(HelixTestCase):
     def setUp(self) -> None:
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.event = EventFactory.create(start_date=(timezone.now() + timedelta(days=10)).strftime('%Y-%m-%d'),
-                                         end_date=(timezone.now() + timedelta(days=25)).strftime('%Y-%m-%d'))
+        self.event = EventFactory.create(
+            start_date=(timezone.now() + timedelta(days=10)).strftime('%Y-%m-%d'),
+            end_date=(timezone.now() + timedelta(days=25)).strftime('%Y-%m-%d'),
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         self.entry = EntryFactory.create(created_by=self.editor,)
         self.figure_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.figure = FigureFactory.create(
@@ -195,7 +198,9 @@ class TestEntryModel(HelixTestCase):
     def setUp(self) -> None:
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.entry = EntryFactory.create(created_by=self.editor)
-        self.event = EventFactory.create()
+        self.event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
 
     def test_entry_can_be_updated_by(self):
         editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)

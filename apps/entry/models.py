@@ -1103,10 +1103,10 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             categories='Figure Categories',
             terms='Figure Terms',
             figures_count='Figures Count',
-            **{
-                cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
-                cls.ND_FIGURES_ANNOTATE: 'ND Figure',
-            },
+            # **{
+            #     cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
+            #     cls.ND_FIGURES_ANNOTATE: 'ND Figure',
+            # },
             min_fig_start='Earliest figure start',
             max_fig_start='Latest figure start',
             min_fig_end='Earliest figure end',
@@ -1145,7 +1145,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             publishers_name=StringAgg('publishers__name', delimiter='; '),
             publisher_types=StringAgg('publishers__organization_kind__name', delimiter='; '),
             figures_count=models.Count('figures', distinct=True),
-            **cls._total_figure_disaggregation_subquery(),
+            # **cls._total_figure_disaggregation_subquery(),
         ).annotate(
             centroid=models.Case(
                 models.When(

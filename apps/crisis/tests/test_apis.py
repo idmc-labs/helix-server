@@ -3,6 +3,7 @@ import json
 from apps.entry.models import EntryReviewer
 from apps.users.enums import USER_ROLE
 from apps.review.models import Review
+from apps.crisis.models import Crisis
 from utils.factories import (
     CountryFactory,
     CrisisFactory,
@@ -205,7 +206,8 @@ class TestCrisisList(HelixGraphQLTestCase):
     def test_crisis_review_count_with_dataloader(self):
         crisis = CrisisFactory.create()
         event = EventFactory.create(
-            crisis=crisis
+            crisis=crisis,
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
         r1 = create_user_with_role(
             USER_ROLE.MONITORING_EXPERT.name,

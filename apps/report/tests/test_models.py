@@ -23,8 +23,12 @@ from utils.factories import (
 
 class TestReportModel(HelixTestCase):
     def setUp(self) -> None:
-        self.event_conflict = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT)
-        self.event_disaster = EventFactory.create(event_type=Crisis.CRISIS_TYPE.DISASTER)
+        self.event_conflict = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.CONFLICT,
+        )
+        self.event_disaster = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.DISASTER,
+        )
 
     def test_002_appropriate_figures_are_summed_up(self):
         c = CountryFactory.create()

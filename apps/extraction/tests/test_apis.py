@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.utils import timezone
 from apps.users.enums import USER_ROLE
 from apps.extraction.models import ExtractionQuery
+from apps.crisis.models import Crisis
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 from utils.factories import (
     CountryFactory,
@@ -29,11 +30,20 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         self.crisis2 = CrisisFactory.create()
         self.crisis2.countries.set([self.country3reg3, self.country2reg2])
 
-        self.event1crisis1 = EventFactory.create(crisis=self.crisis1)
+        self.event1crisis1 = EventFactory.create(
+            crisis=self.crisis1,
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         self.event1crisis1.countries.set([self.country2reg2])
-        self.event2crisis1 = EventFactory.create(crisis=self.crisis1)
+        self.event2crisis1 = EventFactory.create(
+            crisis=self.crisis1,
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         self.event2crisis1.countries.set([self.country1reg1])
-        self.event3crisis2 = EventFactory.create(crisis=self.crisis2)
+        self.event3crisis2 = EventFactory.create(
+            crisis=self.crisis2,
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         self.event3crisis2.countries.set([self.country2reg2, self.country3reg3])
 
         self.tag1 = TagFactory.create()
@@ -139,7 +149,11 @@ class TestExtractionFigureList(HelixGraphQLTestCase):
         for i in range(3):
             start_date = (timezone.now() - timedelta(days=30)).strftime('%Y-%m-%d')
             end_date = (timezone.now() + timedelta(days=30)).strftime('%Y-%m-%d')
-            event = EventFactory.create(start_date=start_date, end_date=end_date)
+            event = EventFactory.create(
+                start_date=start_date,
+                end_date=end_date,
+                event_type=Crisis.CRISIS_TYPE.OTHER.value,
+            )
             entry = EntryFactory.create(created_by=admin)
             figure_category = Figure.FIGURE_CATEGORY_TYPES.IDPS
             FigureFactory.create(entry=entry, created_by=admin, category=figure_category, event=event)
