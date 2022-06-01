@@ -461,7 +461,6 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     calculation_logic = models.TextField(verbose_name=_('Analysis and Calculation Logic'),
                                          blank=True, null=True)
-    caveats = models.TextField(verbose_name=_('Caveats'), blank=True, null=True)
     tags = models.ManyToManyField('FigureTag', blank=True)
     source_excerpt = models.TextField(verbose_name=_('Excerpt from Source'),
                                       blank=True, null=True)
@@ -668,7 +667,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             is_housing_destruction='Is housing destruction',
             tags__name='Tags',
             calculation_logic='Analysis and Calculation Logic',
-            caveats='Caveats',
             source_excerpt='Source Excerpt',
             geo_locations__identifier='Type of point',
             disaggregation_displacement_urban='Displacement: Urban',
