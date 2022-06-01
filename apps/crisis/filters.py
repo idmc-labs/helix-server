@@ -103,4 +103,4 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
                 default=None,
                 output_field=models.FloatField()
             )
-        ).prefetch_related('events')
+        ).prefetch_related('events').distinct()
