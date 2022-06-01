@@ -62,7 +62,7 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
     def filter_created_by(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(events__created_by__in=value)
+        return qs.filter(created_by__in=value)
 
     @property
     def qs(self):
@@ -103,4 +103,4 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
                 default=None,
                 output_field=models.FloatField()
             )
-        ).prefetch_related('events')
+        ).prefetch_related('events').distinct()
