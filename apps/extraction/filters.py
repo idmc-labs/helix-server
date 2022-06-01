@@ -52,7 +52,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_event_violence_types = IDListFilter(method='filter_filter_event_violence_types')
     filter_entry_has_review_comments = df.BooleanFilter(method='filter_has_review_comments', initial=False)
     filter_event_osv_sub_types = IDListFilter(method='filter_filter_event_osv_sub_types')
-    filter_entry_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data', initial=False)
+    filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data', initial=False)
     # used in report entry table
     report = df.CharFilter(method='filter_report')
     filter_context_of_violences = IDListFilter(method='filter_filter_context_of_violences')
@@ -344,7 +344,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_event_violence_types = IDListFilter(method='filter_filter_event_violence_types')
     filter_entry_has_review_comments = df.BooleanFilter(method='filter_has_review_comments', initial=False)
     filter_event_osv_sub_types = IDListFilter(method='filter_filter_event_osv_sub_types')
-    filter_entry_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data', initial=False)
+    filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_figure_has_disaggregated_data', initial=False)
     # used in report entry table
     report = df.CharFilter(method='filter_report')
     filter_context_of_violences = IDListFilter(method='filter_context_of_violences')

@@ -163,7 +163,7 @@ class QueryAbstractModel(models.Model):
         verbose_name=_('Has review comments'),
         default=None,
     )
-    filter_entry_has_disaggregated_data = models.NullBooleanField(
+    filter_figure_has_disaggregated_data = models.NullBooleanField(
         verbose_name=_('Has disaggregated data'),
         default=None,
     )
@@ -199,7 +199,7 @@ class QueryAbstractModel(models.Model):
             filter_event_violence_sub_types=self.filter_event_violence_sub_types.all(),
             filter_figure_category_types=self.filter_figure_category_types,
             filter_entry_has_review_comments=self.filter_entry_has_review_comments,
-            filter_entry_has_disaggregated_data=self.filter_entry_has_disaggregated_data,
+            filter_figure_has_disaggregated_data=self.filter_figure_has_disaggregated_data,
             filter_context_of_violence=self.filter_context_of_violence.all(),
         )
 
