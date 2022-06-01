@@ -34,7 +34,7 @@ class TestEntrySerializer(HelixTestCase):
         r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.factory = RequestFactory()
         self.country = CountryFactory.create(country_code=123, iso2='ak')
-        self.event = EventFactory.create()
+        self.event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT.value)
         self.event.countries.add(self.country)
         self.publisher = OrganizationFactory.create()
         self.data = {
@@ -48,7 +48,8 @@ class TestEntrySerializer(HelixTestCase):
             "idmc_analysis": "analysis one",
             "methodology": "methoddddd",
             "reviewers": [r1.id, r2.id],
-            "calculation_logic": "calculation logic 1"
+            "calculation_logic": "calculation logic 1",
+            "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
         }
         self.request = self.factory.get('/graphql')
         self.request.user = self.user = create_user_with_role(
@@ -457,7 +458,7 @@ class TestFigureSerializer(HelixTestCase):
         self.factory = RequestFactory()
         country1 = CountryFactory.create(country_code=123, iso2='lo')
         country2 = CountryFactory.create(name='Nepal', iso2='bo')
-        self.event = EventFactory.create(name="hahaha")
+        self.event = EventFactory.create(name="hahaha", event_type=Crisis.CRISIS_TYPE.DISASTER.value)
         self.event.countries.set([country1, country2])
         self.entry = EntryFactory.create(
             created_by=self.creator,
@@ -495,7 +496,7 @@ class TestFigureSerializer(HelixTestCase):
             "tags": [],
             "event": self.event.id,
             "context_of_violence": [],
-            "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
+            "figure_cause": Crisis.CRISIS_TYPE.DISASTER.value,
         }
         self.request = self.factory.get('/graphql')
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)

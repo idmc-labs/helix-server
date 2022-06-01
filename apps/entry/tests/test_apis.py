@@ -107,7 +107,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         DisaggregatedAgeCategory.objects.create(name='three')
         self.country = CountryFactory.create(iso2='lo', iso3='lol')
         self.country_id = str(self.country.id)
-        self.event = EventFactory.create()
+        self.event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT.value)
         self.event.countries.add(self.country)
         self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
@@ -404,7 +404,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT)
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.event = EventFactory.create(name='myevent')
+        self.event = EventFactory.create(name='myevent', event_type=Crisis.CRISIS_TYPE.CONFLICT.value)
         self.event.countries.add(self.country)
         DisaggregatedAgeCategory.objects.create(name='one')
         DisaggregatedAgeCategory.objects.create(name='two')
