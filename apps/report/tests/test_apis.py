@@ -56,7 +56,7 @@ class TestCreateReport(HelixGraphQLTestCase):
                          len(self.input['filterFigureCountries']))
 
     def test_invalid_report_creation_by_guest(self) -> None:
-        reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        reviewer = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(reviewer)
         response = self.query(
             self.mutation,

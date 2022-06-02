@@ -8,46 +8,55 @@ from .enums import PERMISSION_ACTION, PERMISSION_ENTITY, USER_ROLE
 USER_ROLES = [USER_ROLE.ADMIN, USER_ROLE.MONITORING_EXPERT,
               USER_ROLE.REGIONAL_COORDINATOR, USER_ROLE.GUEST]
 
-# All except user
-ALL_MODELS = {PERMISSION_ENTITY.crisis, PERMISSION_ENTITY.event,
-              PERMISSION_ENTITY.entry, PERMISSION_ENTITY.organization,
-              PERMISSION_ENTITY.organizationkind, PERMISSION_ENTITY.contact,
-              PERMISSION_ENTITY.communication, PERMISSION_ENTITY.figure,
-              PERMISSION_ENTITY.summary, PERMISSION_ENTITY.contextualanalysis,
-              PERMISSION_ENTITY.resource, PERMISSION_ENTITY.review,
-              PERMISSION_ENTITY.actor, PERMISSION_ENTITY.parkeditem,
-              PERMISSION_ENTITY.reviewcomment, PERMISSION_ENTITY.contextualupdate,
-              PERMISSION_ENTITY.reportcomment}
+MONITORING_EXPERT_MODELS = {
+    PERMISSION_ENTITY.crisis,
+    PERMISSION_ENTITY.event,
+    PERMISSION_ENTITY.contextualupdate,
+    PERMISSION_ENTITY.entry,
+    PERMISSION_ENTITY.figure,
+    PERMISSION_ENTITY.reviewcomment,
+    PERMISSION_ENTITY.parkeditem,
+    PERMISSION_ENTITY.organization,
+    PERMISSION_ENTITY.actor,
+    PERMISSION_ENTITY.summary,
+    PERMISSION_ENTITY.contact,
+    PERMISSION_ENTITY.communication,
+    PERMISSION_ENTITY.contextualanalysis,
+    PERMISSION_ENTITY.resource,
+    PERMISSION_ENTITY.report,
+    PERMISSION_ENTITY.reportcomment,
+}
+
+REGIONAL_COORDINATOR_MODELS = MONITORING_EXPERT_MODELS | {
+    PERMISSION_ENTITY.organizationkind,
+    PERMISSION_ENTITY.contextofviolence,
+}
+
+ADMIN_MODELS = REGIONAL_COORDINATOR_MODELS | {
+    PERMISSION_ENTITY.user,
+    PERMISSION_ENTITY.portfolio,
+}
 
 # NOTE: To add custom permissions, add `bla_model` like `sign_off_model`.
 PERMISSIONS = {
     USER_ROLE.ADMIN: {
-        PERMISSION_ACTION.add: ALL_MODELS | {
-            PERMISSION_ENTITY.user, PERMISSION_ENTITY.report, PERMISSION_ENTITY.portfolio,
-            PERMISSION_ENTITY.contextofviolence,
-        },
-        PERMISSION_ACTION.change: ALL_MODELS | {
-            PERMISSION_ENTITY.user, PERMISSION_ENTITY.report, PERMISSION_ENTITY.portfolio,
-            PERMISSION_ENTITY.contextofviolence,
-        },
-        PERMISSION_ACTION.delete: ALL_MODELS | {
-            PERMISSION_ENTITY.user, PERMISSION_ENTITY.report, PERMISSION_ENTITY.portfolio,
-            PERMISSION_ENTITY.contextofviolence,
-        },
+        PERMISSION_ACTION.add: ADMIN_MODELS,
+        PERMISSION_ACTION.change: ADMIN_MODELS,
+        PERMISSION_ACTION.delete: ADMIN_MODELS,
         PERMISSION_ACTION.approve: {PERMISSION_ENTITY.report},
         PERMISSION_ACTION.sign_off: {PERMISSION_ENTITY.entry, PERMISSION_ENTITY.report},
     },
     USER_ROLE.REGIONAL_COORDINATOR: {
-        PERMISSION_ACTION.add: ALL_MODELS | {PERMISSION_ENTITY.portfolio},
-        PERMISSION_ACTION.change: ALL_MODELS | {PERMISSION_ENTITY.portfolio},
-        PERMISSION_ACTION.delete: ALL_MODELS | {PERMISSION_ENTITY.portfolio},
+        PERMISSION_ACTION.add: REGIONAL_COORDINATOR_MODELS,
+        PERMISSION_ACTION.change: REGIONAL_COORDINATOR_MODELS,
+        PERMISSION_ACTION.delete: REGIONAL_COORDINATOR_MODELS,
         PERMISSION_ACTION.approve: {PERMISSION_ENTITY.report},
         PERMISSION_ACTION.sign_off: {PERMISSION_ENTITY.entry},
     },
     USER_ROLE.MONITORING_EXPERT: {
-        PERMISSION_ACTION.add: ALL_MODELS,
-        PERMISSION_ACTION.change: ALL_MODELS,
-        PERMISSION_ACTION.delete: ALL_MODELS,
+        PERMISSION_ACTION.add: MONITORING_EXPERT_MODELS,
+        PERMISSION_ACTION.change: MONITORING_EXPERT_MODELS,
+        PERMISSION_ACTION.delete: MONITORING_EXPERT_MODELS,
         PERMISSION_ACTION.approve: {PERMISSION_ENTITY.report},
         PERMISSION_ACTION.sign_off: set(),
     },
