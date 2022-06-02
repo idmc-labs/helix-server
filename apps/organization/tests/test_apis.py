@@ -180,12 +180,7 @@ class TestCreateOrganizationKind(HelixGraphQLTestCase):
         )
 
         content = json.loads(response.content)
-
-        self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['createOrganizationKind']['ok'], content)
-        self.assertIsNotNone(content['data']['createOrganizationKind']['result']['id'])
-        self.assertEqual(content['data']['createOrganizationKind']['result']['name'],
-                         self.input['name'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
     def test_invalid_organization_kind_creation_by_guest(self) -> None:
         guest = create_user_with_role(USER_ROLE.GUEST.name)
@@ -228,13 +223,7 @@ class TestUpdateOrganizationKind(HelixGraphQLTestCase):
         )
 
         content = json.loads(response.content)
-
-        self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['updateOrganizationKind']['ok'], content)
-        self.assertEqual(content['data']['updateOrganizationKind']['result']['id'],
-                         self.input['id'])
-        self.assertEqual(content['data']['updateOrganizationKind']['result']['name'],
-                         self.input['name'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
     def test_invalid_organization_kind_update_by_guest(self) -> None:
         guest = create_user_with_role(USER_ROLE.GUEST.name)
@@ -243,7 +232,6 @@ class TestUpdateOrganizationKind(HelixGraphQLTestCase):
             self.mutation,
             input_data=self.input
         )
-
         content = json.loads(response.content)
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
@@ -273,13 +261,8 @@ class TestDeleteOrganizationKind(HelixGraphQLTestCase):
             self.mutation,
             variables=self.variables
         )
-
         content = json.loads(response.content)
-
-        self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['deleteOrganizationKind']['ok'], content)
-        self.assertEqual(content['data']['deleteOrganizationKind']['result']['id'],
-                         self.variables['id'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
     def test_invalid_organization_kind_delete_by_guest(self) -> None:
         guest = create_user_with_role(USER_ROLE.GUEST.name)
