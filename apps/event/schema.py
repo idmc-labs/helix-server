@@ -217,6 +217,28 @@ class EventType(DjangoObjectType):
     def resolve_figure_typology(root, info, **kwargs):
         return info.context.event_figure_typology_dataloader.load(root.id)
 
+    def resolve_total_stock_idp_figures(root, info, **kwargs):
+        NULL = 'null'
+        value = getattr(
+            root,
+            Event.IDP_FIGURES_ANNOTATE,
+            NULL
+        )
+        if value != NULL:
+            return value
+        return info.context.event_event_total_stock_idp_figures.load(root.id)
+
+    def resolve_total_flow_nd_figures(root, info, **kwargs):
+        NULL = 'null'
+        value = getattr(
+            root,
+            Event.ND_FIGURES_ANNOTATE,
+            NULL
+        )
+        if value != NULL:
+            return value
+        return info.context.event_event_total_flow_nd_figures.load(root.id)
+
 
 class EventListType(CustomDjangoListObjectType):
     class Meta:
