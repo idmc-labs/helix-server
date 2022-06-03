@@ -29,6 +29,12 @@ def get_new_event_url(id):
     return f'https://helix-alpha.idmcdb.org/events/{id}'
 
 
+def get_report_url(id):
+    if not id:
+        return ''
+    return f'https://helix-alpha.idmcdb.org/reports/{id}/'
+
+
 def add_row(workspace, row, *args):
     for index, arg in enumerate(args):
         if isinstance(arg, str) and (arg.startswith('https://') or arg.startswith('http://')):
@@ -163,12 +169,10 @@ class Command(BaseCommand):
         wb = Workbook()
 
         ws0 = wb.active
-
         # Events with small or large dates
         ws1 = wb.create_sheet(settings['ws1']['code'])
         ws1.append([settings['ws1']['title']])
         ws1.append(["Old ID", "Old URL", "ID", "URL"])
-
         # NOTE: start_date and end_date are required fields on database
         small_and_large_event_date_qs = Event.objects.filter(
             Q(start_date__gt=largest_date) |
@@ -207,7 +211,6 @@ class Command(BaseCommand):
                 id,
                 get_fact_url(id),
             )
-
         # Recommended flow figures without end date
         ws3 = wb.create_sheet(settings['ws3']['code'])
         ws3.append([settings['ws3']['title']])
@@ -215,7 +218,7 @@ class Command(BaseCommand):
 
         flow_figures_without_end_date_qs = Figure.objects.filter(
             end_date__isnull=True,
-            category__type='Flow',
+            category__in=Figure.flow_list(),
             role=Figure.ROLE.RECOMMENDED
         )
 
@@ -235,7 +238,7 @@ class Command(BaseCommand):
 
         stock_figures_without_end_date_qs = Figure.objects.filter(
             end_date__isnull=True,
-            category__type='Stock',
+            category__in=Figure.stock_list(),
             role=Figure.ROLE.RECOMMENDED
         )
 
@@ -252,12 +255,11 @@ class Command(BaseCommand):
         ws5 = wb.create_sheet(settings['ws5']['code'])
         ws5.append([settings['ws5']['title']])
         ws5.append(["Fact ID", "Fact URL"])
-
         flow_figures_with_start_date_gt_end_date_qs = Figure.objects.filter(
             start_date__isnull=False,
             end_date__isnull=False,
             start_date__gt=F('end_date'),
-            category__type='Flow',
+            category__in=Figure.flow_list(),
             role=Figure.ROLE.RECOMMENDED
         )
 
@@ -279,7 +281,7 @@ class Command(BaseCommand):
             start_date__isnull=False,
             end_date__isnull=False,
             start_date__gt=F('end_date'),
-            category__type='Stock',
+            category__in=Figure.stock_list(),
             role=Figure.ROLE.RECOMMENDED
         )
 
@@ -296,7 +298,6 @@ class Command(BaseCommand):
         ws7 = wb.create_sheet(settings['ws7']['code'])
         ws7.append([settings['ws7']['title']])
         ws7.append(["Fact ID", "Fact URL"])
-
         small_and_large_figure_date_qs = Figure.objects.filter(
             Q(start_date__gt=largest_date) |
             Q(start_date__lt=smallest_date) |
@@ -315,17 +316,19 @@ class Command(BaseCommand):
             )
 
         all_reports = Report.objects.all()
-
         # Recommended flow figures not included in reports
         ws8 = wb.create_sheet(settings['ws8']['code'])
         ws8.append([settings['ws8']['title']])
-        ws8.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL"])
+        # FIXME:
+        # ws8.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
+        ws8.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
 
         # Recommended flow figures added in reports
         ws9 = wb.create_sheet(settings['ws9']['code'])
         ws9.append([settings['ws9']['title']])
-        ws9.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL"])
-
+        # FIXME:
+        # ws9.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
+        ws9.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
         missing_flow_row = 0
         added_flow_row = 0
         for report in all_reports:
@@ -334,13 +337,13 @@ class Command(BaseCommand):
 
             linked_figures = report.attached_figures.filter(
                 role=Figure.ROLE.RECOMMENDED,
-                category__type='Flow',
-                category__name='New Displacement',
+                category__in=Figure.flow_list(),
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
             ).values_list('old_id', flat=True)
             extracted_figures = report.extract_report_figures.filter(
                 role=Figure.ROLE.RECOMMENDED,
-                category__type='Flow',
-                category__name='New Displacement',
+                category__in=Figure.flow_list(),
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
             ).values_list('old_id', flat=True)
 
             missing = set(linked_figures) - set(extracted_figures)
@@ -352,6 +355,8 @@ class Command(BaseCommand):
                     get_fact_url(report.old_id),
                     id,
                     get_fact_url(id),
+                    report.id,
+                    get_report_url(id),
                 )
                 missing_flow_row = missing_flow_row + 1
 
@@ -364,17 +369,20 @@ class Command(BaseCommand):
                     get_fact_url(report.old_id),
                     id,
                     get_fact_url(id),
+                    report.id,
+                    get_report_url(id),
                 )
                 added_flow_row = added_flow_row + 1
 
         # Recommended flow figures not included in reports
         ws10 = wb.create_sheet(settings['ws10']['code'])
         ws10.append([settings['ws10']['title']])
+        # ws10.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
         ws10.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL"])
-
         # Recommended flow figures added in reports
         ws11 = wb.create_sheet(settings['ws11']['code'])
         ws11.append([settings['ws11']['title']])
+        # ws11.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
         ws11.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL"])
 
         missing_stock_row = 0
@@ -385,13 +393,13 @@ class Command(BaseCommand):
 
             linked_figures = report.attached_figures.filter(
                 role=Figure.ROLE.RECOMMENDED,
-                category__type='Stock',
-                category__name='IDPs',
+                category__in=Figure.stock_list(),
+                category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
             ).values_list('old_id', flat=True)
             extracted_figures = report.extract_report_figures.filter(
                 role=Figure.ROLE.RECOMMENDED,
-                category__type='Stock',
-                category__name='IDPs',
+                category__in=Figure.stock_list(),
+                category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
             ).values_list('old_id', flat=True)
 
             missing = set(linked_figures) - set(extracted_figures)
@@ -422,7 +430,6 @@ class Command(BaseCommand):
         ws12 = wb.create_sheet(settings['ws12']['code'])
         ws12.append([settings['ws12']['title']])
         ws12.append(["Fact ID", "Fact URL"])
-
         triangulation_start_date_null_figures_qs = Figure.objects.filter(
             start_date__isnull=True,
             role=Figure.ROLE.TRIANGULATION
@@ -444,7 +451,7 @@ class Command(BaseCommand):
 
         triangulation_flow_figures_without_end_date_qs = Figure.objects.filter(
             end_date__isnull=True,
-            category__type='Flow',
+            category__in=Figure.flow_list(),
             role=Figure.ROLE.TRIANGULATION
         )
 
@@ -461,10 +468,9 @@ class Command(BaseCommand):
         ws14 = wb.create_sheet(settings['ws14']['code'])
         ws14.append([settings['ws14']['title']])
         ws14.append(["Fact ID", "Fact URL"])
-
         triangulation_stock_figures_without_end_date_qs = Figure.objects.filter(
             end_date__isnull=True,
-            category__type='Stock',
+            category__in=Figure.stock_list(),
             role=Figure.ROLE.TRIANGULATION
         )
 
@@ -486,7 +492,7 @@ class Command(BaseCommand):
             start_date__isnull=False,
             end_date__isnull=False,
             start_date__gt=F('end_date'),
-            category__type='Flow',
+            category__in=Figure.flow_list(),
             role=Figure.ROLE.TRIANGULATION
         )
 
@@ -508,7 +514,7 @@ class Command(BaseCommand):
             start_date__isnull=False,
             end_date__isnull=False,
             start_date__gt=F('end_date'),
-            category__type='Stock',
+            category__in=Figure.stock_list(),
             role=Figure.ROLE.TRIANGULATION
         )
 
@@ -525,7 +531,6 @@ class Command(BaseCommand):
         ws17 = wb.create_sheet(settings['ws17']['code'])
         ws17.append([settings['ws17']['title']])
         ws17.append(["Fact ID", "Fact URL"])
-
         triangulation_small_and_large_figure_date_qs = Figure.objects.filter(
             Q(start_date__gt=largest_date) |
             Q(start_date__lt=smallest_date) |
@@ -549,7 +554,6 @@ class Command(BaseCommand):
         ws18 = wb.create_sheet(settings['ws18']['code'])
         ws18.append([settings['ws18']['title']])
         ws18.append(["Fact ID", "Fact URL", "Fact Name"])
-
         old_facts_qs = Facts.objects.using('helixmigration').filter(
             Q(name__icontains="ignore") |
             Q(name__icontains="not include") |
