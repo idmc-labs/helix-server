@@ -10,6 +10,16 @@ services:
     ports:
       - '127.0.0.1:6050:5432'
 
+  olddb:
+    image: postgres:14
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_PORT=5433
+    volumes:
+      - postgres-data-old:/var/lib/postgresql/data
+
   redis:
     image: redis:latest
     volumes:
@@ -50,3 +60,4 @@ services:
 volumes:
   helix-db-data:
   helix-redis-data:
+  postgres-data-old:
