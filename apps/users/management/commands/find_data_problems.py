@@ -319,15 +319,11 @@ class Command(BaseCommand):
         # Recommended flow figures not included in reports
         ws8 = wb.create_sheet(settings['ws8']['code'])
         ws8.append([settings['ws8']['title']])
-        # FIXME:
-        # ws8.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
         ws8.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
 
         # Recommended flow figures added in reports
         ws9 = wb.create_sheet(settings['ws9']['code'])
         ws9.append([settings['ws9']['title']])
-        # FIXME:
-        # ws9.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
         ws9.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
         missing_flow_row = 0
         added_flow_row = 0
@@ -356,7 +352,7 @@ class Command(BaseCommand):
                     id,
                     get_fact_url(id),
                     report.id,
-                    get_report_url(id),
+                    get_report_url(report.id),
                 )
                 missing_flow_row = missing_flow_row + 1
 
@@ -370,20 +366,18 @@ class Command(BaseCommand):
                     id,
                     get_fact_url(id),
                     report.id,
-                    get_report_url(id),
+                    get_report_url(report.id),
                 )
                 added_flow_row = added_flow_row + 1
 
         # Recommended flow figures not included in reports
         ws10 = wb.create_sheet(settings['ws10']['code'])
         ws10.append([settings['ws10']['title']])
-        # ws10.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
-        ws10.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL"])
+        ws10.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
         # Recommended flow figures added in reports
         ws11 = wb.create_sheet(settings['ws11']['code'])
         ws11.append([settings['ws11']['title']])
-        # ws11.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
-        ws11.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL"])
+        ws11.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
 
         missing_stock_row = 0
         added_stock_row = 0
@@ -411,6 +405,8 @@ class Command(BaseCommand):
                     get_fact_url(report.old_id),
                     id,
                     get_fact_url(id),
+                    report.id,
+                    get_report_url(report.id),
                 )
                 missing_stock_row = missing_stock_row + 1
 
@@ -423,6 +419,8 @@ class Command(BaseCommand):
                     get_fact_url(report.old_id),
                     id,
                     get_fact_url(id),
+                    report.id,
+                    get_report_url(report.id),
                 )
                 added_stock_row = added_stock_row + 1
 
