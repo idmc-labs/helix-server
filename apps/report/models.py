@@ -114,7 +114,27 @@ class Report(MetaInformationArchiveAbstractModel,
                     role=Figure.ROLE.RECOMMENDED,
                     event__event_type=Crisis.CRISIS_TYPE.DISASTER,
                 )
-            )
+            ),
+            total_flow=Sum(
+                'total_figures',
+                filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                         role=Figure.ROLE.RECOMMENDED,
+                         event__event_type__in=[Crisis.CRISIS_TYPE.DISASTER, Crisis.CRISIS_TYPE.CONFLICT])
+            ),
+            total_stock=Sum(
+                'total_figures',
+                filter=Q(
+                    Q(
+                        end_date__isnull=True,
+                    ) | Q(
+                        end_date__isnull=False,
+                        end_date__gte=self.filter_figure_end_before or timezone.now().date(),
+                    ),
+                    category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                    role=Figure.ROLE.RECOMMENDED,
+                    event__event_type__in=[Crisis.CRISIS_TYPE.DISASTER, Crisis.CRISIS_TYPE.CONFLICT]
+                )
+            ),
         )
 
     generated_from = enum.EnumField(REPORT_TYPE,
@@ -177,12 +197,15 @@ class Report(MetaInformationArchiveAbstractModel,
             total_flow_disaster_sum='ND Disaster',
             total_stock_conflict_sum='IDPs Conflict',
             total_stock_disaster_sum='IDPs Disaster',
+            total_flow_sum='Total Flow Sum',
+            total_stock_sum='Total Stock Sum',
 
             analysis='Analysis',
             methodology='Methodology',
             significant_updates='Significant Updates',
             challenges='Challenges',
             summary='Summary',
+            ignore='IGNORE',
         )
         data = ReportFilter(
             data=filters,
@@ -193,6 +216,9 @@ class Report(MetaInformationArchiveAbstractModel,
             total_flow_disaster_sum=Value(0, output_field=models.IntegerField()),
             total_stock_conflict_sum=Value(0, output_field=models.IntegerField()),
             total_stock_disaster_sum=Value(0, output_field=models.IntegerField()),
+            total_flow_sum=Value(0, output_field=models.IntegerField()),
+            total_stock_sum=Value(0, output_field=models.IntegerField()),
+            ignore=Value('', output_field=models.CharField()),
         ).order_by('-created_at').select_related(
             'created_by',
         ).prefetch_related(
@@ -205,11 +231,13 @@ class Report(MetaInformationArchiveAbstractModel,
             return ''
 
         def transformer(datum):
+            total_disaggregation = Report.objects.get(id=datum['id']).total_disaggregation
             return {
                 **datum,
                 # ref: heavy
                 # NOTE: there must be a better way
-                **Report.objects.get(id=datum['id']).total_disaggregation,
+                **total_disaggregation,
+                'ignore': Report.objects.get(id=datum['id']).ignore_field_status,
                 'filter_figure_categories': transform_filter_figure_category(datum['filter_figure_categories'])
             }
 
@@ -290,8 +318,40 @@ class Report(MetaInformationArchiveAbstractModel,
             total_stock_conflict_sum=Sum('total_stock_conflict'),
             total_flow_conflict_sum=Sum('total_flow_conflict'),
             total_flow_disaster_sum=Sum('total_flow_disaster'),
-            total_stock_disaster_sum=Sum('total_stock_disaster')
+            total_stock_disaster_sum=Sum('total_stock_disaster'),
+            total_flow_sum=Sum('total_flow'),
+            total_stock_sum=Sum('total_stock'),
         )
+
+    @property
+    def ignore_field_status(self):
+        total_disaggregation = self.total_disaggregation
+        total_flow_sum = total_disaggregation['total_flow_sum'] or 0
+        total_stock_sum = total_disaggregation['total_stock_sum'] or 0
+        figure_categories_to_check = [
+            Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+            Figure.FIGURE_CATEGORY_TYPES.IDPS.value
+        ]
+        if self.total_figures in [0, None]:
+            return 'Missing master figures'
+
+        total_masterfact_figures = self.total_figures or 0
+        if (
+            self.filter_figure_categories is None or
+            (
+                bool(
+                    set([item.value for item in self.filter_figure_categories]) & set(figure_categories_to_check)
+                ) and
+                (
+                    total_masterfact_figures != total_flow_sum and
+                    total_masterfact_figures != total_stock_sum
+                )
+            )
+        ):
+            return 'CHECK WITH NUMBERS'
+        if not bool(set([item.value for item in self.filter_figure_categories]) & set(figure_categories_to_check)):
+            return 'Different figure category'
+        return ''
 
     @cached_property
     def is_approved(self):
