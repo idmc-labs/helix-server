@@ -328,7 +328,7 @@ class Report(MetaInformationArchiveAbstractModel,
             Figure.FIGURE_CATEGORY_TYPES.IDPS.value
         ]
         if self.total_figures in [0, None]:
-            return 'Missing master figures'
+            return 'The masterfact figure is missing.'
 
         total_masterfact_figures = self.total_figures or 0
         if (
