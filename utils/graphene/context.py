@@ -1,7 +1,11 @@
 from django.utils.functional import cached_property
 
 from apps.country.dataloaders import TotalFigureThisYearByCountryCategoryEventTypeLoader
-from apps.crisis.dataloaders import TotalIDPFigureByCrisisLoader, TotalNDFigureByCrisisLoader
+from apps.crisis.dataloaders import (
+    TotalIDPFigureByCrisisLoader,
+    TotalNDFigureByCrisisLoader,
+    EventCountLoader,
+)
 from apps.entry.dataloaders import (
     TotalIDPFigureByEntryLoader, TotalNDFigureByEntryLoader, FigureTypologyLoader
 )
@@ -127,3 +131,7 @@ class GQLContext:
     @cached_property
     def figure_typology_dataloader(self):
         return FigureTypologyLoader()
+
+    @cached_property
+    def event_count_dataloader(self):
+        return EventCountLoader()

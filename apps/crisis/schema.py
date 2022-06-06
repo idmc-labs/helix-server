@@ -37,6 +37,7 @@ class CrisisType(DjangoObjectType):
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     review_count = graphene.Field(CrisisReviewCountType)
+    event_count = graphene.Field(graphene.Int)
 
     def resolve_review_count(root, info, **kwargs):
         return info.context.crisis_crisis_review_count_dataloader.load(root.id)
@@ -62,6 +63,9 @@ class CrisisType(DjangoObjectType):
         if value != NULL:
             return value
         return info.context.crisis_crisis_total_flow_nd_figures.load(root.id)
+
+    def resolve_event_count(root, info, **kwargs):
+        return info.context.event_count_dataloader.load(root.id)
 
 
 class CrisisListType(CustomDjangoListObjectType):
