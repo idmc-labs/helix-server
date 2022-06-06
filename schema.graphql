@@ -680,6 +680,7 @@ type CrisisType {
   totalStockIdpFigures: Int
   totalFlowNdFigures: Int
   reviewCount: CrisisReviewCountType
+  eventCount: Int
 }
 
 input CrisisUpdateInputType {
