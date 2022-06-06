@@ -294,7 +294,7 @@ class UpdateContextOfViolence(graphene.Mutation):
     result = graphene.Field(ContextOfViolenceType)
 
     @staticmethod
-    @permission_checker(['event.update_contextofviolence'])
+    @permission_checker(['event.change_contextofviolence'])
     def mutate(root, info, data):
         try:
             instance = ContextOfViolence.objects.get(id=data['id'])
