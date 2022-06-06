@@ -197,15 +197,12 @@ class Report(MetaInformationArchiveAbstractModel,
             total_flow_disaster_sum='ND Disaster',
             total_stock_conflict_sum='IDPs Conflict',
             total_stock_disaster_sum='IDPs Disaster',
-            total_flow_sum='Total Flow Sum',
-            total_stock_sum='Total Stock Sum',
-
             analysis='Analysis',
             methodology='Methodology',
             significant_updates='Significant Updates',
             challenges='Challenges',
             summary='Summary',
-            ignore='IGNORE',
+            remarks='Remarks',
         )
         data = ReportFilter(
             data=filters,
@@ -216,9 +213,7 @@ class Report(MetaInformationArchiveAbstractModel,
             total_flow_disaster_sum=Value(0, output_field=models.IntegerField()),
             total_stock_conflict_sum=Value(0, output_field=models.IntegerField()),
             total_stock_disaster_sum=Value(0, output_field=models.IntegerField()),
-            total_flow_sum=Value(0, output_field=models.IntegerField()),
-            total_stock_sum=Value(0, output_field=models.IntegerField()),
-            ignore=Value('', output_field=models.CharField()),
+            remarks=Value('', output_field=models.CharField()),
         ).order_by('-created_at').select_related(
             'created_by',
         ).prefetch_related(
@@ -237,7 +232,7 @@ class Report(MetaInformationArchiveAbstractModel,
                 # ref: heavy
                 # NOTE: there must be a better way
                 **total_disaggregation,
-                'ignore': Report.objects.get(id=datum['id']).ignore_field_status,
+                'remarks': Report.objects.get(id=datum['id']).generate_remarks_for_report,
                 'filter_figure_categories': transform_filter_figure_category(datum['filter_figure_categories'])
             }
 
@@ -324,7 +319,7 @@ class Report(MetaInformationArchiveAbstractModel,
         )
 
     @property
-    def ignore_field_status(self):
+    def generate_remarks_for_report(self):
         total_disaggregation = self.total_disaggregation
         total_flow_sum = total_disaggregation['total_flow_sum'] or 0
         total_stock_sum = total_disaggregation['total_stock_sum'] or 0
@@ -348,9 +343,9 @@ class Report(MetaInformationArchiveAbstractModel,
                 )
             )
         ):
-            return 'CHECK WITH NUMBERS'
+            return 'The numbers do no match'
         if not bool(set([item.value for item in self.filter_figure_categories]) & set(figure_categories_to_check)):
-            return 'Different figure category'
+            return "The figure category is not 'new displacement' or 'idps'"
         return ''
 
     @cached_property
