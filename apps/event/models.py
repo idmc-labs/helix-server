@@ -5,6 +5,7 @@ from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django_enumfield import enum
+from django.contrib.postgres.aggregates.general import StringAgg
 
 from apps.contrib.models import (
     MetaInformationAbstractModel,
@@ -280,7 +281,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             disaster_sub_type__name='Disaster Sub Type',
             disaster_sub_type='Diaster Sub Type Id',
             glide_numbers='Event Codes',
-            context_of_violence__name='Context of violences',
+            context_of_violences='Context of violences',
         )
         data = EventFilter(
             data=filters,
@@ -292,6 +293,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             figures_count=models.Count('figures', distinct=True),
             entries_count=models.Count('figures__entry', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
+            context_of_violences=StringAgg('context_of_violence__name', delimiter='; '),
         ).order_by('-created_at').select_related(
             'violence',
             'violence_sub_type',
