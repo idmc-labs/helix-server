@@ -10,6 +10,7 @@ from promise.dataloader import DataLoader
 
 from apps.entry.models import Figure, EntryReviewer
 from apps.crisis.models import Crisis
+from apps.event.models import Event
 
 
 class CrisisReviewCountLoader(DataLoader):
@@ -105,3 +106,26 @@ class TotalNDFigureByCrisisLoader(DataLoader):
             keys,
             Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
         )
+
+
+class EventCountLoader(DataLoader):
+    def batch_load_fn(self, keys):
+        qs = Crisis.objects.filter(
+            id__in=keys
+        ).annotate(
+            event_count=models.Subquery(
+                Event.objects.filter(
+                    crisis=models.OuterRef('pk')
+                ).order_by().values('crisis').annotate(
+                    count=models.Count('crisis')
+                ).values('count')[:1],
+                output_field=models.IntegerField()
+            )
+        )
+        batch_load = {
+            item['id']: item['event_count']
+            for item in qs.values('id', 'event_count')
+        }
+        return Promise.resolve([
+            batch_load.get(key) for key in keys
+        ])

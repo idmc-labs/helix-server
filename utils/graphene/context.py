@@ -1,7 +1,11 @@
 from django.utils.functional import cached_property
 
 from apps.country.dataloaders import TotalFigureThisYearByCountryCategoryEventTypeLoader
-from apps.crisis.dataloaders import TotalIDPFigureByCrisisLoader, TotalNDFigureByCrisisLoader
+from apps.crisis.dataloaders import (
+    TotalIDPFigureByCrisisLoader,
+    TotalNDFigureByCrisisLoader,
+    EventCountLoader,
+)
 from apps.entry.dataloaders import (
     TotalIDPFigureByEntryLoader, TotalNDFigureByEntryLoader, FigureTypologyLoader
 )
@@ -76,7 +80,7 @@ class GQLContext:
     def country_country_this_year_idps_disaster_loader(self):
         from apps.crisis.models import Crisis
         return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category__in=Figure.stock_list(),
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             event_type=Crisis.CRISIS_TYPE.DISASTER.value,
         )
 
@@ -84,7 +88,7 @@ class GQLContext:
     def country_country_this_year_idps_conflict_loader(self):
         from apps.crisis.models import Crisis
         return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category__in=Figure.stock_list(),
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
         )
 
@@ -92,7 +96,7 @@ class GQLContext:
     def country_country_this_year_nd_conflict_loader(self):
         from apps.crisis.models import Crisis
         return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category__in=Figure.flow_list(),
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
         )
 
@@ -100,7 +104,7 @@ class GQLContext:
     def country_country_this_year_nd_disaster_loader(self):
         from apps.crisis.models import Crisis
         return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category__in=Figure.flow_list(),
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             event_type=Crisis.CRISIS_TYPE.DISASTER.value,
         )
 
@@ -127,3 +131,7 @@ class GQLContext:
     @cached_property
     def figure_typology_dataloader(self):
         return FigureTypologyLoader()
+
+    @cached_property
+    def event_count_dataloader(self):
+        return EventCountLoader()

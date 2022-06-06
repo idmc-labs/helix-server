@@ -706,7 +706,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__disaster_sub_category__name='Disaster Sub Category',
             event__disaster_type__name='Disaster Type',
             event__disaster_sub_type__name='Disaster Sub Type',
-            context_of_violence__name='Context of violences',
+            context_of_violences='Context of violences',
         )
         values = figures.order_by(
             '-created_at'
@@ -727,7 +727,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                 filter=~Q(entry__publishers__name=''),
                 distinct=True
             ),
-            year=ExtractYear("start_date")
+            year=ExtractYear("start_date"),
+            context_of_violences=StringAgg('context_of_violence__name', delimiter='; '),
         ).annotate(
             centroid=models.Case(
                 models.When(
@@ -1125,6 +1126,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             total_male_age_group_eighteen_to_fiftynine="M_18-59",
             total_male_age_group_sixty_plus="M_60+",
             total_other_age_group_male="M_other age group",
+            context_of_violences='Context of violences',
         )
         entries = EntryExtractionFilterSet(
             data=filters,
@@ -1145,6 +1147,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             publishers_name=StringAgg('publishers__name', delimiter='; '),
             publisher_types=StringAgg('publishers__organization_kind__name', delimiter='; '),
             figures_count=models.Count('figures', distinct=True),
+            context_of_violences=StringAgg('figures__context_of_violence__name', delimiter='; '),
             # **cls._total_figure_disaggregation_subquery(),
         ).annotate(
             centroid=models.Case(

@@ -52,6 +52,7 @@ class CountryRegion(models.Model):
             now = timezone.now()
             start_date = datetime(year=now.year, month=1, day=1)
             end_date = now.date()
+
         return {
             cls.ND_CONFLICT_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
@@ -213,12 +214,13 @@ class Country(models.Model):
         returns the subqueries for figures sum annotations
         '''
         figures = figures or Figure.objects.all()
-        if start_date and end_date is None:
+        if start_date is None and end_date is None:
             start_date = datetime(year=timezone.now().year, month=1, day=1)
             end_date = datetime(year=timezone.now().year, month=12, day=31)
         if ignore_dates:
             start_date = None
             end_date = None
+
         return {
             cls.ND_CONFLICT_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
@@ -318,9 +320,9 @@ class Country(models.Model):
             # entries_count=Count('events__entries', distinct=True),
             entries_count=models.Subquery(
                 Entry.objects.filter(
-                    figures__event__countries=OuterRef('pk')
-                ).order_by().values('figures__event__countries').annotate(
-                    _count=Count('pk')
+                    figures__country=OuterRef('pk')
+                ).order_by().values('figures__country').annotate(
+                    _count=Count('figures__entry', distinct=True)
                 ).values('_count')[:1],
                 output_field=models.IntegerField()
             ),

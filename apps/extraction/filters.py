@@ -231,7 +231,7 @@ class EntryExtractionFilterSet(df.FilterSet):
         if value:
             return qs.filter(
                 ~Q(
-                    figures__figure_cause__in=Crisis.CRISIS_TYPE.DISASTER.value
+                    figures__figure_cause=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(figures__disaster_category__in=value)
             ).distinct()
         return qs
@@ -240,7 +240,7 @@ class EntryExtractionFilterSet(df.FilterSet):
         if value:
             return qs.filter(
                 ~Q(
-                    figures__figure_cause__in=Crisis.CRISIS_TYPE.DISASTER.value
+                    figures__figure_cause=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(figures__disaster_sub_category__in=value)
             ).distinct()
         return qs
@@ -249,7 +249,7 @@ class EntryExtractionFilterSet(df.FilterSet):
         if value:
             return qs.filter(
                 ~Q(
-                    figures__figure_cause__in=Crisis.CRISIS_TYPE.DISASTER.value
+                    figures__figure_cause=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(figures__disaster_sub_type__in=value)
             ).distinct()
         return qs
@@ -258,7 +258,7 @@ class EntryExtractionFilterSet(df.FilterSet):
         if value:
             return qs.filter(
                 ~Q(
-                    figures__figure_cause__in=Crisis.CRISIS_TYPE.DISASTER.value
+                    figures__figure_cause=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(figures__disaster_type__in=value)
             ).distinct()
         return qs
@@ -267,7 +267,7 @@ class EntryExtractionFilterSet(df.FilterSet):
         if value:
             return qs.filter(
                 ~Q(
-                    figures__figure_cause__in=Crisis.CRISIS_TYPE.CONFLICT.value
+                    figures__figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value
                 ) | Q(figures__violence_sub_type__in=value)
             ).distinct()
         return qs
@@ -276,7 +276,7 @@ class EntryExtractionFilterSet(df.FilterSet):
         if value:
             return qs.filter(
                 ~Q(
-                    figures__figure_cause__in=Crisis.CRISIS_TYPE.CONFLICT.value
+                    figures__figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value
                 ) | Q(figures__violence_type__in=value)
             ).distinct()
         return qs
@@ -509,7 +509,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         if value:
             return qs.filter(
                 ~Q(
-                    figure_cause__in=Crisis.CRISIS_TYPE.DISASTER.value
+                    figure_cause=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(disaster_category__in=value)
             ).distinct()
         return qs
@@ -518,7 +518,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         if value:
             return qs.filter(
                 ~Q(
-                    figure_cause__in=Crisis.CRISIS_TYPE.DISASTER.value
+                    figure_cause=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(disaster_sub_category__in=value)
             ).distinct()
         return qs
@@ -527,7 +527,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         if value:
             return qs.filter(
                 ~Q(
-                    figure_cause__in=Crisis.CRISIS_TYPE.DISASTER.value
+                    figure_cause=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(disaster_sub_type__in=value)
             ).distinct()
         return qs
@@ -536,7 +536,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         if value:
             return qs.filter(
                 ~Q(
-                    figure_cause__in=Crisis.CRISIS_TYPE.DISASTER.value
+                    figure_cause=Crisis.CRISIS_TYPE.DISASTER.value
                 ) | Q(disaster_type__in=value)
             ).distinct()
         return qs
@@ -545,7 +545,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         if value:
             return qs.filter(
                 ~Q(
-                    figure_cause__in=Crisis.CRISIS_TYPE.CONFLICT.value
+                    figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value
                 ) | Q(violence_sub_type__in=value)
             ).distinct()
         return qs
@@ -554,7 +554,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         if value:
             return qs.filter(
                 ~Q(
-                    figure_cause__in=Crisis.CRISIS_TYPE.CONFLICT.value
+                    figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value
                 ) | Q(violence_type__in=value)
             ).distinct()
         return qs
