@@ -12,7 +12,7 @@ class TotalFigureThisYearByCountryCategoryEventTypeLoader(DataLoader):
         *args,
         **kwargs
     ):
-        self.category = kwargs.pop('category__in')
+        self.category = kwargs.pop('category')
         self.event_type = kwargs.pop('event_type')
         return super().__init__(*args, **kwargs)
 

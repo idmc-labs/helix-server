@@ -76,7 +76,7 @@ class GQLContext:
     def country_country_this_year_idps_disaster_loader(self):
         from apps.crisis.models import Crisis
         return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category__in=Figure.stock_list(),
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             event_type=Crisis.CRISIS_TYPE.DISASTER.value,
         )
 
@@ -84,7 +84,7 @@ class GQLContext:
     def country_country_this_year_idps_conflict_loader(self):
         from apps.crisis.models import Crisis
         return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category__in=Figure.stock_list(),
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
         )
 
@@ -92,7 +92,7 @@ class GQLContext:
     def country_country_this_year_nd_conflict_loader(self):
         from apps.crisis.models import Crisis
         return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category__in=Figure.flow_list(),
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
         )
 
@@ -100,7 +100,7 @@ class GQLContext:
     def country_country_this_year_nd_disaster_loader(self):
         from apps.crisis.models import Crisis
         return TotalFigureThisYearByCountryCategoryEventTypeLoader(
-            category__in=Figure.flow_list(),
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             event_type=Crisis.CRISIS_TYPE.DISASTER.value,
         )
 
