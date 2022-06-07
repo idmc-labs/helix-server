@@ -76,6 +76,7 @@ class UserType(DjangoObjectType):
 
     highest_role = Field(PermissionRoleEnum)
     permissions = graphene.List(graphene.NonNull(PermissionsType))
+    is_admin = graphene.Boolean()
 
     @staticmethod
     def resolve_permissions(root, info, **kwargs):
@@ -93,6 +94,12 @@ class UserType(DjangoObjectType):
     def resolve_email(root, info, **kwargs):
         if root == info.context.request.user:
             return root.email
+
+    @staticmethod
+    def resolve_is_admin(root, info, **kwargs):
+        if root.highest_role == USER_ROLE.ADMIN.value:
+            return True
+        return False
 
 
 class UserListType(CustomDjangoListObjectType):

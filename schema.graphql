@@ -2986,6 +2986,7 @@ type UserType {
   portfolios(monitoringSubRegion_In: ID, country_In: ID, roleIn: [String!], page: Int = 1, ordering: String, pageSize: Int): PortfolioListType
   highestRole: USER_ROLE
   permissions: [PermissionsType!]
+  isAdmin: Boolean
 }
 
 input UserUpdateInputType {
