@@ -616,7 +616,7 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
             queryset, start_date, end_date
         )
         stock_qs = Figure.filtered_idp_figures(
-            queryset, reference_point=timezone.now().date()
+            queryset, reference_point=end_date
         )
         return flow_qs | stock_qs
 

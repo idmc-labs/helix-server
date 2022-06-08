@@ -527,23 +527,18 @@ class Figure(MetaInformationArchiveAbstractModel,
     def filtered_nd_figures(
         cls,
         qs: QuerySet,
-        start_date: Optional[date],
-        end_date: Optional[date] = None,
+        filter_start_date: Optional[date],
+        filter_end_date: Optional[date] = None,
     ):
-        end_date = end_date or timezone.now().date()
+        filter_end_date = filter_end_date or timezone.now().date()
         qs = qs.filter(
-            Q(
-                end_date__isnull=True,
-            ) | Q(
-                end_date__isnull=False,
-                end_date__lte=end_date,
-            ),
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
         )
-        if start_date:
-            qs = qs.filter(
-                end_date__gte=start_date,
-            )
+        if filter_start_date:
+            qs = qs.filter(start_date__gte=filter_start_date)
+
+        if filter_end_date:
+            qs = qs.filter(start_date__lte=filter_end_date)
         return qs
 
     @classmethod
@@ -600,8 +595,9 @@ class Figure(MetaInformationArchiveAbstractModel,
         qs: QuerySet,
         reference_point: Optional[date] = None,
     ):
-        reference_point = reference_point or timezone.now().date()
-        return qs.filter(
+        if not reference_point:
+            return qs
+        qs = qs.filter(
             Q(
                 # if end date does not exist, we must make sure that that figure started before given start date
                 end_date__isnull=True
@@ -610,11 +606,12 @@ class Figure(MetaInformationArchiveAbstractModel,
                 # also figure started before the end date
                 end_date__isnull=False,
                 end_date__gte=reference_point,
+                start_date__lte=reference_point
             ),
-            start_date__isnull=False,
-            start_date__lte=reference_point,
+            # start_date__isnull=False,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
         )
+        return qs
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
