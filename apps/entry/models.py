@@ -527,18 +527,18 @@ class Figure(MetaInformationArchiveAbstractModel,
     def filtered_nd_figures(
         cls,
         qs: QuerySet,
-        filter_start_date: Optional[date],
-        filter_end_date: Optional[date] = None,
+        start_date: Optional[date],
+        end_date: Optional[date] = None,
     ):
-        filter_end_date = filter_end_date or timezone.now().date()
+        end_date = end_date or timezone.now().date()
         qs = qs.filter(
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
         )
-        if filter_start_date:
-            qs = qs.filter(start_date__gte=filter_start_date)
+        if start_date:
+            qs = qs.filter(start_date__gte=start_date)
 
-        if filter_end_date:
-            qs = qs.filter(start_date__lte=filter_end_date)
+        if end_date:
+            qs = qs.filter(start_date__lte=end_date)
         return qs
 
     @classmethod
