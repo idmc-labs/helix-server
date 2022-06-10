@@ -1,6 +1,5 @@
 from django_filters import rest_framework as df
 from django.db.models import Q
-from django.utils import timezone
 from apps.crisis.models import Crisis
 from apps.country.models import Country
 from apps.extraction.models import ExtractionQuery
