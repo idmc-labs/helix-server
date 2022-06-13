@@ -75,6 +75,7 @@ class UserType(DjangoObjectType):
                                                 related_name='portfolios')
 
     highest_role = Field(PermissionRoleEnum)
+    portfolio_role = Field(PermissionRoleEnum)
     permissions = graphene.List(graphene.NonNull(PermissionsType))
     is_admin = graphene.Boolean()
 
@@ -100,6 +101,10 @@ class UserType(DjangoObjectType):
         if root.highest_role == USER_ROLE.ADMIN.value:
             return True
         return False
+
+    @staticmethod
+    def resolve_portfolio_role(root, info, **kwargs):
+        return root.portfolio_role
 
 
 class UserListType(CustomDjangoListObjectType):
