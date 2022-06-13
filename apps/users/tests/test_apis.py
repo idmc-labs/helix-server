@@ -558,6 +558,7 @@ class TestUserListSchema(HelixGraphQLTestCase):
                 results {
                   id
                   email
+                  isAdmin
                 }
               }
             }
@@ -662,6 +663,25 @@ class TestUserListSchema(HelixGraphQLTestCase):
             None,
             [item['highestRole'] for item in content['data']['users']['results']]
         )
+
+    def test_is_admin_field(self):
+        create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
+        create_user_with_role(USER_ROLE.GUEST.name)
+        admin_user = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.force_login(admin_user)
+
+        roles = [USER_ROLE.ADMIN.name]
+        response = self.query(
+            self.users_q,
+            variables={"roles": roles},
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertEqual(len(content['data']['users']['results']), 1)
+        self.assertEqual(content['data']['users']['results'][0]['id'], str(admin_user.id))
+        self.assertEqual(content['data']['users']['results'][0]['email'], admin_user.email)
+        self.assertEqual(content['data']['users']['results'][0]['isAdmin'], True)
 
 
 class TestAPIMe(HelixAPITestCase):
