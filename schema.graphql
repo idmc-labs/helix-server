@@ -1947,7 +1947,6 @@ input OrganizationCreateInputType {
   shortName: String
   category: ORGANIZATION_CATEGORY
   methodology: String
-  breakdown: String
   createdBy: ID
   lastModifiedBy: ID
   organizationKind: ID
@@ -1960,6 +1959,7 @@ input OrganizationKindCreateInputType {
   createdAt: DateTime
   versionId: String
   name: String!
+  reliability: String
   createdBy: ID
   lastModifiedBy: ID
 }
@@ -1980,7 +1980,14 @@ type OrganizationKindObjectType {
   versionId: String
   id: ID!
   name: String!
+  reliability: OrganizationKindReliability!
   organizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
+}
+
+enum OrganizationKindReliability {
+  A_0
+  A_1
+  A_2
 }
 
 input OrganizationKindUpdateInputType {
@@ -1989,6 +1996,7 @@ input OrganizationKindUpdateInputType {
   createdAt: DateTime
   versionId: String
   name: String
+  reliability: String
   createdBy: ID
   lastModifiedBy: ID
 }
@@ -2015,7 +2023,6 @@ type OrganizationType {
   countries: [CountryType!]!
   organizationKind: OrganizationKindObjectType
   methodology: String
-  breakdown: String
   parent: OrganizationType
   sourcedFigures: [FigureType!]!
   publishedEntries: [EntryType!]!
@@ -2039,7 +2046,6 @@ input OrganizationUpdateInputType {
   shortName: String
   category: ORGANIZATION_CATEGORY
   methodology: String
-  breakdown: String
   createdBy: ID
   lastModifiedBy: ID
   organizationKind: ID
@@ -2279,7 +2285,7 @@ type Query {
   organization(id: ID!): OrganizationType
   organizationList(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
   organizationKind(id: ID!): OrganizationKindObjectType
-  organizationKindList(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, name: String, page: Int = 1, ordering: String, pageSize: Int): OrganizationKindListType
+  organizationKindList(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, name: String, reliability: String, page: Int = 1, ordering: String, pageSize: Int): OrganizationKindListType
   attachment(id: ID!): AttachmentType
   excelExports(startedAt_Lt: DateTime, startedAt_Gt: DateTime, startedAt_Gte: DateTime, startedAt_Lte: DateTime, statusList: [String!], page: Int = 1, ordering: String, pageSize: Int): ExcelExportsListType
   contact(id: ID!): ContactType
