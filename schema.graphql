@@ -1027,7 +1027,6 @@ input EntryCreateInputType {
   associatedParkedItem: ID
   preview: ID
   document: ID
-  sources: [ID!]
   publishers: [ID!]
 }
 
@@ -1076,7 +1075,6 @@ type EntryType {
   document: AttachmentType
   documentUrl: String
   articleTitle: String!
-  sources(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], ordering: String): OrganizationListType
   publishers(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], ordering: String): OrganizationListType
   publishDate: Date!
   idmcAnalysis: String
@@ -1087,7 +1085,6 @@ type EntryType {
   figures: [FigureType!]!
   reviewing: [EntryReviewerType!]!
   latestReviews: [ReviewType]
-  sourceMethodology: String
   isReviewed: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
   isUnderReview: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
   isSignedOff: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
@@ -1109,7 +1106,6 @@ input EntryUpdateInputType {
   associatedParkedItem: ID
   preview: ID
   document: ID
-  sources: [ID!]
   publishers: [ID!]
 }
 
@@ -1494,6 +1490,7 @@ type FigureType {
   disasterSubType: DisasterSubObjectType
   otherSubType: OtherSubTypeObjectType
   osvSubType: OsvSubObjectType
+  sources(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], ordering: String): OrganizationListType
   figureReviews: [ReviewType!]!
   reportSet: [ReportType!]!
   figureTypology: String
@@ -1553,6 +1550,7 @@ input FigureUpdateInputType {
   osvSubType: ID
   tags: [ID!]
   contextOfViolence: [ID!]
+  sources: [ID!]
 }
 
 enum GENDER_TYPE {
@@ -1790,6 +1788,7 @@ input NestedFigureCreateInputType {
   osvSubType: ID
   tags: [ID!]
   contextOfViolence: [ID!]
+  sources: [ID!]
 }
 
 input NestedFigureUpdateInputType {
@@ -1850,6 +1849,7 @@ input NestedFigureUpdateInputType {
   osvSubType: ID
   tags: [ID!]
   contextOfViolence: [ID!]
+  sources: [ID!]
 }
 
 enum ORGANIZATION_CATEGORY {
@@ -2017,7 +2017,7 @@ type OrganizationType {
   methodology: String
   breakdown: String
   parent: OrganizationType
-  sourcedEntries: [EntryType!]!
+  sourcedFigures: [FigureType!]!
   publishedEntries: [EntryType!]!
   subOrganizations: [OrganizationType!]!
   contacts(country: ID, id: String, firstNameContains: String, lastNameContains: String, nameContains: String, countriesOfOperation: [String!], page: Int = 1, ordering: String, pageSize: Int): ContactListType
