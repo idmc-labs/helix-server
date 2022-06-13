@@ -600,7 +600,7 @@ class TestUserListSchema(HelixGraphQLTestCase):
                 totalCount
                 results {
                   id
-                  highestRole
+                  portfolioRole
                   permissions {
                     action
                   }
@@ -623,8 +623,8 @@ class TestUserListSchema(HelixGraphQLTestCase):
         self.assertEqual(content['data']['users']['totalCount'], 4)
         self.assertEqual(set([item['email'] for item in content['data']['users']['results']]),
                          set([guest.email, None]))
-        self.assertEqual(set([item['highestRole'] for item in content['data']['users']['results']]),
-                         set(['GUEST', None]))
+        self.assertEqual(set([item['portfolioRole'] for item in content['data']['users']['results']]),
+                         set([USER_ROLE.REGIONAL_COORDINATOR.name, USER_ROLE.MONITORING_EXPERT.name, None]))
         self.assertIn(
             None,
             [item['permissions'] for item in content['data']['users']['results']]
@@ -639,13 +639,6 @@ class TestUserListSchema(HelixGraphQLTestCase):
         self.assertEqual(content['data']['users']['totalCount'], 4)
         self.assertEqual(set([item['email'] for item in content['data']['users']['results']]),
                          set([ur.email, None]))
-        self.assertEqual(set([item['highestRole'] for item in content['data']['users']['results']]),
-                         set([ur.highest_role.name, None]))
-        self.assertIn(
-            None,
-            [item['permissions'] for item in content['data']['users']['results']]
-        )
-
         self.force_login(ua)
         response = self.query(
             users_q
@@ -657,11 +650,6 @@ class TestUserListSchema(HelixGraphQLTestCase):
         self.assertIn(
             None,
             [item['email'] for item in content['data']['users']['results']]
-        )
-        # we should get all roles
-        self.assertNotIn(
-            None,
-            [item['highestRole'] for item in content['data']['users']['results']]
         )
 
     def test_is_admin_field(self):
