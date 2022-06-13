@@ -550,7 +550,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             figures_gte_365_days = figures_gte_365_days.filter(end_date__gte=start_date)
         if end_date:
             figures_lte_365_days = figures_lte_365_days.filter(start_date__lte=end_date)
-            figures_gte_365_days = figures_gte_365_days.filter(end_date__gte=end_date)
+            figures_gte_365_days = figures_gte_365_days.filter(end_date__lte=end_date)
 
         return figures_lte_365_days | figures_gte_365_days
 
