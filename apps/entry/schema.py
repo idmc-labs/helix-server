@@ -132,6 +132,11 @@ class FigureType(DjangoObjectType):
     figure_cause = graphene.Field(CrisisTypeGrapheneEnum)
     other_sub_type = graphene.Field(OtherSubTypeObjectType)
     figure_typology = graphene.String()
+    sources = DjangoPaginatedListObjectField(
+        OrganizationListType,
+        related_name='sources',
+        reverse_related_name='sourced_figures'
+    )
 
     def resolve_figure_typology(root, info, **kwargs):
         return info.context.figure_typology_dataloader.load(root.id)
@@ -161,9 +166,6 @@ class EntryType(DjangoObjectType):
 
     created_by = graphene.Field('apps.users.schema.UserType')
     last_modified_by = graphene.Field('apps.users.schema.UserType')
-    sources = DjangoPaginatedListObjectField(OrganizationListType,
-                                             related_name='sources',
-                                             reverse_related_name='sourced_entries')
     publishers = DjangoPaginatedListObjectField(OrganizationListType,
                                                 related_name='publishers',
                                                 reverse_related_name='published_entries')
@@ -187,7 +189,6 @@ class EntryType(DjangoObjectType):
     #                                          data=TotalFigureFilterInputType())
     # total_flow_nd_figures = graphene.Field(graphene.Int,
     #                                        data=TotalFigureFilterInputType())
-    source_methodology = graphene.Field(graphene.String)
     is_reviewed = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
     is_under_review = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
     is_signed_off = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')

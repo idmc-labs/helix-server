@@ -42,7 +42,6 @@ class TestEntrySerializer(HelixTestCase):
         self.data = {
             "url": "https://yoko-onos-blog.com",
             "article_title": "title 1",
-            "sources": [self.publisher.id],
             "publishers": [self.publisher.id],
             "publish_date": "2020-09-09",
             "source_methodology": "method",
