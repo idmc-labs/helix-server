@@ -511,6 +511,10 @@ class Figure(MetaInformationArchiveAbstractModel,
         blank=True, null=True, related_name='figures',
         on_delete=models.SET_NULL
     )
+    sources = models.ManyToManyField(
+        'organization.Organization', verbose_name=_('Source'),
+        blank=True, related_name='sourced_figures'
+    )
 
     class Meta:
         indexes = [
@@ -1016,8 +1020,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
     document_url = models.URLField(verbose_name=_('Document URL'), max_length=2000,
                                    blank=True, null=True)
     article_title = models.TextField(verbose_name=_('Event Title'))
-    sources = models.ManyToManyField('organization.Organization', verbose_name=_('Source'),
-                                     blank=True, related_name='sourced_entries')
     publishers = models.ManyToManyField('organization.Organization', verbose_name=_('Publisher'),
                                         blank=True, related_name='published_entries')
     publish_date = models.DateField(verbose_name=_('Published Date'))
@@ -1139,8 +1141,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             max_fig_end=Max('figures__end_date'),
             centroid_lat=Avg('figures__geo_locations__lat'),
             centroid_lon=Avg('figures__geo_locations__lon'),
-            sources_name=StringAgg('sources__name', delimiter='; '),
-            source_types=StringAgg('sources__organization_kind__name', delimiter='; '),
+            sources_name=StringAgg('figures__sources__name', delimiter='; '),
+            source_types=StringAgg('figures__sources__organization_kind__name', delimiter='; '),
             publishers_name=StringAgg('publishers__name', delimiter='; '),
             publisher_types=StringAgg('publishers__organization_kind__name', delimiter='; '),
             figures_count=models.Count('figures', distinct=True),
@@ -1278,7 +1280,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             'created_by',
         ).prefetch_related(
             'figures',
-            'sources',
             'publishers',
             'figures__disaggregation_age',
             'figures__disaggregation_age__category',

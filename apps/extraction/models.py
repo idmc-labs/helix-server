@@ -52,7 +52,7 @@ class QueryAbstractModel(models.Model):
         null=True,
         blank=True,
     )
-    filter_entry_sources = models.ManyToManyField(
+    filter_figure_sources = models.ManyToManyField(
         'organization.Organization',
         verbose_name=_('Sources'),
         related_name='sourced_%(class)s',

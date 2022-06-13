@@ -13,7 +13,15 @@ User = get_user_model()
 
 
 class OrganizationKind(MetaInformationArchiveAbstractModel, models.Model):
+    class ORGANIZATION_RELIABILITY(enum.Enum):
+        LOW = 0
+        MEDIUM = 1
+        HIGH = 2
     name = models.CharField(verbose_name=_('Title'), max_length=256)
+    reliability = enum.EnumField(
+        ORGANIZATION_RELIABILITY, verbose_name=_('Reliability'),
+        default=ORGANIZATION_RELIABILITY.LOW
+    )
 
     def __str__(self):
         return self.name
@@ -50,7 +58,6 @@ class Organization(MetaInformationArchiveAbstractModel,
                                           on_delete=models.SET_NULL,
                                           related_name='organizations')
     methodology = models.TextField(verbose_name=_('Methodology'), blank=True, null=True)
-    breakdown = models.TextField(verbose_name=_('Source Breakdown and Reliability'), blank=True, null=True)
     parent = models.ForeignKey('Organization', verbose_name=_('Organization'),
                                null=True, blank=True,
                                on_delete=models.CASCADE, related_name='sub_organizations')
@@ -75,7 +82,6 @@ class Organization(MetaInformationArchiveAbstractModel,
             organization_kind__name='Organization Type',
             countries_iso3='ISO3',
             methodology='Methodology',
-            breakdown='Breakdown',
             # sourced_entries_count='Sourced Entries Count',
             # published_entries_count='Published Entries Count',
             category='Geographical Coverage',

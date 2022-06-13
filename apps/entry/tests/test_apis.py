@@ -135,7 +135,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.input = {
             "url": "https://yoko-onos-blog.com",
             "articleTitle": "title 1",
-            "sources": [str(OrganizationFactory.create().id)],
             "publishers": [str(OrganizationFactory.create().id)],
             "publishDate": "2020-09-09",
             "idmcAnalysis": "analysis one",
@@ -658,11 +657,6 @@ class TestEntryDelete(HelixGraphQLTestCase):
                     errors
                     result {
                         id
-                        sources{
-                          results {
-                            id
-                          }
-                        }
                         url
                         createdAt
                     }
