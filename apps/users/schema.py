@@ -73,8 +73,6 @@ class UserType(DjangoObjectType):
                                                     page_size_query_param='pageSize'
                                                 ),
                                                 related_name='portfolios')
-
-    highest_role = Field(PermissionRoleEnum)
     portfolio_role = Field(PermissionRoleEnum)
     permissions = graphene.List(graphene.NonNull(PermissionsType))
     is_admin = graphene.Boolean()
@@ -83,13 +81,6 @@ class UserType(DjangoObjectType):
     def resolve_permissions(root, info, **kwargs):
         if root == info.context.request.user:
             return root.permissions
-
-    @staticmethod
-    def resolve_highest_role(root, info, **kwargs):
-        if info.context.request.user == root:
-            return root.highest_role
-        if info.context.request.user.highest_role in [USER_ROLE.ADMIN]:
-            return root.highest_role
 
     @staticmethod
     def resolve_email(root, info, **kwargs):
