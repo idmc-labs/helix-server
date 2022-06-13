@@ -28,7 +28,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_crises = IDListFilter(method='filter_crises')
     filter_figure_glide_number = StringListFilter(method='filter_filter_figure_glide_number')
 
-    filter_entry_sources = IDListFilter(method='filter_sources')
+    filter_figure_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
     filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='unaccent__icontains')
     filter_entry_review_status = StringListFilter(method='filter_by_review_status')
@@ -111,7 +111,7 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     def filter_sources(self, qs, name, value):
         if value:
-            return qs.filter(sources__in=value).distinct()
+            return qs.filter(figures__sources__in=value).distinct()
         return qs
 
     def filter_publishers(self, qs, name, value):
@@ -321,7 +321,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_countries = IDListFilter(method='filter_countries')
     filter_events = IDListFilter(method='filter_events_')
     filter_figure_crises = IDListFilter(method='filter_crises')
-    filter_entry_sources = IDListFilter(method='filter_sources')
+    filter_figure_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
     filter_figure_category_types = StringListFilter(method='filter_filter_figure_category_types')
     filter_figure_categories = StringListFilter(method='filter_filter_figure_categories')
@@ -409,7 +409,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
 
     def filter_sources(self, qs, name, value):
         if value:
-            return qs.filter(entry__sources__in=value).distinct()
+            return qs.filter(sources__in=value).distinct()
         return qs
 
     def filter_publishers(self, qs, name, value):
