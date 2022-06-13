@@ -96,35 +96,41 @@ class EventFilter(NameFilterMixin,
         return qs
 
     def filter_qa_rules(self, qs, name, value):
-        flow_qs_ids = []
-        stock_qs_ids = []
+        event_flow_qs_ids = []
+        event_stock_qs_ids = []
         recommended_stock_figures_count = Count('figures', filter=(
             Q(figures__role=Figure.ROLE.RECOMMENDED) &
             Q(ignore_qa=False) &
-            Q(figures__category=Figure.FIGURE_CATEGORY_TYPES.IDPS))
+            Q(figures__category=Figure.FIGURE_CATEGORY_TYPES.IDPS)),
+            distinct='figures__id'
         )
         recommended_flow_figures_count = Count('figures', filter=(
             Q(figures__role=Figure.ROLE.RECOMMENDED) &
             Q(ignore_qa=False) &
-            Q(figures__category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT))
+            Q(figures__category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT)),
+            distinct='figures__id'
         )
         annotated_fields = {
             'stock_figure_count': recommended_stock_figures_count,
             'flow_figure_count': recommended_flow_figures_count
         }
         if QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name in value:
-            flow_qs_ids = qs.annotate(**annotated_fields).filter(
+            event_flow_qs_ids = qs.annotate(**annotated_fields).filter(
                 ignore_qa=False,
                 stock_figure_count=0, flow_figure_count=0
             ).values_list("id", flat=True)
         if QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name in value:
-            stock_qs_ids = qs.annotate(**annotated_fields).filter(
-                ignore_qa=False,
-                figures__role=Figure.ROLE.RECOMMENDED
-            ).filter(
+            event_stock_qs_ids = qs.annotate(**annotated_fields).filter(
                 Q(stock_figure_count__gt=1) | Q(flow_figure_count__gt=1)
+            ).filter(
+                ignore_qa=False,
+                figures__role=Figure.ROLE.RECOMMENDED,
+                figures__category__in=[
+                    Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+                    Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
+                ]
             ).values_list("id", flat=True)
-        event_ids = list(flow_qs_ids) + list(stock_qs_ids)
+        event_ids = list(event_flow_qs_ids) + list(event_stock_qs_ids)
         return qs.filter(id__in=event_ids)
 
     def filter_context_of_violences(self, qs, name, value):
