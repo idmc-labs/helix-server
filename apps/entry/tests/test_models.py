@@ -68,8 +68,8 @@ class TestFigureModel(HelixTestCase):
         nd_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
         idp_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS.value
         f1 = FigureFactory.create(
-            start_date=ref - timedelta(days=30),
-            end_date=ref,
+            start_date=ref - timedelta(days=300),
+            end_date=ref + timedelta(days=300),
             category=nd_cat,
             role=Figure.ROLE.RECOMMENDED,
             event=self.event,
@@ -98,11 +98,20 @@ class TestFigureModel(HelixTestCase):
 
         nd = Figure.filtered_nd_figures(
             qs=Figure.objects.all(),
-            start_date=None,
-            end_date=ref + timedelta(days=360),
+            start_date=ref,
+            end_date=ref + timedelta(days=400),
         )
 
-        self.assertEqual(nd.count(), 4)
+        self.assertEqual(nd.count(), 3)
+        self.assertNotIn(f4, nd)
+
+        nd = Figure.filtered_nd_figures(
+            qs=Figure.objects.all(),
+            start_date=ref,
+            end_date=ref + timedelta(days=100),
+        )
+        self.assertEqual(nd.count(), 2)
+
         self.assertNotIn(f4, nd)
 
         nd = Figure.filtered_nd_figures(
@@ -110,7 +119,7 @@ class TestFigureModel(HelixTestCase):
             start_date=ref - timedelta(days=15),
             end_date=ref + timedelta(days=45),
         )
-        self.assertEqual(nd.count(), 3)
+        self.assertEqual(nd.count(), 2)
         self.assertNotIn({f1, f2, f3}, set(nd))
         self.assertNotIn(f4, nd)
 
@@ -119,8 +128,8 @@ class TestFigureModel(HelixTestCase):
             start_date=ref - timedelta(days=15),
             end_date=ref + timedelta(days=15),
         )
-        self.assertEqual(nd.count(), 2)
-        self.assertEqual(set(nd), {f2, self.figure})
+        self.assertEqual(nd.count(), 1)
+        self.assertEqual(set(nd), {f2})
 
     def test_figure_idp_filtering(self):
         ref = datetime.today()

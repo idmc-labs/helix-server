@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from datetime import date
+from datetime import date, timedelta
 import logging
 from typing import Optional
 from uuid import uuid4
@@ -9,7 +9,7 @@ from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
 from django.db.models.query import QuerySet
 from django.db.models import (
-    Sum, Avg, F, Value, Min, Max, Q, Case, When,
+    Sum, Avg, F, Value, Min, Max, Q, Case, When, ExpressionWrapper, fields
 )
 from django.db.models.functions import Concat, ExtractYear
 from django.utils.translation import gettext_lazy as _, gettext
@@ -534,16 +534,25 @@ class Figure(MetaInformationArchiveAbstractModel,
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
-        end_date = end_date or timezone.now().date()
-        qs = qs.filter(
+        duration = ExpressionWrapper(F('end_date') - F('start_date'), output_field=fields.DurationField())
+        qs = qs.annotate(date_difference=duration)
+
+        figures_lte_365_days = qs.filter(
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+            date_difference__lte=timedelta(days=365),
+        )
+        figures_gte_365_days = qs.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+            date_difference__gt=timedelta(days=365),
         )
         if start_date:
-            qs = qs.filter(start_date__gte=start_date)
-
+            figures_lte_365_days = figures_lte_365_days.filter(start_date__gte=start_date)
+            figures_gte_365_days = figures_gte_365_days.filter(end_date__gte=start_date)
         if end_date:
-            qs = qs.filter(start_date__lte=end_date)
-        return qs
+            figures_lte_365_days = figures_lte_365_days.filter(start_date__lte=end_date)
+            figures_gte_365_days = figures_gte_365_days.filter(end_date__lte=end_date)
+
+        return figures_lte_365_days | figures_gte_365_days
 
     @classmethod
     def stock_list(cls):
