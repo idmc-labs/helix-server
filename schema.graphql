@@ -1861,6 +1861,12 @@ enum ORGANIZATION_CATEGORY {
   OTHER
 }
 
+enum ORGANIZATION_RELIABILITY {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 input OSMNameInputType {
   id: ID
   uuid: String!
@@ -1959,7 +1965,7 @@ input OrganizationKindCreateInputType {
   createdAt: DateTime
   versionId: String
   name: String!
-  reliability: String
+  reliability: ORGANIZATION_RELIABILITY
   createdBy: ID
   lastModifiedBy: ID
 }
@@ -1980,14 +1986,8 @@ type OrganizationKindObjectType {
   versionId: String
   id: ID!
   name: String!
-  reliability: OrganizationKindReliability!
+  reliability: ORGANIZATION_RELIABILITY
   organizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
-}
-
-enum OrganizationKindReliability {
-  A_0
-  A_1
-  A_2
 }
 
 input OrganizationKindUpdateInputType {
@@ -1996,7 +1996,7 @@ input OrganizationKindUpdateInputType {
   createdAt: DateTime
   versionId: String
   name: String
-  reliability: String
+  reliability: ORGANIZATION_RELIABILITY
   createdBy: ID
   lastModifiedBy: ID
 }
