@@ -542,11 +542,11 @@ class Figure(MetaInformationArchiveAbstractModel,
 
         same_year_figures = qs.filter(
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-            year_difference__lte=0,
+            year_difference__lt=1,
         )
         mutiple_year_figures = qs.filter(
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-            year_difference__gt=1,
+            year_difference__gte=1,
         )
         if start_date:
             same_year_figures = same_year_figures.filter(start_date__gte=start_date)
