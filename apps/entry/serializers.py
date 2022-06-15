@@ -275,6 +275,7 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
         }
 
     def create(self, validated_data: dict) -> Figure:
+        validated_data['created_by'] = self.context['request'].user
         geo_locations = validated_data.pop('geo_locations', [])
         tags = validated_data.pop('tags', [])
         context_of_violence = validated_data.pop('context_of_violence', [])
@@ -340,7 +341,8 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
         getattr(instance, attr).set(disaggregation_age)
 
     def update(self, instance, validated_data):
-        validated_data['created_by'] = self.context['request'].user
+        if not instance.created_by:
+            validated_data['created_by'] = self.context['request'].user
         geo_locations = validated_data.pop('geo_locations', [])
         tags = validated_data.pop('tags', [])
         context_of_violence = validated_data.pop('context_of_violence', [])
@@ -444,7 +446,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                 entry = super().create(validated_data)
                 for each in figures:
                     # each figure contains further nested objects
-                    fig_ser = NestedFigureCreateSerializer()
+                    fig_ser = NestedFigureCreateSerializer(context=self.context)
                     fig_ser._validated_data = {**each, 'entry': entry}
                     fig_ser._errors = {}
                     fig_ser.save()
@@ -465,7 +467,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                 # create if has no ids
                 for each in figures:
                     if not each.get('id'):
-                        fig_ser = NestedFigureCreateSerializer()
+                        fig_ser = NestedFigureCreateSerializer(context=self.context)
                         fig_ser._validated_data = {**each, 'entry': entry}
                     else:
                         fig_ser = NestedFigureUpdateSerializer(

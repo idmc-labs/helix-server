@@ -122,11 +122,19 @@ class TestEntryCreation(HelixGraphQLTestCase):
                         id
                         figures {
                             id
+                            createdBy{
+                                id
+                                fullName
+                            }
                         }
                         reviewers {
                             results {
                                 id
                             }
+                        }
+                        createdBy{
+                            id
+                            fullName
                         }
                     }
                 }
@@ -174,6 +182,9 @@ class TestEntryCreation(HelixGraphQLTestCase):
             accuracy=OSMName.OSM_ACCURACY.ADM0.name,
             identifier=OSMName.IDENTIFIER.ORIGIN.name,
         )
+        source2 = copy(source1)
+        source2['lat'] = 67.5
+        source2['uuid'] = str(uuid4())
         figures = [
             {
                 "uuid": str(uuid4()),
@@ -188,6 +199,26 @@ class TestEntryCreation(HelixGraphQLTestCase):
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
                 "geoLocations": [source1],
+                "tags": [self.tag1.id, self.tag2.id, self.tag3.id],
+                'calculationLogic': 'test logics',
+                'sourceExcerpt': 'source excerpt',
+                'event': self.event.id,
+                "contextOfViolence": [self.context_of_violence.id],
+                "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
+            },
+            {
+                "uuid": str(uuid4()),
+                "country": self.country_id,
+                "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
+                "reported": 10,
+                "unit": Figure.UNIT.PERSON.name,
+                "term": Figure.FIGURE_TERMS.EVACUATED.name,
+                "category": self.fig_cat.name,
+                "role": Figure.ROLE.RECOMMENDED.name,
+                "startDate": "2020-10-10",
+                "includeIdu": True,
+                "excerptIdu": "excerpt abc",
+                "geoLocations": [source2],
                 "tags": [self.tag1.id, self.tag2.id, self.tag3.id],
                 'calculationLogic': 'test logics',
                 'sourceExcerpt': 'source excerpt',
@@ -213,6 +244,16 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertEqual(len(content['data']['createEntry']['result']['figures']),
                          len(figures))
         self.assertIsNotNone(content['data']['createEntry']['result']['figures'][0]['id'])
+        self.assertEqual(
+            content['data']['createEntry']['result']['createdBy']['fullName'],
+            self.editor.full_name
+        )
+        self.assertTrue(
+            content['data']['createEntry']['result']['figures'][0]['createdBy']
+        )
+        self.assertTrue(
+            content['data']['createEntry']['result']['figures'][1]['createdBy']
+        )
 
     def test_assert_nested_figures_errors(self):
         uuid = str(uuid4())
