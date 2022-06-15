@@ -28,7 +28,8 @@ class ParkedItemSerializer(MetaInformationSerializerMixin,
 
     def create(self, validated_data):
         iso3 = validated_data.pop('country_iso3', None)
-        validated_data['country'] = Country.objects.filter(iso3=iso3).first()
+        if iso3:
+            validated_data['country'] = Country.objects.filter(iso3=iso3).first()
         return ParkedItem.objects.create(**validated_data)
 
 
