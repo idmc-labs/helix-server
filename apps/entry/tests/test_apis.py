@@ -610,12 +610,18 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.assertIn('householdSize', json.dumps(content['data']['updateEntry']['errors']))
 
     def test_figure_cause_should_be_same_as_event_type(self):
-        event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT)
+        event_1 = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT)
+        event_2 = EventFactory.create(event_type=Crisis.CRISIS_TYPE.DISASTER)
+        event_3 = EventFactory.create(event_type=Crisis.CRISIS_TYPE.OTHER)
         # Pass incorrect figure cause
         figures = [
             {
                 'figureCause': Crisis.CRISIS_TYPE.OTHER.name,
-                'event': event.id,
+                'event': event_1.id,
+            },
+            {
+                'figureCause': Crisis.CRISIS_TYPE.DISASTER.name,
+                'event': event_2.id,
             }
         ]
         self.input.update({
@@ -633,7 +639,20 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.assertIn('figureCause', json.dumps(content['data']['updateEntry']['errors']))
 
         # Pass correct figure cause
-        figures[0]['figureCause'] = Crisis.CRISIS_TYPE.CONFLICT.name
+        self.input['figures'] = [
+            {
+                'figureCause': Crisis.CRISIS_TYPE.CONFLICT.name,
+                'event': event_1.id,
+            },
+            {
+                'figureCause': Crisis.CRISIS_TYPE.DISASTER.name,
+                'event': event_2.id,
+            },
+            {
+                'figureCause': Crisis.CRISIS_TYPE.OTHER.name,
+                'event': event_3.id,
+            }
+        ]
         response = self.query(
             self.mutation,
             input_data=self.input
