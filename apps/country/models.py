@@ -209,14 +209,19 @@ class Country(models.Model):
         ignore_dates=False,
         start_date=None,
         end_date=None,
+        year=None
     ):
         '''
         returns the subqueries for figures sum annotations
         '''
         figures = figures or Figure.objects.all()
         if start_date is None and end_date is None:
-            start_date = datetime(year=timezone.now().year, month=1, day=1)
-            end_date = datetime(year=timezone.now().year, month=12, day=31)
+            if year:
+                start_date = datetime(year=int(year), month=1, day=1)
+                end_date = datetime(year=int(year), month=12, day=31)
+            else:
+                start_date = datetime(year=timezone.now().year, month=1, day=1)
+                end_date = datetime(year=timezone.now().year, month=12, day=31)
         if ignore_dates:
             start_date = None
             end_date = None
@@ -310,6 +315,7 @@ class Country(models.Model):
                 cls.ND_DISASTER_ANNOTATE: f'ND Disaster Figure {timezone.now().year}',
             }
         )
+        year = filters.get('year', None)
         data = CountryFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
@@ -336,7 +342,7 @@ class Country(models.Model):
             ),
             # contacts_count=Count('contacts', distinct=True),
             # operating_contacts_count=Count('operating_contacts', distinct=True),
-            **cls._total_figure_disaggregation_subquery(),
+            **cls._total_figure_disaggregation_subquery(year=year),
         ).select_related(
             'geographical_group',
             'region',
