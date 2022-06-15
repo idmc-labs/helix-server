@@ -16,6 +16,10 @@ def get_fact_url(id):
         return ''
     return f'https://helix.idmcdb.org/facts/{id}'
 
+def get_document_url(id):
+    if not id:
+        return ''
+    return f'https://helix.idmcdb.org/documents/{id}'
 
 def get_event_url(id):
     if not id:
@@ -51,7 +55,7 @@ settings = {
     'ws1': {
         'title': f'Events with small/large event dates ({smallest_date} to {largest_date})',
         'code': 'E1',
-        'remarks': '',
+        'remarks': 'Maria: We can ignore this',
     },
     'ws2': {
         'title': 'Recommended stock/flow figures without start date',
@@ -81,7 +85,7 @@ settings = {
     'ws7': {
         'title': f'Recommended figures with small/large start/end dates ({smallest_date} to {largest_date})',
         'code': 'E7',
-        'remarks': '',
+        'remarks': 'Maria: We can ignore this',
     },
     'ws8': {
         'title': 'Recommended new displacement figures not included in reports (but included in masterfacts)',
@@ -569,7 +573,7 @@ class Command(BaseCommand):
         # Old documents Delete and do not include items
         ws19 = wb.create_sheet(settings['ws19']['code'])
         ws19.append([settings['ws19']['title']])
-        ws19.append(["Fact ID", "Fact URL", "Fact Name"])
+        ws19.append(["Document ID", "Document URL", "Document Name"])
 
         old_documents_qs = Documents.objects.using('helixmigration').filter(
             Q(name__icontains="ignore") |
@@ -653,7 +657,7 @@ class Command(BaseCommand):
                 ws22,
                 row + 3,
                 id,
-                get_fact_url(id),
+                get_document_url(id),
             )
 
         # Summary page
