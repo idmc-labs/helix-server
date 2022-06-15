@@ -204,8 +204,6 @@ class CommonFigureValidationMixin:
         errors = OrderedDict()
         event = attrs.get('event')
         figure_cause = attrs.get('figure_cause')
-        if self.instance:
-            event = self.instance.event
         if figure_cause is not None and event:
             if event.event_type.value != figure_cause:
                 errors.update({
