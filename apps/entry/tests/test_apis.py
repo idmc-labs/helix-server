@@ -432,9 +432,17 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                       }
                   }
                 }
+                createdBy {
+                  id
+                  fullName
+                }
               }
               createdAt
               articleTitle
+              createdBy {
+                  id
+                  fullName
+              }
             }
           }
         }
@@ -575,6 +583,16 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.entry.refresh_from_db()
         self.assertNotIn(deleted_figure, self.entry.figures.all())
         self.assertEqual(self.entry.figures.count(), old_figures_count)
+        self.assertEqual(
+            content['data']['updateEntry']['result']['createdBy']['fullName'],
+            self.editor.full_name
+        )
+        self.assertTrue(
+            content['data']['updateEntry']['result']['figures'][0]['createdBy']
+        )
+        self.assertTrue(
+            content['data']['updateEntry']['result']['figures'][1]['createdBy']
+        )
 
     def test_invalid_figures_household_size(self):
         figures = [

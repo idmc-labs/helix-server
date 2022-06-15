@@ -340,6 +340,7 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
         getattr(instance, attr).set(disaggregation_age)
 
     def update(self, instance, validated_data):
+        validated_data['created_by'] = self.context['request'].user
         geo_locations = validated_data.pop('geo_locations', [])
         tags = validated_data.pop('tags', [])
         context_of_violence = validated_data.pop('context_of_violence', [])
@@ -469,7 +470,8 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                     else:
                         fig_ser = NestedFigureUpdateSerializer(
                             instance=entry.figures.get(id=each['id']),
-                            partial=True
+                            partial=True,
+                            context=self.context,
                         )
                         fig_ser._validated_data = {**each, 'entry': entry}
                     fig_ser._errors = {}
