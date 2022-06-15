@@ -68,7 +68,7 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
     def qs(self):
         from apps.entry.models import Figure
         return super().qs.annotate(
-            # **Crisis._total_figure_disaggregation_subquery(),
+            **Crisis._total_figure_disaggregation_subquery(),
             event_count=Count('events'),
             total=models.Subquery(
                 Figure.objects.filter(
