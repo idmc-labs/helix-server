@@ -15,3 +15,4 @@ docker-compose exec server python manage.py init_figure_tags
 docker-compose exec server python manage.py init_osv_sub_type
 docker-compose exec server python manage.py init_other_sub_types
 docker-compose exec server python manage.py init_context_of_violences
+docker-compose exec server python manage.py save_users
