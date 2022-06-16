@@ -62,5 +62,5 @@ python manage.py addstatictoken -t 123456 "admin@idmcdb.org"
 
 ## Find bugs in database
 ```bash
-./find_bugs.sh
+./find_data_problems.sh
 ```

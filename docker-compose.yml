@@ -19,6 +19,8 @@ services:
       - POSTGRES_PORT=5433
     volumes:
       - postgres-data-old:/var/lib/postgresql/data
+    ports:
+      - '127.0.0.1:5432:5432'
 
   redis:
     image: redis:latest
