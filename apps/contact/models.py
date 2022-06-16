@@ -70,18 +70,21 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
                 self.user = user
 
         headers = OrderedDict(
-            old_id='Old Id',
             id='Id',
-            created_at='Created At',
             created_by__full_name='Created By',
-            designation='Designation',
+            created_at='Created At',
+            last_modified_by__full_name='Updated By',
+            modified_at='Updated At',
             full_name='Name',
             gender='Gender',
-            job_title='Job Title',
-            country__name='Country',
             organization__name='Organization',
-            operating_countries='Operating Countries',
-            communications_count='Communications Count'
+            job_title='Job Title',
+            operating_countries='Countries of operation',
+            # Extra added fields
+            designation='Designation',
+            country__name='Country',
+            communications_count='Communications Count',
+            old_id='Old Id',
         )
         data = ContactFilter(
             data=filters,
