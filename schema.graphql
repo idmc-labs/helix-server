@@ -116,13 +116,10 @@ input CommentUpdateInputType {
 
 input CommunicationCreateInputType {
   oldId: String
-  createdAt: DateTime
   versionId: String
   subject: String!
   content: String!
   date: Date
-  createdBy: ID
-  lastModifiedBy: ID
   contact: ID!
   country: ID
   medium: ID
@@ -168,13 +165,10 @@ type CommunicationType {
 input CommunicationUpdateInputType {
   id: ID!
   oldId: String
-  createdAt: DateTime
   versionId: String
   subject: String
   content: String
   date: Date
-  createdBy: ID
-  lastModifiedBy: ID
   contact: ID
   country: ID
   medium: ID
@@ -183,7 +177,6 @@ input CommunicationUpdateInputType {
 
 input ContactCreateInputType {
   oldId: String
-  createdAt: DateTime
   versionId: String
   designation: DESIGNATION!
   firstName: String!
@@ -195,8 +188,6 @@ input ContactCreateInputType {
   skype: String
   phone: String
   comment: String
-  createdBy: ID
-  lastModifiedBy: ID
   organization: ID
   country: ID
   countriesOfOperation: [ID!]
@@ -236,7 +227,6 @@ type ContactType {
 input ContactUpdateInputType {
   id: ID!
   oldId: String
-  createdAt: DateTime
   versionId: String
   designation: DESIGNATION
   firstName: String
@@ -248,8 +238,6 @@ input ContactUpdateInputType {
   skype: String
   phone: String
   comment: String
-  createdBy: ID
-  lastModifiedBy: ID
   organization: ID
   country: ID
   countriesOfOperation: [ID!]
@@ -633,7 +621,6 @@ type CreateSummary {
 }
 
 input CrisisCreateInputType {
-  createdAt: DateTime
   versionId: String
   name: String!
   crisisType: CRISIS_TYPE!
@@ -642,8 +629,6 @@ input CrisisCreateInputType {
   startDateAccuracy: DATE_ACCURACY
   endDate: Date
   endDateAccuracy: DATE_ACCURACY
-  createdBy: ID
-  lastModifiedBy: ID
   countries: [ID!]!
 }
 
@@ -685,7 +670,6 @@ type CrisisType {
 
 input CrisisUpdateInputType {
   id: ID!
-  createdAt: DateTime
   versionId: String
   name: String
   crisisType: CRISIS_TYPE
@@ -694,8 +678,6 @@ input CrisisUpdateInputType {
   startDateAccuracy: DATE_ACCURACY
   endDate: Date
   endDateAccuracy: DATE_ACCURACY
-  createdBy: ID
-  lastModifiedBy: ID
   countries: [ID!]
 }
 
@@ -1732,30 +1714,7 @@ type Mutation {
 }
 
 input NestedFigureCreateInputType {
-  createdAt: DateTime
-  modifiedAt: DateTime
-  createdBy: ID
-  lastModifiedBy: ID
-  disaggregationAge: [DisaggregatedAgeInputType!]
-  disaggregationStrataJson: [DisaggregatedStratumInputType!]
-  geoLocations: [OSMNameInputType!]
-  oldId: String
-  versionId: String
-  disaggregationDisplacementUrban: Int
-  disaggregationDisplacementRural: Int
-  disaggregationLocationCamp: Int
-  disaggregationLocationNonCamp: Int
-  disaggregationLgbtiq: Int
-  disaggregationDisability: Int
-  disaggregationIndigenousPeople: Int
-  disaggregationSexMale: Int
-  disaggregationSexFemale: Int
-  disaggregationConflict: Int
-  disaggregationConflictPolitical: Int
-  disaggregationConflictCriminal: Int
-  disaggregationConflictCommunal: Int
-  disaggregationConflictOther: Int
-  uuid: String!
+  id: Int
   wasSubfact: Boolean
   quantifier: QUANTIFIER!
   reported: Int!
@@ -1771,13 +1730,16 @@ input NestedFigureCreateInputType {
   endDateAccuracy: DATE_ACCURACY
   includeIdu: Boolean!
   excerptIdu: String
+  country: ID
   isDisaggregated: Boolean
   isHousingDestruction: Boolean
+  geoLocations: [OSMNameInputType!]
   calculationLogic: String
+  tags: [ID!]
   sourceExcerpt: String
-  figureCause: CRISIS_TYPE!
-  country: ID
   event: ID!
+  contextOfViolence: [ID!]
+  figureCause: CRISIS_TYPE!
   violence: ID
   violenceSubType: ID
   disasterCategory: ID
@@ -1786,9 +1748,24 @@ input NestedFigureCreateInputType {
   disasterSubType: ID
   otherSubType: ID
   osvSubType: ID
-  tags: [ID!]
-  contextOfViolence: [ID!]
   sources: [ID!]
+  uuid: String!
+  disaggregationDisplacementUrban: Int
+  disaggregationDisplacementRural: Int
+  disaggregationLocationCamp: Int
+  disaggregationLocationNonCamp: Int
+  disaggregationLgbtiq: Int
+  disaggregationDisability: Int
+  disaggregationIndigenousPeople: Int
+  disaggregationSexMale: Int
+  disaggregationSexFemale: Int
+  disaggregationAge: [DisaggregatedAgeInputType!]
+  disaggregationStrataJson: [DisaggregatedStratumInputType!]
+  disaggregationConflict: Int
+  disaggregationConflictPolitical: Int
+  disaggregationConflictCriminal: Int
+  disaggregationConflictCommunal: Int
+  disaggregationConflictOther: Int
 }
 
 input NestedFigureUpdateInputType {
@@ -1962,12 +1939,9 @@ input OrganizationCreateInputType {
 
 input OrganizationKindCreateInputType {
   oldId: String
-  createdAt: DateTime
   versionId: String
   name: String!
   reliability: ORGANIZATION_RELIABILITY
-  createdBy: ID
-  lastModifiedBy: ID
 }
 
 type OrganizationKindListType {
@@ -1993,12 +1967,9 @@ type OrganizationKindObjectType {
 input OrganizationKindUpdateInputType {
   id: ID!
   oldId: String
-  createdAt: DateTime
   versionId: String
   name: String
   reliability: ORGANIZATION_RELIABILITY
-  createdBy: ID
-  lastModifiedBy: ID
 }
 
 type OrganizationListType {

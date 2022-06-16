@@ -5,12 +5,12 @@ from django.utils.translation import gettext
 from rest_framework import serializers
 
 from apps.crisis.models import Crisis
-from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
+from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField, MetaInformationSerializerMixin
 from apps.country.models import Country
 from apps.event.models import Event
 
 
-class CrisisSerializer(serializers.ModelSerializer):
+class CrisisSerializer(serializers.ModelSerializer, MetaInformationSerializerMixin):
     class Meta:
         model = Crisis
         fields = '__all__'
