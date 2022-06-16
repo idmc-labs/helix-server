@@ -341,8 +341,7 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
         getattr(instance, attr).set(disaggregation_age)
 
     def update(self, instance, validated_data):
-        if not instance.created_by:
-            validated_data['created_by'] = self.context['request'].user
+        validated_data['last_modified_by'] = self.context['request'].user
         geo_locations = validated_data.pop('geo_locations', [])
         tags = validated_data.pop('tags', [])
         context_of_violence = validated_data.pop('context_of_violence', [])

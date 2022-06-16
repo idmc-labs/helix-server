@@ -628,8 +628,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
             content['data']['updateEntry']['result']['createdBy']['fullName'],
             self.editor.full_name
         )
-        self.assertTrue(
-            content['data']['updateEntry']['result']['figures'][0]['createdBy']
+        self.assertEqual(
+            content['data']['updateEntry']['result']['figures'][0]['createdBy'], None
         )
         self.assertTrue(
             content['data']['updateEntry']['result']['figures'][1]['createdBy']
