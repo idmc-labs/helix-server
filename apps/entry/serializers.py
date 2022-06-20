@@ -273,7 +273,6 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
     class Meta:
         model = Figure
         fields = [
-            'id',
             'was_subfact',
             'quantifier',
             'reported',

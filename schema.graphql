@@ -1698,7 +1698,6 @@ type Mutation {
 }
 
 input NestedFigureCreateInputType {
-  id: Int
   wasSubfact: Boolean
   quantifier: QUANTIFIER!
   reported: Int!
