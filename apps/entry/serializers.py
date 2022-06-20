@@ -38,7 +38,7 @@ class DisaggregatedAgeSerializer(serializers.ModelSerializer):
             errors['age_to'] = gettext('This field is required.')
         if (age_to and not age_from):
             errors['age_from'] = gettext('This field is required.')
-        return errors
+        return attrs
 
     class Meta:
         model = DisaggregatedAge

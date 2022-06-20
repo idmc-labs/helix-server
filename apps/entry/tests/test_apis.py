@@ -375,8 +375,8 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     # invalid: category and sex is duplicated
                     {
                         "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
-                        "age_from": 10,
-                        "age_to": 20,
+                        "ageFrom": 10,
+                        "ageTo": 20,
                         "sex": "MALE",
                         "value": 5
                     },
@@ -460,10 +460,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 disaggregationAge {
                  results {
                       uuid
-                      category {
-                        id
-                        name
-                      }
+                      ageFrom
+                      ageTo
                   }
                 }
                 createdBy {
@@ -548,15 +546,15 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "disaggregationAge": [
                     {
                         "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
-                        "age_from": 10,
-                        "age_to": 20,
+                        "ageFrom": 10,
+                        "ageTo": 20,
                         "value": 3,
                         "sex": "MALE",
                     },
                     {
                         "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                        "age_from": 10,
-                        "age_to": 20,
+                        "ageFrom": 10,
+                        "ageTo": 20,
                         "value": 3,
                         "sex": "FEMALE",
                     }
@@ -584,15 +582,15 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "disaggregationAge": [
                     {
                         "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
-                        "age_from": 10,
-                        "age_to": 20,
+                        "ageFrom": 10,
+                        "ageTo": 20,
                         "value": 3,
                         "sex": "MALE",
                     },
                     {
                         "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                        "age_from": 10,
-                        "age_to": 20,
+                        "ageFrom": 10,
+                        "ageTo": 20,
                         "value": 3,
                         "sex": "FEMALE",
                     }

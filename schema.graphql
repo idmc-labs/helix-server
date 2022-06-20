@@ -843,28 +843,13 @@ type DeleteReviewComment {
   result: ReviewCommentType
 }
 
-type DisaggregatedAgeCategoryListType {
-  results: [DisaggregatedAgeCategoryType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
-type DisaggregatedAgeCategoryType {
-  id: ID!
-  name: String!
-  ageGroup: String
-  ageGroupFrom: Int
-  ageGroupTo: Int
-  disaggregatedAgeCategory: [DisaggregatedAgeType!]!
-}
-
 input DisaggregatedAgeInputType {
   id: ID
   sex: GENDER_TYPE!
   uuid: String!
   value: Int
-  category: ID
+  ageFrom: Int
+  ageTo: Int
 }
 
 type DisaggregatedAgeListType {
@@ -879,7 +864,8 @@ type DisaggregatedAgeType {
   sex: GENDER_TYPE
   uuid: String!
   value: Int
-  category: DisaggregatedAgeCategoryType
+  ageFrom: Int
+  ageTo: Int
   entryFigureRelated: [FigureType!]!
   reportReportRelated: [ReportType!]!
 }
@@ -2213,8 +2199,6 @@ type Query {
   sourcePreview(id: ID!): SourcePreviewType
   entry(id: ID!): EntryType
   entryList(filterEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterEntryHasReviewComments: Boolean, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EntryListType
-  disaggregatedAgeCategory(id: ID!): DisaggregatedAgeCategoryType
-  disaggregatedAgeCategoryList(name_Unaccent_Icontains: String, ordering: String): DisaggregatedAgeCategoryListType
   disaggregatedAge(id: ID!): DisaggregatedAgeType
   disaggregatedAgeList(sex_In: String, ordering: String): DisaggregatedAgeListType
   violenceList(id_Iexact: Float, ordering: String): ViolenceListType

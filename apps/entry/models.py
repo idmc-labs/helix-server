@@ -9,7 +9,7 @@ from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
 from django.db.models.query import QuerySet
 from django.db.models import (
-    Sum, Avg, F, Value, Min, Max, Q, Case, When, ExpressionWrapper, fields
+    Sum, Avg, F, Value, Min, Max, Q, ExpressionWrapper, fields
 )
 from django.db.models.functions import Concat, ExtractYear
 from django.utils.translation import gettext_lazy as _, gettext
