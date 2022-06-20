@@ -1480,26 +1480,6 @@ type FigureType {
 
 input FigureUpdateInputType {
   id: ID
-  disaggregationAge: [DisaggregatedAgeInputType!]
-  disaggregationStrataJson: [DisaggregatedStratumInputType!]
-  geoLocations: [OSMNameInputType!]
-  oldId: String
-  versionId: String
-  disaggregationDisplacementUrban: Int
-  disaggregationDisplacementRural: Int
-  disaggregationLocationCamp: Int
-  disaggregationLocationNonCamp: Int
-  disaggregationLgbtiq: Int
-  disaggregationDisability: Int
-  disaggregationIndigenousPeople: Int
-  disaggregationSexMale: Int
-  disaggregationSexFemale: Int
-  disaggregationConflict: Int
-  disaggregationConflictPolitical: Int
-  disaggregationConflictCriminal: Int
-  disaggregationConflictCommunal: Int
-  disaggregationConflictOther: Int
-  uuid: String
   wasSubfact: Boolean
   quantifier: QUANTIFIER
   reported: Int
@@ -1515,13 +1495,16 @@ input FigureUpdateInputType {
   endDateAccuracy: DATE_ACCURACY
   includeIdu: Boolean
   excerptIdu: String
+  country: ID
   isDisaggregated: Boolean
   isHousingDestruction: Boolean
+  geoLocations: [OSMNameInputType!]
   calculationLogic: String
+  tags: [ID!]
   sourceExcerpt: String
-  figureCause: CRISIS_TYPE
-  country: ID
   event: ID
+  contextOfViolence: [ID!]
+  figureCause: CRISIS_TYPE
   violence: ID
   violenceSubType: ID
   disasterCategory: ID
@@ -1530,9 +1513,24 @@ input FigureUpdateInputType {
   disasterSubType: ID
   otherSubType: ID
   osvSubType: ID
-  tags: [ID!]
-  contextOfViolence: [ID!]
   sources: [ID!]
+  uuid: String
+  disaggregationDisplacementUrban: Int
+  disaggregationDisplacementRural: Int
+  disaggregationLocationCamp: Int
+  disaggregationLocationNonCamp: Int
+  disaggregationLgbtiq: Int
+  disaggregationDisability: Int
+  disaggregationIndigenousPeople: Int
+  disaggregationSexMale: Int
+  disaggregationSexFemale: Int
+  disaggregationAge: [DisaggregatedAgeInputType!]
+  disaggregationStrataJson: [DisaggregatedStratumInputType!]
+  disaggregationConflict: Int
+  disaggregationConflictPolitical: Int
+  disaggregationConflictCriminal: Int
+  disaggregationConflictCommunal: Int
+  disaggregationConflictOther: Int
 }
 
 enum GENDER_TYPE {
@@ -1770,30 +1768,6 @@ input NestedFigureCreateInputType {
 
 input NestedFigureUpdateInputType {
   id: ID
-  createdAt: DateTime
-  modifiedAt: DateTime
-  createdBy: ID
-  lastModifiedBy: ID
-  disaggregationAge: [DisaggregatedAgeInputType!]
-  disaggregationStrataJson: [DisaggregatedStratumInputType!]
-  geoLocations: [OSMNameInputType!]
-  oldId: String
-  versionId: String
-  disaggregationDisplacementUrban: Int
-  disaggregationDisplacementRural: Int
-  disaggregationLocationCamp: Int
-  disaggregationLocationNonCamp: Int
-  disaggregationLgbtiq: Int
-  disaggregationDisability: Int
-  disaggregationIndigenousPeople: Int
-  disaggregationSexMale: Int
-  disaggregationSexFemale: Int
-  disaggregationConflict: Int
-  disaggregationConflictPolitical: Int
-  disaggregationConflictCriminal: Int
-  disaggregationConflictCommunal: Int
-  disaggregationConflictOther: Int
-  uuid: String
   wasSubfact: Boolean
   quantifier: QUANTIFIER
   reported: Int
@@ -1809,13 +1783,16 @@ input NestedFigureUpdateInputType {
   endDateAccuracy: DATE_ACCURACY
   includeIdu: Boolean
   excerptIdu: String
+  country: ID
   isDisaggregated: Boolean
   isHousingDestruction: Boolean
+  geoLocations: [OSMNameInputType!]
   calculationLogic: String
+  tags: [ID!]
   sourceExcerpt: String
-  figureCause: CRISIS_TYPE
-  country: ID
   event: ID
+  contextOfViolence: [ID!]
+  figureCause: CRISIS_TYPE
   violence: ID
   violenceSubType: ID
   disasterCategory: ID
@@ -1824,9 +1801,24 @@ input NestedFigureUpdateInputType {
   disasterSubType: ID
   otherSubType: ID
   osvSubType: ID
-  tags: [ID!]
-  contextOfViolence: [ID!]
   sources: [ID!]
+  uuid: String
+  disaggregationDisplacementUrban: Int
+  disaggregationDisplacementRural: Int
+  disaggregationLocationCamp: Int
+  disaggregationLocationNonCamp: Int
+  disaggregationLgbtiq: Int
+  disaggregationDisability: Int
+  disaggregationIndigenousPeople: Int
+  disaggregationSexMale: Int
+  disaggregationSexFemale: Int
+  disaggregationAge: [DisaggregatedAgeInputType!]
+  disaggregationStrataJson: [DisaggregatedStratumInputType!]
+  disaggregationConflict: Int
+  disaggregationConflictPolitical: Int
+  disaggregationConflictCriminal: Int
+  disaggregationConflictCommunal: Int
+  disaggregationConflictOther: Int
 }
 
 enum ORGANIZATION_CATEGORY {
@@ -1923,15 +1915,12 @@ enum OSM_ACCURACY {
 
 input OrganizationCreateInputType {
   oldId: String
-  createdAt: DateTime
   versionId: String
   deletedOn: DateTime
   name: String!
   shortName: String
   category: ORGANIZATION_CATEGORY
   methodology: String
-  createdBy: ID
-  lastModifiedBy: ID
   organizationKind: ID
   parent: ID
   countries: [ID!]
@@ -2010,15 +1999,12 @@ type OrganizationType {
 input OrganizationUpdateInputType {
   id: ID!
   oldId: String
-  createdAt: DateTime
   versionId: String
   deletedOn: DateTime
   name: String
   shortName: String
   category: ORGANIZATION_CATEGORY
   methodology: String
-  createdBy: ID
-  lastModifiedBy: ID
   organizationKind: ID
   parent: ID
   countries: [ID!]
@@ -2662,17 +2648,11 @@ type ReviewCommentType {
 
 input ReviewInputType {
   id: Int
-  createdAt: DateTime
-  modifiedAt: DateTime
-  createdBy: ID
-  lastModifiedBy: ID
-  oldId: String
-  versionId: String
+  entry: ID!
+  figure: ID
   field: String!
   value: ENTRY_REVIEW_STATUS
   age: String
-  entry: ID!
-  figure: ID
   geoLocation: ID
   comment: ID
 }

@@ -14,7 +14,7 @@ class OrganizationKindUpdateSerializer(UpdateSerializerMixin, OrganizationKindSe
     id = IntegerIDField(required=True)
 
 
-class OrganizationSerializer(serializers.ModelSerializer):
+class OrganizationSerializer(serializers.ModelSerializer, MetaInformationSerializerMixin):
     class Meta:
         model = Organization
         fields = '__all__'
@@ -25,5 +25,5 @@ class OrganizationSerializer(serializers.ModelSerializer):
         }
 
 
-class OrganizationUpdateSerializer(UpdateSerializerMixin, OrganizationSerializer):
+class OrganizationUpdateSerializer(UpdateSerializerMixin, OrganizationSerializer, MetaInformationSerializerMixin):
     id = IntegerIDField(required=True)
