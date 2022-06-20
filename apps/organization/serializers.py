@@ -1,10 +1,10 @@
 from rest_framework import serializers
 
 from apps.organization.models import Organization, OrganizationKind
-from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField
+from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField, MetaInformationSerializerMixin
 
 
-class OrganizationKindSerializer(serializers.ModelSerializer):
+class OrganizationKindSerializer(serializers.ModelSerializer, MetaInformationSerializerMixin):
     class Meta:
         model = OrganizationKind
         fields = '__all__'
@@ -14,7 +14,7 @@ class OrganizationKindUpdateSerializer(UpdateSerializerMixin, OrganizationKindSe
     id = IntegerIDField(required=True)
 
 
-class OrganizationSerializer(serializers.ModelSerializer):
+class OrganizationSerializer(serializers.ModelSerializer, MetaInformationSerializerMixin):
     class Meta:
         model = Organization
         fields = '__all__'
@@ -25,5 +25,5 @@ class OrganizationSerializer(serializers.ModelSerializer):
         }
 
 
-class OrganizationUpdateSerializer(UpdateSerializerMixin, OrganizationSerializer):
+class OrganizationUpdateSerializer(UpdateSerializerMixin, OrganizationSerializer, MetaInformationSerializerMixin):
     id = IntegerIDField(required=True)

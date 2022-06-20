@@ -11,7 +11,7 @@ class ReviewSerializer(MetaInformationSerializerMixin,
                        serializers.ModelSerializer):
     class Meta:
         model = Review
-        fields = '__all__'
+        fields = ('id', 'entry', 'figure', 'field', 'value', 'age', 'geo_location', 'comment')
 
 
 class ReviewCommentSerializer(MetaInformationSerializerMixin,

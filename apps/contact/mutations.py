@@ -40,7 +40,7 @@ class CreateContact(graphene.Mutation):
     @staticmethod
     @permission_checker(['contact.add_contact'])
     def mutate(root, info, data):
-        serializer = ContactSerializer(data=data)
+        serializer = ContactSerializer(data=data, context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateContact(errors=errors, ok=False)
         instance = serializer.save()
@@ -64,7 +64,12 @@ class UpdateContact(graphene.Mutation):
             return UpdateContact(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Contact does not exist.'))
             ])
-        serializer = ContactSerializer(instance=instance, data=data, partial=True)
+        serializer = ContactSerializer(
+            instance=instance,
+            data=data,
+            partial=True,
+            context={'request': info.context.request}
+        )
         if errors := mutation_is_not_valid(serializer):
             return UpdateContact(errors=errors, ok=False)
         instance = serializer.save()
@@ -116,7 +121,7 @@ class CreateCommunication(graphene.Mutation):
 
     @staticmethod
     def mutate(root, info, data):
-        serializer = CommunicationSerializer(data=data)
+        serializer = CommunicationSerializer(data=data, context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateCommunication(errors=errors, ok=False)
         instance = serializer.save()
@@ -139,7 +144,12 @@ class UpdateCommunication(graphene.Mutation):
             return UpdateCommunication(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Communication does not exist.'))
             ])
-        serializer = CommunicationSerializer(instance=instance, data=data, partial=True)
+        serializer = CommunicationSerializer(
+            instance=instance,
+            data=data,
+            partial=True,
+            context={'request': info.context.request}
+        )
         if errors := mutation_is_not_valid(serializer):
             return UpdateCommunication(errors=errors, ok=False)
         instance = serializer.save()

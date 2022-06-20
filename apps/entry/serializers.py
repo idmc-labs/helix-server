@@ -261,11 +261,64 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
 
     class Meta:
         model = Figure
-        exclude = ('id', 'entry', 'total_figures')
-        read_only_fields = [
-            'disaggregation_conflict', 'disaggregation_strata_json', 'disaggregation_conflict_other',
-            'disaggregation_conflict_communal', 'disaggregation_conflict_criminal', 'disaggregation_conflict_political',
-            'disaggregation_sex_male', 'disaggregation_sex_female', 'disaggregation_lgbtiq'
+        fields = [
+            'id',
+            'was_subfact',
+            'quantifier',
+            'reported',
+            'unit',
+            'household_size',
+            'category',
+            'term',
+            'displacement_occurred',
+            'role',
+            'start_date',
+            'start_date_accuracy',
+            'end_date',
+            'end_date_accuracy',
+            'include_idu',
+            'excerpt_idu',
+            'country',
+            'is_disaggregated',
+            'is_housing_destruction',
+            'geo_locations',
+            'calculation_logic',
+            'tags',
+            'source_excerpt',
+            'event',
+            'context_of_violence',
+            'figure_cause',
+            'violence',
+            'violence_sub_type',
+            'disaster_category',
+            'disaster_sub_category',
+            'disaster_type',
+            'disaster_sub_type',
+            'other_sub_type',
+            'osv_sub_type',
+            'sources',
+            # UUID abstract fields
+            'uuid',
+            # Figure disaggregation abstract fields
+            'disaggregation_displacement_urban',
+            'disaggregation_displacement_rural',
+            'disaggregation_location_camp',
+            'disaggregation_location_non_camp',
+            'disaggregation_lgbtiq',
+            'disaggregation_disability',
+            'disaggregation_indigenous_people',
+            'disaggregation_sex_male',
+            'disaggregation_sex_female',
+            'disaggregation_age',
+            'disaggregation_strata_json',
+            'disaggregation_conflict',
+            'disaggregation_conflict_political',
+            'disaggregation_conflict_criminal',
+            'disaggregation_conflict_communal',
+            'disaggregation_conflict_other',
+            'disaggregation_age',
+            'disaggregation_strata_json',
+            'geo_locations'
         ]
         extra_kwargs = {
             'uuid': {
@@ -275,6 +328,7 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
         }
 
     def create(self, validated_data: dict) -> Figure:
+        validated_data['created_by'] = self.context['request'].user
         geo_locations = validated_data.pop('geo_locations', [])
         tags = validated_data.pop('tags', [])
         context_of_violence = validated_data.pop('context_of_violence', [])
@@ -340,6 +394,7 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
         getattr(instance, attr).set(disaggregation_age)
 
     def update(self, instance, validated_data):
+        validated_data['last_modified_by'] = self.context['request'].user
         geo_locations = validated_data.pop('geo_locations', [])
         tags = validated_data.pop('tags', [])
         context_of_violence = validated_data.pop('context_of_violence', [])
@@ -370,7 +425,65 @@ class NestedFigureUpdateSerializer(NestedFigureCreateSerializer):
 
     class Meta:
         model = Figure
-        exclude = ('entry', 'total_figures')
+        fields = [
+            'id',
+            'was_subfact',
+            'quantifier',
+            'reported',
+            'unit',
+            'household_size',
+            'category',
+            'term',
+            'displacement_occurred',
+            'role',
+            'start_date',
+            'start_date_accuracy',
+            'end_date',
+            'end_date_accuracy',
+            'include_idu',
+            'excerpt_idu',
+            'country',
+            'is_disaggregated',
+            'is_housing_destruction',
+            'geo_locations',
+            'calculation_logic',
+            'tags',
+            'source_excerpt',
+            'event',
+            'context_of_violence',
+            'figure_cause',
+            'violence',
+            'violence_sub_type',
+            'disaster_category',
+            'disaster_sub_category',
+            'disaster_type',
+            'disaster_sub_type',
+            'other_sub_type',
+            'osv_sub_type',
+            'sources',
+            # UUID abstract fields
+            'uuid',
+            # Figure disaggregation abstract fields
+            'disaggregation_displacement_urban',
+            'disaggregation_displacement_rural',
+            'disaggregation_location_camp',
+            'disaggregation_location_non_camp',
+            'disaggregation_lgbtiq',
+            'disaggregation_disability',
+            'disaggregation_indigenous_people',
+            'disaggregation_sex_male',
+            'disaggregation_sex_female',
+            'disaggregation_age',
+            'disaggregation_strata_json',
+            'disaggregation_conflict',
+            'disaggregation_conflict_political',
+            'disaggregation_conflict_criminal',
+            'disaggregation_conflict_communal',
+            'disaggregation_conflict_other',
+            'disaggregation_age',
+            'disaggregation_strata_json',
+            'geo_locations'
+        ]
         extra_kwargs = {
             'uuid': {
                 'validators': [],
@@ -443,7 +556,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                 entry = super().create(validated_data)
                 for each in figures:
                     # each figure contains further nested objects
-                    fig_ser = NestedFigureCreateSerializer()
+                    fig_ser = NestedFigureCreateSerializer(context=self.context)
                     fig_ser._validated_data = {**each, 'entry': entry}
                     fig_ser._errors = {}
                     fig_ser.save()
@@ -464,12 +577,13 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                 # create if has no ids
                 for each in figures:
                     if not each.get('id'):
-                        fig_ser = NestedFigureCreateSerializer()
+                        fig_ser = NestedFigureCreateSerializer(context=self.context)
                         fig_ser._validated_data = {**each, 'entry': entry}
                     else:
                         fig_ser = NestedFigureUpdateSerializer(
                             instance=entry.figures.get(id=each['id']),
-                            partial=True
+                            partial=True,
+                            context=self.context,
                         )
                         fig_ser._validated_data = {**each, 'entry': entry}
                     fig_ser._errors = {}
