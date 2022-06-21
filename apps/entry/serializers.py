@@ -519,7 +519,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                 USER_ROLE.MONITORING_EXPERT.name,
                 USER_ROLE.REGIONAL_COORDINATOR.name,
             ]
-        ),
+        ).distinct(),
         required=False
     )
 
