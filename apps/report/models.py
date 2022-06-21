@@ -87,19 +87,22 @@ class Report(MetaInformationArchiveAbstractModel,
                     category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
                     role=Figure.ROLE.RECOMMENDED,
                     event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
-                )
+                ),
+                default=0,
             ),
             total_flow_conflict=Sum(
                 'total_figures',
                 filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                          role=Figure.ROLE.RECOMMENDED,
-                         event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
+                         event__event_type=Crisis.CRISIS_TYPE.CONFLICT),
+                default=0,
             ),
             total_flow_disaster=Sum(
                 'total_figures',
                 filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                          role=Figure.ROLE.RECOMMENDED,
-                         event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+                         event__event_type=Crisis.CRISIS_TYPE.DISASTER),
+                default=0,
             ),
             total_stock_disaster=Sum(
                 'total_figures',
@@ -113,13 +116,15 @@ class Report(MetaInformationArchiveAbstractModel,
                     category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
                     role=Figure.ROLE.RECOMMENDED,
                     event__event_type=Crisis.CRISIS_TYPE.DISASTER,
-                )
+                ),
+                default=0,
             ),
             total_flow=Sum(
                 'total_figures',
                 filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                          role=Figure.ROLE.RECOMMENDED,
-                         event__event_type__in=[Crisis.CRISIS_TYPE.DISASTER, Crisis.CRISIS_TYPE.CONFLICT])
+                         event__event_type__in=[Crisis.CRISIS_TYPE.DISASTER, Crisis.CRISIS_TYPE.CONFLICT]),
+                default=0,
             ),
             total_stock=Sum(
                 'total_figures',
@@ -133,7 +138,8 @@ class Report(MetaInformationArchiveAbstractModel,
                     category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
                     role=Figure.ROLE.RECOMMENDED,
                     event__event_type__in=[Crisis.CRISIS_TYPE.DISASTER, Crisis.CRISIS_TYPE.CONFLICT]
-                )
+                ),
+                default=0,
             ),
         )
 
@@ -225,6 +231,9 @@ class Report(MetaInformationArchiveAbstractModel,
                 return '; '.join([category.name if category else "" for category in figure_categories])
             return ''
 
+        def format_numbers(number):
+            return number if number else '0'
+
         def transformer(datum):
             total_disaggregation = Report.objects.get(id=datum['id']).total_disaggregation
             return {
@@ -233,7 +242,11 @@ class Report(MetaInformationArchiveAbstractModel,
                 # NOTE: there must be a better way
                 **total_disaggregation,
                 'remarks': Report.objects.get(id=datum['id']).generate_remarks_for_report,
-                'filter_figure_categories': transform_filter_figure_category(datum['filter_figure_categories'])
+                'filter_figure_categories': transform_filter_figure_category(datum['filter_figure_categories']),
+                'total_flow_conflict_sum': format_numbers(datum['total_flow_conflict_sum']),
+                'total_flow_disaster_sum': format_numbers(datum['total_flow_disaster_sum']),
+                'total_stock_conflict_sum': format_numbers(datum['total_stock_conflict_sum']),
+                'total_stock_disaster_sum': format_numbers(datum['total_stock_disaster_sum']),
             }
 
         return {

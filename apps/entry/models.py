@@ -684,7 +684,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             centroid_lon=Avg('geo_locations__lon'),
             geolocations=StringAgg(
                 'geo_locations__city',
-                delimiter='; ',
+                '; ',
                 filter=~Q(
                     Q(geo_locations__city__isnull=True) | Q(geo_locations__city='')
                 ),
@@ -692,12 +692,12 @@ class Figure(MetaInformationArchiveAbstractModel,
             ),
             publishers_name=StringAgg(
                 'entry__publishers__name',
-                delimiter='; ',
+                '; ',
                 filter=~Q(entry__publishers__name=''),
                 distinct=True
             ),
             year=ExtractYear("start_date"),
-            context_of_violences=StringAgg('context_of_violence__name', delimiter='; '),
+            context_of_violences=StringAgg('context_of_violence__name', '; ', distinct=True),
         ).annotate(
             centroid=models.Case(
                 models.When(
@@ -976,8 +976,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            countries=StringAgg('figures__country__name', distinct=True, delimiter='; '),
-            countries_iso3=StringAgg('figures__country__iso3', delimiter='; ', distinct=True),
+            countries=StringAgg('figures__country__name', '; ', distinct=True),
+            countries_iso3=StringAgg('figures__country__iso3', '; ', distinct=True),
             figure_causes=ArrayAgg('figures__figure_cause', distinct=True),
             categories=ArrayAgg('figures__category', distinct=True),
             terms=ArrayAgg('figures__term', distinct=True),
@@ -987,12 +987,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             max_fig_end=Max('figures__end_date'),
             centroid_lat=Avg('figures__geo_locations__lat'),
             centroid_lon=Avg('figures__geo_locations__lon'),
-            sources_name=StringAgg('figures__sources__name', delimiter='; '),
-            source_types=StringAgg('figures__sources__organization_kind__name', delimiter='; '),
-            publishers_name=StringAgg('publishers__name', delimiter='; '),
-            publisher_types=StringAgg('publishers__organization_kind__name', delimiter='; '),
+            sources_name=StringAgg('figures__sources__name', '; ', distinct=True),
+            source_types=StringAgg('figures__sources__organization_kind__name', '; ', distinct=True),
+            publishers_name=StringAgg('publishers__name', '; ', distinct=True),
+            publisher_types=StringAgg('publishers__organization_kind__name', '; ', distinct=True),
             figures_count=models.Count('figures', distinct=True),
-            context_of_violences=StringAgg('figures__context_of_violence__name', delimiter='; '),
+            context_of_violences=StringAgg('figures__context_of_violence__name', '; ', distinct=True),
             # **cls._total_figure_disaggregation_subquery(),
         ).annotate(
             centroid=models.Case(

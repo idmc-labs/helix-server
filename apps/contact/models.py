@@ -92,10 +92,10 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
             operating_countries=StringAgg(
-                'countries_of_operation__name', distinct=True, delimiter='; '
+                'countries_of_operation__name', '; ', distinct=True
             ),
             operating_countries_regions=StringAgg(
-                'countries_of_operation__regions__name', distinct=True, delimiter='; '
+                'countries_of_operation__regions__name', '; ', distinct=True
             ),
             communications_count=models.Count('communications', distinct=True),
         ).order_by(

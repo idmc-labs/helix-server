@@ -1,6 +1,5 @@
 from collections import OrderedDict
-
-from django.contrib.postgres.aggregates.general import ArrayAgg
+from django.contrib.postgres.aggregates.general import StringAgg
 from django.utils import timezone
 from django.db import models
 from django.utils.translation import gettext_lazy as _
@@ -116,9 +115,9 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            countries_iso3=ArrayAgg('countries__iso3', distinct=True),
-            countries_name=ArrayAgg('countries__name', distinct=True),
-            regions_name=ArrayAgg('countries__region__name', distinct=True),
+            countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
+            countries_name=StringAgg('countries__name', '; ', distinct=True),
+            regions_name=StringAgg('countries__region__name', '; ', distinct=True),
             events_count=models.Count('events', distinct=True),
             min_event_start=models.Min('events__start_date'),
             max_event_end=models.Max('events__end_date'),

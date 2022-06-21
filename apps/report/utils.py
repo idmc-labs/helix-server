@@ -671,8 +671,8 @@ def report_disaster_event(report):
         dsub_type=F('event__disaster_sub_type__name'),
         flow_total=Sum('total_figures', filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT)),
         affected_countries=Count('country', distinct=True),
-        affected_iso3=StringAgg('country__iso3', delimiter=', ', distinct=True),
-        affected_names=StringAgg('country__name', delimiter=' | ', distinct=True),
+        affected_iso3=StringAgg('country__iso3', '; ', distinct=True),
+        affected_names=StringAgg('country__name', ';  ', distinct=True),
     )
     return {
         'headers': headers,

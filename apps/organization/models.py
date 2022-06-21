@@ -5,7 +5,6 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
-from django.contrib.postgres.aggregates.general import ArrayAgg
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel, SoftDeleteModel
 
@@ -79,7 +78,6 @@ class Organization(MetaInformationArchiveAbstractModel,
             name='Name',
             organization_kind__name='Organization Type',
             # Extra added fields
-            short_name='Short Name',
             countries_iso3='ISO3',
             category='Geographical Coverage',
             countries_name='Countries',
@@ -94,8 +92,8 @@ class Organization(MetaInformationArchiveAbstractModel,
         ).qs.annotate(
             countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
             # sourced_entries_count=models.Count('sourced_entries', distinct=True),
-            # published_entries_count=models.Count('published_entries', distinct=True),
-            countries_name=ArrayAgg('countries__name', distinct=True),
+            # published_entries_count=models.Count('published_entries', distinct=True),organization/mo
+            countries_name=StringAgg('countries__name', '; ', distinct=True),
         ).order_by('-created_at').select_related(
             'organization_kind'
             'created_by',

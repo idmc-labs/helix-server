@@ -5,7 +5,6 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django_enumfield import enum
-from django.contrib.postgres.aggregates.general import StringAgg
 
 from apps.contrib.models import (
     MetaInformationAbstractModel,
@@ -281,7 +280,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             osv_sub_type__name="OSV Sub Type",
             actor_id='Actor Id',
             actor__name='Actor',
-            event_codes='Event Codes',
+            glide_numbers='Event Codes',
             context_of_violences='Context of violences',
 
         )
@@ -289,14 +288,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            countries_iso3=StringAgg('countries__iso3', distinct=True, delimiter='; '),
-            event_codes=StringAgg('glide_numbres', distinct=True, delimiter='; '),
-            countries_name=StringAgg('countries__name', distinct=True, delimiter='; '),
-            regions_name=StringAgg('countries__region__name', distinct=True, delimiter='; '),
+            countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
+            countries_name=StringAgg('countries__name', '; ', distinct=True),
+            regions_name=StringAgg('countries__region__name', '; ', distinct=True),
             figures_count=models.Count('figures', distinct=True),
             entries_count=models.Count('figures__entry', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
-            context_of_violences=StringAgg('context_of_violence__name', delimiter='; '),
+            context_of_violences=StringAgg('context_of_violence__name', ';', distinct=True),
         ).order_by('-created_at').select_related(
             'violence',
             'violence_sub_type',
@@ -311,6 +309,11 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             'countries',
         )
 
+        def format_glide_numbers(glide_numbers):
+            if not glide_numbers:
+                return ''
+            return '; '.join(str(glide_number) for glide_number in glide_numbers)
+
         def transformer(datum):
             return {
                 **datum,
@@ -318,6 +321,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
                     event_type=getattr(Crisis.CRISIS_TYPE.get(datum['event_type']), 'name', ''),
+                    glide_numbers=format_glide_numbers(datum['glide_numbers']),
                 )
             }
 
