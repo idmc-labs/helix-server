@@ -9,7 +9,6 @@ from apps.entry.models import (
     EntryReviewer,
     CANNOT_UPDATE_MESSAGE,
 )
-from apps.entry.models import DisaggregatedAgeCategory
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     EventFactory,
@@ -104,9 +103,6 @@ class TestEntryQuery(HelixGraphQLTestCase):
 
 class TestEntryCreation(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        DisaggregatedAgeCategory.objects.create(name='one')
-        DisaggregatedAgeCategory.objects.create(name='two')
-        DisaggregatedAgeCategory.objects.create(name='three')
         self.country = CountryFactory.create(iso2='lo', iso3='lol')
         self.country_id = str(self.country.id)
         self.event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT.value)
@@ -379,13 +375,13 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     # invalid: category and sex is duplicated
                     {
                         "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
-                        "category": DisaggregatedAgeCategory.objects.first().id,
+                        "ageFrom": 10,
+                        "ageTo": 20,
                         "sex": "MALE",
                         "value": 5
                     },
                     {
                         "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                        "category": DisaggregatedAgeCategory.objects.first().id,
                         "sex": "FEMALE",
                         "value": 6
                     }
@@ -448,9 +444,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.event = EventFactory.create(name='myevent', event_type=Crisis.CRISIS_TYPE.CONFLICT.value)
         self.event.countries.add(self.country)
-        DisaggregatedAgeCategory.objects.create(name='one')
-        DisaggregatedAgeCategory.objects.create(name='two')
-        DisaggregatedAgeCategory.objects.create(name='three')
         self.entry = EntryFactory.create(
             created_by=self.editor,
         )
@@ -467,10 +460,8 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 disaggregationAge {
                  results {
                       uuid
-                      category {
-                        id
-                        name
-                      }
+                      ageFrom
+                      ageTo
                   }
                 }
                 createdBy {
@@ -516,7 +507,6 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.assertTrue(content['data']['updateEntry']['ok'], content)
 
     def test_valid_update_entry_with_figures(self):
-        assert DisaggregatedAgeCategory.objects.count() > 1
         figure = FigureFactory.create(
             entry=self.entry,
             country=self.country,
@@ -556,13 +546,15 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "disaggregationAge": [
                     {
                         "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
-                        "category": DisaggregatedAgeCategory.objects.first().id,
+                        "ageFrom": 10,
+                        "ageTo": 20,
                         "value": 3,
                         "sex": "MALE",
                     },
                     {
                         "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                        "category": DisaggregatedAgeCategory.objects.last().id,
+                        "ageFrom": 10,
+                        "ageTo": 20,
                         "value": 3,
                         "sex": "FEMALE",
                     }
@@ -590,13 +582,15 @@ class TestEntryUpdate(HelixGraphQLTestCase):
                 "disaggregationAge": [
                     {
                         "uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9",
-                        "category": DisaggregatedAgeCategory.objects.first().id,
+                        "ageFrom": 10,
+                        "ageTo": 20,
                         "value": 3,
                         "sex": "MALE",
                     },
                     {
                         "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                        "category": DisaggregatedAgeCategory.objects.last().id,
+                        "ageFrom": 10,
+                        "ageTo": 20,
                         "value": 3,
                         "sex": "FEMALE",
                     }

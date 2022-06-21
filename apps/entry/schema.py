@@ -27,7 +27,6 @@ from apps.entry.models import (
     Entry,
     EntryReviewer,
     OSMName,
-    DisaggregatedAgeCategory,
     DisaggregatedAge,
 )
 from apps.contrib.models import SourcePreview
@@ -51,28 +50,13 @@ def convert_json_field_to_scalar(field, registry=None):
     return GenericScalar()
 
 
-class DisaggregatedAgeCategoryType(DjangoObjectType):
-    class Meta:
-        model = DisaggregatedAgeCategory
-
-
-class DisaggregatedAgeCategoryListType(CustomDjangoListObjectType):
-    class Meta:
-        model = DisaggregatedAgeCategory
-        filter_fields = {
-            'name': ('unaccent__icontains',),
-        }
-
-
 class DisaggregatedAgeType(DjangoObjectType):
     class Meta:
         model = DisaggregatedAge
     uuid = graphene.String(required=True)
-    category = graphene.Field(DisaggregatedAgeCategoryType)
+    age_from = graphene.Field(graphene.Int)
+    age_to = graphene.Field(graphene.Int)
     sex = graphene.Field(GenderTypeGrapheneEnum)
-
-    def resolve_category(root, info):
-        return DisaggregatedAgeCategory.objects.filter(id=root.category.id).first()
 
 
 class DisaggregatedAgeListType(CustomDjangoListObjectType):
@@ -274,7 +258,5 @@ class Query:
                                                 pagination=PageGraphqlPaginationWithoutCount(
                                                     page_size_query_param='pageSize'
                                                 ))
-    disaggregated_age_category = DjangoObjectField(DisaggregatedAgeCategoryType)
-    disaggregated_age_category_list = DjangoPaginatedListObjectField(DisaggregatedAgeCategoryListType)
     disaggregated_age = DjangoObjectField(DisaggregatedAgeType)
     disaggregated_age_list = DjangoPaginatedListObjectField(DisaggregatedAgeListType)

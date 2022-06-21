@@ -29,6 +29,17 @@ class DisaggregatedAgeSerializer(serializers.ModelSerializer):
     # to allow updating
     id = IntegerIDField(required=False)
 
+    def validate(self, attrs):
+        errors = OrderedDict()
+        age_from = attrs.get('age_from')
+        age_to = attrs.get('age_to')
+
+        if (age_from and not age_to):
+            errors['age_to'] = gettext('This field is required.')
+        if (age_to and not age_from):
+            errors['age_from'] = gettext('This field is required.')
+        return attrs
+
     class Meta:
         model = DisaggregatedAge
         fields = '__all__'
@@ -74,9 +85,9 @@ class CommonFigureValidationMixin:
         age_groups = age_groups or []
         values = []
         for each in age_groups:
-            values.append((each.get('category'), each.get('sex')))
+            values.append((each.get('age_from'), each.get('age_to'), each.get('sex')))
         if len(values) != len(set(values)):
-            raise serializers.ValidationError('Please provide unique age category and sex.')
+            raise serializers.ValidationError('Please provide unique age range and sex.')
         return age_groups
 
     def validate_disaggregation_strata_json(self, strata):
@@ -262,7 +273,6 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
     class Meta:
         model = Figure
         fields = [
-            'id',
             'was_subfact',
             'quantifier',
             'reported',
