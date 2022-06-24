@@ -5,6 +5,7 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django_enumfield import enum
+from django.db.models.functions import Coalesce
 
 from apps.contrib.models import (
     MetaInformationAbstractModel,
@@ -220,7 +221,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     start_date=None,
                     end_date=None,
                 ).order_by().values('event').annotate(
-                    _total=models.Sum('total_figures')
+                    _total=Coalesce(models.Sum('total_figures'), 0)
                 ).values('_total')[:1],
                 output_field=models.IntegerField()
             ),
@@ -232,7 +233,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     ),
                     reference_point=timezone.now().date(),
                 ).order_by().values('event').annotate(
-                    _total=models.Sum('total_figures')
+                    _total=Coalesce(models.Sum('total_figures'), 0)
                 ).values('_total')[:1],
                 output_field=models.IntegerField()
             ),

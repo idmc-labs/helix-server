@@ -95,7 +95,7 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
                 'countries_of_operation__name', '; ', distinct=True
             ),
             operating_countries_regions=StringAgg(
-                'countries_of_operation__regions__name', '; ', distinct=True
+                'countries_of_operation__region__name', '; ', distinct=True
             ),
             communications_count=models.Count('communications', distinct=True),
         ).order_by(
