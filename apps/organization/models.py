@@ -5,7 +5,6 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
-from django.contrib.postgres.aggregates.general import ArrayAgg
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel, SoftDeleteModel
 
@@ -71,20 +70,21 @@ class Organization(MetaInformationArchiveAbstractModel,
                 self.user = user
 
         headers = OrderedDict(
-            old_id='Old Id',
             id='Id',
-            created_by__full_name='Created By',
-            created_at='Created At',
-            last_modified_by__full_name='Updated By',
-            modified_at='Updated At',
+            created_by__full_name='Created by',
+            created_at='Created at',
+            last_modified_by__full_name='Updated by',
+            modified_at='Updated at',
             name='Name',
             organization_kind__name='Organization Type',
             # Extra added fields
-            short_name='Short Name',
             countries_iso3='ISO3',
-            methodology='Methodology',
             category='Geographical Coverage',
             countries_name='Countries',
+            # Extra added fields
+            old_id='Old Id',
+            short_name='Short Name',
+            methodology='Methodology',
         )
         data = OrganizationFilter(
             data=filters,
@@ -93,7 +93,7 @@ class Organization(MetaInformationArchiveAbstractModel,
             countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
             # sourced_entries_count=models.Count('sourced_entries', distinct=True),
             # published_entries_count=models.Count('published_entries', distinct=True),
-            countries_name=ArrayAgg('countries__name', distinct=True),
+            countries_name=StringAgg('countries__name', '; ', distinct=True),
         ).order_by('-created_at').select_related(
             'organization_kind'
             'created_by',

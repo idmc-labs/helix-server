@@ -2,7 +2,6 @@ import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
-from apps.users.roles import USER_ROLE
 from apps.contact.enums import DesignationGrapheneEnum
 from apps.entry.enums import GenderTypeGrapheneEnum
 from apps.contact.filters import ContactFilter, CommunicationFilter
@@ -12,38 +11,10 @@ from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
 
 
-def communication_media_qs(info):
-    def _qs():
-        if info.context.user.highest_role == USER_ROLE.GUEST.value:
-            return CommunicationMedium.objects.none()
-        return CommunicationMedium.objects.all()
-    return _qs().distinct()
-
-
-def communication_qs(info):
-    def _qs():
-        if info.context.user.highest_role == USER_ROLE.GUEST.value:
-            return Communication.objects.none()
-        return Communication.objects.all()
-    return _qs().distinct()
-
-
-def contact_qs(info):
-    def _qs():
-        if info.context.user.highest_role == USER_ROLE.GUEST.value:
-            return Contact.objects.none()
-        return Contact.objects.all()
-    return _qs().distinct()
-
-
 class CommunicationMediumType(DjangoObjectType):
     class Meta:
         model = CommunicationMedium
         filter_fields = []
-
-    @staticmethod
-    def get_queryset(queryset, info):
-        return communication_media_qs(info)
 
 
 class CommunicationMediumListType(CustomDjangoListObjectType):
@@ -55,10 +26,6 @@ class CommunicationMediumListType(CustomDjangoListObjectType):
 class CommunicationType(DjangoObjectType):
     class Meta:
         model = Communication
-
-    @staticmethod
-    def get_queryset(queryset, info):
-        return communication_qs(info)
 
 
 class CommunicationListType(CustomDjangoListObjectType):
@@ -81,10 +48,6 @@ class ContactType(DjangoObjectType):
         ),
         related_name='communications'
     )
-
-    @staticmethod
-    def get_queryset(queryset, info):
-        return contact_qs(info)
 
 
 class ContactListType(CustomDjangoListObjectType):

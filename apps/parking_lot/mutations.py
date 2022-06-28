@@ -50,7 +50,7 @@ class UpdateParkedItem(graphene.Mutation):
     @permission_checker(['parking_lot.change_parkeditem'])
     def mutate(root, info, data):
         try:
-            instance = ParkedItem.objects.get(id=data['id'], created_by=info.context.user)
+            instance = ParkedItem.objects.get(id=data['id'])
         except ParkedItem.DoesNotExist:
             return UpdateParkedItem(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Parked item does not exist.'))
@@ -75,7 +75,7 @@ class DeleteParkedItem(graphene.Mutation):
     @permission_checker(['parking_lot.delete_parkeditem'])
     def mutate(root, info, id):
         try:
-            instance = ParkedItem.objects.get(id=id, created_by=info.context.user)
+            instance = ParkedItem.objects.get(id=id)
         except ParkedItem.DoesNotExist:
             return DeleteParkedItem(errors=[
                 dict(

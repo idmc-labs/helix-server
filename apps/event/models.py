@@ -1,11 +1,11 @@
 from collections import OrderedDict
 
 from django.db import models
-from django.contrib.postgres.aggregates.general import ArrayAgg
+from django.contrib.postgres.aggregates.general import StringAgg
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django_enumfield import enum
-from django.contrib.postgres.aggregates.general import StringAgg
+from django.db.models.functions import Coalesce
 
 from apps.contrib.models import (
     MetaInformationAbstractModel,
@@ -221,7 +221,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     start_date=None,
                     end_date=None,
                 ).order_by().values('event').annotate(
-                    _total=models.Sum('total_figures')
+                    _total=Coalesce(models.Sum('total_figures'), 0)
                 ).values('_total')[:1],
                 output_field=models.IntegerField()
             ),
@@ -233,7 +233,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     ),
                     reference_point=timezone.now().date(),
                 ).order_by().values('event').annotate(
-                    _total=models.Sum('total_figures')
+                    _total=Coalesce(models.Sum('total_figures'), 0)
                 ).values('_total')[:1],
                 output_field=models.IntegerField()
             ),
@@ -248,52 +248,54 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 self.user = user
 
         headers = OrderedDict(
-            old_id='Old Id',
             id='Id',
             created_at='Created At',
             created_by__full_name='Created By',
-            crisis='Crisis Id',
-            crisis__name='Crisis',
             name='Name',
             start_date='Start Date',
             start_date_accuracy='Start Date Accuracy',
             end_date='End Date',
             end_date_accuracy='End Date Accuracy',
+            event_type='Event Cause',
+            disaster_category__name='Disaster Category',
+            disaster_sub_category__name='Disaster Sub Category',
+            disaster_type__name='Disaster Type',
+            disaster_sub_type__name='Disaster Sub Type',
+            disaster_sub_type='Diaster Sub Type Id',
             countries_iso3='ISO3',
             countries_name='Countries',
             regions_name='Regions',
             figures_count='Figures Count',
             entries_count='Entries Count',
+            # Extra added fields
+            old_id='Old Id',
+            crisis='Crisis Id',
+            crisis__name='Crisis',
             **{
                 cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
                 cls.ND_FIGURES_ANNOTATE: 'ND Figure',
             },
-            event_type='Event Cause',
             other_sub_type__name='Other Event Sub Type',
             violence__name='Violence',
             violence_sub_type__name='Violence Sub Type',
             osv_sub_type__name="OSV Sub Type",
             actor_id='Actor Id',
             actor__name='Actor',
-            disaster_category__name='Disaster Category',
-            disaster_sub_category__name='Disaster Sub Category',
-            disaster_type__name='Disaster Type',
-            disaster_sub_type__name='Disaster Sub Type',
-            disaster_sub_type='Diaster Sub Type Id',
             glide_numbers='Event Codes',
             context_of_violences='Context of violences',
+
         )
         data = EventFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            countries_iso3=ArrayAgg('countries__iso3', distinct=True),
-            countries_name=ArrayAgg('countries__name', distinct=True),
-            regions_name=ArrayAgg('countries__region__name', distinct=True),
+            countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
+            countries_name=StringAgg('countries__name', '; ', distinct=True),
+            regions_name=StringAgg('countries__region__name', '; ', distinct=True),
             figures_count=models.Count('figures', distinct=True),
             entries_count=models.Count('figures__entry', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
-            context_of_violences=StringAgg('context_of_violence__name', delimiter='; '),
+            context_of_violences=StringAgg('context_of_violence__name', ';', distinct=True),
         ).order_by('-created_at').select_related(
             'violence',
             'violence_sub_type',
@@ -308,6 +310,11 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             'countries',
         )
 
+        def format_glide_numbers(glide_numbers):
+            if not glide_numbers:
+                return ''
+            return '; '.join(str(glide_number) for glide_number in glide_numbers)
+
         def transformer(datum):
             return {
                 **datum,
@@ -315,6 +322,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
                     event_type=getattr(Crisis.CRISIS_TYPE.get(datum['event_type']), 'name', ''),
+                    glide_numbers=format_glide_numbers(datum['glide_numbers']),
                 )
             }
 

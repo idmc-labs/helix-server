@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.db import models, transaction
+from django.db.models.functions import Coalesce
 from django.db.models import (
     Sum,
     Q,
@@ -75,65 +76,89 @@ class Report(MetaInformationArchiveAbstractModel,
     @cached_property
     def TOTAL_FIGURE_DISAGGREGATIONS(self):
         return dict(
-            total_stock_conflict=Sum(
-                'total_figures',
-                filter=Q(
-                    Q(
-                        end_date__isnull=True,
-                    ) | Q(
-                        end_date__isnull=False,
-                        end_date__gte=self.filter_figure_end_before or timezone.now().date(),
+            total_stock_conflict=Coalesce(
+                Sum(
+                    'total_figures',
+                    filter=Q(
+                        Q(
+                            end_date__isnull=True,
+                        ) | Q(
+                            end_date__isnull=False,
+                            end_date__gte=self.filter_figure_end_before or timezone.now().date(),
+                        ),
+                        category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                        role=Figure.ROLE.RECOMMENDED,
+                        event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                    )
+                ),
+                0
+            ),
+            total_flow_conflict=Coalesce(
+                Sum(
+                    'total_figures',
+                    filter=Q(
+                        category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                        role=Figure.ROLE.RECOMMENDED,
+                        event__event_type=Crisis.CRISIS_TYPE.CONFLICT
                     ),
-                    category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-                    role=Figure.ROLE.RECOMMENDED,
-                    event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
-                )
+                ),
+                0
             ),
-            total_flow_conflict=Sum(
-                'total_figures',
-                filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-                         role=Figure.ROLE.RECOMMENDED,
-                         event__event_type=Crisis.CRISIS_TYPE.CONFLICT)
-            ),
-            total_flow_disaster=Sum(
-                'total_figures',
-                filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-                         role=Figure.ROLE.RECOMMENDED,
-                         event__event_type=Crisis.CRISIS_TYPE.DISASTER)
-            ),
-            total_stock_disaster=Sum(
-                'total_figures',
-                filter=Q(
-                    Q(
-                        end_date__isnull=True,
-                    ) | Q(
-                        end_date__isnull=False,
-                        end_date__gte=self.filter_figure_end_before or timezone.now().date(),
+            total_flow_disaster=Coalesce(
+                Sum(
+                    'total_figures',
+                    filter=Q(
+                        category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                        role=Figure.ROLE.RECOMMENDED,
+                        event__event_type=Crisis.CRISIS_TYPE.DISASTER
                     ),
-                    category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-                    role=Figure.ROLE.RECOMMENDED,
-                    event__event_type=Crisis.CRISIS_TYPE.DISASTER,
-                )
+                ),
+                0
             ),
-            total_flow=Sum(
-                'total_figures',
-                filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-                         role=Figure.ROLE.RECOMMENDED,
-                         event__event_type__in=[Crisis.CRISIS_TYPE.DISASTER, Crisis.CRISIS_TYPE.CONFLICT])
+            total_stock_disaster=Coalesce(
+                Sum(
+                    'total_figures',
+                    filter=Q(
+                        Q(
+                            end_date__isnull=True,
+                        ) | Q(
+                            end_date__isnull=False,
+                            end_date__gte=self.filter_figure_end_before or timezone.now().date(),
+                        ),
+                        category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                        role=Figure.ROLE.RECOMMENDED,
+                        event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                    )
+                ),
+                0
             ),
-            total_stock=Sum(
-                'total_figures',
-                filter=Q(
-                    Q(
-                        end_date__isnull=True,
-                    ) | Q(
-                        end_date__isnull=False,
-                        end_date__gte=self.filter_figure_end_before or timezone.now().date(),
+            total_flow=Coalesce(
+                Sum(
+                    'total_figures',
+                    filter=Q(
+                        category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                        role=Figure.ROLE.RECOMMENDED,
+                        event__event_type__in=[Crisis.CRISIS_TYPE.DISASTER, Crisis.CRISIS_TYPE.CONFLICT]
                     ),
-                    category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-                    role=Figure.ROLE.RECOMMENDED,
-                    event__event_type__in=[Crisis.CRISIS_TYPE.DISASTER, Crisis.CRISIS_TYPE.CONFLICT]
-                )
+                ),
+                0
+            ),
+            total_stock=Coalesce(
+                Sum(
+                    'total_figures',
+                    filter=Q(
+                        Q(
+                            end_date__isnull=True,
+                        ) | Q(
+                            end_date__isnull=False,
+                            end_date__gte=self.filter_figure_end_before or timezone.now().date(),
+                        ),
+                        category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                        role=Figure.ROLE.RECOMMENDED,
+                        event__event_type__in=[Crisis.CRISIS_TYPE.DISASTER, Crisis.CRISIS_TYPE.CONFLICT]
+                    )
+                ),
+                0
             ),
         )
 
@@ -233,7 +258,7 @@ class Report(MetaInformationArchiveAbstractModel,
                 # NOTE: there must be a better way
                 **total_disaggregation,
                 'remarks': Report.objects.get(id=datum['id']).generate_remarks_for_report,
-                'filter_figure_categories': transform_filter_figure_category(datum['filter_figure_categories'])
+                'filter_figure_categories': transform_filter_figure_category(datum['filter_figure_categories']),
             }
 
         return {

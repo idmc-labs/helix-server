@@ -1,6 +1,7 @@
 from django.db.models import Q
 import django_filters
 
+from apps.users.roles import USER_ROLE
 from apps.contact.models import Contact, Communication
 from utils.filters import StringListFilter
 
@@ -24,6 +25,12 @@ class ContactFilter(django_filters.FilterSet):
             return qs
         return qs.filter(countries_of_operation__in=value).distinct()
 
+    @property
+    def qs(self):
+        if self.request.user.highest_role == USER_ROLE.GUEST.value:
+            return super().qs.none()
+        return super().qs.distinct()
+
 
 class CommunicationFilter(django_filters.FilterSet):
     id = django_filters.CharFilter(field_name='id', lookup_expr='iexact')
@@ -32,3 +39,9 @@ class CommunicationFilter(django_filters.FilterSet):
     class Meta:
         model = Communication
         fields = ['contact', 'country']
+
+    @property
+    def qs(self):
+        if self.request.user.highest_role == USER_ROLE.GUEST.value:
+            return super().qs.none()
+        return super().qs.distinct()

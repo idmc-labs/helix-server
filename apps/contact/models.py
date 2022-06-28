@@ -1,7 +1,7 @@
 from collections import OrderedDict
 
 from django.contrib.auth import get_user_model
-from django.contrib.postgres.aggregates.general import ArrayAgg
+from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
@@ -71,26 +71,32 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
 
         headers = OrderedDict(
             id='Id',
-            created_by__full_name='Created By',
-            created_at='Created At',
-            last_modified_by__full_name='Updated By',
-            modified_at='Updated At',
+            created_by__full_name='Created by',
+            created_at='Created at',
+            last_modified_by__full_name='Updated by',
+            last_modified_by='Updated at',
             full_name='Name',
             gender='Gender',
             organization__name='Organization',
             job_title='Job Title',
-            operating_countries='Countries of operation',
-            # Extra added fields
-            designation='Designation',
             country__name='Country',
-            communications_count='Communications Count',
+            operating_countries='Countries of operation',
+            operating_countries_regions='Countries of operation regions',
+            # Extra added fields
             old_id='Old Id',
+            designation='Designation',
+            communications_count='Communications count'
         )
         data = ContactFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            operating_countries=ArrayAgg('countries_of_operation__name', distinct=True),
+            operating_countries=StringAgg(
+                'countries_of_operation__name', '; ', distinct=True
+            ),
+            operating_countries_regions=StringAgg(
+                'countries_of_operation__region__name', '; ', distinct=True
+            ),
             communications_count=models.Count('communications', distinct=True),
         ).order_by(
             '-created_at',
