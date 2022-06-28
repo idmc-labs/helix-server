@@ -10,7 +10,6 @@ from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django_enumfield import enum
-from django.db.models.functions import Coalesce
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel, ArchiveAbstractModel
 from apps.entry.models import Entry, Figure

@@ -25,9 +25,7 @@ def get_excel_sheet_content(headers, data, **kwargs):
     ws = wb.create_sheet('Main')
 
     def clean_data_item(item):
-        if isinstance(item, int):
-            return str(item)
-        elif item:
+        if isinstance(item, int) or item:
             return str(item)
         else:
             return ''

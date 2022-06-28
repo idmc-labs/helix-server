@@ -92,7 +92,7 @@ class Organization(MetaInformationArchiveAbstractModel,
         ).qs.annotate(
             countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
             # sourced_entries_count=models.Count('sourced_entries', distinct=True),
-            # published_entries_count=models.Count('published_entries', distinct=True),organization/mo
+            # published_entries_count=models.Count('published_entries', distinct=True),
             countries_name=StringAgg('countries__name', '; ', distinct=True),
         ).order_by('-created_at').select_related(
             'organization_kind'

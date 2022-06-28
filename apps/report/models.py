@@ -250,7 +250,6 @@ class Report(MetaInformationArchiveAbstractModel,
                 return '; '.join([category.name if category else "" for category in figure_categories])
             return ''
 
-
         def transformer(datum):
             total_disaggregation = Report.objects.get(id=datum['id']).total_disaggregation
             return {
