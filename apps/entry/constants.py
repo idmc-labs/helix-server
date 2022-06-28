@@ -11,4 +11,5 @@ FIGURE_TAGS = [
     'Multi-causality',
     'Protracted (5 years)',
     'Chronic/repeated displacement',
+    'Food Insecurity',
 ]
