@@ -41,6 +41,6 @@ class TestCountrySchema(HelixGraphQLTestCase):
         self.assertEqual(self.country1.operating_contacts.count(), 1)
         self.assertEqual(self.country1.operating_contacts.first(), self.contact2)
         contact_ids = [int(each['id']) for each in content['data']['country']['contacts']['results']]
-        self.assertEqual(set(contact_ids), {self.contact1.id, self.contact2.id})
+        self.assertEqual(set(contact_ids), {self.contact1.id})
         contact_ids = [int(each['id']) for each in content['data']['country']['operatingContacts']['results']]
-        self.assertEqual(set(contact_ids), {self.contact1.id, self.contact2.id})
+        self.assertEqual(set(contact_ids), {self.contact2.id})
