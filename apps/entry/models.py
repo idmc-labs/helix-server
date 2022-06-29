@@ -21,6 +21,7 @@ from apps.contrib.models import (
     UUIDAbstractModel,
     MetaInformationArchiveAbstractModel,
 )
+from utils.common import get_string_from_list
 from apps.contrib.commons import DATE_ACCURACY
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
@@ -1017,9 +1018,15 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         def transformer(datum):
             return {
                 **datum,
-                'categories': '; '.join([category.name if category else "" for category in datum['categories']]),
-                'terms': '; '.join([term.name if term else "" for term in datum['terms']]),
-                'figure_causes': '; '.join([cause.name if cause else "" for cause in datum['categories']]),
+                'categories': get_string_from_list(
+                    [category.label if category else "" for category in datum['categories']]
+                ),
+                'terms': get_string_from_list(
+                    [term.label if term else "" for term in datum['terms']]
+                ),
+                'figure_causes': get_string_from_list(
+                    [cause.label if cause else "" for cause in datum['categories']]
+                ),
             }
 
         return {
