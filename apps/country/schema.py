@@ -4,6 +4,7 @@ from graphene_django import DjangoObjectType
 from graphene_django_extras import (
     DjangoObjectField,
 )
+from utils.graphene.enums import EnumDescription
 
 from apps.contact.schema import ContactListType
 from apps.country.models import (
@@ -88,6 +89,7 @@ class ContextualAnalysisType(DjangoObjectType):
     created_by = graphene.Field('apps.users.schema.UserType')
     last_modified_by = graphene.Field('apps.users.schema.UserType')
     crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
+    crisis_type_display = EnumDescription(source='get_crisis_type_display')
 
 
 class ContextualAnalysisListType(CustomDjangoListObjectType):

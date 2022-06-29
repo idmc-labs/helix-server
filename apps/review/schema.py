@@ -1,6 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
+from utils.graphene.enums import EnumDescription
 
 from apps.review.enums import ReviewStatusEnum
 from apps.review.filters import ReviewCommentFilter
@@ -15,6 +16,7 @@ class ReviewType(DjangoObjectType):
         model = Review
 
     value = graphene.NonNull(ReviewStatusEnum)
+    value_display = EnumDescription(source='get_value_display')
 
 
 class ReviewListType(CustomDjangoListObjectType):

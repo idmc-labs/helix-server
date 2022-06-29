@@ -2,6 +2,7 @@ import graphene
 from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
+from utils.graphene.enums import EnumDescription
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.entry.enums import RoleGrapheneEnum, FigureTermsEnum, FigureCategoryTypeEnum
@@ -55,6 +56,7 @@ class ReportGenerationType(DjangoObjectType):
         exclude_fields = ('approvers', )
 
     status = graphene.NonNull(ReportGenerationStatusEnum)
+    status_display = EnumDescription(source='get_status_display')
     is_approved = graphene.Boolean()
     approvals = DjangoPaginatedListObjectField(
         ReportApprovalListType,
@@ -87,7 +89,9 @@ class ReportType(DjangoObjectType):
                                                   page_size_query_param='pageSize'
                                               ))
     filter_figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
+    filter_figure_roles_display = EnumDescription(source='get_filter_figure_roles_display')
     filter_figure_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
+    filter_figure_crisis_types = EnumDescription(source='get_filter_figure_crisis_types')
     countries_report = graphene.Dynamic(lambda: CustomPaginatedListObjectField(
         get_type('apps.country.schema.CountryListType'),
         accessor='countries_report',
@@ -132,8 +136,10 @@ class ReportType(DjangoObjectType):
         ReportGenerationListType,
     )
     generated_from = graphene.Field(ReportTypeEnum)
+    generated_from_display = EnumDescription(source='get_generated_from_display_display')
     filter_figure_categories = graphene.List(graphene.NonNull(FigureCategoryTypeEnum))
     filter_figure_terms = graphene.List(graphene.NonNull(FigureTermsEnum))
+    filter_figure_terms_display = EnumDescription(source='get_filter_figure_terms_display')
 
 
 class ReportListType(CustomDjangoListObjectType):

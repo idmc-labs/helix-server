@@ -1,6 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
+from utils.graphene.enums import EnumDescription
 
 from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -189,6 +190,7 @@ class EventType(DjangoObjectType):
         exclude_fields = ('figures',)
 
     event_type = graphene.Field(CrisisTypeGrapheneEnum)
+    event_type_display = EnumDescription(source='get_event_type_display')
     other_sub_type = graphene.Field(OtherSubTypeObjectType)
     violence = graphene.Field(ViolenceType)
     violence_sub_type = graphene.Field(ViolenceSubObjectType)
@@ -196,12 +198,15 @@ class EventType(DjangoObjectType):
     total_stock_idp_figures = graphene.Field(graphene.Int)
     total_flow_nd_figures = graphene.Field(graphene.Int)
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
+    start_date_accuracy_display = EnumDescription(source='get_start_date_accuracy_display')
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
+    end_date_accuracy_display = EnumDescription(source='get_end_date_accuracy_display')
     review_count = graphene.Field(EventReviewCountType)
     entry_count = graphene.Field(graphene.Int)
     glide_numbers = graphene.List(graphene.NonNull(graphene.String))
     osv_sub_type = graphene.Field(OsvSubObjectType)
-    QA_RULE_TYPE = graphene.Field(QaRecommendedFigureEnum)
+    qa_rule_type = graphene.Field(QaRecommendedFigureEnum)
+    qs_rule_type_display = EnumDescription(source='get_qs_rule_type_display')
     event_typology = graphene.String()
     figure_typology = graphene.List(graphene.String)
 

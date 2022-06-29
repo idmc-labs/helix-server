@@ -1,6 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
+from utils.graphene.enums import EnumDescription
 
 from apps.parking_lot.models import ParkedItem
 from apps.parking_lot.enums import (
@@ -18,7 +19,9 @@ class ParkedItemType(DjangoObjectType):
         model = ParkedItem
 
     status = graphene.Field(ParkingLotStatusGrapheneEnum)
+    status_display = EnumDescription(source='get_status_display')
     source = graphene.Field(ParkingLotSourceGrapheneEnum)
+    source_display = EnumDescription(source='get_source_display')
     entry = graphene.Field('apps.entry.schema.EntryType')
 
 
