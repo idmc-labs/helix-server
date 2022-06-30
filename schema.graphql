@@ -75,6 +75,7 @@ type AttachmentType {
   mimetype: String
   encoding: String
   filetypeDetail: String
+  attachmentForDisplay: EnumDescription
 }
 
 input BulkMonitoringExpertPortfolioInputType {
@@ -222,6 +223,8 @@ type ContactType {
   phone: String
   comment: String
   communications(contact: ID, country: ID, id: String, subjectContains: String, page: Int = 1, ordering: String, pageSize: Int): CommunicationListType
+  designationDisplay: EnumDescription
+  genderDisplay: EnumDescription
 }
 
 input ContactUpdateInputType {
@@ -300,6 +303,7 @@ type ContextualAnalysisType {
   update: String!
   publishDate: Date
   crisisType: CRISIS_TYPE
+  crisisTypeDisplay: EnumDescription
 }
 
 input ContextualUpdateCreateInputType {
@@ -348,6 +352,7 @@ type ContextualUpdateType {
   tags: [FigureTagType!]!
   countries: [CountryType!]!
   crisisTypes: [CRISIS_TYPE!]
+  crisisTypesDisplay: EnumDescription
 }
 
 input ContextualUpdateUpdateInputType {
@@ -662,8 +667,11 @@ type CrisisType {
   endDate: Date
   endDateAccuracy: DATE_ACCURACY
   events(createdAt_Lte: DateTime, createdAt_Lt: DateTime, createdAt_Gte: DateTime, createdAt_Gt: DateTime, startDate_Lte: Date, startDate_Lt: Date, startDate_Gte: Date, startDate_Gt: Date, endDate_Lte: Date, endDate_Lt: Date, endDate_Gte: Date, endDate_Gt: Date, ignoreQa: Boolean, name: String, crisisByIds: [ID!], eventTypes: [String!], countries: [ID!], glideNumbers: [String!], osvSubTypeByIds: [ID!], report: String, disasterSubTypes: [ID!], violenceTypes: [ID!], violenceSubTypes: [ID!], createdByIds: [ID!], qaRules: [String!], contextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EventListType
+  crisisTypeDisplay: EnumDescription
   totalStockIdpFigures: Int
   totalFlowNdFigures: Int
+  startDateAccuracyDisplay: EnumDescription
+  endDateAccuracyDisplay: EnumDescription
   reviewCount: CrisisReviewCountType
   eventCount: Int
 }
@@ -868,6 +876,7 @@ type DisaggregatedAgeType {
   ageTo: Int
   entryFigureRelated: [FigureType!]!
   reportReportRelated: [ReportType!]!
+  sexDisplay: EnumDescription
 }
 
 input DisaggregatedStratumInputType {
@@ -1027,6 +1036,7 @@ type EntryReviewerType {
   entry: EntryType!
   reviewer: UserType!
   status: REVIEW_STATUS
+  statusDisplay: EnumDescription
 }
 
 type EntryType {
@@ -1053,6 +1063,7 @@ type EntryType {
   figures: [FigureType!]!
   reviewing: [EntryReviewerType!]!
   latestReviews: [ReviewType]
+  reviewStatusDisplay: EnumDescription
   isReviewed: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
   isUnderReview: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
   isSignedOff: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
@@ -1080,6 +1091,8 @@ input EntryUpdateInputType {
 type Enum {
   reviewFilter: REPORT_REVIEW_FILTER
 }
+
+scalar EnumDescription
 
 input EventCreateInputType {
   oldId: String
@@ -1152,11 +1165,15 @@ type EventType {
   contextOfViolence: [ContextOfViolenceType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
+  eventTypeDisplay: EnumDescription
   totalStockIdpFigures: Int
   totalFlowNdFigures: Int
+  startDateAccuracyDisplay: EnumDescription
+  endDateAccuracyDisplay: EnumDescription
   reviewCount: EventReviewCountType
   entryCount: Int
-  QARuleType: QA_RULE_TYPE
+  qaRuleType: QA_RULE_TYPE
+  qsRuleTypeDisplay: EnumDescription
   eventTypology: String
   figureTypology: [String]
 }
@@ -1202,6 +1219,8 @@ type ExcelExportType {
   file: String
   fileSize: Int
   filters: JSONString
+  downloadTypeDisplay: EnumDescription
+  statusDisplay: EnumDescription
 }
 
 type ExcelExportsListType {
@@ -1461,6 +1480,15 @@ type FigureType {
   sources(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], ordering: String): OrganizationListType
   figureReviews: [ReviewType!]!
   reportSet: [ReportType!]!
+  getQuantifier: EnumDescription
+  unitDisplay: EnumDescription
+  roleDisplay: EnumDescription
+  displacementOccurredDisplay: EnumDescription
+  startDateAccuracyDisplay: EnumDescription
+  endDateAccuracyDisplay: EnumDescription
+  categoryDisplay: EnumDescription
+  termDisplay: EnumDescription
+  figureCauseDisplay: EnumDescription
   figureTypology: String
 }
 
@@ -1888,6 +1916,8 @@ type OSMNameType {
   moved: Boolean!
   reviews: [ReviewType!]!
   figures: [FigureType!]!
+  accuracyDisplay: EnumDescription
+  identifierDisplay: EnumDescription
 }
 
 enum OSM_ACCURACY {
@@ -1936,6 +1966,7 @@ type OrganizationKindObjectType {
   name: String!
   reliability: ORGANIZATION_RELIABILITY
   organizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
+  reliabilityDisplay: EnumDescription
 }
 
 input OrganizationKindUpdateInputType {
@@ -1979,6 +2010,7 @@ type OrganizationType {
   publishedContextualUpdates: [ContextualUpdateType!]!
   sourcedReport: [ReportType!]!
   publishedReport: [ReportType!]!
+  categoryDisplay: EnumDescription
 }
 
 input OrganizationUpdateInputType {
@@ -2118,6 +2150,8 @@ type ParkedItemType {
   sourceUuid: String
   metaData: JSONString
   entry: EntryType
+  statusDisplay: EnumDescription
+  sourceDisplay: EnumDescription
 }
 
 input ParkedItemUpdateInputType {
@@ -2137,6 +2171,7 @@ input ParkedItemUpdateInputType {
 
 type PermissionsType {
   action: PERMISSION_ACTION!
+  actionDisplay: EnumDescription
   entities: [PERMISSION_ENTITY!]!
 }
 
@@ -2153,6 +2188,7 @@ type PortfolioType {
   role: USER_ROLE!
   monitoringSubRegion: MonitoringSubRegionType
   country: CountryType
+  roleDisplay: EnumDescription
   permissions: [PermissionsType!]
 }
 
@@ -2394,6 +2430,7 @@ type ReportGenerationType {
   completedAt: DateTime
   includeHistory: Boolean!
   approvals(isApproved: Boolean, ordering: String): ReportApprovalListType
+  statusDisplay: EnumDescription
   isApproved: Boolean
 }
 
@@ -2446,7 +2483,7 @@ type ReportType {
   filterFigureRoles: [ROLE!]
   filterFigureTags: [FigureTagType!]!
   filterEntryArticleTitle: String
-  filterFigureCrisisTypes: [CRISIS_TYPE!]
+  filterFigureCrisisTypes: EnumDescription
   filterEntryReviewStatus: [Int!]
   filterFigureGlideNumber: [String]
   filterEntryCreatedBy: [UserType!]!
@@ -2479,6 +2516,7 @@ type ReportType {
   isPublic: Boolean!
   comments(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, body: String, report: ID, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
   generations(report: ID, ordering: String): ReportGenerationListType
+  filterFigureRolesDisplay: EnumDescription
   countriesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): CountryListType
   eventsReport(id: String, page: Int = 1, ordering: String, pageSize: Int): EventListType
   entriesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
@@ -2486,6 +2524,8 @@ type ReportType {
   crisesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): CrisisListType
   totalDisaggregation: ReportTotalsType!
   lastGeneration: ReportGenerationType
+  generatedFromDisplay: EnumDescription
+  filterFigureTermsDisplay: EnumDescription
 }
 
 input ReportUpdateInputType {
@@ -2662,6 +2702,7 @@ type ReviewType {
   age: String
   geoLocation: OSMNameType
   comment: ReviewCommentType
+  valueDisplay: EnumDescription
 }
 
 type SignOffReport {
@@ -2691,6 +2732,7 @@ type SourcePreviewType {
   status: PREVIEW_STATUS
   remark: String
   contextualUpdate: ContextualUpdateType
+  statusDisplay: EnumDescription
 }
 
 input SummaryCreateInputType {
@@ -2925,6 +2967,7 @@ type UserType {
   createdEntry(filterEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterEntryHasReviewComments: Boolean, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EntryListType
   portfolios(monitoringSubRegion_In: ID, country_In: ID, roleIn: [String!], page: Int = 1, ordering: String, pageSize: Int): PortfolioListType
   portfolioRole: USER_ROLE
+  portfolioRoleDisplay: EnumDescription
   permissions: [PermissionsType!]
   isAdmin: Boolean
 }

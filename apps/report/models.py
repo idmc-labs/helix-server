@@ -16,7 +16,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django_enumfield import enum
 
-from  utils.common import get_string_from_list
+from utils.common import get_string_from_list
 from apps.contrib.models import MetaInformationArchiveAbstractModel
 from apps.country.models import (
     Country,
