@@ -46,6 +46,8 @@ class AttachmentType(DjangoObjectType):
     attachment_for_display = EnumDescription(source='get_attachment_for_display')
 
     def resolve_attachment(root, info, **kwargs):
+        if root.attachment.name.startswith('http://') or root.attachment.name.startswith('https://'):
+            return root.attachment.name
         return info.context.request.build_absolute_uri(root.attachment.url)
 
 

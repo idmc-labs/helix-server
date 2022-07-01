@@ -233,6 +233,9 @@ class SourcePreviewType(DjangoObjectType):
 
     def resolve_pdf(root, info, **kwargs):
         if root.status == SourcePreview.PREVIEW_STATUS.COMPLETED:
+            print(root.pdf.__dict__)
+            if root.pdf.name.startswith('http://') or root.pdf.name.startswith('https://'):
+                return root.pdf.name
             return info.context.request.build_absolute_uri(root.pdf.url)
         return None
 
