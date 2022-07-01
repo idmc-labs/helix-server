@@ -136,6 +136,12 @@ class CommonFigureValidationMixin:
         return errors
 
     def validate_disaggregated_sum_against_reported(self, attrs, fields, verbose_names):
+
+        def _format_message(fields, verbose_names):
+            if len(fields) > 1:
+                return f'Sum of {verbose_names} figures is greater than reported.'
+            return f'{verbose_names} figures is greater than reported.'
+
         errors = OrderedDict()
         reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
         disaggregated_sum = 0
@@ -143,7 +149,7 @@ class CommonFigureValidationMixin:
             disaggregated_sum += attrs.get(field, getattr(self.instance, field, 0)) or 0
         if disaggregated_sum > reported:
             errors.update({
-                field: f'Sum of {verbose_names} figures is greater than reported.'
+                field: _format_message(fields, verbose_names)
                 for field in fields
             })
         return errors
