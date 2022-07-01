@@ -3,6 +3,7 @@ from datetime import date
 import logging
 from typing import Optional
 from uuid import uuid4
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.aggregates.general import StringAgg, ArrayAgg
 from django.contrib.postgres.fields import ArrayField, JSONField
@@ -26,7 +27,6 @@ from apps.contrib.commons import DATE_ACCURACY
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
 from apps.common.enums import GENDER_TYPE
-
 logger = logging.getLogger(__name__)
 User = get_user_model()
 CANNOT_UPDATE_MESSAGE = _('You cannot sign off the entry.')
@@ -634,12 +634,12 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__name='Event Name',
             sources__name='Sources',
             centroid='Centroid',
-            centroid_lat='Centroid Lat',
-            centroid_lon='Centroid Lon',
+            centroid_lat='Lat',  # Newly added but related to centroid
+            centroid_lon='Lon',  # Newly added but related to centroid
             include_idu='Include in IDU',
             excerpt_idu='Excerpt IDU',
             publishers_name='Publishers',
-            entry__url='Link',
+            figure_link='Link',
             violence__name='Violence',
             violence_sub_type__name='Violence Sub Type',
             disaster_type__name='Disaster Type',
@@ -657,6 +657,8 @@ class Figure(MetaInformationArchiveAbstractModel,
             disaggregation_location_non_camp='Location: Non-Camp',
             # Extra added fields
             old_id='Old Id',
+            entry__url='Source url',
+            entry_link='Entry link',
             country__name='Country',
             entry__old_id='Entry Old Id',
             unit='Unit',
@@ -664,7 +666,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             household_size='Household Size',
             category='Figure Category',
             displacement_occurred='Displacement Occurred',
-            geolocations='Geolocations (City)',
+            geolocations='Locations names',
             is_housing_destruction='Is housing destruction',
             tags__name='Tags',
             calculation_logic='Analysis and Calculation Logic',
@@ -683,8 +685,13 @@ class Figure(MetaInformationArchiveAbstractModel,
         ).annotate(
             centroid_lat=Avg('geo_locations__lat'),
             centroid_lon=Avg('geo_locations__lon'),
+            entry_link=Concat(Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id')),
+            figure_link=Concat(
+                Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id'),
+                Value('/?id='), F('id'), Value('#/figures-and-analysis')
+            ),
             geolocations=StringAgg(
-                'geo_locations__city',
+                'geo_locations__display_name',
                 '; ',
                 filter=~Q(
                     Q(geo_locations__city__isnull=True) | Q(geo_locations__city='')
