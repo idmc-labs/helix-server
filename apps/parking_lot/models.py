@@ -38,7 +38,7 @@ class ParkedItem(MetaInformationAbstractModel):
         null=True,
     )
     title = models.TextField(verbose_name=_('Title'))
-    url = models.URLField(verbose_name=_('URL'))
+    url = models.URLField(verbose_name=_('URL'), max_length=2000)
     assigned_to = models.ForeignKey('users.User', verbose_name=_('Assigned To'),
                                     related_name='assigned_parked_items',
                                     on_delete=models.SET_NULL,

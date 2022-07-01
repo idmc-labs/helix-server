@@ -38,7 +38,7 @@ class ResourceGroup(MetaInformationArchiveAbstractModel):
 
 class Resource(MetaInformationArchiveAbstractModel):
     name = models.CharField(verbose_name=_('Name'), max_length=256)
-    url = models.URLField(verbose_name=_('URL'), max_length=256)
+    url = models.URLField(verbose_name=_('URL'), max_length=2000)
     group = models.ForeignKey('ResourceGroup', verbose_name=_('Resource Group'),
                               related_name='resources', on_delete=models.SET_NULL,
                               blank=True, null=True)
