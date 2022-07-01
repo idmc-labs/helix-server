@@ -12,8 +12,8 @@ from helix.celery import app as celery_app
 # from helix.settings import QueuePriority
 
 logger = logging.getLogger(__name__)
-PDF_TASK_TIMEOUT = 30  # seconds
-SELENIUM_TIMEOUT = math.floor(PDF_TASK_TIMEOUT * 0.8)
+PDF_TASK_TIMEOUT = 60 * 3  # seconds
+SELENIUM_TIMEOUT = math.floor(PDF_TASK_TIMEOUT / 3)
 
 
 def __get_pdf_from_html(path, timeout=SELENIUM_TIMEOUT, print_options={}):
