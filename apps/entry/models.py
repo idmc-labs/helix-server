@@ -41,10 +41,10 @@ class OSMName(UUIDAbstractModel, models.Model):
         POINT = 4
 
         __labels__ = {
-            ADM0: _('Country/territory (ADM0)'),
-            ADM1: _('State/Region/Province (ADM1)'),
-            ADM2: _('District/Zone/Department (ADM2)'),
-            ADM3: _('County/City/Town/Village/Woreda (ADM3)'),
+            ADM0: _('ADM0'),
+            ADM1: _('ADM1'),
+            ADM2: _('ADM2'),
+            ADM3: _('ADM3'),
             POINT: _('Point'),
         }
 
