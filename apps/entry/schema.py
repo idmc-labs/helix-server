@@ -7,6 +7,7 @@ from graphene_django import DjangoObjectType
 from graphene_django_extras.converter import convert_django_field
 from graphene_django_extras import DjangoObjectField
 import logging
+from utils.graphene.enums import EnumDescription
 
 from apps.entry.enums import (
     GenderTypeGrapheneEnum,
@@ -57,6 +58,7 @@ class DisaggregatedAgeType(DjangoObjectType):
     age_from = graphene.Field(graphene.Int)
     age_to = graphene.Field(graphene.Int)
     sex = graphene.Field(GenderTypeGrapheneEnum)
+    sex_display = EnumDescription(source='get_sex_display')
 
 
 class DisaggregatedAgeListType(CustomDjangoListObjectType):
@@ -78,7 +80,9 @@ class OSMNameType(DjangoObjectType):
         model = OSMName
 
     accuracy = graphene.Field(OSMAccuracyGrapheneEnum)
+    accuracy_display = EnumDescription(source='get_accuracy_display')
     identifier = graphene.Field(IdentifierGrapheneEnum)
+    identifier_display = EnumDescription(source='get_identifier_display')
 
 
 class OSMNameListType(CustomDjangoListObjectType):
@@ -98,9 +102,13 @@ class FigureType(DjangoObjectType):
         model = Figure
 
     quantifier = graphene.Field(QuantifierGrapheneEnum)
+    get_quantifier = EnumDescription(source='get_quantifier_display')
     unit = graphene.Field(UnitGrapheneEnum)
+    unit_display = EnumDescription(source='get_unit_display')
     role = graphene.Field(RoleGrapheneEnum)
+    role_display = EnumDescription(source='get_role_display')
     displacement_occurred = graphene.Field(DisplacementOccurredGrapheneEnum)
+    displacement_occurred_display = EnumDescription(source='get_displacement_occurred_display')
     disaggregation_age = DjangoPaginatedListObjectField(
         DisaggregatedAgeListType, related_name="disaggregation_age"
     )
@@ -110,10 +118,15 @@ class FigureType(DjangoObjectType):
         related_name='geo_locations',
     )
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
+    start_date_accuracy_display = EnumDescription(source='get_start_date_accuracy_display')
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
+    end_date_accuracy_display = EnumDescription(source='get_end_date_accuracy_display')
     category = graphene.Field(FigureCategoryTypeEnum)
+    category_display = EnumDescription(source='get_category_display')
     term = graphene.Field(FigureTermsEnum)
+    term_display = EnumDescription(source='get_term_display')
     figure_cause = graphene.Field(CrisisTypeGrapheneEnum)
+    figure_cause_display = EnumDescription(source='get_figure_cause_display')
     other_sub_type = graphene.Field(OtherSubTypeObjectType)
     figure_typology = graphene.String()
     sources = DjangoPaginatedListObjectField(
@@ -161,6 +174,7 @@ class EntryType(DjangoObjectType):
             reverse_related_name='review_entries',
         ))
     review_status = graphene.Field(EntryReviewerGrapheneEnum)
+    review_status_display = EnumDescription(source='get_review_status_display')
     review_comments = graphene.Dynamic(
         lambda: DjangoPaginatedListObjectField(
             get_type('apps.review.schema.ReviewCommentListType'),
@@ -212,6 +226,7 @@ class SourcePreviewType(DjangoObjectType):
         exclude_fields = ('entry', 'token')
 
     status = graphene.Field(PreviewStatusGrapheneEnum)
+    status_display = EnumDescription(source='get_status_display')
 
     def resolve_pdf(root, info, **kwargs):
         if root.status == SourcePreview.PREVIEW_STATUS.COMPLETED:
@@ -224,6 +239,7 @@ class EntryReviewerType(DjangoObjectType):
         model = EntryReviewer
 
     status = graphene.Field(EntryReviewerGrapheneEnum)
+    status_display = EnumDescription(source='get_status_display')
 
 
 class EntryReviewerListType(CustomDjangoListObjectType):

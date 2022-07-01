@@ -16,6 +16,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django_enumfield import enum
 
+from utils.common import get_string_from_list
 from apps.contrib.models import MetaInformationArchiveAbstractModel
 from apps.country.models import (
     Country,
@@ -228,7 +229,7 @@ class Report(MetaInformationArchiveAbstractModel,
 
         def transform_filter_figure_category(figure_categories):
             if figure_categories:
-                return '; '.join([category.name if category else "" for category in figure_categories])
+                return get_string_from_list([category.name if category else "" for category in figure_categories])
             return ''
 
         def transformer(datum):

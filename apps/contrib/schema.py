@@ -4,6 +4,7 @@ from graphene_django_extras import (
     DjangoObjectField,
     PageGraphqlPagination,
 )
+from utils.graphene.enums import EnumDescription
 
 from apps.contrib.models import Attachment, ExcelDownload
 from apps.contrib.filters import ExcelExportFilter
@@ -21,7 +22,9 @@ class ExcelExportType(DjangoObjectType):
         model = ExcelDownload
 
     download_type = graphene.Field(DownloadTypeGrapheneEnum)
+    download_type_display = EnumDescription(source='get_download_type_display')
     status = graphene.Field(ExcelGenerationStatusGrapheneEnum)
+    status_display = EnumDescription(source='get_status_display')
 
     def resolve_file(root, info, **kwargs):
         if not getattr(root, 'file', None):
@@ -40,6 +43,7 @@ class AttachmentType(DjangoObjectType):
         model = Attachment
 
     attachment_for = graphene.Field(AttachmentForGrapheneEnum)
+    attachment_for_display = EnumDescription(source='get_attachment_for_display')
 
     def resolve_attachment(root, info, **kwargs):
         return info.context.request.build_absolute_uri(root.attachment.url)

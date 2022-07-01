@@ -2,6 +2,7 @@ import graphene
 from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
+from utils.graphene.enums import EnumDescription
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.contextualupdate.models import ContextualUpdate
@@ -16,6 +17,7 @@ class ContextualUpdateType(DjangoObjectType):
         model = ContextualUpdate
 
     crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
+    crisis_types_display = EnumDescription(source='get_crisis_types_display')
     sources = graphene.Dynamic(
         lambda: DjangoPaginatedListObjectField(
             get_type('apps.organization.schema.OrganizationListType'),

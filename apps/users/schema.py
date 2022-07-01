@@ -8,6 +8,7 @@ from graphene.types.generic import GenericScalar
 from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
+from utils.graphene.enums import EnumDescription
 
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
@@ -26,6 +27,7 @@ EntryReviewerListType: CustomDjangoListObjectType = get_type('apps.entry.schema.
 
 class PermissionsType(ObjectType):
     action = Field(PermissionActionEnum, required=True)
+    action_display = EnumDescription(source='get_action_display')
     entities = graphene.List(graphene.NonNull(PermissionModelEnum), required=True)
 
 
@@ -34,6 +36,7 @@ class PortfolioType(DjangoObjectType):
         model = Portfolio
 
     role = Field(PermissionRoleEnum, required=True)
+    role_display = EnumDescription(source='get_role_display')
     permissions = graphene.List(graphene.NonNull(PermissionsType))
 
 
@@ -74,6 +77,7 @@ class UserType(DjangoObjectType):
                                                 ),
                                                 related_name='portfolios')
     portfolio_role = Field(PermissionRoleEnum)
+    portfolio_role_display = EnumDescription(source='get_portfolio_role_display')
     permissions = graphene.List(graphene.NonNull(PermissionsType))
     is_admin = graphene.Boolean()
 

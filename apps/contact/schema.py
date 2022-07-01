@@ -1,6 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
+from utils.graphene.enums import EnumDescription
 
 from apps.contact.enums import DesignationGrapheneEnum
 from apps.entry.enums import GenderTypeGrapheneEnum
@@ -40,7 +41,9 @@ class ContactType(DjangoObjectType):
 
     full_name = graphene.Field(graphene.String)
     designation = graphene.Field(DesignationGrapheneEnum)
+    designation_display = EnumDescription(source='get_designation_display')
     gender = graphene.Field(GenderTypeGrapheneEnum)
+    gender_display = EnumDescription(source='get_gender_display')
     communications = DjangoPaginatedListObjectField(
         CommunicationListType,
         pagination=PageGraphqlPaginationWithoutCount(

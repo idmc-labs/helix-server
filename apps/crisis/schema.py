@@ -1,6 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
+from utils.graphene.enums import EnumDescription
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.filters import CrisisFilter
@@ -24,6 +25,7 @@ class CrisisType(DjangoObjectType):
         model = Crisis
 
     crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
+    crisis_type_display = EnumDescription(source='get_crisis_type_display')
     events = DjangoPaginatedListObjectField(
         EventListType,
         pagination=PageGraphqlPaginationWithoutCount(
@@ -35,7 +37,9 @@ class CrisisType(DjangoObjectType):
     total_stock_idp_figures = graphene.Field(graphene.Int)
     total_flow_nd_figures = graphene.Field(graphene.Int)
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
+    start_date_accuracy_display = EnumDescription(source='get_start_date_accuracy_display')
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
+    end_date_accuracy_display = EnumDescription(source='get_end_date_accuracy_display')
     review_count = graphene.Field(CrisisReviewCountType)
     event_count = graphene.Field(graphene.Int)
 

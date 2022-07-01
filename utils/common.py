@@ -66,3 +66,7 @@ def generate_storage_url_from_path(file_path):
     # instance of the current storage class
     media_storage = get_storage_class()()
     return media_storage.url(file_path)
+
+
+def get_string_from_list(list_of_string):
+    return '; '.join(filter(None, list_of_string))

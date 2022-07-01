@@ -293,6 +293,8 @@ class Country(models.Model):
             def __init__(self, user):
                 self.user = user
 
+        year = filters.get('year', None)
+        str_year = filters.get('year', '')
         headers = OrderedDict(
             id='Id',
             geographical_group__name='Geographical Group',
@@ -309,13 +311,12 @@ class Country(models.Model):
             entries_count='Entries Count',
             figures_count='Figures Count',
             **{
-                cls.IDP_DISASTER_ANNOTATE: f'IDPs Disaster Figure {timezone.now().year}',
-                cls.ND_CONFLICT_ANNOTATE: f'ND Conflict Figure {timezone.now().year}',
-                cls.IDP_CONFLICT_ANNOTATE: f'IDPs Conflict Figure {timezone.now().year}',
-                cls.ND_DISASTER_ANNOTATE: f'ND Disaster Figure {timezone.now().year}',
+                cls.IDP_DISASTER_ANNOTATE: f'IDPs Disaster Figure {str_year}',
+                cls.ND_CONFLICT_ANNOTATE: f'ND Conflict Figure {str_year}',
+                cls.IDP_CONFLICT_ANNOTATE: f'IDPs Conflict Figure {str_year}',
+                cls.ND_DISASTER_ANNOTATE: f'ND Disaster Figure {str_year}',
             }
         )
-        year = filters.get('year', None)
         data = CountryFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),

@@ -5,6 +5,7 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django_enumfield import enum
+from utils.common import get_string_from_list
 
 from apps.contrib.models import (
     MetaInformationAbstractModel,
@@ -312,7 +313,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         def format_glide_numbers(glide_numbers):
             if not glide_numbers:
                 return ''
-            return '; '.join(str(glide_number) for glide_number in glide_numbers)
+            return get_string_from_list(str(glide_number) for glide_number in glide_numbers)
 
         def transformer(datum):
             return {

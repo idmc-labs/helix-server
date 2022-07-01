@@ -1,6 +1,7 @@
 import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
+from utils.graphene.enums import EnumDescription
 
 from apps.contact.schema import ContactListType
 from apps.organization.models import Organization, OrganizationKind
@@ -18,6 +19,7 @@ class OrganizationType(DjangoObjectType):
         model = Organization
 
     category = graphene.Field(OrganizationCategoryTypeGrapheneEnum)
+    category_display = EnumDescription(source='get_category_display')
     contacts = DjangoPaginatedListObjectField(ContactListType,
                                               pagination=PageGraphqlPaginationWithoutCount(
                                                   page_size_query_param='pageSize'
@@ -39,6 +41,7 @@ class OrganizationKindObjectType(DjangoObjectType):
                                                        page_size_query_param='pageSize'
                                                    ))
     reliability = graphene.Field(OrganizationReliablityEnum)
+    reliability_display = EnumDescription(source='get_reliability_display_display')
 
 
 class OrganizationKindListType(CustomDjangoListObjectType):
