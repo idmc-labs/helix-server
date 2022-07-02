@@ -42,16 +42,18 @@ variables:                    # Pass environment variables as key value pairs.
 # secrets:                      # Pass secrets from AWS Systems Manager (SSM) Parameter Store.
 
 secrets:
-  DJANGO_SECRET_KEY: /copilot/helix/${COPILOT_ENVIRONMENT_NAME}/secrets/DJANGO_SECRET_KEY
-  FRONTEND_BASE_URL: /copilot/helix/${COPILOT_ENVIRONMENT_NAME}/secrets/FRONTEND_BASE_URL
-  HCAPTCHA_SECRET: /copilot/helix/${COPILOT_ENVIRONMENT_NAME}/secrets/HCAPTCHA_SECRET
-  SENTRY_DSN: /copilot/helix/${COPILOT_ENVIRONMENT_NAME}/secrets/SENTRY_DSN
+  DJANGO_SECRET_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/DJANGO_SECRET_KEY
+  FRONTEND_BASE_URL: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/FRONTEND_BASE_URL
+  HCAPTCHA_SECRET: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/HCAPTCHA_SECRET
+  CSRF_COOKIE_DOMAIN: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/CSRF_COOKIE_DOMAIN
+  SESSION_COOKIE_DOMAIN: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/SESSION_COOKIE_DOMAIN
+  SENTRY_DSN: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/SENTRY_DSN
 
 # You can override any of the values defined above by environment.
 environments:
   staging:
     http:
-      alias: api.helix.staging.idmcdb.org
+      alias: helix-api.staging.tools.idmcdb.org
     cpu: 256
     memory: 1024
     count:
@@ -68,4 +70,3 @@ environments:
       cpu_percentage: 80
       memory_percentage: 80
       requests: 1000
-

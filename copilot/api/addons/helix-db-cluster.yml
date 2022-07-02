@@ -102,6 +102,7 @@ Resources:
       SecretId: !Ref helixdbclusterAuroraSecret
       TargetId: !Ref helixdbclusterDBCluster
       TargetType: AWS::RDS::DBCluster
+
   # NOTE: this ssm bears the ARN for db secret, which cannot be readily exported
   helixdbclusterSecretParam:
     Type: AWS::SSM::Parameter
@@ -109,6 +110,7 @@ Resources:
       Name: !Sub ${App}-${Env}-auroraSecret
       Type: String
       Value: !Ref helixdbclusterAuroraSecret
+
 Outputs:
   helixdbclusterSecret: # injected as HELIXDBCLUSTER_SECRET environment variable by Copilot.
     Description: "The JSON secret that holds the database username and password. Fields are 'host', 'port', 'dbname', 'username', 'password', 'dbClusterIdentifier' and 'engine'"
