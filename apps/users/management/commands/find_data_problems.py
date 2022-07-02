@@ -163,6 +163,11 @@ settings = {
         'code': 'E13',
         'remarks': 'The document is not defined, but the parent is defined in the database',
     },
+    'ws23': {
+        'title': 'Masterfacts that do not have any subfacts',
+        'code': 'E14',
+        'remarks': '',
+    },
 }
 
 
@@ -377,11 +382,11 @@ class Command(BaseCommand):
         # Recommended flow figures not included in reports
         ws10 = wb.create_sheet(settings['ws10']['code'])
         ws10.append([settings['ws10']['title']])
-        ws10.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
+        ws10.append(["Masterfact ID", "Masterfact URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
         # Recommended flow figures added in reports
         ws11 = wb.create_sheet(settings['ws11']['code'])
         ws11.append([settings['ws11']['title']])
-        ws11.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
+        ws11.append(["Masterfact ID", "Masterfact URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
 
         missing_stock_row = 0
         added_stock_row = 0
@@ -660,6 +665,27 @@ class Command(BaseCommand):
                 get_document_url(id),
             )
 
+        # Events with small or large dates
+        ws23 = wb.create_sheet(settings['ws23']['code'])
+        ws23.append([settings['ws23']['title']])
+        ws23.append(["Masterfact ID", "Masterfact URL", "Report ID", "Report URL", "Length"])
+        reports_with_no_subfacts = Report.objects.all()
+        reports_with_no_subfacts_count = 0
+
+        for row, report in enumerate(reports_with_no_subfacts):
+            length = len(report.attached_figures)
+            add_row(
+                ws23,
+                row + 3,
+                report.old_id,
+                get_fact_url(report.old_id),
+                report.id,
+                get_report_url(report.id),
+                length,
+            )
+            if length < 1:
+                reports_with_no_subfacts_count += 1
+
         # Summary page
         ws0.title = "summary"
         ws0.append(["Code", "Title", "Count", "Remarks"])
@@ -781,6 +807,12 @@ class Command(BaseCommand):
             [
                 settings['ws22']['code'], settings['ws22']['title'],
                 master_facts_qs.count(), settings['ws22']['remarks']
+            ]
+        )
+        ws0.append(
+            [
+                settings['ws23']['code'], settings['ws23']['title'],
+                reports_with_no_subfacts_count, settings['ws23']['remarks']
             ]
         )
         # Make sure generated directory exists
