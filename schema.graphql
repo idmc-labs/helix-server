@@ -2717,7 +2717,7 @@ type SourcePreviewType {
   pdf: String
   status: PREVIEW_STATUS
   remark: String
-  contextualUpdate: ContextualUpdateType
+  contextualUpdate: [ContextualUpdateType!]!
   statusDisplay: EnumDescription
 }
 
