@@ -16,9 +16,9 @@ class ResourceGroupType(DjangoObjectType):
 
 class Query:
     resource = DjangoObjectField(ResourceType)
-    resource_list = graphene.List(ResourceType)
+    resource_list = graphene.List(graphene.NonNull(ResourceType))
     resource_group = DjangoObjectField(ResourceType)
-    resource_group_list = graphene.List(ResourceGroupType)
+    resource_group_list = graphene.List(graphene.NonNull(ResourceGroupType))
 
     def resolve_resource_list(root, info, **kwargs):
         return Resource.objects.filter(created_by=info.context.user)

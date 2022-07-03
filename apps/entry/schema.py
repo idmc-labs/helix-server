@@ -190,7 +190,7 @@ class EntryType(DjangoObjectType):
     is_reviewed = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
     is_under_review = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
     is_signed_off = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
-    figures = graphene.List(FigureType)
+    figures = graphene.List(graphene.NonNull(FigureType))
 
     # def resolve_total_stock_idp_figures(root, info, **kwargs):
     #     NULL = 'null'
