@@ -1,5 +1,40 @@
 version: '3.4'
 
+
+x-server: &base_server_setup
+  environment: &base_server_environment
+    HELIX_ENVIRONMENT: development
+    DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
+    ENABLE_DEBUG: ${ENABLE_DEBUG:-True}  # Used for DEBUG TOOLBAR, TODO: REMOVE
+    DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-STATIC-INSECURE-KEY-PLEASE-DONT-USE-IN-PRODUCTION}
+    DJANGO_ALLOWED_HOST: ${DJANGO_ALLOWED_HOST:-localhost,host.docker.internal}
+    HCAPTCHA_SECRET: ${HCAPTCHA_SECRET:-0x0000000000000000000000000000000000000000}
+    FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3080}
+    # Database (Default from db container)
+    POSTGRES_HOST: ${POSTGRES_HOST:-db}
+    POSTGRES_DB: ${POSTGRES_DB:-postgres}
+    POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+    POSTGRES_USER: ${POSTGRES_USER:-postgres}
+    # REDIS (Default from redis container)
+    DJANGO_CACHE_REDIS_URL: ${DJANGO_CACHE_REDIS_URL:-redis://redis:6379/1}
+    CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+    CELERY_RESULT_BACKEND_URL: ${CELERY_RESULT_BACKEND_URL:-redis://redis:6379/1}
+    # Cookie config
+    SESSION_COOKIE_DOMAIN: ${SESSION_COOKIE_DOMAIN:-localhost}
+    CSRF_COOKIE_DOMAIN: ${CSRF_COOKIE_DOMAIN:-localhost}
+    CORS_ORIGIN_REGEX_WHITELIST: ${CORS_ORIGIN_REGEX_WHITELIST:-^http://localhost:[\d\-]+$$|^http://localhost$$}
+    # MISC
+    HCAPTCHA_SECRET: ${HCAPTCHA_SECRET:-0x0000000000000000000000000000000000000000}
+  volumes:
+    - ./:/code
+    - ipython_data_local:/root/.ipython/profile_default   # persist ipython data, including ipython history
+  # restart: 'on-failure'
+  depends_on:
+    - db
+    - redis
+
+
 services:
   db:
     image: postgres:11
@@ -16,37 +51,24 @@ services:
       - helix-redis-data:/data
 
   server:
+    <<: *base_server_setup
     image: helix/helix-server:latest
     build:
       context: ./
       dockerfile: api.Dockerfile
-      cache_from:
-        - helix/helix-server:latest
-    env_file:
-      - .env
     command: python manage.py runserver 0.0.0.0:9000
-    volumes:
-      - ./:/code
     ports:
       - '9000:9000'
-    depends_on:
-      - db
-      - redis
 
   celery:
+    <<: *base_server_setup
     image: helix/helix-worker:latest
-    restart: 'on-failure'
     build:
       context: ./
       dockerfile: worker.Dockerfile
-    env_file:
-      - .env
-    environment:
-      - DEBUG=False
     command: ./deploy/scripts/run_tasks.sh
-    volumes:
-      - ./:/code
 
 volumes:
   helix-db-data:
   helix-redis-data:
+  ipython_data_local:

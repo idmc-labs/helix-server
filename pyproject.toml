@@ -40,6 +40,7 @@ sentry-sdk = ">=0.10,<0.20"
 six = "1.15"
 turfpy = "0.0.6"
 uWSGI = "*"
+django-environ = "^0.8.1"
 
 [tool.poetry.dev-dependencies]
 pytest-django = "3.9.0"

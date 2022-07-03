@@ -8,28 +8,39 @@ Parameters:
   Name:
     Type: String
     Description: The name of the service, job, or workflow being deployed.
+
 Resources:
-  helixs3:
+  S3MediaBucket:
     Metadata:
-      'aws:copilot:description': 'An Amazon S3 bucket to store and retrieve objects for helix-s3'
+      'aws:copilot:description': 'An Amazon S3 bucket to store and retrieve objects for Media'
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
     Properties:
+      BucketName: !Sub '${App}-${Env}-helix-media'
       AccessControl: PublicRead
       BucketEncryption:
         ServerSideEncryptionConfiguration:
         - ServerSideEncryptionByDefault:
             SSEAlgorithm: AES256
-      BucketName: !Sub '${App}-${Env}-helix-s3'
       PublicAccessBlockConfiguration:
         # NOTE: Make the bucket public
         BlockPublicAcls: false
         BlockPublicPolicy: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - HEAD
+            AllowedOrigins:
+              - "https://*.idmcdb.org"
+            MaxAge: 3600
 
-  helixs3BucketPolicy:
+  S3MediaBucketPolicy:
     Metadata:
       'aws:copilot:description': 'A bucket policy to deny unencrypted access to the bucket and its contents'
     Type: AWS::S3::BucketPolicy
-    DeletionPolicy: Retain
     Properties:
       PolicyDocument:
         Version: 2012-10-17
@@ -41,27 +52,27 @@ Resources:
             Action:
               - s3:GetObject
             Resource:
-              - !Sub ${ helixs3.Arn}/*
+              - !Sub ${ S3MediaBucket.Arn}/*
           - Sid: ForceHTTPS
             Effect: Deny
             Principal: '*'
             Action: 's3:*'
             Resource:
-              - !Sub ${ helixs3.Arn}/*
-              - !Sub ${ helixs3.Arn}
+              - !Sub ${ S3MediaBucket.Arn}/*
+              - !Sub ${ S3MediaBucket.Arn}
             Condition:
               Bool:
                 "aws:SecureTransport": false
-      Bucket: !Ref helixs3
+      Bucket: !Ref S3MediaBucket
 
-  helixs3AccessPolicy:
+  S3MediaAccessPolicy:
     Metadata:
-      'aws:copilot:description': 'An IAM ManagedPolicy for your service to access the helix-s3 bucket'
+      'aws:copilot:description': 'An IAM ManagedPolicy for your service to access the Media bucket'
     Type: AWS::IAM::ManagedPolicy
     Properties:
       Description: !Sub
         - Grants CRUD access to the S3 bucket ${Bucket}
-        - { Bucket: !Ref helixs3 }
+        - { Bucket: !Ref S3MediaBucket }
       PolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -74,20 +85,20 @@ Resources:
               - s3:PutObjectTagging
               - s3:DeleteObject
               - s3:RestoreObject
-            Resource: !Sub ${ helixs3.Arn}/*
+            Resource: !Sub ${ S3MediaBucket.Arn}/*
           - Sid: S3ListAction
             Effect: Allow
             Action: s3:ListBucket
-            Resource: !Sub ${ helixs3.Arn}
+            Resource: !Sub ${ S3MediaBucket.Arn}
 
 Outputs:
   # NOTE: making this bucket environment var uniform across stack
-  copilotS3BucketName:
-    Description: "The name of a user-defined bucket."
-    Value: !Ref helixs3
+  S3BucketName:
+    Value: !Ref S3MediaBucket
     # NOTE: export the name so it can be used elsewhere in the stack
     Export:
-      Name: !Sub ${App}-${Env}-S3BucketName
-  helixs3AccessPolicy:
+      Name: !Sub ${App}-${Env}-S3MediaBucketName
+
+  S3MediaAccessPolicy:
     Description: "The IAM::ManagedPolicy to attach to the task role"
-    Value: !Ref helixs3AccessPolicy
+    Value: !Ref S3MediaAccessPolicy

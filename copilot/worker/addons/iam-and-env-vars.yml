@@ -46,13 +46,13 @@ Resources:
               - s3:RestoreObject
             Resource: !Sub
               - arn:aws:s3:::${BucketArn}/*
-              - { BucketArn: { 'Fn::ImportValue': !Sub '${App}-${Env}-S3BucketName' }}
+              - { BucketArn: { 'Fn::ImportValue': !Sub '${App}-${Env}-S3MediaBucketName' }}
           - Sid: S3ListAction
             Effect: Allow
             Action: s3:ListBucket
             Resource: !Sub
               - arn:aws:s3:::${BucketArn}
-              - { BucketArn: { 'Fn::ImportValue': !Sub '${App}-${Env}-S3BucketName' }}
+              - { BucketArn: { 'Fn::ImportValue': !Sub '${App}-${Env}-S3MediaBucketName' }}
           - Sid: EmailSenderAction
             Effect: Allow
             Action:
@@ -70,11 +70,17 @@ Outputs:
     Value: !Ref ResourceAccessPolicy
 
   # NOTE: this bucket name env-var is uniform across stack
-  CopilotS3BucketName:
+  S3BucketName:
     Description: "The name of a user-defined bucket."
     Value:
       Fn::ImportValue:
-        !Sub ${App}-${Env}-S3BucketName
+        !Sub ${App}-${Env}-S3MediaBucketName
+
+  # From aip/addons/helix-db-cluster.yml (This will inject HELIXDBCLUSTER_SECRET_ARN)
+  helixdbclusterSecretArn:
+    Value:
+      Fn::ImportValue:
+        !Sub ${App}-${Env}-DatabaseSecret
 
   ElastiCacheAddress: # env var ELASTI_CACHE_ADDRESS
     Description: ElastiCache endpoint address

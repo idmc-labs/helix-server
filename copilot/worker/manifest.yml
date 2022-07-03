@@ -26,18 +26,20 @@ memory: 8192    # Amount of memory in MiB used by the task.
 count: 1       # Number of tasks that should be running in your service.
 exec: true     # Enable running commands in your container.
 
-# Optional fields for more advanced use-cases.
-variables:                    # Pass environment variables as key value pairs.
-  LOG_LEVEL: info
-
+variables:
+  DJANGO_DEBUG: False
+  ENABLE_DEBUG: False
 
 secrets:
+  # Same as api/manifest.yml::secrets
   DJANGO_SECRET_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/DJANGO_SECRET_KEY
+  DJANGO_ALLOWED_HOST: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/DJANGO_ALLOWED_HOST
   FRONTEND_BASE_URL: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/FRONTEND_BASE_URL
   HCAPTCHA_SECRET: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/HCAPTCHA_SECRET
   CSRF_COOKIE_DOMAIN: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/CSRF_COOKIE_DOMAIN
   SESSION_COOKIE_DOMAIN: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/SESSION_COOKIE_DOMAIN
-  HELIXDBCLUSTER_SECRET: helix-${COPILOT_ENVIRONMENT_NAME}-auroraSecret
+  CORS_ORIGIN_REGEX_WHITELIST: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/CORS_ORIGIN_REGEX_WHITELIST
+  SENTRY_DSN: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/SENTRY_DSN
 
 # You can override any of the values defined above by environment.
 environments:
