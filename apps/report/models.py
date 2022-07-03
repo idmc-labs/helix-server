@@ -436,11 +436,11 @@ class ReportApproval(MetaInformationArchiveAbstractModel, models.Model):
 
 
 def full_report_upload_to(instance, filename: str) -> str:
-    return f'generation/full/{uuid4()}/{filename}'
+    return f'report/generation/full/{uuid4()}/{filename}'
 
 
 def snapshot_report_upload_to(instance, filename: str) -> str:
-    return f'generation/snapshot/{uuid4()}/{filename}'
+    return f'report/generation/snapshot/{uuid4()}/{filename}'
 
 
 class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):

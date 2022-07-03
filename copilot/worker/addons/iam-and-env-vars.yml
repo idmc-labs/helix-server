@@ -62,6 +62,16 @@ Resources:
             Resource: '*'
             # NOTE: below did not work, though it is specific
             # Resource: !Sub 'arn:aws:ses:${AWS::Region}:${AWS::AccountId}:identity/idmcdb.org'
+          - Sid: DatabaseAccessActions
+            Effect: Allow
+            Action:
+              - secretsmanager:GetResourcePolicy
+              - secretsmanager:GetSecretValue
+              - secretsmanager:DescribeSecret
+              - secretsmanager:ListSecretVersionIds,
+              - secretsmanager:ListSecrets
+            Resource:
+              - Fn::ImportValue: !Sub '${App}-${Env}-DatabaseSecret'
 
 Outputs:
   # We also need to output the IAM ManagedPolicy so that Copilot can inject it to our ECS task role.

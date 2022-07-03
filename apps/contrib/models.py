@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def global_upload_to(instance, filename: str) -> str:
-    return f'{uuid4()}/{instance.__class__.__name__.lower()}/{uuid4()}/{filename}'
+    return f'contrib/{instance.__class__.__name__.lower()}/{uuid4()}/{uuid4()}/{filename}'
 
 
 class UUIDAbstractModel(models.Model):
@@ -175,7 +175,7 @@ class SourcePreview(MetaInformationAbstractModel):
 
 
 def excel_upload_to(instance, filename: str) -> str:
-    return f'{uuid4()}/{instance.download_type}/{filename}'
+    return f'contrib/excel/{uuid4()}/{instance.download_type}/{filename}'
 
 
 class ExcelDownload(MetaInformationAbstractModel):

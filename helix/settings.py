@@ -284,11 +284,6 @@ USE_L10N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/3.0/howto/static-files/
-
-STATIC_URL = '/static/'
-
 AUTH_USER_MODEL = 'users.User'
 
 # https://docs.graphene-python.org/projects/django/en/latest/settings/
@@ -328,10 +323,6 @@ else:
 
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = 'media/'
-
 # https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-APPEND_SLASH
 APPEND_SLASH = False
 
@@ -362,10 +353,22 @@ INTERNAL_IPS = [
 hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
 INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 
-# Django storage
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/3.0/howto/static-files/
 
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_URL = '/static/'
+STATICFILES_LOCATION = 'static'
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+MEDIAFILES_LOCATION = 'media'
+
+# Django storage
 if 'S3_BUCKET_NAME' in os.environ:
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+    DEFAULT_FILE_STORAGE = 'helix.s3_storages.MediaStorage'
+    STATICFILES_STORAGE = 'helix.s3_storages.StaticStorage'
+
     AWS_STORAGE_BUCKET_NAME = env('S3_BUCKET_NAME')
     AWS_S3_ACCESS_KEY_ID = env('AWS_S3_ACCESS_KEY_ID')
     if AWS_S3_ACCESS_KEY_ID:

@@ -48,6 +48,7 @@ environments:
     memory: 1024
     count:
       range: 1-2
+      spot_from: 1
       cpu_percentage: 80
       memory_percentage: 80
 
