@@ -10,12 +10,12 @@ from apps.crisis.models import Crisis
 class ContextualUpdate(MetaInformationArchiveAbstractModel, models.Model):
     url = models.URLField(verbose_name=_('Source URL'), max_length=2000,
                           blank=True, null=True)
-    preview = models.OneToOneField('contrib.SourcePreview',
-                                   related_name='contextual_update', on_delete=models.SET_NULL,
-                                   blank=True, null=True,
-                                   help_text=_('After the preview has been generated pass its id'
-                                               'along during entry creation, so that during entry '
-                                               'update the preview can be obtained.'))
+    preview = models.ForeignKey('contrib.SourcePreview',
+                                related_name='contextual_update', on_delete=models.SET_NULL,
+                                blank=True, null=True,
+                                help_text=_('After the preview has been generated pass its id'
+                                            ' along during entry creation, so that during entry '
+                                            'update the preview can be obtained.'))
     document = models.ForeignKey('contrib.Attachment', verbose_name='Attachment',
                                  on_delete=models.CASCADE, related_name='+',
                                  null=True, blank=True)
