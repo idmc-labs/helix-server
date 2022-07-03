@@ -738,19 +738,19 @@ class Figure(MetaInformationArchiveAbstractModel,
             return {
                 **datum,
                 'include_idu': 'Yes' if datum['include_idu'] else 'No',
-                'start_date_accuracy': getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
-                'end_date_accuracy': getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
-                'quantifier': getattr(Figure.QUANTIFIER.get(datum['quantifier']), 'name', ''),
-                'unit': getattr(Figure.UNIT.get(datum['unit']), 'name', ''),
-                'role': getattr(Figure.ROLE.get(datum['role']), 'name', ''),
+                'start_date_accuracy': getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'label', ''),
+                'end_date_accuracy': getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'label', ''),
+                'quantifier': getattr(Figure.QUANTIFIER.get(datum['quantifier']), 'label', ''),
+                'unit': getattr(Figure.UNIT.get(datum['unit']), 'label', ''),
+                'role': getattr(Figure.ROLE.get(datum['role']), 'label', ''),
                 'displacement_occurred': getattr(
-                    Figure.DISPLACEMENT_OCCURRED.get(datum['displacement_occurred']), 'name', ''
+                    Figure.DISPLACEMENT_OCCURRED.get(datum['displacement_occurred']), 'label', ''
                 ),
                 'figure_cause': getattr(Crisis.CRISIS_TYPE.get(
-                    datum['figure_cause']), 'name', ''
+                    datum['figure_cause']), 'label', ''
                 ),
                 'geo_locations__identifier': getattr(OSMName.IDENTIFIER.get(
-                    datum['geo_locations__identifier']), 'name', ''
+                    datum['geo_locations__identifier']), 'label', ''
                 ),
             }
 

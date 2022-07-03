@@ -1060,13 +1060,13 @@ type EntryType {
   reviewers(email: String, isActive: Boolean, roleIn: [String!], roleNotIn: [String!], monitoringSubRegionIn: [ID!], monitoringSubRegionNotIn: [ID!], fullName: String, includeInactive: Boolean, id: String, ordering: String): UserListType
   reviewStatus: REVIEW_STATUS
   reviewComments(entry: ID, page: Int = 1, ordering: String, pageSize: Int): ReviewCommentListType
-  figures: [FigureType!]!
   reviewing: [EntryReviewerType!]!
   latestReviews: [ReviewType]
   reviewStatusDisplay: EnumDescription
   isReviewed: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
   isUnderReview: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
   isSignedOff: Boolean! @deprecated(reason: "Please use `reviewStatus` field.")
+  figures: [FigureType]
 }
 
 input EntryUpdateInputType {
@@ -2220,9 +2220,9 @@ type Query {
   reviewComment(id: ID!): ReviewCommentType
   reviewComments(entry: ID, page: Int = 1, ordering: String, pageSize: Int): ReviewCommentListType
   resource(id: ID!): ResourceType
-  resourceList(name_Unaccent_Icontains: String, countries: [String!], page: Int = 1, ordering: String, pageSize: Int): ResourceListType
-  resourceGroup(id: ID!): ResourceGroupType
-  resourceGroupList(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): ResourceGroupListType
+  resourceList: [ResourceType]
+  resourceGroup(id: ID!): ResourceType
+  resourceGroupList: [ResourceGroupType]
   extractionQuery(id: ID!): ExtractionQueryObjectType
   extractionQueryList(id: Float, name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): ExtractionQueryListType
   extractionEntryList(filterEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterEntryReviewStatus: [String!], filterEntryCreatedBy: [ID!], filterEntryHasReviewComments: Boolean, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EntryListType
@@ -2582,13 +2582,6 @@ input ResourceGroupCreateInputType {
   name: String!
 }
 
-type ResourceGroupListType {
-  results: [ResourceGroupType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
 type ResourceGroupType {
   oldId: String
   createdAt: DateTime!
@@ -2598,7 +2591,7 @@ type ResourceGroupType {
   versionId: String
   id: ID!
   name: String!
-  resources(name_Unaccent_Icontains: String, countries: [String!], page: Int = 1, ordering: String, pageSize: Int): ResourceListType
+  resources: [ResourceType!]!
 }
 
 input ResourceGroupUpdateInputType {
@@ -2606,13 +2599,6 @@ input ResourceGroupUpdateInputType {
   oldId: String
   versionId: String
   name: String
-}
-
-type ResourceListType {
-  results: [ResourceType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
 }
 
 type ResourceType {

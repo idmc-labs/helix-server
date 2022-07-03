@@ -11,9 +11,7 @@ class TestQueryResourceGroup(HelixGraphQLTestCase):
         self.list_resource_groups = '''
             query MyQuery {
               resourceGroupList {
-                results {
-                  id
-                }
+                id
               }
             }
         '''
@@ -124,14 +122,12 @@ class TestQueryResource(HelixGraphQLTestCase):
         self.list_resources = '''
             query MyQuery {
               resourceList {
-                results {
                   id
                   name
                   createdBy {
                     id
                   }
                 }
-              }
             }
         '''
 
@@ -153,4 +149,4 @@ class TestQueryResource(HelixGraphQLTestCase):
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
         self.assertEqual(len(content['data']['resourceList']), 1)  # only the resource created by user
-        self.assertEqual(int(content['data']['resourceList']['results'][0]['createdBy']['id']), self.reviewer2.id)
+        self.assertEqual(int(content['data']['resourceList'][0]['createdBy']['id']), self.reviewer2.id)

@@ -158,7 +158,7 @@ class TotalFigureFilterInputType(graphene.InputObjectType):
 class EntryType(DjangoObjectType):
     class Meta:
         model = Entry
-        exclude_fields = ('reviews',)
+        exclude_fields = ('reviews', 'figures',)
         filter_fields = ('article_title',)
 
     created_by = graphene.Field('apps.users.schema.UserType')
@@ -190,6 +190,7 @@ class EntryType(DjangoObjectType):
     is_reviewed = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
     is_under_review = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
     is_signed_off = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
+    figures = graphene.List(FigureType)
 
     # def resolve_total_stock_idp_figures(root, info, **kwargs):
     #     NULL = 'null'
@@ -212,6 +213,8 @@ class EntryType(DjangoObjectType):
     #     if value != NULL:
     #         return value
     #     return info.context.entry_entry_total_flow_nd_figures.load(root.id)
+    def resolve_figures(root, info, **kwargs):
+        return Figure.objects.filter(entry=root.id)
 
 
 class EntryListType(CustomDjangoListObjectType):
