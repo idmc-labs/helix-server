@@ -54,6 +54,11 @@ env = environ.Env(
         'media-monitoring.idmcdb.org',
         'https://media-monitoring.idmcdb.org',
         'http://media-monitoring.idmcdb.org',
+        'https://idumap.idmcdb.org',
+        'https://dev-idmc.datafriendlyspace.org',
+        'https://idmc-website.dev.datafriendlyspace.org',
+        'https://internal-displacement.org',
+        'https://idmc-website-components.idmcdb.org',
     ]),
     # MISC
     DEFAULT_FROM_EMAIL=(str, 'contact@idmcdb.org'),
@@ -87,16 +92,6 @@ logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 ALLOWED_HOSTS = env('DJANGO_ALLOWED_HOST')
 
 IN_AWS_COPILOT_ECS = not not env('COPILOT_SERVICE_NAME')
-
-# https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-CSRF_USE_SESSIONS
-CSRF_USE_SESSIONS = env('CSRF_USE_SESSIONS', 'False')
-# https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-SESSION_COOKIE_DOMAIN
-SESSION_COOKIE_DOMAIN = env('SESSION_COOKIE_DOMAIN')
-# https://docs.djangoproject.com/en/3.2/ref/settings/#csrf-cookie-domain
-CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
-
-CORS_ORIGIN_REGEX_WHITELIST = env('CORS_ORIGIN_REGEX_WHITELIST')
-CSRF_TRUSTED_ORIGINS = env('CSRF_TRUSTED_ORIGINS')
 
 # Application definition
 
@@ -335,6 +330,8 @@ CORS_ORIGIN_WHITELIST = [
     "http://127.0.0.1:3080"
 ]
 CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_REGEX_WHITELIST = env('CORS_ORIGIN_REGEX_WHITELIST')
+
 # CORS_ORIGIN_ALLOW_ALL = False
 # CORS_ORIGIN_REGEX_WHITELIST = [
 #     '^https://[\w\-]+\.idmcdb\.org$'
@@ -489,3 +486,37 @@ OTP_EMAIL_SUBJECT = 'IDMC OTP Token'
 OTP_EMAIL_BODY_TEMPLATE_PATH = 'emails/otp.html'
 
 TEMP_FILE_DIRECTORY = '/tmp/'
+
+# Security Header configuration
+SESSION_COOKIE_NAME = f'helix-{HELIX_ENVIRONMENT}-sessionid'
+CSRF_COOKIE_NAME = f'helix-{HELIX_ENVIRONMENT}-csrftoken'
+# # SECURE_BROWSER_XSS_FILTER = True
+# # SECURE_CONTENT_TYPE_NOSNIFF = True
+# # X_FRAME_OPTIONS = 'DENY'
+# # CSP_DEFAULT_SRC = ["'self'"]
+# # SECURE_REFERRER_POLICY = 'same-origin'
+# if HELIX_ENVIRONMENT != DEVELOPMENT_ENV:
+#     SESSION_COOKIE_NAME = f'__Secure-{SESSION_COOKIE_NAME}'
+#     # SESSION_COOKIE_SECURE = True
+#     # SESSION_COOKIE_HTTPONLY = True
+#     # SECURE_HSTS_SECONDS = 30  # TODO: Increase this slowly
+#     # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+#     # SECURE_HSTS_PRELOAD = True
+#     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+#     # NOTE: Client needs to read CSRF COOKIE.
+#     # CSRF_COOKIE_NAME = f'__Secure-{CSRF_COOKIE_NAME}'
+#     # CSRF_COOKIE_SECURE = True
+#     # CSRF_COOKIE_HTTPONLY = True
+
+
+# https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-CSRF_USE_SESSIONS
+CSRF_USE_SESSIONS = env('CSRF_USE_SESSIONS', 'False')
+# https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-SESSION_COOKIE_DOMAIN
+SESSION_COOKIE_DOMAIN = env('SESSION_COOKIE_DOMAIN')
+# https://docs.djangoproject.com/en/3.2/ref/settings/#csrf-cookie-domain
+CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
+
+CSRF_TRUSTED_ORIGINS = [
+    FRONTEND_BASE_URL,
+    *env('CSRF_TRUSTED_ORIGINS'),
+]
