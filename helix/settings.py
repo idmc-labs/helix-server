@@ -49,8 +49,7 @@ env = environ.Env(
     SESSION_COOKIE_DOMAIN=str,  # .tools.idmdb.org
     CSRF_COOKIE_DOMAIN=str,   # .tools.idmdb.org
     CSRF_USE_SESSIONS=(bool, False),
-    CORS_ORIGIN_REGEX_WHITELIST=list,  # ^https://[\w\-]+\.tools\.idmcdb\.org$
-    CSRF_TRUSTED_ORIGINS=(list, [
+    CSRF_TRUSTED_ORIGINS=(list, [  # TODO: CHECK IF THIS IS USED
         'media-monitoring.idmcdb.org',
         'https://media-monitoring.idmcdb.org',
         'http://media-monitoring.idmcdb.org',
@@ -74,6 +73,7 @@ env = environ.Env(
     POSTGRES_USER=str,
     SEND_ACTIVATION_EMAIL=(bool, True),
     SENTRY_DSN=(str, None),
+    SENTRY_SAMPLE_RATE=(float, 0.2),
     # Copilot
     COPILOT_ENVIRONMENT_NAME=(str, None),
     COPILOT_SERVICE_NAME=(str, None),
@@ -321,23 +321,6 @@ DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 # https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-APPEND_SLASH
 APPEND_SLASH = False
 
-########
-# CORS #
-########
-
-CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3080",
-    "http://127.0.0.1:3080"
-]
-CORS_ALLOW_CREDENTIALS = True
-CORS_ORIGIN_REGEX_WHITELIST = env('CORS_ORIGIN_REGEX_WHITELIST')
-
-# CORS_ORIGIN_ALLOW_ALL = False
-# CORS_ORIGIN_REGEX_WHITELIST = [
-#     '^https://[\w\-]+\.idmcdb\.org$'
-# ]
-# CSRF_TRUSTED_ORIGINS = []
-
 #################
 # DEBUG TOOLBAR #
 #################
@@ -396,6 +379,7 @@ if SENTRY_DSN:
         # TODO: Move server to root directory to get access to .git
         # 'release': sentry.fetch_git_sha(os.path.dirname(BASE_DIR)),
         'environment': HELIX_ENVIRONMENT,
+        'traces_sample_rate': env('SENTRY_SAMPLE_RATE'),
         'debug': DEBUG,
         'tags': {
             'site': ALLOWED_HOSTS[0],
@@ -519,4 +503,18 @@ CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
 CSRF_TRUSTED_ORIGINS = [
     FRONTEND_BASE_URL,
     *env('CSRF_TRUSTED_ORIGINS'),
+]
+
+########
+# CORS #
+########
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    # LOCAL
+    "http://localhost:3080",
+    "http://127.0.0.1:3080",
+    # OUTSIDE
+    FRONTEND_BASE_URL,
+    "https://media-monitoring.idmcdb.org/",
 ]

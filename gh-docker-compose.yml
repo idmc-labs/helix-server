@@ -2,7 +2,7 @@ version: '3.2'
 
 services:
   db:
-    image: postgres:11
+    image: postgres:13
     environment:
       POSTGRES_PASSWORD: postgres
 
@@ -15,6 +15,27 @@ services:
       CI: "true"
       # https://github.com/pytest-dev/pytest/issues/7443
       PYTEST_ADDOPTS: "--color=yes"
+      DJANGO_DEBUG: "true"
+      HELIX_ENVIRONMENT: development
+      DJANGO_DEBUG: "true"
+      DJANGO_SECRET_KEY: STATIC-INSECURE-KEY-PLEASE-DONT-USE-IN-PRODUCTION
+      FRONTEND_BASE_URL: http://localhost:3080
+      # Database (Default from db container)
+      POSTGRES_HOST: db
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: postgres
+      # REDIS (Default from redis container)
+      DJANGO_CACHE_REDIS_URL: redis://redis:6379/1
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND_URL: redis://redis:6379/1
+      # Cookie config
+      SESSION_COOKIE_DOMAIN: localhost
+      CSRF_COOKIE_DOMAIN: localhost
+      CORS_ORIGIN_REGEX_WHITELIST: ^http://localhost:[\d\-]+$$|^http://localhost$$
+      # MISC
+      HCAPTCHA_SECRET: 0x0000000000000000000000000000000000000000
     volumes:
       - ./:/code
     depends_on:

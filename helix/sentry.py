@@ -2,11 +2,18 @@ import logging
 import os
 import sentry_sdk
 
+from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
+from sentry_sdk.integrations.redis import RedisIntegration
 from sentry_sdk.integrations.logging import ignore_logger
+from django.core.exceptions import PermissionDenied
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+IGNORED_ERRORS = [
+    PermissionDenied,
+]
 
 
 class InvalidGitRepository(Exception):
@@ -67,10 +74,13 @@ def fetch_git_sha(path, head=None):
 def init_sentry(app_type, tags={}, **config):
     integrations = [
         DjangoIntegration(),
+        RedisIntegration(),
+        CeleryIntegration(),
     ]
     sentry_sdk.init(
         **config,
         integrations=integrations,
+        ignore_errors=IGNORED_ERRORS,
     )
     ignore_logger('graphql.execution.utils')
     with sentry_sdk.configure_scope() as scope:
