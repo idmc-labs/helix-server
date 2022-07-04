@@ -500,21 +500,16 @@ SESSION_COOKIE_DOMAIN = env('SESSION_COOKIE_DOMAIN')
 # https://docs.djangoproject.com/en/3.2/ref/settings/#csrf-cookie-domain
 CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
 
-CSRF_TRUSTED_ORIGINS = [
-    FRONTEND_BASE_URL,
-    *env('CSRF_TRUSTED_ORIGINS'),
-]
-
 ########
 # CORS #
 ########
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = [
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS = [
     # LOCAL
     "http://localhost:3080",
     "http://127.0.0.1:3080",
     # OUTSIDE
     FRONTEND_BASE_URL,
-    "https://media-monitoring.idmcdb.org/",
+    "https://media-monitoring.idmcdb.org",
 ]

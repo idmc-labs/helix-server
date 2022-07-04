@@ -16,9 +16,12 @@ services:
       # https://github.com/pytest-dev/pytest/issues/7443
       PYTEST_ADDOPTS: "--color=yes"
       DJANGO_DEBUG: "true"
+
       HELIX_ENVIRONMENT: development
       DJANGO_DEBUG: "true"
+      ENABLE_DEBUG: "true"
       DJANGO_SECRET_KEY: STATIC-INSECURE-KEY-PLEASE-DONT-USE-IN-PRODUCTION
+      DJANGO_ALLOWED_HOST: localhost
       FRONTEND_BASE_URL: http://localhost:3080
       # Database (Default from db container)
       POSTGRES_HOST: db
