@@ -505,7 +505,7 @@ CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
 ########
 
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS = [
+CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = [
     # LOCAL
     "http://localhost:3080",
     "http://127.0.0.1:3080",
@@ -513,3 +513,27 @@ CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS = [
     FRONTEND_BASE_URL,
     "https://media-monitoring.idmcdb.org",
 ]
+
+CORS_URLS_REGEX = r'(^/api/.*$)|(^/graphql$)'
+
+CORS_ALLOW_METHODS = (
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+)
+
+CORS_ALLOW_HEADERS = (
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'sentry-trace',
+)
