@@ -48,9 +48,9 @@ class FigureTypologyLoader(DataLoader):
             id__in=keys
         ).annotate(
             figure_typology=Case(
-                When(event__other_sub_type__isnull=False, then=F('event__other_sub_type__name')),
-                When(event__violence_sub_type__isnull=False, then=F('event__violence_sub_type__name')),
-                When(event__disaster_sub_type__isnull=False, then=F('event__disaster_sub_type__name')),
+                When(other_sub_type__isnull=False, then=F('other_sub_type__name')),
+                When(violence_sub_type__isnull=False, then=F('violence_sub_type__name')),
+                When(disaster_sub_type__isnull=False, then=F('disaster_sub_type__name')),
                 output_field=CharField(),
             )
         ).values('id', 'figure_typology')

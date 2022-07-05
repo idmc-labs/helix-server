@@ -6,6 +6,7 @@ from django.db.models import (
     IntegerField,
 )
 from django.db.models import Case, F, When, CharField
+from django.contrib.postgres.aggregates import ArrayAgg
 
 from promise import Promise
 from promise.dataloader import DataLoader
@@ -155,22 +156,22 @@ class EventTypologyLoader(DataLoader):
 
 class EventFigureTypologyLoader(DataLoader):
     def batch_load_fn(self, keys: list):
-        qs = Event.objects.filter(
-            id__in=keys
+        qs = Figure.objects.filter(
+            event_id__in=keys
+        ).values(
+            'event_id'
         ).annotate(
-            event_typology=Case(
-                When(figures__other_sub_type__isnull=False, then=F('figures__other_sub_type__name')),
-                When(figures__violence_sub_type__isnull=False, then=F('figures__violence_sub_type__name')),
-                When(figures__disaster_sub_type__isnull=False, then=F('figures__disaster_sub_type__name')),
+            event_typology=ArrayAgg(Case(
+                When(other_sub_type__isnull=False, then=F('other_sub_type__name')),
+                When(violence_sub_type__isnull=False, then=F('violence_sub_type__name')),
+                When(disaster_sub_type__isnull=False, then=F('disaster_sub_type__name')),
                 output_field=CharField(),
-            )
+            ), distinct=True)
         )
-        batch_load = {}
-        for key in keys:
-            batch_load[key] = qs.filter(
-                id=key, event_typology__isnull=False
-            ).values_list('event_typology', flat=True).distinct('event_typology')
-
+        batch_load = {
+            item['event_id']: item['event_typology']
+            for item in qs
+        }
         return Promise.resolve([
             batch_load.get(key) for key in keys
         ])
