@@ -1626,11 +1626,12 @@ type MonitoringSubRegionListType {
 type MonitoringSubRegionType {
   id: ID!
   name: String!
-  countries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, year: Float, page: Int = 1, ordering: String, pageSize: Int): CountryListType
+  countries: [CountryType!]
   regionalCoordinator: PortfolioType
   monitoringExpertsCount: Int!
   unmonitoredCountriesCount: Int!
   unmonitoredCountriesNames: String!
+  countriesCount: Int!
 }
 
 type Mutation {

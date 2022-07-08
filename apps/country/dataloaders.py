@@ -1,8 +1,9 @@
+from collections import defaultdict
 from django.db import models
 from promise import Promise
 from promise.dataloader import DataLoader
 from apps.crisis.models import Crisis
-from apps.country.models import Country
+from apps.country.models import Country, MonitoringSubRegion
 from apps.entry.models import Figure
 
 
@@ -47,3 +48,30 @@ class TotalFigureThisYearByCountryCategoryEventTypeLoader(DataLoader):
             list_to_dict.get(country)
             for country in keys
         ])
+
+
+class MonitoringSubRegionCountryCountLoader(DataLoader):
+    def batch_load_fn(self, keys: list):
+        qs = MonitoringSubRegion.objects.filter(
+            id__in=keys
+        ).annotate(
+            country_count=models.Count('countries', distinct=True)
+        ).values('id', 'country_count')
+        return Promise.resolve([
+            item['country_count']
+            for item in qs
+        ])
+
+
+class MonitoringSubRegionCountryLoader(DataLoader):
+    def batch_load_fn(self, keys: list):
+        qs = MonitoringSubRegion.objects.filter(
+            id__in=keys
+        ).values('id', 'countries__id')
+        country_qs = Country.objects.filter(
+            monitoring_sub_region__in=keys
+        )
+        _map = defaultdict(list)
+        for item in qs:
+            _map[item['id']].append(country_qs.get(id=item['countries__id']))
+        return Promise.resolve([_map[key] for key in keys])
