@@ -802,7 +802,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         # TODO: set household size from the country
         self.total_figures = self.reported
         if self.unit == self.UNIT.HOUSEHOLD:
-            self.total_figures = self.reported * self.household_size
+            self.total_figures = round(self.reported * self.household_size)
         return super().save(*args, **kwargs)
 
     def __str__(self):
