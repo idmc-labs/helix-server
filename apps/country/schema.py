@@ -34,18 +34,23 @@ class MonitoringSubRegionType(DjangoObjectType):
         model = MonitoringSubRegion
         exclude_fields = ('portfolios',)
 
-    countries = graphene.Dynamic(lambda: DjangoPaginatedListObjectField(
-        get_type('apps.country.schema.CountryListType'),
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        related_name='countries',
-    ))
+    countries = graphene.Dynamic(
+        lambda: graphene.List(
+            graphene.NonNull(get_type('apps.country.schema.CountryType'))
+        )
+    )
     # TODO: Add dataloaders
     regional_coordinator = graphene.Field('apps.users.schema.PortfolioType')
     monitoring_experts_count = graphene.Int(required=True)
     unmonitored_countries_count = graphene.Int(required=True)
     unmonitored_countries_names = graphene.String(required=True)
+    countries_count = graphene.Int(required=True)
+
+    def resolve_countries_count(root, info, **kwargs):
+        return info.context.monitoring_sub_region_country_count_loader.load(root.id)
+
+    def resolve_countries(root, info, **kwargs):
+        return info.context.monitoring_sub_region_country_loader.load(root.id)
 
 
 class MonitoringSubRegionListType(CustomDjangoListObjectType):

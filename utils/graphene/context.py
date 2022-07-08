@@ -1,6 +1,10 @@
 from django.utils.functional import cached_property
 
-from apps.country.dataloaders import TotalFigureThisYearByCountryCategoryEventTypeLoader
+from apps.country.dataloaders import (
+    TotalFigureThisYearByCountryCategoryEventTypeLoader,
+    MonitoringSubRegionCountryLoader,
+    MonitoringSubRegionCountryCountLoader,
+)
 from apps.crisis.dataloaders import (
     TotalIDPFigureByCrisisLoader,
     TotalNDFigureByCrisisLoader,
@@ -107,6 +111,14 @@ class GQLContext:
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             event_type=Crisis.CRISIS_TYPE.DISASTER.value,
         )
+
+    @cached_property
+    def monitoring_sub_region_country_loader(self):
+        return MonitoringSubRegionCountryLoader()
+
+    @cached_property
+    def monitoring_sub_region_country_count_loader(self):
+        return MonitoringSubRegionCountryCountLoader()
 
     @cached_property
     def event_event_review_count_dataloader(self):
