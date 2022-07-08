@@ -30,13 +30,13 @@ def get_event_url(id):
 def get_new_event_url(id):
     if not id:
         return ''
-    return f'https://helix-alpha.idmcdb.org/events/{id}'
+    return f'https://helix.tools.idmcdb.org/events/{id}'
 
 
 def get_report_url(id):
     if not id:
         return ''
-    return f'https://helix-alpha.idmcdb.org/reports/{id}/'
+    return f'https://helix.tools.idmcdb.org/reports/{id}/'
 
 
 def add_row(workspace, row, *args):
@@ -337,8 +337,8 @@ class Command(BaseCommand):
         missing_flow_row = 0
         added_flow_row = 0
         for report in all_reports:
-            if not report.old_id.isnumeric():
-                continue
+            # if not report.old_id.isnumeric():
+            #     continue
 
             linked_figures = report.attached_figures.filter(
                 role=Figure.ROLE.RECOMMENDED,
@@ -357,7 +357,7 @@ class Command(BaseCommand):
                     ws8,
                     missing_flow_row + 3,
                     report.old_id,
-                    get_fact_url(report.old_id),
+                    get_fact_url(report.old_id) if report.old_id.isnumeric() else '',
                     id,
                     get_fact_url(id),
                     report.id,
@@ -371,7 +371,7 @@ class Command(BaseCommand):
                     ws9,
                     added_flow_row + 3,
                     report.old_id,
-                    get_fact_url(report.old_id),
+                    get_fact_url(report.old_id) if report.old_id.isnumeric() else '',
                     id,
                     get_fact_url(id),
                     report.id,
@@ -391,8 +391,8 @@ class Command(BaseCommand):
         missing_stock_row = 0
         added_stock_row = 0
         for report in all_reports:
-            if not report.old_id.isnumeric():
-                continue
+            # if not report.old_id.isnumeric():
+            #     continue
 
             linked_figures = report.attached_figures.filter(
                 role=Figure.ROLE.RECOMMENDED,
@@ -411,7 +411,7 @@ class Command(BaseCommand):
                     ws10,
                     missing_stock_row + 3,
                     report.old_id,
-                    get_fact_url(report.old_id),
+                    get_fact_url(report.old_id) if report.old_id.isnumeric() else '',
                     id,
                     get_fact_url(id),
                     report.id,
@@ -425,7 +425,7 @@ class Command(BaseCommand):
                     ws11,
                     added_stock_row + 3,
                     report.old_id,
-                    get_fact_url(report.old_id),
+                    get_fact_url(report.old_id) if report.old_id.isnumeric() else '',
                     id,
                     get_fact_url(id),
                     report.id,
