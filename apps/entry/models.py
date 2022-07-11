@@ -12,7 +12,7 @@ from django.db.models.query import QuerySet
 from django.db.models import (
     Sum, Avg, F, Value, Min, Max, Q, ExpressionWrapper, fields
 )
-from django.db.models.functions import Concat, ExtractYear
+from django.db.models.functions import Concat, ExtractYear, Cast
 from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
 from django_enumfield import enum
@@ -632,7 +632,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             year='Year',
             entry_id='Entry Id',
             event__name='Event Name',
-            sources__name='Sources',
+            sources_name='Sources',
             centroid='Centroid',
             centroid_lat='Lat',  # Newly added but related to centroid
             centroid_lon='Lon',  # Newly added but related to centroid
@@ -668,9 +668,9 @@ class Figure(MetaInformationArchiveAbstractModel,
             displacement_occurred='Displacement Occurred',
             geolocations='Locations names',
             is_housing_destruction='Is housing destruction',
-            tags__name='Tags',
+            tags_name='Tags',
             calculation_logic='Analysis and Calculation Logic',
-            geo_locations__identifier='Type of point',
+            geo_locations_identifier='Type of point',
             disaggregation_disability='Disability',
             disaggregation_indigenous_people='Indigenous People',
             entry__article_title='Entry Title',
@@ -695,8 +695,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 '; ',
                 filter=~Q(
                     Q(geo_locations__city__isnull=True) | Q(geo_locations__city='')
-                ),
-                distinct=True
+                ), distinct=True
             ),
             publishers_name=StringAgg(
                 'entry__publishers__name',
@@ -706,6 +705,12 @@ class Figure(MetaInformationArchiveAbstractModel,
             ),
             year=ExtractYear("start_date"),
             context_of_violences=StringAgg('context_of_violence__name', '; ', distinct=True),
+            tags_name=StringAgg('tags__name', '; ', distinct=True),
+            sources_name=StringAgg('sources__name', '; ', distinct=True),
+            geo_locations_identifier=ArrayAgg(
+                Cast('geo_locations__identifier', models.IntegerField()),
+                distinct=True, filter=Q(geo_locations__identifier__isnull=False)
+            )
         ).annotate(
             centroid=models.Case(
                 models.When(
@@ -749,9 +754,9 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'figure_cause': getattr(Crisis.CRISIS_TYPE.get(
                     datum['figure_cause']), 'label', ''
                 ),
-                'geo_locations__identifier': getattr(OSMName.IDENTIFIER.get(
-                    datum['geo_locations__identifier']), 'label', ''
-                ),
+                'geo_locations_identifier': get_string_from_list([
+                    OSMName.IDENTIFIER(item).label for item in datum['geo_locations_identifier']
+                ]),
             }
 
         return {
