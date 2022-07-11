@@ -680,9 +680,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__other_sub_type__name='Other Event Sub Type',
             context_of_violences='Context of violences',
         )
-        values = figures.order_by(
-            '-created_at'
-        ).annotate(
+        values = figures.annotate(
             centroid_lat=Avg('geo_locations__lat'),
             centroid_lon=Avg('geo_locations__lon'),
             entry_link=Concat(Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id')),
@@ -722,21 +720,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 default=Value('')
             )
-        ).select_related(
-            'entry',
-            'event',
-            'category',
-            'term',
-            'created_by',
-        ).prefetch_related(
-            'geo_locations',
-            'disaggregation_age',
-            'disaggregation_age__category',
-            'geo_locations__identifier',
-            'context_of_violence'
         ).order_by(
-            '-entry',
-            '-created_at',
+            'id',
         ).values(*[header for header in headers.keys()])
 
         def transformer(datum):
@@ -1018,14 +1003,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                 ),
                 default=Value('')
             )
-        ).order_by('-created_at').select_related(
-            'created_by',
-        ).prefetch_related(
-            'figures',
-            'publishers',
-            'figures__disaggregation_age',
-            'figures__disaggregation_age__category',
-        ).order_by('-id')
+        ).order_by('id')
 
         def transformer(datum):
             return {

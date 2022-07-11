@@ -123,11 +123,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             max_event_end=models.Max('events__end_date'),
             figures_count=models.Count('events__figures', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
-        ).order_by('-created_at').select_related(
-            'created_by',
-        ).prefetch_related(
-            'countries'
-        )
+        ).order_by('id')
 
         def transformer(datum):
             return {

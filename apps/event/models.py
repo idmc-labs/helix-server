@@ -296,19 +296,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             entries_count=models.Count('figures__entry', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
             context_of_violences=StringAgg('context_of_violence__name', ';', distinct=True),
-        ).order_by('-created_at').select_related(
-            'violence',
-            'violence_sub_type',
-            'actor',
-            'disaster_category',
-            'disaster_sub_category',
-            'disaster_type',
-            'disaster_sub_type',
-            'created_at',
-            'osv_sub_type'
-        ).prefetch_related(
-            'countries',
-        )
+        ).order_by('id')
 
         def format_glide_numbers(glide_numbers):
             if not glide_numbers:

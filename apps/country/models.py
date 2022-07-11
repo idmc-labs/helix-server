@@ -344,11 +344,7 @@ class Country(models.Model):
             # contacts_count=Count('contacts', distinct=True),
             # operating_contacts_count=Count('operating_contacts', distinct=True),
             **cls._total_figure_disaggregation_subquery(year=year),
-        ).select_related(
-            'geographical_group',
-            'region',
-            'sub_region',
-        )
+        ).order_by('id')
 
         return {
             'headers': headers,

@@ -221,11 +221,7 @@ class Report(MetaInformationArchiveAbstractModel,
             total_stock_conflict_sum=Value(0, output_field=models.IntegerField()),
             total_stock_disaster_sum=Value(0, output_field=models.IntegerField()),
             remarks=Value('', output_field=models.CharField()),
-        ).order_by('-created_at').select_related(
-            'created_by',
-        ).prefetch_related(
-            'filter_figure_categories',
-        )
+        ).order_by('id')
 
         def transform_filter_figure_category(figure_categories):
             if figure_categories:
