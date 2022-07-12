@@ -734,6 +734,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'unit': getattr(Figure.UNIT.get(datum['unit']), 'label', ''),
                 'role': getattr(Figure.ROLE.get(datum['role']), 'label', ''),
                 'term': getattr(Figure.FIGURE_TERMS.get(datum['term']), 'label', ''),
+                'category': getattr(Figure.FIGURE_CATEGORY_TYPES.get(datum['category']), 'label', ''),
                 'displacement_occurred': getattr(
                     Figure.DISPLACEMENT_OCCURRED.get(datum['displacement_occurred']), 'label', ''
                 ),
