@@ -721,7 +721,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 default=Value('')
             )
         ).order_by(
-            'id',
+            'created_at',
         ).values(*[header for header in headers.keys()])
 
         def transformer(datum):
@@ -1003,7 +1003,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                 ),
                 default=Value('')
             )
-        ).order_by('id')
+        ).order_by('created_at')
 
         def transformer(datum):
             return {

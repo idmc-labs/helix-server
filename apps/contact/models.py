@@ -99,7 +99,7 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
             ),
             communications_count=models.Count('communications', distinct=True),
         ).order_by(
-            'id',
+            'created_at',
         )
 
         def transformer(datum):
