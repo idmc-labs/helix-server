@@ -600,13 +600,13 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
-        from apps.extraction.filters import FigureExtractionFilterSet
+        from apps.extraction.filters import BaseFigureExtractionFilterSet
 
         class DummyRequest:
             def __init__(self, user):
                 self.user = user
 
-        qs = FigureExtractionFilterSet(
+        qs = BaseFigureExtractionFilterSet(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs
