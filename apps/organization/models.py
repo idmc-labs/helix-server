@@ -94,15 +94,7 @@ class Organization(MetaInformationArchiveAbstractModel,
             # sourced_entries_count=models.Count('sourced_entries', distinct=True),
             # published_entries_count=models.Count('published_entries', distinct=True),
             countries_name=StringAgg('countries__name', '; ', distinct=True),
-        ).order_by('-created_at').select_related(
-            'organization_kind'
-            'created_by',
-            'last_modified_by',
-        ).prefetch_related(
-            'countries'
-            # 'sourced_entries',
-            # 'published_entries',
-        )
+        ).order_by('created_at')
 
         def transformer(datum):
             return {

@@ -37,7 +37,7 @@ from apps.organization.schema import OrganizationListType
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.pagination import PageGraphqlPaginationWithoutCount
-from apps.extraction.filters import BaseFigureExtractionFilterSet, EntryExtractionFilterSet
+from apps.extraction.filters import FigureExtractionFilterSet, EntryExtractionFilterSet
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.schema import OtherSubTypeObjectType
 
@@ -270,7 +270,7 @@ class Query:
     figure_list = DjangoPaginatedListObjectField(FigureListType,
                                                  pagination=PageGraphqlPaginationWithoutCount(
                                                      page_size_query_param='pageSize',
-                                                 ), filterset_class=BaseFigureExtractionFilterSet)
+                                                 ), filterset_class=FigureExtractionFilterSet)
     source_preview = DjangoObjectField(SourcePreviewType)
     entry = DjangoObjectField(EntryType)
     entry_list = DjangoPaginatedListObjectField(EntryListType,

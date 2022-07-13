@@ -3,7 +3,7 @@ from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 import logging
 
-from apps.extraction.filters import EntryExtractionFilterSet, ExtractionQueryFilter, BaseFigureExtractionFilterSet
+from apps.extraction.filters import EntryExtractionFilterSet, ExtractionQueryFilter, FigureExtractionFilterSet
 from apps.extraction.models import (
     ExtractionQuery,
 )
@@ -57,8 +57,10 @@ class Query:
                                                                page_size_query_param='pageSize'
                                                            ),
                                                            filterset_class=EntryExtractionFilterSet)
+
+    # FIXME: this is not used in client, remove this
     extraction_figure_list = DjangoPaginatedListObjectField(FigureListType,
                                                             pagination=PageGraphqlPaginationWithoutCount(
                                                                 page_size_query_param='pageSize'
                                                             ),
-                                                            filterset_class=BaseFigureExtractionFilterSet)
+                                                            filterset_class=FigureExtractionFilterSet)

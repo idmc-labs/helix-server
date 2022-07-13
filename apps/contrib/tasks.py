@@ -25,10 +25,14 @@ def get_excel_sheet_content(headers, data, **kwargs):
     ws = wb.create_sheet('Main')
 
     def clean_data_item(item):
-        if isinstance(item, int) or item:
+        # NOTE: we are using isinstance(item, int) because 0 is falsy value
+        if isinstance(item, int):
+            return item
+        elif isinstance(item, str):
+            return re.sub(ILLEGAL_CHARACTERS_RE, '', item)
+        elif item:
             return str(item)
-        else:
-            return ''
+        return ''
 
     def append_to_worksheet(_ws, _headers, _data, _transformer):
         keys = _headers.keys()
@@ -38,7 +42,7 @@ def get_excel_sheet_content(headers, data, **kwargs):
             if _transformer:
                 transformed_datum = _transformer(_datum)
             _ws.append([
-                re.sub(ILLEGAL_CHARACTERS_RE, '', clean_data_item(transformed_datum.get(key)))
+                clean_data_item(transformed_datum.get(key))
                 for key in keys
             ])
 
