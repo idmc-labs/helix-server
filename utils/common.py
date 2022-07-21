@@ -73,5 +73,6 @@ def generate_storage_url_from_path(file_path):
 def get_string_from_list(list_of_string):
     return '; '.join(filter(None, list_of_string))
 
+
 def get_temp_file(dir=settings.TEMP_FILE_DIRECTORY, **kwargs):
     return tempfile.NamedTemporaryFile(dir=dir, **kwargs)
