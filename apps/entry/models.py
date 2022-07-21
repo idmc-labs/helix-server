@@ -1101,6 +1101,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         return f'Entry {self.article_title}'
 
 
+def dump_file_upload_to(instance, filename):
+    today = date.today()
+    api_type = instance.api_type
+    return f'external-api-dump/{api_type}/{today}/{filename}'
+
+
 class ExternalApiDump(models.Model):
 
     class ExternalApiType(models.TextChoices):
@@ -1115,14 +1121,13 @@ class ExternalApiDump(models.Model):
     dump_file = CachedFileField(
         verbose_name=_('Dump file'),
         blank=True, null=True,
-        upload_to='external_api_dump/idus'
+        upload_to=dump_file_upload_to,
     )
     api_type = models.CharField(
         max_length=40,
         choices=ExternalApiType.choices,
     )
-    status = models.CharField(
-        max_length=40,
+    status = models.IntegerField(
         choices=Status.choices,
     )
 
