@@ -154,3 +154,29 @@ def kill_all_long_running_report_generations():
     ).update(status=ReportGeneration.REPORT_GENERATION_STATUS.KILLED)
 
     logger.info(f'Updated REPORT GENERATION to killed:\n{progress=}')
+
+
+@celery_app.task
+def generate_idus_dump_file():
+    import json
+    from apps.entry.models import ExternalApiDump
+    from apps.entry.serializers import FigureReadOnlySerializer
+    from apps.entry.views import get_idu_data
+
+    external_api_dump = ExternalApiDump.objects.create(
+        api_type=ExternalApiDump.ExternalApiType.IDUS.value,
+        status=ExternalApiDump.Status.PENDING.value,
+    )
+    try:
+        serializer = FigureReadOnlySerializer(get_idu_data(), many=True)
+        tmp = NamedTemporaryFile(mode="w+")
+        json.dump(serializer.data, tmp)
+        file = File(tmp)
+        external_api_dump.dump_file.save('idus_dump.json', file)
+        external_api_dump.status = ExternalApiDump.Status.COMPLETED.value
+        external_api_dump.save()
+        logger.info('Idus file dump created')
+    except Exception:
+        external_api_dump.status = ExternalApiDump.Staus.FAILED.value
+        external_api_dump.save()
+        logger.info('Idus file dump generation failed')

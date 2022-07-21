@@ -23,6 +23,7 @@ from apps.contrib.models import (
     MetaInformationArchiveAbstractModel,
 )
 from utils.common import get_string_from_list
+from utils.fields import CachedFileField
 from apps.contrib.commons import DATE_ACCURACY
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
@@ -1098,3 +1099,32 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
     def __str__(self):
         return f'Entry {self.article_title}'
+
+
+class ExternalApiDump(models.Model):
+
+    class ExternalApiType(models.TextChoices):
+        # There might be other external endpoints
+        IDUS = 'idus', _('Idus')
+
+    class Status(models.IntegerChoices):
+        PENDING = 0, 'Pending'
+        COMPLETED = 1, 'Completed'
+        FAILED = 2, 'Failed'
+
+    dump_file = CachedFileField(
+        verbose_name=_('Dump file'),
+        blank=True, null=True,
+        upload_to='external_api_dump/idus'
+    )
+    api_type = models.CharField(
+        max_length=40,
+        choices=ExternalApiType.choices,
+    )
+    status = models.CharField(
+        max_length=40,
+        choices=Status.choices,
+    )
+
+    def __str__(self):
+        return self.api_type
