@@ -23,6 +23,7 @@ from django.views.decorators.csrf import csrf_exempt
 from graphene_file_upload.django import FileUploadGraphQLView
 
 from . import api_urls as rest_urls
+from . import external_urls as external_rest_urls
 from utils.graphene.context import GQLContext
 from django_otp.admin import OTPAdminSite
 from django.http import HttpRequest
@@ -78,7 +79,8 @@ if not settings.DEBUG:
 urlpatterns = [
     path('admin/', admin.site.urls),
     re_path('^graphql/?$', csrf_exempt(CustomGraphQLView.as_view())),
-    path('api/', include(rest_urls))
+    path('api/', include(rest_urls)),
+    path('external-api/', include(external_rest_urls))
 ]
 
 if settings.DEBUG:
