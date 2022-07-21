@@ -1102,9 +1102,9 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
 
 def dump_file_upload_to(instance, filename):
-    today = date.today()
+    date_str = timezone.now().strftime('%Y-%m-%d-%H-%M-%S')
     api_type = instance.api_type
-    return f'external-api-dump/{api_type}/{today}/{filename}'
+    return f'external-api-dump/{api_type}/{date_str}/{filename}'
 
 
 class ExternalApiDump(models.Model):
@@ -1128,7 +1128,7 @@ class ExternalApiDump(models.Model):
         choices=ExternalApiType.choices,
     )
     status = models.IntegerField(
-        choices=Status.choices,
+        choices=Status.choices, default=Status.PENDING
     )
 
     def __str__(self):

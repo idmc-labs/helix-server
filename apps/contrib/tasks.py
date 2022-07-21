@@ -2,6 +2,7 @@ import logging
 import re
 from tempfile import NamedTemporaryFile
 import time
+import json
 from datetime import timedelta
 
 from django.core.files import File
@@ -9,6 +10,7 @@ from django.conf import settings
 from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
+from utils.common import get_temp_file
 
 # from helix.settings import QueuePriority
 from helix.celery import app as celery_app
@@ -158,11 +160,9 @@ def kill_all_long_running_report_generations():
 
 @celery_app.task
 def generate_idus_dump_file():
-    import json
     from apps.entry.models import ExternalApiDump
     from apps.entry.serializers import FigureReadOnlySerializer
     from apps.entry.views import get_idu_data
-    from utils.common import get_temp_file
 
     external_api_dump, created = ExternalApiDump.objects.get_or_create(
         api_type=ExternalApiDump.ExternalApiType.IDUS.value,
@@ -172,9 +172,9 @@ def generate_idus_dump_file():
         with get_temp_file(mode="w+") as tmp:
             json.dump(serializer.data, tmp)
             external_api_dump.dump_file.save('idus_dump.json', File(tmp))
-        external_api_dump.status = ExternalApiDump.Status.COMPLETED.value
+        external_api_dump.status = ExternalApiDump.Status.COMPLETED
         logger.info('Idus file dump created')
     except Exception:
-        external_api_dump.status = ExternalApiDump.Status.FAILED.value
+        external_api_dump.status = ExternalApiDump.Status.FAILED
         logger.info('Idus file dump generation failed')
     external_api_dump.save()
