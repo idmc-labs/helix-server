@@ -162,21 +162,19 @@ def generate_idus_dump_file():
     from apps.entry.models import ExternalApiDump
     from apps.entry.serializers import FigureReadOnlySerializer
     from apps.entry.views import get_idu_data
+    from utils.common import get_temp_file
 
-    external_api_dump = ExternalApiDump.objects.create(
+    external_api_dump, created = ExternalApiDump.objects.get_or_create(
         api_type=ExternalApiDump.ExternalApiType.IDUS.value,
-        status=ExternalApiDump.Status.PENDING.value,
     )
     try:
         serializer = FigureReadOnlySerializer(get_idu_data(), many=True)
-        tmp = NamedTemporaryFile(mode="w+")
-        json.dump(serializer.data, tmp)
-        file = File(tmp)
-        external_api_dump.dump_file.save('idus_dump.json', file)
+        with get_temp_file(mode="w+") as tmp:
+            json.dump(serializer.data, tmp)
+            external_api_dump.dump_file.save('idus_dump.json', File(tmp))
         external_api_dump.status = ExternalApiDump.Status.COMPLETED.value
-        external_api_dump.save()
         logger.info('Idus file dump created')
     except Exception:
-        external_api_dump.status = ExternalApiDump.Staus.FAILED.value
-        external_api_dump.save()
+        external_api_dump.status = ExternalApiDump.Status.FAILED.value
         logger.info('Idus file dump generation failed')
+    external_api_dump.save()

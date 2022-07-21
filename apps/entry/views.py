@@ -6,8 +6,9 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from apps.entry.models import Figure, ExternalApiDump
 from apps.entry.serializers import FigureReadOnlySerializer
 from rest_framework.permissions import AllowAny
+from rest_framework import status
 from rest_framework.views import APIView
-from django.http import HttpResponseNotFound
+from rest_framework.response import Response
 from django.shortcuts import redirect
 
 
@@ -268,5 +269,10 @@ class IdusFlatCachedView(APIView):
             dump_file__isnull=False,
         ).last()
         if idu_obj and idu_obj.dump_file:
-            return redirect(request.build_absolute_uri(idu_obj.dump_file.url))
-        return HttpResponseNotFound("Page not found")
+            if idu_obj.status == ExternalApiDump.Status.COMPLETED.value:
+                return redirect(request.build_absolute_uri(idu_obj.dump_file.url))
+            elif idu_obj.status in [None, ExternalApiDump.Status.PENDING.value]:
+                return Response(status=status.HTTP_202_ACCEPTED)
+            elif idu_obj.status == ExternalApiDump.Status.FAILED.value:
+                return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response(status=status.HTTP_404_NOT_FOUND)
