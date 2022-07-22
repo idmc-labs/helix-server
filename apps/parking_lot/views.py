@@ -17,3 +17,4 @@ class ParkedItemViewSet(CreateListMixin, viewsets.ModelViewSet):
     queryset = ParkedItem.objects.all()
     serializer_class = ParkedItemSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None

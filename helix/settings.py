@@ -161,7 +161,9 @@ else:
     }
 
 REST_FRAMEWORK = {
-    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend']
+    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 20
 }
 
 ROOT_URLCONF = 'helix.urls'
@@ -470,3 +472,5 @@ OTP_HOTP_ISSUER = 'IDMC'
 OTP_EMAIL_SENDER = DEFAULT_FROM_EMAIL
 OTP_EMAIL_SUBJECT = 'IDMC OTP Token'
 OTP_EMAIL_BODY_TEMPLATE_PATH = 'emails/otp.html'
+
+TEMP_FILE_DIRECTORY = '/tmp/'

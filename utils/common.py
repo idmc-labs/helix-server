@@ -1,6 +1,8 @@
 import datetime
 import re
 from django.core.files.storage import get_storage_class
+from django.conf import settings
+import tempfile
 
 
 def convert_date_object_to_string_in_dict(dictionary):
@@ -70,3 +72,7 @@ def generate_storage_url_from_path(file_path):
 
 def get_string_from_list(list_of_string):
     return '; '.join(filter(None, list_of_string))
+
+
+def get_temp_file(dir=settings.TEMP_FILE_DIRECTORY, **kwargs):
+    return tempfile.NamedTemporaryFile(dir=dir, **kwargs)

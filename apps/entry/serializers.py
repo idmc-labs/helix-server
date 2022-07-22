@@ -626,3 +626,55 @@ class FigureTagCreateSerializer(MetaInformationSerializerMixin,
 class FigureTagUpdateSerializer(UpdateSerializerMixin,
                                 FigureTagCreateSerializer):
     id = IntegerIDField(required=True)
+
+
+class FigureReadOnlySerializer(serializers.ModelSerializer):
+    country = serializers.CharField(source='country_name')
+    iso3 = serializers.CharField()
+    latitude = serializers.FloatField(source='centroid_lat')
+    longitude = serializers.FloatField(source='centroid_lon')
+    centroid = serializers.CharField()
+    displacement_type = serializers.CharField(source='figure_cause')
+    qualifier = serializers.CharField(source='quantifier_label')
+    figure = serializers.IntegerField(source='total_figures')
+    displacement_start_date = serializers.CharField()
+    displacement_end_date = serializers.CharField()
+    displacement_date = serializers.CharField()
+    event_name = serializers.CharField()
+    event_start_date = serializers.CharField()
+    event_end_date = serializers.CharField()
+    category = serializers.CharField(source='disaster_category_name')
+    subcategory = serializers.CharField(source='disaster_sub_category_name')
+    type = serializers.CharField(source='disaster_type_name')
+    subtype = serializers.CharField(source='disaster_sub_type_name')
+    year = serializers.IntegerField()
+    standard_popup_text = serializers.CharField()
+    standard_info_text = serializers.CharField()
+
+    class Meta:
+        model = Figure
+        fields = (
+            'id',
+            'country',
+            'iso3',
+            'latitude',
+            'longitude',
+            'centroid',
+            'displacement_type',
+            'qualifier',
+            'figure',
+            'displacement_date',
+            'displacement_start_date',
+            'displacement_end_date',
+            'year',
+            'event_name',
+            'event_start_date',
+            'event_end_date',
+            'category',
+            'subcategory',
+            'type',
+            'subtype',
+            'standard_popup_text',
+            'standard_info_text',
+            'old_id',
+        )
