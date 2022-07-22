@@ -51,7 +51,7 @@ def get_idu_data():
         ),
         displacement_start_date=F('start_date'),
         displacement_end_date=F('end_date'),
-        year=Coalesce(ExtractYear('end_date', 'year'), ExtractYear('start_date', 'year')),
+        year=Coalesce(ExtractYear('start_date', 'year'), ExtractYear('end_date', 'year')),
         event_name=F('event__name'),
         event_start_date=F('event__start_date'),
         event_end_date=F('event__end_date'),

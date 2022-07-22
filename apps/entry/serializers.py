@@ -631,8 +631,8 @@ class FigureTagUpdateSerializer(UpdateSerializerMixin,
 class FigureReadOnlySerializer(serializers.ModelSerializer):
     country = serializers.CharField(source='country_name')
     iso3 = serializers.CharField()
-    lat = serializers.IntegerField(source='centroid_lat')
-    lon = serializers.IntegerField(source='centroid_lon')
+    latitude = serializers.FloatField(source='centroid_lat')
+    longitude = serializers.FloatField(source='centroid_lon')
     centroid = serializers.CharField()
     displacement_type = serializers.CharField(source='figure_cause')
     qualifier = serializers.CharField(source='quantifier')
@@ -657,8 +657,8 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
             'id',
             'country',
             'iso3',
-            'lat',
-            'lon',
+            'latitude',
+            'longitude',
             'centroid',
             'displacement_type',
             'qualifier',
