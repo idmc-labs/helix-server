@@ -116,7 +116,8 @@ def get_idu_data():
             ),
             When(
                 (
-                    ~Q(total_figures=1) & Q(category=Figure.FIGURE_CATEGORY_TYPES.RETURN.value)
+                    ~Q(total_figures=1)
+                    & Q(category=Figure.FIGURE_CATEGORY_TYPES.RETURN.value)
                 ),
                 then=Concat(
                     F('country__name'),
@@ -181,9 +182,10 @@ def get_idu_data():
                     F('country__name'),
                     Value(': '),
                     F('total_figures_text'),
-                    Value(' displacements '),
-                    Concat(Value('('), F('figure_term_label'), Value('),')),
-                    Value(' '),
+                    Value(' displacements, '),
+                    # THIS may be problematic
+                    # Concat(Value('('), F('figure_term_label'), Value('),')),
+                    # Value(' '),
                     Func(
                         F('start_date'),
                         Value('DD Month'),
@@ -237,11 +239,11 @@ def get_idu_data():
                 When(entry__document_url__isnull=False, then=F('entry__document_url'))
             ),
             Value('"'),
-            Value(' target=_blank>'),
+            Value('target="_blank">'),
             StringAgg('entry__publishers__name', ' ', distinct=True),
             Value(' - '),
             Func(
-                F('entry__created_at'),
+                F('entry__publish_date'),
                 Value('DD Month YYYY'),
                 function='to_char',
                 output_field=CharField()
@@ -250,18 +252,18 @@ def get_idu_data():
             output_field=CharField(),
         ),
         standard_popup_text=Concat(
-            Value('<b>'),
+            Value('<b> '),
             F('custom_figure_text'),
-            Value('</b> <br>'),
+            Value(' </b> <br> '),
             F('excerpt_idu'),
-            Value('<br>'),
+            Value(' <br> '),
             F('custom_link_text'),
             output_field=CharField(),
         ),
         standard_info_text=Concat(
-            Value('<b>'),
+            Value('<b> '),
             F('custom_figure_text'),
-            Value('<b>'),
+            Value(' </b>'),
         )
     )
 
