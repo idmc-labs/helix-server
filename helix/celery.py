@@ -33,7 +33,7 @@ app.conf.beat_schedule = {
     },
     'generate-idus-dump-file': {
         'task': 'apps.contrib.tasks.generate_idus_dump_file',
-        'schedule': crontab(hour='*/24'),
+        'schedule': crontab(hour='*/8'),
         'args': [],
     },
 }
