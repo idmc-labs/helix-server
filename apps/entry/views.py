@@ -116,8 +116,7 @@ def get_idu_data():
             ),
             When(
                 (
-                    ~Q(total_figures=1)
-                    & Q(category=Figure.FIGURE_CATEGORY_TYPES.RETURN.value)
+                    ~Q(total_figures=1) & Q(category=Figure.FIGURE_CATEGORY_TYPES.RETURN.value)
                 ),
                 then=Concat(
                     F('country__name'),
