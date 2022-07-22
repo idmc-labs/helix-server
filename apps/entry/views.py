@@ -81,6 +81,12 @@ def get_idu_data():
             When(quantifier=3, then=Lower(Value(Figure.QUANTIFIER.APPROXIMATELY.label))),
             output_field=CharField()
         ),
+        total_figures_text=Func(
+            F('total_figures'),
+            Value('999G999G999G990D'),
+            function='to_char',
+            output_field=CharField()
+        ),
         custom_figure_text=Case(
             When(
                 total_figures=1,
@@ -88,7 +94,7 @@ def get_idu_data():
                 then=Concat(
                     F('country__name'),
                     Value(': '),
-                    F('total_figures'),
+                    F('total_figures_text'),
                     Value(' return '),
                     Concat(Value('('), F('figure_term_label'), Value('),')),
                     Value(' '),
@@ -115,7 +121,7 @@ def get_idu_data():
                 then=Concat(
                     F('country__name'),
                     Value(': '),
-                    F('total_figures'),
+                    F('total_figures_text'),
                     Value(' returns '),
                     Concat(Value('('), F('figure_term_label'), Value('),')),
                     Value(' '),
@@ -143,7 +149,7 @@ def get_idu_data():
                 then=Concat(
                     F('country__name'),
                     Value(': '),
-                    F('total_figures'),
+                    F('total_figures_text'),
                     Value(' displacement '),
                     Concat(Value('('), F('figure_term_label'), Value('),')),
                     Value(' '),
@@ -174,7 +180,7 @@ def get_idu_data():
                 then=Concat(
                     F('country__name'),
                     Value(': '),
-                    F('total_figures'),
+                    F('total_figures_text'),
                     Value(' displacements '),
                     Concat(Value('('), F('figure_term_label'), Value('),')),
                     Value(' '),
@@ -202,7 +208,7 @@ def get_idu_data():
                 then=Concat(
                     F('country__name'),
                     Value(': '),
-                    F('total_figures'),
+                    F('total_figures_text'),
                     Value(' displacements '),
                     Concat(Value('('), F('figure_term_label'), Value('),')),
                     Value(' '),
