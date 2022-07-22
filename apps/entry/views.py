@@ -74,6 +74,13 @@ def get_idu_data():
             When(term=12, then=Lower(Value(Figure.FIGURE_TERMS.MULTIPLE_OR_OTHER.label))),
             output_field=CharField()
         ),
+        quantifier_label=Case(
+            When(quantifier=0, then=Lower(Value(Figure.QUANTIFIER.MORE_THAN.label))),
+            When(quantifier=1, then=Lower(Value(Figure.QUANTIFIER.LESS_THAN.label))),
+            When(quantifier=2, then=Value('total')),
+            When(quantifier=3, then=Lower(Value(Figure.QUANTIFIER.APPROXIMATELY.label))),
+            output_field=CharField()
+        ),
         custom_figure_text=Case(
             When(
                 total_figures=1,

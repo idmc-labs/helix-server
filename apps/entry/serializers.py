@@ -635,7 +635,7 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
     longitude = serializers.FloatField(source='centroid_lon')
     centroid = serializers.CharField()
     displacement_type = serializers.CharField(source='figure_cause')
-    qualifier = serializers.CharField(source='quantifier')
+    qualifier = serializers.CharField(source='quantifier_label')
     figure = serializers.IntegerField(source='total_figures')
     displacement_start_date = serializers.CharField()
     displacement_end_date = serializers.CharField()
