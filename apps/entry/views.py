@@ -273,39 +273,38 @@ class FigureViewSet(viewsets.ReadOnlyModelViewSet):
         return get_idu_data()
 
 
-class IdusFlatCachedView(APIView):
+class ExternalEndpointBaseCachedViewMixin():
+    ENDPOINT_TYPE = None
 
     def get(self, request):
-        idu_obj = ExternalApiDump.objects.filter(
-            api_type=ExternalApiDump.ExternalApiType.IDUS,
-        ).first()
-        if not idu_obj:
-            return Response([], status=status.HTTP_404_NOT_FOUND)
-        if idu_obj.status == ExternalApiDump.Status.COMPLETED:
-            return redirect(request.build_absolute_uri(idu_obj.dump_file.url))
-        if idu_obj.status == ExternalApiDump.Status.FAILED:
+        api_dump = ExternalApiDump.objects.filter(api_type=self.ENDPOINT_TYPE).first()
+        # NOTE: Sending empty array so client don't break.
+        _empty_response = []
+        if not api_dump:
+            return Response(_empty_response, status=status.HTTP_404_NOT_FOUND)
+        if api_dump.status == ExternalApiDump.Status.COMPLETED:
+            return redirect(
+                request.build_absolute_uri(
+                    api_dump.dump_file.url,
+                )
+            )
+        if api_dump.status == ExternalApiDump.Status.FAILED:
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         # Finally, for pending. If we have a dump send it
-        if idu_obj.dump_file.name is not None:
-            return redirect(request.build_absolute_uri(idu_obj.dump_file.url))
+        if api_dump.dump_file.name is not None:
+            return redirect(
+                request.build_absolute_uri(
+                    api_dump.dump_file.url,
+                )
+            )
         # Else send 202 response
-        return Response(status=status.HTTP_202_ACCEPTED)
+        return Response(_empty_response, status=status.HTTP_202_ACCEPTED)
 
 
-class IdusAllFlatCachedView(APIView):
+class IdusFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
+    ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS
 
-    def get(self, request):
-        idu_obj = ExternalApiDump.objects.filter(
-            api_type=ExternalApiDump.ExternalApiType.IDUS_ALL,
-        ).first()
-        if not idu_obj:
-            return Response([], status=status.HTTP_404_NOT_FOUND)
-        if idu_obj.status == ExternalApiDump.Status.COMPLETED:
-            return redirect(request.build_absolute_uri(idu_obj.dump_file.url))
-        if idu_obj.status == ExternalApiDump.Status.FAILED:
-            return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-        # Finally, for pending. If we have a dump send it
-        if idu_obj.dump_file.name is not None:
-            return redirect(request.build_absolute_uri(idu_obj.dump_file.url))
-        # Else send 202 response
-        return Response(status=status.HTTP_202_ACCEPTED)
+
+class IdusAllFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
+    ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL
