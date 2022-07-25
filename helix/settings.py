@@ -34,10 +34,12 @@ env = environ.Env(
     DJANGO_ALLOWED_HOST=list,
     DJANGO_SECRET_KEY=str,
     # S3 Optional Credentials
+    USE_S3_BUCKET=(bool, False),
     AWS_S3_ACCESS_KEY_ID=(str, None),
     AWS_S3_SECRET_ACCESS_KEY=(str, None),
     AWS_S3_REGION=str,
     S3_BUCKET_NAME=str,
+    EXTERNAL_S3_BUCKET_NAME=str,
     # Redis URL
     DJANGO_CACHE_REDIS_URL=str,  # redis://redis:6379/1
     DJANGO_EXTERNAL_API_CACHE_REDIS_URL=str,  # redis://redis:6379/1
@@ -341,38 +343,59 @@ INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATIC_URL = '/static/'
-STATICFILES_LOCATION = 'static'
+# Use File System Storage as default
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# Set URL (Only used in development mode)
+STATIC_URL = '/static/'
 MEDIA_URL = '/media/'
-MEDIAFILES_LOCATION = 'media'
+EXTERNAL_MEDIA_URL = '/external-media/'
 
 # Django storage
-if 'S3_BUCKET_NAME' in os.environ:
-    DEFAULT_FILE_STORAGE = 'helix.s3_storages.MediaStorage'
-    STATICFILES_STORAGE = 'helix.s3_storages.StaticStorage'
-
-    AWS_STORAGE_BUCKET_NAME = env('S3_BUCKET_NAME')
+if env('USE_S3_BUCKET'):
+    # Get S3 Credentials
     AWS_S3_ACCESS_KEY_ID = env('AWS_S3_ACCESS_KEY_ID')
     if AWS_S3_ACCESS_KEY_ID:
         AWS_S3_SECRET_ACCESS_KEY = env('AWS_S3_SECRET_ACCESS_KEY')
         AWS_S3_REGION_NAME = env('AWS_S3_REGION')
 
-    # NOTE: s3 bucket is public
-    AWS_QUERYSTRING_AUTH = False
-    AWS_S3_FILE_OVERWRITE = False
-    AWS_IS_GZIPPED = True
-    GZIP_CONTENT_TYPES = [
-        'text/css',
-        'text/javascript',
-        'application/javascript',
-        'application/x-javascript',
-        'image/svg+xml',
-        'application/json',
-        'application/pdf',
-    ]
+    # Set storage root
+    STATIC_ROOT = 'static'
+    MEDIA_ROOT = 'media'
+    EXTERNAL_MEDIA_ROOT = 'external-media'
+
+    # Set bucket Names
+    AWS_STORAGE_MEDIA_BUCKET_NAME = AWS_STORAGE_STATIC_BUCKET_NAME = env('S3_BUCKET_NAME')
+    AWS_STORAGE_EXTERNAL_BUCKET_NAME = env('EXTERNAL_S3_BUCKET_NAME')
+
+    # Set Default storages
+    DEFAULT_FILE_STORAGE = 'helix.storages.S3MediaStorage'
+    STATICFILES_STORAGE = 'helix.storages.S3StaticStorage'
+    EXTERNAL_FILE_STORAGE = 'helix.storages.S3ExternalMediaStorage'
+else:
+    # Set root to code directory as default
+    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+    EXTERNAL_MEDIA_ROOT = os.path.join(BASE_DIR, 'external-media')
+
+    # Set default file storages
+    DEFAULT_FILE_STORAGE = 'helix.storages.FileSystemMediaStorage'
+    STATICFILES_STORAGE = 'helix.storages.FileSystemStaticStorage'
+    EXTERNAL_FILE_STORAGE = 'helix.storages.FileSystemExternalMediaStorage'
+
+# Additional S3 configurations
+# NOTE: s3 bucket is public
+AWS_QUERYSTRING_AUTH = False
+AWS_S3_FILE_OVERWRITE = False
+AWS_IS_GZIPPED = True
+GZIP_CONTENT_TYPES = [
+    'text/css',
+    'text/javascript',
+    'application/javascript',
+    'application/x-javascript',
+    'image/svg+xml',
+    'application/json',
+    'application/pdf',
+]
 
 # Sentry Config
 SENTRY_DSN = env('SENTRY_DSN')

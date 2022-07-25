@@ -89,4 +89,5 @@ if settings.DEBUG:
         path('__debug__/', include(debug_toolbar.urls)),
         re_path('^graphiql/?$', csrf_exempt(CustomGraphQLView.as_view(graphiql=True))),
     ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) \
+      + static(settings.EXTERNAL_MEDIA_URL, document_root=settings.EXTERNAL_MEDIA_ROOT) \
       + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

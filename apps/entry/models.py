@@ -18,6 +18,7 @@ from django.utils.translation import gettext_lazy as _, gettext
 from django.utils import timezone
 from django_enumfield import enum
 from helix.settings import FIGURE_NUMBER
+from helix.storages import get_external_storage_class
 from apps.contrib.models import (
     MetaInformationAbstractModel,
     UUIDAbstractModel,
@@ -1139,6 +1140,7 @@ class ExternalApiDump(models.Model):
         verbose_name=_('Dump file'),
         blank=True, null=True,
         upload_to=dump_file_upload_to,
+        storage=get_external_storage_class(),
     )
     api_type = models.CharField(
         max_length=40,
