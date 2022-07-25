@@ -1,5 +1,5 @@
 from django_filters import rest_framework as df
-from django.db.models import Q
+from django.db.models import Q, When, Case, F
 from apps.crisis.models import Crisis
 from apps.country.models import Country
 from apps.extraction.models import ExtractionQuery
@@ -607,7 +607,20 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
 
     @property
     def qs(self):
-        queryset = super().qs
+        queryset = super().qs.annotate(
+            stock_date=Case(
+                When(category__in=Figure.stock_list(), then=F('start_date'))
+            ),
+            stock_reporting_date=Case(
+                When(category__in=Figure.stock_list(), then=F('end_date'))
+            ),
+            flow_date=Case(
+                When(category__in=Figure.flow_list(), then=F('start_date'))
+            ),
+            flow_reporting_date=Case(
+                When(category__in=Figure.flow_list(), then=F('end_date'))
+            ),
+        )
         start_date = self.data.get('filter_figure_start_after')
         end_date = self.data.get('filter_figure_end_before')
 
