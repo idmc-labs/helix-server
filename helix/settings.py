@@ -77,6 +77,7 @@ env = environ.Env(
     # Copilot
     COPILOT_ENVIRONMENT_NAME=(str, None),
     COPILOT_SERVICE_NAME=(str, None),
+    ENABLE_DEBUG_TOOLBAR=(bool, False),
 )
 
 
@@ -154,8 +155,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
 
-ENABLE_DEBUG = env('ENABLE_DEBUG')
-if ENABLE_DEBUG:
+ENABLE_DEBUG_TOOLBAR = env('ENABLE_DEBUG_TOOLBAR')
+if ENABLE_DEBUG_TOOLBAR:
     MIDDLEWARE.append(
         # NOTE: DebugToolbarMiddleware will cause mutation to execute twice for the client, works fine with graphiql
         'utils.middleware.DebugToolbarMiddleware',
@@ -505,14 +506,15 @@ CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
 ########
 
 CORS_ALLOW_CREDENTIALS = True
-CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = [
-    # LOCAL
-    "http://localhost:3080",
-    "http://127.0.0.1:3080",
-    # OUTSIDE
-    FRONTEND_BASE_URL,
-    "https://media-monitoring.idmcdb.org",
-]
+
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = [
+        "http://localhost:3080",
+        "http://127.0.0.1:3080",
+        FRONTEND_BASE_URL,
+    ]
+else:
+    CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = env('CSRF_TRUSTED_ORIGINS').append(env('FRONTEND_BASE_URL'))
 
 CORS_URLS_REGEX = r'(^/api/.*$)|(^/graphql$)'
 
