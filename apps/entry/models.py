@@ -15,6 +15,7 @@ from django.db.models import (
 )
 from django.db.models.functions import Concat, ExtractYear, Cast
 from django.utils.translation import gettext_lazy as _, gettext
+from django.utils.crypto import get_random_string
 from django.utils import timezone
 from django_enumfield import enum
 from helix.settings import FIGURE_NUMBER
@@ -1121,7 +1122,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 def dump_file_upload_to(instance, filename):
     date_str = timezone.now().strftime('%Y-%m-%d-%H-%M-%S')
     api_type = instance.api_type
-    return f'external-api-dump/{api_type}/{date_str}/{filename}'
+    random_chars = get_random_string(length=5)
+    return f'api-dump/{api_type}/{date_str}/{random_chars}/{filename}'
 
 
 class ExternalApiDump(models.Model):
