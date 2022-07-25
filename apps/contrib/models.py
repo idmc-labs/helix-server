@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 
 def global_upload_to(instance, filename: str) -> str:
-    return f'{uuid4()}/{instance.__class__.__name__.lower()}/{uuid4()}/{filename}'
+    return f'contrib/{instance.__class__.__name__.lower()}/{uuid4()}/{uuid4()}/{filename}'
 
 
 class UUIDAbstractModel(models.Model):
@@ -79,9 +79,13 @@ class Attachment(MetaInformationAbstractModel):
         COMMUNICATION = 1
         CONTEXTUAL_UPDATE = 2
 
-    attachment = CachedFileField(verbose_name=_('Attachment'),
-                                 blank=False, null=False,
-                                 upload_to=global_upload_to)
+    attachment = CachedFileField(
+        verbose_name=_('Attachment'),
+        blank=False,
+        null=False,
+        upload_to=global_upload_to,
+        max_length=256,
+    )
     attachment_for = enum.EnumField(enum=FOR_CHOICES, verbose_name=_('Attachment for'),
                                     null=True, blank=True,
                                     help_text=_('The type of instance for which attachment was'
@@ -144,10 +148,13 @@ class SourcePreview(MetaInformationAbstractModel):
     token = models.CharField(verbose_name=_('Token'),
                              max_length=64, db_index=True,
                              blank=True, null=True)
-    pdf = CachedFileField(verbose_name=_('Rendered Pdf'),
-                          blank=True, null=True,
-                          upload_to=global_upload_to,
-                          max_length=256)
+    pdf = CachedFileField(
+        verbose_name=_('Rendered Pdf'),
+        blank=True,
+        null=True,
+        upload_to=global_upload_to,
+        max_length=256,
+    )
     status = enum.EnumField(enum=PREVIEW_STATUS, default=PREVIEW_STATUS.PENDING)
     remark = models.TextField(verbose_name=_('Remark'),
                               blank=True, null=True)
@@ -175,7 +182,7 @@ class SourcePreview(MetaInformationAbstractModel):
 
 
 def excel_upload_to(instance, filename: str) -> str:
-    return f'{uuid4()}/{instance.download_type}/{filename}'
+    return f'contrib/excel/{uuid4()}/{instance.download_type}/{filename}'
 
 
 class ExcelDownload(MetaInformationAbstractModel):
@@ -221,7 +228,8 @@ class ExcelDownload(MetaInformationAbstractModel):
         verbose_name=_('Excel File'),
         blank=True,
         null=True,
-        upload_to=excel_upload_to
+        upload_to=excel_upload_to,
+        max_length=256,
     )
     file_size = models.IntegerField(
         verbose_name=_('File Size'),

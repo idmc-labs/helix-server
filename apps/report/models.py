@@ -436,11 +436,11 @@ class ReportApproval(MetaInformationArchiveAbstractModel, models.Model):
 
 
 def full_report_upload_to(instance, filename: str) -> str:
-    return f'generation/full/{uuid4()}/{filename}'
+    return f'report/generation/full/{uuid4()}/{filename}'
 
 
 def snapshot_report_upload_to(instance, filename: str) -> str:
-    return f'generation/snapshot/{uuid4()}/{filename}'
+    return f'report/generation/snapshot/{uuid4()}/{filename}'
 
 
 class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
@@ -469,12 +469,20 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                                        through_fields=('generation', 'created_by'),
                                        related_name='approved_generations')
     # TODO schedule a task on create to generate following files
-    full_report = CachedFileField(verbose_name=_('full report'),
-                                  blank=True, null=True,
-                                  upload_to=full_report_upload_to)
-    snapshot = CachedFileField(verbose_name=_('report snapshot'),
-                               blank=True, null=True,
-                               upload_to=snapshot_report_upload_to)
+    full_report = CachedFileField(
+        verbose_name=_('full report'),
+        blank=True,
+        null=True,
+        upload_to=full_report_upload_to,
+        max_length=256,
+    )
+    snapshot = CachedFileField(
+        verbose_name=_('report snapshot'),
+        blank=True,
+        null=True,
+        upload_to=snapshot_report_upload_to,
+        max_length=256,
+    )
     status = enum.EnumField(
         REPORT_GENERATION_STATUS,
         default=REPORT_GENERATION_STATUS.PENDING,

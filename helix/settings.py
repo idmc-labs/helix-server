@@ -11,11 +11,13 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import json
 import socket
 import logging
+import environ
 
 from . import sentry
-from helix.aws.secrets_manager import get_db_cluster_secret
+from helix.aws.secrets_manager import fetch_db_credentials_from_secret_arn
 
 logger = logging.getLogger(__name__)
 
@@ -24,41 +26,73 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 APPS_DIRNAME = 'apps'
 APPS_DIR = os.path.join(BASE_DIR, APPS_DIRNAME)
 
+DEVELOPMENT_ENV = 'development'
+
+env = environ.Env(
+    DJANGO_DEBUG=(bool, False),
+    ENABLE_DEBUG=(bool, False),
+    DJANGO_ALLOWED_HOST=list,
+    DJANGO_SECRET_KEY=str,
+    # S3 Optional Credentials
+    AWS_S3_ACCESS_KEY_ID=(str, None),
+    AWS_S3_SECRET_ACCESS_KEY=(str, None),
+    AWS_S3_REGION=str,
+    S3_BUCKET_NAME=str,
+    # Redis URL
+    DJANGO_CACHE_REDIS_URL=str,  # redis://redis:6379/1
+    CELERY_BROKER_URL=str,  # redis://redis:6379/0
+    CELERY_RESULT_BACKEND_URL=str,  # redis://redis:6379/1
+    # -- Single Redis url (For copilot)
+    ELASTI_CACHE_ADDRESS=str,
+    ELASTI_CACHE_PORT=str,
+    # DJANGO cookie conf
+    SESSION_COOKIE_DOMAIN=str,  # .tools.idmdb.org
+    CSRF_COOKIE_DOMAIN=str,   # .tools.idmdb.org
+    CSRF_USE_SESSIONS=(bool, False),
+    CSRF_TRUSTED_ORIGINS=(list, [  # TODO: CHECK IF THIS IS USED
+        'media-monitoring.idmcdb.org',
+        'https://media-monitoring.idmcdb.org',
+        'http://media-monitoring.idmcdb.org',
+        'https://idumap.idmcdb.org',
+        'https://dev-idmc.datafriendlyspace.org',
+        'https://idmc-website.dev.datafriendlyspace.org',
+        'https://internal-displacement.org',
+        'https://idmc-website-components.idmcdb.org',
+    ]),
+    # MISC
+    DEFAULT_FROM_EMAIL=(str, 'contact@idmcdb.org'),
+    FRONTEND_BASE_URL=str,
+    HCAPTCHA_SECRET=str,
+    HELIXDBCLUSTER_SECRET=(str, None),
+    HELIXDBCLUSTER_SECRET_ARN=(str, None),
+    HELIX_ENVIRONMENT=(str, DEVELOPMENT_ENV),
+    POSTGRES_DB=str,
+    POSTGRES_HOST=str,
+    POSTGRES_PASSWORD=str,
+    POSTGRES_PORT=(int, 5432),
+    POSTGRES_USER=str,
+    SEND_ACTIVATION_EMAIL=(bool, True),
+    SENTRY_DSN=(str, None),
+    SENTRY_SAMPLE_RATE=(float, 0.2),
+    # Copilot
+    COPILOT_ENVIRONMENT_NAME=(str, None),
+    COPILOT_SERVICE_NAME=(str, None),
+    ENABLE_DEBUG_TOOLBAR=(bool, False),
+)
+
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY',
-                            'w(m6)jr08z!anjsq6mjz%xo^*+sfnv$e3list=gfcfxaj_^4%o')
-PRODUCTION = 'production'
-DEVELOPMENT = 'development'
-ALPHA = 'alpha'
-NIGHTLY = 'nightly'
-HELIX_ENVIRONMENT = os.environ.get('HELIX_ENVIRONMENT', DEVELOPMENT)
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+SECRET_KEY = env('DJANGO_SECRET_KEY')
+HELIX_ENVIRONMENT = env('COPILOT_ENVIRONMENT_NAME') or env('HELIX_ENVIRONMENT')
+DEBUG = env('DJANGO_DEBUG')
 logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 
-ALLOWED_HOSTS = [
-    os.environ.get('ALLOWED_HOST', '.idmcdb.org')
-]
+ALLOWED_HOSTS = env('DJANGO_ALLOWED_HOST')
 
-# https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-CSRF_USE_SESSIONS
-CSRF_USE_SESSIONS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'False').lower() == 'true'
-# https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-SESSION_COOKIE_DOMAIN
-SESSION_COOKIE_DOMAIN = os.environ.get('SESSION_COOKIE_DOMAIN', None)
-# https://docs.djangoproject.com/en/3.2/ref/settings/#csrf-cookie-domain
-CSRF_COOKIE_DOMAIN = os.environ.get('CSRF_COOKIE_DOMAIN', '.idmcdb.org')
-
-CORS_ORIGIN_REGEX_WHITELIST = [
-    r'^https://[\w\-]+\.idmcdb\.org$'
-]
-CSRF_TRUSTED_ORIGINS = [
-    'media-monitoring.idmcdb.org',
-    'https://media-monitoring.idmcdb.org',
-    'http://media-monitoring.idmcdb.org',
-]
+IN_AWS_COPILOT_ECS = not not env('COPILOT_SERVICE_NAME')
 
 # Application definition
 
@@ -121,44 +155,36 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
 ]
 
-ENABLE_DEBUG = os.environ.get('ENABLE_DEBUG', False)
-if ENABLE_DEBUG:
+ENABLE_DEBUG_TOOLBAR = env('ENABLE_DEBUG_TOOLBAR')
+if ENABLE_DEBUG_TOOLBAR:
     MIDDLEWARE.append(
         # NOTE: DebugToolbarMiddleware will cause mutation to execute twice for the client, works fine with graphiql
         'utils.middleware.DebugToolbarMiddleware',
     )
 
-if HELIX_ENVIRONMENT not in (DEVELOPMENT,):
+if HELIX_ENVIRONMENT not in (DEVELOPMENT_ENV,):
     MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
 
-REDIS_BROKER_URL = 0
-REDIS_CACHE_DB = 1
-REDIS_RESULT_BACKEND = 2
 
-if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': 'redis://{}:{}/{}'.format(
-                os.environ['ELASTI_CACHE_ADDRESS'],
-                os.environ['ELASTI_CACHE_PORT'],
-                REDIS_CACHE_DB,
-            ),
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            }
-        }
-    }
+if IN_AWS_COPILOT_ECS:
+    _COPILOT_ELASTI_CACHE_URL = f"redis://{env('ELASTI_CACHE_ADDRESS')}:{env('ELASTI_CACHE_PORT')}"
+    DJANGO_CACHE_REDIS_URL = f'{_COPILOT_ELASTI_CACHE_URL}/1'
+    CELERY_BROKER_URL = f'{_COPILOT_ELASTI_CACHE_URL}/0'
+    CELERY_RESULT_BACKEND = f'{_COPILOT_ELASTI_CACHE_URL}/2'
 else:
-    CACHES = {
-        'default': {
-            'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': os.environ.get('REDIS_CACHE_URL', 'redis://redis:6379/1'),
-            'OPTIONS': {
-                'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-            }
+    DJANGO_CACHE_REDIS_URL = env('DJANGO_CACHE_REDIS_URL')
+    CELERY_BROKER_URL = env('CELERY_BROKER_URL')
+    CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND_URL')
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': DJANGO_CACHE_REDIS_URL,
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
     }
+}
 
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
@@ -190,8 +216,11 @@ WSGI_APPLICATION = 'helix.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
-if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
-    DBCLUSTER_SECRET = get_db_cluster_secret()
+if IN_AWS_COPILOT_ECS:
+    DBCLUSTER_SECRET = (
+        json.loads(env('HELIXDBCLUSTER_SECRET') or '{}') or
+        fetch_db_credentials_from_secret_arn(env('HELIXDBCLUSTER_SECRET_ARN'))
+    )
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
@@ -207,11 +236,11 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': os.environ.get('POSTGRES_DB', 'postgres'),
-            'USER': os.environ.get('POSTGRES_USER', 'postgres'),
-            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'postgres'),
-            'HOST': os.environ.get('POSTGRES_HOST', 'db'),
-            'PORT': os.environ.get('POSTGRES_PORT', 5432),
+            'NAME': env('POSTGRES_DB'),
+            'USER': env('POSTGRES_USER'),
+            'PASSWORD': env('POSTGRES_PASSWORD'),
+            'HOST': env('POSTGRES_HOST'),
+            'PORT': env('POSTGRES_PORT'),
         }
     }
 
@@ -251,11 +280,6 @@ USE_L10N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/3.0/howto/static-files/
-
-STATIC_URL = '/static/'
-
 AUTH_USER_MODEL = 'users.User'
 
 # https://docs.graphene-python.org/projects/django/en/latest/settings/
@@ -286,36 +310,17 @@ AUTHENTICATION_BACKEND = [
 
 DJOSER = {
     'ACTIVATION_URL': '#/activate/{uid}/{token}',
-    'SEND_ACTIVATION_EMAIL': os.environ.get('SEND_ACTIVATION_EMAIL', "True") == 'True',
+    'SEND_ACTIVATION_EMAIL': env('SEND_ACTIVATION_EMAIL'),
 }
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
     EMAIL_BACKEND = 'django_ses.SESBackend'
 
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", 'contact@idmcdb.org')
-
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = 'media/'
+DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
 
 # https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-APPEND_SLASH
 APPEND_SLASH = False
-
-########
-# CORS #
-########
-
-CORS_ORIGIN_WHITELIST = [
-    "http://localhost:3080",
-    "http://127.0.0.1:3080"
-]
-CORS_ALLOW_CREDENTIALS = True
-# CORS_ORIGIN_ALLOW_ALL = False
-# CORS_ORIGIN_REGEX_WHITELIST = [
-#     '^https://[\w\-]+\.idmcdb\.org$'
-# ]
-# CSRF_TRUSTED_ORIGINS = []
 
 #################
 # DEBUG TOOLBAR #
@@ -329,38 +334,44 @@ INTERNAL_IPS = [
 hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
 INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/3.0/howto/static-files/
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_URL = '/static/'
+STATICFILES_LOCATION = 'static'
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+MEDIAFILES_LOCATION = 'media'
+
 # Django storage
+if 'S3_BUCKET_NAME' in os.environ:
+    DEFAULT_FILE_STORAGE = 'helix.s3_storages.MediaStorage'
+    STATICFILES_STORAGE = 'helix.s3_storages.StaticStorage'
 
-# https://django-storages.readthedocs.io/en/latest/backends/amazon-S3.html
-if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    # NOTE: This naming convention is defined in the addon for s3
-    AWS_STORAGE_BUCKET_NAME = os.environ['COPILOT_S3_BUCKET_NAME']
-elif HELIX_ENVIRONMENT not in (DEVELOPMENT,):
-    # TODO: Remove me after complete move to copilot
-    DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
-    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-    AWS_STORAGE_BUCKET_NAME = os.environ.get('S3_BUCKET_NAME', 'idmc-helix')
-    AWS_S3_REGION_NAME = os.environ.get('AWS_REGION', 'us-east-1')
+    AWS_STORAGE_BUCKET_NAME = env('S3_BUCKET_NAME')
+    AWS_S3_ACCESS_KEY_ID = env('AWS_S3_ACCESS_KEY_ID')
+    if AWS_S3_ACCESS_KEY_ID:
+        AWS_S3_SECRET_ACCESS_KEY = env('AWS_S3_SECRET_ACCESS_KEY')
+        AWS_S3_REGION_NAME = env('AWS_S3_REGION')
 
-# NOTE: s3 bucket is public
-# AWS_QUERYSTRING_EXPIRE = int(os.environ.get('AWS_QUERYSTRING_EXPIRE', 12 * 60 * 60))
-AWS_QUERYSTRING_AUTH = False
-AWS_S3_FILE_OVERWRITE = False
-AWS_IS_GZIPPED = True
-GZIP_CONTENT_TYPES = [
-    'text/css',
-    'text/javascript',
-    'application/javascript',
-    'application/x-javascript',
-    'image/svg+xml',
-    'application/json',
-    'application/pdf',
-]
+    # NOTE: s3 bucket is public
+    AWS_QUERYSTRING_AUTH = False
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_IS_GZIPPED = True
+    GZIP_CONTENT_TYPES = [
+        'text/css',
+        'text/javascript',
+        'application/javascript',
+        'application/x-javascript',
+        'image/svg+xml',
+        'application/json',
+        'application/pdf',
+    ]
 
 # Sentry Config
-SENTRY_DSN = os.environ.get('SENTRY_DSN')
+SENTRY_DSN = env('SENTRY_DSN')
 
 if SENTRY_DSN:
     SENTRY_CONFIG = {
@@ -369,6 +380,7 @@ if SENTRY_DSN:
         # TODO: Move server to root directory to get access to .git
         # 'release': sentry.fetch_git_sha(os.path.dirname(BASE_DIR)),
         'environment': HELIX_ENVIRONMENT,
+        'traces_sample_rate': env('SENTRY_SAMPLE_RATE'),
         'debug': DEBUG,
         'tags': {
             'site': ALLOWED_HOSTS[0],
@@ -385,24 +397,9 @@ FIGURE_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
 
 # CELERY
 
-if 'COPILOT_ENVIRONMENT_NAME' in os.environ:
-    CELERY_BROKER_URL = 'redis://{}:{}/{}'.format(
-        os.environ['ELASTI_CACHE_ADDRESS'],
-        os.environ['ELASTI_CACHE_PORT'],
-        REDIS_BROKER_URL,
-    )
-    CELERY_RESULT_BACKEND = 'redis://{}:{}/{}'.format(
-        os.environ['ELASTI_CACHE_ADDRESS'],
-        os.environ['ELASTI_CACHE_PORT'],
-        REDIS_RESULT_BACKEND,
-    )
-else:
-    CELERY_BROKER_URL = os.environ.get('CELERY_REDIS_URL', 'redis://redis:6379/0')
-    CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
-
 # NOTE: These queue names must match the worker container command
-# CELERY_DEFAULT_QUEUE = LOW_PRIO_QUEUE = os.environ.get('LOW_PRIO_QUEUE_NAME', 'celery_low')
-# HIGH_PRIO_QUEUE = os.environ.get('HIGH_PRIO_QUEUE_NAME', 'celery_high')
+# CELERY_DEFAULT_QUEUE = LOW_PRIO_QUEUE = env('LOW_PRIO_QUEUE_NAME', 'celery_low')
+# HIGH_PRIO_QUEUE = env('HIGH_PRIO_QUEUE_NAME', 'celery_high')
 
 # CELERY ROUTES
 # CELERY_ROUTES = {
@@ -438,7 +435,7 @@ GRAPHENE_NODES_WHITELIST = (
 )
 
 # CAPTCHA
-HCAPTCHA_SECRET = os.environ.get('HCAPTCHA_SECRET', '0x0000000000000000000000000000000000000000')
+HCAPTCHA_SECRET = env('HCAPTCHA_SECRET')
 
 # It login attempts exceed MAX_LOGIN_ATTEMPTS, users will need to enter captcha
 # to login
@@ -450,7 +447,7 @@ MAX_CAPTCHA_LOGIN_ATTEMPTS = 10
 LOGIN_TIMEOUT = 10 * 60  # seconds
 
 # Frontend base url for email button link
-FRONTEND_BASE_URL = os.environ.get('FRONTEND_BASE_URL', 'http://localhost:3080')
+FRONTEND_BASE_URL = env('FRONTEND_BASE_URL')
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#password-reset-timeout
 PASSWORD_RESET_TIMEOUT = 15 * 60  # seconds
@@ -474,3 +471,71 @@ OTP_EMAIL_SUBJECT = 'IDMC OTP Token'
 OTP_EMAIL_BODY_TEMPLATE_PATH = 'emails/otp.html'
 
 TEMP_FILE_DIRECTORY = '/tmp/'
+
+# Security Header configuration
+SESSION_COOKIE_NAME = f'helix-{HELIX_ENVIRONMENT}-sessionid'
+CSRF_COOKIE_NAME = f'helix-{HELIX_ENVIRONMENT}-csrftoken'
+# # SECURE_BROWSER_XSS_FILTER = True
+# # SECURE_CONTENT_TYPE_NOSNIFF = True
+# # X_FRAME_OPTIONS = 'DENY'
+# # CSP_DEFAULT_SRC = ["'self'"]
+# # SECURE_REFERRER_POLICY = 'same-origin'
+# if HELIX_ENVIRONMENT != DEVELOPMENT_ENV:
+#     SESSION_COOKIE_NAME = f'__Secure-{SESSION_COOKIE_NAME}'
+#     # SESSION_COOKIE_SECURE = True
+#     # SESSION_COOKIE_HTTPONLY = True
+#     # SECURE_HSTS_SECONDS = 30  # TODO: Increase this slowly
+#     # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+#     # SECURE_HSTS_PRELOAD = True
+#     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+#     # NOTE: Client needs to read CSRF COOKIE.
+#     # CSRF_COOKIE_NAME = f'__Secure-{CSRF_COOKIE_NAME}'
+#     # CSRF_COOKIE_SECURE = True
+#     # CSRF_COOKIE_HTTPONLY = True
+
+
+# https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-CSRF_USE_SESSIONS
+CSRF_USE_SESSIONS = env('CSRF_USE_SESSIONS', 'False')
+# https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-SESSION_COOKIE_DOMAIN
+SESSION_COOKIE_DOMAIN = env('SESSION_COOKIE_DOMAIN')
+# https://docs.djangoproject.com/en/3.2/ref/settings/#csrf-cookie-domain
+CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
+
+########
+# CORS #
+########
+
+CORS_ALLOW_CREDENTIALS = True
+
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = [
+        "http://localhost:3080",
+        "http://127.0.0.1:3080",
+        FRONTEND_BASE_URL,
+    ]
+else:
+    CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = env('CSRF_TRUSTED_ORIGINS').append(env('FRONTEND_BASE_URL'))
+
+CORS_URLS_REGEX = r'(^/api/.*$)|(^/graphql$)'
+
+CORS_ALLOW_METHODS = (
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+)
+
+CORS_ALLOW_HEADERS = (
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'sentry-trace',
+)
