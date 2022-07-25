@@ -36,6 +36,11 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='*/8'),
         'args': [],
     },
+    'generate-idus-all-dump-file': {
+        'task': 'apps.contrib.tasks.generate_idus_all_dump_file',
+        'schedule': crontab(hour='*/8'),
+        'args': [],
+    },
 }
 
 # Load task modules from all registered Django apps.

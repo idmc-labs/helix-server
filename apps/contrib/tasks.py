@@ -3,8 +3,7 @@ import re
 from tempfile import NamedTemporaryFile
 import time
 import json
-from datetime import timedelta
-
+from datetime import date, timedelta
 from django.core.files import File
 from django.conf import settings
 from django.utils import timezone
@@ -158,17 +157,23 @@ def kill_all_long_running_report_generations():
     logger.info(f'Updated REPORT GENERATION to killed:\n{progress=}')
 
 
-@celery_app.task
-def generate_idus_dump_file():
+def generate_idus_file(idus_type):
     from apps.entry.models import ExternalApiDump
-    from apps.entry.serializers import FigureReadOnlySerializer
     from apps.entry.views import get_idu_data
+    from apps.entry.serializers import FigureReadOnlySerializer
 
     external_api_dump, created = ExternalApiDump.objects.get_or_create(
-        api_type=ExternalApiDump.ExternalApiType.IDUS.value,
+        api_type=idus_type
     )
     try:
-        serializer = FigureReadOnlySerializer(get_idu_data(), many=True)
+        data = []
+        if idus_type == ExternalApiDump.ExternalApiType.IDUS_ALL.value:
+            data = get_idu_data()
+        elif idus_type == ExternalApiDump.ExternalApiType.IDUS.value:
+            idu_date_from = date.today() - timedelta(days=180)
+            data = get_idu_data().filter(displacement_date__gte=idu_date_from)
+
+        serializer = FigureReadOnlySerializer(data, many=True)
         with get_temp_file(mode="w+") as tmp:
             json.dump(serializer.data, tmp)
             external_api_dump.dump_file.save('idus_dump.json', File(tmp))
@@ -178,3 +183,15 @@ def generate_idus_dump_file():
         external_api_dump.status = ExternalApiDump.Status.FAILED
         logger.info('Idus file dump generation failed')
     external_api_dump.save()
+
+
+@celery_app.task
+def generate_idus_dump_file():
+    from apps.entry.models import ExternalApiDump
+    return generate_idus_file(ExternalApiDump.ExternalApiType.IDUS.value)
+
+
+@celery_app.task
+def generate_idus_all_dump_file():
+    from apps.entry.models import ExternalApiDump
+    return generate_idus_file(ExternalApiDump.ExternalApiType.IDUS_ALL.value)

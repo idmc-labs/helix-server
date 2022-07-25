@@ -1112,6 +1112,7 @@ class ExternalApiDump(models.Model):
     class ExternalApiType(models.TextChoices):
         # There might be other external endpoints
         IDUS = 'idus', _('Idus')
+        IDUS_ALL = 'idus-all', _('Idus all')
 
     class Status(models.IntegerChoices):
         PENDING = 0, 'Pending'
