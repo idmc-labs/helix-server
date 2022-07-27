@@ -30,7 +30,7 @@ DEVELOPMENT_ENV = 'development'
 
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
-    ENABLE_DEBUG=(bool, False),
+    ENABLE_DEBUG_TOOLBAR=(bool, False),
     DJANGO_ALLOWED_HOST=list,
     DJANGO_SECRET_KEY=str,
     # S3 Optional Credentials
@@ -70,7 +70,6 @@ env = environ.Env(
     # Copilot
     COPILOT_ENVIRONMENT_NAME=(str, None),
     COPILOT_SERVICE_NAME=(str, None),
-    ENABLE_DEBUG_TOOLBAR=(bool, False),
 )
 
 

@@ -32,7 +32,7 @@ exec: true     # Enable running commands in your container.
 
 variables:
   DJANGO_DEBUG: False
-  ENABLE_DEBUG: False
+  ENABLE_DEBUG_TOOLBAR: False
   USE_S3_BUCKET: True
 
 
