@@ -49,16 +49,6 @@ env = environ.Env(
     SESSION_COOKIE_DOMAIN=str,  # .tools.idmdb.org
     CSRF_COOKIE_DOMAIN=str,   # .tools.idmdb.org
     CSRF_USE_SESSIONS=(bool, False),
-    CSRF_TRUSTED_ORIGINS=(list, [  # TODO: CHECK IF THIS IS USED
-        'media-monitoring.idmcdb.org',
-        'https://media-monitoring.idmcdb.org',
-        'http://media-monitoring.idmcdb.org',
-        'https://idumap.idmcdb.org',
-        'https://dev-idmc.datafriendlyspace.org',
-        'https://idmc-website.dev.datafriendlyspace.org',
-        'https://internal-displacement.org',
-        'https://idmc-website-components.idmcdb.org',
-    ]),
     # MISC
     DEFAULT_FROM_EMAIL=(str, 'contact@idmcdb.org'),
     FRONTEND_BASE_URL=str,
@@ -507,19 +497,22 @@ CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
 
 CORS_ALLOW_CREDENTIALS = True
 
-if DEBUG:
-    CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = [
-        "http://localhost:3080",
-        "http://127.0.0.1:3080",
-        FRONTEND_BASE_URL,
-    ]
-else:
-    CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = [
-        *env('CSRF_TRUSTED_ORIGINS'),
-        env('FRONTEND_BASE_URL')
-    ]
+CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = [
+    # Localhost
+    "http://localhost:3080",
+    "http://127.0.0.1:3080",
+    # External services
+    'https://media-monitoring.idmcdb.org',
+    'https://idumap.idmcdb.org',
+    'https://dev-idmc.datafriendlyspace.org',
+    'https://idmc-website.dev.datafriendlyspace.org',
+    'https://internal-displacement.org',
+    'https://idmc-website-components.idmcdb.org',
+    # Frontend
+    FRONTEND_BASE_URL,
+]
 
-CORS_URLS_REGEX = r'(^/api/.*$)|(^/graphql$)'
+CORS_URLS_REGEX = r'(^/api/.*$)|(^/graphql$)|(^/external-api/.*$)'
 
 CORS_ALLOW_METHODS = (
     'DELETE',
