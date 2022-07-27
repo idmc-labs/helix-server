@@ -506,7 +506,7 @@ CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = [
     'https://idumap.idmcdb.org',
     'https://dev-idmc.datafriendlyspace.org',
     'https://idmc-website.dev.datafriendlyspace.org',
-    'https://internal-displacement.org',
+    'https://www.internal-displacement.org',
     'https://idmc-website-components.idmcdb.org',
     # Frontend
     FRONTEND_BASE_URL,
