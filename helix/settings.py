@@ -514,7 +514,10 @@ if DEBUG:
         FRONTEND_BASE_URL,
     ]
 else:
-    CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = env('CSRF_TRUSTED_ORIGINS').append(env('FRONTEND_BASE_URL'))
+    CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = [
+        *env('CSRF_TRUSTED_ORIGINS'),
+        env('FRONTEND_BASE_URL')
+    ]
 
 CORS_URLS_REGEX = r'(^/api/.*$)|(^/graphql$)'
 
