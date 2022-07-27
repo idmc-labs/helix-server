@@ -136,8 +136,8 @@ class FigureType(DjangoObjectType):
     )
     stock_date = graphene.Date()
     stock_reporting_date = graphene.Date()
-    flow_date = graphene.Date()
-    flow_reporting_date = graphene.Date()
+    flow_start_date = graphene.Date()
+    flow_end_date = graphene.Date()
 
     def resolve_stock_date(root, info, **kwargs):
         if root.category in Figure.stock_list():
@@ -147,11 +147,11 @@ class FigureType(DjangoObjectType):
         if root.category in Figure.stock_list():
             return root.end_date
 
-    def resolve_flow_date(root, info, **kwargs):
+    def resolve_flow_start_date(root, info, **kwargs):
         if root.category in Figure.flow_list():
             return root.start_date
 
-    def resolve_flow_reporting_date(root, info, **kwargs):
+    def resolve_flow_end_date(root, info, **kwargs):
         if root.category in Figure.flow_list():
             return root.end_date
 

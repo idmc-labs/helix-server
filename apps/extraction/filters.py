@@ -614,10 +614,10 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
             stock_reporting_date=Case(
                 When(category__in=Figure.stock_list(), then=F('end_date'))
             ),
-            flow_date=Case(
+            flow_start_date=Case(
                 When(category__in=Figure.flow_list(), then=F('start_date'))
             ),
-            flow_reporting_date=Case(
+            flow_end_date=Case(
                 When(category__in=Figure.flow_list(), then=F('end_date'))
             ),
         )

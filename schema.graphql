@@ -1492,8 +1492,8 @@ type FigureType {
   figureTypology: String
   stockDate: Date
   stockReportingDate: Date
-  flowDate: Date
-  flowReportingDate: Date
+  flowStartDate: Date
+  flowEndDate: Date
 }
 
 input FigureUpdateInputType {
