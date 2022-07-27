@@ -37,11 +37,6 @@ Resources:
               # TODO: Make sure this works.
               - "https://*.idmcdb.org"
             MaxAge: 3600
-      LifecycleConfiguration:
-        Rules:
-          - Id: AutoDelete
-            Status: Enabled
-            ExpirationInDays: 7
 
   S3MediaBucketPolicy:
     Metadata:
@@ -120,6 +115,11 @@ Resources:
             AllowedOrigins:
               - "*"
             MaxAge: 3600
+      LifecycleConfiguration:
+        Rules:
+          - Id: AutoDelete
+            Status: Enabled
+            ExpirationInDays: 7
 
   ExternalS3MediaBucketPolicy:
     Metadata:

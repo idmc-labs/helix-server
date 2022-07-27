@@ -1,4 +1,5 @@
 from storages.backends.s3boto3 import S3Boto3Storage
+from django.utils.functional import LazyObject
 from django.core.files.storage import FileSystemStorage, get_storage_class
 from django.conf import settings
 
@@ -54,3 +55,11 @@ class S3ExternalMediaStorage(S3Boto3Storage):
 
 def get_external_storage_class():
     return get_storage_class(import_path=settings.EXTERNAL_FILE_STORAGE)
+
+
+class ExternalStorage(LazyObject):
+    def _setup(self):
+        self._wrapped = get_external_storage_class()()
+
+
+external_storage = ExternalStorage()
