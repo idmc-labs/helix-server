@@ -1,5 +1,4 @@
 from rest_framework import viewsets
-from datetime import date, timedelta
 from django.db.models import F, When, Case, Value, CharField, Avg, Q, Func
 from django.db.models.functions import Concat, Coalesce, ExtractYear, Lower
 from django.contrib.postgres.aggregates.general import StringAgg
@@ -13,11 +12,9 @@ from django.shortcuts import redirect
 
 
 def get_idu_data():
-    idu_date_from = date.today() - timedelta(days=180)
     return Figure.objects.annotate(
         displacement_date=Coalesce('end_date', 'start_date'),
     ).filter(
-        displacement_date__gte=idu_date_from,
         category__in=[
             Figure.FIGURE_CATEGORY_TYPES.RETURNEES.value,
             Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
@@ -264,7 +261,7 @@ def get_idu_data():
             F('custom_figure_text'),
             Value(' </b>'),
         )
-    ).order_by('start_date', 'end_date')
+    ).order_by('-start_date', '-end_date')
 
 
 class FigureViewSet(viewsets.ReadOnlyModelViewSet):
@@ -276,20 +273,38 @@ class FigureViewSet(viewsets.ReadOnlyModelViewSet):
         return get_idu_data()
 
 
-class IdusFlatCachedView(APIView):
+class ExternalEndpointBaseCachedViewMixin():
+    ENDPOINT_TYPE = None
 
     def get(self, request):
-        idu_obj = ExternalApiDump.objects.filter(
-            api_type=ExternalApiDump.ExternalApiType.IDUS,
-        ).first()
-        if not idu_obj:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        if idu_obj.status == ExternalApiDump.Status.COMPLETED:
-            return redirect(request.build_absolute_uri(idu_obj.dump_file.url))
-        if idu_obj.status == ExternalApiDump.Status.FAILED:
+        api_dump = ExternalApiDump.objects.filter(api_type=self.ENDPOINT_TYPE).first()
+        # NOTE: Sending empty array so client don't break.
+        _empty_response = []
+        if not api_dump:
+            return Response(_empty_response, status=status.HTTP_404_NOT_FOUND)
+        if api_dump.status == ExternalApiDump.Status.COMPLETED:
+            return redirect(
+                request.build_absolute_uri(
+                    api_dump.dump_file.url,
+                )
+            )
+        if api_dump.status == ExternalApiDump.Status.FAILED:
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         # Finally, for pending. If we have a dump send it
-        if idu_obj.dump_file.name is not None:
-            return redirect(request.build_absolute_uri(idu_obj.dump_file.url))
+        if api_dump.dump_file.name is not None:
+            return redirect(
+                request.build_absolute_uri(
+                    api_dump.dump_file.url,
+                )
+            )
         # Else send 202 response
-        return Response(status=status.HTTP_202_ACCEPTED)
+        return Response(_empty_response, status=status.HTTP_202_ACCEPTED)
+
+
+class IdusFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
+    ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS
+
+
+class IdusAllFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
+    ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL

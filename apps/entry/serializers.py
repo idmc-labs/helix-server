@@ -677,4 +677,5 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
             'standard_popup_text',
             'standard_info_text',
             'old_id',
+            'created_at',
         )

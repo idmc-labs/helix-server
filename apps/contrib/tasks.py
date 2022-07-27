@@ -1,6 +1,5 @@
 import logging
 import re
-from tempfile import NamedTemporaryFile
 import time
 import json
 from datetime import timedelta
@@ -10,12 +9,13 @@ from django.conf import settings
 from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
-from utils.common import get_temp_file
 
+from utils.common import get_temp_file
 # from helix.settings import QueuePriority
 from helix.celery import app as celery_app
 from apps.entry.tasks import PDF_TASK_TIMEOUT
 from apps.report.tasks import REPORT_TIMEOUT
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ def get_excel_sheet_content(headers, data, **kwargs):
 
 
 def save_download_file(download, workbook, path):
-    with NamedTemporaryFile(dir='/tmp') as tmp:
+    with get_temp_file() as tmp:
         workbook.save(tmp.name)
         workbook.close()
         file = File(tmp)
@@ -158,23 +158,57 @@ def kill_all_long_running_report_generations():
     logger.info(f'Updated REPORT GENERATION to killed:\n{progress=}')
 
 
-@celery_app.task
-def generate_idus_dump_file():
+def generate_external_endpoint_dump_file(
+    endpoint_type,
+    serializer,
+    get_data,
+    filename,
+):
     from apps.entry.models import ExternalApiDump
-    from apps.entry.serializers import FigureReadOnlySerializer
-    from apps.entry.views import get_idu_data
-
-    external_api_dump, created = ExternalApiDump.objects.get_or_create(
-        api_type=ExternalApiDump.ExternalApiType.IDUS.value,
-    )
+    external_api_dump, _ = ExternalApiDump.objects.get_or_create(api_type=endpoint_type)
     try:
-        serializer = FigureReadOnlySerializer(get_idu_data(), many=True)
+        data = get_data()
+        serializer = serializer(data, many=True)
         with get_temp_file(mode="w+") as tmp:
             json.dump(serializer.data, tmp)
-            external_api_dump.dump_file.save('idus_dump.json', File(tmp))
+            external_api_dump.dump_file.save(
+                filename,
+                File(tmp),
+            )
         external_api_dump.status = ExternalApiDump.Status.COMPLETED
-        logger.info('Idus file dump created')
+        logger.info(f'{endpoint_type}: file dump created')
     except Exception:
         external_api_dump.status = ExternalApiDump.Status.FAILED
-        logger.info('Idus file dump generation failed')
+        logger.info(f'{endpoint_type}: file dump generation failed')
     external_api_dump.save()
+    return external_api_dump
+
+
+def _generate_idus_dump_file(idus_all=False):
+    from apps.entry.serializers import FigureReadOnlySerializer
+    from apps.entry.views import get_idu_data
+    from apps.entry.models import ExternalApiDump
+    if idus_all:
+        return generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL,
+            FigureReadOnlySerializer,
+            get_idu_data,
+            'idus_all.json',
+        )
+    idu_date_from = timezone.now() - timedelta(days=180)
+    return generate_external_endpoint_dump_file(
+        ExternalApiDump.ExternalApiType.IDUS,
+        FigureReadOnlySerializer,
+        lambda: get_idu_data().filter(displacement_date__gte=idu_date_from),
+        'idus.json',
+    )
+
+
+@celery_app.task
+def generate_idus_dump_file():
+    return _generate_idus_dump_file()
+
+
+@celery_app.task
+def generate_idus_all_dump_file():
+    return _generate_idus_dump_file(idus_all=True)
