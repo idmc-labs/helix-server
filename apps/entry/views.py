@@ -261,7 +261,7 @@ def get_idu_data():
             F('custom_figure_text'),
             Value(' </b>'),
         )
-    ).order_by('start_date', 'end_date')
+    ).order_by('-start_date', '-end_date')
 
 
 class FigureViewSet(viewsets.ReadOnlyModelViewSet):
