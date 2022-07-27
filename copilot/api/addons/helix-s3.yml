@@ -118,7 +118,7 @@ Resources:
               - GET
               - HEAD
             AllowedOrigins:
-              - "https://*.idmcdb.org"
+              - "*"
             MaxAge: 3600
 
   ExternalS3MediaBucketPolicy:
