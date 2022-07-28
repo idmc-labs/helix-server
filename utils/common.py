@@ -3,10 +3,6 @@ import re
 from django.core.files.storage import get_storage_class
 from django.conf import settings
 import tempfile
-from django.core.cache import caches
-from django.utils import timezone
-
-external_api_cache = caches['external_api']
 
 
 def convert_date_object_to_string_in_dict(dictionary):
@@ -80,12 +76,3 @@ def get_string_from_list(list_of_string):
 
 def get_temp_file(dir=settings.TEMP_FILE_DIRECTORY, **kwargs):
     return tempfile.NamedTemporaryFile(dir=dir, **kwargs)
-
-
-def track_client(api_type, client_id):
-    date_today = timezone.now().strftime('%Y-%m-%d')
-    cache_key = f'trackinfo:{date_today}:{api_type}:{client_id}'
-    try:
-        external_api_cache.incr(cache_key)
-    except ValueError:
-        external_api_cache.set(cache_key, 1, None)

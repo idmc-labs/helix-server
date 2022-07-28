@@ -11,11 +11,16 @@ from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 
-from utils.common import get_temp_file, external_api_cache
+from utils.common import get_temp_file
 # from helix.settings import QueuePriority
 from helix.celery import app as celery_app
 from apps.entry.tasks import PDF_TASK_TIMEOUT
 from apps.report.tasks import REPORT_TIMEOUT
+from apps.contrib.redis_client_track import (
+    get_client_tracked_cache_keys,
+    get_external_redis_data,
+    delete_external_redis_record_by_key,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -220,12 +225,11 @@ def save_and_delete_tracked_data_from_redis_to_db():
     from apps.contrib.models import ClientTrackInfo, Client
 
     tracked_data = []
-    one_day_ago = (timezone.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-    tracking_keys = external_api_cache.keys(f'trackinfo:{one_day_ago}:*')
+    tracking_keys = get_client_tracked_cache_keys()
     for key in tracking_keys:
         tracked_date, api_type, code = itemgetter(1, 2, 3)(key.split(':'))
         tracked_date = datetime.strptime(tracked_date, "%Y-%m-%d").date()
-        requests_per_day = external_api_cache.get(key)
+        requests_per_day = get_external_redis_data(key)
         try:
             client = Client.objects.get(code=code)
             tracked_data.append(dict(
@@ -235,7 +239,7 @@ def save_and_delete_tracked_data_from_redis_to_db():
                 tracked_date=tracked_date
             ))
         except Client.DoesNotExist:
-            pass
+            logger.error(f'Client with is code {code} doesnnot exist')
 
     # Save to database from redis
     ClientTrackInfo.objects.bulk_create(
@@ -250,5 +254,5 @@ def save_and_delete_tracked_data_from_redis_to_db():
     )
 
     # Finally delete redis keys after save
-    for key in tracking_keys:
-        tracking_keys.delete(key)
+    for key in get_client_tracked_cache_keys():
+        delete_external_redis_record_by_key(key)

@@ -12,7 +12,7 @@ from django_enumfield import enum
 from apps.contrib.tasks import generate_excel_file
 from apps.entry.tasks import generate_pdf
 from utils.fields import CachedFileField
-from utils.common import external_api_cache
+from apps.contrib.redis_client_track import set_client_ids_in_redis
 
 logger = logging.getLogger(__name__)
 
@@ -286,28 +286,16 @@ class Client(MetaInformationAbstractModel):
         return self.code
 
     def save(self, *args, **kwargs):
-        # Create client_ids key list if not exists
-        if not external_api_cache.get('client_ids'):
-            external_api_cache.set("keys", [])
-
-        if self._state.adding is True:
-            # Make queryset to list, because we can't append item in queryset
-            client_ids = list(Client.objects.values_list('code', flat=True))
-            client_ids.append(self.code)
-            external_api_cache.set('client_ids', client_ids, None)
-
-        elif self._state.adding is False:
-            client_ids = Client.objects.values_list('code', flat=True)
-            external_api_cache.set('client_ids', client_ids, None)
-
-        return super().save(*args, **kwargs)
+        instance = super().save(*args, **kwargs)
+        client_ids = list(Client.objects.values_list('code', flat=True))
+        set_client_ids_in_redis(client_ids)
+        return instance
 
     def delete(self, *args, **kwargs):
-        client_ids = Client.objects.values_list('code', flat=True)
-        client_ids = client_ids.pop(self.code)
-        external_api_cache.set('clien_ids', client_ids, None)
-        super().delete(*args, **kwargs)
-
+        deleted = super().delete(*args, **kwargs)
+        client_ids = list(Client.objects.values_list('code', flat=True))
+        set_client_ids_in_redis(client_ids)
+        return deleted
 
 class ClientTrackInfo(models.Model):
     from apps.entry.models import ExternalApiDump

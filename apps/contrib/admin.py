@@ -10,8 +10,10 @@ class ClientAdmin(admin.ModelAdmin):
     search_fields = ['code', 'name']
 
     def save_model(self, request, obj, form, change):
-        obj.created_by = request.user
-        obj.last_modified_by = request.user
+        if obj.id is not None:
+            obj.last_modified_by = request.user
+        else:
+            obj.created_by = request.user
         obj.save()
 
 

@@ -9,7 +9,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import redirect
-from utils.common import track_client, external_api_cache
+from apps.contrib.redis_client_track import track_client, external_api_cache
 from rest_framework.exceptions import PermissionDenied
 
 
