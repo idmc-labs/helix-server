@@ -213,3 +213,42 @@ def generate_idus_dump_file():
 @celery_app.task
 def generate_idus_all_dump_file():
     return _generate_idus_dump_file(idus_all=True)
+
+
+@celery_app.task
+def save_and_delete_tracked_data_from_redis_to_db():
+    from apps.contrib.models import ClientTrackInfo, Client
+
+    tracked_data = []
+    one_day_ago = (timezone.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    tracking_keys = external_api_cache.keys(f'trackinfo:{one_day_ago}:*')
+    for key in tracking_keys:
+        tracked_date, api_type, code = itemgetter(1, 2, 3)(key.split(':'))
+        tracked_date = datetime.strptime(tracked_date, "%Y-%m-%d").date()
+        requests_per_day = external_api_cache.get(key)
+        try:
+            client = Client.objects.get(code=code)
+            tracked_data.append(dict(
+                api_type=api_type,
+                client=client,
+                requests_per_day=requests_per_day,
+                tracked_date=tracked_date
+            ))
+        except Client.DoesNotExist:
+            pass
+
+    # Save to database from redis
+    ClientTrackInfo.objects.bulk_create(
+        [
+            ClientTrackInfo(
+                api_type=tracked_item.get('api_type'),
+                client=tracked_item.get('client'),
+                tracked_date=tracked_item.get('tracked_date'),
+                requests_per_day=tracked_item.get('requests_per_day'),
+            ) for tracked_item in tracked_data
+        ]
+    )
+
+    # Finally delete redis keys after save
+    for key in tracking_keys:
+        tracking_keys.delete(key)
