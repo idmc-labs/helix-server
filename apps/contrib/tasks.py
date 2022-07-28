@@ -180,8 +180,9 @@ def generate_external_endpoint_dump_file(
     except Exception:
         external_api_dump.status = ExternalApiDump.Status.FAILED
         logger.info(f'{endpoint_type}: file dump generation failed')
+        return False
     external_api_dump.save()
-    return external_api_dump
+    return True
 
 
 def _generate_idus_dump_file(idus_all=False):
