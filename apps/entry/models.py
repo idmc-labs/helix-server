@@ -543,6 +543,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     def flow_list(cls):
         return [
             Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+            Figure.FIGURE_CATEGORY_TYPES.RETURN.value,
             Figure.FIGURE_CATEGORY_TYPES.MULTIPLE_DISPLACEMENT.value,
             Figure.FIGURE_CATEGORY_TYPES.PARTIAL_FLOW.value,
             Figure.FIGURE_CATEGORY_TYPES.CROSS_BORDER_FLIGHT.value,
@@ -553,6 +554,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             Figure.FIGURE_CATEGORY_TYPES.FAILED_LOCAL_INTEGRATION.value,
             Figure.FIGURE_CATEGORY_TYPES.LOCAL_INTEGRATION.value,
             Figure.FIGURE_CATEGORY_TYPES.FAILED_RETURN_RETURNEE_DISPLACEMENT.value,
+            Figure.FIGURE_CATEGORY_TYPES.FAILED_RELOCATION_ELSEWHERE.value,
             Figure.FIGURE_CATEGORY_TYPES.UNVERIFIED_FLOW.value,
         ]
 
