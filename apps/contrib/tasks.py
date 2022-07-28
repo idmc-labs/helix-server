@@ -2,7 +2,8 @@ import logging
 import re
 import time
 import json
-from datetime import timedelta
+from operator import itemgetter
+from datetime import timedelta, datetime
 
 from django.core.files import File
 from django.conf import settings
@@ -10,12 +11,11 @@ from django.utils import timezone
 from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 
-from utils.common import get_temp_file
+from utils.common import get_temp_file, external_api_cache
 # from helix.settings import QueuePriority
 from helix.celery import app as celery_app
 from apps.entry.tasks import PDF_TASK_TIMEOUT
 from apps.report.tasks import REPORT_TIMEOUT
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

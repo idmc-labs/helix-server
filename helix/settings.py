@@ -173,7 +173,15 @@ CACHES = {
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
-    }
+    },
+    'external_api': {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": f"{DJANGO_CACHE_REDIS_URL}/2",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "KEY_PREFIX": "external_api",
+    },
 }
 
 REST_FRAMEWORK = {

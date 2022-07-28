@@ -41,6 +41,11 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour='*/2'),
         'args': [],
     },
+    'save_and_delete_tracked_data_from_redis_to_db': {
+        'task': 'apps.contrib.tasks.save_and_delete_tracked_data_from_redis_to_db',
+        'schedule': crontab(minute=1, hour='*/24'),
+        'args': [],
+    },
 }
 
 # Load task modules from all registered Django apps.
