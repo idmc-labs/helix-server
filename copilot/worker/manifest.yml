@@ -45,7 +45,7 @@ secrets:
 environments:
   staging:
     cpu: 256
-    memory: 1024
+    memory: 2048
     count:
       range: 1-2
       spot_from: 1
