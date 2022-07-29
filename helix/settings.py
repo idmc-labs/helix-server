@@ -176,7 +176,7 @@ CACHES = {
     },
     'external_api': {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"{DJANGO_CACHE_REDIS_URL}/2",
+        "LOCATION": f"{DJANGO_CACHE_REDIS_URL}/3",
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },

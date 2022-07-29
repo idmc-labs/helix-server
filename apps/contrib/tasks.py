@@ -2,8 +2,7 @@ import logging
 import re
 import time
 import json
-from operator import itemgetter
-from datetime import timedelta, datetime
+from datetime import timedelta
 
 from django.core.files import File
 from django.conf import settings
@@ -18,9 +17,11 @@ from apps.entry.tasks import PDF_TASK_TIMEOUT
 from apps.report.tasks import REPORT_TIMEOUT
 from apps.contrib.redis_client_track import (
     get_client_tracked_cache_keys,
-    get_external_redis_data,
+    pull_track_data_from_redis,
     delete_external_redis_record_by_key,
 )
+from django.db.models import F, Value, CharField
+from django.db.models.functions import Concat
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -222,37 +223,57 @@ def generate_idus_all_dump_file():
 
 @celery_app.task
 def save_and_delete_tracked_data_from_redis_to_db():
-    from apps.contrib.models import ClientTrackInfo, Client
+    from apps.contrib.models import ClientTrackInfo
 
-    tracked_data = []
     tracking_keys = get_client_tracked_cache_keys()
-    for key in tracking_keys:
-        tracked_date, api_type, code = itemgetter(1, 2, 3)(key.split(':'))
-        tracked_date = datetime.strptime(tracked_date, "%Y-%m-%d").date()
-        requests_per_day = get_external_redis_data(key)
-        try:
-            client = Client.objects.get(code=code)
-            tracked_data.append(dict(
-                api_type=api_type,
-                client=client,
-                requests_per_day=requests_per_day,
-                tracked_date=tracked_date
-            ))
-        except Client.DoesNotExist:
-            logger.error(f'Client with is code {code} doesnnot exist')
+    tracked_data_from_redis = pull_track_data_from_redis(tracking_keys)
+
+    # Update track records count with max value if they already exist in database
+    existing_track_info_qs = ClientTrackInfo.objects.annotate(
+        redis_tracking_key=Concat(
+            Value('trackinfo:'),
+            F('tracked_date'),
+            Value(':'),
+            F('api_type'),
+            Value(':'),
+            F('client__code'),
+            output_field=CharField()
+        )
+    ).filter(
+        redis_tracking_key__in=tracked_data_from_redis.keys()
+    )
+
+    existing_track_info_map = {
+        track_info.redis_tracking_key: track_info
+        for track_info in existing_track_info_qs
+    }
+
+    new_objects = []
+    update_objects = []
+    for key, tracked_item in tracked_data_from_redis.items():
+        existing_track_info = existing_track_info_map.get(key)
+        if existing_track_info:
+            existing_track_info.requests_per_day = max(
+                tracked_item['requests_per_day'],
+                existing_track_info.requests_per_day
+            )
+            update_objects.append(existing_track_info)
+        else:
+            new_objects.append(
+                ClientTrackInfo(
+                    api_type=tracked_item['api_type'],
+                    client_id=tracked_item['client_id'],
+                    tracked_date=tracked_item['tracked_date'],
+                    requests_per_day=tracked_item['requests_per_day'],
+                ),
+            )
 
     # Save to database from redis
-    ClientTrackInfo.objects.bulk_create(
-        [
-            ClientTrackInfo(
-                api_type=tracked_item.get('api_type'),
-                client=tracked_item.get('client'),
-                tracked_date=tracked_item.get('tracked_date'),
-                requests_per_day=tracked_item.get('requests_per_day'),
-            ) for tracked_item in tracked_data
-        ]
+    ClientTrackInfo.objects.bulk_create(new_objects)
+    ClientTrackInfo.objects.bulk_update(
+        update_objects,
+        fields=['requests_per_day'],
     )
 
     # Finally delete redis keys after save
-    for key in get_client_tracked_cache_keys():
-        delete_external_redis_record_by_key(key)
+    delete_external_redis_record_by_key(tracking_keys)

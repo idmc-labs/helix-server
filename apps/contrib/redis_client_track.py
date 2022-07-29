@@ -1,7 +1,14 @@
+import logging
+from operator import itemgetter
+from datetime import datetime
+
 from django.core.cache import caches
 from django.utils import timezone
 
 external_api_cache = caches['external_api']
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def get_external_redis_data(key):
@@ -17,8 +24,11 @@ def get_client_tracked_cache_keys():
     return external_api_cache.keys('trackinfo:*')
 
 
-def delete_external_redis_record_by_key(key):
-    return external_api_cache.delete(key)
+def delete_external_redis_record_by_key(*keys):
+    return [
+        external_api_cache.delete(key)
+        for key in keys
+    ]
 
 
 def track_client(api_type, client_id):
@@ -32,3 +42,35 @@ def track_client(api_type, client_id):
 def set_client_ids_in_redis(client_ids):
     external_api_cache.set('client_ids', client_ids, None)
     return True
+
+
+def pull_track_data_from_redis(tracking_keys):
+    from apps.contrib.models import Client
+
+    client_mapping = {
+        code: _id
+        for _id, code in Client.objects.values_list('id', 'code')
+    }
+    tracked_data_from_redis = {}
+
+    for key in tracking_keys:
+        tracked_date, api_type, code = itemgetter(1, 2, 3)(key.split(':'))
+        tracked_date = datetime.strptime(tracked_date, "%Y-%m-%d").date()
+        requests_per_day = get_external_redis_data(key)
+
+        # Only save records before today
+        if tracked_date >= datetime.now().date():
+            continue
+
+        client_id = client_mapping.get(code)
+        if client_id is None:
+            logger.error(f'Client with is code {code} doesnnot exist')
+            continue
+
+        tracked_data_from_redis[key] = dict(
+            api_type=api_type,
+            client_id=client_id,
+            tracked_date=tracked_date,
+            requests_per_day=requests_per_day,
+        )
+    return tracked_data_from_redis

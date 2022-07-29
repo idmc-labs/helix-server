@@ -1,12 +1,15 @@
 import os
 import shutil
 from unittest.mock import patch
+import pytz
+import datetime
 
 from django.contrib.auth import get_user_model
 from django.core import management
 from django.test import TestCase, override_settings
 from graphene_django.utils import GraphQLTestCase
 from rest_framework.test import APITestCase
+from django.core.cache import caches
 
 from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio
@@ -25,6 +28,12 @@ TEST_CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
         'LOCATION': 'unique-snowflake',
+        "KEY_PREFIX": "default",
+    },
+    'external_api': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+        "KEY_PREFIX": "external_api",
     }
 }
 TEST_AUTH_PASSWORD_VALIDATORS = []
@@ -163,6 +172,8 @@ class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     CELERY_EAGER_PROPAGATES=CELERY_EAGER_PROPAGATES,
 )
 class HelixAPITestCase(APITestCase):
+    ENABLE_NOW_PATCHER = True
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.user_password = 'joHnDave!@#123'
@@ -175,6 +186,8 @@ class HelixAPITestCase(APITestCase):
 
     def setUp(self):
         super().setUp()
+        for key in TEST_CACHES.keys():
+            caches[key].clear()
         self.user = User.objects.create_user(
             username='jon@dave.com',
             first_name='Jon',
@@ -182,6 +195,11 @@ class HelixAPITestCase(APITestCase):
             password=self.user_password,
             email='jon@dave.com',
         )
+        if self.ENABLE_NOW_PATCHER:
+            self.now_patcher = patch('django.utils.timezone.now')
+            self.now_datetime = datetime.datetime(2021, 1, 1, 0, 0, 0, 123456, tzinfo=pytz.UTC)
+            self.now_datetime_str = self.now_datetime.isoformat()
+            self.now_patcher.start().return_value = self.now_datetime
 
     def authenticate(self, user=None):
         user = user or self.user

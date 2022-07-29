@@ -297,6 +297,7 @@ class Client(MetaInformationAbstractModel):
         set_client_ids_in_redis(client_ids)
         return deleted
 
+
 class ClientTrackInfo(models.Model):
     from apps.entry.models import ExternalApiDump
     client = models.ForeignKey('Client', on_delete=models.CASCADE)

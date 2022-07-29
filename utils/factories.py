@@ -274,3 +274,13 @@ class ReportCommentFactory(DjangoModelFactory):
 class OtherSubtypeFactory(DjangoModelFactory):
     class Meta:
         model = 'event.otherSubType'
+
+
+class ClientFactory(DjangoModelFactory):
+    class Meta:
+        model = 'contrib.Client'
+
+
+class ClientTrackInfoFactory(DjangoModelFactory):
+    class Meta:
+        model = 'contrib.ClientTrackInfo'
