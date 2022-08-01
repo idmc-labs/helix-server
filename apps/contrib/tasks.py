@@ -253,6 +253,8 @@ def save_and_delete_tracked_data_from_redis_to_db():
     for key, tracked_item in tracked_data_from_redis.items():
         existing_track_info = existing_track_info_map.get(key)
         if existing_track_info:
+            # If there are more than one tracking info objects per
+            # day take maximum value and update.
             existing_track_info.requests_per_day = max(
                 tracked_item['requests_per_day'],
                 existing_track_info.requests_per_day

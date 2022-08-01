@@ -64,7 +64,7 @@ def pull_track_data_from_redis(tracking_keys):
 
         client_id = client_mapping.get(code)
         if client_id is None:
-            logger.error(f'Client with is code {code} doesnnot exist')
+            logger.error(f'Client with is code {code} does not exist.')
             continue
 
         tracked_data_from_redis[key] = dict(
