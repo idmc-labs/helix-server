@@ -2,10 +2,10 @@ import logging
 from operator import itemgetter
 from datetime import datetime
 
-from django.core.cache import caches
 from django.utils import timezone
 
-external_api_cache = caches['external_api']
+from helix.caches import external_api_cache
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

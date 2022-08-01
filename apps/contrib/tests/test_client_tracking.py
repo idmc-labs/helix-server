@@ -14,11 +14,11 @@ from apps.contrib.tasks import (
 
 class TestExternalClientTrack(HelixAPITestCase):
     def setUp(self):
+        super().setUp()
         self.idus_url = '/external-api/idus'
         self.idus_all_url = '/external-api/idus-all'
         self.client1 = ClientFactory.create(code='random-code-1')
         self.client2 = ClientFactory.create(code='random-code-2')
-        super().setUp()
 
     def test_should_raise_permission_denied_if_client_is_not_registered(self):
         for endpoint in [self.idus_url, self.idus_all_url]:
@@ -66,6 +66,8 @@ class TestExternalClientTrack(HelixAPITestCase):
         # Test with invalid client ids
         endpoints = [
             f'{self.idus_url}?client_id={self.client1.code}',
+            f'{self.idus_url}?client_id={self.client2.code}',
+            f'{self.idus_all_url}?client_id={self.client1.code}',
             f'{self.idus_all_url}?client_id={self.client2.code}',
         ]
 
@@ -96,4 +98,4 @@ class TestExternalClientTrack(HelixAPITestCase):
 
         # For each client track info requests per day should be 1 for each api type
         for obj in ClientTrackInfo.objects.all():
-            self.assertEqual(obj.requests_per_day, 1)
+            self.assertEqual(obj.requests_per_day, 3)

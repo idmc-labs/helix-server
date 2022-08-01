@@ -7,6 +7,7 @@ import datetime
 from django.contrib.auth import get_user_model
 from django.core import management
 from django.test import TestCase, override_settings
+from django.conf import settings
 from graphene_django.utils import GraphQLTestCase
 from rest_framework.test import APITestCase
 from django.core.cache import caches
@@ -25,17 +26,14 @@ CELERY_ALWAYS_EAGER = True
 CELERY_EAGER_PROPAGATES = True
 
 TEST_CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
-        "KEY_PREFIX": "default",
-    },
-    'external_api': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'unique-snowflake',
-        "KEY_PREFIX": "external_api",
+    cache_key: {
+        **config,
+        "LOCATION": f"{config['LOCATION']}-test",  # APPEND -test to existing redis db for test
     }
+    for cache_key, config in settings.CACHES.items()
 }
+
+
 TEST_AUTH_PASSWORD_VALIDATORS = []
 
 
