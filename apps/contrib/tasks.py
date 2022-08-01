@@ -15,7 +15,13 @@ from utils.common import get_temp_file
 from helix.celery import app as celery_app
 from apps.entry.tasks import PDF_TASK_TIMEOUT
 from apps.report.tasks import REPORT_TIMEOUT
-
+from apps.contrib.redis_client_track import (
+    get_client_tracked_cache_keys,
+    pull_track_data_from_redis,
+    delete_external_redis_record_by_key,
+)
+from django.db.models import F, Value, CharField
+from django.db.models.functions import Concat
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -213,3 +219,63 @@ def generate_idus_dump_file():
 @celery_app.task
 def generate_idus_all_dump_file():
     return _generate_idus_dump_file(idus_all=True)
+
+
+@celery_app.task
+def save_and_delete_tracked_data_from_redis_to_db():
+    from apps.contrib.models import ClientTrackInfo
+
+    tracking_keys = get_client_tracked_cache_keys()
+    tracked_data_from_redis = pull_track_data_from_redis(tracking_keys)
+
+    # Update track records count with max value if they already exist in database
+    existing_track_info_qs = ClientTrackInfo.objects.annotate(
+        redis_tracking_key=Concat(
+            Value('trackinfo:'),
+            F('tracked_date'),
+            Value(':'),
+            F('api_type'),
+            Value(':'),
+            F('client__code'),
+            output_field=CharField()
+        )
+    ).filter(
+        redis_tracking_key__in=tracked_data_from_redis.keys()
+    )
+
+    existing_track_info_map = {
+        track_info.redis_tracking_key: track_info
+        for track_info in existing_track_info_qs
+    }
+
+    new_objects = []
+    update_objects = []
+    for key, tracked_item in tracked_data_from_redis.items():
+        existing_track_info = existing_track_info_map.get(key)
+        if existing_track_info:
+            # If there are more than one tracking info objects per
+            # day take maximum value and update.
+            existing_track_info.requests_per_day = max(
+                tracked_item['requests_per_day'],
+                existing_track_info.requests_per_day
+            )
+            update_objects.append(existing_track_info)
+        else:
+            new_objects.append(
+                ClientTrackInfo(
+                    api_type=tracked_item['api_type'],
+                    client_id=tracked_item['client_id'],
+                    tracked_date=tracked_item['tracked_date'],
+                    requests_per_day=tracked_item['requests_per_day'],
+                ),
+            )
+
+    # Save to database from redis
+    ClientTrackInfo.objects.bulk_create(new_objects)
+    ClientTrackInfo.objects.bulk_update(
+        update_objects,
+        fields=['requests_per_day'],
+    )
+
+    # Finally delete redis keys after save
+    delete_external_redis_record_by_key(tracking_keys)

@@ -40,6 +40,7 @@ env = environ.Env(
     S3_BUCKET_NAME=str,
     # Redis URL
     DJANGO_CACHE_REDIS_URL=str,  # redis://redis:6379/1
+    DJANGO_EXTERNAL_API_CACHE_REDIS_URL=str,  # redis://redis:6379/1
     CELERY_BROKER_URL=str,  # redis://redis:6379/0
     CELERY_RESULT_BACKEND_URL=str,  # redis://redis:6379/1
     # -- Single Redis url (For copilot)
@@ -161,10 +162,15 @@ if IN_AWS_COPILOT_ECS:
     DJANGO_CACHE_REDIS_URL = f'{_COPILOT_ELASTI_CACHE_URL}/1'
     CELERY_BROKER_URL = f'{_COPILOT_ELASTI_CACHE_URL}/0'
     CELERY_RESULT_BACKEND = f'{_COPILOT_ELASTI_CACHE_URL}/2'
+    DJANGO_EXTERNAL_API_CACHE_REDIS_URL = f'{_COPILOT_ELASTI_CACHE_URL}/3'
 else:
     DJANGO_CACHE_REDIS_URL = env('DJANGO_CACHE_REDIS_URL')
+    DJANGO_EXTERNAL_API_CACHE_REDIS_URL = env('DJANGO_EXTERNAL_API_CACHE_REDIS_URL')
     CELERY_BROKER_URL = env('CELERY_BROKER_URL')
     CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND_URL')
+
+EXTERNAL_API_CACHE_ALIAS = 'external_api'
+
 
 CACHES = {
     'default': {
@@ -173,7 +179,15 @@ CACHES = {
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
-    }
+    },
+    EXTERNAL_API_CACHE_ALIAS: {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": DJANGO_EXTERNAL_API_CACHE_REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
+        "KEY_PREFIX": "external_api",
+    },
 }
 
 REST_FRAMEWORK = {

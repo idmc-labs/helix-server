@@ -12,6 +12,7 @@ from django_enumfield import enum
 from apps.contrib.tasks import generate_excel_file
 from apps.entry.tasks import generate_pdf
 from utils.fields import CachedFileField
+from apps.contrib.redis_client_track import set_client_ids_in_redis
 
 logger = logging.getLogger(__name__)
 
@@ -272,3 +273,44 @@ class ExcelDownload(MetaInformationAbstractModel):
         transaction.on_commit(lambda: generate_excel_file.delay(
             self.pk, request.user.id, model_instance_id=model_instance_id
         ))
+
+
+class Client(MetaInformationAbstractModel):
+    name = models.CharField(max_length=255)
+    code = models.CharField(
+        max_length=100,
+        help_text=_('Recommended format client-short-name:custom-name:month:day'),
+        unique=True
+    )
+
+    def __str__(self):
+        return self.code
+
+    def save(self, *args, **kwargs):
+        instance = super().save(*args, **kwargs)
+        client_ids = list(Client.objects.values_list('code', flat=True))
+        set_client_ids_in_redis(client_ids)
+        return instance
+
+    def delete(self, *args, **kwargs):
+        deleted = super().delete(*args, **kwargs)
+        client_ids = list(Client.objects.values_list('code', flat=True))
+        set_client_ids_in_redis(client_ids)
+        return deleted
+
+
+class ClientTrackInfo(models.Model):
+    from apps.entry.models import ExternalApiDump
+    client = models.ForeignKey('Client', on_delete=models.CASCADE)
+    api_type = models.CharField(
+        max_length=40,
+        choices=ExternalApiDump.ExternalApiType.choices,
+    )
+    requests_per_day = models.IntegerField()
+    tracked_date = models.DateField()
+
+    class Meta:
+        unique_together = ('client', 'api_type', 'tracked_date')
+
+    def __str__(self):
+        return f'{self.client} - {self.tracked_date}'

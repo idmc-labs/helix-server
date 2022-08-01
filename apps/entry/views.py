@@ -10,6 +10,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import redirect
 
+from helix.caches import external_api_cache
+
+from apps.contrib.redis_client_track import track_client
+from rest_framework.exceptions import PermissionDenied
+
 
 def get_idu_data():
     return Figure.objects.annotate(
@@ -277,6 +282,15 @@ class ExternalEndpointBaseCachedViewMixin():
     ENDPOINT_TYPE = None
 
     def get(self, request):
+        # Check if request is comming from valid client
+        client_id = request.GET.get('client_id', None)
+        if client_id not in external_api_cache.get('client_ids', []):
+            raise PermissionDenied('Client is not not registered.')
+        # Track client
+        track_client(
+            self.ENDPOINT_TYPE,
+            client_id,
+        )
         api_dump = ExternalApiDump.objects.filter(api_type=self.ENDPOINT_TYPE).first()
         # NOTE: Sending empty array so client don't break.
         _empty_response = []
@@ -298,6 +312,7 @@ class ExternalEndpointBaseCachedViewMixin():
                     api_dump.dump_file.url,
                 )
             )
+
         # Else send 202 response
         return Response(_empty_response, status=status.HTTP_202_ACCEPTED)
 
