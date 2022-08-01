@@ -18,10 +18,13 @@ class ClientAdmin(admin.ModelAdmin):
 
 
 class ClientTrackInfoAdmin(admin.ModelAdmin):
-    list_display = ['id', 'api_type', 'requests_per_day', 'tracked_date']
+    list_display = ['id', 'api_type', 'client_name', 'requests_per_day', 'tracked_date']
     autocomplete_fields = ('client',)
     search_fields = ['client__code', 'client__name']
     list_display_links = ['id']
+
+    def client_name(self, obj):
+        return obj.client.name
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('client',)

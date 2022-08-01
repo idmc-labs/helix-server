@@ -279,7 +279,8 @@ class Client(MetaInformationAbstractModel):
     name = models.CharField(max_length=255)
     code = models.CharField(
         max_length=100,
-        help_text=_('Recommended format <client-short-name><custom-name><month><day>')
+        help_text=_('Recommended format client-short-name:custom-name:month:day'),
+        unique=True
     )
 
     def __str__(self):
@@ -307,6 +308,9 @@ class ClientTrackInfo(models.Model):
     )
     requests_per_day = models.IntegerField()
     tracked_date = models.DateField()
+
+    class Meta:
+        unique_together = ('client', 'api_type', 'tracked_date')
 
     def __str__(self):
         return f'{self.client} - {self.tracked_date}'
