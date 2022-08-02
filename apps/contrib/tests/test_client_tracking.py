@@ -10,6 +10,7 @@ from apps.contrib.tasks import (
     generate_idus_all_dump_file,
     save_and_delete_tracked_data_from_redis_to_db,
 )
+from helix.caches import external_api_cache
 
 
 class TestExternalClientTrack(HelixAPITestCase):
@@ -99,3 +100,36 @@ class TestExternalClientTrack(HelixAPITestCase):
         # For each client track info requests per day should be 1 for each api type
         for obj in ClientTrackInfo.objects.all():
             self.assertEqual(obj.requests_per_day, 3)
+
+    def test_should_update_duplicated_tracking_record(self):
+        # Create duplicated redis client tracking keys
+        keys = [
+            'trackinfo:2022-07-09:idus',
+            'trackinfo:2022-07-12:idus',
+            'trackinfo:2022-07-28:idus',
+            'trackinfo:2022-07-05:idus',
+            'trackinfo:2022-07-04:idus',
+            'trackinfo:2022-07-01:idus',
+            'trackinfo:2022-07-06:idus',
+            'trackinfo:2022-08-01:idus',
+            'trackinfo:2022-08-02:idus',
+            'trackinfo:2022-07-14:idus',
+            'trackinfo:2022-07-03:idus',
+            'trackinfo:2022-07-13:idus',
+            'trackinfo:2022-07-02:idus',
+            'trackinfo:2022-07-07:idus',
+            'trackinfo:2022-07-08:idus'
+        ]
+        for key in keys:
+            external_api_cache.set(f'{key}:{self.client1.code}', 100, None)
+
+        # Trigger task
+        save_and_delete_tracked_data_from_redis_to_db()
+        self.assertEqual(ClientTrackInfo.objects.count(), 14)
+
+        for key in keys:
+            external_api_cache.set(f'{key}:{self.client1.code}', 100, None)
+
+        # Trigger task
+        save_and_delete_tracked_data_from_redis_to_db()
+        self.assertEqual(ClientTrackInfo.objects.count(), 14)
