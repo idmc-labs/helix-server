@@ -22,6 +22,7 @@ from apps.contrib.redis_client_track import (
 )
 from django.db.models import F, Value, CharField
 from django.db.models.functions import Concat
+from utils.common import redis_lock
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -222,6 +223,7 @@ def generate_idus_all_dump_file():
 
 
 @celery_app.task
+@redis_lock('remaining_lead_extract', 60 * 5)
 def save_and_delete_tracked_data_from_redis_to_db():
     from apps.contrib.models import ClientTrackInfo
 

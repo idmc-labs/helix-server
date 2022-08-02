@@ -3,6 +3,12 @@ import re
 from django.core.files.storage import get_storage_class
 from django.conf import settings
 import tempfile
+import logging
+from helix import redis
+from datetime import timedelta
+
+
+logger = logging.getLogger(__name__)
 
 
 def convert_date_object_to_string_in_dict(dictionary):
@@ -76,3 +82,35 @@ def get_string_from_list(list_of_string):
 
 def get_temp_file(dir=settings.TEMP_FILE_DIRECTORY, **kwargs):
     return tempfile.NamedTemporaryFile(dir=dir, **kwargs)
+
+
+def get_redis_lock_ttl(lock):
+    try:
+        return timedelta(seconds=redis.get_connection().ttl(lock.name))
+    except Exception:
+        pass
+
+
+def redis_lock(lock_key, timeout=60 * 60 * 4):
+    """
+    Default Lock lifetime 4 hours
+    """
+    def _dec(func):
+        def _caller(*args, **kwargs):
+            key = lock_key.format(*args, **kwargs)
+            lock = redis.get_lock(key, timeout)
+            have_lock = lock.acquire(blocking=False)
+            if not have_lock:
+                logger.warning(f'Unable to get lock for {key}(ttl: {get_redis_lock_ttl(lock)})')
+                return False
+            try:
+                return_value = func(*args, **kwargs) or True
+            except Exception:
+                logger.error('{}.{}'.format(func.__module__, func.__name__), exc_info=True)
+                return_value = False
+            lock.release()
+            return return_value
+        _caller.__name__ = func.__name__
+        _caller.__module__ = func.__module__
+        return _caller
+    return _dec
