@@ -434,6 +434,39 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertFalse(content['data']['createEntry']['ok'], content)
         self.assertIn('householdSize', json.dumps(content['data']['createEntry']['errors']))
 
+    def test_household_size_validation(self):
+        figures = [
+            {
+                "uuid": str(uuid4()),
+                "country": self.country_id,
+                "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
+                "reported": 10,
+                "unit": Figure.UNIT.HOUSEHOLD.name,  # missing household_size
+                "householdSize": 30,
+                "term": Figure.FIGURE_TERMS.EVACUATED.name,
+                "category": self.fig_cat.name,
+                "role": Figure.ROLE.RECOMMENDED.name,
+                "startDate": "2020-10-10",
+                "includeIdu": True,
+                "excerptIdu": "excerpt abc",
+                "event": self.event.id,
+                "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
+                "disaggregationLocationCamp": 200,
+                "disaggregationLocationNonCamp": 100,
+            }
+        ]
+        self.input.update({
+            'figures': figures
+        })
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+        self.assertFalse(content['data']['createEntry']['ok'], content)
+        self.assertNotIn('disaggregationLocationCamp', json.dumps(content['data']['createEntry']['errors']))
+        self.assertNotIn('disaggregationLocationNonCamp', json.dumps(content['data']['createEntry']['errors']))
+
 
 class TestEntryUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:

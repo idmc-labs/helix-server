@@ -135,34 +135,38 @@ class CommonFigureValidationMixin:
                 })
         return errors
 
-    def validate_disaggregated_sum_against_reported(self, attrs, fields, verbose_names):
+    def validate_disaggregated_sum_against_total_figures(self, attrs, fields, verbose_names):
 
         def _format_message(fields, verbose_names):
             if len(fields) > 1:
-                return f'Sum of {verbose_names} figures is greater than reported.'
-            return f'{verbose_names} figures is greater than reported.'
+                return f'Sum of {verbose_names} figures is greater than total figures.'
+            return f'{verbose_names} figures is greater than total figures.'
 
         errors = OrderedDict()
-        reported = attrs.get('reported', getattr(self.instance, 'reported', 0)) or 0
+        total_figures = attrs.get('reported', getattr(self.instance, 'total_figures', 0)) or 0
+        household_size = attrs.get('household_size', None)
+        unit = attrs.get('unit', None)
+        if unit == Figure.UNIT.HOUSEHOLD.value and household_size and not self.instance:
+            total_figures = total_figures * household_size
         disaggregated_sum = 0
         for field in fields:
             disaggregated_sum += attrs.get(field, getattr(self.instance, field, 0)) or 0
-        if disaggregated_sum > reported:
+        if disaggregated_sum > total_figures:
             errors.update({
                 field: _format_message(fields, verbose_names)
                 for field in fields
             })
         return errors
 
-    def validate_disaggregated_json_sum_against_reported(self, attrs, field, verbose_name):
+    def validate_disaggregated_json_sum_against_total_figures(self, attrs, field, verbose_name):
         errors = OrderedDict()
-        reported = attrs.get('reported') or getattr(self.instance, 'reported', None) or 0
+        total_figures = attrs.get('reported') or getattr(self.instance, 'total_figures', None) or 0
         json_field = attrs.get(field) or getattr(self.instance, field, None) or []
         if isinstance(json_field, list):
             total = [item['value'] for item in json_field]
-            if sum(total) > reported:
+            if sum(total) > total_figures:
                 errors.update({
-                    field: f'Sum of {verbose_name} figures is greater than reported.'
+                    field: f'Sum of {verbose_name} figures is greater than total figures.'
                 })
             return errors
         return errors
@@ -240,19 +244,19 @@ class CommonFigureValidationMixin:
         errors.update(self.validate_figure_country(attrs))
         errors.update(self.validate_figure_geo_locations(attrs))
 
-        errors.update(self.validate_disaggregated_sum_against_reported(
+        errors.update(self.validate_disaggregated_sum_against_total_figures(
             attrs, ['disaggregation_location_camp', 'disaggregation_location_non_camp'], 'camp and non-camp'
         ))
-        errors.update(self.validate_disaggregated_sum_against_reported(
+        errors.update(self.validate_disaggregated_sum_against_total_figures(
             attrs, ['disaggregation_displacement_urban', 'disaggregation_displacement_rural'], 'urban and rural'
         ))
-        errors.update(self.validate_disaggregated_sum_against_reported(
+        errors.update(self.validate_disaggregated_sum_against_total_figures(
             attrs, ['disaggregation_disability'], 'Disability',
         ))
-        errors.update(self.validate_disaggregated_sum_against_reported(
+        errors.update(self.validate_disaggregated_sum_against_total_figures(
             attrs, ['disaggregation_indigenous_people'], 'Indigenous people',
         ))
-        errors.update(self.validate_disaggregated_json_sum_against_reported(attrs, 'disaggregation_age', 'age'))
+        errors.update(self.validate_disaggregated_json_sum_against_total_figures(attrs, 'disaggregation_age', 'age'))
         errors.update(self.clean_figure_cause(attrs))
 
         if errors:
