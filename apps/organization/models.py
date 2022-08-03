@@ -50,7 +50,7 @@ class Organization(MetaInformationArchiveAbstractModel,
                                   null=True)
     category = enum.EnumField(ORGANIZATION_CATEGORY, verbose_name=_('Geographical Coverage'),
                               default=ORGANIZATION_CATEGORY.UNKNOWN)
-    countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
+    countries = models.ManyToManyField('country.Country', blank=True, verbose_name=_('Countries'),
                                        related_name='organizations')
     organization_kind = models.ForeignKey('OrganizationKind', verbose_name=_('Organization Type'),
                                           blank=True, null=True,
