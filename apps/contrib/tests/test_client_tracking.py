@@ -118,7 +118,6 @@ class TestExternalClientTrack(HelixAPITestCase):
             'trackinfo:2022-07-13:idus',
             'trackinfo:2022-07-02:idus',
             'trackinfo:2022-07-07:idus',
-            'trackinfo:2022-07-08:idus'
         ]
         for key in keys:
             external_api_cache.set(f'{key}:{self.client1.code}', 100, None)
