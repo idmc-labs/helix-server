@@ -782,26 +782,8 @@ class Figure(MetaInformationArchiveAbstractModel,
         """
         return self.entry.can_be_updated_by(user)
 
-    @staticmethod
-    def clean_idu(values: dict, instance=None) -> OrderedDict:
-        errors = OrderedDict()
-        if values.get('include_idu', getattr(instance, 'include_idu', None)):
-            excerpt_idu = values.get('excerpt_idu', getattr(instance, 'excerpt_idu', None))
-            if excerpt_idu is None or not excerpt_idu.strip():
-                errors['excerpt_idu'] = gettext('This field is required.')
-        return errors
-
-    # core
-
-    def save(self, *args, **kwargs):
-        # TODO: set household size from the country
-        self.total_figures = self.reported
-        if self.unit == self.UNIT.HOUSEHOLD:
-            self.total_figures = round(self.reported * self.household_size)
-        return super().save(*args, **kwargs)
-
     def __str__(self):
-        return f'{self.quantifier.label} {self.reported}'
+        return f'{self.quantifier.label}:{self.total_figures}'
 
 
 class FigureTag(MetaInformationAbstractModel):

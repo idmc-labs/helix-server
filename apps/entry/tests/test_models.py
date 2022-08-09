@@ -61,7 +61,7 @@ class TestFigureModel(HelixTestCase):
         figure.household_size = 4
         figure.reported = 10
         figure.save()
-        self.assertEqual(figure.total_figures, figure.reported * figure.household_size)
+        self.assertEqual(figure.total_figures, round(figure.reported * figure.household_size))
 
     def test_figure_nd_filtering(self):
         ref = datetime.today()

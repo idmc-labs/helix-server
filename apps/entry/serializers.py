@@ -97,23 +97,22 @@ class CommonFigureValidationMixin:
                 gettext('Make sure the dates are unique in a figure.'))
         return strata
 
-    def validate_unit_and_household_size(self, attrs):
+    def _validate_unit_and_household_size(self, attrs):
         errors = OrderedDict()
-        if attrs.get('unit',
-                     getattr(self.instance, 'unit', Figure.UNIT.PERSON.value) ==
-                     Figure.UNIT.HOUSEHOLD.value) and \
-                not attrs.get('household_size',
-                              getattr(self.instance, 'household_size', 0)):
-            raise serializers.ValidationError(
-                dict(household_size=gettext('Please pass in household size for household unit.'))
-            )
+
+        unit = attrs.get('unit', getattr(self.instance, 'unit', Figure.UNIT.PERSON))
+        household_size = attrs.get('household_size', getattr(self.instance, 'household_size', 0))
+
+        if unit == Figure.UNIT.HOUSEHOLD and not household_size:
+            errors.update({
+                'household_size': 'Please pass in household size for household unit.'
+            })
         return errors
 
-    def validate_figure_geo_locations(self, attrs):
-        pass
+    def _validate_figure_geo_locations(self, attrs):
         errors = OrderedDict()
         country = attrs.get('country')
-        geo_locations = attrs.get('geo_locations')
+        geo_locations = attrs.get('geo_locations', None)
         if not country and self.instance:
             country = self.instance.country
         if not geo_locations:
@@ -135,22 +134,20 @@ class CommonFigureValidationMixin:
                 })
         return errors
 
-    def validate_disaggregated_sum_against_total_figures(self, attrs, fields, verbose_names):
-
+    def _validate_disaggregated_sum_against_total_figures(self, attrs, fields, verbose_names):
         def _format_message(fields, verbose_names):
             if len(fields) > 1:
                 return f'Sum of {verbose_names} figures is greater than total figures.'
             return f'{verbose_names} figures is greater than total figures.'
 
         errors = OrderedDict()
-        total_figures = attrs.get('reported', getattr(self.instance, 'total_figures', 0)) or 0
-        household_size = attrs.get('household_size', None)
-        unit = attrs.get('unit', None)
-        if unit == Figure.UNIT.HOUSEHOLD.value and household_size and not self.instance:
-            total_figures = total_figures * household_size
+
+        total_figures = attrs.get('total_figures')
+
         disaggregated_sum = 0
         for field in fields:
             disaggregated_sum += attrs.get(field, getattr(self.instance, field, 0)) or 0
+
         if disaggregated_sum > total_figures:
             errors.update({
                 field: _format_message(fields, verbose_names)
@@ -158,33 +155,44 @@ class CommonFigureValidationMixin:
             })
         return errors
 
-    def validate_disaggregated_json_sum_against_total_figures(self, attrs, field, verbose_name):
+    def _validate_disaggregated_json_sum_against_total_figures(self, attrs, field, verbose_name):
         errors = OrderedDict()
-        total_figures = attrs.get('reported') or getattr(self.instance, 'total_figures', None) or 0
+
+        total_figures = attrs.get('total_figures')
+
         json_field = attrs.get(field) or getattr(self.instance, field, None) or []
-        if isinstance(json_field, list):
-            total = [item['value'] for item in json_field]
-            if sum(total) > total_figures:
-                errors.update({
-                    field: f'Sum of {verbose_name} figures is greater than total figures.'
-                })
+        if not isinstance(json_field, list):
             return errors
+        total = sum([item['value'] for item in json_field])
+
+        if total > total_figures:
+            errors.update({
+                field: f'Sum of {verbose_name} figures is greater than total figures.'
+            })
         return errors
 
-    def _validate_geo_locations(self, geo_locations) -> list:
-        if self.instance:
-            if {each['id'] for each in geo_locations if 'id' in each}.difference(
-                    list(self.instance.geo_locations.values_list('id', flat=True))
-            ):
-                raise serializers.ValidationError(
-                    dict(geo_locations='Some geo locations not found.')
-                )
-        return geo_locations
-
-    def validate_figure_country(self, attrs):
+    def _validate_geo_locations(self, attrs):
         _attrs = copy(attrs)
         errors = OrderedDict()
-        if attrs.get('event'):
+
+        geo_locations = _attrs.get('geo_locations', None)
+
+        # FIXME: why only check when creating entry
+        if self.instance and geo_locations:
+            geo_location_ids = {geo_location['id'] for geo_location in geo_locations if 'id' in geo_location}
+            geo_locations_on_db = list(self.instance.geo_locations.values_list('id', flat=True)) if self.instance.geo_locations else []
+            if geo_location_ids.difference(geo_locations_on_db):
+                errors['geo_locations'] = 'Some geo locations not found.';
+
+        return errors
+
+    def _validate_figure_country(self, attrs):
+        _attrs = copy(attrs)
+        errors = OrderedDict()
+
+        event = attrs.get('event', getattr(self.instance, 'event', None))
+
+        if event:
             errors.update(is_child_parent_inclusion_valid(
                 _attrs,
                 self.instance,
@@ -193,77 +201,103 @@ class CommonFigureValidationMixin:
             ))
         return errors
 
-    def validate_dates(self, attrs):
+    def _validate_dates(self, attrs):
         errors = OrderedDict()
-        event = attrs.get('event')
+        event = attrs.get('event', getattr(self.instance, 'event', None))
+
         if event:
-            category = attrs.get('category', getattr(self.instance, 'category', None))
-            if category in Figure.stock_list():
-                errors.update(is_child_parent_dates_valid(
-                    attrs.get('start_date', getattr(self.instance, 'start_date', None)),
-                    attrs.get('end_date', getattr(self.instance, 'end_date', None)),
-                    event.start_date,
-                    'event',
-                ))
-            else:
-                errors.update(is_child_parent_dates_valid(
-                    attrs.get('start_date', getattr(self.instance, 'start_date', None)),
-                    attrs.get('end_date', getattr(self.instance, 'end_date', None)),
-                    event.start_date,
-                    'event',
-                ))
+            errors.update(is_child_parent_dates_valid(
+                attrs.get('start_date', getattr(self.instance, 'start_date', None)),
+                attrs.get('end_date', getattr(self.instance, 'end_date', None)),
+                event.start_date,
+                'event',
+            ))
         return errors
+
+    def _validate_idu(self, attrs):
+        errors = OrderedDict()
+        if attrs.get('include_idu', getattr(self.instance, 'include_idu', None)):
+            excerpt_idu = attrs.get('excerpt_idu', getattr(self.instance, 'excerpt_idu', None))
+            if excerpt_idu is None or not excerpt_idu.strip():
+                errors['excerpt_idu'] = gettext('This field is required.')
+        return errors
+
+    def _validate_figure_cause(self, attrs):
+        errors = OrderedDict()
+
+        event = attrs.get('event', getattr(self.instance, 'event', None))
+        figure_cause = attrs.get('figure_cause', getattr(self.instance, 'figure_cause', None))
+
+        if figure_cause and event and event.event_type.value != figure_cause:
+            errors.update({
+                'figure_cause': f'Figure cause should be {event.event_type.label}'
+            })
+        return errors
+
+    def clean_total_figures(self, attrs):
+        _attrs = copy(attrs)
+        if self.instance:
+            unit = _attrs.get('unit', self.instance.unit) or Figure.UNIT.PERSON
+            reported = _attrs.get('reported', self.instance.reported) or 0
+            household_size = _attrs.get('household_size', self.instance.household_size) or 0
+        else:
+            unit = _attrs.get('unit') or Figure.UNIT.PERSON
+            reported = _attrs.get('reported') or 0
+            household_size = _attrs.get('household_size') or 0
+
+        total_figures = 0
+        if unit == Figure.UNIT.HOUSEHOLD:
+            total_figures = round(reported * household_size)
+        else:
+            total_figures = reported
+        _attrs['total_figures'] = total_figures
+
+        return _attrs
 
     def clean_term_with_displacement_occur(self, attrs):
         _attrs = copy(attrs)
-        term = attrs.get('term')
-        if not term or term in Figure.housing_list():
+
+        term = _attrs.get('term', getattr(self.instance, 'term', None))
+        if not term or term not in Figure.housing_list():
             _attrs['displacement_occurred'] = None
         return _attrs
-
-    def clean_figure_cause(self, attrs):
-        errors = OrderedDict()
-        event = attrs.get('event')
-        figure_cause = attrs.get('figure_cause')
-        if figure_cause is not None and event:
-            if event.event_type.value != figure_cause:
-                errors.update({
-                    'figure_cause': f'Figure cause should be {event.event_type.label}'
-                })
-        return errors
 
     def validate(self, attrs: dict) -> dict:
         if not self.instance and attrs.get('id'):
             self.instance = Figure.objects.get(id=attrs['id'])
-        self._validate_geo_locations(attrs.get('geo_locations', []))
-        attrs = super().validate(attrs)
-        errors = OrderedDict()
-        errors.update(Figure.clean_idu(attrs, self.instance))
-        errors.update(self.validate_unit_and_household_size(attrs))
-        errors.update(self.validate_dates(attrs))
-        errors.update(self.validate_figure_country(attrs))
-        errors.update(self.validate_figure_geo_locations(attrs))
 
-        errors.update(self.validate_disaggregated_sum_against_total_figures(
+        attrs = super().validate(attrs)
+
+        errors = OrderedDict()
+
+        # NOTE: calculate attributes
+        attrs = self.clean_total_figures(attrs)
+        attrs = self.clean_term_with_displacement_occur(attrs)
+
+        errors.update(self._validate_idu(attrs))
+        errors.update(self._validate_unit_and_household_size(attrs))
+        errors.update(self._validate_geo_locations(attrs))
+        errors.update(self._validate_dates(attrs))
+        errors.update(self._validate_figure_country(attrs))
+        errors.update(self._validate_figure_geo_locations(attrs))
+        errors.update(self._validate_disaggregated_sum_against_total_figures(
             attrs, ['disaggregation_location_camp', 'disaggregation_location_non_camp'], 'camp and non-camp'
         ))
-        errors.update(self.validate_disaggregated_sum_against_total_figures(
+        errors.update(self._validate_disaggregated_sum_against_total_figures(
             attrs, ['disaggregation_displacement_urban', 'disaggregation_displacement_rural'], 'urban and rural'
         ))
-        errors.update(self.validate_disaggregated_sum_against_total_figures(
+        errors.update(self._validate_disaggregated_sum_against_total_figures(
             attrs, ['disaggregation_disability'], 'Disability',
         ))
-        errors.update(self.validate_disaggregated_sum_against_total_figures(
+        errors.update(self._validate_disaggregated_sum_against_total_figures(
             attrs, ['disaggregation_indigenous_people'], 'Indigenous people',
         ))
-        errors.update(self.validate_disaggregated_json_sum_against_total_figures(attrs, 'disaggregation_age', 'age'))
-        errors.update(self.clean_figure_cause(attrs))
+        errors.update(self._validate_disaggregated_json_sum_against_total_figures(attrs, 'disaggregation_age', 'age'))
+        errors.update(self._validate_figure_cause(attrs))
 
         if errors:
             raise ValidationError(errors)
 
-        # update attrs
-        attrs = self.clean_term_with_displacement_occur(attrs)
         return attrs
 
 
