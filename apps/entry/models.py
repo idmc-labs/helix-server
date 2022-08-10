@@ -531,29 +531,26 @@ class Figure(MetaInformationArchiveAbstractModel,
     @classmethod
     def annotate_stock_and_flow_dates(cls):
         return {
-            'stock_date': Case(
-                When(category__in=Figure.stock_list(), then=F('start_date'))
-            ),
-            'stock_reporting_date': Case(
-                When(category__in=Figure.stock_list(), then=F('end_date'))
-            ),
             'flow_start_date': Case(
                 When(category__in=Figure.flow_list(), then=F('start_date'))
             ),
             'flow_end_date': Case(
                 When(category__in=Figure.flow_list(), then=F('end_date'))
             ),
-            'stock_date_accuracy': Case(
-                When(category__in=Figure.stock_list(), then=F('start_date_accuracy'))
-            ),
-            'stock_reporting_date_accuracy': Case(
-                When(category__in=Figure.stock_list(), then=F('end_date_accuracy'))
-            ),
             'flow_start_date_accuracy': Case(
                 When(category__in=Figure.flow_list(), then=F('start_date_accuracy'))
             ),
             'flow_end_date_accuracy': Case(
                 When(category__in=Figure.flow_list(), then=F('end_date_accuracy'))
+            ),
+            'stock_date': Case(
+                When(category__in=Figure.stock_list(), then=F('start_date'))
+            ),
+            'stock_reporting_date': Case(
+                When(category__in=Figure.stock_list(), then=F('end_date'))
+            ),
+            'stock_date_accuracy': Case(
+                When(category__in=Figure.stock_list(), then=F('start_date_accuracy'))
             ),
         }
 
@@ -659,11 +656,10 @@ class Figure(MetaInformationArchiveAbstractModel,
             stock_date='Stock date',
             stock_date_accuracy='Stock date accuracy',
             stock_reporting_date='Stock reporting date',
-            stock_reporting_date_accuracy='Stock reporting date accuracy',
-            flow_start_date='Flow start date',
-            flow_start_date_accuracy='Flow start date accuracy',
-            flow_end_date='Flow end date',
-            flow_end_date_accuracy='Flow end date accuracy',
+            flow_start_date='Start date',
+            flow_start_date_accuracy='Start date accuracy',
+            flow_end_date='End date',
+            flow_end_date_accuracy='End date accuracy',
             role='Figure Role',
             event__id='Event Id',
             year='Year',
@@ -767,9 +763,6 @@ class Figure(MetaInformationArchiveAbstractModel,
                 **datum,
                 'include_idu': 'Yes' if datum['include_idu'] else 'No',
                 'stock_date_accuracy': getattr(DATE_ACCURACY.get(datum['stock_date_accuracy']), 'label', ''),
-                'stock_reporting_date_accuracy': getattr(
-                    DATE_ACCURACY.get(datum['stock_reporting_date_accuracy']), 'label', ''
-                ),
                 'flow_start_date_accuracy': getattr(DATE_ACCURACY.get(datum['flow_start_date_accuracy']), 'label', ''),
                 'flow_end_date_accuracy': getattr(DATE_ACCURACY.get(datum['flow_end_date_accuracy']), 'label', ''),
                 'quantifier': getattr(Figure.QUANTIFIER.get(datum['quantifier']), 'label', ''),
