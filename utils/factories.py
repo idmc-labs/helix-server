@@ -200,6 +200,7 @@ class FigureFactory(DjangoModelFactory):
     quantifier = factory.Iterator(Figure.QUANTIFIER)
     reported = factory.Sequence(lambda n: n + 2)
     unit = factory.Iterator(Figure.UNIT)
+    # FIXME: household_size should not be a unit value
     household_size = 1  # validation based on unit in the serializer
     role = factory.Iterator(Figure.ROLE)
     start_date = factory.LazyFunction(today().date)

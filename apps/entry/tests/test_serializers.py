@@ -530,7 +530,6 @@ class TestFigureSerializer(HelixTestCase):
         term = Figure.FIGURE_TERMS.DISPLACED.value
         self.data['term'] = term
         self.data['displacement_occurred'] = 0
-
         serializer = FigureSerializer(data=self.data,
                                       context={'request': self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)

@@ -434,6 +434,39 @@ class TestEntryCreation(HelixGraphQLTestCase):
         self.assertFalse(content['data']['createEntry']['ok'], content)
         self.assertIn('householdSize', json.dumps(content['data']['createEntry']['errors']))
 
+    def test_household_size_validation(self):
+        figures = [
+            {
+                "uuid": str(uuid4()),
+                "country": self.country_id,
+                "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
+                "reported": 10,
+                "unit": Figure.UNIT.HOUSEHOLD.name,  # missing household_size
+                "householdSize": 30,
+                "term": Figure.FIGURE_TERMS.EVACUATED.name,
+                "category": self.fig_cat.name,
+                "role": Figure.ROLE.RECOMMENDED.name,
+                "startDate": "2020-10-10",
+                "includeIdu": True,
+                "excerptIdu": "excerpt abc",
+                "event": self.event.id,
+                "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
+                "disaggregationLocationCamp": 200,
+                "disaggregationLocationNonCamp": 100,
+            }
+        ]
+        self.input.update({
+            'figures': figures
+        })
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+        self.assertFalse(content['data']['createEntry']['ok'], content)
+        self.assertNotIn('disaggregationLocationCamp', json.dumps(content['data']['createEntry']['errors']))
+        self.assertNotIn('disaggregationLocationNonCamp', json.dumps(content['data']['createEntry']['errors']))
+
 
 class TestEntryUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
@@ -505,6 +538,28 @@ class TestEntryUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEntry']['ok'], content)
+
+    def test_figure_include_idu_validation(self):
+        self.force_login(self.admin)
+        self.input['figures'] = [
+            {'includeIdu': False, 'excerptIdu': '   '}
+        ]
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+        self.assertNotIn('excerptIdu', json.dumps(content['data']['updateEntry']['errors']))
+
+        self.input['figures'] = [
+            {'includeIdu': True, 'excerptIdu': '   '}
+        ]
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+        self.assertIn('excerptIdu', json.dumps(content['data']['updateEntry']['errors']))
 
     def test_valid_update_entry_with_figures(self):
         figure = FigureFactory.create(
