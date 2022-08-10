@@ -1490,6 +1490,10 @@ type FigureType {
   termDisplay: EnumDescription
   figureCauseDisplay: EnumDescription
   figureTypology: String
+  stockDate: Date
+  stockReportingDate: Date
+  flowStartDate: Date
+  flowEndDate: Date
 }
 
 input FigureUpdateInputType {

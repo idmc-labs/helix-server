@@ -10,7 +10,8 @@ from django.contrib.postgres.fields import ArrayField, JSONField
 from django.db import models
 from django.db.models.query import QuerySet
 from django.db.models import (
-    Sum, Avg, F, Value, Min, Max, Q, ExpressionWrapper, fields
+    Sum, Avg, F, Value, Min, Max, Q, ExpressionWrapper,
+    fields, Case, When,
 )
 from django.db.models.functions import Concat, ExtractYear, Cast
 from django.utils.translation import gettext_lazy as _, gettext
@@ -528,6 +529,32 @@ class Figure(MetaInformationArchiveAbstractModel,
         return same_year_figures | mutiple_year_figures
 
     @classmethod
+    def annotate_stock_and_flow_dates(cls):
+        return {
+            'flow_start_date': Case(
+                When(category__in=Figure.flow_list(), then=F('start_date'))
+            ),
+            'flow_end_date': Case(
+                When(category__in=Figure.flow_list(), then=F('end_date'))
+            ),
+            'flow_start_date_accuracy': Case(
+                When(category__in=Figure.flow_list(), then=F('start_date_accuracy'))
+            ),
+            'flow_end_date_accuracy': Case(
+                When(category__in=Figure.flow_list(), then=F('end_date_accuracy'))
+            ),
+            'stock_date': Case(
+                When(category__in=Figure.stock_list(), then=F('start_date'))
+            ),
+            'stock_reporting_date': Case(
+                When(category__in=Figure.stock_list(), then=F('end_date'))
+            ),
+            'stock_date_accuracy': Case(
+                When(category__in=Figure.stock_list(), then=F('start_date_accuracy'))
+            ),
+        }
+
+    @classmethod
     def stock_list(cls):
         return [
             Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
@@ -626,10 +653,13 @@ class Figure(MetaInformationArchiveAbstractModel,
             figure_cause='Figure cause',
             total_figures='Total figures',
             term='Figure term',
-            start_date='Start date',
-            start_date_accuracy='Start date accuracy',
-            end_date='End Date',
-            end_date_accuracy='End date accuracy',
+            stock_date='Stock date',
+            stock_date_accuracy='Stock date accuracy',
+            stock_reporting_date='Stock reporting date',
+            flow_start_date='Start date',
+            flow_start_date_accuracy='Start date accuracy',
+            flow_end_date='End date',
+            flow_end_date_accuracy='End date accuracy',
             role='Figure Role',
             event__id='Event Id',
             year='Year',
@@ -684,6 +714,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             context_of_violences='Context of violences',
         )
         values = figures.annotate(
+            **Figure.annotate_stock_and_flow_dates(),
             centroid_lat=Avg('geo_locations__lat'),
             centroid_lon=Avg('geo_locations__lon'),
             entry_link=Concat(Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id')),
@@ -731,8 +762,9 @@ class Figure(MetaInformationArchiveAbstractModel,
             return {
                 **datum,
                 'include_idu': 'Yes' if datum['include_idu'] else 'No',
-                'start_date_accuracy': getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'label', ''),
-                'end_date_accuracy': getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'label', ''),
+                'stock_date_accuracy': getattr(DATE_ACCURACY.get(datum['stock_date_accuracy']), 'label', ''),
+                'flow_start_date_accuracy': getattr(DATE_ACCURACY.get(datum['flow_start_date_accuracy']), 'label', ''),
+                'flow_end_date_accuracy': getattr(DATE_ACCURACY.get(datum['flow_end_date_accuracy']), 'label', ''),
                 'quantifier': getattr(Figure.QUANTIFIER.get(datum['quantifier']), 'label', ''),
                 'unit': getattr(Figure.UNIT.get(datum['unit']), 'label', ''),
                 'role': getattr(Figure.ROLE.get(datum['role']), 'label', ''),

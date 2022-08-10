@@ -607,7 +607,9 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
 
     @property
     def qs(self):
-        queryset = super().qs
+        queryset = super().qs.annotate(
+            **Figure.annotate_stock_and_flow_dates()
+        )
         start_date = self.data.get('filter_figure_start_after')
         end_date = self.data.get('filter_figure_end_before')
 
