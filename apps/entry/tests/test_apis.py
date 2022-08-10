@@ -539,6 +539,28 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEntry']['ok'], content)
 
+    def test_figure_include_idu_validation(self):
+        self.force_login(self.admin)
+        self.input['figures'] = [
+            {'includeIdu': False, 'excerptIdu': '   '}
+        ]
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+        self.assertNotIn('excerptIdu', json.dumps(content['data']['updateEntry']['errors']))
+
+        self.input['figures'] = [
+            {'includeIdu': True, 'excerptIdu': '   '}
+        ]
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+        self.assertIn('excerptIdu', json.dumps(content['data']['updateEntry']['errors']))
+
     def test_valid_update_entry_with_figures(self):
         figure = FigureFactory.create(
             entry=self.entry,

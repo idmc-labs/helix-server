@@ -44,25 +44,6 @@ class TestFigureModel(HelixTestCase):
         self.assertTrue(self.figure.can_be_created_by(editor2, self.entry))
         self.assertTrue(self.figure.can_be_created_by(self.editor, self.entry))
 
-    def test_figure_clean_idu(self):
-        data = dict(
-            include_idu=False,
-            excerpt_idu='   '
-        )
-        self.figure.save()
-        self.assertFalse(self.figure.clean_idu(data, self.figure))
-        data = dict(include_idu=True)
-        self.figure.save()
-        self.assertIn('excerpt_idu', self.figure.clean_idu(data, self.figure))
-
-    def test_figure_saves_total_figures(self):
-        figure = FigureFactory(event=self.event)
-        figure.unit = 1
-        figure.household_size = 4
-        figure.reported = 10
-        figure.save()
-        self.assertEqual(figure.total_figures, round(figure.reported * figure.household_size))
-
     def test_figure_nd_filtering(self):
         ref = datetime.today()
         nd_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value

@@ -128,7 +128,7 @@ class CommonFigureValidationMixin:
             # If location is moved manually allow to save location of other coutries
             # These locations are considered as problematic border issues
             moved = location.get("moved", False)
-            if location["country_code"].lower() != country_code.lower() and not moved:
+            if location.get("country_code", '').lower() != country_code.lower() and not moved:
                 errors.update({
                     'geo_locations': "Location should be inside the selected figure's country"
                 })
@@ -180,9 +180,11 @@ class CommonFigureValidationMixin:
         # FIXME: why only check when creating entry
         if self.instance and geo_locations:
             geo_location_ids = {geo_location['id'] for geo_location in geo_locations if 'id' in geo_location}
-            geo_locations_on_db = list(self.instance.geo_locations.values_list('id', flat=True)) if self.instance.geo_locations else []
+            geo_locations_on_db = list(
+                self.instance.geo_locations.values_list('id', flat=True)
+            ) if self.instance.geo_locations else []
             if geo_location_ids.difference(geo_locations_on_db):
-                errors['geo_locations'] = 'Some geo locations not found.';
+                errors['geo_locations'] = 'Some geo locations not found.'
 
         return errors
 
@@ -258,7 +260,7 @@ class CommonFigureValidationMixin:
         _attrs = copy(attrs)
 
         term = _attrs.get('term', getattr(self.instance, 'term', None))
-        if not term or term not in Figure.housing_list():
+        if not term and term not in Figure.housing_list():
             _attrs['displacement_occurred'] = None
         return _attrs
 
