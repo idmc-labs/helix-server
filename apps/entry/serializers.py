@@ -260,7 +260,7 @@ class CommonFigureValidationMixin:
         _attrs = copy(attrs)
 
         term = _attrs.get('term', getattr(self.instance, 'term', None))
-        if not term and term not in Figure.housing_list():
+        if term is None or term not in Figure.displacement_occur_list():
             _attrs['displacement_occurred'] = None
         return _attrs
 
