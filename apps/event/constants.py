@@ -68,6 +68,6 @@ OSV_SUB_TYPE = [
     "Host/Displaced tensions",
     "Elections",
     "Demonstrations",
-    "Police operatins",
+    "Police operations",
     "Other"
 ]
