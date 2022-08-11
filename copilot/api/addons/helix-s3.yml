@@ -34,6 +34,7 @@ Resources:
               - GET
               - HEAD
             AllowedOrigins:
+              # TODO: Make sure this works.
               - "https://*.idmcdb.org"
             MaxAge: 3600
 
@@ -91,8 +92,91 @@ Resources:
             Action: s3:ListBucket
             Resource: !Sub ${ S3MediaBucket.Arn}
 
+  # External Shared Bucket
+  ExternalS3MediaBucket:
+    Metadata:
+      'aws:copilot:description': 'An Amazon S3 bucket to store and retrieve objects shared externally.'
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      BucketName: !Sub '${App}-${Env}-helix-media-external'
+      AccessControl: PublicRead
+      PublicAccessBlockConfiguration:
+        # NOTE: Make the bucket public
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - HEAD
+            AllowedOrigins:
+              - "*"
+            MaxAge: 3600
+      LifecycleConfiguration:
+        Rules:
+          - Id: AutoDelete
+            Status: Enabled
+            ExpirationInDays: 7
+
+  ExternalS3MediaBucketPolicy:
+    Metadata:
+      'aws:copilot:description': 'A bucket policy to deny unencrypted access to the bucket and its contents'
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          # NOTE: Allow all objects read
+          - Sid: ReadAny
+            Effect: Allow
+            Principal: "*"
+            Action:
+              - s3:GetObject
+            Resource:
+              - !Sub ${ ExternalS3MediaBucket.Arn}/*
+          - Sid: ForceHTTPS
+            Effect: Deny
+            Principal: '*'
+            Action: 's3:*'
+            Resource:
+              - !Sub ${ ExternalS3MediaBucket.Arn}/*
+              - !Sub ${ ExternalS3MediaBucket.Arn}
+            Condition:
+              Bool:
+                "aws:SecureTransport": false
+      Bucket: !Ref ExternalS3MediaBucket
+
+  ExternalS3MediaAccessPolicy:
+    Metadata:
+      'aws:copilot:description': 'An IAM ManagedPolicy for your service to access the Media bucket'
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      Description: !Sub
+        - Grants CRUD access to the S3 bucket ${Bucket}
+        - { Bucket: !Ref ExternalS3MediaBucket }
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: S3ObjectActions
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:PutObjectACL
+              - s3:PutObjectTagging
+              - s3:DeleteObject
+              - s3:RestoreObject
+            Resource: !Sub ${ ExternalS3MediaBucket.Arn}/*
+          - Sid: S3ListAction
+            Effect: Allow
+            Action: s3:ListBucket
+            Resource: !Sub ${ ExternalS3MediaBucket.Arn}
+
 Outputs:
-  # NOTE: making this bucket environment var uniform across stack
+  # NOTE: making this bucket environment var uniform across stack: S3_BUCKET_NAME
   S3BucketName:
     Value: !Ref S3MediaBucket
     # NOTE: export the name so it can be used elsewhere in the stack
@@ -102,3 +186,14 @@ Outputs:
   S3MediaAccessPolicy:
     Description: "The IAM::ManagedPolicy to attach to the task role"
     Value: !Ref S3MediaAccessPolicy
+
+  # NOTE: making this bucket environment var uniform across stack: EXTERNAL_S3_BUCKET_NAME
+  ExternalS3BucketName:
+    Value: !Ref ExternalS3MediaBucket
+    # NOTE: export the name so it can be used elsewhere in the stack
+    Export:
+      Name: !Sub ${App}-${Env}-ExternalS3MediaBucketName
+
+  ExternalS3MediaAccessPolicy:
+    Description: "The IAM::ManagedPolicy to attach to the task role"
+    Value: !Ref ExternalS3MediaAccessPolicy

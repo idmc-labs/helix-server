@@ -5,7 +5,7 @@ x-server: &base_server_setup
   environment: &base_server_environment
     HELIX_ENVIRONMENT: development
     DJANGO_DEBUG: ${DJANGO_DEBUG:-True}
-    ENABLE_DEBUG: ${ENABLE_DEBUG:-True}  # Used for DEBUG TOOLBAR, TODO: REMOVE
+    ENABLE_DEBUG_TOOLBAR: ${ENABLE_DEBUG_TOOLBAR:-False}  # Used for DEBUG TOOLBAR, TODO: REMOVE
     DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-STATIC-INSECURE-KEY-PLEASE-DONT-USE-IN-PRODUCTION}
     DJANGO_ALLOWED_HOST: ${DJANGO_ALLOWED_HOST:-localhost,host.docker.internal}
     FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3080}

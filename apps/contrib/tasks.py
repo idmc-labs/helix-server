@@ -186,7 +186,7 @@ def generate_external_endpoint_dump_file(
         logger.info(f'{endpoint_type}: file dump created')
     except Exception:
         external_api_dump.status = ExternalApiDump.Status.FAILED
-        logger.info(f'{endpoint_type}: file dump generation failed')
+        logger.error(f'{endpoint_type}: file dump generation failed', exc_info=True)
         return False
     external_api_dump.save()
     return True
