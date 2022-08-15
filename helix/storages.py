@@ -26,20 +26,20 @@ class S3StaticStorage(S3Boto3Storage):
     location = settings.STATIC_ROOT
 
     def get_default_settings(self):
-        return dict(
+        return {
             **super().get_default_settings(),
-            bucket_name=settings.AWS_STORAGE_STATIC_BUCKET_NAME,
-        )
+            'bucket_name': settings.AWS_STORAGE_STATIC_BUCKET_NAME,
+        }
 
 
 class S3MediaStorage(S3Boto3Storage):
     location = settings.MEDIA_ROOT
 
     def get_default_settings(self):
-        return dict(
+        return {
             **super().get_default_settings(),
-            bucket_name=settings.AWS_STORAGE_MEDIA_BUCKET_NAME,
-        )
+            'bucket_name': settings.AWS_STORAGE_MEDIA_BUCKET_NAME,
+        }
 
 
 class S3ExternalMediaStorage(S3Boto3Storage):
@@ -47,10 +47,10 @@ class S3ExternalMediaStorage(S3Boto3Storage):
     location = settings.EXTERNAL_MEDIA_ROOT
 
     def get_default_settings(self):
-        return dict(
+        return {
             **super().get_default_settings(),
-            bucket_name=settings.AWS_STORAGE_EXTERNAL_BUCKET_NAME,
-        )
+            'bucket_name': settings.AWS_STORAGE_EXTERNAL_BUCKET_NAME,
+        }
 
 
 def get_external_storage_class():
