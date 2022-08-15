@@ -99,7 +99,7 @@ class UserType(DjangoObjectType):
 
     @staticmethod
     def resolve_portfolio_role(root, info, **kwargs):
-        return root.portfolio_role
+        return root.highest_role
 
 
 class UserListType(CustomDjangoListObjectType):
