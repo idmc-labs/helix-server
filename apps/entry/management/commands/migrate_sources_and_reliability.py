@@ -15,8 +15,6 @@ class Command(BaseCommand):
         for figure in figures:
             source_and_reliability = source_and_reliability_map.get(int(figure.old_id))
             if source_and_reliability:
-                figure.calculation_logic = f'''
-                {figure.calculation_logic.strip()}\n\n###Source and reliability\n{source_and_reliability}
-                '''
+                figure.calculation_logic = f'{figure.calculation_logic.strip()}\n\n### Sources Breakdown & Reliability\n{source_and_reliability}'  # noqa: E501
         Figure.objects.bulk_update(figures, ['calculation_logic', ])
         print(f'{figures.count()} Figures updated')
