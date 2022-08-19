@@ -18,7 +18,7 @@ class Command(BaseCommand):
                 osm = OSMName.objects.filter(osm_id=moved_location['osm_id'], figures__old_id=old_id).first()
                 if osm:
                     osm.lat = moved_location['lat']
-                    osm.lng = moved_location['lng']
+                    osm.lon = moved_location['lng']
                     osm.moved = True
                     osm.save()
                     count += 1
