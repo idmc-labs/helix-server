@@ -24,7 +24,7 @@ class Command(BaseCommand):
 
     help = 'Generate moved location dump'
 
-    def get_lat_lon_osm_id_form_locations(self, location):
+    def get_lat_lon_osm_id_from_locations(self, location):
         return {
             'lat': location['latlng'][0],
             'lng': location['latlng'][1],
@@ -48,7 +48,7 @@ class Command(BaseCommand):
             for location_item_to_update in fact['fields']['locations']['locations']:
                 if location_item_to_update['moved']:
                     location_dict['locations'].append(
-                        self.get_lat_lon_osm_id_form_locations(location_item_to_update)
+                        self.get_lat_lon_osm_id_from_locations(location_item_to_update)
                     )
 
             # Only append moved locations
