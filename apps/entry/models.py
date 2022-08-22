@@ -1132,6 +1132,7 @@ class ExternalApiDump(models.Model):
         # There might be other external endpoints
         IDUS = 'idus', _('Idus')
         IDUS_ALL = 'idus-all', _('Idus all')
+        IDUS_ALL_DISASTER = 'idus-all-disaster', _('Idus all disaster')
 
     class Status(models.IntegerChoices):
         PENDING = 0, 'Pending'
