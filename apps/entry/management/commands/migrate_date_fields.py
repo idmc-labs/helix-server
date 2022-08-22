@@ -49,6 +49,7 @@ class Command(BaseCommand):
         entries = Entry.objects.filter(old_id__in=entry_data.keys())
         for entry in entries:
             entry.publish_date = entry_data.get(entry.old_id)
+        Entry.objects.bulk_update(entries, ['publish_date'])
         print(f'{entries.count()} entries updated')
 
         #########################################
@@ -60,6 +61,7 @@ class Command(BaseCommand):
         contextual_updates = ContextualUpdate.objects.filter(old_id__in=contextual_update_data.keys())
         for contextual_update in contextual_updates:
             contextual_update.publish_date = contextual_update_data.get(contextual_update.old_id)
+        ContextualUpdate.objects.bulk_update(contextual_updates, ['publish_date'])
         print(f'{contextual_updates.count()} contextual updates updated')
 
         #########################################
@@ -71,4 +73,5 @@ class Command(BaseCommand):
         communications = Communication.objects.filter(old_id__in=communication_data.keys())
         for communication in communications:
             communication.date = communication_data.get(communication.old_id)
+        Communication.objects.bulk_update(communications, ['date'])
         print(f'{communications.count()} communications updated')
