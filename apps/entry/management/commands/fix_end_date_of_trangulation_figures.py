@@ -47,7 +47,7 @@ class Command(BaseCommand):
             start_date__isnull=True,
         )
         for figure in figures_to_update:
-            year = trangulation_figures_with_null_start_date_map.get(figure.old_id, None),
+            year = trangulation_figures_with_null_start_date_map.get(figure.old_id, None)
             if year:
                 figure.start_date = date(year=year, month=1, day=1)
                 figure.end_date = figure.start_date
