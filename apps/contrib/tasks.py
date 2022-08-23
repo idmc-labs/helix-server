@@ -210,7 +210,7 @@ def _generate_idus_dump_file(idus_all=False, idus_all_disaster=False):
             ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER,
             FigureReadOnlySerializer,
             lambda: get_idu_data().filter(figure_cause=Crisis.CRISIS_TYPE.DISASTER),
-            'idus_all.json',
+            'idus_all_disaster.json',
         )
     idu_date_from = timezone.now() - timedelta(days=180)
     return generate_external_endpoint_dump_file(
