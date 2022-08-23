@@ -323,3 +323,7 @@ class IdusFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
 
 class IdusAllFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL
+
+
+class IdusAllDisasterCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
+    ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER

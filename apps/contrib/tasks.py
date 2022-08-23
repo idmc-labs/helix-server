@@ -192,16 +192,25 @@ def generate_external_endpoint_dump_file(
     return True
 
 
-def _generate_idus_dump_file(idus_all=False):
+def _generate_idus_dump_file(api_type):
     from apps.entry.serializers import FigureReadOnlySerializer
     from apps.entry.views import get_idu_data
     from apps.entry.models import ExternalApiDump
-    if idus_all:
+    from apps.crisis.models import Crisis
+
+    if api_type == ExternalApiDump.ExternalApiType.IDUS_ALL:
         return generate_external_endpoint_dump_file(
             ExternalApiDump.ExternalApiType.IDUS_ALL,
             FigureReadOnlySerializer,
             get_idu_data,
             'idus_all.json',
+        )
+    if api_type == ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER:
+        return generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data().filter(figure_cause=Crisis.CRISIS_TYPE.DISASTER),
+            'idus_all_disaster.json',
         )
     idu_date_from = timezone.now() - timedelta(days=180)
     return generate_external_endpoint_dump_file(
@@ -214,12 +223,20 @@ def _generate_idus_dump_file(idus_all=False):
 
 @celery_app.task
 def generate_idus_dump_file():
-    return _generate_idus_dump_file()
+    from apps.entry.models import ExternalApiDump
+    return _generate_idus_dump_file(ExternalApiDump.ExternalApiType.IDUS)
 
 
 @celery_app.task
 def generate_idus_all_dump_file():
-    return _generate_idus_dump_file(idus_all=True)
+    from apps.entry.models import ExternalApiDump
+    return _generate_idus_dump_file(ExternalApiDump.ExternalApiType.IDUS_ALL)
+
+
+@celery_app.task
+def generate_idus_all_disaster_dump_file():
+    from apps.entry.models import ExternalApiDump
+    return _generate_idus_dump_file(ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER)
 
 
 @celery_app.task

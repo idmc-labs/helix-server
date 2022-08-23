@@ -8,6 +8,7 @@ from apps.contrib.models import ClientTrackInfo
 from apps.contrib.tasks import (
     generate_idus_dump_file,
     generate_idus_all_dump_file,
+    generate_idus_all_disaster_dump_file,
     save_and_delete_tracked_data_from_redis_to_db,
 )
 from helix.caches import external_api_cache
@@ -18,6 +19,7 @@ class TestExternalClientTrack(HelixAPITestCase):
         super().setUp()
         self.idus_url = '/external-api/idus'
         self.idus_all_url = '/external-api/idus-all'
+        self.idus_all_disaster_url = '/external-api/idus-all-disaster'
         self.client1 = ClientFactory.create(code='random-code-1')
         self.client2 = ClientFactory.create(code='random-code-2')
 
@@ -30,6 +32,7 @@ class TestExternalClientTrack(HelixAPITestCase):
         endpoints = [
             f'{self.idus_url}?client_id=random-client-id-1',
             f'{self.idus_all_url}?client_id=random-client-id-2',
+            f'{self.idus_all_disaster_url}?client_id=random-client-id-2',
         ]
 
         for endpoint in endpoints:
@@ -42,6 +45,7 @@ class TestExternalClientTrack(HelixAPITestCase):
         endpoints = [
             f'{self.idus_url}?client_id={self.client1.code}',
             f'{self.idus_all_url}?client_id={self.client2.code}',
+            f'{self.idus_all_disaster_url}?client_id={self.client2.code}',
         ]
 
         def _response_status_check(status_code):
@@ -54,6 +58,7 @@ class TestExternalClientTrack(HelixAPITestCase):
         # Let's trigger dump generator
         generate_idus_dump_file()
         generate_idus_all_dump_file()
+        generate_idus_all_disaster_dump_file()
 
         _response_status_check(status.HTTP_302_FOUND)
 
@@ -70,6 +75,8 @@ class TestExternalClientTrack(HelixAPITestCase):
             f'{self.idus_url}?client_id={self.client2.code}',
             f'{self.idus_all_url}?client_id={self.client1.code}',
             f'{self.idus_all_url}?client_id={self.client2.code}',
+            f'{self.idus_all_disaster_url}?client_id={self.client1.code}',
+            f'{self.idus_all_disaster_url}?client_id={self.client2.code}',
         ]
 
         # Assume yesterdays data
@@ -79,7 +86,7 @@ class TestExternalClientTrack(HelixAPITestCase):
 
         # Sync redis data to database
         save_and_delete_tracked_data_from_redis_to_db()
-        self.assertEqual(ClientTrackInfo.objects.count(), 4)
+        self.assertEqual(ClientTrackInfo.objects.count(), 6)
 
         # Again track client ids for same date
         for endpoint in endpoints:
@@ -87,7 +94,7 @@ class TestExternalClientTrack(HelixAPITestCase):
 
         # Resync redis data for same date
         save_and_delete_tracked_data_from_redis_to_db()
-        self.assertEqual(ClientTrackInfo.objects.count(), 4)
+        self.assertEqual(ClientTrackInfo.objects.count(), 6)
 
         # Again track client ids for same date
         for endpoint in endpoints:
@@ -95,7 +102,7 @@ class TestExternalClientTrack(HelixAPITestCase):
 
         # Resync redis data for same date
         save_and_delete_tracked_data_from_redis_to_db()
-        self.assertEqual(ClientTrackInfo.objects.count(), 4)
+        self.assertEqual(ClientTrackInfo.objects.count(), 6)
 
         # For each client track info requests per day should be 1 for each api type
         for obj in ClientTrackInfo.objects.all():
