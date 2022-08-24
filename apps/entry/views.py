@@ -59,7 +59,7 @@ def get_idu_data():
         event_end_date=F('event__end_date'),
         disaster_category_name=F('disaster_category__name'),
         disaster_sub_category_name=F('disaster_sub_category__name'),
-        disaster_type_name=F('disaster_type__name'),
+        disaster_type_name=F('disaster_sub_type__type__name'),
         disaster_sub_type_name=F('disaster_sub_type__name'),
         figure_term_label=Case(
             When(term=0, then=Lower(Value(Figure.FIGURE_TERMS.EVACUATED.label))),
