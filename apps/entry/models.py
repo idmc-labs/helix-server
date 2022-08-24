@@ -499,6 +499,12 @@ class Figure(MetaInformationArchiveAbstractModel,
             models.Index(fields=['event']),
         ]
 
+    UNSUPPORTED_OSMNAME_COUNTRY_CODES = {
+        'CX', 'GP', 'BV', 'YT', 'GF', 'PR', 'AW', 'SX',
+        'SJ', 'PM', 'CW', 'HM', 'BL', 'MO', 'AX', 'GU',
+        'HK', 'NF', 'MQ', 'MF', 'CC', 'RE', 'VI'
+    }
+
     # methods
     @classmethod
     def filtered_nd_figures(
