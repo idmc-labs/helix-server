@@ -1856,10 +1856,10 @@ enum ORGANIZATION_RELIABILITY {
 
 input OSMNameInputType {
   id: ID
+  country: String
   uuid: String!
   wikipedia: String
   rank: Int
-  country: String!
   countryCode: String
   street: String
   wikiData: String
