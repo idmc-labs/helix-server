@@ -257,7 +257,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         source1 = dict(
             uuid=str(uuid4()),
             rank=101,
-            country=str(self.country.name),
+            country='',
             countryCode=self.country.iso2,
             osmId='ted',
             osmType='okay',

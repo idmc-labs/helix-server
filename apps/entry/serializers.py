@@ -6,6 +6,7 @@ from django.core.validators import MinValueValidator
 from django.db import transaction
 from django.utils.translation import gettext, gettext_lazy as _
 from rest_framework import serializers
+from rest_framework.fields import CharField
 
 from apps.contrib.serializers import (
     MetaInformationSerializerMixin,
@@ -21,6 +22,7 @@ from apps.entry.models import (
     DisaggregatedAge,
 )
 from apps.users.models import User
+from apps.country.models import Country
 from apps.users.enums import USER_ROLE
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
 
@@ -67,6 +69,20 @@ class DisaggregatedStratumSerializer(serializers.Serializer):
 class OSMNameSerializer(serializers.ModelSerializer):
     # to allow updating
     id = IntegerIDField(required=False)
+    country = CharField(required=False, allow_blank=True)
+
+    def validate(self, attrs: dict) -> dict:
+        '''
+        NOTE: In some cases osmname api does not provides country,
+        in this case get country from country code
+        '''
+        if not self.instance and not attrs.get('country'):
+            country_code = attrs.get('country_code', '').upper()
+            country = Country.objects.filter(iso2__iexact=country_code).first()
+            if not country:
+                raise serializers.ValidationError('Country field is required.')
+            attrs['country'] = country
+        return attrs
 
     class Meta:
         model = OSMName
