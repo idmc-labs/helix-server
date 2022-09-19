@@ -610,7 +610,8 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
     def qs(self):
         queryset = super().qs.annotate(
             **Figure.annotate_stock_and_flow_dates(),
-            geolocations=StringAgg('geo_locations__display_name', '; ')
+            geolocations=StringAgg('geo_locations__display_name', '; '),
+            **Figure.annotate_sources_reliability(),
         )
         start_date = self.data.get('filter_figure_start_after')
         end_date = self.data.get('filter_figure_end_before')

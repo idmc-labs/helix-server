@@ -563,6 +563,30 @@ class Figure(MetaInformationArchiveAbstractModel,
         }
 
     @classmethod
+    def annotate_sources_reliability(cls):
+        from apps.organization.models import OrganizationKind
+        return {
+            'high_count': models.Count(
+                'sources__organization_kind__reliability',
+                filters=Q(
+                    sources__organization_kind__reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW
+                )
+            ),
+            'low_count': models.Count(
+                'sources__organization_kind__reliability',
+                filters=Q(
+                    sources__organization_kind__reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH
+                )
+            ),
+            'sources_reliability': Case(
+                When(high_count__gt=F('low_count'), then=Value('High to Low')),
+                When(high_count__lt=F('low_count'), then=Value('Low to High')),
+                When(high_count=F('low_count'), then=Value('Low')),
+                output_field=models.CharField(),
+            )
+        }
+
+    @classmethod
     def stock_list(cls):
         return [
             Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
