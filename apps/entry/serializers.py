@@ -641,7 +641,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
         return entry
 
     def update(self, instance, validated_data: dict) -> Entry:
-        figures = validated_data.pop('figures', [])
+        figures = validated_data.pop('figures', None)
         if figures:
             with transaction.atomic():
                 entry = super().update(instance, validated_data)
@@ -662,8 +662,11 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         fig_ser._validated_data = {**each, 'entry': entry}
                     fig_ser._errors = {}
                     fig_ser.save()
-        else:
-            entry = super().update(instance, validated_data)
+        elif isinstance(figures, list) and not figures:
+            # If figure is empty list remove all figures associated with entry
+            Figure.objects.filter(entry=instance).delete()
+
+        entry = super().update(instance, validated_data)
         return entry
 
 

@@ -1494,6 +1494,8 @@ type FigureType {
   stockReportingDate: Date
   flowStartDate: Date
   flowEndDate: Date
+  geolocations: String
+  sourcesReliability: String
 }
 
 input FigureUpdateInputType {

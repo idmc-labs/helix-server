@@ -563,6 +563,30 @@ class Figure(MetaInformationArchiveAbstractModel,
         }
 
     @classmethod
+    def annotate_sources_reliability(cls):
+        from apps.organization.models import OrganizationKind
+        return {
+            'high_count': models.Count(
+                'sources__organization_kind__reliability',
+                filters=Q(
+                    sources__organization_kind__reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW
+                )
+            ),
+            'low_count': models.Count(
+                'sources__organization_kind__reliability',
+                filters=Q(
+                    sources__organization_kind__reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH
+                )
+            ),
+            'sources_reliability': Case(
+                When(high_count__gt=F('low_count'), then=Value('High to Low')),
+                When(high_count__lt=F('low_count'), then=Value('Low to High')),
+                When(high_count=F('low_count'), then=Value('Low')),
+                output_field=models.CharField(),
+            )
+        }
+
+    @classmethod
     def stock_list(cls):
         return [
             Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
@@ -720,9 +744,11 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__crisis__name='Crisis Name',
             event__other_sub_type__name='Other Event Sub Type',
             context_of_violences='Context of violences',
+            sources_reliability='Sources reliability'
         )
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
+            **Figure.annotate_sources_reliability(),
             centroid_lat=Avg('geo_locations__lat'),
             centroid_lon=Avg('geo_locations__lon'),
             entry_link=Concat(Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id')),

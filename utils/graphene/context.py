@@ -11,7 +11,11 @@ from apps.crisis.dataloaders import (
     EventCountLoader,
 )
 from apps.entry.dataloaders import (
-    TotalIDPFigureByEntryLoader, TotalNDFigureByEntryLoader, FigureTypologyLoader
+    TotalIDPFigureByEntryLoader,
+    TotalNDFigureByEntryLoader,
+    FigureTypologyLoader,
+    FigureGeoLocationLoader,
+    FigureSourcesReliability,
 )
 from apps.event.dataloaders import (
     TotalIDPFigureByEventLoader,
@@ -143,6 +147,14 @@ class GQLContext:
     @cached_property
     def figure_typology_dataloader(self):
         return FigureTypologyLoader()
+
+    @cached_property
+    def figure_geolocations_loader(self):
+        return FigureGeoLocationLoader()
+
+    @cached_property
+    def figure_sources_reliability_loader(self):
+        return FigureSourcesReliability()
 
     @cached_property
     def event_count_dataloader(self):
