@@ -138,6 +138,7 @@ class FigureType(DjangoObjectType):
     stock_reporting_date = graphene.Date()
     flow_start_date = graphene.Date()
     flow_end_date = graphene.Date()
+    geolocations = graphene.String()
 
     def resolve_stock_date(root, info, **kwargs):
         if root.category in Figure.stock_list():
@@ -157,6 +158,9 @@ class FigureType(DjangoObjectType):
 
     def resolve_figure_typology(root, info, **kwargs):
         return info.context.figure_typology_dataloader.load(root.id)
+
+    def resolve_geolocations(root, info, **kwargs):
+        return info.context.figure_geolocations_loader.load(root.id)
 
 
 class FigureListType(CustomDjangoListObjectType):

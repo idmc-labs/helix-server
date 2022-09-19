@@ -1,5 +1,6 @@
 from django_filters import rest_framework as df
 from django.db.models import Q
+from django.contrib.postgres.aggregates.general import StringAgg
 from apps.crisis.models import Crisis
 from apps.country.models import Country
 from apps.extraction.models import ExtractionQuery
@@ -608,7 +609,8 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
     @property
     def qs(self):
         queryset = super().qs.annotate(
-            **Figure.annotate_stock_and_flow_dates()
+            **Figure.annotate_stock_and_flow_dates(),
+            geolocations=StringAgg('geo_locations__display_name', '; ')
         )
         start_date = self.data.get('filter_figure_start_after')
         end_date = self.data.get('filter_figure_end_before')

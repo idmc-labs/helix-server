@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.postgres.aggregates.general import StringAgg
 from promise import Promise
 from promise.dataloader import DataLoader
 from django.db.models import Case, F, When, CharField
@@ -56,6 +57,22 @@ class FigureTypologyLoader(DataLoader):
         ).values('id', 'figure_typology')
         batch_load = {
             item['id']: item['figure_typology']
+            for item in qs
+        }
+        return Promise.resolve([
+            batch_load.get(key) for key in keys
+        ])
+
+
+class FigureGeoLocationLoader(DataLoader):
+    def batch_load_fn(self, keys):
+        qs = Figure.objects.filter(
+            id__in=keys
+        ).annotate(
+            geolocations=StringAgg('geo_locations__display_name', '; ')
+        ).values('id', 'geolocations')
+        batch_load = {
+            item['id']: item['geolocations']
             for item in qs
         }
         return Promise.resolve([
