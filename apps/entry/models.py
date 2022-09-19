@@ -744,9 +744,11 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__crisis__name='Crisis Name',
             event__other_sub_type__name='Other Event Sub Type',
             context_of_violences='Context of violences',
+            sources_reliability='Sources reliability'
         )
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
+            **Figure.annotate_sources_reliability(),
             centroid_lat=Avg('geo_locations__lat'),
             centroid_lon=Avg('geo_locations__lon'),
             entry_link=Concat(Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id')),

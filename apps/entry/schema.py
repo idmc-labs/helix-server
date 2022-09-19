@@ -166,6 +166,7 @@ class FigureType(DjangoObjectType):
     def resolve_sources_reliability(root, info, **kwargs):
         return info.context.figure_sources_reliability_loader.load(root.id)
 
+
 class FigureListType(CustomDjangoListObjectType):
     class Meta:
         model = Figure
