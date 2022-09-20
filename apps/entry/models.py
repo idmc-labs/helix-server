@@ -760,7 +760,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'geo_locations__display_name',
                 '; ',
                 filter=~Q(
-                    Q(geo_locations__city__isnull=True) | Q(geo_locations__city='')
+                    Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name='')
                 ), distinct=True
             ),
             publishers_name=StringAgg(
