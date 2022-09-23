@@ -568,13 +568,13 @@ class Figure(MetaInformationArchiveAbstractModel,
         return {
             'high_count': models.Count(
                 'sources__organization_kind__reliability',
-                filters=Q(
+                filter=Q(
                     sources__organization_kind__reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW
                 )
             ),
             'low_count': models.Count(
                 'sources__organization_kind__reliability',
-                filters=Q(
+                filter=Q(
                     sources__organization_kind__reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH
                 )
             ),
