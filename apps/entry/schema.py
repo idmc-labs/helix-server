@@ -20,6 +20,7 @@ from apps.entry.enums import (
     IdentifierGrapheneEnum,
     FigureCategoryTypeEnum,
     FigureTermsEnum,
+    FigureSourcesReliabilityEnum,
 )
 from apps.entry.filters import EntryReviewerFilter, OSMNameFilter
 from apps.entry.models import (
@@ -139,7 +140,7 @@ class FigureType(DjangoObjectType):
     flow_start_date = graphene.Date()
     flow_end_date = graphene.Date()
     geolocations = graphene.String()
-    sources_reliability = graphene.String()
+    sources_reliability = graphene.Field(FigureSourcesReliabilityEnum)
 
     def resolve_stock_date(root, info, **kwargs):
         if root.category in Figure.stock_list():
