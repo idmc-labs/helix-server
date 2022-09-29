@@ -282,9 +282,9 @@ class Figure(MetaInformationArchiveAbstractModel,
         LOW = 0
         MEDIUM = 1
         HIGH = 2
-        LOW_TO_HIGH = 4
-        LOW_TO_MEDIUM= 5
-        MEDIUM_TO_HIGH = 6
+        LOW_TO_HIGH = 3
+        LOW_TO_MEDIUM= 4
+        MEDIUM_TO_HIGH = 5
 
         __labels__ = {
             LOW: _('Low'),
