@@ -283,7 +283,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         MEDIUM = 1
         HIGH = 2
         LOW_TO_HIGH = 3
-        LOW_TO_MEDIUM= 4
+        LOW_TO_MEDIUM = 4
         MEDIUM_TO_HIGH = 5
 
         __labels__ = {
@@ -851,6 +851,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'geo_locations_identifier': get_string_from_list([
                     OSMName.IDENTIFIER(item).label for item in datum['geo_locations_identifier']
                 ]),
+                'sources_reliability': getattr(Figure.SOURCES_RELIABILITY.get(datum['sources_reliability']), 'label', ''),
             }
 
         return {
