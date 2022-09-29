@@ -144,7 +144,7 @@ class CommonFigureValidationMixin:
             # If location is moved manually allow to save location of other coutries
             # These locations are considered as problematic border issues
             moved = location.get("moved", False)
-            if country_code in Figure.UNSUPPORTED_OSMNAME_COUNTRY_CODES:
+            if country_code not in Figure.SUPPORTED_OSMNAME_COUNTRY_CODES:
                 continue
             elif location.get("country_code", '').lower() != country_code.lower() and not moved:
                 errors.update({
