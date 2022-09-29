@@ -283,13 +283,15 @@ class Figure(MetaInformationArchiveAbstractModel,
         MEDIUM = 1
         HIGH = 2
         LOW_TO_HIGH = 4
-        MEDIUM_TO_HIGH = 5
+        LOW_TO_MEDIUM= 5
+        MEDIUM_TO_HIGH = 6
 
         __labels__ = {
             LOW: _('Low'),
             MEDIUM: _('Medium'),
             HIGH: _('High'),
             LOW_TO_HIGH: _('Low to high'),
+            LOW_TO_MEDIUM: _('Low to medium'),
             MEDIUM_TO_HIGH: _('Medium to high'),
         }
 
@@ -612,6 +614,11 @@ class Figure(MetaInformationArchiveAbstractModel,
                     lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.MEDIUM.value,
                     highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH.value,
                     then=Value(Figure.SOURCES_RELIABILITY.MEDIUM_TO_HIGH)
+                ),
+                When(
+                    lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW.value,
+                    highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.MEDIUM.value,
+                    then=Value(Figure.SOURCES_RELIABILITY.LOW_TO_MEDIUM)
                 ),
                 output_field=models.CharField(),
             )
