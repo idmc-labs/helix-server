@@ -71,11 +71,7 @@ class UserType(DjangoObjectType):
     )
     full_name = Field(graphene.String, required=True)
     email = graphene.String()
-    portfolios = DjangoPaginatedListObjectField(PortfolioListType,
-                                                pagination=PageGraphqlPaginationWithoutCount(
-                                                    page_size_query_param='pageSize'
-                                                ),
-                                                related_name='portfolios')
+    portfolios = graphene.List(graphene.NonNull(PortfolioType))
     portfolio_role = Field(PermissionRoleEnum)
     portfolio_role_display = EnumDescription(source='get_portfolio_role_display')
     permissions = graphene.List(graphene.NonNull(PermissionsType))
@@ -100,6 +96,10 @@ class UserType(DjangoObjectType):
     @staticmethod
     def resolve_portfolio_role(root, info, **kwargs):
         return root.portfolio_role
+
+    @staticmethod
+    def resolve_portfolios(root, info, **kwargs):
+        return Portfolio.objects.filter(user=root.id)
 
 
 class UserListType(CustomDjangoListObjectType):
