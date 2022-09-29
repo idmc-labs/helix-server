@@ -1495,7 +1495,7 @@ type FigureType {
   flowStartDate: Date
   flowEndDate: Date
   geolocations: String
-  sourcesReliability: String
+  sourcesReliability: SOURCES_RELIABILITY
 }
 
 input FigureUpdateInputType {
@@ -2697,6 +2697,15 @@ type ReviewType {
   geoLocation: OSMNameType
   comment: ReviewCommentType
   valueDisplay: EnumDescription
+}
+
+enum SOURCES_RELIABILITY {
+  LOW
+  MEDIUM
+  HIGH
+  LOW_TO_HIGH
+  LOW_TO_MEDIUM
+  MEDIUM_TO_HIGH
 }
 
 type SignOffReport {

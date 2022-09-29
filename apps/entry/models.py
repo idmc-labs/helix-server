@@ -278,6 +278,23 @@ class Figure(MetaInformationArchiveAbstractModel,
             UNKNOWN: _('Unknown'),
         }
 
+    class SOURCES_RELIABILITY(enum.Enum):
+        LOW = 0
+        MEDIUM = 1
+        HIGH = 2
+        LOW_TO_HIGH = 3
+        LOW_TO_MEDIUM = 4
+        MEDIUM_TO_HIGH = 5
+
+        __labels__ = {
+            LOW: _('Low'),
+            MEDIUM: _('Medium'),
+            HIGH: _('High'),
+            LOW_TO_HIGH: _('Low to high'),
+            LOW_TO_MEDIUM: _('Low to medium'),
+            MEDIUM_TO_HIGH: _('Medium to high'),
+        }
+
     class FIGURE_CATEGORY_TYPES(enum.Enum):
         IDPS = 0
         RETURNEES = 1
@@ -566,22 +583,43 @@ class Figure(MetaInformationArchiveAbstractModel,
     def annotate_sources_reliability(cls):
         from apps.organization.models import OrganizationKind
         return {
-            'high_count': models.Count(
-                'sources__organization_kind__reliability',
-                filter=Q(
-                    sources__organization_kind__reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW
-                )
+            'lowest_source_reliability': models.Min(
+                'sources__organization_kind__reliability', output_field=models.IntegerField()
             ),
-            'low_count': models.Count(
-                'sources__organization_kind__reliability',
-                filter=Q(
-                    sources__organization_kind__reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH
-                )
+            'highest_source_reliability': models.Max(
+                'sources__organization_kind__reliability', output_field=models.IntegerField()
             ),
             'sources_reliability': Case(
-                When(high_count__gt=F('low_count'), then=Value('High to Low')),
-                When(high_count__lt=F('low_count'), then=Value('Low to High')),
-                When(high_count=F('low_count'), then=Value('Low')),
+                When(
+                    lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW.value,
+                    highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW.value,
+                    then=Value(Figure.SOURCES_RELIABILITY.LOW)
+                ),
+                When(
+                    lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.MEDIUM.value,
+                    highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.MEDIUM.value,
+                    then=Value(Figure.SOURCES_RELIABILITY.MEDIUM)
+                ),
+                When(
+                    lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH.value,
+                    highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH.value,
+                    then=Value(Figure.SOURCES_RELIABILITY.HIGH)
+                ),
+                When(
+                    lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW.value,
+                    highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH.value,
+                    then=Value(Figure.SOURCES_RELIABILITY.LOW_TO_HIGH)
+                ),
+                When(
+                    lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.MEDIUM.value,
+                    highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.HIGH.value,
+                    then=Value(Figure.SOURCES_RELIABILITY.MEDIUM_TO_HIGH)
+                ),
+                When(
+                    lowest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.LOW.value,
+                    highest_source_reliability=OrganizationKind.ORGANIZATION_RELIABILITY.MEDIUM.value,
+                    then=Value(Figure.SOURCES_RELIABILITY.LOW_TO_MEDIUM)
+                ),
                 output_field=models.CharField(),
             )
         }
@@ -813,6 +851,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'geo_locations_identifier': get_string_from_list([
                     OSMName.IDENTIFIER(item).label for item in datum['geo_locations_identifier']
                 ]),
+                'sources_reliability': getattr(Figure.SOURCES_RELIABILITY.get(datum['sources_reliability']), 'label', ''),
             }
 
         return {
