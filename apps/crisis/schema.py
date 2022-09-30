@@ -10,7 +10,7 @@ from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.event.schema import EventListType
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
-from utils.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 
 
 class CrisisReviewCountType(graphene.ObjectType):

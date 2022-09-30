@@ -9,7 +9,7 @@ from apps.contextualupdate.models import ContextualUpdate
 from apps.contextualupdate.filters import ContextualUpdateFilter
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
-from utils.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 
 
 class ContextualUpdateType(DjangoObjectType):

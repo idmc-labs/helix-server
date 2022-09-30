@@ -18,7 +18,7 @@ from apps.report.filters import ReportFilter, DummyFilter
 from apps.report.enums import ReportGenerationStatusEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import CustomPaginatedListObjectField, DjangoPaginatedListObjectField
-from utils.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 
 
 class ReportTotalsType(graphene.ObjectType):

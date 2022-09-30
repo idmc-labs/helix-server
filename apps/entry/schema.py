@@ -37,7 +37,7 @@ from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.organization.schema import OrganizationListType
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
-from utils.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 from apps.extraction.filters import FigureExtractionFilterSet, EntryExtractionFilterSet
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.schema import OtherSubTypeObjectType

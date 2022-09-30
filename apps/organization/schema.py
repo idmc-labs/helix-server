@@ -10,7 +10,7 @@ from apps.organization.enums import (
 )
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
-from utils.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 from apps.organization.filters import OrganizationFilter
 
 
