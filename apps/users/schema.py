@@ -12,7 +12,7 @@ from utils.graphene.enums import EnumDescription
 
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
-from utils.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 from apps.users.filters import UserFilter, ReviewerUserFilter, PortfolioFilter
 from apps.users.roles import USER_ROLE
 from apps.users.models import Portfolio

@@ -22,7 +22,7 @@ from apps.event.models import (
 from apps.event.filters import ActorFilter, EventFilter
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
-from utils.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 
 
 class ViolenceSubObjectType(DjangoObjectType):

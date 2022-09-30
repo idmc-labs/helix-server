@@ -11,7 +11,7 @@ from apps.parking_lot.enums import (
 from apps.parking_lot.filters import ParkingLotFilter
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
-from utils.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 
 
 class ParkedItemType(DjangoObjectType):

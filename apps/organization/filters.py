@@ -1,4 +1,5 @@
 import django_filters
+from django.db.models import Case, When
 from apps.organization.models import Organization
 from utils.filters import NameFilterMixin, IDListFilter, StringListFilter
 
@@ -8,6 +9,7 @@ class OrganizationFilter(NameFilterMixin,
     countries = IDListFilter(method='filter_countries')
     categories = StringListFilter(method='filter_categories')
     organization_kinds = IDListFilter(method='filter_organization_kinds')
+    order_country_first = IDListFilter(method='filter_order_country_first')
 
     class Meta:
         model = Organization
@@ -31,6 +33,16 @@ class OrganizationFilter(NameFilterMixin,
         if not value:
             return qs
         return qs.filter(organization_kind__in=value).distinct()
+
+    def filter_order_country_first(self, qs, name, value):
+        if not value:
+            return qs
+        country_organization_ids = qs.filter(countries__in=value).distinct().values_list('id', flat=True)
+        return qs.order_by(
+            Case(
+                When(id__in=country_organization_ids, then=0), default=1
+            )
+        )
 
     @property
     def qs(self):

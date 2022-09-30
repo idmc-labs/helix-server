@@ -1,23 +1,22 @@
-from django.db.models import F
 from graphene import String
+from graphene_django_extras.paginations.pagination import BaseDjangoGraphqlPagination
+from graphene_django_extras import PageGraphqlPagination
+from django.db.models import F
 from graphene_django_extras.paginations.utils import (
     _nonzero_int,
 )
-from graphene_django_extras.paginations.pagination import (
-    BaseDjangoGraphqlPagination,
-    PageGraphqlPagination as OriginalPageGraphqlPagination
-)
 
 
-def nulls_last_order_queryset(qs, ordering_param, ordering, **kwargs):
+def nulls_last_order_queryset(qs, ordering_param, **kwargs):
     '''
     https://docs.djangoproject.com/en/3.1/ref/models/expressions/#django.db.models.Expression.desc
     https://docs.djangoproject.com/en/3.1/ref/models/expressions/#using-f-to-sort-null-values
     '''
-    order = kwargs.pop(ordering_param, None) or ordering or ''
-    order = order.strip(",").replace(" ", "").split(",")
+    order = kwargs.pop(ordering_param, None) or ''
+    if order:
+        order = order.strip(",").replace(" ", "").split(",")
 
-    if order.__len__() == 0:
+    if not order:
         return qs
 
     mod_ordering = []
@@ -30,6 +29,19 @@ def nulls_last_order_queryset(qs, ordering_param, ordering, **kwargs):
             mod_ordering.append(F(o).asc(nulls_last=True))
 
     return qs.distinct().order_by(*mod_ordering)
+
+
+class NoOrderingPageGraphqlPagination(PageGraphqlPagination):
+    """
+    Custom pagination to support enum ordering from filterset
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def to_graphql_fields(self):
+        fields = super().to_graphql_fields()
+        fields.pop(self.ordering_param)
+        return fields
 
 
 class OrderingOnlyArgumentPagination(BaseDjangoGraphqlPagination):
@@ -68,16 +80,21 @@ class OrderingOnlyArgumentPagination(BaseDjangoGraphqlPagination):
         return argument_dict
 
     def paginate_queryset(self, qs, **kwargs):
-        ordering_param = self.ordering_param
-        ordering = self.ordering
-        return nulls_last_order_queryset(qs, ordering_param, ordering, **kwargs)
+        order = kwargs.pop(self.ordering_param, None) or self.ordering
+        if order:
+            if "," in order:
+                order = order.strip(",").replace(" ", "").split(",")
+                if order.__len__() > 0:
+                    qs = qs.order_by(*order)
+            else:
+                qs = qs.order_by(order)
+        return qs
 
 
-class PageGraphqlPaginationWithoutCount(OriginalPageGraphqlPagination):
+class PageGraphqlPaginationWithoutCount(PageGraphqlPagination):
     '''
     Default implementation applies qs.count()
     which is not possible with dataloading
-
     https://github.com/eamigo86/graphene-django-extras/blob/master/graphene_django_extras/paginations/pagination.py
     '''
     def paginate_queryset(self, qs, **kwargs):
@@ -107,6 +124,5 @@ class PageGraphqlPaginationWithoutCount(OriginalPageGraphqlPagination):
         offset = page_size * (page - 1)
 
         ordering_param = self.ordering_param
-        ordering = self.ordering
-        qs = nulls_last_order_queryset(qs, ordering_param, ordering, **kwargs)
+        qs = nulls_last_order_queryset(qs, ordering_param, **kwargs)
         return qs[offset: offset + page_size]

@@ -14,7 +14,7 @@ from graphene_django_extras.paginations.pagination import BaseDjangoGraphqlPagin
 from graphene_django_extras.settings import graphql_api_settings
 from graphene_django_extras.utils import get_extra_filters
 
-from utils.pagination import OrderingOnlyArgumentPagination
+from utils.graphene.pagination import OrderingOnlyArgumentPagination
 
 
 def path_has_list(info):
@@ -127,7 +127,7 @@ class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
         if getattr(self, "pagination", None):
             ordering = kwargs.pop(self.pagination.ordering_param, None) or self.pagination.ordering
             ordering = ','.join([to_snake_case(each) for each in ordering.strip(',').replace(' ', '').split(',')])
-            self.pagination.ordering = ordering
+            kwargs[self.pagination.ordering_param] = ordering
             qs = self.pagination.paginate_queryset(qs, **kwargs)
 
         return CustomDjangoListObjectBase(
@@ -219,7 +219,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
         if getattr(self, "pagination", None):
             ordering = kwargs.pop(self.pagination.ordering_param, None) or self.pagination.ordering
             ordering = ','.join([to_snake_case(each) for each in ordering.strip(',').replace(' ', '').split(',')])
-            self.pagination.ordering = ordering
+            kwargs[self.pagination.ordering_param] = ordering
 
         if root and path_has_list(info):
             if not getattr(self, 'related_name', None):
