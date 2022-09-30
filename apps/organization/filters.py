@@ -37,7 +37,7 @@ class OrganizationFilter(NameFilterMixin,
     def filter_order_country_first(self, qs, name, value):
         if not value:
             return qs
-        country_organization_ids = qs.filter(countries__in=value).distinct().values_list('id', flat=True)
+        country_organization_ids = qs.filter(countries__in=value).values('id').distinct()
         return qs.order_by(
             Case(
                 When(id__in=country_organization_ids, then=0), default=1
