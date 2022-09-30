@@ -477,8 +477,8 @@ class TestFigureSerializer(HelixTestCase):
     def setUp(self):
         self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.factory = RequestFactory()
-        country1 = CountryFactory.create(country_code=123, iso2='lo')
-        country2 = CountryFactory.create(name='Nepal', iso2='bo')
+        country1 = CountryFactory.create(country_code=123, iso2='AD')
+        country2 = CountryFactory.create(name='Nepal', iso2='AF')
         self.event = EventFactory.create(
             name="hahaha",
             event_type=Crisis.CRISIS_TYPE.DISASTER.value,
