@@ -23,27 +23,27 @@ app.conf.beat_schedule = {
     },
     'kill-previews': {
         'task': 'apps.contrib.tasks.kill_all_long_running_previews',
-        'schedule': crontab(hour='*/2'),
+        'schedule': crontab(minute='0', hour='*/2'),
         'args': [],
     },
     'kill-report-generations': {
         'task': 'apps.contrib.tasks.kill_all_long_running_report_generations',
-        'schedule': crontab(hour='*/3'),
+        'schedule': crontab(minute='0', hour='*/3'),
         'args': [],
     },
     'generate-idus-dump-file': {
         'task': 'apps.contrib.tasks.generate_idus_dump_file',
-        'schedule': crontab(hour='*/2'),
+        'schedule': crontab(minute='0', hour='*/2'),
         'args': [],
     },
     'generate-idus-all-dump-file': {
         'task': 'apps.contrib.tasks.generate_idus_all_dump_file',
-        'schedule': crontab(hour='*/2'),
+        'schedule': crontab(minute='0', hour='*/2'),
         'args': [],
     },
     'generate-idus-all-disaster-dump-file': {
         'task': 'apps.contrib.tasks.generate_idus_all_disaster_dump_file',
-        'schedule': crontab(hour='*/2'),
+        'schedule': crontab(minute='0', hour='*/2'),
         'args': [],
     },
     'save_and_delete_tracked_data_from_redis_to_db': {
