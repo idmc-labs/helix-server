@@ -776,7 +776,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             disaggregation_location_non_camp='Location: Non-Camp',
             # Extra added fields
             old_id='Old Id',
-            entry__url='Source url',
+            entry_url_or_document_url='Source url',
             entry_link='Entry link',
             country__name='Country',
             entry__old_id='Entry Old Id',
@@ -805,6 +805,17 @@ class Figure(MetaInformationArchiveAbstractModel,
             **Figure.annotate_sources_reliability(),
             centroid_lat=Avg('geo_locations__lat'),
             centroid_lon=Avg('geo_locations__lon'),
+            entry_url_or_document_url=models.Case(
+                models.When(
+                    entry__document__isnull=False,
+                    then=F('entry__document_url')
+                ),
+                models.When(
+                    entry__document__isnull=True,
+                    then=F('entry__url')
+                ),
+                default=Value('')
+            ),
             entry_link=Concat(Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id')),
             figure_link=Concat(
                 Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id'),
