@@ -810,7 +810,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             entry_url_or_document_url=models.Case(
                 models.When(
                     entry__document__isnull=False,
-                    then=F('entry__document__attachment')
+                    then=F('entry__document_url')
                 ),
                 models.When(
                     entry__document__isnull=True,
@@ -872,7 +872,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 if not url:
                     return ''
                 document_name = re.findall(r"([^/]+)$", url)
-                if not document_name or document_name == url or len(document_name) == 0:
+                if len(document_name) == 0 or document_name[0] == url:
                     return ''
                 return document_name[0]
 
