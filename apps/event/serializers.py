@@ -3,6 +3,7 @@ from collections import OrderedDict
 from django.core.exceptions import ValidationError
 from django.db.models import Min, Max, Q
 from django.utils.translation import gettext
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.contrib.serializers import (
@@ -32,9 +33,23 @@ class ActorUpdateSerializer(UpdateSerializerMixin,
 
 class EventSerializer(MetaInformationSerializerMixin,
                       serializers.ModelSerializer):
+
+    from apps.users.models import User, USER_ROLE
+    reviewer = serializers.PrimaryKeyRelatedField(
+        many=False,
+        queryset=User.objects.filter(
+            groups__name__in=[
+                USER_ROLE.ADMIN.name,
+                USER_ROLE.MONITORING_EXPERT.name,
+                USER_ROLE.REGIONAL_COORDINATOR.name,
+            ]
+        ).distinct(),
+        required=False
+    )
+
     class Meta:
         model = Event
-        fields = '__all__'
+        exclude = ('assignee', 'assigned_at')
 
     def validate_violence_sub_type_and_type(self, attrs):
         errors = OrderedDict()
@@ -176,6 +191,11 @@ class EventSerializer(MetaInformationSerializerMixin,
 
     def create(self, validated_data):
         validated_data["created_by"] = self.context['request'].user
+        reviewer = validated_data.get('reviewer')
+        if reviewer:
+            validated_data['assignee'] = self.context['request'].user
+            validated_data['assigned_at'] = timezone.now()
+        validated_data["created_by"] = self.context['request'].user
         countries = validated_data.pop("countries", None)
         context_of_violence = validated_data.pop("context_of_violence", None)
         event = Event.objects.create(**validated_data)
@@ -185,6 +205,14 @@ class EventSerializer(MetaInformationSerializerMixin,
             event.context_of_violence.set(context_of_violence)
         context_of_violence = validated_data.pop("context_of_violence", None)
         return event
+
+    def update(self, instance, validated_data): 
+        reviewer = validated_data.get('reviewer')
+        if instance.reviewer and reviewer and instance.reviewer != reviewer:
+            validated_data['assignee'] = self.context['request'].user
+            validated_data['assigned_at'] = timezone.now()
+        validated_data["created_by"] = self.context['request'].user
+        return super().update(instance, validated_data)
 
 
 class EventUpdateSerializer(UpdateSerializerMixin, EventSerializer):

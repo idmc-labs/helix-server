@@ -2,6 +2,7 @@ import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 from utils.graphene.enums import EnumDescription
+from graphene.types.utils import get_type
 
 from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -185,6 +186,7 @@ class OtherSubTypeList(CustomDjangoListObjectType):
 
 
 class EventType(DjangoObjectType):
+
     class Meta:
         model = Event
         exclude_fields = ('figures',)
@@ -209,6 +211,12 @@ class EventType(DjangoObjectType):
     qs_rule_type_display = EnumDescription(source='get_qs_rule_type_display')
     event_typology = graphene.String()
     figure_typology = graphene.List(graphene.String)
+    reviewer = graphene.Dynamic(
+        lambda: graphene.Field(
+            get_type('apps.users.schema.UserType'),
+            required=False
+        )
+    )
 
     def resolve_review_count(root, info, **kwargs):
         return info.context.event_event_review_count_dataloader.load(root.id)

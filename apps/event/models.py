@@ -19,6 +19,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.forms import model_to_dict
 from utils.common import add_clone_prefix
 
+CANNOT_UPDATE_MESSAGE = _('You cannot sign off the event.')
 
 class NameAttributedModels(models.Model):
     name = models.CharField(_('Name'), max_length=256)
@@ -205,6 +206,15 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     context_of_violence = models.ManyToManyField(
         'ContextOfViolence', verbose_name=_('Context of violence'), blank=True, related_name='events'
     )
+    reviewer = models.ForeignKey(
+        'users.User', verbose_name=_('Reviewer'), null=True, blank=True,
+        related_name='event_reviewer', on_delete=models.CASCADE
+    )
+    assignee = models.ForeignKey(
+        'users.User', verbose_name=_('Assignee'), null=True, blank=True,
+        related_name='event_assignee', on_delete=models.CASCADE
+    )
+    assigned_at = models.DateTimeField(verbose_name='Assigned at', null=True, blank=True)
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
@@ -320,6 +330,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             'formulae': None,
             'transformer': transformer,
         }
+
 
     def save(self, *args, **kwargs):
         if self.disaster_sub_type:
