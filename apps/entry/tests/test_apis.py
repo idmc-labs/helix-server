@@ -5,9 +5,6 @@ from uuid import uuid4
 from apps.entry.models import (
     Figure,
     OSMName,
-    Entry,
-    EntryReviewer,
-    CANNOT_UPDATE_MESSAGE,
 )
 from apps.users.enums import USER_ROLE
 from utils.factories import (
@@ -123,11 +120,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
                                 fullName
                             }
                         }
-                        reviewers {
-                            results {
-                                id
-                            }
-                        }
                         createdBy{
                             id
                             fullName
@@ -143,7 +135,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
             "publishDate": "2020-09-09",
             "idmcAnalysis": "analysis one",
             "isConfidential": True,
-            "reviewers": [],
         }
         self.force_login(self.editor)
         self.tag1 = TagFactory.create()
@@ -325,26 +316,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
                          content['data']['createEntry'])
         self.assertEqual('reported',
                          content['data']['createEntry']['errors'][0]['arrayErrors'][0]['objectErrors'][0]['field'])
-
-    def test_add_reviewers_while_create_entry(self):
-        r1 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT.name)
-        r2 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT.name)
-        r3 = create_user_with_role(role=USER_ROLE.MONITORING_EXPERT.name)
-        self.input.update(dict(reviewers=[str(r1.id), str(r2.id), str(r3.id)]))
-
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
-        content = response.json()
-
-        self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['createEntry']['ok'], content)
-        self.assertIsNone(content['data']['createEntry']['errors'], content)
-        entry = Entry.objects.get(id=content['data']['createEntry']['result']['id'])
-        self.assertEqual(entry.reviewers.count(), len(self.input['reviewers']))
-        self.assertEqual(len(content['data']['createEntry']['result']['reviewers']
-                             ['results']), len(self.input['reviewers']), content)
 
     def test_invalid_guest_entry_create(self):
         guest = create_user_with_role(role=USER_ROLE.GUEST.name)
@@ -830,7 +801,6 @@ class TestEntryReviewUpdate(HelixGraphQLTestCase):
         self.r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.r3 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.it = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.entry.reviewers.set([self.r1, self.r2, self.r3, self.it])
         self.q = '''
         mutation MyMutation ($input: EntryReviewStatusInputType!){
           updateEntryReview(data: $input) {
@@ -839,46 +809,6 @@ class TestEntryReviewUpdate(HelixGraphQLTestCase):
           }
         }
         '''
-
-    def test_update_review_status(self):
-        input = dict(
-            entry=str(self.entry.id),
-            status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW.name
-        )
-        self.force_login(self.r1)
-        response = self.query(
-            self.q,
-            input_data=input
-        )
-        content = response.json()
-
-        self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['updateEntryReview']['ok'], content)
-
-        # trying to signoff should fail
-        input['status'] = EntryReviewer.REVIEW_STATUS.SIGNED_OFF.name
-        response = self.query(
-            self.q,
-            input_data=input
-        )
-        content = response.json()
-
-        self.assertResponseNoErrors(response)
-        self.assertFalse(content['data']['updateEntryReview']['ok'], content)
-        self.assertIn(str(CANNOT_UPDATE_MESSAGE),
-                      content['data']['updateEntryReview']['errors'][0]['messages'])
-
-        # signoff by it head should succeed
-        self.force_login(self.it)
-        input['status'] = EntryReviewer.REVIEW_STATUS.SIGNED_OFF.name
-        response = self.query(
-            self.q,
-            input_data=input
-        )
-        content = response.json()
-
-        self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['updateEntryReview']['ok'], content)
 
 
 class TestExportEntry(HelixGraphQLTestCase):

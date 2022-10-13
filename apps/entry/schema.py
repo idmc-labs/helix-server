@@ -1,5 +1,4 @@
 import graphene
-from graphene.types.utils import get_type
 from django.contrib.postgres.fields import JSONField
 from graphene import ObjectType
 from graphene.types.generic import GenericScalar
@@ -15,19 +14,17 @@ from apps.entry.enums import (
     UnitGrapheneEnum,
     RoleGrapheneEnum,
     DisplacementOccurredGrapheneEnum,
-    EntryReviewerGrapheneEnum,
     OSMAccuracyGrapheneEnum,
     IdentifierGrapheneEnum,
     FigureCategoryTypeEnum,
     FigureTermsEnum,
     FigureSourcesReliabilityEnum,
 )
-from apps.entry.filters import EntryReviewerFilter, OSMNameFilter
+from apps.entry.filters import OSMNameFilter
 from apps.entry.models import (
     Figure,
     FigureTag,
     Entry,
-    EntryReviewer,
     OSMName,
     DisaggregatedAge,
 )
@@ -100,6 +97,9 @@ class FigureTagType(DjangoObjectType):
 
 class FigureType(DjangoObjectType):
     class Meta:
+        exclude_fields = (
+            'figure_reviews',
+        )
         model = Figure
 
     quantifier = graphene.Field(QuantifierGrapheneEnum)
@@ -187,7 +187,10 @@ class TotalFigureFilterInputType(graphene.InputObjectType):
 class EntryType(DjangoObjectType):
     class Meta:
         model = Entry
-        exclude_fields = ('reviews', 'figures',)
+        exclude_fields = (
+            'reviews', 'figures', 'reviewers', 'review_status', 'review_comments',
+            'reviewing',
+        )
         filter_fields = ('article_title',)
 
     created_by = graphene.Field('apps.users.schema.UserType')
@@ -195,30 +198,10 @@ class EntryType(DjangoObjectType):
     publishers = DjangoPaginatedListObjectField(OrganizationListType,
                                                 related_name='publishers',
                                                 reverse_related_name='published_entries')
-    latest_reviews = graphene.List('apps.review.schema.ReviewType')
-    reviewers = graphene.Dynamic(
-        lambda: DjangoPaginatedListObjectField(
-            get_type('apps.users.schema.UserListType'),
-            related_name='reviewers',
-            reverse_related_name='review_entries',
-        ))
-    review_status = graphene.Field(EntryReviewerGrapheneEnum)
-    review_status_display = EnumDescription(source='get_review_status_display')
-    review_comments = graphene.Dynamic(
-        lambda: DjangoPaginatedListObjectField(
-            get_type('apps.review.schema.ReviewCommentListType'),
-            pagination=PageGraphqlPaginationWithoutCount(
-                page_size_query_param='pageSize'
-            )
-        )
-    )
     # total_stock_idp_figures = graphene.Field(graphene.Int,
     #                                          data=TotalFigureFilterInputType())
     # total_flow_nd_figures = graphene.Field(graphene.Int,
     #                                        data=TotalFigureFilterInputType())
-    is_reviewed = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
-    is_under_review = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
-    is_signed_off = graphene.NonNull(graphene.Boolean, deprecation_reason='Please use `reviewStatus` field.')
     figures = graphene.List(graphene.NonNull(FigureType))
 
     # def resolve_total_stock_idp_figures(root, info, **kwargs):
@@ -264,20 +247,6 @@ class SourcePreviewType(DjangoObjectType):
         if root.status == SourcePreview.PREVIEW_STATUS.COMPLETED:
             return info.context.request.build_absolute_uri(root.pdf.url)
         return None
-
-
-class EntryReviewerType(DjangoObjectType):
-    class Meta:
-        model = EntryReviewer
-
-    status = graphene.Field(EntryReviewerGrapheneEnum)
-    status_display = EnumDescription(source='get_status_display')
-
-
-class EntryReviewerListType(CustomDjangoListObjectType):
-    class Meta:
-        model = EntryReviewer
-        filterset_class = EntryReviewerFilter
 
 
 class FigureTagListType(CustomDjangoListObjectType):

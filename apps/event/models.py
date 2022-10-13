@@ -21,6 +21,7 @@ from utils.common import add_clone_prefix
 
 CANNOT_UPDATE_MESSAGE = _('You cannot sign off the event.')
 
+
 class NameAttributedModels(models.Model):
     name = models.CharField(_('Name'), max_length=256)
 
@@ -330,7 +331,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             'formulae': None,
             'transformer': transformer,
         }
-
 
     def save(self, *args, **kwargs):
         if self.disaster_sub_type:

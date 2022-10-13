@@ -3,15 +3,11 @@ import graphene
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 
 from apps.contrib.models import SourcePreview
-from apps.entry.enums import (
-    EntryReviewerGrapheneEnum,
-)
-from apps.entry.models import Entry, EntryReviewer, FigureTag, Figure
+from apps.entry.models import Entry, FigureTag, Figure
 from apps.entry.schema import (
     EntryType,
     FigureType,
     SourcePreviewType,
-    EntryReviewerType,
     FigureTagType,)
 from apps.entry.serializers import (
     EntryCreateSerializer,
@@ -217,54 +213,6 @@ class CreateSourcePreview(graphene.Mutation):
         return CreateSourcePreview(result=instance, errors=None, ok=True)
 
 
-# Entry review
-
-
-class EntryReviewStatusInputType(graphene.InputObjectType):
-    entry = graphene.ID(required=True)
-    status = graphene.Field(EntryReviewerGrapheneEnum, required=True)
-
-
-class UpdateEntryReview(graphene.Mutation):
-    class Arguments:
-        data = EntryReviewStatusInputType(required=True)
-
-    ok = graphene.Boolean()
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    result = graphene.Field(EntryReviewerType)
-
-    @staticmethod
-    @is_authenticated()
-    def mutate(root, info, data):
-        reviewer = info.context.user
-        try:
-            entry = Entry.objects.get(id=data['entry'])
-        except Entry.DoesNotExist:
-            return UpdateEntryReview(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Entry does not exist.'))
-            ])
-        try:
-            try:
-                entry_review = EntryReviewer.objects.get(entry=entry, reviewer=reviewer)
-                entry_review.status = data['status']
-                entry_review.save()
-            except EntryReviewer.DoesNotExist:
-                # anyone can come along and change the status if they have the permission
-                entry_review = EntryReviewer.objects.create(
-                    entry=entry,
-                    reviewer=reviewer,
-                    status=data['status']
-                )
-        except EntryReviewer.CannotUpdateStatusException as e:
-            return UpdateEntryReview(errors=[
-                dict(field='nonFieldErrors', messages=gettext(e.message))
-            ])
-        return UpdateEntryReview(errors=None, ok=True, result=entry_review)
-
-
-# Figure Tag
-
-
 FigureTagCreateInputType = generate_input_type_for_serializer(
     'FigureTagCreateInputType',
     FigureTagCreateSerializer
@@ -401,8 +349,6 @@ class Mutation(object):
     update_entry = UpdateEntry.Field()
     delete_entry = DeleteEntry.Field()
     create_source_preview = CreateSourcePreview.Field()
-    # entry review
-    update_entry_review = UpdateEntryReview.Field()
     # figure tags
     create_figure_tag = CreateFigureTag.Field()
     update_figure_tag = UpdateFigureTag.Field()

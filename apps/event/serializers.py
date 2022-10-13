@@ -206,7 +206,7 @@ class EventSerializer(MetaInformationSerializerMixin,
         context_of_violence = validated_data.pop("context_of_violence", None)
         return event
 
-    def update(self, instance, validated_data): 
+    def update(self, instance, validated_data):
         reviewer = validated_data.get('reviewer')
         if instance.reviewer and reviewer and instance.reviewer != reviewer:
             validated_data['assignee'] = self.context['request'].user

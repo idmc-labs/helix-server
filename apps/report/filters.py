@@ -1,23 +1,11 @@
-from django.db.models import (
-    Exists,
-    Subquery,
-    OuterRef,
-    Q,
-    F,
-    When,
-    Case,
-    Value,
-    BooleanField,
-)
+from django.db.models import Q
 from django_filters import rest_framework as df
-
-from apps.report.models import Report, ReportGeneration, ReportApproval
-from utils.filters import IDListFilter, StringListFilter
+from apps.report.models import Report
+from utils.filters import IDListFilter
 
 
 class ReportFilter(df.FilterSet):
     filter_figure_countries = IDListFilter(method='filter_countries')
-    review_status = StringListFilter(method='filter_by_review_status')
     start_date_after = df.DateFilter(method='filter_date_after')
     end_date_before = df.DateFilter(method='filter_end_date_before')
     is_public = df.BooleanFilter(method='filter_is_public', initial=False)
@@ -32,46 +20,6 @@ class ReportFilter(df.FilterSet):
         if value:
             return qs.filter(filter_figure_countries__in=value).distinct()
         return qs
-
-    def filter_by_review_status(self, qs, name, value):
-        if not value:
-            return qs
-        qs = qs.annotate(
-            _last_generation_id=Subquery(
-                ReportGeneration.objects.filter(
-                    report=OuterRef('pk')
-                ).order_by('-created_by').values('pk')[:1]
-            )
-        ).annotate(
-            # is_signed_off already exists
-            _is_signed_off=F('is_signed_off'),
-            _is_approved=Exists(
-                ReportApproval.objects.filter(
-                    generation=OuterRef('_last_generation_id'),
-                    is_approved=True,
-                )
-            ),
-        ).annotate(
-            _is_unapproved=Case(
-                When(
-                    Q(_is_approved=False) & Q(_is_signed_off=False),
-                    then=Value(True)
-                ),
-                default=Value(False),
-                output_field=BooleanField()
-            )
-        )
-        _temp = qs.none()
-        if Report.REPORT_REVIEW_FILTER.SIGNED_OFF.name in value:
-            signed_off = qs.filter(_is_signed_off=True)
-            _temp = _temp | signed_off
-        if Report.REPORT_REVIEW_FILTER.APPROVED.name in value:
-            approved = qs.filter(_is_approved=True)
-            _temp = _temp | approved
-        if Report.REPORT_REVIEW_FILTER.UNAPPROVED.name in value:
-            unapproved = qs.filter(_is_unapproved=True)
-            _temp = _temp | unapproved
-        return _temp
 
     def filter_date_after(self, qs, name, value):
         if value:
