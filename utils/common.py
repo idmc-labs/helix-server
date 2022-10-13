@@ -1,5 +1,6 @@
 import datetime
 import re
+import decimal
 from django.core.files.storage import get_storage_class
 from django.conf import settings
 import tempfile
@@ -114,3 +115,15 @@ def redis_lock(lock_key, timeout=60 * 60 * 4):
         _caller.__module__ = func.__module__
         return _caller
     return _dec
+
+
+def round_half_up(float_value):
+    """
+    Returns rounded half upper value, eg 2.5 rounds to 3.0
+    """
+    return float(
+        decimal.Decimal(float_value).quantize(
+            0,
+            rounding=decimal.ROUND_HALF_UP
+        )
+    )

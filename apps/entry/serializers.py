@@ -25,6 +25,7 @@ from apps.users.models import User
 from apps.country.models import Country
 from apps.users.enums import USER_ROLE
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
+from utils.common import round_half_up
 
 
 class DisaggregatedAgeSerializer(serializers.ModelSerializer):
@@ -267,7 +268,7 @@ class CommonFigureValidationMixin:
 
         total_figures = 0
         if unit == Figure.UNIT.HOUSEHOLD:
-            total_figures = round(reported * household_size)
+            total_figures = round_half_up(reported * household_size)
         else:
             total_figures = reported
         _attrs['total_figures'] = total_figures
