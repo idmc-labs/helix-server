@@ -1,3 +1,4 @@
+import re
 from collections import OrderedDict
 from datetime import date
 import logging
@@ -776,7 +777,8 @@ class Figure(MetaInformationArchiveAbstractModel,
             disaggregation_location_non_camp='Location: Non-Camp',
             # Extra added fields
             old_id='Old Id',
-            entry__url='Source url',
+            entry_url_or_document_url='Source url',
+            source_document='Source document',
             entry_link='Entry link',
             country__name='Country',
             entry__old_id='Entry Old Id',
@@ -805,6 +807,24 @@ class Figure(MetaInformationArchiveAbstractModel,
             **Figure.annotate_sources_reliability(),
             centroid_lat=Avg('geo_locations__lat'),
             centroid_lon=Avg('geo_locations__lon'),
+            entry_url_or_document_url=models.Case(
+                models.When(
+                    entry__document__isnull=False,
+                    then=F('entry__document_url')
+                ),
+                models.When(
+                    entry__document__isnull=True,
+                    then=F('entry__url')
+                ),
+                output_field=models.CharField()
+            ),
+            source_document=models.Case(
+                models.When(
+                    entry__document__isnull=False,
+                    then=F('entry__document__attachment')
+                ),
+                output_field=models.CharField()
+            ),
             entry_link=Concat(Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id')),
             figure_link=Concat(
                 Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id'),
@@ -847,6 +867,15 @@ class Figure(MetaInformationArchiveAbstractModel,
         ).values(*[header for header in headers.keys()])
 
         def transformer(datum):
+
+            def get_document_name_from_url(url):
+                if not url:
+                    return ''
+                document_name = re.findall(r"([^/]+)$", url)
+                if len(document_name) == 0 or document_name[0] == url:
+                    return ''
+                return document_name[0]
+
             return {
                 **datum,
                 'include_idu': 'Yes' if datum['include_idu'] else 'No',
@@ -868,6 +897,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                     OSMName.IDENTIFIER(item).label for item in datum['geo_locations_identifier']
                 ]),
                 'sources_reliability': getattr(Figure.SOURCES_RELIABILITY.get(datum['sources_reliability']), 'label', ''),
+                'source_document': get_document_name_from_url(datum['source_document']),
             }
 
         return {
