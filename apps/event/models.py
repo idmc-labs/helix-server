@@ -207,9 +207,9 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     context_of_violence = models.ManyToManyField(
         'ContextOfViolence', verbose_name=_('Context of violence'), blank=True, related_name='events'
     )
-    reviewer = models.ForeignKey(
-        'users.User', verbose_name=_('Reviewer'), null=True, blank=True,
-        related_name='event_reviewer', on_delete=models.CASCADE
+    assigner = models.ForeignKey(
+        'users.User', verbose_name=_('Assigner'), null=True, blank=True,
+        related_name='event_assigner', on_delete=models.CASCADE
     )
     assignee = models.ForeignKey(
         'users.User', verbose_name=_('Assignee'), null=True, blank=True,

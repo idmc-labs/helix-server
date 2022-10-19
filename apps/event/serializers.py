@@ -33,23 +33,9 @@ class ActorUpdateSerializer(UpdateSerializerMixin,
 
 class EventSerializer(MetaInformationSerializerMixin,
                       serializers.ModelSerializer):
-
-    from apps.users.models import User, USER_ROLE
-    reviewer = serializers.PrimaryKeyRelatedField(
-        many=False,
-        queryset=User.objects.filter(
-            groups__name__in=[
-                USER_ROLE.ADMIN.name,
-                USER_ROLE.MONITORING_EXPERT.name,
-                USER_ROLE.REGIONAL_COORDINATOR.name,
-            ]
-        ).distinct(),
-        required=False
-    )
-
     class Meta:
         model = Event
-        exclude = ('assignee', 'assigned_at')
+        exclude = ('assigner', 'assigned_at')
 
     def validate_violence_sub_type_and_type(self, attrs):
         errors = OrderedDict()
@@ -191,9 +177,9 @@ class EventSerializer(MetaInformationSerializerMixin,
 
     def create(self, validated_data):
         validated_data["created_by"] = self.context['request'].user
-        reviewer = validated_data.get('reviewer')
-        if reviewer:
-            validated_data['assignee'] = self.context['request'].user
+        assigner = validated_data.get('assigner')
+        if assigner:
+            validated_data['assigner'] = self.context['request'].user
             validated_data['assigned_at'] = timezone.now()
         validated_data["created_by"] = self.context['request'].user
         countries = validated_data.pop("countries", None)
@@ -207,9 +193,9 @@ class EventSerializer(MetaInformationSerializerMixin,
         return event
 
     def update(self, instance, validated_data):
-        reviewer = validated_data.get('reviewer')
-        if instance.reviewer and reviewer and instance.reviewer != reviewer:
-            validated_data['assignee'] = self.context['request'].user
+        assignee = validated_data.get('assignee')
+        if assignee and instance.assignee != assignee:
+            validated_data['assigner'] = self.context['request'].user
             validated_data['assigned_at'] = timezone.now()
         validated_data["created_by"] = self.context['request'].user
         return super().update(instance, validated_data)
