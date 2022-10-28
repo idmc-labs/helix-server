@@ -397,6 +397,7 @@ class ClearAssigneFromEvent(graphene.Mutation):
         event.assignee = None
         event.assigner = None
         event.assigned_at = None
+        event.save()
         return ClearAssigneFromEvent(result=event, errors=None, ok=True)
 
 class Mutation(object):
