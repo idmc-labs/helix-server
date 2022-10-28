@@ -35,8 +35,8 @@ class UnifiedReviewComment(MetaInformationArchiveAbstractModel, models.Model):
         FIGURE_COUNTRY = 13
 
         # Location fields
-        LOCATION_TYPE = 114
-        LOCATION_ACCURACY = 115
+        LOCATION_TYPE = 100
+        LOCATION_ACCURACY = 101
 
         __labels__ = {
             FIGURE_SOURCE_EXCERPT: 'Source Excerpt',
