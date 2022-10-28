@@ -13,7 +13,6 @@ from apps.entry.serializers import (
 )
 from apps.users.enums import USER_ROLE
 from apps.entry.models import (
-    EntryReviewer,
     OSMName,
     Figure,
 )
@@ -107,58 +106,6 @@ class TestEntrySerializer(HelixTestCase):
         self.assertEqual(instance.last_modified_by, self.user)
         self.assertIsNotNone(instance.created_at)
         self.assertIsNotNone(instance.modified_at)
-
-    def test_entry_creation_create_entry_reviewers(self):
-        reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        self.data['reviewers'] = [reviewer1.id, reviewer2.id]
-        serializer = EntryCreateSerializer(data=self.data,
-                                           context={'request': self.request})
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        serializer.save()
-        entry = serializer.instance
-        self.assertEqual(entry.reviewers.count(), len([reviewer1, reviewer2]))
-        self.assertEqual(
-            sorted(list(entry.reviewers.through.objects.values_list('reviewer', flat=1))),
-            sorted([reviewer1.id, reviewer2.id])
-        )
-
-    def test_entry_update_entry_reviewers(self):
-        x = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        y = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        z = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        entry = EntryFactory.create()
-        entry.reviewers.set([x, y, z])
-
-        reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        reviewer3 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        entry = EntryFactory.create()
-        entry.reviewers.set([reviewer1, reviewer2, reviewer3])
-        self.assertEqual(
-            sorted(list(
-                entry.reviewers.filter(
-                    reviewing__status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
-                ).values_list('id', flat=1))
-            ),
-            sorted([each.id for each in [reviewer1, reviewer2, reviewer3]])
-        )
-        entry.reviewing.all().update(
-            status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
-        )
-
-        old_count = EntryReviewer.objects.count()
-        serializer = EntryCreateSerializer(instance=entry, data={
-            'reviewers': [reviewer1.id, reviewer2.id]
-        }, context={'request': self.request}, partial=True)
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        serializer.save()
-        self.assertEqual(entry.reviewers.count(), 2)
-        self.assertEqual(entry.reviewing.count(), 2)
-        self.assertEqual(set(entry.reviewing.values_list('status', flat=1)),
-                         {EntryReviewer.REVIEW_STATUS.UNDER_REVIEW})
-
-        self.assertEqual(old_count - 1, EntryReviewer.objects.count())
 
     def test_entry_serializer_with_figures_source(self):
         source1 = dict(

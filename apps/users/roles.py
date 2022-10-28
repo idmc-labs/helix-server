@@ -14,7 +14,6 @@ MONITORING_EXPERT_MODELS = {
     PERMISSION_ENTITY.contextualupdate,
     PERMISSION_ENTITY.entry,
     PERMISSION_ENTITY.figure,
-    PERMISSION_ENTITY.review,
     PERMISSION_ENTITY.reviewcomment,
     PERMISSION_ENTITY.parkeditem,
     PERMISSION_ENTITY.organization,

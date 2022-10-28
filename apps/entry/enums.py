@@ -1,12 +1,10 @@
 __all__ = ['QuantifierGrapheneEnum', 'UnitGrapheneEnum',
-           'RoleGrapheneEnum', 'EntryReviewerGrapheneEnum',
-           'OSMAccuracyGrapheneEnum', 'IdentifierGrapheneEnum']
+           'RoleGrapheneEnum', 'OSMAccuracyGrapheneEnum', 'IdentifierGrapheneEnum']
 
 import graphene
 
 from apps.entry.models import (
     Figure,
-    EntryReviewer,
     OSMName,
     FigureDisaggregationAbstractModel,
 )
@@ -29,8 +27,6 @@ DisplacementOccurredGrapheneEnum = graphene.Enum.from_enum(
     Figure.DISPLACEMENT_OCCURRED,
     description=enum_description
 )
-EntryReviewerGrapheneEnum = graphene.Enum.from_enum(EntryReviewer.REVIEW_STATUS,
-                                                    description=enum_description)
 OSMAccuracyGrapheneEnum = graphene.Enum.from_enum(OSMName.OSM_ACCURACY,
                                                   description=enum_description)
 IdentifierGrapheneEnum = graphene.Enum.from_enum(OSMName.IDENTIFIER, description=enum_description)
@@ -46,7 +42,6 @@ enum_map = dict(
     UNIT=UnitGrapheneEnum,
     ROLE=RoleGrapheneEnum,
     DISPLACEMENT_OCCURRED=DisplacementOccurredGrapheneEnum,
-    REVIEW_STATUS=EntryReviewerGrapheneEnum,
     OSM_ACCURACY=OSMAccuracyGrapheneEnum,
     IDENTIFIER=IdentifierGrapheneEnum,
     FIGURE_CATEGORY_TYPES=FigureCategoryTypeEnum,

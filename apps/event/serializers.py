@@ -3,6 +3,7 @@ from collections import OrderedDict
 from django.core.exceptions import ValidationError
 from django.db.models import Min, Max, Q
 from django.utils.translation import gettext
+from django.utils import timezone
 from rest_framework import serializers
 
 from apps.contrib.serializers import (
@@ -34,7 +35,7 @@ class EventSerializer(MetaInformationSerializerMixin,
                       serializers.ModelSerializer):
     class Meta:
         model = Event
-        fields = '__all__'
+        exclude = ('assigner', 'assigned_at')
 
     def validate_violence_sub_type_and_type(self, attrs):
         errors = OrderedDict()

@@ -7,7 +7,6 @@ from apps.extraction.models import ExtractionQuery
 from apps.entry.models import (
     Entry,
     Figure,
-    EntryReviewer,
     FigureDisaggregationAbstractModel,
 )
 from apps.report.models import Report
@@ -32,9 +31,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
     filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='unaccent__icontains')
-    filter_entry_review_status = StringListFilter(method='filter_by_review_status')
     filter_entry_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
-    filter_entry_has_review_comments = df.BooleanFilter(method='filter_has_review_comments', initial=False)
 
     filter_figure_regions = IDListFilter(method='filter_regions')
     filter_figure_geographical_groups = IDListFilter(method='filter_geographical_groups')
@@ -203,19 +200,6 @@ class EntryExtractionFilterSet(df.FilterSet):
             ])
         return qs
 
-    def filter_by_review_status(self, qs, name, value):
-        if not value:
-            return qs
-        to_be_reviewed_qs = Entry.objects.none()
-        if EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.name in value:
-            value.remove(EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.name)
-            to_be_reviewed_qs = qs.filter(
-                Q(review_status__isnull=True) | Q(review_status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.value)
-            )
-        db_values = [EntryReviewer.REVIEW_STATUS.get(item) for item in value]
-        qs = qs.filter(review_status__in=db_values) | to_be_reviewed_qs
-        return qs.distinct()
-
     def filter_by_figure_displacement_types(self, qs, name, value):
         if not value:
             return qs
@@ -281,13 +265,6 @@ class EntryExtractionFilterSet(df.FilterSet):
             ).distinct()
         return qs
 
-    def filter_has_review_comments(self, qs, name, value):
-        if value is True:
-            return qs.filter(review_comments__isnull=False)
-        if value is False:
-            return qs.filter(review_comments__isnull=True)
-        return qs
-
     def filter_filter_figure_glide_number(self, qs, name, value):
         if not value:
             return qs
@@ -333,7 +310,6 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_tags = IDListFilter(method='filter_tags')
     filter_figure_crisis_types = StringListFilter(method='filter_crisis_types')
     filter_figure_glide_number = StringListFilter(method='filter_filter_figure_glide_number')
-    filter_entry_review_status = StringListFilter(method='filter_by_review_status')
     filter_entry_created_by = IDListFilter(field_name='entry__created_by', lookup_expr='in')
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
@@ -344,7 +320,6 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_disaster_types = IDListFilter(method='filter_filter_figure_disaster_types')
     filter_figure_violence_sub_types = IDListFilter(method='filter_filter_figure_violence_sub_types')
     filter_figure_violence_types = IDListFilter(method='filter_filter_figure_violence_types')
-    filter_entry_has_review_comments = df.BooleanFilter(method='filter_has_review_comments', initial=False)
     filter_figure_osv_sub_types = IDListFilter(method='filter_filter_figure_osv_sub_types')
     filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data', initial=False)
     # used in report entry table
@@ -470,20 +445,6 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
                 ])
         return qs
 
-    def filter_by_review_status(self, qs, name, value):
-        if not value:
-            return qs
-        to_be_reviewed_qs = Figure.objects.none()
-        if EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.name in value:
-            value.remove(EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.name)
-            to_be_reviewed_qs = qs.filter(
-                Q(entry__review_status__isnull=True) |
-                Q(entry__review_status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED.value)
-            )
-        db_values = [EntryReviewer.REVIEW_STATUS.get(item) for item in value]
-        qs = qs.filter(entry__review_status__in=db_values) | to_be_reviewed_qs
-        return qs.distinct()
-
     def filter_by_figure_displacement_types(self, qs, name, value):
         if not value:
             return qs
@@ -557,13 +518,6 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
                     figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value
                 ) | Q(violence_type__in=value)
             ).distinct()
-        return qs
-
-    def filter_has_review_comments(self, qs, name, value):
-        if value is True:
-            return qs.filter(entry__review_comments__isnull=False)
-        if value is False:
-            return qs.filter(entry__review_comments__isnull=True)
         return qs
 
     def filter_filter_figure_glide_number(self, qs, name, value):
