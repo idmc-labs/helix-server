@@ -2,6 +2,7 @@ import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 from utils.graphene.enums import EnumDescription
+from graphene.types.utils import get_type
 
 from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -185,6 +186,7 @@ class OtherSubTypeList(CustomDjangoListObjectType):
 
 
 class EventType(DjangoObjectType):
+
     class Meta:
         model = Event
         exclude_fields = ('figures',)
@@ -201,7 +203,6 @@ class EventType(DjangoObjectType):
     start_date_accuracy_display = EnumDescription(source='get_start_date_accuracy_display')
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy_display = EnumDescription(source='get_end_date_accuracy_display')
-    review_count = graphene.Field(EventReviewCountType)
     entry_count = graphene.Field(graphene.Int)
     glide_numbers = graphene.List(graphene.NonNull(graphene.String))
     osv_sub_type = graphene.Field(OsvSubObjectType)
@@ -209,9 +210,6 @@ class EventType(DjangoObjectType):
     qs_rule_type_display = EnumDescription(source='get_qs_rule_type_display')
     event_typology = graphene.String()
     figure_typology = graphene.List(graphene.String)
-
-    def resolve_review_count(root, info, **kwargs):
-        return info.context.event_event_review_count_dataloader.load(root.id)
 
     def resolve_entry_count(root, info, **kwargs):
         return info.context.event_entry_count_dataloader.load(root.id)

@@ -5,7 +5,6 @@ from apps.crisis.models import Crisis
 from apps.report.models import Report
 from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
 from apps.event.constants import OSV
-from apps.entry.models import EntryReviewer
 from django.db import models
 from apps.common.enums import QA_RULE_TYPE
 
@@ -149,39 +148,6 @@ class EventFilter(NameFilterMixin,
                     count=models.Count('entry', distinct=True)
                 ).values('count')[:1],
                 output_field=models.IntegerField()
-            ),
-            total=models.Subquery(
-                Figure.objects.filter(
-                    event=models.OuterRef('pk')
-                ).order_by().values('event').annotate(
-                    count=models.Count('entry__reviewing', distinct=True)
-                ).values('count')[:1],
-                output_field=models.IntegerField()
-            ),
-            total_signed_off=models.Subquery(
-                Figure.objects.filter(
-                    event=models.OuterRef('pk'),
-                    entry__reviewing__status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF,
-                ).order_by().values('event').annotate(
-                    count=models.Count('entry__reviewing', distinct=True)
-                ).values('count')[:1],
-                output_field=models.IntegerField()
-            ),
-            total_review_completed=models.Subquery(
-                Figure.objects.filter(
-                    event=models.OuterRef('pk'),
-                    entry__reviewing__status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED,
-                ).order_by().values('event').annotate(
-                    count=models.Count('entry__reviewing', distinct=True)
-                ).values('count')[:1],
-                output_field=models.IntegerField()
-            ),
-            progress=models.Case(
-                models.When(total__gt=0, then=(
-                    models.F('total_signed_off') + models.F('total_review_completed')) / models.F('total')
-                ),
-                default=None,
-                output_field=models.FloatField()
             )
         ).prefetch_related("figures", 'context_of_violence')
 

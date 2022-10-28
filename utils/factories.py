@@ -225,27 +225,9 @@ class ResourceFactory(DjangoModelFactory):
     group = factory.SubFactory(ResourceGroupFactory)
 
 
-class EntryReviewerFactoryFactory(DjangoModelFactory):
+class UnifiedReviewCommentFactory(DjangoModelFactory):
     class Meta:
-        model = 'entry.EntryReviewer'
-
-    entry = factory.SubFactory(EntryFactory)
-    reviewer = factory.SubFactory(UserFactory)
-
-
-class ReviewCommentFactory(DjangoModelFactory):
-    class Meta:
-        model = 'review.ReviewComment'
-
-    entry = factory.SubFactory(EntryFactory)
-
-
-class ReviewFactory(DjangoModelFactory):
-    class Meta:
-        model = 'review.Review'
-
-    entry = factory.SubFactory(EntryFactory)
-    comment = factory.SubFactory(ReviewCommentFactory)
+        model = 'review.UnifiedReviewComment'
 
 
 class TagFactory(DjangoModelFactory):
