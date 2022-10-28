@@ -3,48 +3,38 @@ from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 from utils.graphene.enums import EnumDescription
 
-from apps.review.enums import ReviewStatusEnum
-from apps.review.filters import ReviewCommentFilter
-from apps.review.models import ReviewComment, Review
+from apps.review.enums import (
+    ReviewCommentStatusEnum,
+    FieldTypeEnum,
+)
+from apps.review.filters import UnifiedReviewCommentFilter
+from apps.review.models import UnifiedReviewComment
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 
 
-class ReviewType(DjangoObjectType):
+class UnifiedReviewCommentType(DjangoObjectType):
+    comment_type = graphene.NonNull(ReviewCommentStatusEnum)
+    comment_display = EnumDescription(source='get_comment_type_display')
+    field = graphene.NonNull(FieldTypeEnum)
+    field_display = EnumDescription(source='get_field_display')
+
     class Meta:
-        model = Review
-
-    value = graphene.NonNull(ReviewStatusEnum)
-    value_display = EnumDescription(source='get_value_display')
+        model = UnifiedReviewComment
 
 
-class ReviewListType(CustomDjangoListObjectType):
+class UnifiedReviewCommentListType(CustomDjangoListObjectType):
     class Meta:
-        model = Review
-        filter_fields = ('entry',)
-
-
-class ReviewCommentType(DjangoObjectType):
-    class Meta:
-        model = ReviewComment
-
-    reviews = DjangoPaginatedListObjectField(ReviewListType)
-
-
-class ReviewCommentListType(CustomDjangoListObjectType):
-    class Meta:
-        model = ReviewComment
-        filterset_class = ReviewCommentFilter
+        model = UnifiedReviewComment
+        filterset_class = UnifiedReviewCommentFilter
 
 
 class Query(object):
-    review_list = DjangoPaginatedListObjectField(ReviewListType,
-                                                 pagination=PageGraphqlPaginationWithoutCount(
-                                                     page_size_query_param='pageSize'
-                                                 ))
-    review_comment = DjangoObjectField(ReviewCommentType)
-    review_comments = DjangoPaginatedListObjectField(ReviewCommentListType,
-                                                     pagination=PageGraphqlPaginationWithoutCount(
-                                                         page_size_query_param='pageSize'
-                                                     ))
+    review_comment = DjangoObjectField(UnifiedReviewCommentType)
+    review_comments = DjangoPaginatedListObjectField(
+        UnifiedReviewCommentListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        )
+    )

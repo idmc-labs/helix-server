@@ -952,10 +952,6 @@ class EntryReviewer(MetaInformationAbstractModel, models.Model):
             raise self.CannotUpdateStatusException()
         self.status = status
 
-    def save(self, *args, **kwargs):
-        self.update_status(self.status)
-        return super().save(*args, **kwargs)
-
 
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
     FIGURES_PER_ENTRY = FIGURE_NUMBER

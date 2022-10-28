@@ -3,8 +3,7 @@ import json
 
 from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
-from apps.review.models import Review
-from apps.entry.models import Figure, EntryReviewer
+from apps.entry.models import Figure
 
 from utils.factories import (
     CountryFactory,
@@ -281,12 +280,6 @@ class TestEventListQuery(HelixGraphQLTestCase):
               eventList(crisisByIds: $crisisByIds, name: $name, qaRules: $qaRules) {
                 results {
                   id
-                  reviewCount {
-                    reviewCompleteCount
-                    signedOffCount
-                    toBeReviewedCount
-                    underReviewCount
-                  }
                 }
                 totalCount
               }
@@ -331,64 +324,6 @@ class TestEventListQuery(HelixGraphQLTestCase):
         self.assertEqual(
             [int(each['id']) for each in content['data']['eventList']['results']],
             expected
-        )
-
-    def test_event_review_count_with_dataloader(self):
-        event = EventFactory.create(
-            event_type=Crisis.CRISIS_TYPE.OTHER.value,
-        )
-        r1 = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT.name,
-        )
-        r2 = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT.name,
-        )
-        entry = EntryFactory.create(review_status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED)
-        FigureFactory.create(event=event, entry=entry,)
-        entry.reviewers.set([r1, r2])
-        response = self.query(
-            self.q,
-        )
-        content = response.json()
-        # check the counts
-        data = content['data']
-        self.assertEqual(
-            data['eventList']['results'][1]['reviewCount']['toBeReviewedCount'],
-            1
-        )
-        self.assertEqual(
-            data['eventList']['results'][1]['reviewCount']['underReviewCount'],
-            None
-        )
-
-        # one reviewer starts reviewing
-        Review.objects.create(
-            entry=entry,
-            created_by=r1,
-            field='field',
-            value=0,
-        )
-        response = self.query(
-            self.q,
-        )
-        content = response.json()
-        # check the counts
-        data = content['data']
-        self.assertEqual(
-            data['eventList']['results'][1]['reviewCount']['toBeReviewedCount'],
-            None
-        )
-        self.assertEqual(
-            data['eventList']['results'][1]['reviewCount']['underReviewCount'],
-            1
-        )
-        self.assertEqual(
-            data['eventList']['results'][1]['reviewCount']['signedOffCount'],
-            None
-        )
-        self.assertEqual(
-            data['eventList']['results'][1]['reviewCount']['reviewCompleteCount'],
-            None
         )
 
     def test_event_has_mutiple_recommended_figures(self):

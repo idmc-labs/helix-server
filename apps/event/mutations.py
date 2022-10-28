@@ -1,5 +1,6 @@
 import graphene
 from graphene_django.filter.utils import get_filtering_args_from_filterset
+from django.utils import timezone
 from django.utils.translation import gettext
 
 from apps.contrib.serializers import ExcelDownloadSerializer
@@ -334,6 +335,70 @@ class DeleteContextOfViolence(graphene.Mutation):
         return DeleteContextOfViolence(result=instance, errors=None, ok=True)
 
 
+class SetAssigneToEvent(graphene.Mutation):
+    class Arguments:
+        event_id = graphene.ID(required=True)
+        user_id = graphene.ID(required=True)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(EventType)
+
+    @staticmethod
+    def mutate(root, info, event_id, user_id):
+        from apps.users.models import User, USER_ROLE
+        event = Event.objects.filter(id=event_id).first()
+        # TODO move this logic in permission class
+        if info.context.user.highest_role == USER_ROLE.GUEST:
+            return SetAssigneToEvent(errors=[
+                dict(field='user_id', messages=gettext('Guest cannot set assignee.'))
+            ])
+
+        if not event:
+            return SetAssigneToEvent(errors=[
+                dict(field='event_id', messages=gettext('Event does not exist.'))
+            ])
+        user = User.objects.filter(
+            id=user_id,
+            groups__name__in=[
+                USER_ROLE.ADMIN.name,
+                USER_ROLE.MONITORING_EXPERT.name,
+                USER_ROLE.REGIONAL_COORDINATOR.name,
+            ]
+        ).first()
+        if not user:
+            return SetAssigneToEvent(errors=[
+                dict(field='user_id', messages=gettext('User does not exist.'))
+            ])
+        event.assignee = user
+        event.assigner = info.context.user
+        event.assigned_at = timezone.now()
+        return SetAssigneToEvent(result=event, errors=None, ok=True)
+
+class ClearAssigneFromEvent(graphene.Mutation):
+    class Arguments:
+        event_id = graphene.ID(required=True)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(EventType)
+
+    @staticmethod
+    def mutate(root, info, event_id):
+        from apps.users.models import User, USER_ROLE
+        event = Event.objects.filter(id=event_id).first()
+        if not event:
+            return SetAssigneToEvent(errors=[
+                dict(field='event_id', messages=gettext('Event does not exist.'))
+            ])
+        if info.context.user.highest_role != USER_ROLE.ADMIN:
+            if (info.context.user.id not in [event.assignee_id, event.assigner_id]):
+                return SetAssigneToEvent(errors=[
+                    dict(field='user_id', messages=gettext('You do not have permission to clear assignee.'))
+                ])
+        event.assignee = None
+        event.assigner = None
+        event.assigned_at = None
+        return ClearAssigneFromEvent(result=event, errors=None, ok=True)
+
 class Mutation(object):
     create_event = CreateEvent.Field()
     update_event = UpdateEvent.Field()
@@ -349,3 +414,7 @@ class Mutation(object):
     export_events = ExportEvents.Field()
     export_actors = ExportActors.Field()
     clone_event = CloneEvent.Field()
+
+    # review related
+    set_assignee_to_event = SetAssigneToEvent.Field()
+    clear_assignee_from_event = ClearAssigneFromEvent.Field()

@@ -17,13 +17,10 @@ from apps.entry.models import (
     Entry,
     Figure,
     OSMName,
-    EntryReviewer,
     FigureTag,
     DisaggregatedAge,
 )
-from apps.users.models import User
 from apps.country.models import Country
-from apps.users.enums import USER_ROLE
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
 
 
@@ -575,17 +572,6 @@ class NestedFigureUpdateSerializer(NestedFigureCreateSerializer):
 class EntryCreateSerializer(MetaInformationSerializerMixin,
                             serializers.ModelSerializer):
     figures = NestedFigureCreateSerializer(many=True, required=False)
-    reviewers = serializers.PrimaryKeyRelatedField(
-        many=True,
-        queryset=User.objects.filter(
-            groups__name__in=[
-                USER_ROLE.ADMIN.name,
-                USER_ROLE.MONITORING_EXPERT.name,
-                USER_ROLE.REGIONAL_COORDINATOR.name,
-            ]
-        ).distinct(),
-        required=False
-    )
 
     class Meta:
         model = Entry
@@ -636,8 +622,6 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                     fig_ser.save()
         else:
             entry = super().create(validated_data)
-        EntryReviewer.assign_creator(entry=entry,
-                                     user=self.context['request'].user)
         return entry
 
     def update(self, instance, validated_data: dict) -> Entry:

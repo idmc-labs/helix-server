@@ -6,4 +6,4 @@ class EntryConfig(AppConfig):
 
     def ready(self):
         # registering receiver
-        from apps.entry import receivers  # noqa :f401
+        pass

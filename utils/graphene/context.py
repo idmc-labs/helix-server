@@ -20,12 +20,10 @@ from apps.entry.dataloaders import (
 from apps.event.dataloaders import (
     TotalIDPFigureByEventLoader,
     TotalNDFigureByEventLoader,
-    EventReviewCountLoader,
     EventEntryCountLoader,
     EventTypologyLoader,
     EventFigureTypologyLoader,
 )
-from apps.crisis.dataloaders import CrisisReviewCountLoader
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 from apps.entry.models import Figure
 
@@ -125,16 +123,8 @@ class GQLContext:
         return MonitoringSubRegionCountryCountLoader()
 
     @cached_property
-    def event_event_review_count_dataloader(self):
-        return EventReviewCountLoader()
-
-    @cached_property
     def event_entry_count_dataloader(self):
         return EventEntryCountLoader()
-
-    @cached_property
-    def crisis_crisis_review_count_dataloader(self):
-        return CrisisReviewCountLoader()
 
     @cached_property
     def event_typology_dataloader(self):

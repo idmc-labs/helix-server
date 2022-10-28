@@ -6,7 +6,6 @@ from django_enumfield import enum
 from apps.contrib.models import MetaInformationAbstractModel
 from apps.entry.models import (
     Figure,
-    EntryReviewer,
     FigureDisaggregationAbstractModel,
 )
 from apps.crisis.models import Crisis
@@ -95,11 +94,6 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_entry_review_status = ArrayField(
-        base_field=enum.EnumField(enum=EntryReviewer.REVIEW_STATUS),
-        blank=True,
-        null=True
-    )
     filter_figure_glide_number = ArrayField(
         base_field=models.CharField(verbose_name=_('Event Code'), max_length=100, null=True),
         blank=True,
@@ -159,10 +153,6 @@ class QueryAbstractModel(models.Model):
             (FLOW, FLOW),
         ), null=True, blank=True), null=True, blank=True,
     )
-    filter_entry_has_review_comments = models.NullBooleanField(
-        verbose_name=_('Has review comments'),
-        default=None,
-    )
     filter_figure_has_disaggregated_data = models.NullBooleanField(
         verbose_name=_('Has disaggregated data'),
         default=None,
@@ -188,7 +178,6 @@ class QueryAbstractModel(models.Model):
             filter_figure_end_before=self.filter_figure_end_before,
             filter_entry_article_title=self.filter_entry_article_title,
             filter_figure_crisis_types=self.filter_figure_crisis_types,
-            filter_entry_review_status=self.filter_entry_review_status,
             filter_figure_displacement_types=self.filter_figure_displacement_types,
             filter_figure_terms=self.filter_figure_terms,
             filter_figure_disaster_categories=self.filter_figure_disaster_categories.all(),
@@ -198,7 +187,6 @@ class QueryAbstractModel(models.Model):
             filter_figure_violence_types=self.filter_figure_violence_types.all(),
             filter_figure_violence_sub_types=self.filter_figure_violence_sub_types.all(),
             filter_figure_category_types=self.filter_figure_category_types,
-            filter_entry_has_review_comments=self.filter_entry_has_review_comments,
             filter_figure_has_disaggregated_data=self.filter_figure_has_disaggregated_data,
             filter_context_of_violence=self.filter_context_of_violence.all(),
         )
