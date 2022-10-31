@@ -60,16 +60,16 @@ class UnifiedReviewComment(MetaInformationArchiveAbstractModel, models.Model):
     # TODO: Make event non nullable field after review data migration
     event = models.ForeignKey(
         'event.Event', verbose_name=_('Event'),
-        related_name='event_reviews', on_delete=models.SET_NULL, null=True, blank=True
+        related_name='event_reviews', on_delete=models.CASCADE, null=True, blank=True
     )
     geo_location = models.ForeignKey(
         'entry.OSMname', verbose_name=_('Geo location'), null=True, blank=True,
-        related_name='geo_location_reviews', on_delete=models.SET_NULL
+        related_name='geo_location_reviews', on_delete=models.CASCADE
     )
     figure = models.ForeignKey(
         'entry.Figure', verbose_name=_('Figure'),
         blank=True, null=True,
-        related_name='figure_review_comments', on_delete=models.SET_NULL
+        related_name='figure_review_comments', on_delete=models.CASCADE
     )
     field = enum.EnumField(enum=ReviewFieldType, null=True, blank=True)
     comment_type = enum.EnumField(enum=ReviewCommentType, default=ReviewCommentType.GREY.value)
