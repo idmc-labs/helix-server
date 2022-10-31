@@ -6,7 +6,7 @@ from apps.contrib.models import MetaInformationArchiveAbstractModel
 
 class UnifiedReviewComment(MetaInformationArchiveAbstractModel, models.Model):
 
-    class ReviewCommentStatus(enum.Enum):
+    class ReviewCommentType(enum.Enum):
         RED = 0
         GREEN = 1
         GREY = 2
@@ -72,7 +72,7 @@ class UnifiedReviewComment(MetaInformationArchiveAbstractModel, models.Model):
         related_name='figure_review_comments', on_delete=models.SET_NULL
     )
     field = enum.EnumField(enum=ReviewFieldType, null=True, blank=True)
-    comment_type = enum.EnumField(enum=ReviewCommentStatus, default=ReviewCommentStatus.GREY.value)
+    comment_type = enum.EnumField(enum=ReviewCommentType, default=ReviewCommentType.GREY.value)
     geo_location = models.ForeignKey(
         'entry.OSMName', verbose_name=_('Geolocation/OSM'),
         null=True, blank=True,
