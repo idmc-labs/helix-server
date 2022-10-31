@@ -50,15 +50,12 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         }
         '''
 
-
     def test_user_can_set_assignee_on_an_event(self) -> None:
-        
         # Test admin, regional_coordinator can be assign assignees
         assignee_assigners = (
             (self.regional_coordinator, self.regional_coordinator),
             (self.regional_coordinator, self.monitoring_expert),
             (self.regional_coordinator, self.admin),
-            
             (self.admin, self.regional_coordinator),
             (self.admin, self.monitoring_expert),
             (self.admin, self.admin),
@@ -77,7 +74,6 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
 
             self.assertEqual(content['data']['setAssigneeToEvent']['result']['assignee']['id'], str(assignee.id))
             self.assertEqual(content['data']['setAssigneeToEvent']['result']['assigner']['id'], str(assigner.id))
-        
         # Test guest should not be assignee
         guest_assignee_assigners = (
             (self.regional_coordinator, self.guest),

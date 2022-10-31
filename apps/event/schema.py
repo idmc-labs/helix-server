@@ -2,8 +2,6 @@ import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 from utils.graphene.enums import EnumDescription
-from graphene.types.utils import get_type
-
 from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.enums import QaRecommendedFigureEnum

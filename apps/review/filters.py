@@ -5,7 +5,7 @@ from apps.review.models import UnifiedReviewComment
 
 class UnifiedReviewCommentFilter(df.FilterSet):
     events = IDListFilter(method='filter_events')
-    figures= IDListFilter(method='filter_figures')
+    figures = IDListFilter(method='filter_figures')
 
     def filter_events(self, qs, name, value):
         if not value:
