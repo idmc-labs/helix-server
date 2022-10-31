@@ -44,14 +44,18 @@ PERMISSIONS = {
         PERMISSION_ACTION.change: ADMIN_MODELS,
         PERMISSION_ACTION.delete: ADMIN_MODELS,
         PERMISSION_ACTION.approve: {PERMISSION_ENTITY.report},
-        PERMISSION_ACTION.sign_off: {PERMISSION_ENTITY.entry, PERMISSION_ENTITY.report},
+        PERMISSION_ACTION.sign_off: {PERMISSION_ENTITY.report},
+        PERMISSION_ACTION.assign: {PERMISSION_ENTITY.event},
+        PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
     },
     USER_ROLE.REGIONAL_COORDINATOR: {
         PERMISSION_ACTION.add: REGIONAL_COORDINATOR_MODELS,
         PERMISSION_ACTION.change: REGIONAL_COORDINATOR_MODELS,
         PERMISSION_ACTION.delete: REGIONAL_COORDINATOR_MODELS,
         PERMISSION_ACTION.approve: {PERMISSION_ENTITY.report},
-        PERMISSION_ACTION.sign_off: {PERMISSION_ENTITY.entry},
+        PERMISSION_ACTION.sign_off: set(),
+        PERMISSION_ACTION.assign: {PERMISSION_ENTITY.event},
+        PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
     },
     USER_ROLE.MONITORING_EXPERT: {
         PERMISSION_ACTION.add: MONITORING_EXPERT_MODELS,
@@ -59,6 +63,8 @@ PERMISSIONS = {
         PERMISSION_ACTION.delete: MONITORING_EXPERT_MODELS,
         PERMISSION_ACTION.approve: {PERMISSION_ENTITY.report},
         PERMISSION_ACTION.sign_off: set(),
+        PERMISSION_ACTION.assign: set(),
+        PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
     },
     USER_ROLE.GUEST: {
         PERMISSION_ACTION.add: set(),
@@ -66,5 +72,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.delete: set(),
         PERMISSION_ACTION.approve: set(),
         PERMISSION_ACTION.sign_off: set(),
+        PERMISSION_ACTION.assign: set(),
+        PERMISSION_ACTION.self_assign: set(),
     }
 }

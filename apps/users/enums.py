@@ -13,13 +13,17 @@ class PERMISSION_ACTION(enum.Enum):
     delete = 2
     sign_off = 3
     approve = 4
+    assign = 5
+    self_assign = 6
 
     __labels__ = {
         add: _('Add'),
         change: _('Change'),
         delete: _('Delete'),
         sign_off: _('Sign Off'),
-        approve: _('Approve')
+        approve: _('Approve'),
+        assign: _('Assign event'),
+        self_assign: _('Self assign event'),
     }
 
 
