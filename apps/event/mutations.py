@@ -344,35 +344,43 @@ class SetAssigneToEvent(graphene.Mutation):
     result = graphene.Field(EventType)
 
     @staticmethod
+    @permission_checker(['event.assign_event', 'event.self_assign_event'])
     def mutate(root, info, event_id, user_id):
         from apps.users.models import User, USER_ROLE
         event = Event.objects.filter(id=event_id).first()
-        # TODO move this logic in permission class
-        if info.context.user.highest_role == USER_ROLE.GUEST:
-            return SetAssigneToEvent(errors=[
-                dict(field='user_id', messages=gettext('Guest cannot set assignee.'))
-            ])
+        user = User.objects.filter(
+            id=user_id,
+            groups__name__in=[
+                USER_ROLE.ADMIN.name,
+                USER_ROLE.REGIONAL_COORDINATOR.name,
+                USER_ROLE.MONITORING_EXPERT.name,
+            ]
+        ).first()
 
         if not event:
             return SetAssigneToEvent(errors=[
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
-        user = User.objects.filter(
-            id=user_id,
-            groups__name__in=[
-                USER_ROLE.ADMIN.name,
-                USER_ROLE.MONITORING_EXPERT.name,
-                USER_ROLE.REGIONAL_COORDINATOR.name,
-            ]
-        ).first()
+
         if not user:
             return SetAssigneToEvent(errors=[
-                dict(field='user_id', messages=gettext('User does not exist.'))
+                dict(field='user_id', messages=gettext('Guest user can not be set as assignee.'))
             ])
+
+        # Monitoring Experts should be able to only set themselves as assignee.
+        if info.context.user.highest_role == USER_ROLE.MONITORING_EXPERT:
+            if info.context.user.id == user_id:
+                user = info.context.user
+            return SetAssigneToEvent(errors=[
+                dict(field='user_id', messages=gettext('Monitoring expert is not allowed to set other users as asignee.'))
+            ])
+
         event.assignee = user
         event.assigner = info.context.user
         event.assigned_at = timezone.now()
+        event.save()
         return SetAssigneToEvent(result=event, errors=None, ok=True)
+
 
 class ClearAssigneFromEvent(graphene.Mutation):
     class Arguments:
@@ -383,6 +391,7 @@ class ClearAssigneFromEvent(graphene.Mutation):
 
     @staticmethod
     def mutate(root, info, event_id):
+        # Admin, assigner and assignee(self) can only clear assignee
         from apps.users.models import User, USER_ROLE
         event = Event.objects.filter(id=event_id).first()
         if not event:
