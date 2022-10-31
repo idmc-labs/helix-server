@@ -351,6 +351,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     def __str__(self):
         return self.name or str(self.id)
 
+    class Meta:
+        permissions = (
+            ('assign_event', 'Can assign on event level'),
+            ('self_assign_event', 'Can assign self on event level'),
+        )
+
+
     def clone_and_save_event(self, user: 'User'):
         event_data = model_to_dict(
             self,
