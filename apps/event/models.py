@@ -209,11 +209,11 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     )
     assigner = models.ForeignKey(
         'users.User', verbose_name=_('Assigner'), null=True, blank=True,
-        related_name='event_assigner', on_delete=models.CASCADE
+        related_name='event_assigner', on_delete=models.SET_NULL
     )
     assignee = models.ForeignKey(
         'users.User', verbose_name=_('Assignee'), null=True, blank=True,
-        related_name='event_assignee', on_delete=models.CASCADE
+        related_name='event_assignee', on_delete=models.SET_NULL
     )
     assigned_at = models.DateTimeField(verbose_name='Assigned at', null=True, blank=True)
 
