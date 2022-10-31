@@ -2,7 +2,7 @@ __all__ = ['ReviewStatusEnum']
 
 import graphene
 
-from apps.review.models import Review, ReviewComment, UnifiedReviewComment
+from apps.review.models import Review, UnifiedReviewComment
 
 from utils.enums import enum_description
 
@@ -15,4 +15,3 @@ enum_map = dict(
     ReviewFieldType=ReviewFieldTypeEnum,
     ReviewCommentType=ReviewCommentTypeEnum,
 )
-

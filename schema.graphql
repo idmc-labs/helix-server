@@ -2024,6 +2024,8 @@ enum PERMISSION_ACTION {
   delete
   sign_off
   approve
+  assign
+  self_assign
 }
 
 enum PERMISSION_ENTITY {
@@ -2565,7 +2567,7 @@ input ResourceUpdateInputType {
   countries: [ID!]
 }
 
-enum ReviewCommentStatus {
+enum ReviewCommentType {
   RED
   GREEN
   GREY
@@ -2675,8 +2677,8 @@ scalar UUID
 input UnifiedReviewCommentCreateInputType {
   oldId: String
   versionId: String
-  field: String
-  commentType: String
+  field: ReviewFieldType
+  commentType: ReviewCommentType
   comment: String
   isEdited: Boolean
   isDeleted: Boolean
@@ -2703,7 +2705,7 @@ type UnifiedReviewCommentType {
   event: EventType
   figure: FigureType
   field: ReviewFieldType!
-  commentType: ReviewCommentStatus!
+  commentType: ReviewCommentType!
   geoLocation: OSMNameType
   comment: String
   isEdited: Boolean!
