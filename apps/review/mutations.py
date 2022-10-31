@@ -7,6 +7,7 @@ from apps.review.serializers import UnifiedReviewCommentSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 from utils.mutation import generate_input_type_for_serializer
+from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
 
 
 UnifiedReviewCommentCreateInputType = generate_input_type_for_serializer(
@@ -16,8 +17,10 @@ UnifiedReviewCommentCreateInputType = generate_input_type_for_serializer(
 
 
 class CommentCreateInputType(graphene.InputObjectType):
-    body = graphene.String(required=False)
+    comment = graphene.String(required=False)
     event = graphene.ID(required=True)
+    comment_type = ReviewCommentTypeEnum
+    field = ReviewFieldTypeEnum
 
 
 class CommentUpdateInputType(graphene.InputObjectType):
@@ -36,7 +39,7 @@ class CreateComment(graphene.Mutation):
     @staticmethod
     @permission_checker(['review.add_reviewcomment'])
     def mutate(root, info, data):
-        serializer = UnifiedUnifiedReviewCommentSerializer(
+        serializer = UnifiedReviewCommentSerializer(
             data=data,
             context={'request': info.context.request}, partial=True
         )
@@ -57,7 +60,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
     @staticmethod
     @permission_checker(['review.add_review'])
     def mutate(root, info, data):
-        serializer = UnifiedUnifiedReviewCommentSerializer(
+        serializer = UnifiedReviewCommentSerializer(
             data=data,
             context={'request': info.context.request}, partial=True
         )

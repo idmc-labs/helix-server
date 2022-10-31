@@ -21,7 +21,7 @@ class UnifiedReviewCommentSerializer(MetaInformationSerializerMixin,
 
     def validate_comment_without_reviews(self, attrs):
         if not attrs.get('comment', '').strip():
-            raise serializers.ValidationError(dict(body='Comment is empty.'))
+            raise serializers.ValidationError(dict(comment='Comment is empty.'))
 
     def validate(self, attrs) -> dict:
         self.validate_comment_without_reviews(attrs)

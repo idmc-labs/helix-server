@@ -4,8 +4,8 @@ from graphene_django_extras import DjangoObjectField
 from utils.graphene.enums import EnumDescription
 
 from apps.review.enums import (
-    ReviewCommentStatusEnum,
-    FieldTypeEnum,
+    ReviewCommentTypeEnum,
+    ReviewFieldTypeEnum,
 )
 from apps.review.filters import UnifiedReviewCommentFilter
 from apps.review.models import UnifiedReviewComment
@@ -15,10 +15,10 @@ from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 
 
 class UnifiedReviewCommentType(DjangoObjectType):
-    comment_type = graphene.NonNull(ReviewCommentStatusEnum)
+    comment_type = graphene.NonNull(ReviewCommentTypeEnum)
     comment_display = EnumDescription(source='get_comment_type_display')
-    field = graphene.NonNull(FieldTypeEnum)
-    field_display = EnumDescription(source='get_field_display')
+    field = graphene.NonNull(ReviewFieldTypeEnum)
+    field_display = EnumDescription(source='get_review_field_display')
 
     class Meta:
         model = UnifiedReviewComment
