@@ -1,10 +1,4 @@
 from django.db import models
-from django.db.models import (
-    Count,
-    Subquery,
-    OuterRef,
-    IntegerField,
-)
 from promise import Promise
 from promise.dataloader import DataLoader
 

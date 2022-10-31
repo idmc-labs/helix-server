@@ -409,6 +409,7 @@ class ClearAssigneFromEvent(graphene.Mutation):
         event.save()
         return ClearAssigneFromEvent(result=event, errors=None, ok=True)
 
+
 class Mutation(object):
     create_event = CreateEvent.Field()
     update_event = UpdateEvent.Field()

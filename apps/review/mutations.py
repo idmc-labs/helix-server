@@ -82,8 +82,7 @@ class UpdateUnifiedReviewComment(graphene.Mutation):
     @permission_checker(['review.change_reviewcomment'])
     def mutate(root, info, data):
         try:
-            instance = UnifiedReviewComment.objects.get(created_by=info.context.user,
-                                                 id=data['id'])
+            instance = UnifiedReviewComment.objects.get(created_by=info.context.user, id=data['id'])
         except UnifiedReviewComment.DoesNotExist:
             return UpdateUnifiedReviewComment(
                 errors=[

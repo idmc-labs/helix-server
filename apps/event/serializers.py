@@ -3,9 +3,7 @@ from collections import OrderedDict
 from django.core.exceptions import ValidationError
 from django.db.models import Min, Max, Q
 from django.utils.translation import gettext
-from django.utils import timezone
 from rest_framework import serializers
-
 from apps.contrib.serializers import (
     MetaInformationSerializerMixin,
     UpdateSerializerMixin,
