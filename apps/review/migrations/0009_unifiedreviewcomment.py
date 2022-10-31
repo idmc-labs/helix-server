@@ -27,7 +27,7 @@ class Migration(migrations.Migration):
                 ('modified_at', models.DateTimeField(auto_now=True, verbose_name='Modified At')),
                 ('version_id', models.CharField(blank=True, max_length=16, null=True, verbose_name='Version')),
                 ('field', django_enumfield.db.fields.EnumField(blank=True, enum=apps.review.models.UnifiedReviewComment.ReviewFieldType, null=True)),
-                ('comment_type', django_enumfield.db.fields.EnumField(default=2, enum=apps.review.models.UnifiedReviewComment.ReviewCommentStatus)),
+                ('comment_type', django_enumfield.db.fields.EnumField(default=2, enum=apps.review.models.UnifiedReviewComment.ReviewCommentType)),
                 ('comment', models.TextField(blank=True, null=True, verbose_name='Comment')),
                 ('is_edited', models.BooleanField(default=False, verbose_name='Is edited?')),
                 ('is_deleted', models.BooleanField(default=False, verbose_name='Is deleted?')),

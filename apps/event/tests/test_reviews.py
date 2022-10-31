@@ -53,7 +53,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
 
     def test_user_can_set_assignee_on_an_event(self) -> None:
         
-        # Test regional_coordinator, monitoring_expert, admin can be assignees or assigners
+        # Test admin, regional_coordinator can be assign assignees
         assignee_assigners = (
             (self.regional_coordinator, self.regional_coordinator),
             (self.regional_coordinator, self.monitoring_expert),
@@ -62,10 +62,6 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             (self.admin, self.regional_coordinator),
             (self.admin, self.monitoring_expert),
             (self.admin, self.admin),
-
-            (self.regional_coordinator, self.regional_coordinator),
-            (self.regional_coordinator, self.monitoring_expert),
-            (self.regional_coordinator, self.admin),
         )
         for assigner, assignee in assignee_assigners:
             self.force_login(assigner)
@@ -82,15 +78,11 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertEqual(content['data']['setAssigneeToEvent']['result']['assignee']['id'], str(assignee.id))
             self.assertEqual(content['data']['setAssigneeToEvent']['result']['assigner']['id'], str(assigner.id))
         
-        # Test guest should not be assignees or assigners
+        # Test guest should not be assignee
         guest_assignee_assigners = (
             (self.regional_coordinator, self.guest),
             (self.regional_coordinator, self.guest),
             (self.regional_coordinator, self.guest),
-
-            (self.guest, self.regional_coordinator),
-            (self.guest, self.regional_coordinator),
-            (self.guest, self.regional_coordinator),
         )
         for assigner, assignee in guest_assignee_assigners:
             self.force_login(assigner)
@@ -102,13 +94,44 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             content = json.loads(response.content)
             self.assertIsNotNone(content['data']['setAssigneeToEvent']['errors'])
 
+        # Test monitoring expert should not assign assignee
+        assignee_assigners = (
+            (self.monitoring_expert, self.admin),
+            (self.monitoring_expert, self.regional_coordinator),
+            (self.monitoring_expert, self.monitoring_expert),
+        )
+        for assigner, assignee in assignee_assigners:
+            self.force_login(assigner)
+            input = {'event_id': self.event.id, 'user_id': assignee.id}
+            response = self.query(
+                self.set_assignee_to_event_mutation,
+                variables=input,
+            )
+            content = json.loads(response.content)
+            self.assertIsNotNone(content['errors'])
+
+        # Test guest should not assign assignee
+        assignee_assigners = (
+            (self.guest, self.admin),
+            (self.guest, self.regional_coordinator),
+            (self.guest, self.monitoring_expert),
+        )
+        for assigner, assignee in assignee_assigners:
+            self.force_login(assigner)
+            input = {'event_id': self.event.id, 'user_id': assignee.id}
+            response = self.query(
+                self.set_assignee_to_event_mutation,
+                variables=input,
+            )
+            content = json.loads(response.content)
+            self.assertIsNotNone(content['errors'])
 
     def test_user_can_clear_assignee_on_an_event(self) -> None:
-        event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
 
         # Test assigner or assignee or admin can clear assignee
         users = [self.regional_coordinator, self.monitoring_expert, self.admin]
         for user in users:
+            event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
             self.force_login(user)
             input = {'event_id': event.id}
             response = self.query(
