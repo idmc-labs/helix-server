@@ -1223,9 +1223,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             self.update_associated_parked_item()
         return super().save(*args, **kwargs)
 
-    class Meta:
-        permissions = (('sign_off_entry', 'Can sign off the entry'),)
-
     # Dunders
 
     def __str__(self):
