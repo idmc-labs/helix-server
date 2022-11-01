@@ -346,21 +346,14 @@ class SetAssigneeToEvent(graphene.Mutation):
     @staticmethod
     @permission_checker(['event.assign_event'])
     def mutate(root, info, event_id, user_id):
-        from apps.users.models import User, USER_ROLE
+        from apps.users.models import User
         event = Event.objects.filter(id=event_id).first()
         if not event:
             return SetAssigneeToEvent(errors=[
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
-        user = User.objects.filter(
-            id=user_id,
-            groups__name__in=[
-                USER_ROLE.ADMIN.name,
-                USER_ROLE.REGIONAL_COORDINATOR.name,
-                USER_ROLE.MONITORING_EXPERT.name,
-            ]
-        ).first()
-        if not user:
+        user = User.objects.filter(id=user_id).first()
+        if not user.has_perm('event.self_assign_event'):
             return SetAssigneeToEvent(errors=[
                 dict(field='user_id', messages=gettext('The user does not exist or has enough permissions.'))
             ])
@@ -401,15 +394,15 @@ class ClearAssigneFromEvent(graphene.Mutation):
     result = graphene.Field(EventType)
 
     @staticmethod
+    @permission_checker(['event.clear_self_assignee_event'])
     def mutate(root, info, event_id):
         # Admin, assigner and assignee(self) can only clear assignee
-        from apps.users.models import USER_ROLE
         event = Event.objects.filter(id=event_id).first()
         if not event:
             return ClearAssigneFromEvent(errors=[
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
-        if info.context.user.highest_role != USER_ROLE.ADMIN:
+        if not info.context.user.has_perm('event.clear_assignee_event'):
             if (info.context.user.id not in [event.assignee_id, event.assigner_id]):
                 return ClearAssigneFromEvent(errors=[
                     dict(field='user_id', messages=gettext('You do not have permission to clear assignee.'))

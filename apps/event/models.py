@@ -355,6 +355,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         permissions = (
             ('assign_event', 'Can assign on event level'),
             ('self_assign_event', 'Can assign self on event level'),
+            ('clear_assignee_event', 'Can clear any assignee from event'),
+            ('clear_self_assignee_event', 'Can clear self assigned event'),
         )
 
     def clone_and_save_event(self, user: 'User'):

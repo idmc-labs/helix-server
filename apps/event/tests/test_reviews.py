@@ -178,12 +178,15 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertIsNone(content['data']['clearAssigneeFromEvent']['result']['assigner'], None)
             self.assertIsNone(content['data']['clearAssigneeFromEvent']['result']['assignee'], None)
 
-        # Test other users should not allowed to clear assignee
+        # Test amdin and regional coordinator can clear other assignee from event
+        admin_1 = create_user_with_role(USER_ROLE.ADMIN.name)
         regional_coordinator_1 = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
-        monitoring_expert_1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        for user in [admin_1, regional_coordinator_1]:
+            # Set assignee and assigneer
+            event.assigner = self.admin
+            event.assignee = self.regional_coordinator
+            event.save()
 
-        users = [self.guest, regional_coordinator_1, monitoring_expert_1]
-        for user in users:
             self.force_login(user)
             input = {'event_id': event.id}
             response = self.query(
@@ -192,4 +195,20 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             )
             content = json.loads(response.content)
             self.assertResponseNoErrors(response)
-            self.assertIsNotNone(content['data']['clearAssigneeFromEvent']['errors'])
+            self.assertIsNone(content['data']['clearAssigneeFromEvent']['errors'])
+            self.assertTrue(content['data']['clearAssigneeFromEvent']['ok'], content)
+            self.assertIsNone(content['data']['clearAssigneeFromEvent']['errors'], content)
+            self.assertIsNone(content['data']['clearAssigneeFromEvent']['result']['assigner'], None)
+            self.assertIsNone(content['data']['clearAssigneeFromEvent']['result']['assignee'], None)
+
+        # Test monitoring expert should not clear other assignee from event
+        monitoring_expert_1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.force_login(monitoring_expert_1)
+        input = {'event_id': event.id}
+        response = self.query(
+            self.clear_assignee_from_event_mutation,
+            variables=input,
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertIsNotNone(content['data']['clearAssigneeFromEvent']['errors'])
