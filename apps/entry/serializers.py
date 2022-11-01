@@ -575,7 +575,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
 
     class Meta:
         model = Entry
-        fields = '__all__'
+        exclude = ('review_status',)
 
     def validate_figures(self, figures):
         if len(figures) > Entry.FIGURES_PER_ENTRY:
