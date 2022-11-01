@@ -348,6 +348,10 @@ class SetAssigneToEvent(graphene.Mutation):
     def mutate(root, info, event_id, user_id):
         from apps.users.models import User, USER_ROLE
         event = Event.objects.filter(id=event_id).first()
+        if not event:
+            return SetAssigneToEvent(errors=[
+                dict(field='event_id', messages=gettext('Event does not exist.'))
+            ])
         user = User.objects.filter(
             id=user_id,
             groups__name__in=[
@@ -356,12 +360,6 @@ class SetAssigneToEvent(graphene.Mutation):
                 USER_ROLE.MONITORING_EXPERT.name,
             ]
         ).first()
-
-        if not event:
-            return SetAssigneToEvent(errors=[
-                dict(field='event_id', messages=gettext('Event does not exist.'))
-            ])
-
         if not user:
             return SetAssigneToEvent(errors=[
                 dict(field='user_id', messages=gettext('Guest user can not be set as assignee.'))
