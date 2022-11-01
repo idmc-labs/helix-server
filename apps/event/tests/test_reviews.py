@@ -30,6 +30,25 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             }
         }
         '''
+        self.set_self_assignee_to_event_mutation = '''
+        mutation setSelfAssigneeToEvent($event_id: ID!) {
+            setSelfAssigneeToEvent(eventId: $event_id) {
+                errors
+                result {
+                  id
+                  name
+                  assigner{
+                    id
+                  }
+                  assignee {
+                    id
+                  }
+               }
+              ok
+              errors
+            }
+        }
+        '''
         self.clear_assignee_from_event_mutation = '''
         mutation clearAssigneeFromEvent($event_id: ID!) {
             clearAssigneeFromEvent(eventId: $event_id) {
@@ -121,6 +140,24 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             )
             content = json.loads(response.content)
             self.assertIsNotNone(content['errors'])
+
+    def test_self_event_assignment(self) -> None:
+
+        # Admin, regional coordinator can assign self in an event
+        users = [self.regional_coordinator, self.admin, self.monitoring_expert]
+        for user in users:
+            event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
+            self.force_login(user)
+            input = {'event_id': event.id}
+            response = self.query(
+                self.set_self_assignee_to_event_mutation,
+                variables=input,
+            )
+            content = json.loads(response.content)
+            self.assertResponseNoErrors(response)
+            self.assertTrue(content['data']['setSelfAssigneeToEvent']['ok'], content)
+            self.assertEqual(content['data']['setSelfAssigneeToEvent']['result']['assigner']['id'], str(user.id))
+            self.assertEqual(content['data']['setSelfAssigneeToEvent']['result']['assignee']['id'], str(user.id))
 
     def test_user_can_clear_assignee_on_an_event(self) -> None:
 
