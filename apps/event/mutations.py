@@ -362,7 +362,7 @@ class SetAssigneToEvent(graphene.Mutation):
         ).first()
         if not user:
             return SetAssigneToEvent(errors=[
-                dict(field='user_id', messages=gettext('Guest user can not be set as assignee.'))
+                dict(field='user_id', messages=gettext('The user does not exist or has enough permissions.'))
             ])
 
         # Monitoring Experts should be able to only set themselves as assignee.
@@ -370,7 +370,7 @@ class SetAssigneToEvent(graphene.Mutation):
             if info.context.user.id == user_id:
                 user = info.context.user
             return SetAssigneToEvent(errors=[
-                dict(field='user_id', messages=gettext('Monitoring expert is not allowed to set other users as asignee.'))
+                dict(field='user_id', messages=gettext('The user does not exist or has enough permissions.'))
             ])
 
         event.assignee = user
