@@ -1631,7 +1631,8 @@ type Mutation {
   exportEvents(createdAt_Lte: DateTime, createdAt_Lt: DateTime, createdAt_Gte: DateTime, createdAt_Gt: DateTime, startDate_Lte: Date, startDate_Lt: Date, startDate_Gte: Date, startDate_Gt: Date, endDate_Lte: Date, endDate_Lt: Date, endDate_Gte: Date, endDate_Gt: Date, ignoreQa: Boolean, name: String, crisisByIds: [ID!], eventTypes: [String!], countries: [ID!], glideNumbers: [String!], osvSubTypeByIds: [ID!], report: String, disasterSubTypes: [ID!], violenceTypes: [ID!], violenceSubTypes: [ID!], createdByIds: [ID!], qaRules: [String!], contextOfViolences: [ID!]): ExportEvents
   exportActors(name_Unaccent_Icontains: String): ExportActors
   cloneEvent(data: CloneEventInputType!): CloneEvent
-  setAssigneeToEvent(eventId: ID!, userId: ID!): SetAssigneToEvent
+  setAssigneeToEvent(eventId: ID!, userId: ID!): SetAssigneeToEvent
+  setSelfAssigneeToEvent(eventId: ID!): SetSelfAssigneeToEvent
   clearAssigneeFromEvent(eventId: ID!): ClearAssigneFromEvent
   createCrisis(data: CrisisCreateInputType!): CreateCrisis
   updateCrisis(data: CrisisUpdateInputType!): UpdateCrisis
@@ -2599,7 +2600,13 @@ enum SOURCES_RELIABILITY {
   MEDIUM_TO_HIGH
 }
 
-type SetAssigneToEvent {
+type SetAssigneeToEvent {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: EventType
+}
+
+type SetSelfAssigneeToEvent {
   errors: [GenericScalar!]
   ok: Boolean
   result: EventType

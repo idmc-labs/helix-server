@@ -335,7 +335,7 @@ class DeleteContextOfViolence(graphene.Mutation):
         return DeleteContextOfViolence(result=instance, errors=None, ok=True)
 
 
-class SetAssigneToEvent(graphene.Mutation):
+class SetAssigneeToEvent(graphene.Mutation):
     class Arguments:
         event_id = graphene.ID(required=True)
         user_id = graphene.ID(required=True)
@@ -344,12 +344,12 @@ class SetAssigneToEvent(graphene.Mutation):
     result = graphene.Field(EventType)
 
     @staticmethod
-    @permission_checker(['event.assign_event', 'event.self_assign_event'])
+    @permission_checker(['event.assign_event'])
     def mutate(root, info, event_id, user_id):
         from apps.users.models import User, USER_ROLE
         event = Event.objects.filter(id=event_id).first()
         if not event:
-            return SetAssigneToEvent(errors=[
+            return SetAssigneeToEvent(errors=[
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
         user = User.objects.filter(
@@ -361,23 +361,36 @@ class SetAssigneToEvent(graphene.Mutation):
             ]
         ).first()
         if not user:
-            return SetAssigneToEvent(errors=[
+            return SetAssigneeToEvent(errors=[
                 dict(field='user_id', messages=gettext('The user does not exist or has enough permissions.'))
             ])
-
-        # Monitoring Experts should be able to only set themselves as assignee.
-        if info.context.user.highest_role == USER_ROLE.MONITORING_EXPERT:
-            if info.context.user.id == user_id:
-                user = info.context.user
-            return SetAssigneToEvent(errors=[
-                dict(field='user_id', messages=gettext('The user does not exist or has enough permissions.'))
-            ])
-
         event.assignee = user
         event.assigner = info.context.user
         event.assigned_at = timezone.now()
         event.save()
-        return SetAssigneToEvent(result=event, errors=None, ok=True)
+        return SetAssigneeToEvent(result=event, errors=None, ok=True)
+
+
+class SetSelfAssigneeToEvent(graphene.Mutation):
+    class Arguments:
+        event_id = graphene.ID(required=True)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(EventType)
+
+    @staticmethod
+    @permission_checker(['event.self_assign_event'])
+    def mutate(root, info, event_id):
+        event = Event.objects.filter(id=event_id).first()
+        if not event:
+            return SetSelfAssigneeToEvent(errors=[
+                dict(field='event_id', messages=gettext('Event does not exist.'))
+            ])
+        event.assignee = info.context.user
+        event.assigner = info.context.user
+        event.assigned_at = timezone.now()
+        event.save()
+        return SetSelfAssigneeToEvent(result=event, errors=None, ok=True)
 
 
 class ClearAssigneFromEvent(graphene.Mutation):
@@ -390,15 +403,15 @@ class ClearAssigneFromEvent(graphene.Mutation):
     @staticmethod
     def mutate(root, info, event_id):
         # Admin, assigner and assignee(self) can only clear assignee
-        from apps.users.models import User, USER_ROLE
+        from apps.users.models import USER_ROLE
         event = Event.objects.filter(id=event_id).first()
         if not event:
-            return SetAssigneToEvent(errors=[
+            return ClearAssigneFromEvent(errors=[
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
         if info.context.user.highest_role != USER_ROLE.ADMIN:
             if (info.context.user.id not in [event.assignee_id, event.assigner_id]):
-                return SetAssigneToEvent(errors=[
+                return ClearAssigneFromEvent(errors=[
                     dict(field='user_id', messages=gettext('You do not have permission to clear assignee.'))
                 ])
         event.assignee = None
@@ -425,5 +438,6 @@ class Mutation(object):
     clone_event = CloneEvent.Field()
 
     # review related
-    set_assignee_to_event = SetAssigneToEvent.Field()
+    set_assignee_to_event = SetAssigneeToEvent.Field()
+    set_self_assignee_to_event = SetSelfAssigneeToEvent.Field()
     clear_assignee_from_event = ClearAssigneFromEvent.Field()
