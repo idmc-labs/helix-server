@@ -978,7 +978,6 @@ input EntryCreateInputType {
   publishDate: Date!
   idmcAnalysis: String
   isConfidential: Boolean
-  reviewStatus: String
   associatedParkedItem: ID
   preview: ID
   document: ID
@@ -1024,7 +1023,6 @@ input EntryUpdateInputType {
   publishDate: Date
   idmcAnalysis: String
   isConfidential: Boolean
-  reviewStatus: String
   associatedParkedItem: ID
   preview: ID
   document: ID
