@@ -68,6 +68,25 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             }
         }
         '''
+        self.clear_self_assignee_from_event_mutation = '''
+        mutation clearSelfAssigneeFromEvent($event_id: ID!) {
+            clearSelfAssigneeFromEvent(eventId: $event_id) {
+                errors
+                result {
+                  id
+                  name
+                  assigner{
+                    id
+                  }
+                  assignee {
+                    id
+                  }
+               }
+              ok
+              errors
+            }
+        }
+        '''
 
     def test_user_can_set_assignee_on_an_event(self) -> None:
         # Test admin, regional_coordinator can be assign assignees
@@ -162,7 +181,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
     def test_user_can_clear_assignee_on_an_event(self) -> None:
 
         # Test assigner or assignee or admin can clear assignee
-        users = [self.regional_coordinator, self.monitoring_expert, self.admin]
+        users = [self.regional_coordinator, self.admin]
         for user in users:
             event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
             self.force_login(user)
@@ -210,5 +229,20 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             variables=input,
         )
         content = json.loads(response.content)
-        self.assertResponseNoErrors(response)
-        self.assertIsNotNone(content['data']['clearAssigneeFromEvent']['errors'])
+        self.assertIsNotNone(content['errors'])
+
+    def test_all_users_can_clear_self_assignee_from_event(self) -> None:
+        users = [self.regional_coordinator, self.admin, self.monitoring_expert]
+        for user in users:
+            event = EventFactory.create(assigner=self.admin, assignee=user)
+            self.force_login(user)
+            input = {'event_id': event.id}
+            response = self.query(
+                self.clear_self_assignee_from_event_mutation,
+                variables=input,
+            )
+            content = json.loads(response.content)
+            self.assertResponseNoErrors(response)
+            self.assertTrue(content['data']['clearSelfAssigneeFromEvent']['ok'], content)
+            self.assertIsNone(content['data']['clearSelfAssigneeFromEvent']['errors'], content)
+            self.assertIsNone(content['data']['clearSelfAssigneeFromEvent']['result']['assigner'], None)
