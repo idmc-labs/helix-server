@@ -19,8 +19,6 @@ from django.contrib.postgres.fields import ArrayField
 from django.forms import model_to_dict
 from utils.common import add_clone_prefix
 
-CANNOT_UPDATE_MESSAGE = _('You cannot sign off the event.')
-
 
 class NameAttributedModels(models.Model):
     name = models.CharField(_('Name'), max_length=256)
