@@ -353,6 +353,7 @@ class SetAssigneeToEvent(graphene.Mutation):
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
         user = User.objects.filter(id=user_id).first()
+        # To prevent users being saved with no permission in event review process. for eg GUEST
         if not user.has_perm('event.self_assign_event'):
             return SetAssigneeToEvent(errors=[
                 dict(field='user_id', messages=gettext('The user does not exist or has enough permissions.'))
@@ -394,7 +395,7 @@ class ClearAssigneFromEvent(graphene.Mutation):
     result = graphene.Field(EventType)
 
     @staticmethod
-    @permission_checker(['event.clear_self_assignee_event'])
+    @permission_checker(['event.clear_assignee_event'])
     def mutate(root, info, event_id):
         # Admin, assigner and assignee(self) can only clear assignee
         event = Event.objects.filter(id=event_id).first()
@@ -402,16 +403,38 @@ class ClearAssigneFromEvent(graphene.Mutation):
             return ClearAssigneFromEvent(errors=[
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
-        if not info.context.user.has_perm('event.clear_assignee_event'):
-            if (info.context.user.id not in [event.assignee_id, event.assigner_id]):
-                return ClearAssigneFromEvent(errors=[
-                    dict(field='user_id', messages=gettext('You do not have permission to clear assignee.'))
-                ])
         event.assignee = None
         event.assigner = None
         event.assigned_at = None
         event.save()
         return ClearAssigneFromEvent(result=event, errors=None, ok=True)
+
+
+class ClearSelfAssigneFromEvent(graphene.Mutation):
+    class Arguments:
+        event_id = graphene.ID(required=True)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(EventType)
+
+    @staticmethod
+    @permission_checker(['event.clear_self_assignee_event'])
+    def mutate(root, info, event_id):
+        event = Event.objects.filter(id=event_id).first()
+        if not event:
+            return ClearSelfAssigneFromEvent(errors=[
+                dict(field='event_id', messages=gettext('Event does not exist.'))
+            ])
+        # Admin and RE can clear all other users from assignee except ME
+        if event.assignee.id != info.context.user.id or info.context.user.has_perm('clear_assignee_from_event'):
+            return ClearAssigneFromEvent(errors=[
+                dict(field='event_id', messages=gettext('You are not allowed to clear others from assignee.'))
+            ])
+        event.assignee = None
+        event.assigner = None
+        event.assigned_at = None
+        event.save()
+        return ClearSelfAssigneFromEvent(result=event, errors=None, ok=True)
 
 
 class Mutation(object):
@@ -434,3 +457,4 @@ class Mutation(object):
     set_assignee_to_event = SetAssigneeToEvent.Field()
     set_self_assignee_to_event = SetSelfAssigneeToEvent.Field()
     clear_assignee_from_event = ClearAssigneFromEvent.Field()
+    clear_self_assignee_from_event = ClearSelfAssigneFromEvent.Field()
