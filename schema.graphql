@@ -101,6 +101,12 @@ type ClearAssigneFromEvent {
   result: EventType
 }
 
+type ClearSelfAssigneFromEvent {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: EventType
+}
+
 type CloneEvent {
   errors: [GenericScalar!]
   ok: Boolean
@@ -1634,6 +1640,7 @@ type Mutation {
   setAssigneeToEvent(eventId: ID!, userId: ID!): SetAssigneeToEvent
   setSelfAssigneeToEvent(eventId: ID!): SetSelfAssigneeToEvent
   clearAssigneeFromEvent(eventId: ID!): ClearAssigneFromEvent
+  clearSelfAssigneeFromEvent(eventId: ID!): ClearSelfAssigneFromEvent
   createCrisis(data: CrisisCreateInputType!): CreateCrisis
   updateCrisis(data: CrisisUpdateInputType!): UpdateCrisis
   deleteCrisis(id: ID!): DeleteCrisis
@@ -2025,6 +2032,8 @@ enum PERMISSION_ACTION {
   approve
   assign
   self_assign
+  clear_assignee
+  clear_self_assignee
 }
 
 enum PERMISSION_ENTITY {
