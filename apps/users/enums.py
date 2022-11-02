@@ -24,8 +24,8 @@ class PERMISSION_ACTION(enum.Enum):
         delete: _('Delete'),
         sign_off: _('Sign Off'),
         approve: _('Approve'),
-        assign: _('Assign event'),
-        self_assign: _('Self assign event'),
+        assign: _('Assign'),
+        self_assign: _('Self assign'),
         clear_assignee: _('Clear assignee'),
         clear_self_assignee: _('Clear self assignee'),
     }
