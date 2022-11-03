@@ -139,14 +139,14 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         REVIEW_IN_PROGRESS = 1
         APPROVED = 3
         REVIEW_NOT_REQUIRED = 4
-        SIGEN_OFF = 5
+        SIGNED_OFF = 5
 
         __labels__ = {
             REVIEW_NOT_STARTED: _("Review not started"),
             REVIEW_IN_PROGRESS: _("Review in progress"),
             APPROVED: _("Approved"),
             REVIEW_NOT_REQUIRED: _("Review not required"),
-            SIGEN_OFF: _("Signed-off"),
+            SIGNED_OFF: _("Signed-off"),
         }
 
     # NOTE figure disaggregation variable definitions

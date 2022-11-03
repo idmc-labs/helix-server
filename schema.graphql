@@ -1053,7 +1053,7 @@ input EventCreateInputType {
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String
   ignoreQa: Boolean
-  reviewStatus: EventReviewStatus
+  reviewStatus: String
   crisis: ID
   otherSubType: ID
   violence: ID
@@ -1081,7 +1081,7 @@ enum EventReviewStatus {
   REVIEW_IN_PROGRESS
   APPROVED
   REVIEW_NOT_REQUIRED
-  SIGEN_OFF
+  SIGNED_OFF
 }
 
 type EventType {
@@ -1146,7 +1146,7 @@ input EventUpdateInputType {
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String
   ignoreQa: Boolean
-  reviewStatus: EventReviewStatus
+  reviewStatus: String
   crisis: ID
   otherSubType: ID
   violence: ID
@@ -1346,7 +1346,6 @@ enum FigureReviewStatus {
   REVIEW_NOT_STARTED
   REVIEW_IN_PROGRESS
   APPROVED
-  REVIEW_NOT_REQUIRED
   REVIEW_RE_REQUESTED
 }
 
