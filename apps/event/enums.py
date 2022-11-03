@@ -8,5 +8,5 @@ EventReviewStatusEnum = graphene.Enum.from_enum(Event.EventReviewStatus, descrip
 
 enum_map = dict(
     QA_RULE_TYPE=QaRecommendedFigureEnum,
-    EventReviewStatus=EventReviewStatusEnum,
+    EVENT_REVIEW_STATUS=EventReviewStatusEnum,
 )
