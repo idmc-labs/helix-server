@@ -4,7 +4,7 @@ from graphene_django_extras import DjangoObjectField
 from utils.graphene.enums import EnumDescription
 from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.event.enums import QaRecommendedFigureEnum
+from apps.event.enums import QaRecommendedFigureEnum, EventReviewStatusEnum
 from apps.event.models import (
     Event,
     Violence,
@@ -208,6 +208,8 @@ class EventType(DjangoObjectType):
     qs_rule_type_display = EnumDescription(source='get_qs_rule_type_display')
     event_typology = graphene.String()
     figure_typology = graphene.List(graphene.String)
+    review_status = graphene.Field(EventReviewStatusEnum)
+    review_status_display = EnumDescription(source='get_event_review_status_display')
 
     def resolve_entry_count(root, info, **kwargs):
         return info.context.event_entry_count_dataloader.load(root.id)
