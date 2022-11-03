@@ -14,6 +14,7 @@ from apps.entry.enums import (
     DisplacementTypeGrapheneEnum,
     FigureCategoryTypeEnum,
     FigureTermsEnum,
+    FigureReviewStatusEnum,
 )
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.graphene.types import CustomDjangoListObjectType
@@ -36,6 +37,7 @@ class ExtractionQueryObjectType(DjangoObjectType):
     filter_figure_displacement_types = graphene.List(graphene.NonNull(DisplacementTypeGrapheneEnum))
     filter_figure_categories = graphene.List(graphene.NonNull(FigureCategoryTypeEnum))
     filter_figure_terms = graphene.List(graphene.NonNull(FigureTermsEnum))
+    filter_figure_review_status = graphene.List(graphene.NonNull(FigureReviewStatusEnum))
 
 
 class ExtractionQueryListType(CustomDjangoListObjectType):

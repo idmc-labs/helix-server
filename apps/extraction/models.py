@@ -114,6 +114,11 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
+    filter_figure_review_status= ArrayField(
+        base_field=enum.EnumField(enum=Figure.FigureReviewStatus),
+        blank=True,
+        null=True
+    )
     filter_figure_disaster_categories = models.ManyToManyField(
         'event.DisasterCategory',
         verbose_name=_('Disaster Category'),
