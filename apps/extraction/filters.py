@@ -53,7 +53,8 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_violence_types = IDListFilter(method='filter_filter_figure_violence_types')
     filter_figure_osv_sub_types = IDListFilter(method='filter_filter_figure_osv_sub_types')
     filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data', initial=False)
-
+    filter_figure_review_status = StringListFilter(method='filter_filter_figure_review_status')
+    filter_figure_approved_by = IDListFilter(method='filter_filter_figure_approved_by')
     # used in report entry table
     report = df.CharFilter(method='filter_report')
     filter_context_of_violences = IDListFilter(method='filter_filter_context_of_violences')
@@ -287,6 +288,21 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs
         return qs.filter(figures__context_of_violence__in=value).distinct()
 
+    def filter_filter_figure_review_status(self, qs, name, value):
+        if value:
+            if isinstance(value[0], int):
+                return qs.filter(figures__review_status__in=value)
+            return qs.filter(
+                figures__review_status__in=[Figure.FigureReviewStatus.get(item).value for item in value]
+            )
+        return qs
+
+    def filter_filter_figure_approved_by(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(figures__approved_by__in=value)
+
+
     @property
     def qs(self):
         return super().qs.distinct()
@@ -325,6 +341,8 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     # used in report entry table
     report = df.CharFilter(method='filter_report')
     filter_context_of_violences = IDListFilter(method='filter_context_of_violences')
+    filter_figure_review_status = StringListFilter(method='filter_filter_figure_review_status')
+    filter_figure_approved_by = IDListFilter(method='filter_filter_figure_approved_by')
 
     class Meta:
         model = Figure
@@ -541,6 +559,20 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         if not value:
             return qs
         return qs.filter(context_of_violence__in=value).distinct()
+
+    def filter_filter_figure_review_status(self, qs, name, value):
+        if value:
+            if isinstance(value[0], int):
+                return qs.filter(review_status__in=value)
+            return qs.filter(
+                review_status__in=[Figure.FigureReviewStatus.get(item).value for item in value]
+            )
+        return qs
+    
+    def filter_filter_figure_approved_by(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(approved_by__in=value)
 
     @property
     def qs(self):
