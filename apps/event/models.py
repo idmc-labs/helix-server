@@ -134,6 +134,21 @@ class DisasterSubType(NameAttributedModels):
 
 
 class Event(MetaInformationArchiveAbstractModel, models.Model):
+    class EventReviewStatus(enum.Enum):
+        REVIEW_NOT_STARTED = 0
+        REVIEW_IN_PROGRESS = 1
+        APPROVED = 3
+        REVIEW_NOT_REQUIRED = 4
+        SIGEN_OFF = 5
+
+        __labels__ = {
+            REVIEW_NOT_STARTED: _("Review not started"),
+            REVIEW_IN_PROGRESS: _("Review in progress"),
+            APPROVED: _("Approved"),
+            REVIEW_NOT_REQUIRED: _("Review not required"),
+            SIGEN_OFF: _("Signed-off"),
+        }
+
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
     IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
@@ -214,6 +229,11 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         related_name='event_assignee', on_delete=models.SET_NULL
     )
     assigned_at = models.DateTimeField(verbose_name='Assigned at', null=True, blank=True)
+    review_status = enum.EnumField(
+        EventReviewStatus,
+        verbose_name=_('Event status'),
+        default=EventReviewStatus.REVIEW_NOT_STARTED,
+    )
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):

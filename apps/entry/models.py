@@ -377,6 +377,21 @@ class Figure(MetaInformationArchiveAbstractModel,
             MULTIPLE_OR_OTHER: _('Multiple/Other'),
         }
 
+    class FigureReviewStatus(enum.Enum):
+        REVIEW_NOT_STARTED = 0
+        REVIEW_IN_PROGRESS = 1
+        APPROVED = 3
+        REVIEW_NOT_REQUIRED = 4
+        REVIEW_RE_REQUESTED = 5
+
+        __labels__ = {
+            REVIEW_NOT_STARTED: _("Review not started"),
+            REVIEW_IN_PROGRESS: _("Review in progress"),
+            APPROVED: _("Approved"),
+            REVIEW_NOT_REQUIRED: _("Review not required"),
+            REVIEW_RE_REQUESTED: _("Review re required"),
+        }
+
     uuid = models.UUIDField(verbose_name='UUID',
                             blank=True, default=uuid4)
     entry = models.ForeignKey('Entry', verbose_name=_('Entry'),
@@ -505,6 +520,15 @@ class Figure(MetaInformationArchiveAbstractModel,
     sources = models.ManyToManyField(
         'organization.Organization', verbose_name=_('Source'),
         blank=True, related_name='sourced_figures'
+    )
+    approved_by = models.ForeignKey(
+        'users.User', verbose_name=_('Approved by'), null=True, blank=True,
+        related_name='figure_approved_by', on_delete=models.SET_NULL
+    )
+    approved_on = models.DateTimeField(verbose_name='Assigned at', null=True, blank=True)
+    review_status = enum.EnumField(
+        enum=FigureReviewStatus, verbose_name=_('Figure status'),
+        default=FigureReviewStatus.REVIEW_NOT_STARTED
     )
 
     class Meta:
