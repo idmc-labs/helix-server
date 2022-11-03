@@ -47,6 +47,6 @@ enum_map = dict(
     IDENTIFIER=IdentifierGrapheneEnum,
     FIGURE_CATEGORY_TYPES=FigureCategoryTypeEnum,
     FIGURE_TERMS=FigureTermsEnum,
-    SOURCES_RILIABILITY=FigureSourcesReliabilityEnum,
-    FigureReviewStatus=FigureReviewStatusEnum,
+    SOURCES_RELIABILITY=FigureSourcesReliabilityEnum,
+    FIGURE_REVIEW_STATUS=FigureReviewStatusEnum,
 )
