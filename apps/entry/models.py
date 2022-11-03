@@ -380,8 +380,8 @@ class Figure(MetaInformationArchiveAbstractModel,
     class FigureReviewStatus(enum.Enum):
         REVIEW_NOT_STARTED = 0
         REVIEW_IN_PROGRESS = 1
-        APPROVED = 3
-        REVIEW_RE_REQUESTED = 4
+        APPROVED = 2
+        REVIEW_RE_REQUESTED = 3
 
         __labels__ = {
             REVIEW_NOT_STARTED: _("Review not started"),
