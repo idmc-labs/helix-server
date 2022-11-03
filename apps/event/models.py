@@ -137,15 +137,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     class EventReviewStatus(enum.Enum):
         REVIEW_NOT_STARTED = 0
         REVIEW_IN_PROGRESS = 1
-        APPROVED = 3
-        REVIEW_NOT_REQUIRED = 4
-        SIGNED_OFF = 5
+        APPROVED = 2
+        SIGNED_OFF = 3
 
         __labels__ = {
             REVIEW_NOT_STARTED: _("Review not started"),
             REVIEW_IN_PROGRESS: _("Review in progress"),
             APPROVED: _("Approved"),
-            REVIEW_NOT_REQUIRED: _("Review not required"),
             SIGNED_OFF: _("Signed-off"),
         }
 
