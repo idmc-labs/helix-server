@@ -105,7 +105,7 @@ class Review(MetaInformationArchiveAbstractModel, models.Model):
         }
 
     entry = models.ForeignKey('entry.Entry', verbose_name=_('Entry'),
-                              related_name='reviews', on_delete=models.CASCADE)
+                              related_name='figure_reviews', on_delete=models.CASCADE)
     figure = models.ForeignKey('entry.Figure', verbose_name=_('Figure'),
                                blank=True, null=True,
                                related_name='figure_reviews', on_delete=models.SET_NULL)
@@ -115,10 +115,10 @@ class Review(MetaInformationArchiveAbstractModel, models.Model):
                            null=True, blank=True)
     geo_location = models.ForeignKey('entry.OSMName', verbose_name=_('Geolocation/OSM'),
                                      null=True, blank=True,
-                                     related_name='reviews', on_delete=models.SET_NULL)
+                                     related_name='figure_reviews', on_delete=models.SET_NULL)
     comment = models.ForeignKey('review.ReviewComment', verbose_name=_('Comment'),
                                 blank=True, null=True,
-                                related_name='reviews', on_delete=models.CASCADE)
+                                related_name='figure_reviews', on_delete=models.CASCADE)
 
 
 class ReviewComment(MetaInformationArchiveAbstractModel, models.Model):
