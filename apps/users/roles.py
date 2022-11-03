@@ -49,6 +49,8 @@ PERMISSIONS = {
         PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_assignee: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_self_assignee: {PERMISSION_ENTITY.event},
+        PERMISSION_ACTION.approve: {PERMISSION_ENTITY.figure},
+        PERMISSION_ACTION.unapprove: {PERMISSION_ENTITY.figure},
     },
     USER_ROLE.REGIONAL_COORDINATOR: {
         PERMISSION_ACTION.add: REGIONAL_COORDINATOR_MODELS,
@@ -60,6 +62,8 @@ PERMISSIONS = {
         PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_assignee: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_self_assignee: {PERMISSION_ENTITY.event},
+        PERMISSION_ACTION.approve: {PERMISSION_ENTITY.figure},
+        PERMISSION_ACTION.unapprove: {PERMISSION_ENTITY.figure},
     },
     USER_ROLE.MONITORING_EXPERT: {
         PERMISSION_ACTION.add: MONITORING_EXPERT_MODELS,
@@ -71,6 +75,8 @@ PERMISSIONS = {
         PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_assignee: set(),
         PERMISSION_ACTION.clear_self_assignee: {PERMISSION_ENTITY.event},
+        PERMISSION_ACTION.approve: {PERMISSION_ENTITY.figure},
+        PERMISSION_ACTION.unapprove: {PERMISSION_ENTITY.figure},
     },
     USER_ROLE.GUEST: {
         PERMISSION_ACTION.add: set(),
@@ -82,5 +88,6 @@ PERMISSIONS = {
         PERMISSION_ACTION.self_assign: set(),
         PERMISSION_ACTION.clear_assignee: set(),
         PERMISSION_ACTION.clear_self_assignee: set(),
+        PERMISSION_ACTION.unapprove: set(),
     }
 }

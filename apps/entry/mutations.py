@@ -328,6 +328,76 @@ class ExportFigures(graphene.Mutation):
         return ExportFigures(errors=None, ok=True)
 
 
+class ApproveFigure(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(FigureType)
+
+    @staticmethod
+    @permission_checker(['entry.approve_figure'])
+    def mutate(root, info, id):
+        figure = Figure.objects.filter(id=id).first()
+        if not figure:
+            return ApproveFigure(errors=[
+                dict(field='id', messages=gettext('Figure does not exist.'))
+            ])
+        figure.review_status = Figure.FigureReviewStatus.APPROVED.value
+        figure.approved_by = info.context.user
+        figure.save()
+        return ApproveFigure(result=figure, errors=None, ok=True)
+
+
+class UnapproveFigure(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(FigureType)
+
+    @staticmethod
+    @permission_checker(['entry.unapprove_figure'])
+    @is_authenticated()
+    def mutate(root, info, id):
+        figure = Figure.objects.filter(id=id).first()
+        if not figure:
+            return UnapproveFigure(errors=[
+                dict(field='id', messages=gettext('Figure does not exist.'))
+            ])
+        figure.review_status = Figure.FigureReviewStatus.REVIEW_NOT_STARTED
+        if figure.figure_review_comments.all().count() > 0:
+            figure.review_status = Figure.FigureReviewStatus.REVIEW_IN_PROGRESS
+        figure.approved_by = None
+        figure.save()
+        return UnapproveFigure(result=figure, errors=None, ok=True)
+
+
+class ReRequetReivewFigure(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(FigureType)
+
+    @staticmethod
+    @permission_checker(['entry.change_figure'])
+    @is_authenticated()
+    def mutate(root, info, id):
+        figure = Figure.objects.filter(id=id).first()
+        if not figure:
+            return ReRequetReivewFigure(errors=[
+                dict(field='id', messages=gettext('Figure does not exist.'))
+            ])
+        figure.review_status = Figure.FigureReviewStatus.REVIEW_RE_REQUESTED
+        figure.approved_by = None
+        figure.save()
+        return ReRequetReivewFigure(result=figure, errors=None, ok=True)
+
+
 class Mutation(object):
     create_entry = CreateEntry.Field()
     update_entry = UpdateEntry.Field()
@@ -343,3 +413,7 @@ class Mutation(object):
     # figure
     update_figure = updateFigure.Field()
     delete_figure = DeleteFigure.Field()
+    # figure reviews
+    approve_figure = ApproveFigure.Field()
+    unapprove_figure = UnapproveFigure.Field()
+    re_request_review_figure = ReRequetReivewFigure.Field()
