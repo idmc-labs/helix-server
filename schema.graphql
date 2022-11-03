@@ -1053,6 +1053,7 @@ input EventCreateInputType {
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String
   ignoreQa: Boolean
+  reviewStatus: EventReviewStatus
   crisis: ID
   otherSubType: ID
   violence: ID
@@ -1073,6 +1074,14 @@ type EventListType {
   totalCount: Int
   page: Int
   pageSize: Int
+}
+
+enum EventReviewStatus {
+  REVIEW_NOT_STARTED
+  REVIEW_IN_PROGRESS
+  APPROVED
+  REVIEW_NOT_REQUIRED
+  SIGEN_OFF
 }
 
 type EventType {
@@ -1107,6 +1116,7 @@ type EventType {
   assigner: UserType
   assignee: UserType
   assignedAt: DateTime
+  reviewStatus: EventReviewStatus
   eventReviews: [UnifiedReviewCommentType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -1120,6 +1130,7 @@ type EventType {
   qsRuleTypeDisplay: EnumDescription
   eventTypology: String
   figureTypology: [String]
+  reviewStatusDisplay: EnumDescription
 }
 
 input EventUpdateInputType {
@@ -1135,6 +1146,7 @@ input EventUpdateInputType {
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String
   ignoreQa: Boolean
+  reviewStatus: EventReviewStatus
   crisis: ID
   otherSubType: ID
   violence: ID
@@ -1330,6 +1342,14 @@ type FigureListType {
   pageSize: Int
 }
 
+enum FigureReviewStatus {
+  REVIEW_NOT_STARTED
+  REVIEW_IN_PROGRESS
+  APPROVED
+  REVIEW_NOT_REQUIRED
+  REVIEW_RE_REQUESTED
+}
+
 input FigureTagCreateInputType {
   versionId: String
   name: String!
@@ -1421,6 +1441,9 @@ type FigureType {
   otherSubType: OtherSubTypeObjectType
   osvSubType: OsvSubObjectType
   sources(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], orderCountryFirst: [ID!], ordering: String): OrganizationListType
+  approvedBy: UserType
+  approvedOn: DateTime
+  reviewStatus: FigureReviewStatus
   figureReviewComments: [UnifiedReviewCommentType!]!
   reportSet: [ReportType!]!
   getQuantifier: EnumDescription
@@ -1439,6 +1462,7 @@ type FigureType {
   flowEndDate: Date
   geolocations: String
   sourcesReliability: SOURCES_RELIABILITY
+  reviewStatusDisplay: EnumDescription
 }
 
 input FigureUpdateInputType {
