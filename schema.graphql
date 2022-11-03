@@ -1053,7 +1053,6 @@ input EventCreateInputType {
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String
   ignoreQa: Boolean
-  reviewStatus: String
   crisis: ID
   otherSubType: ID
   violence: ID
@@ -1146,7 +1145,6 @@ input EventUpdateInputType {
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String
   ignoreQa: Boolean
-  reviewStatus: String
   crisis: ID
   otherSubType: ID
   violence: ID
