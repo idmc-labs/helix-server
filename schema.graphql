@@ -52,6 +52,12 @@ input AdminPortfolioInputType {
   user: ID!
 }
 
+type ApproveFigure {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: FigureType
+}
+
 type ApproveReport {
   errors: [GenericScalar!]
   ok: Boolean
@@ -1647,6 +1653,9 @@ type Mutation {
   exportFigures(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterFigureCrises: [ID!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterFigureCrisisTypes: [String!], filterFigureGlideNumber: [String!], filterEntryCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], event: String, filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!]): ExportFigures
   updateFigure(data: FigureUpdateInputType!): updateFigure
   deleteFigure(id: ID!): DeleteFigure
+  approveFigure(id: ID!): ApproveFigure
+  unapproveFigure(id: ID!): UnapproveFigure
+  reRequestReviewFigure(id: ID!): ReRequetReivewFigure
   createEvent(data: EventCreateInputType!): CreateEvent
   updateEvent(data: EventUpdateInputType!): UpdateEvent
   deleteEvent(id: ID!): DeleteEvent
@@ -2056,6 +2065,7 @@ enum PERMISSION_ACTION {
   self_assign
   clear_assignee
   clear_self_assignee
+  unapprove
 }
 
 enum PERMISSION_ENTITY {
@@ -2276,6 +2286,12 @@ enum REPORT_TYPE {
 enum ROLE {
   RECOMMENDED
   TRIANGULATION
+}
+
+type ReRequetReivewFigure {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: FigureType
 }
 
 input RegionalCoordinatorPortfolioInputType {
@@ -2710,6 +2726,12 @@ enum USER_ROLE {
 }
 
 scalar UUID
+
+type UnapproveFigure {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: FigureType
+}
 
 input UnifiedReviewCommentCreateInputType {
   event: ID
