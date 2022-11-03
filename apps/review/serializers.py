@@ -10,7 +10,9 @@ NOT_ALLOWED_TO_REVIEW = _('You are not allowed to review this entry.')
 class UnifiedReviewCommentSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = UnifiedReviewComment
-        fields = '__all__'
+        fields = (
+            'event', 'geo_location', 'figure', 'field', 'comment_type', 'geo_location', 'comment',
+        )
 
     def validate_comment(self, comment: str):
         # we will store null for empty bodies
