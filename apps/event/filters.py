@@ -26,6 +26,9 @@ class EventFilter(NameFilterMixin,
     created_by_ids = IDListFilter(method='filter_created_by')
     qa_rules = StringListFilter(method='filter_qa_rules')
     context_of_violences = IDListFilter(method='filter_context_of_violences')
+    review_status = StringListFilter(method='filter_review_status')
+    assignees = IDListFilter(method='filter_assignees')
+    assigners = IDListFilter(method='filter_assigners')
 
     class Meta:
         model = Event
@@ -75,6 +78,15 @@ class EventFilter(NameFilterMixin,
                 return qs.filter(event_type__in=value).distinct()
             return qs.filter(event_type__in=[
                 Crisis.CRISIS_TYPE.get(item).value for item in value
+            ]).distinct()
+        return qs
+
+    def filter_review_status(self, qs, name, value):
+        if value:
+            if isinstance(value[0], int):
+                return qs.filter(review_status__in=value).distinct()
+            return qs.filter(review_status__in=[
+                Event.EventReviewStatus.get(item).value for item in value
             ]).distinct()
         return qs
 
@@ -136,6 +148,16 @@ class EventFilter(NameFilterMixin,
         if not value:
             return qs
         return qs.filter(context_of_violence__in=value).distinct()
+
+    def filter_assigners(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(assigner__in=value)
+
+    def filter_assignees(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(assignee__in=value)
 
     @property
     def qs(self):
