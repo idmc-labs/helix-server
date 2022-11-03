@@ -15,7 +15,7 @@ class UnifiedReviewCommentFilter(df.FilterSet):
     def filter_figures(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(reviews__figure__in=value)
+        return qs.filter(figure__in=value)
 
     class Meta:
         model = UnifiedReviewComment
