@@ -2173,7 +2173,7 @@ type Query {
   parkedItem(id: ID!): ParkedItemType
   parkedItemList(title_Unaccent_Icontains: String, createdBy: ID, statusIn: [String!], assignedToIn: [String!], page: Int = 1, ordering: String, pageSize: Int): ParkedItemListType
   reviewComment(id: ID!): UnifiedReviewCommentType
-  reviewComments(event: ID, events: [ID!], figures: [ID!], page: Int = 1, ordering: String, pageSize: Int): UnifiedReviewCommentListType
+  reviewComments(events: [ID!], figures: [ID!], fields: [String!], page: Int = 1, ordering: String, pageSize: Int): UnifiedReviewCommentListType
   resource(id: ID!): ResourceType
   resourceList: [ResourceType!]
   resourceGroup(id: ID!): ResourceType
@@ -2687,16 +2687,12 @@ enum USER_ROLE {
 scalar UUID
 
 input UnifiedReviewCommentCreateInputType {
-  oldId: String
-  versionId: String
+  event: ID
+  geoLocation: ID
+  figure: ID
   field: ReviewFieldType
   commentType: ReviewCommentType
   comment: String
-  isEdited: Boolean
-  isDeleted: Boolean
-  event: ID
-  figure: ID
-  geoLocation: ID
 }
 
 type UnifiedReviewCommentListType {
