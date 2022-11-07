@@ -538,6 +538,10 @@ class Figure(MetaInformationArchiveAbstractModel,
             models.Index(fields=['role']),
             models.Index(fields=['event']),
         ]
+        permissions = (
+            ('qa_approve_figure', 'Can approve figure'),
+            ('qa_unapprove_figure', 'Can un-approve figure'),
+        )
 
     SUPPORTED_OSMNAME_COUNTRY_CODES = {
         'AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT',
