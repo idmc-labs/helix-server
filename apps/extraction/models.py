@@ -114,7 +114,7 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_figure_review_status= ArrayField(
+    filter_figure_review_status = ArrayField(
         base_field=enum.EnumField(enum=Figure.FigureReviewStatus),
         blank=True,
         null=True
