@@ -302,7 +302,6 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs
         return qs.filter(figures__approved_by__in=value)
 
-
     @property
     def qs(self):
         return super().qs.distinct()
@@ -568,7 +567,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
                 review_status__in=[Figure.FigureReviewStatus.get(item).value for item in value]
             )
         return qs
-    
+
     def filter_filter_figure_approved_by(self, qs, name, value):
         if not value:
             return qs

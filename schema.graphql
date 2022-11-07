@@ -526,6 +526,7 @@ input CreateExtractInputType {
   filterFigureGlideNumber: [String!]
   filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
   filterFigureTerms: [FIGURE_TERMS!]
+  filterFigureReviewStatus: [String!]
   filterFigureCategoryTypes: [String!]
   filterFigureHasDisaggregatedData: Boolean
   filterFigureGeographicalGroups: [ID!]
@@ -1079,7 +1080,6 @@ enum EventReviewStatus {
   REVIEW_NOT_STARTED
   REVIEW_IN_PROGRESS
   APPROVED
-  REVIEW_NOT_REQUIRED
   SIGNED_OFF
 }
 
@@ -1274,6 +1274,7 @@ type ExtractionQueryObjectType {
   filterEntryCreatedBy: [UserType!]!
   filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
   filterFigureTerms: [FIGURE_TERMS!]
+  filterFigureReviewStatus: [FigureReviewStatus!]
   filterFigureDisasterCategories: [DisasterCategoryType!]!
   filterFigureDisasterSubCategories: [DisasterSubCategoryType!]!
   filterFigureDisasterTypes: [DisasterTypeObjectType!]!
@@ -2457,6 +2458,7 @@ type ReportType {
   filterEntryCreatedBy: [UserType!]!
   filterFigureDisplacementTypes: [Int!]
   filterFigureTerms: [FIGURE_TERMS!]
+  filterFigureReviewStatus: [Int!]
   filterFigureDisasterCategories: [DisasterCategoryType!]!
   filterFigureDisasterSubCategories: [DisasterSubCategoryType!]!
   filterFigureDisasterTypes: [DisasterTypeObjectType!]!
@@ -2810,6 +2812,7 @@ input UpdateExtractInputType {
   filterFigureGlideNumber: [String!]
   filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
   filterFigureTerms: [FIGURE_TERMS!]
+  filterFigureReviewStatus: [String!]
   filterFigureCategoryTypes: [String!]
   filterFigureHasDisaggregatedData: Boolean
   filterFigureGeographicalGroups: [ID!]
