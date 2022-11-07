@@ -29,7 +29,7 @@ class UnifiedReviewCommentFilter(df.FilterSet):
 
     class Meta:
         model = UnifiedReviewComment
-        fields = ('figure',)
+        fields = ()
 
     @property
     def qs(self):
