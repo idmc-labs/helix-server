@@ -84,7 +84,7 @@ class TestFigureModel(HelixTestCase):
         nd = Figure.filtered_nd_figures(
             qs=Figure.objects.all(),
             start_date=ref - timedelta(days=15),
-            end_date=ref + timedelta(days=45),
+            end_date=ref + timedelta(days=60),
         )
         self.assertEqual(nd.count(), 2)
         self.assertNotIn({f1, f2, f3}, set(nd))

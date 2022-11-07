@@ -58,7 +58,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
     result = graphene.Field(UnifiedReviewCommentType)
 
     @staticmethod
-    @permission_checker(['review.add_review'])
+    @permission_checker(['review.add_reviewcomment'])
     def mutate(root, info, data):
         serializer = UnifiedReviewCommentSerializer(
             data=data,
