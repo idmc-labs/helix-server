@@ -952,6 +952,27 @@ class Figure(MetaInformationArchiveAbstractModel,
     def can_be_created_by(cls, user: User, entry: 'Entry') -> bool:
         return entry.can_be_updated_by(user)
 
+    @classmethod
+    def update_event_status(cls, event_id):
+        from apps.event.models import Event
+
+        event = Event.objects.filter(id=event_id).annotate(**Event.annotate_review_figures_count()).first()
+        review_not_started_count = event.review_not_started_count
+        review_in_progress_count = event.review_in_progress_count
+        review_re_request_count = event.review_re_request_count
+        review_approved_count = event.review_approved_count
+        if (
+            not any(
+                [review_in_progress_count, review_not_started_count, review_re_request_count]
+            ) and review_approved_count
+        ):
+            event.review_status = Event.EventReviewStatus.APPROVED.value
+        elif (review_in_progress_count or review_re_request_count) or review_approved_count:
+            event.review_status = Event.EventReviewStatus.REVIEW_IN_PROGRESS.value
+        else:
+            event.review_status = Event.EventReviewStatus.REVIEW_NOT_STARTED.value
+        event.save()
+
     def can_be_updated_by(self, user: User) -> bool:
         """
         used to check before deleting as well
