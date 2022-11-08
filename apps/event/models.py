@@ -275,26 +275,45 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             'review_not_started_count': models.Count(
                 'figures',
                 filter=models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED
+                    figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED,
+                    figures__role=Figure.ROLE.RECOMMENDED,
+                ) | models.Q(
+                    figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED,
+                    include_triangulation_in_qa=True,
                 )
             ),
             'review_in_progress_count': models.Count(
                 'figures',
                 filter=models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.REVIEW_IN_PROGRESS
+                    figures__review_status=Figure.FigureReviewStatus.REVIEW_IN_PROGRESS,
+                    figures__role=Figure.ROLE.RECOMMENDED,
+                ) | models.Q(
+                    figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED,
+                    include_triangulation_in_qa=True,
                 )
+
             ),
             'review_re_request_count': models.Count(
                 'figures',
                 filter=models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.REVIEW_RE_REQUESTED
+                    figures__review_status=Figure.FigureReviewStatus.REVIEW_RE_REQUESTED,
+                    figures__role=Figure.ROLE.RECOMMENDED,
+                ) | models.Q(
+                    figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED,
+                    include_triangulation_in_qa=True,
                 )
+
             ),
             'review_approved_count': models.Count(
                 'figures',
                 filter=models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.APPROVED
+                    figures__review_status=Figure.FigureReviewStatus.APPROVED,
+                    figures__role=Figure.ROLE.RECOMMENDED,
+                ) | models.Q(
+                    figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED,
+                    include_triangulation_in_qa=True,
                 )
+
             ),
         }
 
