@@ -138,8 +138,9 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
     def test_event_status_should_be_changed_if_figure_status_updated(self) -> None:
         self.force_login(self.admin)
 
-        event = EventFactory.create()
-        f1, f2, f3 = FigureFactory.create_batch(3, event=event)
+        event = EventFactory.create(include_triangulation_in_qa=True)
+        f1, f2, f3 = FigureFactory.create_batch(3, event=event, role=Figure.ROLE.RECOMMENDED)
+        f4 = FigureFactory.create(event=event, role=Figure.ROLE.TRIANGULATION)
 
         # Initially event type should be REVIEW_NOT_STARTED
         self.assertEqual(event.review_status, event.EventReviewStatus.REVIEW_NOT_STARTED)
@@ -154,7 +155,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertEqual(event.review_status, event.EventReviewStatus.REVIEW_IN_PROGRESS)
 
         # After all figures approved event should be also approved
-        for figure in [f2, f3]:
+        for figure in [f2, f3, f4]:
             response = self.query(
                 self.approve_figure,
                 variables={'id': figure.id}
