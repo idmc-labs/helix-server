@@ -232,6 +232,9 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         verbose_name=_('Event status'),
         default=EventReviewStatus.REVIEW_NOT_STARTED,
     )
+    include_triangulation_in_qa = models.BooleanField(
+        verbose_name='Include triangulation in qa?', default=False,
+    )
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
@@ -263,6 +266,35 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
                 output_field=models.IntegerField()
+            ),
+        }
+
+    @classmethod
+    def annotate_review_figures_count(cls):
+        return {
+            'review_not_started_count': models.Count(
+                'figures',
+                filter=models.Q(
+                    figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED
+                )
+            ),
+            'review_in_progress_count': models.Count(
+                'figures',
+                filter=models.Q(
+                    figures__review_status=Figure.FigureReviewStatus.REVIEW_IN_PROGRESS
+                )
+            ),
+            'review_re_request_count': models.Count(
+                'figures',
+                filter=models.Q(
+                    figures__review_status=Figure.FigureReviewStatus.REVIEW_RE_REQUESTED
+                )
+            ),
+            'review_approved_count': models.Count(
+                'figures',
+                filter=models.Q(
+                    figures__review_status=Figure.FigureReviewStatus.APPROVED
+                )
             ),
         }
 
