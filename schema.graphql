@@ -1060,6 +1060,7 @@ input EventCreateInputType {
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String
   ignoreQa: Boolean
+  includeTriangulationInQa: Boolean
   crisis: ID
   otherSubType: ID
   violence: ID
@@ -1122,6 +1123,7 @@ type EventType {
   assignee: UserType
   assignedAt: DateTime
   reviewStatus: EventReviewStatus
+  includeTriangulationInQa: Boolean!
   eventReviews: [UnifiedReviewCommentType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -1151,6 +1153,7 @@ input EventUpdateInputType {
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String
   ignoreQa: Boolean
+  includeTriangulationInQa: Boolean
   crisis: ID
   otherSubType: ID
   violence: ID
