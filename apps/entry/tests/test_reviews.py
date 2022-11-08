@@ -134,3 +134,41 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 content['data']['unapproveFigure']['result']['reviewStatus'],
                 Figure.FigureReviewStatus.REVIEW_IN_PROGRESS.name
             )
+
+    def test_event_status_should_be_changed_if_figure_status_updated(self) -> None:
+        self.force_login(self.admin)
+
+        event = EventFactory.create()
+        f1, f2, f3 = FigureFactory.create_batch(3, event=event)
+
+        # Initially event type should be REVIEW_NOT_STARTED
+        self.assertEqual(event.review_status, event.EventReviewStatus.REVIEW_NOT_STARTED)
+
+        # If any figure one of many event figures is approved review status should be REVIEW_IN_PROGRESS
+        response = self.query(
+            self.approve_figure,
+            variables={'id': f1.id}
+        )
+        self.assertResponseNoErrors(response)
+        event.refresh_from_db()
+        self.assertEqual(event.review_status, event.EventReviewStatus.REVIEW_IN_PROGRESS)
+
+        # After all figures approved event should be also approved
+        for figure in [f2, f3]:
+            response = self.query(
+                self.approve_figure,
+                variables={'id': figure.id}
+            )
+            self.assertResponseNoErrors(response)
+        event.refresh_from_db()
+        self.assertEqual(event.review_status, event.EventReviewStatus.APPROVED)
+
+        # If review re-requested event status should be changes to REVIEW_IN_PROGRESS
+        response = self.query(
+            self.re_request_review_figure,
+            variables={'id': f1.id}
+        )
+        self.assertResponseNoErrors(response)
+
+        event.refresh_from_db()
+        self.assertEqual(event.review_status, event.EventReviewStatus.REVIEW_IN_PROGRESS)
