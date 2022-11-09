@@ -30,8 +30,8 @@ class PERMISSION_ACTION(enum.Enum):
         self_assign: _('Self assign'),
         clear_assignee: _('Clear assignee'),
         clear_self_assignee: _('Clear self assignee'),
-        qa_approve: _('Unapprove figure'),
-        qa_unapprove: _('Approve figure'),
+        qa_approve: _('Qa approve'),
+        qa_unapprove: _('Qa unpprove figure'),
     }
 
 
