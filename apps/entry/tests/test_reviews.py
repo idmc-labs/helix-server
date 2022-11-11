@@ -1,6 +1,7 @@
 import json
 from apps.users.enums import USER_ROLE
 from apps.entry.models import Figure
+from apps.event.models import Event
 from utils.factories import (
     EventFactory,
     FigureFactory,
@@ -52,6 +53,17 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             }
         }
         '''
+        self.update_event = '''mutation UpdateEvent($input: EventUpdateInputType!) {
+            updateEvent(data: $input) {
+                errors
+                result {
+                    id
+                    reviewStatus
+                    includeTriangulationInQa
+                }
+                ok
+                }
+            }'''
         self.event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
         self.figure = FigureFactory.create(event=self.event)
 
@@ -173,3 +185,20 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
 
         event.refresh_from_db()
         self.assertEqual(event.review_status, event.EventReviewStatus.REVIEW_IN_PROGRESS)
+
+    def test_event_status_should_be_calculated_if_include_triangulation_in_qa_is_changed(self):
+        event = EventFactory.create(include_triangulation_in_qa=False, review_status=Event.EventReviewStatus.APPROVED)
+        FigureFactory.create(event=event, role=Figure.ROLE.TRIANGULATION)
+        self.assertEqual(event.review_status, event.EventReviewStatus.APPROVED)
+
+        self.force_login(self.regional_coordinator)
+        response = self.query(
+            self.update_event,
+            input_data={'id': event.id, 'includeTriangulationInQa': True}
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['updateEvent']['ok'], content)
+
+        event.refresh_from_db()
+        self.assertEqual(event.review_status, event.EventReviewStatus.REVIEW_NOT_STARTED)

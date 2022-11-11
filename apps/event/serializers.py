@@ -185,6 +185,13 @@ class EventSerializer(MetaInformationSerializerMixin,
         context_of_violence = validated_data.pop("context_of_violence", None)
         return event
 
+    def update(self, instance, validated_data):
+        # Update event status if include_triangulation_in_qa is changed
+        validated_data['last_modified_by'] = self.context['request'].user
+        if validated_data.get('include_triangulation_in_qa'):
+            Figure.update_event_status(instance.id)
+        return super().update(instance, validated_data)
+
 
 class EventUpdateSerializer(UpdateSerializerMixin, EventSerializer):
     id = IntegerIDField(required=True)

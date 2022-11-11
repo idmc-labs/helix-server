@@ -349,7 +349,6 @@ class ApproveFigure(graphene.Mutation):
         figure.approved_by = info.context.user
         figure.approved_on = timezone.now()
         figure.save()
-        Figure.update_event_status(figure.event_id)
         return ApproveFigure(result=figure, errors=None, ok=True)
 
 
@@ -376,7 +375,6 @@ class UnapproveFigure(graphene.Mutation):
         figure.approved_by = None
         figure.approved_on = None
         figure.save()
-        Figure.update_event_status(figure.event_id)
         return UnapproveFigure(result=figure, errors=None, ok=True)
 
 
@@ -401,7 +399,6 @@ class ReRequestReivewFigure(graphene.Mutation):
         figure.approved_by = None
         figure.approved_on = None
         figure.save()
-        Figure.update_event_status(figure.event_id)
         return ReRequestReivewFigure(result=figure, errors=None, ok=True)
 
 
