@@ -18,7 +18,6 @@ class PERMISSION_ACTION(enum.Enum):
     clear_assignee = 7
     clear_self_assignee = 8
     qa_approve = 9
-    qa_unapprove = 10
 
     __labels__ = {
         add: _('Add'),
@@ -31,7 +30,6 @@ class PERMISSION_ACTION(enum.Enum):
         clear_assignee: _('Clear assignee'),
         clear_self_assignee: _('Clear self assignee'),
         qa_approve: _('Qa approve'),
-        qa_unapprove: _('Qa unpprove figure'),
     }
 
 

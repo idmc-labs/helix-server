@@ -1,6 +1,7 @@
 from django.utils.translation import gettext
 import graphene
 from graphene_django.filter.utils import get_filtering_args_from_filterset
+from django.utils import timezone
 
 from apps.contrib.models import SourcePreview
 from apps.entry.models import Entry, FigureTag, Figure
@@ -346,6 +347,7 @@ class ApproveFigure(graphene.Mutation):
             ])
         figure.review_status = Figure.FigureReviewStatus.APPROVED.value
         figure.approved_by = info.context.user
+        figure.approved_on = timezone.now()
         figure.save()
         return ApproveFigure(result=figure, errors=None, ok=True)
 
@@ -359,7 +361,7 @@ class UnapproveFigure(graphene.Mutation):
     result = graphene.Field(FigureType)
 
     @staticmethod
-    @permission_checker(['entry.qa_unapprove_figure'])
+    @permission_checker(['entry.qa_approve_figure'])
     @is_authenticated()
     def mutate(root, info, id):
         figure = Figure.objects.filter(id=id).first()
@@ -371,11 +373,12 @@ class UnapproveFigure(graphene.Mutation):
         if figure.figure_review_comments.all().count() > 0:
             figure.review_status = Figure.FigureReviewStatus.REVIEW_IN_PROGRESS
         figure.approved_by = None
+        figure.approved_on = None
         figure.save()
         return UnapproveFigure(result=figure, errors=None, ok=True)
 
 
-class ReRequetReivewFigure(graphene.Mutation):
+class ReRequestReivewFigure(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
@@ -389,13 +392,14 @@ class ReRequetReivewFigure(graphene.Mutation):
     def mutate(root, info, id):
         figure = Figure.objects.filter(id=id).first()
         if not figure:
-            return ReRequetReivewFigure(errors=[
+            return ReRequestReivewFigure(errors=[
                 dict(field='id', messages=gettext('Figure does not exist.'))
             ])
         figure.review_status = Figure.FigureReviewStatus.REVIEW_RE_REQUESTED
         figure.approved_by = None
+        figure.approved_on = None
         figure.save()
-        return ReRequetReivewFigure(result=figure, errors=None, ok=True)
+        return ReRequestReivewFigure(result=figure, errors=None, ok=True)
 
 
 class Mutation(object):
@@ -416,4 +420,4 @@ class Mutation(object):
     # figure reviews
     approve_figure = ApproveFigure.Field()
     unapprove_figure = UnapproveFigure.Field()
-    re_request_review_figure = ReRequetReivewFigure.Field()
+    re_request_review_figure = ReRequestReivewFigure.Field()
