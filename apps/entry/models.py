@@ -967,7 +967,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             ) and review_approved_count
         ):
             event.review_status = Event.EventReviewStatus.APPROVED.value
-        elif (review_in_progress_count or review_re_request_count) or review_approved_count:
+        elif review_in_progress_count or review_re_request_count or review_approved_count:
             event.review_status = Event.EventReviewStatus.REVIEW_IN_PROGRESS.value
         else:
             event.review_status = Event.EventReviewStatus.REVIEW_NOT_STARTED.value

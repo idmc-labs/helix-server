@@ -288,7 +288,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     figures__review_status=Figure.FigureReviewStatus.REVIEW_IN_PROGRESS,
                     figures__role=Figure.ROLE.RECOMMENDED,
                 ) | models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED,
+                    figures__review_status=Figure.FigureReviewStatus.REVIEW_IN_PROGRESS,
                     include_triangulation_in_qa=True,
                 )
 
@@ -299,7 +299,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     figures__review_status=Figure.FigureReviewStatus.REVIEW_RE_REQUESTED,
                     figures__role=Figure.ROLE.RECOMMENDED,
                 ) | models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED,
+                    figures__review_status=Figure.FigureReviewStatus.REVIEW_RE_REQUESTED,
                     include_triangulation_in_qa=True,
                 )
 
@@ -310,7 +310,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     figures__review_status=Figure.FigureReviewStatus.APPROVED,
                     figures__role=Figure.ROLE.RECOMMENDED,
                 ) | models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED,
+                    figures__review_status=Figure.FigureReviewStatus.APPROVED,
                     include_triangulation_in_qa=True,
                 )
 
