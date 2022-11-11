@@ -1655,7 +1655,7 @@ type Mutation {
   deleteFigure(id: ID!): DeleteFigure
   approveFigure(id: ID!): ApproveFigure
   unapproveFigure(id: ID!): UnapproveFigure
-  reRequestReviewFigure(id: ID!): ReRequetReivewFigure
+  reRequestReviewFigure(id: ID!): ReRequestReivewFigure
   createEvent(data: EventCreateInputType!): CreateEvent
   updateEvent(data: EventUpdateInputType!): UpdateEvent
   deleteEvent(id: ID!): DeleteEvent
@@ -2066,7 +2066,6 @@ enum PERMISSION_ACTION {
   clear_assignee
   clear_self_assignee
   qa_approve
-  qa_unapprove
 }
 
 enum PERMISSION_ENTITY {
@@ -2289,7 +2288,7 @@ enum ROLE {
   TRIANGULATION
 }
 
-type ReRequetReivewFigure {
+type ReRequestReivewFigure {
   errors: [GenericScalar!]
   ok: Boolean
   result: FigureType

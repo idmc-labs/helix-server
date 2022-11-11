@@ -539,8 +539,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             models.Index(fields=['event']),
         ]
         permissions = (
-            ('qa_approve_figure', 'Can approve figure'),
-            ('qa_unapprove_figure', 'Can un-approve figure'),
+            ('qa_approve_figure', 'Can approve/unapprove figure'),
         )
 
     SUPPORTED_OSMNAME_COUNTRY_CODES = {
