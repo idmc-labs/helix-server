@@ -112,3 +112,33 @@ class EventFigureTypologyLoader(DataLoader):
         return Promise.resolve([
             batch_load.get(key) for key in keys
         ])
+
+
+class EventReviewCountLoader(DataLoader):
+    def batch_load_fn(self, keys: list):
+        qs = Event.objects.filter(
+            id__in=keys
+        ).annotate(
+            **Event.annotate_review_figures_count()
+        ).values(
+            'id',
+            'review_not_started_count',
+            'review_in_progress_count',
+            'review_re_request_count',
+            'review_approved_count',
+            'total_count',
+            'progress',
+        )
+        batch_load = {
+            item['id']: {
+                'review_not_started_count': item['review_not_started_count'],
+                'review_in_progress_count': item['review_in_progress_count'],
+                'review_re_request_count': item['review_re_request_count'],
+                'review_approved_count': item['review_approved_count'],
+                'total_count': item['total_count'],
+                'progress': item['progress'],
+            } for item in qs
+        }
+        return Promise.resolve([
+            batch_load.get(key) for key in keys
+        ])
