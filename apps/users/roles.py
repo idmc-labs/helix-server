@@ -44,7 +44,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.change: ADMIN_MODELS,
         PERMISSION_ACTION.delete: ADMIN_MODELS,
         PERMISSION_ACTION.approve: {PERMISSION_ENTITY.report, PERMISSION_ENTITY.figure},
-        PERMISSION_ACTION.sign_off: {PERMISSION_ENTITY.report},
+        PERMISSION_ACTION.sign_off: {PERMISSION_ENTITY.report, PERMISSION_ENTITY.event},
         PERMISSION_ACTION.assign: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_assignee: {PERMISSION_ENTITY.event},
@@ -55,7 +55,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.change: REGIONAL_COORDINATOR_MODELS,
         PERMISSION_ACTION.delete: REGIONAL_COORDINATOR_MODELS,
         PERMISSION_ACTION.approve: {PERMISSION_ENTITY.report, PERMISSION_ENTITY.figure},
-        PERMISSION_ACTION.sign_off: set(),
+        PERMISSION_ACTION.sign_off: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.assign: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_assignee: {PERMISSION_ENTITY.event},
@@ -82,6 +82,5 @@ PERMISSIONS = {
         PERMISSION_ACTION.self_assign: set(),
         PERMISSION_ACTION.clear_assignee: set(),
         PERMISSION_ACTION.clear_self_assignee: set(),
-        PERMISSION_ACTION.approve: set(),
     }
 }
