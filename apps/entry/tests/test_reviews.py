@@ -151,7 +151,11 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.force_login(self.admin)
 
         event = EventFactory.create(include_triangulation_in_qa=True)
-        f1, f2, f3 = FigureFactory.create_batch(3, event=event, role=Figure.ROLE.RECOMMENDED)
+        f1, f2, f3 = FigureFactory.create_batch(
+            3,
+            event=event,
+            role=Figure.ROLE.RECOMMENDED,
+        )
         f4 = FigureFactory.create(event=event, role=Figure.ROLE.TRIANGULATION)
 
         # Initially event type should be REVIEW_NOT_STARTED
