@@ -150,7 +150,7 @@ class EventReviewCountType(graphene.ObjectType):
     review_re_request_count= graphene.Int(required=False)
     review_approved_count= graphene.Int(required=False)
     total_count = graphene.Int(required=False)
-    progress = graphene.Int(required=False)
+    progress = graphene.Float(required=False)
 
 
 class OsvSubObjectType(DjangoObjectType):
