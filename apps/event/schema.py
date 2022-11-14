@@ -145,10 +145,10 @@ class DisasterCategoryListType(CustomDjangoListObjectType):
 
 
 class EventReviewCountType(graphene.ObjectType):
-    review_not_started_count= graphene.Int(required=False)
-    review_in_progress_count= graphene.Int(required=False)
-    review_re_request_count= graphene.Int(required=False)
-    review_approved_count= graphene.Int(required=False)
+    review_not_started_count = graphene.Int(required=False)
+    review_in_progress_count = graphene.Int(required=False)
+    review_re_request_count = graphene.Int(required=False)
+    review_approved_count = graphene.Int(required=False)
     total_count = graphene.Int(required=False)
     progress = graphene.Float(required=False)
 
@@ -183,8 +183,6 @@ class OtherSubTypeList(CustomDjangoListObjectType):
         filter_fields = {
             'name': ['icontains']
         }
-
-
 
 
 class EventType(DjangoObjectType):
