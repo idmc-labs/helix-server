@@ -1,7 +1,8 @@
 import json
 from apps.users.enums import USER_ROLE
-from utils.factories import EventFactory
+from utils.factories import EventFactory, FigureFactory
 from apps.event.models import Event
+from apps.entry.models import Figure
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
@@ -285,3 +286,67 @@ class TestEventRewviewCount(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.event = EventFactory.create()
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.f1, self.f2, self.f3 = FigureFactory.create_batch(3, event=self.event, role=Figure.ROLE.RECOMMENDED)
+        self.event_query = '''
+        query MyQuery {
+          eventList {
+            results {
+              reviewCount {
+                progress
+                reviewApprovedCount
+                reviewInProgressCount
+                reviewNotStartedCount
+                reviewReRequestCount
+                totalCount
+              }
+            }
+          }
+        }
+        '''
+
+    def test_progress(self) -> None:
+        self.force_login(self.admin)
+        response = self.query(
+            self.event_query,
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        # Initially all counts should be zero
+        event_data = content['data']['eventList']['results'][0]
+        self.assertEqual(event_data['reviewCount']['progress'], 0)
+        self.assertEqual(event_data['reviewCount']['reviewApprovedCount'], 0)
+        self.assertEqual(event_data['reviewCount']['reviewInProgressCount'], 0)
+        self.assertEqual(event_data['reviewCount']['reviewNotStartedCount'], 3)
+        self.assertEqual(event_data['reviewCount']['reviewReRequestCount'], 0)
+
+        # Update figure status and check review counts
+        self.f1.review_status = Figure.FigureReviewStatus.REVIEW_IN_PROGRESS
+        self.f1.save()
+        response = self.query(
+            self.event_query,
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        event_data = content['data']['eventList']['results'][0]
+        self.assertEqual(event_data['reviewCount']['progress'], 0)
+        self.assertEqual(event_data['reviewCount']['reviewApprovedCount'], 0)
+        self.assertEqual(event_data['reviewCount']['reviewInProgressCount'], 1)
+        self.assertEqual(event_data['reviewCount']['reviewNotStartedCount'], 2)
+        self.assertEqual(event_data['reviewCount']['reviewReRequestCount'], 0)
+
+        # Make all figures approved and check review counts
+        for figure in [self.f1, self.f2, self.f3]:
+            figure.review_status = Figure.FigureReviewStatus.APPROVED
+            figure.save()
+
+        response = self.query(
+            self.event_query,
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        event_data = content['data']['eventList']['results'][0]
+        self.assertEqual(event_data['reviewCount']['progress'], 1.0)
+        self.assertEqual(event_data['reviewCount']['reviewApprovedCount'], 3)
+        self.assertEqual(event_data['reviewCount']['reviewInProgressCount'], 0)
+        self.assertEqual(event_data['reviewCount']['reviewNotStartedCount'], 0)
+        self.assertEqual(event_data['reviewCount']['reviewReRequestCount'], 0)
