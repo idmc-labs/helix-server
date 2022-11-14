@@ -315,6 +315,20 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 )
 
             ),
+            'total_count': (
+                models.F('review_not_started_count') +
+                models.F('review_in_progress_count') +
+                models.F('review_re_request_count') +
+                models.F('review_approved_count')
+            ),
+            'progress': models.Case(
+                models.When(
+                    total_count__gt=0,
+                    then=models.F('review_approved_count') / models.F('total_count')
+                ),
+                default=models.Value(0),
+                output_field=models.FloatField()
+            )
         }
 
     @classmethod

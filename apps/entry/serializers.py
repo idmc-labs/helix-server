@@ -652,7 +652,6 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                     old_event_id = fig_ser.data.get('event_id')
                     # Change if event id changed and update event review status
                     if new_event_id != old_event_id:
-                        Figure.update_event_status(new_event_id)
                         Figure.update_event_status(old_event_id)
 
         elif isinstance(figures, list) and not figures:
