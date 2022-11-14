@@ -145,10 +145,12 @@ class DisasterCategoryListType(CustomDjangoListObjectType):
 
 
 class EventReviewCountType(graphene.ObjectType):
-    under_review_count = graphene.Int(required=False)
-    signed_off_count = graphene.Int(required=False)
-    review_complete_count = graphene.Int(required=False)
-    to_be_reviewed_count = graphene.Int(required=False)
+    review_not_started_count= graphene.Int(required=False)
+    review_in_progress_count= graphene.Int(required=False)
+    review_re_request_count= graphene.Int(required=False)
+    review_approved_count= graphene.Int(required=False)
+    total_count = graphene.Int(required=False)
+    progress = graphene.Int(required=False)
 
 
 class OsvSubObjectType(DjangoObjectType):
@@ -183,6 +185,8 @@ class OtherSubTypeList(CustomDjangoListObjectType):
         }
 
 
+
+
 class EventType(DjangoObjectType):
 
     class Meta:
@@ -210,6 +214,7 @@ class EventType(DjangoObjectType):
     figure_typology = graphene.List(graphene.String)
     review_status = graphene.Field(EventReviewStatusEnum)
     review_status_display = EnumDescription(source='get_event_review_status_display')
+    review_count = graphene.Field(EventReviewCountType)
 
     def resolve_entry_count(root, info, **kwargs):
         return info.context.event_entry_count_dataloader.load(root.id)
@@ -241,6 +246,9 @@ class EventType(DjangoObjectType):
         if value != NULL:
             return value
         return info.context.event_event_total_flow_nd_figures.load(root.id)
+
+    def resolve_review_count(root, info, **kwargs):
+        return info.context.event_review_count_dataloader.load(root.id)
 
 
 class EventListType(CustomDjangoListObjectType):

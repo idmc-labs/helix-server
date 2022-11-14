@@ -23,6 +23,7 @@ from apps.event.dataloaders import (
     EventEntryCountLoader,
     EventTypologyLoader,
     EventFigureTypologyLoader,
+    EventReviewCountLoader,
 )
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 from apps.entry.models import Figure
@@ -149,3 +150,7 @@ class GQLContext:
     @cached_property
     def event_count_dataloader(self):
         return EventCountLoader()
+
+    @cached_property
+    def event_review_count_dataloader(self):
+        return EventReviewCountLoader()
