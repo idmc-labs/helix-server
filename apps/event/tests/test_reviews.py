@@ -1,6 +1,7 @@
 import json
 from apps.users.enums import USER_ROLE
 from utils.factories import EventFactory
+from apps.event.models import Event
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
@@ -89,7 +90,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         '''
         self.sign_off_event = '''
         mutation signOffEvent($event_id: ID!) {
-            SignOffEvent(eventId: $event_id) {
+            signOffEvent(eventId: $event_id) {
                 errors
                 result {
                   id
@@ -263,7 +264,11 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
     def test_sign_off_event(self) -> None:
         users = [self.regional_coordinator, self.admin]
         for user in users:
-            event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
+            event = EventFactory.create(
+              assigner=self.regional_coordinator,
+              assignee=self.monitoring_expert,
+              review_status=Event.EventReviewStatus.APPROVED,
+            )
             self.force_login(user)
             input = {'event_id': event.id}
             response = self.query(
