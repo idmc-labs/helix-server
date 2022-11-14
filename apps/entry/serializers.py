@@ -647,6 +647,14 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         fig_ser._validated_data = {**each, 'entry': entry}
                     fig_ser._errors = {}
                     fig_ser.save()
+
+                    new_event_id = each.get('event_id')
+                    old_event_id = fig_ser.data.get('event_id')
+                    # Change if event id changed and update event review status
+                    if new_event_id != old_event_id:
+                        Figure.update_event_status(new_event_id)
+                        Figure.update_event_status(old_event_id)
+
         elif isinstance(figures, list) and not figures:
             # If figure is empty list remove all figures associated with entry
             Figure.objects.filter(entry=instance).delete()
