@@ -87,6 +87,19 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             }
         }
         '''
+        self.sign_off_event = '''
+        mutation signOffEvent($event_id: ID!) {
+            SignOffEvent(eventId: $event_id) {
+                errors
+                result {
+                  id
+                  reviewStatus
+               }
+              ok
+              errors
+            }
+        }
+        '''
 
     def test_user_can_set_assignee_on_an_event(self) -> None:
         # Test admin, regional_coordinator can be assign assignees
@@ -246,3 +259,18 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertTrue(content['data']['clearSelfAssigneeFromEvent']['ok'], content)
             self.assertIsNone(content['data']['clearSelfAssigneeFromEvent']['errors'], content)
             self.assertIsNone(content['data']['clearSelfAssigneeFromEvent']['result']['assigner'], None)
+
+    def test_sign_off_event(self) -> None:
+        users = [self.regional_coordinator, self.admin]
+        for user in users:
+            event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
+            self.force_login(user)
+            input = {'event_id': event.id}
+            response = self.query(
+                self.sign_off_event,
+                variables=input,
+            )
+            content = json.loads(response.content)
+            self.assertResponseNoErrors(response)
+            self.assertTrue(content['data']['signOffEvent']['ok'], content)
+            self.assertIsNone(content['data']['signOffEvent']['errors'], content)

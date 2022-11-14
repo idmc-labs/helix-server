@@ -437,6 +437,30 @@ class ClearSelfAssigneFromEvent(graphene.Mutation):
         return ClearSelfAssigneFromEvent(result=event, errors=None, ok=True)
 
 
+class SignOffEvent(graphene.Mutation):
+    class Arguments:
+        event_id = graphene.ID(required=True)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(EventType)
+
+    @staticmethod
+    @permission_checker(['event.sign_off_event'])
+    def mutate(root, info, event_id):
+        event = Event.objects.filter(id=event_id).first()
+        if not event:
+            return ClearSelfAssigneFromEvent(errors=[
+                dict(field='event_id', messages=gettext('Event does not exist.'))
+            ])
+        if not event.review_status == Event.EventReviewStatus.APPROVED:
+            return ClearSelfAssigneFromEvent(errors=[
+                dict(field='event_id', messages=gettext('Event is not approved yet.'))
+            ])
+        event.review_status = Event.EventReviewStatus.SIGNED_OFF
+        event.save()
+        return ClearSelfAssigneFromEvent(result=event, errors=None, ok=True)
+
+
 class Mutation(object):
     create_event = CreateEvent.Field()
     update_event = UpdateEvent.Field()
@@ -458,3 +482,4 @@ class Mutation(object):
     set_self_assignee_to_event = SetSelfAssigneeToEvent.Field()
     clear_assignee_from_event = ClearAssigneFromEvent.Field()
     clear_self_assignee_from_event = ClearSelfAssigneFromEvent.Field()
+    sign_off_event = SignOffEvent.Field()

@@ -1675,6 +1675,7 @@ type Mutation {
   setSelfAssigneeToEvent(eventId: ID!): SetSelfAssigneeToEvent
   clearAssigneeFromEvent(eventId: ID!): ClearAssigneFromEvent
   clearSelfAssigneeFromEvent(eventId: ID!): ClearSelfAssigneFromEvent
+  signOffEvent(eventId: ID!): SignOffEvent
   createCrisis(data: CrisisCreateInputType!): CreateCrisis
   updateCrisis(data: CrisisUpdateInputType!): UpdateCrisis
   deleteCrisis(id: ID!): DeleteCrisis
@@ -2655,6 +2656,12 @@ type SetAssigneeToEvent {
 }
 
 type SetSelfAssigneeToEvent {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: EventType
+}
+
+type SignOffEvent {
   errors: [GenericScalar!]
   ok: Boolean
   result: EventType
