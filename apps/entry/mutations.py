@@ -338,7 +338,7 @@ class ApproveFigure(graphene.Mutation):
     result = graphene.Field(FigureType)
 
     @staticmethod
-    @permission_checker(['entry.qa_approve_figure'])
+    @permission_checker(['entry.approve_figure'])
     def mutate(root, info, id):
         figure = Figure.objects.filter(id=id).first()
         if not figure:
@@ -361,7 +361,7 @@ class UnapproveFigure(graphene.Mutation):
     result = graphene.Field(FigureType)
 
     @staticmethod
-    @permission_checker(['entry.qa_approve_figure'])
+    @permission_checker(['entry.approve_figure'])
     @is_authenticated()
     def mutate(root, info, id):
         figure = Figure.objects.filter(id=id).first()
