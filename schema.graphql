@@ -2065,7 +2065,6 @@ enum PERMISSION_ACTION {
   self_assign
   clear_assignee
   clear_self_assignee
-  qa_approve
 }
 
 enum PERMISSION_ENTITY {
