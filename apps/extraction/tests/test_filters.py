@@ -60,17 +60,20 @@ class TestExtractionFilter(HelixTestCase):
         FigureFactory.create(entry=cls.entry1ev1,
                              country=cls.country2reg2,
                              category=cls.fig_cat1,
+                             figure_cause=Crisis.CRISIS_TYPE.DISASTER,
                              disaggregation_displacement_rural=100,
                              event=cls.event1crisis1,)
         cls.entry2ev1 = EntryFactory.create(article_title="two")
         FigureFactory.create(entry=cls.entry2ev1,
                              country=cls.country2reg2,
                              category=cls.fig_cat2,
+                             figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
                              disaggregation_displacement_urban=100,
                              event=cls.event1crisis1,)
         cls.entry3ev2 = EntryFactory.create(article_title="three")
         FigureFactory.create(entry=cls.entry3ev2,
                              category=cls.fig_cat3,
+                             figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
                              country=cls.country3reg3,
                              event=cls.event2crisis1,)
         cls.mid_sep = '2020-09-15'
@@ -134,11 +137,12 @@ class TestExtractionFilter(HelixTestCase):
     def test_filter_by_filter_figure_crisis_types(self):
         crisis_types = [Crisis.CRISIS_TYPE.DISASTER]
         fqs = f(data=dict(filter_figure_crisis_types=crisis_types)).qs
-        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1, self.entry3ev2})
+        self.assertEqual(set(fqs), {self.entry1ev1, self.entry3ev2, self.entry2ev1})
+
         crisis_types = [Crisis.CRISIS_TYPE.CONFLICT]
         fqs = f(data=dict(filter_figure_crisis_types=crisis_types)).qs
-        self.assertEqual(set(fqs), {self.entry1ev1, self.entry3ev2})
-        # now from client
+        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1, self.entry3ev2})
+
         crisis_types = ["CONFLICT", "DISASTER"]
         fqs = f(data=dict(filter_figure_crisis_types=crisis_types)).qs
         self.assertEqual(set(fqs), {self.entry3ev2, self.entry1ev1, self.entry2ev1})
