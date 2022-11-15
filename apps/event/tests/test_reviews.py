@@ -196,8 +196,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
 
         # Test assigner or assignee or admin can clear assignee
         users = [self.regional_coordinator, self.admin]
+        event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
         for user in users:
-            event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
             self.force_login(user)
             input = {'event_id': event.id}
             response = self.query(
@@ -265,9 +265,9 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         users = [self.regional_coordinator, self.admin]
         for user in users:
             event = EventFactory.create(
-              assigner=self.regional_coordinator,
-              assignee=self.monitoring_expert,
-              review_status=Event.EventReviewStatus.APPROVED,
+                assigner=self.regional_coordinator,
+                assignee=self.monitoring_expert,
+                review_status=Event.EventReviewStatus.APPROVED,
             )
             self.force_login(user)
             input = {'event_id': event.id}
