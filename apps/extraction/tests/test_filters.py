@@ -59,15 +59,18 @@ class TestExtractionFilter(HelixTestCase):
         cls.entry1ev1 = EntryFactory.create(article_title="one")
         FigureFactory.create(entry=cls.entry1ev1,
                              country=cls.country2reg2,
+                             category=cls.fig_cat1,
                              disaggregation_displacement_rural=100,
                              event=cls.event1crisis1,)
         cls.entry2ev1 = EntryFactory.create(article_title="two")
         FigureFactory.create(entry=cls.entry2ev1,
                              country=cls.country2reg2,
+                             category=cls.fig_cat2,
                              disaggregation_displacement_urban=100,
                              event=cls.event1crisis1,)
         cls.entry3ev2 = EntryFactory.create(article_title="three")
         FigureFactory.create(entry=cls.entry3ev2,
+                             category=cls.fig_cat3,
                              country=cls.country3reg3,
                              event=cls.event2crisis1,)
         cls.mid_sep = '2020-09-15'
