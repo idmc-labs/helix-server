@@ -1,13 +1,37 @@
 from apps.users.enums import USER_ROLE
-from utils.factories import UnifiedReviewCommentFactory
+from apps.entry.models import Figure
+from apps.review.models import UnifiedReviewComment
+from utils.factories import UnifiedReviewCommentFactory, EventFactory, FigureFactory
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
-class TestUpdateReviewComment(HelixGraphQLTestCase):
+class TestReviewComment(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.instance = UnifiedReviewCommentFactory.create(created_by=self.creator)
-        self.mutation = '''
+
+        self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.regional_coordinator = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
+        self.monitoring_expert = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.event = EventFactory.create(assigner=self.admin, assignee=self.regional_coordinator)
+        self.figure = FigureFactory.create(
+            event=self.event,
+            role=Figure.ROLE.RECOMMENDED
+        )
+
+        self.create_comment = '''
+        mutation($input: UnifiedReviewCommentCreateInputType!){
+          createReviewComment(data: $input) {
+            ok
+            errors
+            result {
+              comment
+            }
+          }
+        }
+        '''
+
+        self.update_comment = '''
         mutation($input: CommentUpdateInputType!){
           updateReviewComment(data: $input) {
             ok
@@ -22,11 +46,16 @@ class TestUpdateReviewComment(HelixGraphQLTestCase):
             "id": self.instance.id,
             "comment": "updated comment comment",
         }
+        self.create_input = {
+            "comment": "updated comment comment",
+            "figure": self.figure.id,
+            "event": self.event.id,
+        }
 
     def test_valid_review_comment_update(self) -> None:
         self.force_login(self.creator)
         response = self.query(
-            self.mutation,
+            self.update_comment,
             input_data=self.input
         )
 
@@ -41,7 +70,7 @@ class TestUpdateReviewComment(HelixGraphQLTestCase):
         different_user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(different_user)
         response = self.query(
-            self.mutation,
+            self.update_comment,
             input_data=self.input
         )
 
@@ -51,12 +80,66 @@ class TestUpdateReviewComment(HelixGraphQLTestCase):
         self.assertIn('does not exist',
                       content['data']['updateReviewComment']['errors'][0]['messages'].lower())
 
+    def test_assignee_can_create_all_types_of_comments(self):
+        self.force_login(self.regional_coordinator)
+        for comment_type in [
+            UnifiedReviewComment.ReviewCommentType.GREEN.name,
+            UnifiedReviewComment.ReviewCommentType.RED.name,
+            UnifiedReviewComment.ReviewCommentType.GREY.name,
+        ]:
+            self.create_input['commentType'] = comment_type
+            response = self.query(
+                self.create_comment,
+                input_data=self.create_input
+            )
+            content = response.json()
+            self.assertResponseNoErrors(response)
+            self.assertTrue(content['data']['createReviewComment']['ok'], content)
+            self.assertEqual(content['data']['createReviewComment']['result']['comment'],
+                             self.input['comment'])
+
+    def test_other_than_assignee_can_create_general_comments_only(self):
+        for user in [
+            self.admin,
+            self.monitoring_expert,
+        ]:
+            self.force_login(user)
+            self.create_input['commentType'] = UnifiedReviewComment.ReviewCommentType.GREY.name
+            response = self.query(
+                self.create_comment,
+                input_data=self.create_input
+            )
+            content = response.json()
+            self.assertResponseNoErrors(response)
+            self.assertTrue(content['data']['createReviewComment']['ok'], content)
+            self.assertEqual(content['data']['createReviewComment']['result']['comment'],
+                             self.input['comment'])
+
+    def test_other_than_assignee_can_not_create_approval_comments(self):
+        for user in [
+            self.admin,
+            self.monitoring_expert,
+        ]:
+            self.force_login(user)
+            for comment_type in [
+                UnifiedReviewComment.ReviewCommentType.GREEN.name,
+                UnifiedReviewComment.ReviewCommentType.RED.name,
+            ]:
+                self.create_input['commentType'] = comment_type
+                response = self.query(
+                    self.create_comment,
+                    input_data=self.create_input
+                )
+                content = response.json()
+                self.assertResponseNoErrors(response)
+                self.assertFalse(content['data']['createReviewComment']['ok'])
+
 
 class TestDeleteReviewComment(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.instance = UnifiedReviewCommentFactory.create(created_by=self.creator)
-        self.mutation = '''
+        self.delete_comment = '''
         mutation DeleteReviewComment($id: ID!) {
           deleteReviewComment(id: $id) {
             ok
@@ -75,7 +158,7 @@ class TestDeleteReviewComment(HelixGraphQLTestCase):
     def test_valid_review_comment_delete(self) -> None:
         self.force_login(self.instance.created_by)
         response = self.query(
-            self.mutation,
+            self.delete_comment,
             variables=self.variables
         )
 
@@ -90,7 +173,7 @@ class TestDeleteReviewComment(HelixGraphQLTestCase):
         reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
         response = self.query(
-            self.mutation,
+            self.delete_comment,
             variables=self.variables
         )
 
