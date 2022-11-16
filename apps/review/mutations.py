@@ -68,18 +68,18 @@ class CreateUnifiedReviewComment(graphene.Mutation):
             serialized_data = serializer.validated_data
             review_comment = serialized_data.get('comment_type')
             event = serialized_data.get('event')
-            if event and review_comment != UnifiedReviewComment.ReviewCommentType.GREY:
-                if(
-                    (not event.assignee and event.assignee == info.context.user) or
-                    (not event.assignee == info.context.user)
-                ):
-                    return UpdateUnifiedReviewComment(
-                        errors=[
-                            dict(field='nonFieldErrors',
-                                 messages=gettext('Assignee not set or permission denied'))
-                        ],
-                        ok=False
-                    )
+            if (
+                event and
+                review_comment != UnifiedReviewComment.ReviewCommentType.GREY and
+                (not event.assignee or event.assignee != info.context.user)
+            ):
+                return UpdateUnifiedReviewComment(
+                    errors=[
+                        dict(field='nonFieldErrors',
+                             messages=gettext('Assignee not set or you are not the assignee.'))
+                    ],
+                    ok=False
+                )
 
         if errors := mutation_is_not_valid(serializer):
             return CreateUnifiedReviewComment(errors=errors, ok=False)
