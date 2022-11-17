@@ -103,6 +103,7 @@ LOCAL_APPS = [
     'parking_lot',
     'contextualupdate',
     'report',
+    'notification',
 ]
 
 THIRD_PARTY_APPS = [
