@@ -9,6 +9,7 @@ from apps.crisis.dataloaders import (
     TotalIDPFigureByCrisisLoader,
     TotalNDFigureByCrisisLoader,
     EventCountLoader,
+    CrisisReviewCountLoader,
 )
 from apps.entry.dataloaders import (
     TotalIDPFigureByEntryLoader,
@@ -154,3 +155,7 @@ class GQLContext:
     @cached_property
     def event_review_count_dataloader(self):
         return EventReviewCountLoader()
+
+    @cached_property
+    def crisis_review_count_dataloader(self):
+        return CrisisReviewCountLoader()
