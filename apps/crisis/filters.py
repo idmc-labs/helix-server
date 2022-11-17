@@ -66,5 +66,6 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
     def qs(self):
         return super().qs.annotate(
             **Crisis._total_figure_disaggregation_subquery(),
+            **Crisis.annotate_review_figures_count(),
             event_count=Count('events'),
         ).prefetch_related('events').distinct()

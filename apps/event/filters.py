@@ -163,6 +163,7 @@ class EventFilter(NameFilterMixin,
     def qs(self):
         return super().qs.annotate(
             **Event._total_figure_disaggregation_subquery(),
+            **Event.annotate_review_figures_count(),
             entry_count=models.Subquery(
                 Figure.objects.filter(
                     event=models.OuterRef('pk')
