@@ -650,6 +650,15 @@ type CrisisListType {
   pageSize: Int
 }
 
+type CrisisReviewCountType {
+  reviewNotStartedCount: Int
+  reviewInProgressCount: Int
+  reviewReRequestCount: Int
+  reviewApprovedCount: Int
+  totalCount: Int
+  progress: Float
+}
+
 type CrisisType {
   createdAt: DateTime!
   modifiedAt: DateTime!
@@ -672,6 +681,7 @@ type CrisisType {
   startDateAccuracyDisplay: EnumDescription
   endDateAccuracyDisplay: EnumDescription
   eventCount: Int
+  reviewCount: CrisisReviewCountType
 }
 
 input CrisisUpdateInputType {
