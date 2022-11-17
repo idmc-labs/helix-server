@@ -4,9 +4,12 @@ from apps.users.enums import USER_ROLE
 from utils.factories import (
     CountryFactory,
     CrisisFactory,
+    EventFactory,
+    FigureFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from apps.entry.models import Figure
 
 
 class TestCreateCrisis(HelixGraphQLTestCase):
@@ -176,3 +179,71 @@ class TestCrisisDelete(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+
+
+class TestEventRewviewCount(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.crisis = CrisisFactory.create()
+        self.event = EventFactory.create(crisis=self.crisis)
+        self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.f1, self.f2, self.f3 = FigureFactory.create_batch(3, event=self.event, role=Figure.ROLE.RECOMMENDED)
+        self.event_query = '''
+        query MyQuery {
+          crisisList {
+            results {
+              reviewCount {
+                progress
+                reviewApprovedCount
+                reviewInProgressCount
+                reviewNotStartedCount
+                reviewReRequestCount
+                totalCount
+              }
+            }
+          }
+        }
+        '''
+
+    def test_progress(self) -> None:
+        self.force_login(self.admin)
+        response = self.query(
+            self.event_query,
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        crisis_data = content['data']['crisisList']['results'][0]
+        self.assertEqual(crisis_data['reviewCount']['progress'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewApprovedCount'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewInProgressCount'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewNotStartedCount'], 3)
+        self.assertEqual(crisis_data['reviewCount']['reviewReRequestCount'], 0)
+
+        self.f1.review_status = Figure.FigureReviewStatus.REVIEW_IN_PROGRESS
+        self.f1.save()
+        response = self.query(
+            self.event_query,
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        crisis_data = content['data']['crisisList']['results'][0]
+        self.assertEqual(crisis_data['reviewCount']['progress'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewApprovedCount'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewInProgressCount'], 1)
+        self.assertEqual(crisis_data['reviewCount']['reviewNotStartedCount'], 2)
+        self.assertEqual(crisis_data['reviewCount']['reviewReRequestCount'], 0)
+
+        for figure in [self.f1, self.f2, self.f3]:
+            figure.review_status = Figure.FigureReviewStatus.APPROVED
+            figure.save()
+
+        response = self.query(
+            self.event_query,
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        crisis_data = content['data']['crisisList']['results'][0]
+        self.assertEqual(crisis_data['reviewCount']['progress'], 1.0)
+        self.assertEqual(crisis_data['reviewCount']['reviewApprovedCount'], 3)
+        self.assertEqual(crisis_data['reviewCount']['reviewInProgressCount'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewNotStartedCount'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewReRequestCount'], 0)
