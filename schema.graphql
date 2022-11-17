@@ -1141,6 +1141,7 @@ type EventType {
   eventReviews: [UnifiedReviewCommentType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
+  events: [GenericNotificationType!]!
   eventTypeDisplay: EnumDescription
   totalStockIdpFigures: Int
   totalFlowNdFigures: Int
@@ -1474,6 +1475,7 @@ type FigureType {
   reviewStatus: FIGURE_REVIEW_STATUS
   figureReviewComments: [UnifiedReviewCommentType!]!
   reportSet: [ReportType!]!
+  figures: [GenericNotificationType!]!
   getQuantifier: EnumDescription
   unitDisplay: EnumDescription
   roleDisplay: EnumDescription
@@ -1571,6 +1573,24 @@ input GenerateResetPasswordTokenType {
   captcha: String!
   email: String!
   siteKey: String!
+}
+
+type GenericNotificationListType {
+  results: [GenericNotificationType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type GenericNotificationType {
+  id: ID!
+  notificationType: NotificationType
+  recipient: UserType!
+  isRead: Boolean!
+  event: EventType
+  figure: FigureType
+  createdAt: DateTime!
+  notificationTypeDisplay: EnumDescription
 }
 
 scalar GenericScalar
@@ -1841,6 +1861,15 @@ input NestedFigureUpdateInputType {
   disaggregationConflictCriminal: Int
   disaggregationConflictCommunal: Int
   disaggregationConflictOther: Int
+}
+
+enum NotificationType {
+  FIGURE_APPROVED
+  FIGURE_RE_REQUESTED_REVIEW
+  FIGURE_UN_APPROVED
+  EVENT_ASSIGNED
+  EVENT_ASSIGNEE_CLEARED
+  EVENT_SIGNED_OFF
 }
 
 enum ORGANIZATION_CATEGORY {
@@ -2218,6 +2247,8 @@ enum QUANTIFIER {
 }
 
 type Query {
+  notification(id: ID!): GenericNotificationType
+  notifications(events: [ID!], figures: [ID!], page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType
   report(id: ID!): ReportType
   reportList(name_Unaccent_Icontains: String, filterFigureCountries: [ID!], reviewStatus: [String!], startDateAfter: Date, endDateBefore: Date, isPublic: Boolean, page: Int = 1, ordering: String, pageSize: Int): ReportListType
