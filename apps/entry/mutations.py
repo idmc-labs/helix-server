@@ -345,7 +345,7 @@ class ApproveFigure(graphene.Mutation):
             return ApproveFigure(errors=[
                 dict(field='id', messages=gettext('Figure does not exist.'))
             ])
-        figure.review_status = Figure.FigureReviewStatus.APPROVED.value
+        figure.review_status = Figure.FIGURE_REVIEW_STATUS.APPROVED.value
         figure.approved_by = info.context.user
         figure.approved_on = timezone.now()
         figure.save()
@@ -369,9 +369,9 @@ class UnapproveFigure(graphene.Mutation):
             return UnapproveFigure(errors=[
                 dict(field='id', messages=gettext('Figure does not exist.'))
             ])
-        figure.review_status = Figure.FigureReviewStatus.REVIEW_NOT_STARTED
+        figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
         if figure.figure_review_comments.all().count() > 0:
-            figure.review_status = Figure.FigureReviewStatus.REVIEW_IN_PROGRESS
+            figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
         figure.approved_by = None
         figure.approved_on = None
         figure.save()
@@ -395,7 +395,7 @@ class ReRequestReivewFigure(graphene.Mutation):
             return ReRequestReivewFigure(errors=[
                 dict(field='id', messages=gettext('Figure does not exist.'))
             ])
-        figure.review_status = Figure.FigureReviewStatus.REVIEW_RE_REQUESTED
+        figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED
         figure.approved_by = None
         figure.approved_on = None
         figure.save()

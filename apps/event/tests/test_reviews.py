@@ -268,7 +268,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             event = EventFactory.create(
                 assigner=self.regional_coordinator,
                 assignee=self.monitoring_expert,
-                review_status=Event.EventReviewStatus.APPROVED,
+                review_status=Event.EVENT_REVIEW_STATUS.APPROVED,
             )
             self.force_login(user)
             input = {'event_id': event.id}
@@ -320,7 +320,7 @@ class TestEventRewviewCount(HelixGraphQLTestCase):
         self.assertEqual(event_data['reviewCount']['reviewReRequestCount'], 0)
 
         # Update figure status and check review counts
-        self.f1.review_status = Figure.FigureReviewStatus.REVIEW_IN_PROGRESS
+        self.f1.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
         self.f1.save()
         response = self.query(
             self.event_query,
@@ -336,7 +336,7 @@ class TestEventRewviewCount(HelixGraphQLTestCase):
 
         # Make all figures approved and check review counts
         for figure in [self.f1, self.f2, self.f3]:
-            figure.review_status = Figure.FigureReviewStatus.APPROVED
+            figure.review_status = Figure.FIGURE_REVIEW_STATUS.APPROVED
             figure.save()
 
         response = self.query(

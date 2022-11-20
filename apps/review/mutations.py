@@ -70,7 +70,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
             event = serialized_data.get('event')
             if (
                 event and
-                review_comment != UnifiedReviewComment.ReviewCommentType.GREY and
+                review_comment != UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREY and
                 (not event.assignee or event.assignee != info.context.user)
             ):
                 return UpdateUnifiedReviewComment(

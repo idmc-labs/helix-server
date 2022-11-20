@@ -23,7 +23,7 @@ class UnifiedReviewCommentFilter(df.FilterSet):
             if isinstance(value[0], int):
                 return qs.filter(field__in=value).distinct()
             return qs.filter(field__in=[
-                UnifiedReviewComment.ReviewFieldType.get(item).value for item in value
+                UnifiedReviewComment.REVIEW_FIELD_TYPE.get(item).value for item in value
             ])
         return qs
 

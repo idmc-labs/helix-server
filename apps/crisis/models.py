@@ -155,20 +155,20 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             'review_not_started_count': models.Count(
                 'events__figures',
                 filter=models.Q(
-                    events__figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED,
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
                     events__figures__role=Figure.ROLE.RECOMMENDED,
                 ) | models.Q(
-                    events__figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED,
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
                     events__include_triangulation_in_qa=True,
                 )
             ),
             'review_in_progress_count': models.Count(
                 'events__figures',
                 filter=models.Q(
-                    events__figures__review_status=Figure.FigureReviewStatus.REVIEW_IN_PROGRESS,
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
                     events__figures__role=Figure.ROLE.RECOMMENDED,
                 ) | models.Q(
-                    events__figures__review_status=Figure.FigureReviewStatus.REVIEW_IN_PROGRESS,
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
                     events__include_triangulation_in_qa=True,
                 )
 
@@ -176,10 +176,10 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             'review_re_request_count': models.Count(
                 'events__figures',
                 filter=models.Q(
-                    events__figures__review_status=Figure.FigureReviewStatus.REVIEW_RE_REQUESTED,
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
                     events__figures__role=Figure.ROLE.RECOMMENDED,
                 ) | models.Q(
-                    events__figures__review_status=Figure.FigureReviewStatus.REVIEW_RE_REQUESTED,
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
                     events__include_triangulation_in_qa=True,
                 )
 
@@ -187,10 +187,10 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             'review_approved_count': models.Count(
                 'events__figures',
                 filter=models.Q(
-                    events__figures__review_status=Figure.FigureReviewStatus.APPROVED,
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
                     events__figures__role=Figure.ROLE.RECOMMENDED,
                 ) | models.Q(
-                    events__figures__review_status=Figure.FigureReviewStatus.APPROVED,
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
                     events__include_triangulation_in_qa=True,
                 )
             ),

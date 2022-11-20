@@ -293,7 +293,7 @@ class EntryExtractionFilterSet(df.FilterSet):
             if isinstance(value[0], int):
                 return qs.filter(figures__review_status__in=value)
             return qs.filter(
-                figures__review_status__in=[Figure.FigureReviewStatus.get(item).value for item in value]
+                figures__review_status__in=[Figure.FIGURE_REVIEW_STATUS.get(item).value for item in value]
             )
         return qs
 
@@ -564,7 +564,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             if isinstance(value[0], int):
                 return qs.filter(review_status__in=value)
             return qs.filter(
-                review_status__in=[Figure.FigureReviewStatus.get(item).value for item in value]
+                review_status__in=[Figure.FIGURE_REVIEW_STATUS.get(item).value for item in value]
             )
         return qs
 

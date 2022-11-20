@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='review_status',
-            field=django_enumfield.db.fields.EnumField(default=0, enum=apps.event.models.Event.EventReviewStatus),
+            field=django_enumfield.db.fields.EnumField(default=0, enum=apps.event.models.Event.EVENT_REVIEW_STATUS),
         ),
     ]

@@ -86,7 +86,7 @@ class EventFilter(NameFilterMixin,
             if isinstance(value[0], int):
                 return qs.filter(review_status__in=value).distinct()
             return qs.filter(review_status__in=[
-                Event.EventReviewStatus.get(item).value for item in value
+                Event.EVENT_REVIEW_STATUS.get(item).value for item in value
             ]).distinct()
         return qs
 

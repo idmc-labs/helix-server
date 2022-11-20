@@ -452,11 +452,11 @@ class SignOffEvent(graphene.Mutation):
             return ClearSelfAssigneFromEvent(errors=[
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
-        if not event.review_status == Event.EventReviewStatus.APPROVED:
+        if not event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
             return ClearSelfAssigneFromEvent(errors=[
                 dict(field='event_id', messages=gettext('Event is not approved yet.'))
             ])
-        event.review_status = Event.EventReviewStatus.SIGNED_OFF
+        event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
         event.save()
         return ClearSelfAssigneFromEvent(result=event, errors=None, ok=True)
 
