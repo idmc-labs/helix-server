@@ -83,9 +83,9 @@ class TestReviewComment(HelixGraphQLTestCase):
     def test_assignee_can_create_all_types_of_comments(self):
         self.force_login(self.regional_coordinator)
         for comment_type in [
-            UnifiedReviewComment.ReviewCommentType.GREEN.name,
-            UnifiedReviewComment.ReviewCommentType.RED.name,
-            UnifiedReviewComment.ReviewCommentType.GREY.name,
+            UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN.name,
+            UnifiedReviewComment.REVIEW_COMMENT_TYPE.RED.name,
+            UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREY.name,
         ]:
             self.create_input['commentType'] = comment_type
             response = self.query(
@@ -104,7 +104,7 @@ class TestReviewComment(HelixGraphQLTestCase):
             self.monitoring_expert,
         ]:
             self.force_login(user)
-            self.create_input['commentType'] = UnifiedReviewComment.ReviewCommentType.GREY.name
+            self.create_input['commentType'] = UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREY.name
             response = self.query(
                 self.create_comment,
                 input_data=self.create_input
@@ -122,8 +122,8 @@ class TestReviewComment(HelixGraphQLTestCase):
         ]:
             self.force_login(user)
             for comment_type in [
-                UnifiedReviewComment.ReviewCommentType.GREEN.name,
-                UnifiedReviewComment.ReviewCommentType.RED.name,
+                UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN.name,
+                UnifiedReviewComment.REVIEW_COMMENT_TYPE.RED.name,
             ]:
                 self.create_input['commentType'] = comment_type
                 response = self.query(

@@ -377,7 +377,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             MULTIPLE_OR_OTHER: _('Multiple/Other'),
         }
 
-    class FigureReviewStatus(enum.Enum):
+    class FIGURE_REVIEW_STATUS(enum.Enum):
         REVIEW_NOT_STARTED = 0
         REVIEW_IN_PROGRESS = 1
         APPROVED = 2
@@ -525,8 +525,8 @@ class Figure(MetaInformationArchiveAbstractModel,
     )
     approved_on = models.DateTimeField(verbose_name='Assigned at', null=True, blank=True)
     review_status = enum.EnumField(
-        enum=FigureReviewStatus, verbose_name=_('Figure status'),
-        default=FigureReviewStatus.REVIEW_NOT_STARTED
+        enum=FIGURE_REVIEW_STATUS, verbose_name=_('Figure status'),
+        default=FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
     )
 
     class Meta:
@@ -966,13 +966,13 @@ class Figure(MetaInformationArchiveAbstractModel,
         total_count = event.total_count
 
         if not total_count:
-            event.review_status = Event.EventReviewStatus.REVIEW_NOT_STARTED.value
+            event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED.value
         elif review_approved_count == total_count:
-            event.review_status = Event.EventReviewStatus.APPROVED.value
+            event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
         elif review_not_started_count == total_count:
-            event.review_status = Event.EventReviewStatus.REVIEW_NOT_STARTED.value
+            event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED.value
         else:
-            event.review_status = Event.EventReviewStatus.REVIEW_IN_PROGRESS.value
+            event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value
         event.save()
 
     def can_be_updated_by(self, user: User) -> bool:

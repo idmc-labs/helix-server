@@ -218,7 +218,7 @@ class TestEventRewviewCount(HelixGraphQLTestCase):
         self.assertEqual(crisis_data['reviewCount']['reviewNotStartedCount'], 3)
         self.assertEqual(crisis_data['reviewCount']['reviewReRequestCount'], 0)
 
-        self.f1.review_status = Figure.FigureReviewStatus.REVIEW_IN_PROGRESS
+        self.f1.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
         self.f1.save()
         response = self.query(
             self.event_query,
@@ -233,7 +233,7 @@ class TestEventRewviewCount(HelixGraphQLTestCase):
         self.assertEqual(crisis_data['reviewCount']['reviewReRequestCount'], 0)
 
         for figure in [self.f1, self.f2, self.f3]:
-            figure.review_status = Figure.FigureReviewStatus.APPROVED
+            figure.review_status = Figure.FIGURE_REVIEW_STATUS.APPROVED
             figure.save()
 
         response = self.query(

@@ -134,7 +134,7 @@ class DisasterSubType(NameAttributedModels):
 
 
 class Event(MetaInformationArchiveAbstractModel, models.Model):
-    class EventReviewStatus(enum.Enum):
+    class EVENT_REVIEW_STATUS(enum.Enum):
         REVIEW_NOT_STARTED = 0
         REVIEW_IN_PROGRESS = 1
         APPROVED = 2
@@ -228,9 +228,9 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     )
     assigned_at = models.DateTimeField(verbose_name='Assigned at', null=True, blank=True)
     review_status = enum.EnumField(
-        EventReviewStatus,
+        EVENT_REVIEW_STATUS,
         verbose_name=_('Event status'),
-        default=EventReviewStatus.REVIEW_NOT_STARTED,
+        default=EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED,
     )
     include_triangulation_in_qa = models.BooleanField(
         verbose_name='Include triangulation in qa?', default=False,
@@ -275,20 +275,20 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             'review_not_started_count': models.Count(
                 'figures',
                 filter=models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED,
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
                     figures__role=Figure.ROLE.RECOMMENDED,
                 ) | models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.REVIEW_NOT_STARTED,
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
                     include_triangulation_in_qa=True,
                 )
             ),
             'review_in_progress_count': models.Count(
                 'figures',
                 filter=models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.REVIEW_IN_PROGRESS,
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
                     figures__role=Figure.ROLE.RECOMMENDED,
                 ) | models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.REVIEW_IN_PROGRESS,
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
                     include_triangulation_in_qa=True,
                 )
 
@@ -296,10 +296,10 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             'review_re_request_count': models.Count(
                 'figures',
                 filter=models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.REVIEW_RE_REQUESTED,
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
                     figures__role=Figure.ROLE.RECOMMENDED,
                 ) | models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.REVIEW_RE_REQUESTED,
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
                     include_triangulation_in_qa=True,
                 )
 
@@ -307,10 +307,10 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             'review_approved_count': models.Count(
                 'figures',
                 filter=models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.APPROVED,
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
                     figures__role=Figure.ROLE.RECOMMENDED,
                 ) | models.Q(
-                    figures__review_status=Figure.FigureReviewStatus.APPROVED,
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
                     include_triangulation_in_qa=True,
                 )
 

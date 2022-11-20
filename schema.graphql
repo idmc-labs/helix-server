@@ -1102,7 +1102,7 @@ type EventReviewCountType {
   progress: Float
 }
 
-enum EventReviewStatus {
+enum EVENT_REVIEW_STATUS {
   REVIEW_NOT_STARTED
   REVIEW_IN_PROGRESS
   APPROVED
@@ -1141,7 +1141,7 @@ type EventType {
   assigner: UserType
   assignee: UserType
   assignedAt: DateTime
-  reviewStatus: EventReviewStatus
+  reviewStatus: EVENT_REVIEW_STATUS
   includeTriangulationInQa: Boolean!
   eventReviews: [UnifiedReviewCommentType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
@@ -1303,7 +1303,7 @@ type ExtractionQueryObjectType {
   filterEntryCreatedBy: [UserType!]!
   filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
   filterFigureTerms: [FIGURE_TERMS!]
-  filterFigureReviewStatus: [FigureReviewStatus!]
+  filterFIGURE_REVIEW_STATUS: [FIGURE_REVIEW_STATUS!]
   filterFigureDisasterCategories: [DisasterCategoryType!]!
   filterFigureDisasterSubCategories: [DisasterSubCategoryType!]!
   filterFigureDisasterTypes: [DisasterTypeObjectType!]!
@@ -1370,7 +1370,7 @@ type FigureListType {
   pageSize: Int
 }
 
-enum FigureReviewStatus {
+enum FIGURE_REVIEW_STATUS {
   REVIEW_NOT_STARTED
   REVIEW_IN_PROGRESS
   APPROVED
@@ -1470,7 +1470,7 @@ type FigureType {
   sources(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], orderCountryFirst: [ID!], ordering: String): OrganizationListType
   approvedBy: UserType
   approvedOn: DateTime
-  reviewStatus: FigureReviewStatus
+  reviewStatus: FIGURE_REVIEW_STATUS
   figureReviewComments: [UnifiedReviewCommentType!]!
   reportSet: [ReportType!]!
   getQuantifier: EnumDescription
@@ -2637,13 +2637,13 @@ input ResourceUpdateInputType {
   countries: [ID!]
 }
 
-enum ReviewCommentType {
+enum REVIEW_COMMENT_TYPE {
   RED
   GREEN
   GREY
 }
 
-enum ReviewFieldType {
+enum REVIEW_FIELD_TYPE {
   FIGURE_SOURCE_EXCERPT
   FIGURE_ANALYSIS_CAVEATS_AND_CALCULATION_LOGIC
   FIGURE_SOURCES
@@ -2766,8 +2766,8 @@ input UnifiedReviewCommentCreateInputType {
   event: ID
   geoLocation: ID
   figure: ID
-  field: ReviewFieldType
-  commentType: ReviewCommentType
+  field: REVIEW_FIELD_TYPE
+  commentType: REVIEW_COMMENT_TYPE
   comment: String
 }
 
@@ -2788,8 +2788,8 @@ type UnifiedReviewCommentType {
   id: ID!
   event: EventType
   figure: FigureType
-  field: ReviewFieldType!
-  commentType: ReviewCommentType!
+  field: REVIEW_FIELD_TYPE!
+  commentType: REVIEW_COMMENT_TYPE!
   geoLocation: OSMNameType
   comment: String
   isEdited: Boolean!
