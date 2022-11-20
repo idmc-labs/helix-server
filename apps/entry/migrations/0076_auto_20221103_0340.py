@@ -28,6 +28,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='figure',
             name='review_status',
-            field=django_enumfield.db.fields.EnumField(default=0, enum=apps.entry.models.Figure.FigureReviewStatus),
+            field=django_enumfield.db.fields.EnumField(default=0, enum=apps.entry.models.Figure.FIGURE_REVIEW_STATUS),
         ),
     ]

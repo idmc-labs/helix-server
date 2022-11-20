@@ -16,6 +16,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='report',
             name='filter_figure_review_status',
-            field=django.contrib.postgres.fields.ArrayField(base_field=django_enumfield.db.fields.EnumField(enum=apps.entry.models.Figure.FigureReviewStatus), blank=True, null=True, size=None),
+            field=django.contrib.postgres.fields.ArrayField(base_field=django_enumfield.db.fields.EnumField(enum=apps.entry.models.Figure.FIGURE_REVIEW_STATUS), blank=True, null=True, size=None),
         ),
     ]

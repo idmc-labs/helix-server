@@ -84,7 +84,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertEqual(content['data']['approveFigure']['result']['id'], str(self.figure.id))
             self.assertEqual(
                 content['data']['approveFigure']['result']['reviewStatus'],
-                Figure.FigureReviewStatus.APPROVED.name
+                Figure.FIGURE_REVIEW_STATUS.APPROVED.name
             )
 
     def test_all_users_can_unapprove_figure_except_guest(self) -> None:
@@ -104,7 +104,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertEqual(content['data']['unapproveFigure']['result']['id'], str(self.figure.id))
             self.assertEqual(
                 content['data']['unapproveFigure']['result']['reviewStatus'],
-                Figure.FigureReviewStatus.REVIEW_NOT_STARTED.name
+                Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED.name
             )
 
     def test_all_users_can_re_request_review_figure_except_guest(self) -> None:
@@ -124,7 +124,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertEqual(content['data']['reRequestReviewFigure']['result']['id'], str(self.figure.id))
             self.assertEqual(
                 content['data']['reRequestReviewFigure']['result']['reviewStatus'],
-                Figure.FigureReviewStatus.REVIEW_RE_REQUESTED.name
+                Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED.name
             )
 
     def test_review_status_should_be_review_in_progress_if_figure_has_review_comments_during_unapprove(self) -> None:
@@ -144,7 +144,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertEqual(content['data']['unapproveFigure']['result']['id'], str(self.figure.id))
             self.assertEqual(
                 content['data']['unapproveFigure']['result']['reviewStatus'],
-                Figure.FigureReviewStatus.REVIEW_IN_PROGRESS.name
+                Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS.name
             )
 
     def test_event_status_should_be_changed_if_figure_status_updated(self) -> None:
@@ -159,7 +159,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         f4 = FigureFactory.create(event=event, role=Figure.ROLE.TRIANGULATION)
 
         # Initially event type should be REVIEW_NOT_STARTED
-        self.assertEqual(event.review_status, event.EventReviewStatus.REVIEW_NOT_STARTED)
+        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED)
 
         # If any figure one of many event figures is approved review status should be REVIEW_IN_PROGRESS
         response = self.query(
@@ -168,7 +168,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         )
         self.assertResponseNoErrors(response)
         event.refresh_from_db()
-        self.assertEqual(event.review_status, event.EventReviewStatus.REVIEW_IN_PROGRESS)
+        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS)
 
         # After all figures approved event should be also approved
         for figure in [f2, f3, f4]:
@@ -178,7 +178,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             )
             self.assertResponseNoErrors(response)
         event.refresh_from_db()
-        self.assertEqual(event.review_status, event.EventReviewStatus.APPROVED)
+        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.APPROVED)
 
         # If review re-requested event status should be changes to REVIEW_IN_PROGRESS
         response = self.query(
@@ -188,12 +188,12 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
 
         event.refresh_from_db()
-        self.assertEqual(event.review_status, event.EventReviewStatus.REVIEW_IN_PROGRESS)
+        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS)
 
     def test_event_status_should_be_calculated_if_include_triangulation_in_qa_is_changed(self):
-        event = EventFactory.create(include_triangulation_in_qa=False, review_status=Event.EventReviewStatus.APPROVED)
+        event = EventFactory.create(include_triangulation_in_qa=False, review_status=Event.EVENT_REVIEW_STATUS.APPROVED)
         FigureFactory.create(event=event, role=Figure.ROLE.TRIANGULATION)
-        self.assertEqual(event.review_status, event.EventReviewStatus.APPROVED)
+        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.APPROVED)
 
         self.force_login(self.regional_coordinator)
         response = self.query(
@@ -205,4 +205,4 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertTrue(content['data']['updateEvent']['ok'], content)
 
         event.refresh_from_db()
-        self.assertEqual(event.review_status, event.EventReviewStatus.REVIEW_NOT_STARTED)
+        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED)
