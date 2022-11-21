@@ -7,7 +7,6 @@ from apps.review.serializers import UnifiedReviewCommentSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 from utils.mutation import generate_input_type_for_serializer
-from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
 
 
 UnifiedReviewCommentCreateInputType = generate_input_type_for_serializer(
@@ -16,37 +15,9 @@ UnifiedReviewCommentCreateInputType = generate_input_type_for_serializer(
 )
 
 
-class CommentCreateInputType(graphene.InputObjectType):
-    comment = graphene.String(required=False)
-    event = graphene.ID(required=True)
-    comment_type = ReviewCommentTypeEnum
-    field = ReviewFieldTypeEnum
-
-
-class CommentUpdateInputType(graphene.InputObjectType):
+class UnifiedReviewCommentUpdateInputType(graphene.InputObjectType):
     id = graphene.ID(required=True)
     comment = graphene.String(required=True)
-
-
-class CreateComment(graphene.Mutation):
-    class Arguments:
-        data = CommentCreateInputType(required=True)
-
-    ok = graphene.Boolean()
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    result = graphene.Field(UnifiedReviewCommentType)
-
-    @staticmethod
-    @permission_checker(['review.add_reviewcomment'])
-    def mutate(root, info, data):
-        serializer = UnifiedReviewCommentSerializer(
-            data=data,
-            context={'request': info.context.request}, partial=True
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return CreateComment(errors=errors, ok=False)
-        instance = serializer.save()
-        return CreateComment(result=instance, errors=None, ok=True)
 
 
 class CreateUnifiedReviewComment(graphene.Mutation):
@@ -90,7 +61,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
 
 class UpdateUnifiedReviewComment(graphene.Mutation):
     class Arguments:
-        data = CommentUpdateInputType(required=True)
+        data = UnifiedReviewCommentUpdateInputType(required=True)
 
     ok = graphene.Boolean()
     errors = graphene.List(graphene.NonNull(CustomErrorType))

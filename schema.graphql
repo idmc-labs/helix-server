@@ -123,11 +123,6 @@ input CloneEventInputType {
   event: ID!
 }
 
-input CommentUpdateInputType {
-  id: ID!
-  comment: String!
-}
-
 input CommunicationCreateInputType {
   oldId: String
   versionId: String
@@ -532,7 +527,7 @@ input CreateExtractInputType {
   filterFigureGlideNumber: [String!]
   filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
   filterFigureTerms: [FIGURE_TERMS!]
-  filterFigureReviewStatus: [String!]
+  filterFigureReviewStatus: [FIGURE_REVIEW_STATUS!]
   filterFigureCategoryTypes: [String!]
   filterFigureHasDisaggregatedData: Boolean
   filterFigureGeographicalGroups: [ID!]
@@ -983,6 +978,13 @@ type DjangoDebugSQL {
   encoding: String
 }
 
+enum EVENT_REVIEW_STATUS {
+  REVIEW_NOT_STARTED
+  REVIEW_IN_PROGRESS
+  APPROVED
+  SIGNED_OFF
+}
+
 enum EXCEL_GENERATION_STATUS {
   PENDING
   IN_PROGRESS
@@ -1100,13 +1102,6 @@ type EventReviewCountType {
   reviewApprovedCount: Int
   totalCount: Int
   progress: Float
-}
-
-enum EVENT_REVIEW_STATUS {
-  REVIEW_NOT_STARTED
-  REVIEW_IN_PROGRESS
-  APPROVED
-  SIGNED_OFF
 }
 
 type EventType {
@@ -1303,7 +1298,7 @@ type ExtractionQueryObjectType {
   filterEntryCreatedBy: [UserType!]!
   filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
   filterFigureTerms: [FIGURE_TERMS!]
-  filterFIGURE_REVIEW_STATUS: [FIGURE_REVIEW_STATUS!]
+  filterFigureReviewStatus: [FIGURE_REVIEW_STATUS!]
   filterFigureDisasterCategories: [DisasterCategoryType!]!
   filterFigureDisasterSubCategories: [DisasterSubCategoryType!]!
   filterFigureDisasterTypes: [DisasterTypeObjectType!]!
@@ -1341,6 +1336,13 @@ enum FIGURE_CATEGORY_TYPES {
   FAILED_RELOCATION_ELSEWHERE
 }
 
+enum FIGURE_REVIEW_STATUS {
+  REVIEW_NOT_STARTED
+  REVIEW_IN_PROGRESS
+  APPROVED
+  REVIEW_RE_REQUESTED
+}
+
 enum FIGURE_TERMS {
   EVACUATED
   DISPLACED
@@ -1368,13 +1370,6 @@ type FigureListType {
   totalCount: Int
   page: Int
   pageSize: Int
-}
-
-enum FIGURE_REVIEW_STATUS {
-  REVIEW_NOT_STARTED
-  REVIEW_IN_PROGRESS
-  APPROVED
-  REVIEW_RE_REQUESTED
 }
 
 input FigureTagCreateInputType {
@@ -1642,7 +1637,7 @@ type Mutation {
   updateParkedItem(data: ParkedItemUpdateInputType!): UpdateParkedItem
   deleteParkedItem(id: ID!): DeleteParkedItem
   createReviewComment(data: UnifiedReviewCommentCreateInputType!): CreateUnifiedReviewComment
-  updateReviewComment(data: CommentUpdateInputType!): UpdateUnifiedReviewComment
+  updateReviewComment(data: UnifiedReviewCommentUpdateInputType!): UpdateUnifiedReviewComment
   deleteReviewComment(id: ID!): DeleteUnifiedReviewComment
   createResource(data: ResourceCreateInputType!): CreateResource
   updateResource(data: ResourceUpdateInputType!): UpdateResource
@@ -2306,6 +2301,31 @@ enum REPORT_TYPE {
   MASTERFACT
 }
 
+enum REVIEW_COMMENT_TYPE {
+  RED
+  GREEN
+  GREY
+}
+
+enum REVIEW_FIELD_TYPE {
+  FIGURE_SOURCE_EXCERPT
+  FIGURE_ANALYSIS_CAVEATS_AND_CALCULATION_LOGIC
+  FIGURE_SOURCES
+  FIGURE_ROLE
+  FIGURE_DISPLACEMENT_OCCURRED
+  FIGURE_TERM
+  FIGURE_REPORTED_FIGURE
+  FIGURE_CATEGORY
+  FIGURE_START_DATE
+  FIGURE_END_DATE
+  FIGURE_STOCK_DATE
+  FIGURE_STOCK_REPORTING_DATE
+  FIGURE_MAIN_TRIGGER_OF_REPORTED_FIGURE
+  FIGURE_COUNTRY
+  LOCATION_TYPE
+  LOCATION_ACCURACY
+}
+
 enum ROLE {
   RECOMMENDED
   TRIANGULATION
@@ -2635,31 +2655,6 @@ input ResourceUpdateInputType {
   countries: [ID!]
 }
 
-enum REVIEW_COMMENT_TYPE {
-  RED
-  GREEN
-  GREY
-}
-
-enum REVIEW_FIELD_TYPE {
-  FIGURE_SOURCE_EXCERPT
-  FIGURE_ANALYSIS_CAVEATS_AND_CALCULATION_LOGIC
-  FIGURE_SOURCES
-  FIGURE_ROLE
-  FIGURE_DISPLACEMENT_OCCURRED
-  FIGURE_TERM
-  FIGURE_REPORTED_FIGURE
-  FIGURE_CATEGORY
-  FIGURE_START_DATE
-  FIGURE_END_DATE
-  FIGURE_STOCK_DATE
-  FIGURE_STOCK_REPORTING_DATE
-  FIGURE_MAIN_TRIGGER_OF_REPORTED_FIGURE
-  FIGURE_COUNTRY
-  LOCATION_TYPE
-  LOCATION_ACCURACY
-}
-
 enum SOURCES_RELIABILITY {
   LOW
   MEDIUM
@@ -2796,6 +2791,11 @@ type UnifiedReviewCommentType {
   fieldDisplay: EnumDescription
 }
 
+input UnifiedReviewCommentUpdateInputType {
+  id: ID!
+  comment: String!
+}
+
 type UpdateActor {
   errors: [GenericScalar!]
   ok: Boolean
@@ -2863,7 +2863,7 @@ input UpdateExtractInputType {
   filterFigureGlideNumber: [String!]
   filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
   filterFigureTerms: [FIGURE_TERMS!]
-  filterFigureReviewStatus: [String!]
+  filterFigureReviewStatus: [FIGURE_REVIEW_STATUS!]
   filterFigureCategoryTypes: [String!]
   filterFigureHasDisaggregatedData: Boolean
   filterFigureGeographicalGroups: [ID!]
