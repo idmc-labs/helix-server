@@ -3,16 +3,17 @@ from django.utils.translation import gettext_lazy as _
 
 
 class Notification(models.Model):
-    class NotificationType(models.IntegerChoices):
+    class Type(models.IntegerChoices):
         FIGURE_APPROVED = 0, 'Figure approved'
         FIGURE_RE_REQUESTED_REVIEW = 1, 'Figure re-requested review'
         FIGURE_UN_APPROVED = 2, 'Figure un-approved'
-        EVENT_ASSIGNED = 3, 'Event assigned'
-        EVENT_ASSIGNEE_CLEARED = 4, 'Event assignee cleared'
-        EVENT_SIGNED_OFF = 5, 'Event signed off'
 
-    notification_type = models.IntegerField(
-        choices=NotificationType.choices,
+        EVENT_ASSIGNED = 101, 'Event assigned'
+        EVENT_ASSIGNEE_CLEARED = 102, 'Event assignee cleared'
+        EVENT_SIGNED_OFF = 103, 'Event signed off'
+
+    type = models.IntegerField(
+        choices=Type.choices,
         verbose_name=_("Notification Type")
     )
     recipient = models.ForeignKey(
@@ -52,4 +53,10 @@ class Notification(models.Model):
         verbose_name_plural = _("Notifications")
 
     def __str__(self):
-        return str(self.notification_type)
+        return str(self.type)
+
+    @classmethod
+    def send_notification(cls, **kwargs):
+        return Notification.objects.create(
+            **kwargs
+        )
