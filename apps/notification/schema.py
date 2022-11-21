@@ -21,7 +21,7 @@ class GenericNotificationType(DjangoObjectType):
         model = Notification
         fields = (
             'id',
-            'notification_type',
+            'type',
             'recipient',
             'event',
             'figure',
@@ -29,11 +29,12 @@ class GenericNotificationType(DjangoObjectType):
             'created_at',
         )
 
-    notification_type = graphene.Field(NotificationTypeEnum)
-    notification_type_display = EnumDescription(source='get_notification_type')
+    type = graphene.Field(NotificationTypeEnum)
+    type_display = EnumDescription(source='get_type_display')
 
     @staticmethod
     def get_custom_queryset(queryset, info):
+        # FIXME: Improve utils
         return notificaiton_qs(info)
 
 
@@ -49,11 +50,12 @@ class Query(object):
         GenericNotificationListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
-        )
+        ),
     )
 
-    @staticmethod
-    def resolve_notifications(root, info, **kwargs):
+    def resolve_notification(root, info, **kwargs):
+        # FIXME: This resolver does not work, improve utils to fix this
+        print("here i am *******************************8")
         if info.context.user.is_authenticated:
             return notificaiton_qs(info)
-        return None
+        return []

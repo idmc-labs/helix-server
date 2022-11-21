@@ -19,4 +19,4 @@ class NotificationFilter(df.FilterSet):
 
     class Meta:
         model = Notification
-        fields = ()
+        fields = ('recipient', )
