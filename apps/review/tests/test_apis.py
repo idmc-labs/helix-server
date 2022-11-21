@@ -32,7 +32,7 @@ class TestReviewComment(HelixGraphQLTestCase):
         '''
 
         self.update_comment = '''
-        mutation($input: CommentUpdateInputType!){
+        mutation($input: UnifiedReviewCommentUpdateInputType!){
           updateReviewComment(data: $input) {
             ok
             errors
