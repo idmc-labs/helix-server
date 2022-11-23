@@ -1139,9 +1139,9 @@ type EventType {
   reviewStatus: EVENT_REVIEW_STATUS
   includeTriangulationInQa: Boolean!
   eventReviews: [UnifiedReviewCommentType!]!
+  events: [GenericNotificationType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
-  events: [GenericNotificationType!]!
   eventTypeDisplay: EnumDescription
   totalStockIdpFigures: Int
   totalFlowNdFigures: Int
@@ -1474,8 +1474,8 @@ type FigureType {
   approvedOn: DateTime
   reviewStatus: FIGURE_REVIEW_STATUS
   figureReviewComments: [UnifiedReviewCommentType!]!
-  reportSet: [ReportType!]!
   figures: [GenericNotificationType!]!
+  reportSet: [ReportType!]!
   getQuantifier: EnumDescription
   unitDisplay: EnumDescription
   roleDisplay: EnumDescription
@@ -1584,13 +1584,13 @@ type GenericNotificationListType {
 
 type GenericNotificationType {
   id: ID!
-  notificationType: NotificationType
+  type: NotificationTypeEnum
   recipient: UserType!
   isRead: Boolean!
   event: EventType
   figure: FigureType
   createdAt: DateTime!
-  notificationTypeDisplay: EnumDescription
+  typeDisplay: EnumDescription
 }
 
 scalar GenericScalar
@@ -1863,13 +1863,21 @@ input NestedFigureUpdateInputType {
   disaggregationConflictOther: Int
 }
 
-enum NotificationType {
+enum NotificationTypeEnum {
   FIGURE_APPROVED
   FIGURE_RE_REQUESTED_REVIEW
   FIGURE_UN_APPROVED
+  FIGURE_CREATED
+  FIGURE_UPDATED
+  FIGURE_DELETED
+  FIGURE_UNAPPROVED_IN_SIGNED_EVENT
   EVENT_ASSIGNED
   EVENT_ASSIGNEE_CLEARED
   EVENT_SIGNED_OFF
+  EVENT_SELF_ASSIGNED
+  EVENT_APPROVED
+  EVENT_INCLUDE_TRIANGULATION_CHANGED
+  REVIEW_COMMENT_CREATED
 }
 
 enum ORGANIZATION_CATEGORY {
@@ -2248,7 +2256,7 @@ enum QUANTIFIER {
 
 type Query {
   notification(id: ID!): GenericNotificationType
-  notifications(events: [ID!], figures: [ID!], page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
+  notifications(recipient: ID, events: [ID!], figures: [ID!], page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType
   report(id: ID!): ReportType
   reportList(name_Unaccent_Icontains: String, filterFigureCountries: [ID!], reviewStatus: [String!], startDateAfter: Date, endDateBefore: Date, isPublic: Boolean, page: Int = 1, ordering: String, pageSize: Int): ReportListType
