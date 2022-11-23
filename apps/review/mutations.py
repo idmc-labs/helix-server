@@ -7,6 +7,8 @@ from apps.review.serializers import UnifiedReviewCommentSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 from utils.mutation import generate_input_type_for_serializer
+from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
+from apps.notification.models import Notification
 
 
 UnifiedReviewCommentCreateInputType = generate_input_type_for_serializer(
@@ -67,6 +69,21 @@ class CreateUnifiedReviewComment(graphene.Mutation):
         if errors := mutation_is_not_valid(serializer):
             return CreateUnifiedReviewComment(errors=errors, ok=False)
         instance = serializer.save()
+        if instance.figure and instance.event:
+            Notification.send_notification(
+                recipient=instance.event.assignee,
+                event=instance.event,
+                figure=instance.figure,
+                type=Notification.Type.REVIEW_COMMENT_CREATED,
+            )
+
+        if instance.figure and instance.event and instance.figure.created_by:
+            Notification.send_notification(
+                recipient=instance.figure.created_by,
+                event=instance.event,
+                figure=instance.figure,
+                type=Notification.Type.REVIEW_COMMENT_CREATED,
+            )
         return CreateUnifiedReviewComment(result=instance, errors=None, ok=True)
 
 

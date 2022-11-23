@@ -23,6 +23,7 @@ from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker, is_authenticated
 from utils.mutation import generate_input_type_for_serializer
 from utils.common import convert_date_object_to_string_in_dict
+from apps.notification.models import Notification
 
 # entry
 
@@ -152,9 +153,15 @@ class DeleteFigure(graphene.Mutation):
             return DeleteFigure(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
             ])
+        if instance.event:
+            for coordinator in instance.event.regional_coordinators:
+                Notification.send_notification(
+                    recipient=coordinator,
+                    event=instance.event,
+                    type=Notification.Type.FIGURE_DELETED
+                )
         instance.delete()
-        instance.id = id
-        return DeleteFigure(result=instance, errors=None, ok=True)
+        return DeleteFigure(errors=None, ok=True)
 
 # source preview
 
@@ -364,12 +371,20 @@ class UnapproveFigure(graphene.Mutation):
     @permission_checker(['entry.approve_figure'])
     @is_authenticated()
     def mutate(root, info, id):
+        from apps.event.models import Event
         figure = Figure.objects.filter(id=id).first()
         if not figure:
             return UnapproveFigure(errors=[
                 dict(field='id', messages=gettext('Figure does not exist.'))
             ])
         figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
+        if figure.event and figure.event.review_status == Event.EventReviewStatus.SIGNED_OFF.value:
+            for coordinator in figure.event.regional_coordinators:
+                Notification.send_notification(
+                    event=figure.event,
+                    recipient=coordinator,
+                    type=Notification.Type.FIGURE_UNAPPROVED_IN_SIGNED_EVENT,
+                )
         if figure.figure_review_comments.all().count() > 0:
             figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
         figure.approved_by = None
@@ -399,6 +414,12 @@ class ReRequestReivewFigure(graphene.Mutation):
         figure.approved_by = None
         figure.approved_on = None
         figure.save()
+
+        Notification.send_notification(
+            event=figure.event,
+            recipient=figure.event.assignee,
+            type=Notification.Type.FIGURE_RE_REQUESTED_REVIEW,
+        )
         return ReRequestReivewFigure(result=figure, errors=None, ok=True)
 
 
