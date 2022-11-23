@@ -7,7 +7,6 @@ from apps.review.serializers import UnifiedReviewCommentSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 from utils.mutation import generate_input_type_for_serializer
-from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
 from apps.notification.models import Notification
 
 

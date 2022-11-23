@@ -10,7 +10,6 @@ from utils.factories import (
 )
 from apps.notification.models import Notification
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
-from apps.users.models import Portfolio
 from apps.entry.models import Figure, OSMName
 from apps.event.models import Event
 from apps.crisis.models import Crisis
@@ -490,7 +489,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             countries=(self.country, )
         )
         entry = EntryFactory.create()
-        figure = FigureFactory.create(
+        FigureFactory.create(
             event=event,
             review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
             entry=entry,

@@ -1,5 +1,5 @@
 from django_filters import rest_framework as df
-from utils.filters import IDListFilter, StringListFilter
+from utils.filters import IDListFilter
 from apps.notification.models import Notification
 
 
