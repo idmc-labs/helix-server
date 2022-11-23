@@ -376,7 +376,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             assignee=self.monitoring_expert,
             assigner=self.regional_coordinator,
             countries=(self.country, ),
-            review_status=Event.EventReviewStatus.APPROVED,
+            review_status=Event.EVENT_REVIEW_STATUS.APPROVED,
         )
         self.force_login(self.admin)
         self.query(
@@ -418,9 +418,9 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         )
         figure = FigureFactory.create(
             event=event,
-            review_status=Figure.FigureReviewStatus.APPROVED,
+            review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
         )
-        event.review_status = Event.EventReviewStatus.SIGNED_OFF
+        event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
         event.save()
         self.force_login(self.monitoring_expert)
         self.query(
@@ -448,7 +448,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 'figure': figure.id,
                 'event': event.id,
                 'comment': 'test comment',
-                'commentType': UnifiedReviewComment.ReviewCommentType.GREY.name,
+                'commentType': UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREY.name,
             }
         )
         self.force_login(self.monitoring_expert)
@@ -472,7 +472,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 'figure': figure.id,
                 'event': event.id,
                 'comment': 'test comment',
-                'commentType': UnifiedReviewComment.ReviewCommentType.GREEN.name,
+                'commentType': UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN.name,
             }
         )
         self.force_login(self.admin)
@@ -492,10 +492,10 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         entry = EntryFactory.create()
         figure = FigureFactory.create(
             event=event,
-            review_status=Figure.FigureReviewStatus.APPROVED,
+            review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
             entry=entry,
         )
-        event.review_status = Event.EventReviewStatus.APPROVED
+        event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED
         event.save()
 
         # Create figure in already approved event

@@ -378,7 +378,7 @@ class UnapproveFigure(graphene.Mutation):
                 dict(field='id', messages=gettext('Figure does not exist.'))
             ])
         figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
-        if figure.event and figure.event.review_status == Event.EventReviewStatus.SIGNED_OFF.value:
+        if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF.value:
             for coordinator in figure.event.regional_coordinators:
                 Notification.send_notification(
                     event=figure.event,
@@ -415,11 +415,12 @@ class ReRequestReivewFigure(graphene.Mutation):
         figure.approved_on = None
         figure.save()
 
-        Notification.send_notification(
-            event=figure.event,
-            recipient=figure.event.assignee,
-            type=Notification.Type.FIGURE_RE_REQUESTED_REVIEW,
-        )
+        if figure.event and figure.event.assignee:
+            Notification.send_notification(
+                event=figure.event,
+                recipient=figure.event.assignee,
+                type=Notification.Type.FIGURE_RE_REQUESTED_REVIEW,
+            )
         return ReRequestReivewFigure(result=figure, errors=None, ok=True)
 
 
