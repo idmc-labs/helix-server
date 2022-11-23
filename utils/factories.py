@@ -181,6 +181,14 @@ class EventFactory(DjangoModelFactory):
     disaster_type = factory.SubFactory(DisasterTypeFactory)
     disaster_sub_type = factory.SubFactory(DisasterSubTypeFactory)
 
+    @factory.post_generation
+    def countries(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for country in extracted:
+                self.countries.add(country)
+
 
 class EntryFactory(DjangoModelFactory):
     class Meta:

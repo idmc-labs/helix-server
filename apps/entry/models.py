@@ -32,6 +32,8 @@ from apps.contrib.commons import DATE_ACCURACY
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
 from apps.common.enums import GENDER_TYPE
+from apps.notification.models import Notification
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
 CANNOT_UPDATE_MESSAGE = _('You cannot sign off the entry.')
@@ -974,6 +976,19 @@ class Figure(MetaInformationArchiveAbstractModel,
         else:
             event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value
         event.save()
+        if event.review_status == Event.EventReviewStatus.APPROVED:
+            for coordinator in event.regional_coordinators:
+                Notification.send_notification(
+                    recipient=coordinator,
+                    event=event,
+                    type=Notification.Type.EVENT_APPROVED,
+                )
+            if event.created_by:
+                Notification.send_notification(
+                    recipient=event.created_by,
+                    event=event,
+                    type=Notification.Type.EVENT_APPROVED,
+                )
 
     def can_be_updated_by(self, user: User) -> bool:
         """

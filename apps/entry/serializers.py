@@ -21,6 +21,7 @@ from apps.entry.models import (
     DisaggregatedAge,
 )
 from apps.country.models import Country
+from apps.notification.models import Notification
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
 from utils.common import round_half_up
 
@@ -634,11 +635,14 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                 entry.figures.exclude(
                     id__in=[each['id'] for each in figures if each.get('id')]).delete()
                 # create if has no ids
+                created = False
                 for each in figures:
                     if not each.get('id'):
+                        created = True
                         fig_ser = NestedFigureCreateSerializer(context=self.context)
                         fig_ser._validated_data = {**each, 'entry': entry}
                     else:
+                        created = False
                         fig_ser = NestedFigureUpdateSerializer(
                             instance=entry.figures.get(id=each['id']),
                             partial=True,
@@ -646,8 +650,22 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         )
                         fig_ser._validated_data = {**each, 'entry': entry}
                     fig_ser._errors = {}
-                    fig_ser.save()
-
+                    figure = fig_ser.save()
+                    if figure.event:
+                        for coordinator in figure.event.regional_coordinators:
+                            Notification.send_notification(
+                                recipient=coordinator,
+                                figure=figure,
+                                event=figure.event,
+                                type=Notification.Type.FIGURE_CREATED if created else Notification.Type.FIGURE_UPDATED,
+                            )
+                        if figure.event.assignee:
+                            Notification.send_notification(
+                                recipient=figure.event.assignee,
+                                figure=figure,
+                                event=figure.event,
+                                type=Notification.Type.FIGURE_CREATED if created else Notification.Type.FIGURE_UPDATED,
+                            )
                     new_event_id = each.get('event_id')
                     old_event_id = fig_ser.data.get('event_id')
                     # Change if event id changed and update event review status
