@@ -14,7 +14,7 @@ from apps.contrib.models import (
 from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
-from apps.users.models import User
+from apps.users.models import User, USER_ROLE
 from django.contrib.postgres.fields import ArrayField
 from django.forms import model_to_dict
 from utils.common import add_clone_prefix
@@ -330,6 +330,16 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 output_field=models.FloatField()
             )
         }
+
+    @property
+    def regional_coordinators(self):
+        if self.countries:
+            return User.objects.filter(
+                portfolios__role=USER_ROLE.REGIONAL_COORDINATOR,
+                portfolios__monitoring_sub_region__in=self.countries.values(
+                    'portfolio__monitoring_sub_region'
+                ).distinct(),
+            )
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):

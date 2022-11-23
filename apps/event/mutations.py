@@ -16,6 +16,7 @@ from apps.event.serializers import (
     ContextOfViolenceSerializer,
     ContextOfViolenceUpdateSerializer
 )
+from apps.notification.models import Notification
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 from utils.mutation import generate_input_type_for_serializer
@@ -362,6 +363,12 @@ class SetAssigneeToEvent(graphene.Mutation):
         event.assigner = info.context.user
         event.assigned_at = timezone.now()
         event.save()
+
+        Notification.send_notification(
+            event=event,
+            recipient=user,
+            type=Notification.Type.EVENT_ASSIGNED,
+        )
         return SetAssigneeToEvent(result=event, errors=None, ok=True)
 
 
@@ -384,6 +391,14 @@ class SetSelfAssigneeToEvent(graphene.Mutation):
         event.assigner = info.context.user
         event.assigned_at = timezone.now()
         event.save()
+        if event.regional_coordinators:
+            for recipient in event.regional_coordinators:
+                Notification.send_notification(
+                    event=event,
+                    recipient=recipient,
+                    type=Notification.Type.EVENT_SELF_ASSIGNED,
+                )
+
         return SetSelfAssigneeToEvent(result=event, errors=None, ok=True)
 
 
@@ -434,6 +449,14 @@ class ClearSelfAssigneFromEvent(graphene.Mutation):
         event.assigner = None
         event.assigned_at = None
         event.save()
+
+        if event.regional_coordinators:
+            for recipient in event.regional_coordinators:
+                Notification.send_notification(
+                    event=event,
+                    recipient=recipient,
+                    type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
+                )
         return ClearSelfAssigneFromEvent(result=event, errors=None, ok=True)
 
 
@@ -458,6 +481,12 @@ class SignOffEvent(graphene.Mutation):
             ])
         event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
         event.save()
+        for coordinator in event.regional_coordinators:
+            Notification.send_notification(
+                recipient=coordinator,
+                event=event,
+                type=Notification.Type.EVENT_SIGNED_OFF,
+            )
         return ClearSelfAssigneFromEvent(result=event, errors=None, ok=True)
 
 

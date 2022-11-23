@@ -7,10 +7,19 @@ class Notification(models.Model):
         FIGURE_APPROVED = 0, 'Figure approved'
         FIGURE_RE_REQUESTED_REVIEW = 1, 'Figure re-requested review'
         FIGURE_UN_APPROVED = 2, 'Figure un-approved'
+        FIGURE_CREATED = 3, 'Figure created'
+        FIGURE_UPDATED = 4, 'Figure updated'
+        FIGURE_DELETED = 5, 'Figure deleted'
+        FIGURE_UNAPPROVED_IN_SIGNED_EVENT = 6, 'Figure unapproved in signed event',
 
         EVENT_ASSIGNED = 101, 'Event assigned'
         EVENT_ASSIGNEE_CLEARED = 102, 'Event assignee cleared'
         EVENT_SIGNED_OFF = 103, 'Event signed off'
+        EVENT_SELF_ASSIGNED = 104, 'Event self assigned'
+        EVENT_APPROVED = 105, 'Event approved'
+        EVENT_INCLUDE_TRIANGULATION_CHANGED = 106, 'Event include triangulation changed'
+
+        REVIEW_COMMENT_CREATED = 201, 'Comment created'
 
     type = models.IntegerField(
         choices=Type.choices,
