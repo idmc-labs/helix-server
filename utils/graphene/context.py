@@ -17,6 +17,7 @@ from apps.entry.dataloaders import (
     FigureTypologyLoader,
     FigureGeoLocationLoader,
     FigureSourcesReliability,
+    FigureLastReviewCommentStatusLoader,
 )
 from apps.event.dataloaders import (
     TotalIDPFigureByEventLoader,
@@ -147,6 +148,10 @@ class GQLContext:
     @cached_property
     def figure_sources_reliability_loader(self):
         return FigureSourcesReliability()
+
+    @cached_property
+    def last_review_comment_status_loader(self):
+        return FigureLastReviewCommentStatusLoader()
 
     @cached_property
     def event_count_dataloader(self):

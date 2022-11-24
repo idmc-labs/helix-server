@@ -3,6 +3,7 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from promise import Promise
 from promise.dataloader import DataLoader
 from django.db.models import Case, F, When, CharField
+from collections import defaultdict
 
 from apps.entry.models import Entry, Figure
 
@@ -94,3 +95,31 @@ class FigureSourcesReliability(DataLoader):
         return Promise.resolve([
             batch_load.get(key) for key in keys
         ])
+
+
+class FigureLastReviewCommentStatusLoader(DataLoader):
+    def batch_load_fn(self, keys):
+        qs = Figure.objects.filter(
+            id__in=keys
+        ).order_by(
+            'figure_review_comments__field',
+            '-figure_review_comments__id',
+            'figure_review_comments__comment_type',
+        ).distinct(
+            'figure_review_comments__field',
+        ).values(
+            'id',
+            'figure_review_comments__field',
+            'figure_review_comments__comment_type',
+            'figure_review_comments__id',
+        )
+        _map = defaultdict(list)
+        for item in qs:
+            _map[item['id']].append(
+                {
+                    'id': item['figure_review_comments__id'],
+                    'field': item['figure_review_comments__field'],
+                    'comment_type': item['figure_review_comments__comment_type'],
+                }
+            )
+        return Promise.resolve([_map[key] for key in keys])
