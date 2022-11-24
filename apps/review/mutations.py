@@ -31,30 +31,54 @@ class CreateUnifiedReviewComment(graphene.Mutation):
     @staticmethod
     @permission_checker(['review.add_reviewcomment'])
     def mutate(root, info, data):
+        from apps.event.models import Event
+        from apps.entry.models import Figure
+
         serializer = UnifiedReviewCommentSerializer(
             data=data,
             context={'request': info.context.request}, partial=True
         )
         if serializer.is_valid():
             serialized_data = serializer.validated_data
-            review_comment = serialized_data.get('comment_type')
+            comment_type = serialized_data.get('comment_type')
             event = serialized_data.get('event')
+            figure = serialized_data.get('figure')
+
             if (
                 event and
-                review_comment != UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREY and
+                comment_type != UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREY and
                 (not event.assignee or event.assignee != info.context.user)
             ):
-                return UpdateUnifiedReviewComment(
+                return CreateUnifiedReviewComment(
                     errors=[
                         dict(field='nonFieldErrors',
                              messages=gettext('Assignee not set or you are not the assignee.'))
                     ],
                     ok=False
                 )
+            else:
+                if (
+                    comment_type == UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN and
+                    event and
+                    figure
+                ):
+                    event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED
+                    event.save()
+                    figure.review_status = Figure.FIGURE_REVIEW_STATUS.APPROVED
+                    figure.save()
+
+                if (
+                    comment_type == UnifiedReviewComment.REVIEW_COMMENT_TYPE.RED and
+                    event and
+                    figure
+                ):
+                    event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS
+                    event.save()
+                    figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+                    figure.save()
 
         if errors := mutation_is_not_valid(serializer):
             return CreateUnifiedReviewComment(errors=errors, ok=False)
-
         instance = serializer.save()
         return CreateUnifiedReviewComment(result=instance, errors=None, ok=True)
 
