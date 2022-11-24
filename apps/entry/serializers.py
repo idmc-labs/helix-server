@@ -655,6 +655,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         for coordinator in figure.event.regional_coordinators:
                             Notification.send_notification(
                                 recipient=coordinator,
+                                actor=self.context['request'].user,
                                 figure=figure,
                                 event=figure.event,
                                 type=Notification.Type.FIGURE_CREATED if created else Notification.Type.FIGURE_UPDATED,
@@ -662,6 +663,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         if figure.event.assignee:
                             Notification.send_notification(
                                 recipient=figure.event.assignee,
+                                actor=self.context['request'].user,
                                 figure=figure,
                                 event=figure.event,
                                 type=Notification.Type.FIGURE_CREATED if created else Notification.Type.FIGURE_UPDATED,
