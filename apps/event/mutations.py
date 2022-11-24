@@ -367,6 +367,7 @@ class SetAssigneeToEvent(graphene.Mutation):
         Notification.send_notification(
             event=event,
             recipient=user,
+            actor=info.context.user,
             type=Notification.Type.EVENT_ASSIGNED,
         )
         return SetAssigneeToEvent(result=event, errors=None, ok=True)

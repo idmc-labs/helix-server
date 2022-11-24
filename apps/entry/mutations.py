@@ -157,6 +157,7 @@ class DeleteFigure(graphene.Mutation):
             for coordinator in instance.event.regional_coordinators:
                 Notification.send_notification(
                     recipient=coordinator,
+                    actor=info.context.user,
                     event=instance.event,
                     type=Notification.Type.FIGURE_DELETED
                 )
@@ -382,6 +383,7 @@ class UnapproveFigure(graphene.Mutation):
             for coordinator in figure.event.regional_coordinators:
                 Notification.send_notification(
                     event=figure.event,
+                    actor=info.context.user,
                     recipient=coordinator,
                     type=Notification.Type.FIGURE_UNAPPROVED_IN_SIGNED_EVENT,
                 )
@@ -419,6 +421,7 @@ class ReRequestReivewFigure(graphene.Mutation):
             Notification.send_notification(
                 event=figure.event,
                 recipient=figure.event.assignee,
+                actor=info.context.user,
                 type=Notification.Type.FIGURE_RE_REQUESTED_REVIEW,
             )
         return ReRequestReivewFigure(result=figure, errors=None, ok=True)
