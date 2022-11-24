@@ -39,7 +39,7 @@ from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 from apps.extraction.filters import FigureExtractionFilterSet, EntryExtractionFilterSet
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.event.schema import OtherSubTypeObjectType
-
+from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
 
 logger = logging.getLogger(__name__)
 
@@ -96,6 +96,12 @@ class FigureTagType(DjangoObjectType):
         exclude_fields = ('entry_set',)
 
 
+class FigureLastReviewCommentStatusType(ObjectType):
+    id = graphene.ID(required=True)
+    field = graphene.Field(ReviewFieldTypeEnum)
+    comment_type = graphene.Field(ReviewCommentTypeEnum)
+
+
 class FigureType(DjangoObjectType):
     class Meta:
         exclude_fields = (
@@ -144,6 +150,7 @@ class FigureType(DjangoObjectType):
     sources_reliability = graphene.Field(FigureSourcesReliabilityEnum)
     review_status = graphene.Field(FigureReviewStatusEnum)
     review_status_display = EnumDescription(source='get_review_status_display')
+    last_review_comment_status = graphene.List(FigureLastReviewCommentStatusType)
 
     def resolve_stock_date(root, info, **kwargs):
         if root.category in Figure.stock_list():
@@ -169,6 +176,9 @@ class FigureType(DjangoObjectType):
 
     def resolve_sources_reliability(root, info, **kwargs):
         return info.context.figure_sources_reliability_loader.load(root.id)
+
+    def resolve_last_review_comment_status(root, info, **kwargs):
+        return info.context.last_review_comment_status_loader.load(root.id)
 
 
 class FigureListType(CustomDjangoListObjectType):

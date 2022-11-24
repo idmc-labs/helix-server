@@ -56,26 +56,15 @@ class CreateUnifiedReviewComment(graphene.Mutation):
                     ],
                     ok=False
                 )
-            else:
-                if (
-                    comment_type == UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN and
-                    event and
-                    figure
-                ):
-                    event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED
-                    event.save()
-                    figure.review_status = Figure.FIGURE_REVIEW_STATUS.APPROVED
-                    figure.save()
 
-                if (
-                    comment_type == UnifiedReviewComment.REVIEW_COMMENT_TYPE.RED and
-                    event and
-                    figure
-                ):
-                    event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS
-                    event.save()
-                    figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
-                    figure.save()
+            if (
+                event and figure and (event.assignee or event.assignee == info.context.user)
+            ):
+                event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS
+                event.save()
+
+                figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+                figure.save()
 
         if errors := mutation_is_not_valid(serializer):
             return CreateUnifiedReviewComment(errors=errors, ok=False)
