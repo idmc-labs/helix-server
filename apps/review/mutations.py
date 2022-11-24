@@ -93,7 +93,6 @@ class UpdateUnifiedReviewComment(graphene.Mutation):
                 ],
                 ok=False
             )
-        data['is_edited'] = True
         serializer = UnifiedReviewCommentSerializer(
             instance=instance,
             data=data,
@@ -102,6 +101,8 @@ class UpdateUnifiedReviewComment(graphene.Mutation):
         if errors := mutation_is_not_valid(serializer):
             return UpdateUnifiedReviewComment(errors=errors, ok=False)
         instance = serializer.save()
+        instance.is_edited = True
+        instance.save()
         return UpdateUnifiedReviewComment(result=instance, errors=None, ok=True)
 
 
