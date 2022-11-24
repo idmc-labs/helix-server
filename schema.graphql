@@ -1365,6 +1365,12 @@ enum FOR_CHOICES {
   CONTEXTUAL_UPDATE
 }
 
+type FigureLastReviewCommentStatusType {
+  id: ID!
+  field: REVIEW_FIELD_TYPE
+  commentType: REVIEW_COMMENT_TYPE
+}
+
 type FigureListType {
   results: [FigureType!]
   totalCount: Int
@@ -1485,6 +1491,7 @@ type FigureType {
   geolocations: String
   sourcesReliability: SOURCES_RELIABILITY
   reviewStatusDisplay: EnumDescription
+  lastReviewCommentStatus: [FigureLastReviewCommentStatusType]
 }
 
 input FigureUpdateInputType {
@@ -2223,7 +2230,7 @@ type Query {
   parkedItem(id: ID!): ParkedItemType
   parkedItemList(title_Unaccent_Icontains: String, createdBy: ID, statusIn: [String!], assignedToIn: [String!], page: Int = 1, ordering: String, pageSize: Int): ParkedItemListType
   reviewComment(id: ID!): UnifiedReviewCommentType
-  reviewComments(events: [ID!], figures: [ID!], fields: [String!], page: Int = 1, ordering: String, pageSize: Int): UnifiedReviewCommentListType
+  reviewComments(isEdited: Boolean, isDeleted: Boolean, events: [ID!], figures: [ID!], fields: [String!], page: Int = 1, ordering: String, pageSize: Int): UnifiedReviewCommentListType
   resource(id: ID!): ResourceType
   resourceList: [ResourceType!]
   resourceGroup(id: ID!): ResourceType
