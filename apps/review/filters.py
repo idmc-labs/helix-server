@@ -29,8 +29,4 @@ class UnifiedReviewCommentFilter(df.FilterSet):
 
     class Meta:
         model = UnifiedReviewComment
-        fields = ()
-
-    @property
-    def qs(self):
-        return super().qs.filter(comment__isnull=False)
+        fields = ('is_edited', 'is_deleted')
