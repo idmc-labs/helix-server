@@ -23,6 +23,7 @@ class GenericNotificationType(DjangoObjectType):
             'id',
             'type',
             'recipient',
+            'actor',
             'event',
             'figure',
             'is_read',
