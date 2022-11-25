@@ -1367,8 +1367,8 @@ enum FOR_CHOICES {
 
 type FigureLastReviewCommentStatusType {
   id: ID!
-  field: REVIEW_FIELD_TYPE
-  commentType: REVIEW_COMMENT_TYPE
+  field: REVIEW_FIELD_TYPE!
+  commentType: REVIEW_COMMENT_TYPE!
 }
 
 type FigureListType {
