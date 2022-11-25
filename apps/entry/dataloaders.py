@@ -2,10 +2,11 @@ from django.db import models
 from django.contrib.postgres.aggregates.general import StringAgg
 from promise import Promise
 from promise.dataloader import DataLoader
-from django.db.models import Case, F, When, CharField
+from django.db.models import Case, F, When, CharField, Max, Q
 from collections import defaultdict
 
 from apps.entry.models import Entry, Figure
+from apps.review.models import UnifiedReviewComment
 
 
 def batch_load_fn_by_category(keys, category):
@@ -99,27 +100,37 @@ class FigureSourcesReliability(DataLoader):
 
 class FigureLastReviewCommentStatusLoader(DataLoader):
     def batch_load_fn(self, keys):
-        qs = Figure.objects.filter(
-            id__in=keys
+        review_comment_qs = UnifiedReviewComment.objects.filter(
+            Q(figure__in=keys) and
+            Q(comment_type__in=[
+                UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN,
+                UnifiedReviewComment.REVIEW_COMMENT_TYPE.RED,
+            ])
         ).order_by(
-            'figure_review_comments__field',
-            '-figure_review_comments__id',
-            'figure_review_comments__comment_type',
+            'figure_id',
+            'comment_type',
+            'field',
+            '-id',
         ).distinct(
-            'figure_review_comments__field',
+            'figure_id',
+            'field',
+            'comment_type',
         ).values(
             'id',
-            'figure_review_comments__field',
-            'figure_review_comments__comment_type',
-            'figure_review_comments__id',
+            'figure_id',
+            'field',
+            'comment_type',
         )
         _map = defaultdict(list)
-        for item in qs:
-            _map[item['id']].append(
+        for item in review_comment_qs:
+            id = item['id']
+            field = item['field']
+            comment_type = item['comment_type']
+            _map[item['figure_id']].append(
                 {
-                    'id': item['figure_review_comments__id'],
-                    'field': item['figure_review_comments__field'],
-                    'comment_type': item['figure_review_comments__comment_type'],
+                    'id': id,
+                    'field': field,
+                    'comment_type': comment_type,
                 }
             )
         return Promise.resolve([_map[key] for key in keys])

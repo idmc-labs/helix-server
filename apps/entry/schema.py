@@ -98,8 +98,8 @@ class FigureTagType(DjangoObjectType):
 
 class FigureLastReviewCommentStatusType(ObjectType):
     id = graphene.ID(required=True)
-    field = graphene.Field(ReviewFieldTypeEnum)
-    comment_type = graphene.Field(ReviewCommentTypeEnum)
+    field = graphene.Field(ReviewFieldTypeEnum, required=True)
+    comment_type = graphene.Field(ReviewCommentTypeEnum, required=True)
 
 
 class FigureType(DjangoObjectType):
