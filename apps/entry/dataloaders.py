@@ -108,13 +108,11 @@ class FigureLastReviewCommentStatusLoader(DataLoader):
             ])
         ).order_by(
             'figure_id',
-            'comment_type',
             'field',
             '-id',
         ).distinct(
             'figure_id',
             'field',
-            'comment_type',
         ).values(
             'id',
             'figure_id',
