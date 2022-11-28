@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.postgres.aggregates.general import StringAgg
 from promise import Promise
 from promise.dataloader import DataLoader
-from django.db.models import Case, F, When, CharField, Max, Q
+from django.db.models import Case, F, When, CharField, Q
 from collections import defaultdict
 
 from apps.entry.models import Entry, Figure
