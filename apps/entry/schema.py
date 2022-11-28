@@ -150,7 +150,7 @@ class FigureType(DjangoObjectType):
     sources_reliability = graphene.Field(FigureSourcesReliabilityEnum)
     review_status = graphene.Field(FigureReviewStatusEnum)
     review_status_display = EnumDescription(source='get_review_status_display')
-    last_review_comment_status = graphene.List(FigureLastReviewCommentStatusType)
+    last_review_comment_status = graphene.List(graphene.NonNull(FigureLastReviewCommentStatusType))
 
     def resolve_stock_date(root, info, **kwargs):
         if root.category in Figure.stock_list():
