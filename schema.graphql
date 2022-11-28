@@ -1491,7 +1491,7 @@ type FigureType {
   geolocations: String
   sourcesReliability: SOURCES_RELIABILITY
   reviewStatusDisplay: EnumDescription
-  lastReviewCommentStatus: [FigureLastReviewCommentStatusType]
+  lastReviewCommentStatus: [FigureLastReviewCommentStatusType!]
 }
 
 input FigureUpdateInputType {
