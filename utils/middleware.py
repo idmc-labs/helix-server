@@ -61,7 +61,7 @@ class DisableIntrospectionSchemaMiddleware:
     introspection.
     """
     def resolve(self, next, root, info, **args):
-        if info.field_name == '__schema':
+        if info.context.request.get_host() != 'server' and info.field_name == '__schema':
             return None
         return next(root, info, **args)
 

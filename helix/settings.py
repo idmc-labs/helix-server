@@ -31,7 +31,7 @@ DEVELOPMENT_ENV = 'development'
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
     ENABLE_DEBUG_TOOLBAR=(bool, False),
-    DJANGO_ALLOWED_HOST=list,
+    DJANGO_ALLOWED_HOST=(list, ''),
     DJANGO_SECRET_KEY=str,
     # S3 Optional Credentials
     USE_S3_BUCKET=(bool, False),
@@ -82,7 +82,7 @@ HELIX_ENVIRONMENT = env('COPILOT_ENVIRONMENT_NAME') or env('HELIX_ENVIRONMENT')
 DEBUG = env('DJANGO_DEBUG')
 logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 
-ALLOWED_HOSTS = env('DJANGO_ALLOWED_HOST')
+ALLOWED_HOSTS = ['server', *env.list('DJANGO_ALLOWED_HOST')]
 
 IN_AWS_COPILOT_ECS = not not env('COPILOT_SERVICE_NAME')
 
