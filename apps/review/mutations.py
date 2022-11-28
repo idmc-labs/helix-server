@@ -56,13 +56,11 @@ class CreateUnifiedReviewComment(graphene.Mutation):
                     ],
                     ok=False
                 )
-
-            if (
-                event and figure and (event.assignee or event.assignee == info.context.user)
-            ):
+            if event:
                 event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS
                 event.save()
 
+            if figure:
                 figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
                 figure.save()
 
