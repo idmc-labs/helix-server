@@ -331,15 +331,27 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             )
         }
 
-    @property
-    def regional_coordinators(self):
-        if self.countries:
-            return User.objects.filter(
+    @staticmethod
+    def regional_coordinators(event, figure=None):
+
+        figure_regional_coordinators = User.objects.none()
+        event_regional_coordinators = User.objects.none()
+
+        if figure and figure.country:
+            figure_regional_coordinators = User.objects.filter(
                 portfolios__role=USER_ROLE.REGIONAL_COORDINATOR,
-                portfolios__monitoring_sub_region__in=self.countries.values(
-                    'portfolio__monitoring_sub_region'
-                ).distinct(),
+                portfolios__country=figure.country
             )
+
+        if event.countries:
+            event_regional_coordinators = User.objects.filter(
+                portfolios__role=USER_ROLE.REGIONAL_COORDINATOR,
+                portfolios__monitoring_sub_region__in=event.countries.values(
+                    'portfolio__monitoring_sub_region'
+                )
+            )
+        coordinators = figure_regional_coordinators | event_regional_coordinators
+        return coordinators.values('id')
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
