@@ -193,16 +193,19 @@ class EventSerializer(MetaInformationSerializerMixin,
             new_include_triangulation_in_qa = validated_data.get('include_triangulation_in_qa')
             if new_include_triangulation_in_qa != instance.include_triangulation_in_qa:
                 Figure.update_event_status(instance.id)
-                for coordinator in instance.regional_coordinators:
-                    Notification.send_notification(
-                        recipient=coordinator,
-                        type=Notification.Type.EVENT_INCLUDE_TRIANGULATION_CHANGED,
-                        event=instance,
-                    )
+                Notification.send_multiple_notifications(
+                    recipients=instance.regional_coordinators(
+                        event=instance
+                    ),
+                    type=Notification.Type.EVENT_INCLUDE_TRIANGULATION_CHANGED,
+                    actor=self.context['request'].user,
+                    event=instance,
+                )
                 if instance.created_by:
                     Notification.send_notification(
                         recipient=instance.created_by,
                         type=Notification.Type.EVENT_INCLUDE_TRIANGULATION_CHANGED,
+                        actor=self.context['request'].user,
                         event=instance,
                     )
         return super().update(instance, validated_data)

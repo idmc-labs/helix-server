@@ -137,6 +137,8 @@ class updateFigure(graphene.Mutation):
 
 
 class DeleteFigure(graphene.Mutation):
+    from apps.event.models import Event
+
     class Arguments:
         id = graphene.ID(required=True)
 
@@ -147,20 +149,38 @@ class DeleteFigure(graphene.Mutation):
     @staticmethod
     @permission_checker(['entry.delete_figure'])
     def mutate(root, info, id):
+        from apps.event.models import Event
+
         try:
             instance = Figure.objects.get(id=id)
         except Entry.DoesNotExist:
             return DeleteFigure(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
             ])
-        if instance.event:
-            for coordinator in instance.event.regional_coordinators:
-                Notification.send_notification(
-                    recipient=coordinator,
-                    actor=info.context.user,
-                    event=instance.event,
-                    type=Notification.Type.FIGURE_DELETED
-                )
+        if instance.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+            Notification.send_multiple_notifications(
+                recipients=instance.event.regional_coordinators(
+                    event=instance.event
+                ),
+                actor=info.context.user,
+                type=Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT,
+                event=instance.event,
+                # TODO: Add proper describtive text
+                text=f'''
+                Figure having id {instance.id}, start_date
+                {instance.start_date}, end_date {instance.end_date}
+                was deleted.
+                '''
+            )
+        if instance.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+            Notification.send_multiple_notifications(
+                recipients=instance.event.regional_coordinators(
+                    event=instance.event
+                ),
+                actor=info.context.user,
+                type=Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT,
+                event=instance.event,
+            )
         instance.delete()
         return DeleteFigure(errors=None, ok=True)
 
@@ -379,14 +399,28 @@ class UnapproveFigure(graphene.Mutation):
                 dict(field='id', messages=gettext('Figure does not exist.'))
             ])
         figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
-        if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF.value:
-            for coordinator in figure.event.regional_coordinators:
-                Notification.send_notification(
+        if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+            Notification.send_multiple_notifications(
+                recipients=figure.event.regional_coordinators(
                     event=figure.event,
-                    actor=info.context.user,
-                    recipient=coordinator,
-                    type=Notification.Type.FIGURE_UNAPPROVED_IN_SIGNED_EVENT,
-                )
+                    figure=figure,
+                ),
+                type=Notification.Type.FIGURE_UNAPPROVED_IN_APPROVED_EVENT,
+                actor=info.context.user,
+                event=figure.event,
+                figure=figure,
+            )
+        if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+            Notification.send_multiple_notifications(
+                recipients=figure.event.regional_coordinators(
+                    event=figure.event,
+                    figure=figure,
+                ),
+                type=Notification.Type.FIGURE_UNAPPROVED_IN_SIGNED_EVENT,
+                actor=info.context.user,
+                event=figure.event,
+                figure=figure,
+            )
         if figure.figure_review_comments.all().count() > 0:
             figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
         figure.approved_by = None

@@ -627,6 +627,8 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
         return entry
 
     def update(self, instance, validated_data: dict) -> Entry:
+        from apps.event.models import Event
+
         figures = validated_data.pop('figures', None)
         if figures:
             with transaction.atomic():
@@ -651,23 +653,30 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         fig_ser._validated_data = {**each, 'entry': entry}
                     fig_ser._errors = {}
                     figure = fig_ser.save()
-                    if figure.event:
-                        for coordinator in figure.event.regional_coordinators:
-                            Notification.send_notification(
-                                recipient=coordinator,
-                                actor=self.context['request'].user,
-                                figure=figure,
-                                event=figure.event,
-                                type=Notification.Type.FIGURE_CREATED if created else Notification.Type.FIGURE_UPDATED,
-                            )
-                        if figure.event.assignee:
-                            Notification.send_notification(
-                                recipient=figure.event.assignee,
-                                actor=self.context['request'].user,
-                                figure=figure,
-                                event=figure.event,
-                                type=Notification.Type.FIGURE_CREATED if created else Notification.Type.FIGURE_UPDATED,
-                            )
+                    if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+                        Notification.send_multiple_notifications(
+                            recipients=figure.event.regional_coordinators(figure.event, figure=figure),
+                            actor=self.context['request'].user,
+                            type=(
+                                Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT
+                                if created
+                                else Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT
+                            ),
+                            figure=figure,
+                            event=figure.event,
+                        )
+                    if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+                        Notification.send_multiple_notifications(
+                            recipients=figure.event.regional_coordinators(figure.event, figure=figure),
+                            actor=self.context['request'].user,
+                            type=(
+                                Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT
+                                if created
+                                else Notification.Type.FIGURE_UPDATED_IN_APPROVED_EVENT
+                            ),
+                            figure=figure,
+                            event=figure.event,
+                        )
                     new_event_id = each.get('event_id')
                     old_event_id = fig_ser.data.get('event_id')
                     # Change if event id changed and update event review status
