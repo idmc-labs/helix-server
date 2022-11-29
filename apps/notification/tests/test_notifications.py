@@ -7,6 +7,7 @@ from utils.factories import (
     FigureFactory,
     CountryFactory,
     MonitoringSubRegionFactory,
+    NotificationFactory,
 )
 from apps.notification.models import Notification
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -221,6 +222,31 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
           }
         }
         '''
+        self.update_event = '''
+          mutation UpdateEvent($input: EventUpdateInputType!) {
+            updateEvent(data: $input) {
+              errors
+              result {
+                  id
+                  name
+              }
+              ok
+            }
+          }
+          '''
+        self.toggle_notificaiton = '''
+          mutation ToggleNotification($id: ID!) {
+            toggleNotification(id: $id) {
+              ok
+              errors
+              result {
+                  id
+                  isRead
+              }
+            }
+          }
+
+        '''
         source = dict(
             uuid=str(uuid4()),
             rank=101,
@@ -311,16 +337,18 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.FIGURE_RE_REQUESTED_REVIEW.name, notification_data['type'])
 
-    def test_should_notification_to_co_ordinator_if_figure_is_added_edited_deleted(self):
+    def test_should_notification_to_co_ordinator_if_figure_is_added_edited_deleted_in_signed_off_event(self):
         event = EventFactory.create(
             assignee=self.monitoring_expert,
             assigner=self.regional_coordinator,
-            countries=(self.country, )
+            countries=(self.country, ),
+            review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
         )
         entry = EntryFactory.create()
         self.force_login(self.regional_coordinator)
         figures = self.figures
         figures[0]['event'] = event.id
+
         # Create figure
         response = self.query(
             self.create_update_figure,
@@ -337,14 +365,16 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             variables={'recipient': self.regional_coordinator.id}
         )
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
-        self.assertEqual(Notification.Type.FIGURE_CREATED.name, notification_data['type'])
+        self.assertEqual(Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT.name, notification_data['type'])
 
         # Update figure
+        event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
+        event.save()
 
         figures[0]['id'] = figure_id
         self.query(
             self.create_update_figure,
-            variables={
+            input_data={
                 'id': entry.id,
                 'figures': figures,
             }
@@ -354,10 +384,12 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             variables={'recipient': self.regional_coordinator.id}
         )
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
-        self.assertEqual(Notification.Type.FIGURE_CREATED.name, notification_data['type'])
+        self.assertEqual(Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT.name, notification_data['type'])
 
         # Delete figure
-        self.query(
+        event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
+        event.save()
+        response = self.query(
             self.delete_figure,
             variables={
                 'id': figure_id,
@@ -368,7 +400,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             variables={'recipient': self.regional_coordinator.id}
         )
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
-        self.assertEqual(Notification.Type.FIGURE_DELETED.name, notification_data['type'])
+        self.assertEqual(Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT.name, notification_data['type'])
 
     def test_should_notification_to_co_ordinator_if_event_is_signed_off(self):
         event = EventFactory.create(
@@ -410,6 +442,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertEqual(Notification.Type.EVENT_SELF_ASSIGNED.name, notification_data['type'])
 
     def test_should_send_notification_to_co_ordinator_if_figure_is_un_approved_and_event_is_signed_off(self):
+        # Signed off case
         event = EventFactory.create(
             assignee=self.monitoring_expert,
             assigner=self.regional_coordinator,
@@ -417,6 +450,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         )
         figure = FigureFactory.create(
             event=event,
+            country=self.country,
             review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
         )
         event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
@@ -433,6 +467,21 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         )
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.FIGURE_UNAPPROVED_IN_SIGNED_EVENT.name, notification_data['type'])
+
+        # Approved case
+        event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED
+        event.save()
+        self.query(
+            self.unapprove_figure,
+            variables={'id': figure.id}
+        )
+        self.force_login(self.regional_coordinator)
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.regional_coordinator.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.FIGURE_UNAPPROVED_IN_APPROVED_EVENT.name, notification_data['type'])
 
     def test_should_send_notification_to_the_assignee_when_there_is_a_comment_on_figure_he_is_assigned_to(self):
         event = EventFactory.create(
@@ -494,8 +543,6 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
             entry=entry,
         )
-        event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED
-        event.save()
 
         # Create figure in already approved event
         self.force_login(self.admin)
@@ -512,15 +559,18 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         content = json.loads(response.content)
         figure_id = content['data']['updateEntry']['result']['figures'][0]['id']
 
-        self.force_login(self.monitoring_expert)
+        self.force_login(self.regional_coordinator)
         response = self.query(
             self.notification_query,
-            variables={'recipient': self.monitoring_expert.id}
+            variables={'recipient': self.regional_coordinator.id}
         )
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
-        self.assertEqual(Notification.Type.FIGURE_CREATED.name, notification_data['type'])
+        self.assertEqual(Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT.name, notification_data['type'])
 
         # Update figure in already approved event
+        event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED
+        event.save()
+
         self.force_login(self.admin)
         figures = self.figures
         figures[0]['id'] = figure_id
@@ -531,15 +581,18 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 'figures': figures
             }
         )
-        self.force_login(self.monitoring_expert)
+        self.force_login(self.regional_coordinator)
         response = self.query(
             self.notification_query,
-            variables={'recipient': self.monitoring_expert.id}
+            variables={'recipient': self.regional_coordinator.id}
         )
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
-        self.assertEqual(Notification.Type.FIGURE_UPDATED.name, notification_data['type'])
+        self.assertEqual(Notification.Type.FIGURE_UPDATED_IN_APPROVED_EVENT.name, notification_data['type'])
 
         # Delete figure
+        event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED
+        event.save()
+
         self.query(
             self.delete_figure,
             variables={
@@ -551,13 +604,54 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             variables={'recipient': self.regional_coordinator.id}
         )
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
-        self.assertEqual(Notification.Type.FIGURE_DELETED.name, notification_data['type'])
-
-    def coordinator_should_receive_a_notification_when_event_is_approved(self):
-        pass
-
-    def test_user_who_created_the_event_should_receive_notification_when_event_is_approved(self):
-        pass
+        self.assertEqual(Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT.name, notification_data['type'])
 
     def test_should_send_notification_when_include_triangulation_in_qa_has_changed(self):
-        pass
+        self.force_login(self.regional_coordinator)
+        event = EventFactory.create(
+            assignee=self.monitoring_expert,
+            assigner=self.regional_coordinator,
+            countries=(self.country, )
+        )
+        self.query(
+            self.update_event,
+            input_data={
+                'id': event.id,
+                'includeTriangulationInQa': True
+            }
+        )
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.regional_coordinator.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.EVENT_INCLUDE_TRIANGULATION_CHANGED.name, notification_data['type'])
+
+    def test_can_toggle_read_and_unread_notification(self):
+        notification = NotificationFactory.create(
+            is_read=False,
+            recipient=self.regional_coordinator,
+            type=Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT,
+        )
+        # Read case
+        self.force_login(self.regional_coordinator)
+        response = self.query(
+            self.toggle_notificaiton,
+            variables={
+                'id': notification.id,
+            }
+        )
+        notification_data = json.loads(response.content)['data']['toggleNotification']['result']
+        self.assertEqual(notification_data['id'], str(notification.id))
+        self.assertEqual(True, notification_data['isRead'])
+
+        # Unread case
+        response = self.query(
+            self.toggle_notificaiton,
+            variables={
+                'id': notification.id,
+            }
+        )
+        notification_data = json.loads(response.content)['data']['toggleNotification']['result']
+        self.assertEqual(notification_data['id'], str(notification.id))
+        self.assertEqual(False, notification_data['isRead'])
