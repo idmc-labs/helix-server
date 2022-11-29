@@ -1658,6 +1658,7 @@ type MonitoringSubRegionType {
 }
 
 type Mutation {
+  toggleNotification(id: ID!): ToggleNotification
   createContextualUpdate(data: ContextualUpdateCreateInputType!): CreateContextualUpdate
   updateContextualUpdate(data: ContextualUpdateUpdateInputType!): UpdateContextualUpdate
   deleteContextualUpdate(id: ID!): DeleteContextualUpdate
@@ -1865,13 +1866,15 @@ input NestedFigureUpdateInputType {
 }
 
 enum NotificationTypeEnum {
-  FIGURE_APPROVED
   FIGURE_RE_REQUESTED_REVIEW
-  FIGURE_UN_APPROVED
-  FIGURE_CREATED
-  FIGURE_UPDATED
-  FIGURE_DELETED
+  FIGURE_CREATED_IN_APPROVED_EVENT
+  FIGURE_UPDATED_IN_APPROVED_EVENT
+  FIGURE_DELETED_IN_APPROVED_EVENT
+  FIGURE_CREATED_IN_SIGNED_EVENT
+  FIGURE_UPDATED_IN_SIGNED_EVENT
+  FIGURE_DELETED_IN_SIGNED_EVENT
   FIGURE_UNAPPROVED_IN_SIGNED_EVENT
+  FIGURE_UNAPPROVED_IN_APPROVED_EVENT
   EVENT_ASSIGNED
   EVENT_ASSIGNEE_CLEARED
   EVENT_SIGNED_OFF
@@ -2780,6 +2783,12 @@ type SummaryType {
   versionId: String
   id: ID!
   summary: String!
+}
+
+type ToggleNotification {
+  ok: Boolean
+  errors: [GenericScalar!]
+  result: GenericNotificationType
 }
 
 enum UNIT {

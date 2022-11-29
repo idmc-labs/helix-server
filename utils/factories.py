@@ -275,3 +275,8 @@ class ClientFactory(DjangoModelFactory):
 class ClientTrackInfoFactory(DjangoModelFactory):
     class Meta:
         model = 'contrib.ClientTrackInfo'
+
+
+class NotificationFactory(DjangoModelFactory):
+    class Meta:
+        model = 'notification.Notification'

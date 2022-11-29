@@ -977,12 +977,12 @@ class Figure(MetaInformationArchiveAbstractModel,
             event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value
         event.save()
         if event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-            for coordinator in event.regional_coordinators:
-                Notification.send_notification(
-                    recipient=coordinator,
-                    event=event,
-                    type=Notification.Type.EVENT_APPROVED,
-                )
+            Notification.send_multiple_notifications(
+                recipients=Event.regional_coordinators(event=event),
+                type=Notification.Type.EVENT_APPROVED,
+                event=event,
+                actor=None,
+            )
             if event.created_by:
                 Notification.send_notification(
                     recipient=event.created_by,

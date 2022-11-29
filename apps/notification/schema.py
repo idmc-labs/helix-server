@@ -56,7 +56,6 @@ class Query(object):
 
     def resolve_notification(root, info, **kwargs):
         # FIXME: This resolver does not work, improve utils to fix this
-        print("here i am *******************************8")
         if info.context.user.is_authenticated:
             return notificaiton_qs(info)
         return []

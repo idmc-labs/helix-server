@@ -5,13 +5,15 @@ from django.utils.translation import gettext_lazy as _
 
 class Notification(models.Model):
     class Type(enum.Enum):
-        FIGURE_APPROVED = 0
-        FIGURE_RE_REQUESTED_REVIEW = 1
-        FIGURE_UN_APPROVED = 2
-        FIGURE_CREATED = 3
-        FIGURE_UPDATED = 4
-        FIGURE_DELETED = 5
-        FIGURE_UNAPPROVED_IN_SIGNED_EVENT = 6
+        FIGURE_RE_REQUESTED_REVIEW = 0
+        FIGURE_CREATED_IN_APPROVED_EVENT = 1
+        FIGURE_UPDATED_IN_APPROVED_EVENT = 2
+        FIGURE_DELETED_IN_APPROVED_EVENT = 3
+        FIGURE_CREATED_IN_SIGNED_EVENT = 4
+        FIGURE_UPDATED_IN_SIGNED_EVENT = 5
+        FIGURE_DELETED_IN_SIGNED_EVENT = 6
+        FIGURE_UNAPPROVED_IN_SIGNED_EVENT = 7
+        FIGURE_UNAPPROVED_IN_APPROVED_EVENT = 8
 
         EVENT_ASSIGNED = 101
         EVENT_ASSIGNEE_CLEARED = 102
@@ -24,13 +26,15 @@ class Notification(models.Model):
 
         __labels__ = {
 
-            FIGURE_APPROVED: _('Figure approved'),
             FIGURE_RE_REQUESTED_REVIEW: _('Figure re-requested review'),
-            FIGURE_UN_APPROVED: _('Figure un-approved'),
-            FIGURE_CREATED: _('Figure created'),
-            FIGURE_UPDATED: _('Figure updated'),
-            FIGURE_DELETED: _('Figure deleted'),
-            FIGURE_UNAPPROVED_IN_SIGNED_EVENT: _('Figure unapproved in signed event'),
+            FIGURE_CREATED_IN_APPROVED_EVENT: _('Figure created in approved event'),
+            FIGURE_UPDATED_IN_APPROVED_EVENT: _('Figure updated in approved event'),
+            FIGURE_DELETED_IN_APPROVED_EVENT: _('Figure deleted in approved event'),
+            FIGURE_CREATED_IN_SIGNED_EVENT: _('Figure created in signed-off event'),
+            FIGURE_UPDATED_IN_SIGNED_EVENT: _('Figure updated in signed-off event'),
+            FIGURE_DELETED_IN_SIGNED_EVENT: _('Figure deleted in signed-off event'),
+            FIGURE_UNAPPROVED_IN_SIGNED_EVENT: _('Figure unapproved in signed-off event'),
+            FIGURE_UNAPPROVED_IN_APPROVED_EVENT: _('Figure unapproved in approved event'),
 
             EVENT_ASSIGNED: _('Event assigned'),
             EVENT_ASSIGNEE_CLEARED: _('Event assignee cleared'),
@@ -38,6 +42,7 @@ class Notification(models.Model):
             EVENT_SELF_ASSIGNED: _('Event self assigned'),
             EVENT_APPROVED: _('Event approved'),
             EVENT_INCLUDE_TRIANGULATION_CHANGED: _('Event include triangulation changed'),
+
             REVIEW_COMMENT_CREATED: _('Comment created'),
         }
 
@@ -81,6 +86,12 @@ class Notification(models.Model):
         blank=True,
         null=True,
     )
+    text = models.CharField(
+        verbose_name=_('Raw text'),
+        max_length=256,
+        blank=True,
+        null=True,
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name=_('Created at'),
@@ -96,6 +107,29 @@ class Notification(models.Model):
 
     @classmethod
     def send_notification(cls, **kwargs):
-        return Notification.objects.create(
+        Notification.objects.create(
             **kwargs
+        )
+
+    @classmethod
+    def send_multiple_notifications(
+        cls,
+        recipients,
+        actor,
+        type,
+        figure=None,
+        event=None,
+        text=None,
+    ):
+        Notification.objects.bulk_create(
+            [
+                Notification(
+                    recipient_id=recipient['id'],
+                    type=type,
+                    actor=actor,
+                    figure=figure,
+                    event=event,
+                    text=text,
+                ) for recipient in recipients
+            ]
         )

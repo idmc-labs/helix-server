@@ -392,13 +392,14 @@ class SetSelfAssigneeToEvent(graphene.Mutation):
         event.assigner = info.context.user
         event.assigned_at = timezone.now()
         event.save()
-        if event.regional_coordinators:
-            for recipient in event.regional_coordinators:
-                Notification.send_notification(
-                    event=event,
-                    recipient=recipient,
-                    type=Notification.Type.EVENT_SELF_ASSIGNED,
-                )
+        Notification.send_multiple_notifications(
+            recipients=event.regional_coordinators(
+                event=event
+            ),
+            type=Notification.Type.EVENT_SELF_ASSIGNED,
+            actor=info.context.user,
+            event=event,
+        )
 
         return SetSelfAssigneeToEvent(result=event, errors=None, ok=True)
 
@@ -452,12 +453,14 @@ class ClearSelfAssigneFromEvent(graphene.Mutation):
         event.save()
 
         if event.regional_coordinators:
-            for recipient in event.regional_coordinators:
-                Notification.send_notification(
-                    event=event,
-                    recipient=recipient,
-                    type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
-                )
+            Notification.send_multiple_notifications(
+                recipients=event.regional_coordinators(
+                    event=event
+                ),
+                type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
+                actor=info.context.user,
+                event=event,
+            )
         return ClearSelfAssigneFromEvent(result=event, errors=None, ok=True)
 
 
@@ -482,11 +485,14 @@ class SignOffEvent(graphene.Mutation):
             ])
         event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
         event.save()
-        for coordinator in event.regional_coordinators:
-            Notification.send_notification(
-                recipient=coordinator,
-                event=event,
+        if event.regional_coordinators:
+            Notification.send_multiple_notifications(
+                recipients=event.regional_coordinators(
+                    event=event
+                ),
                 type=Notification.Type.EVENT_SIGNED_OFF,
+                actor=info.context.user,
+                event=event,
             )
         return ClearSelfAssigneFromEvent(result=event, errors=None, ok=True)
 
