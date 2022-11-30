@@ -65,7 +65,7 @@ class UserType(DjangoObjectType):
     email = graphene.String()
     portfolios = graphene.List(graphene.NonNull(PortfolioType))
     portfolio_role = Field(PermissionRoleEnum)
-    portfolio_role_display = EnumDescription(source='get_portfolio_role_display')
+    portfolio_role_display = graphene.String()
     permissions = graphene.List(graphene.NonNull(PermissionsType))
     is_admin = graphene.Boolean()
 
@@ -92,6 +92,9 @@ class UserType(DjangoObjectType):
     @staticmethod
     def resolve_portfolios(root, info, **kwargs):
         return Portfolio.objects.filter(user=root.id)
+
+    def resolve_portfolio_role_display(root, info, **kwargs):
+        return info.context.user_portfolio_role_loader.load(root.id)
 
 
 class UserListType(CustomDjangoListObjectType):
