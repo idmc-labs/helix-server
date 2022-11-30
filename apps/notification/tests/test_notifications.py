@@ -300,15 +300,55 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.EVENT_ASSIGNED.name, notification_data['type'])
 
-    # TODO:
     def test_should_send_notification_to_assignee_when_coordinator_clears_assignee(self):
         # Ref: 2
-        pass
+        event = EventFactory.create(
+            assigner=self.regional_coordinator,
+            assignee=self.monitoring_expert,
+            countries=(self.country, )
+        )
+        self.force_login(self.regional_coordinator)
+        self.query(
+            self.clear_assignee_from_event_mutation,
+            variables={'event_id': event.id}
+        )
+        self.force_login(self.monitoring_expert)
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.monitoring_expert.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.EVENT_ASSIGNEE_CLEARED.name, notification_data['type'])
 
-    # TODO:
     def test_should_send_notification_to_both_assignees_when_coordinator_changes_an_assignee(self):
         # Ref: 3
-        pass
+        event = EventFactory.create(
+            assigner=self.admin,
+            assignee=self.regional_coordinator,
+            countries=(self.country, )
+        )
+        self.force_login(self.admin)
+        self.query(
+            self.set_assignee_to_event_mutation,
+            variables={'event_id': event.id, 'user_id': self.monitoring_expert.id}
+        )
+        # Assignee cleard case
+        self.force_login(self.regional_coordinator)
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.regional_coordinator.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.EVENT_ASSIGNEE_CLEARED.name, notification_data['type'])
+
+        # Assigned case
+        self.force_login(self.monitoring_expert)
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.monitoring_expert.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.EVENT_ASSIGNED.name, notification_data['type'])
 
     def test_should_send_notification_to_co_ordinator_when_user_self_assigns_on_an_event(self):
         # Ref: 4
@@ -464,10 +504,37 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.FIGURE_RE_REQUESTED_REVIEW.name, notification_data['type'])
 
-    # TODO:
     def test_should_send_notification_to_the_coordinators_and_who_created_event_when_event_is_approved(self):
         # Ref: 11
-        pass
+        event = EventFactory.create(
+            assignee=self.monitoring_expert,
+            assigner=self.regional_coordinator,
+            countries=(self.country, ),
+            created_by=self.admin,
+        )
+        figure = FigureFactory.create(event=event, review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS)
+        self.force_login(self.monitoring_expert)
+        self.query(
+            self.approve_figure,
+            variables={'id': figure.id}
+        )
+        # Regional coordinator should receive notification
+        self.force_login(self.regional_coordinator)
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.regional_coordinator.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.EVENT_APPROVED.name, notification_data['type'])
+
+        # Admin who is creator should receive notification
+        self.force_login(self.admin)
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.admin.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.EVENT_APPROVED.name, notification_data['type'])
 
     def test_should_send_notification_to_co_ordinator_if_event_is_signed_off(self):
         # Ref: 12
