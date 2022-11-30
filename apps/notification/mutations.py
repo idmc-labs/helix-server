@@ -5,7 +5,7 @@ from utils.error_types import CustomErrorType
 from apps.notification.schema import GenericNotificationType
 
 
-class ToggleNotification(graphene.Mutation):
+class ToggleNotificationRead(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
@@ -20,10 +20,10 @@ class ToggleNotification(graphene.Mutation):
             id=id
         ).first()
         if not instance:
-            return ToggleNotification(
+            return ToggleNotificationRead(
                 errors=[
                     dict(field='nonFieldErrors',
-                         messages=gettext('Notification does not exist.'))
+                         messages=gettext('Notification does not exist or you are not recipient.'))
                 ],
                 ok=False
             )
@@ -32,8 +32,8 @@ class ToggleNotification(graphene.Mutation):
         else:
             instance.is_read = False
         instance.save()
-        return ToggleNotification(result=instance, errors=None, ok=True)
+        return ToggleNotificationRead(result=instance, errors=None, ok=True)
 
 
 class Mutation(object):
-    toggle_notification = ToggleNotification.Field()
+    toggle_notification_read = ToggleNotificationRead.Field()

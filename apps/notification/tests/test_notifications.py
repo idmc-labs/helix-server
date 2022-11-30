@@ -234,9 +234,9 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             }
           }
           '''
-        self.toggle_notificaiton = '''
-          mutation ToggleNotification($id: ID!) {
-            toggleNotification(id: $id) {
+        self.toggle_notificaiton_read = '''
+          mutation ToggleNotificationRead($id: ID!) {
+            toggleNotificationRead(id: $id) {
               ok
               errors
               result {
@@ -730,22 +730,22 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         # Read case
         self.force_login(self.regional_coordinator)
         response = self.query(
-            self.toggle_notificaiton,
+            self.toggle_notificaiton_read,
             variables={
                 'id': notification.id,
             }
         )
-        notification_data = json.loads(response.content)['data']['toggleNotification']['result']
+        notification_data = json.loads(response.content)['data']['toggleNotificationRead']['result']
         self.assertEqual(notification_data['id'], str(notification.id))
         self.assertEqual(True, notification_data['isRead'])
 
         # Unread case
         response = self.query(
-            self.toggle_notificaiton,
+            self.toggle_notificaiton_read,
             variables={
                 'id': notification.id,
             }
         )
-        notification_data = json.loads(response.content)['data']['toggleNotification']['result']
+        notification_data = json.loads(response.content)['data']['toggleNotificationRead']['result']
         self.assertEqual(notification_data['id'], str(notification.id))
         self.assertEqual(False, notification_data['isRead'])
