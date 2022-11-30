@@ -211,7 +211,7 @@ class EventType(DjangoObjectType):
     event_typology = graphene.String()
     figure_typology = graphene.List(graphene.String)
     review_status = graphene.Field(EventReviewStatusEnum)
-    review_status_display = EnumDescription(source='get_event_review_status_display')
+    review_status_display = EnumDescription(source='get_review_status_display')
     review_count = graphene.Field(EventReviewCountType)
 
     def resolve_entry_count(root, info, **kwargs):
