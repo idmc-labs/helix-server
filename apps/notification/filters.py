@@ -8,7 +8,7 @@ class NotificationFilter(df.FilterSet):
     figures = IDListFilter(method='filter_figures')
     types = StringListFilter(method='filter_types')
     created_at_after = df.DateFilter(method='filter_created_at_after')
-    create_at_before = df.DateFilter(method='filter_created_at_before')
+    created_at_before = df.DateFilter(method='filter_created_at_before')
 
     def filter_events(self, qs, name, value):
         if not value:
