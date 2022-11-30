@@ -1658,7 +1658,7 @@ type MonitoringSubRegionType {
 }
 
 type Mutation {
-  toggleNotification(id: ID!): ToggleNotification
+  toggleNotificationRead(id: ID!): ToggleNotificationRead
   createContextualUpdate(data: ContextualUpdateCreateInputType!): CreateContextualUpdate
   updateContextualUpdate(data: ContextualUpdateUpdateInputType!): UpdateContextualUpdate
   deleteContextualUpdate(id: ID!): DeleteContextualUpdate
@@ -2787,7 +2787,7 @@ type SummaryType {
   summary: String!
 }
 
-type ToggleNotification {
+type ToggleNotificationRead {
   ok: Boolean
   errors: [GenericScalar!]
   result: GenericNotificationType
