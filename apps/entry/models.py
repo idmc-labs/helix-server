@@ -955,11 +955,11 @@ class Figure(MetaInformationArchiveAbstractModel,
         return entry.can_be_updated_by(user)
 
     @classmethod
-    def update_event_status(cls, event_id):
+    def update_event_status(cls, event):
         from apps.event.models import Event
 
         event = Event.objects.filter(
-            id=event_id
+            id=event.id
         ).annotate(
             **Event.annotate_review_figures_count()
         ).first()

@@ -377,6 +377,8 @@ class ApproveFigure(graphene.Mutation):
         figure.approved_by = info.context.user
         figure.approved_on = timezone.now()
         figure.save()
+        # NOTE: To refresh event
+        figure.refresh_from_db()
         return ApproveFigure(result=figure, errors=None, ok=True)
 
 
@@ -399,6 +401,11 @@ class UnapproveFigure(graphene.Mutation):
                 dict(field='id', messages=gettext('Figure does not exist.'))
             ])
         figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
+        if figure.figure_review_comments.all().count() > 0:
+            figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+        figure.approved_by = None
+        figure.approved_on = None
+        figure.save()
         if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
             Notification.send_multiple_notifications(
                 recipients=figure.event.regional_coordinators(
@@ -421,11 +428,8 @@ class UnapproveFigure(graphene.Mutation):
                 event=figure.event,
                 figure=figure,
             )
-        if figure.figure_review_comments.all().count() > 0:
-            figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
-        figure.approved_by = None
-        figure.approved_on = None
-        figure.save()
+        # NOTE: To refresh event
+        figure.refresh_from_db()
         return UnapproveFigure(result=figure, errors=None, ok=True)
 
 
@@ -450,6 +454,9 @@ class ReRequestReivewFigure(graphene.Mutation):
         figure.approved_by = None
         figure.approved_on = None
         figure.save()
+
+        # NOTE: To refresh event
+        figure.refresh_from_db()
 
         if figure.event and figure.event.assignee:
             Notification.send_notification(

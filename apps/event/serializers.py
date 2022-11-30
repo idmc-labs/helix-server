@@ -192,7 +192,7 @@ class EventSerializer(MetaInformationSerializerMixin,
         if 'include_triangulation_in_qa' in validated_data:
             new_include_triangulation_in_qa = validated_data.get('include_triangulation_in_qa')
             if new_include_triangulation_in_qa != instance.include_triangulation_in_qa:
-                Figure.update_event_status(instance.id)
+                Figure.update_event_status(instance)
                 Notification.send_multiple_notifications(
                     recipients=instance.regional_coordinators(
                         event=instance
