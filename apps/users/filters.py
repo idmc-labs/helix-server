@@ -18,6 +18,7 @@ class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
     include_inactive = django_filters.BooleanFilter(method='filter_include_inactive',
                                                     initial=False)
     id = django_filters.CharFilter(field_name='id', lookup_expr='iexact')
+    permissions = StringListFilter(method='filter_permissions')
 
     class Meta:
         model = User
@@ -61,6 +62,11 @@ class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
         if value is False:
             return queryset.filter(is_active=True)
         return queryset
+
+    def filter_permissions(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(groups__permissions__codename__in=value)
 
     @property
     def qs(self):

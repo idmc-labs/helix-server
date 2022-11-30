@@ -2329,7 +2329,7 @@ type Query {
   communicationList(contact: ID, country: ID, id: String, subjectContains: String, page: Int = 1, ordering: String, pageSize: Int): CommunicationListType
   me: UserType
   user(id: ID!): UserType
-  users(email: String, isActive: Boolean, roleIn: [String!], roleNotIn: [String!], monitoringSubRegionIn: [ID!], monitoringSubRegionNotIn: [ID!], fullName: String, includeInactive: Boolean, id: String, page: Int = 1, ordering: String, pageSize: Int): UserListType
+  users(email: String, isActive: Boolean, roleIn: [String!], roleNotIn: [String!], monitoringSubRegionIn: [ID!], monitoringSubRegionNotIn: [ID!], fullName: String, includeInactive: Boolean, id: String, permissions: [String!], page: Int = 1, ordering: String, pageSize: Int): UserListType
   portfolios(monitoringSubRegion_In: ID, country_In: ID, roleIn: [String!], page: Int = 1, ordering: String, pageSize: Int): PortfolioListType
   roleWithRegionAllowedMap: GenericScalar
   _debug: DjangoDebug
