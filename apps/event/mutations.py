@@ -359,11 +359,18 @@ class SetAssigneeToEvent(graphene.Mutation):
             return SetAssigneeToEvent(errors=[
                 dict(field='user_id', messages=gettext('The user does not exist or has enough permissions.'))
             ])
+        if event.assignee:
+            Notification.send_notification(
+                event=event,
+                recipient=event.assignee,
+                actor=info.context.user,
+                type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
+            )
+
         event.assignee = user
         event.assigner = info.context.user
         event.assigned_at = timezone.now()
         event.save()
-
         Notification.send_notification(
             event=event,
             recipient=user,
@@ -420,6 +427,13 @@ class ClearAssigneFromEvent(graphene.Mutation):
             return ClearAssigneFromEvent(errors=[
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
+        if event.assignee:
+            Notification.send_notification(
+                event=event,
+                recipient=event.assignee,
+                actor=info.context.user,
+                type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
+            )
         event.assignee = None
         event.assigner = None
         event.assigned_at = None
@@ -476,11 +490,11 @@ class SignOffEvent(graphene.Mutation):
     def mutate(root, info, event_id):
         event = Event.objects.filter(id=event_id).first()
         if not event:
-            return ClearSelfAssigneFromEvent(errors=[
+            return SignOffEvent(errors=[
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
         if not event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-            return ClearSelfAssigneFromEvent(errors=[
+            return SignOffEvent(errors=[
                 dict(field='event_id', messages=gettext('Event is not approved yet.'))
             ])
         event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
@@ -494,7 +508,7 @@ class SignOffEvent(graphene.Mutation):
                 actor=info.context.user,
                 event=event,
             )
-        return ClearSelfAssigneFromEvent(result=event, errors=None, ok=True)
+        return SignOffEvent(result=event, errors=None, ok=True)
 
 
 class Mutation(object):
