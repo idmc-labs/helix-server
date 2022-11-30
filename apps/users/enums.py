@@ -95,9 +95,9 @@ class USER_ROLE(enum.Enum):
     }
 
 
-PermissionActionEnum = graphene.Enum.from_enum(PERMISSION_ACTION, enum_description)
-PermissionModelEnum = graphene.Enum.from_enum(PERMISSION_ENTITY, enum_description)
-PermissionRoleEnum = graphene.Enum.from_enum(USER_ROLE, enum_description)
+PermissionActionEnum = graphene.Enum.from_enum(PERMISSION_ACTION, description=enum_description)
+PermissionModelEnum = graphene.Enum.from_enum(PERMISSION_ENTITY, description=enum_description)
+PermissionRoleEnum = graphene.Enum.from_enum(USER_ROLE, description=enum_description)
 
 enum_map = dict(
     PERMISSION_ENTITY=PermissionModelEnum,
