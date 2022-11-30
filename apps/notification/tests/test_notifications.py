@@ -285,6 +285,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         ]
 
     def test_should_send_notification_to_user_who_is_assigned_to_an_event(self):
+        # Ref: 1
         event = EventFactory.create()
         self.force_login(self.regional_coordinator)
         self.query(
@@ -299,130 +300,18 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.EVENT_ASSIGNED.name, notification_data['type'])
 
-    def test_should_send_notification_to_co_ordinator_when_user_clears_self_as_assignee(self):
-        event = EventFactory.create(
-            assignee=self.monitoring_expert,
-            assigner=self.regional_coordinator,
-            countries=(self.country, )
-        )
-        self.force_login(self.monitoring_expert)
-        self.query(
-            self.clear_self_assignee_from_event_mutation,
-            variables={'event_id': event.id}
-        )
-        self.force_login(self.regional_coordinator)
-        response = self.query(
-            self.notification_query,
-            variables={'recipient': self.regional_coordinator.id}
-        )
-        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
-        self.assertEqual(Notification.Type.EVENT_ASSIGNEE_CLEARED.name, notification_data['type'])
+    # TODO:
+    def test_should_send_notification_to_assignee_when_coordinator_clears_assignee(self):
+        # Ref: 2
+        pass
 
-    def test_should_send_notification_to_the_assignee_when_there_is_a_re_request_review(self):
-        event = EventFactory.create(
-            assignee=self.monitoring_expert,
-            assigner=self.regional_coordinator,
-        )
-        figure = FigureFactory.create(event=event)
-        self.force_login(self.regional_coordinator)
-        self.query(
-            self.re_request_review_figure,
-            variables={'id': figure.id}
-        )
-        self.force_login(self.monitoring_expert)
-        response = self.query(
-            self.notification_query,
-            variables={'recipient': self.monitoring_expert.id}
-        )
-        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
-        self.assertEqual(Notification.Type.FIGURE_RE_REQUESTED_REVIEW.name, notification_data['type'])
-
-    def test_should_notification_to_co_ordinator_if_figure_is_added_edited_deleted_in_signed_off_event(self):
-        event = EventFactory.create(
-            assignee=self.monitoring_expert,
-            assigner=self.regional_coordinator,
-            countries=(self.country, ),
-            review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
-        )
-        entry = EntryFactory.create()
-        self.force_login(self.regional_coordinator)
-        figures = self.figures
-        figures[0]['event'] = event.id
-
-        # Create figure
-        response = self.query(
-            self.create_update_figure,
-            input_data={
-                'id': entry.id,
-                'figures': figures
-            }
-        )
-        content = json.loads(response.content)
-        figure_id = content['data']['updateEntry']['result']['figures'][0]['id']
-
-        response = self.query(
-            self.notification_query,
-            variables={'recipient': self.regional_coordinator.id}
-        )
-        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
-        self.assertEqual(Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT.name, notification_data['type'])
-
-        # Update figure
-        event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
-        event.save()
-
-        figures[0]['id'] = figure_id
-        self.query(
-            self.create_update_figure,
-            input_data={
-                'id': entry.id,
-                'figures': figures,
-            }
-        )
-        response = self.query(
-            self.notification_query,
-            variables={'recipient': self.regional_coordinator.id}
-        )
-        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
-        self.assertEqual(Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT.name, notification_data['type'])
-
-        # Delete figure
-        event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
-        event.save()
-        response = self.query(
-            self.delete_figure,
-            variables={
-                'id': figure_id,
-            }
-        )
-        response = self.query(
-            self.notification_query,
-            variables={'recipient': self.regional_coordinator.id}
-        )
-        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
-        self.assertEqual(Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT.name, notification_data['type'])
-
-    def test_should_notification_to_co_ordinator_if_event_is_signed_off(self):
-        event = EventFactory.create(
-            assignee=self.monitoring_expert,
-            assigner=self.regional_coordinator,
-            countries=(self.country, ),
-            review_status=Event.EVENT_REVIEW_STATUS.APPROVED,
-        )
-        self.force_login(self.admin)
-        self.query(
-            self.sign_off_event,
-            variables={'event_id': event.id}
-        )
-        self.force_login(self.regional_coordinator)
-        response = self.query(
-            self.notification_query,
-            variables={'recipient': self.regional_coordinator.id}
-        )
-        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
-        self.assertEqual(Notification.Type.EVENT_SIGNED_OFF.name, notification_data['type'])
+    # TODO:
+    def test_should_send_notification_to_both_assignees_when_coordinator_changes_an_assignee(self):
+        # Ref: 3
+        pass
 
     def test_should_send_notification_to_co_ordinator_when_user_self_assigns_on_an_event(self):
+        # Ref: 4
         event = EventFactory.create(
             assignee=self.monitoring_expert,
             assigner=self.regional_coordinator,
@@ -441,7 +330,29 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.EVENT_SELF_ASSIGNED.name, notification_data['type'])
 
-    def test_should_send_notification_to_co_ordinator_if_figure_is_un_approved_and_event_is_signed_off(self):
+    def test_should_send_notification_to_co_ordinator_when_user_clears_self_as_assignee(self):
+        # Ref: 5
+        event = EventFactory.create(
+            assignee=self.monitoring_expert,
+            assigner=self.regional_coordinator,
+            countries=(self.country, )
+        )
+        self.force_login(self.monitoring_expert)
+        self.query(
+            self.clear_self_assignee_from_event_mutation,
+            variables={'event_id': event.id}
+        )
+        self.force_login(self.regional_coordinator)
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.regional_coordinator.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.EVENT_ASSIGNEE_CLEARED.name, notification_data['type'])
+
+    def test_should_send_notification_to_co_ordinator_if_figure_is_un_approved_and_event_is_signed_off_and_approved(self):
+        # Ref: 7
+
         # Signed off case
         event = EventFactory.create(
             assignee=self.monitoring_expert,
@@ -484,6 +395,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertEqual(Notification.Type.FIGURE_UNAPPROVED_IN_APPROVED_EVENT.name, notification_data['type'])
 
     def test_should_send_notification_to_the_assignee_when_there_is_a_comment_on_figure_he_is_assigned_to(self):
+        # Ref: 8
         event = EventFactory.create(
             assignee=self.monitoring_expert,
             assigner=self.regional_coordinator,
@@ -508,6 +420,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertEqual(Notification.Type.REVIEW_COMMENT_CREATED.name, notification_data['type'])
 
     def test_should_send_notification_to_the_user_who_created_the_figure_when_assignee_comments_on_figure(self):
+        # Ref: 8
         event = EventFactory.create(
             assignee=self.monitoring_expert,
             assigner=self.regional_coordinator,
@@ -531,7 +444,54 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.REVIEW_COMMENT_CREATED.name, notification_data['type'])
 
+    def test_should_send_notification_to_the_assignee_when_there_is_a_re_request_review(self):
+        # Ref: 10
+        event = EventFactory.create(
+            assignee=self.monitoring_expert,
+            assigner=self.regional_coordinator,
+        )
+        figure = FigureFactory.create(event=event)
+        self.force_login(self.regional_coordinator)
+        self.query(
+            self.re_request_review_figure,
+            variables={'id': figure.id}
+        )
+        self.force_login(self.monitoring_expert)
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.monitoring_expert.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.FIGURE_RE_REQUESTED_REVIEW.name, notification_data['type'])
+
+    # TODO:
+    def test_should_send_notification_to_the_coordinators_and_who_created_event_when_event_is_approved(self):
+        # Ref: 11
+        pass
+
+    def test_should_send_notification_to_co_ordinator_if_event_is_signed_off(self):
+        # Ref: 12
+        event = EventFactory.create(
+            assignee=self.monitoring_expert,
+            assigner=self.regional_coordinator,
+            countries=(self.country, ),
+            review_status=Event.EVENT_REVIEW_STATUS.APPROVED,
+        )
+        self.force_login(self.admin)
+        self.query(
+            self.sign_off_event,
+            variables={'event_id': event.id}
+        )
+        self.force_login(self.regional_coordinator)
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.regional_coordinator.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.EVENT_SIGNED_OFF.name, notification_data['type'])
+
     def test_should_send_notification_to_assignee_if_figure_is_added_edited_deleted_and_event_is_approved(self):
+        # Ref: 13
         event = EventFactory.create(
             assignee=self.monitoring_expert,
             assigner=self.regional_coordinator,
@@ -606,7 +566,74 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT.name, notification_data['type'])
 
+    def test_should_send_notification_to_co_ordinator_if_figure_is_added_edited_deleted_in_signed_off_event(self):
+        # Ref: 14
+        event = EventFactory.create(
+            assignee=self.monitoring_expert,
+            assigner=self.regional_coordinator,
+            countries=(self.country, ),
+            review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
+        )
+        entry = EntryFactory.create()
+        self.force_login(self.regional_coordinator)
+        figures = self.figures
+        figures[0]['event'] = event.id
+
+        # Create figure
+        response = self.query(
+            self.create_update_figure,
+            input_data={
+                'id': entry.id,
+                'figures': figures
+            }
+        )
+        content = json.loads(response.content)
+        figure_id = content['data']['updateEntry']['result']['figures'][0]['id']
+
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.regional_coordinator.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT.name, notification_data['type'])
+
+        # Update figure
+        event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
+        event.save()
+
+        figures[0]['id'] = figure_id
+        self.query(
+            self.create_update_figure,
+            input_data={
+                'id': entry.id,
+                'figures': figures,
+            }
+        )
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.regional_coordinator.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT.name, notification_data['type'])
+
+        # Delete figure
+        event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
+        event.save()
+        response = self.query(
+            self.delete_figure,
+            variables={
+                'id': figure_id,
+            }
+        )
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.regional_coordinator.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT.name, notification_data['type'])
+
     def test_should_send_notification_when_include_triangulation_in_qa_has_changed(self):
+        # Ref: 15
         self.force_login(self.regional_coordinator)
         event = EventFactory.create(
             assignee=self.monitoring_expert,
