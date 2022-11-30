@@ -407,7 +407,6 @@ class SetSelfAssigneeToEvent(graphene.Mutation):
             actor=info.context.user,
             event=event,
         )
-
         return SetSelfAssigneeToEvent(result=event, errors=None, ok=True)
 
 
