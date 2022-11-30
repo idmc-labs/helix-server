@@ -29,6 +29,7 @@ from apps.event.dataloaders import (
 )
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 from apps.entry.models import Figure
+from apps.users.dataloaders import UserPortfolioRoleLoader
 
 
 class GQLContext:
@@ -164,3 +165,7 @@ class GQLContext:
     @cached_property
     def crisis_review_count_dataloader(self):
         return CrisisReviewCountLoader()
+
+    @cached_property
+    def user_portfolio_role_loader(self):
+        return UserPortfolioRoleLoader()
