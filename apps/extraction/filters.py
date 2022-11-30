@@ -325,7 +325,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_tags = IDListFilter(method='filter_tags')
     filter_figure_crisis_types = StringListFilter(method='filter_crisis_types')
     filter_figure_glide_number = StringListFilter(method='filter_filter_figure_glide_number')
-    filter_entry_created_by = IDListFilter(field_name='entry__created_by', lookup_expr='in')
+    filter_figure_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
     event = df.CharFilter(field_name='event', lookup_expr='exact')
