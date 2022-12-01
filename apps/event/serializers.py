@@ -188,10 +188,12 @@ class EventSerializer(MetaInformationSerializerMixin,
 
     def update(self, instance, validated_data):
         # Update event status if include_triangulation_in_qa is changed
+        is_include_triangulation_in_qa_changed = False
         validated_data['last_modified_by'] = self.context['request'].user
         if 'include_triangulation_in_qa' in validated_data:
             new_include_triangulation_in_qa = validated_data.get('include_triangulation_in_qa')
             if new_include_triangulation_in_qa != instance.include_triangulation_in_qa:
+                is_include_triangulation_in_qa_changed = True
                 Figure.update_event_status(instance)
                 Notification.send_multiple_notifications(
                     recipients=instance.regional_coordinators(
@@ -208,7 +210,11 @@ class EventSerializer(MetaInformationSerializerMixin,
                         actor=self.context['request'].user,
                         event=instance,
                     )
-        return super().update(instance, validated_data)
+        instance = super().update(instance, validated_data)
+        if is_include_triangulation_in_qa_changed:
+            # Update event status
+            Figure.update_event_status(instance)
+        return instance
 
 
 class EventUpdateSerializer(UpdateSerializerMixin, EventSerializer):

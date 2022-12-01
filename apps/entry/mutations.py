@@ -1,5 +1,6 @@
 from django.utils.translation import gettext
 import graphene
+from django.utils.translation import gettext_lazy as _
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from django.utils import timezone
 
@@ -157,34 +158,26 @@ class DeleteFigure(graphene.Mutation):
             return DeleteFigure(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
             ])
-        if instance.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-            Notification.send_multiple_notifications(
-                recipients=instance.event.regional_coordinators(
-                    event=instance.event
-                ),
-                actor=info.context.user,
-                type=Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT,
-                event=instance.event,
-                # TODO: Add proper descriptive text
-                text=f'''
-                Figure having id {instance.id}, start_date
-                {instance.start_date}, end_date {instance.end_date}
-                was deleted.
-                '''
-            )
-        if instance.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
-            Notification.send_multiple_notifications(
-                recipients=instance.event.regional_coordinators(
-                    event=instance.event
-                ),
-                actor=info.context.user,
-                type=Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT,
-                event=instance.event,
-            )
+
+        if instance.event:
+            _type = None
+            if instance.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+                _type = Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT
+            if instance.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+                _type = Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT
+            if _type:
+                Notification.send_multiple_notifications(
+                    recipients=instance.event.regional_coordinators(
+                        event=instance.event
+                    ),
+                    actor=info.context.user,
+                    type=_type,
+                    entry=instance.entry,
+                    event=instance.event,
+                    text=_('Figure was deleted'),
+                )
         instance.delete()
         return DeleteFigure(errors=None, ok=True)
-
-# source preview
 
 
 SourcePreviewInputType = generate_input_type_for_serializer(
@@ -377,7 +370,10 @@ class ApproveFigure(graphene.Mutation):
         figure.approved_by = info.context.user
         figure.approved_on = timezone.now()
         figure.save()
-        # NOTE: To refresh event
+        if figure.event:
+            figure.update_event_status(figure.event)
+        # NOTE: Event is updated on figure save using signals.
+        # We are clearing figure and its reference objects (event).
         figure.refresh_from_db()
         return ApproveFigure(result=figure, errors=None, ok=True)
 
@@ -406,29 +402,29 @@ class UnapproveFigure(graphene.Mutation):
         figure.approved_by = None
         figure.approved_on = None
         figure.save()
-        if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-            Notification.send_multiple_notifications(
-                recipients=figure.event.regional_coordinators(
+
+        if figure.event:
+            # Update event status
+            figure.update_event_status(figure.event)
+
+            _type = None
+            if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+                _type = Notification.Type.FIGURE_UNAPPROVED_IN_APPROVED_EVENT
+            if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+                _type = Notification.Type.FIGURE_UNAPPROVED_IN_SIGNED_EVENT
+            if _type:
+                Notification.send_multiple_notifications(
+                    recipients=figure.event.regional_coordinators(
+                        event=figure.event,
+                        figure=figure,
+                    ),
+                    type=_type,
+                    actor=info.context.user,
                     event=figure.event,
                     figure=figure,
-                ),
-                type=Notification.Type.FIGURE_UNAPPROVED_IN_APPROVED_EVENT,
-                actor=info.context.user,
-                event=figure.event,
-                figure=figure,
-            )
-        if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
-            Notification.send_multiple_notifications(
-                recipients=figure.event.regional_coordinators(
-                    event=figure.event,
-                    figure=figure,
-                ),
-                type=Notification.Type.FIGURE_UNAPPROVED_IN_SIGNED_EVENT,
-                actor=info.context.user,
-                event=figure.event,
-                figure=figure,
-            )
-        # NOTE: To refresh event
+                )
+        # NOTE: Event is updated on figure save using signals.
+        # We are clearing figure and its reference objects (event).
         figure.refresh_from_db()
         return UnapproveFigure(result=figure, errors=None, ok=True)
 
@@ -455,7 +451,11 @@ class ReRequestReivewFigure(graphene.Mutation):
         figure.approved_on = None
         figure.save()
 
-        # NOTE: To refresh event
+        if figure.event:
+            figure.update_event_status(figure.event)
+
+        # NOTE: Event is updated on figure save using signals.
+        # We are clearing figure and its reference objects (event).
         figure.refresh_from_db()
 
         if figure.event and figure.event.assignee:
