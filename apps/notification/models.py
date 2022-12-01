@@ -86,6 +86,14 @@ class Notification(models.Model):
         blank=True,
         null=True,
     )
+    entry = models.ForeignKey(
+        'entry.Entry',
+        verbose_name=_('Entry'),
+        related_name='entries',
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+    )
     text = models.CharField(
         verbose_name=_('Raw text'),
         max_length=256,
@@ -119,6 +127,7 @@ class Notification(models.Model):
         type,
         figure=None,
         event=None,
+        entry=None,
         text=None,
     ):
         Notification.objects.bulk_create(
@@ -129,6 +138,7 @@ class Notification(models.Model):
                     actor=actor,
                     figure=figure,
                     event=event,
+                    entry=entry,
                     text=text,
                 ) for recipient in recipients
             ]

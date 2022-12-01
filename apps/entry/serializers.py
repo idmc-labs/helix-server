@@ -629,6 +629,32 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
     def update(self, instance, validated_data: dict) -> Entry:
         from apps.event.models import Event
 
+        def _send_notificaiton_and_update_event_status(figure, created):
+            # FIXME This function may raise N+1 problem in mutation
+            _type = None
+            if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+                _type = (
+                    Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT
+                    if created
+                    else Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT
+                )
+            if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+                _type = (
+                    Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT
+                    if created
+                    else Notification.Type.FIGURE_UPDATED_IN_APPROVED_EVENT
+                )
+            if _type:
+                Notification.send_multiple_notifications(
+                    recipients=figure.event.regional_coordinators(figure.event, figure=figure),
+                    actor=self.context['request'].user,
+                    type=_type,
+                    figure=figure,
+                    event=figure.event,
+                )
+            # Update event status
+            figure.update_event_status(figure.event)
+
         figures = validated_data.pop('figures', None)
         if figures:
             with transaction.atomic():
@@ -653,35 +679,8 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         fig_ser._validated_data = {**each, 'entry': entry}
                     fig_ser._errors = {}
                     figure = fig_ser.save()
-                    if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
-                        Notification.send_multiple_notifications(
-                            recipients=figure.event.regional_coordinators(figure.event, figure=figure),
-                            actor=self.context['request'].user,
-                            type=(
-                                Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT
-                                if created
-                                else Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT
-                            ),
-                            figure=figure,
-                            event=figure.event,
-                        )
-                    if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-                        Notification.send_multiple_notifications(
-                            recipients=figure.event.regional_coordinators(figure.event, figure=figure),
-                            actor=self.context['request'].user,
-                            type=(
-                                Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT
-                                if created
-                                else Notification.Type.FIGURE_UPDATED_IN_APPROVED_EVENT
-                            ),
-                            figure=figure,
-                            event=figure.event,
-                        )
-                    new_event_id = each.get('event_id')
-                    old_event_id = fig_ser.data.get('event_id')
-                    # Change if event id changed and update event review status
-                    if figure and (new_event_id != old_event_id):
-                        Figure.update_event_status(figure.event)
+                    if figure.event:
+                        _send_notificaiton_and_update_event_status(figure, created)
 
         elif isinstance(figures, list) and not figures:
             # If figure is empty list remove all figures associated with entry
