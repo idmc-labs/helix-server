@@ -23,7 +23,7 @@ FEMALE = GENDER_TYPE.FEMALE.name
 
 class EntryExtractionFilterSet(df.FilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
-    filter_events = IDListFilter(method='filter_events_')
+    filter_figure_events = IDListFilter(method='filter_figure_events_')
 
     filter_figure_crises = IDListFilter(method='filter_crises')
     filter_figure_glide_number = StringListFilter(method='filter_filter_figure_glide_number')
@@ -31,7 +31,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
     filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='unaccent__icontains')
-    filter_entry_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
+    filter_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
 
     filter_figure_regions = IDListFilter(method='filter_regions')
     filter_figure_geographical_groups = IDListFilter(method='filter_geographical_groups')
@@ -98,7 +98,7 @@ class EntryExtractionFilterSet(df.FilterSet):
             )
         return qs
 
-    def filter_events_(self, qs, name, value):
+    def filter_figure_events_(self, qs, name, value):
         if value:
             return qs.filter(figures__event__in=value).distinct()
         return qs
@@ -312,7 +312,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_regions = IDListFilter(method='filter_regions')
     filter_figure_geographical_groups = IDListFilter(method='filter_geographical_groups')
     filter_figure_countries = IDListFilter(method='filter_countries')
-    filter_events = IDListFilter(method='filter_events_')
+    filter_figure_events = IDListFilter(method='filter_figure_events_')
     filter_figure_crises = IDListFilter(method='filter_crises')
     filter_figure_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
@@ -325,7 +325,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_tags = IDListFilter(method='filter_tags')
     filter_figure_crisis_types = StringListFilter(method='filter_crisis_types')
     filter_figure_glide_number = StringListFilter(method='filter_filter_figure_glide_number')
-    filter_figure_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
+    filter_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
     filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
     event = df.CharFilter(field_name='event', lookup_expr='exact')
@@ -390,7 +390,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             return qs.filter(country__in=value).distinct()
         return qs
 
-    def filter_events_(self, qs, name, value):
+    def filter_figure_events_(self, qs, name, value):
         if value:
             return qs.filter(event__in=value).distinct()
         return qs
