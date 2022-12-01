@@ -1590,6 +1590,7 @@ type GenericNotificationType {
   isRead: Boolean!
   event: EventType
   figure: FigureType
+  text: String
   createdAt: DateTime!
   typeDisplay: EnumDescription
 }
