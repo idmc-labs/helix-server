@@ -1034,6 +1034,7 @@ type EntryType {
   publishDate: Date!
   idmcAnalysis: String
   isConfidential: Boolean!
+  entries: [GenericNotificationType!]!
   figures: [FigureType!]
 }
 
@@ -1590,6 +1591,7 @@ type GenericNotificationType {
   isRead: Boolean!
   event: EventType
   figure: FigureType
+  entry: EntryType
   text: String
   createdAt: DateTime!
   typeDisplay: EnumDescription
