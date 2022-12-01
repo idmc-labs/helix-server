@@ -73,6 +73,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
                 recipient=instance.event.assignee,
                 event=instance.event,
                 figure=instance.figure,
+                actor=info.context.user,
                 type=Notification.Type.REVIEW_COMMENT_CREATED,
             )
 
@@ -81,6 +82,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
                 recipient=instance.figure.created_by,
                 event=instance.event,
                 figure=instance.figure,
+                actor=info.context.user,
                 type=Notification.Type.REVIEW_COMMENT_CREATED,
             )
         return CreateUnifiedReviewComment(result=instance, errors=None, ok=True)
