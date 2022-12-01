@@ -17,6 +17,7 @@ from apps.event.serializers import (
     ContextOfViolenceUpdateSerializer
 )
 from apps.notification.models import Notification
+from apps.entry.models import Figure
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 from utils.mutation import generate_input_type_for_serializer
@@ -371,6 +372,10 @@ class SetAssigneeToEvent(graphene.Mutation):
         event.assigner = info.context.user
         event.assigned_at = timezone.now()
         event.save()
+
+        # Update event status
+        Figure.update_event_status(event)
+
         Notification.send_notification(
             event=event,
             recipient=user,
@@ -399,6 +404,10 @@ class SetSelfAssigneeToEvent(graphene.Mutation):
         event.assigner = info.context.user
         event.assigned_at = timezone.now()
         event.save()
+
+        # Update event status
+        Figure.update_event_status(event)
+
         Notification.send_multiple_notifications(
             recipients=event.regional_coordinators(
                 event=event
@@ -437,6 +446,10 @@ class ClearAssigneFromEvent(graphene.Mutation):
         event.assigner = None
         event.assigned_at = None
         event.save()
+
+        # Update event status
+        Figure.update_event_status(event)
+
         return ClearAssigneFromEvent(result=event, errors=None, ok=True)
 
 
@@ -464,6 +477,9 @@ class ClearSelfAssigneFromEvent(graphene.Mutation):
         event.assigner = None
         event.assigned_at = None
         event.save()
+
+        # Update event status
+        Figure.update_event_status(event)
 
         if event.regional_coordinators:
             Notification.send_multiple_notifications(
@@ -498,6 +514,10 @@ class SignOffEvent(graphene.Mutation):
             ])
         event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
         event.save()
+
+        # Update event status
+        Figure.update_event_status(event)
+
         if event.regional_coordinators:
             Notification.send_multiple_notifications(
                 recipients=event.regional_coordinators(

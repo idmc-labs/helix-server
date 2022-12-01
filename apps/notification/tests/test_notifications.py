@@ -207,6 +207,9 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                   isRead
                   type
                   typeDisplay
+                  entry {
+                      id
+                  }
            }
           }
         }
@@ -562,7 +565,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         event = EventFactory.create(
             assignee=self.monitoring_expert,
             assigner=self.regional_coordinator,
-            countries=(self.country, )
+            countries=(self.country, ),
+            review_status=Event.EVENT_REVIEW_STATUS.APPROVED,
         )
         entry = EntryFactory.create()
         FigureFactory.create(
@@ -632,6 +636,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         )
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT.name, notification_data['type'])
+        self.assertEqual(str(entry.id), notification_data['entry']['id'])
 
     def test_should_send_notification_to_co_ordinator_if_figure_is_added_edited_deleted_in_signed_off_event(self):
         # Ref: 14
@@ -692,12 +697,14 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 'id': figure_id,
             }
         )
+        print(json.loads(response.content))
         response = self.query(
             self.notification_query,
             variables={'recipient': self.regional_coordinator.id}
         )
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT.name, notification_data['type'])
+        self.assertEqual(str(entry.id), notification_data['entry']['id'])
 
     def test_should_send_notification_when_include_triangulation_in_qa_has_changed(self):
         # Ref: 15

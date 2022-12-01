@@ -5,4 +5,5 @@ class EntryConfig(AppConfig):
     name = 'apps.entry'
 
     def ready(self):
-        from apps.entry import receivers # noqa :f401
+        # from apps.entry import receivers # noqa :f401
+        pass
