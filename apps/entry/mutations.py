@@ -165,7 +165,7 @@ class DeleteFigure(graphene.Mutation):
                 actor=info.context.user,
                 type=Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT,
                 event=instance.event,
-                # TODO: Add proper describtive text
+                # TODO: Add proper descriptive text
                 text=f'''
                 Figure having id {instance.id}, start_date
                 {instance.start_date}, end_date {instance.end_date}
