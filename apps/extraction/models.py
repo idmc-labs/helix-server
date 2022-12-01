@@ -35,7 +35,7 @@ class QueryAbstractModel(models.Model):
         blank=True,
         related_name='+'
     )
-    filter_events = models.ManyToManyField(
+    filter_figure_events = models.ManyToManyField(
         'event.Event',
         verbose_name=_('Events'),
         blank=True,
@@ -99,7 +99,7 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_entry_created_by = models.ManyToManyField(
+    filter_created_by = models.ManyToManyField(
         'users.User',
         verbose_name=_('Entry Created by'),
         blank=True,
@@ -174,7 +174,7 @@ class QueryAbstractModel(models.Model):
             filter_figure_countries=self.filter_figure_countries.all(),
             filter_figure_regions=self.filter_figure_regions.all(),
             filter_figure_geographical_groups=self.filter_figure_geographical_groups.all(),
-            filter_events=self.filter_events.all(),
+            filter_figure_events=self.filter_figure_events.all(),
             filter_figure_crises=self.filter_figure_crises.all(),
             filter_figure_categories=self.filter_figure_categories,
             filter_figure_tags=self.filter_figure_tags.all(),

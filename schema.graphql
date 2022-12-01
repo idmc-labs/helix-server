@@ -445,7 +445,7 @@ type CountryType {
   contextualupdateSet: [ContextualUpdateType!]!
   lastSummary: SummaryType
   lastContextualAnalysis: ContextualAnalysisType
-  entries(filterEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterEntryCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  entries(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EntryListType
   totalFlowConflict: Int
   totalFlowDisaster: Int
   totalStockConflict: Int
@@ -533,12 +533,12 @@ input CreateExtractInputType {
   filterFigureGeographicalGroups: [ID!]
   filterFigureRegions: [ID!]
   filterFigureCountries: [ID!]
-  filterEvents: [ID!]
+  filterFigureEvents: [ID!]
   filterFigureCrises: [ID!]
   filterFigureSources: [ID!]
   filterEntryPublishers: [ID!]
   filterFigureTags: [ID!]
-  filterEntryCreatedBy: [ID!]
+  filterCreatedBy: [ID!]
   filterFigureDisasterCategories: [ID!]
   filterFigureDisasterSubCategories: [ID!]
   filterFigureDisasterTypes: [ID!]
@@ -1285,7 +1285,7 @@ type ExtractionQueryObjectType {
   filterFigureGeographicalGroups: [GeographicalGroupType!]!
   filterFigureRegions: [CountryRegionType!]!
   filterFigureCountries: [CountryType!]!
-  filterEvents: [EventType!]!
+  filterFigureEvents: [EventType!]!
   filterFigureCrises: [CrisisType!]!
   filterFigureCategories: [FIGURE_CATEGORY_TYPES!]
   filterFigureSources: [OrganizationType!]!
@@ -1297,7 +1297,7 @@ type ExtractionQueryObjectType {
   filterEntryArticleTitle: String
   filterFigureCrisisTypes: [CRISIS_TYPE!]
   filterFigureGlideNumber: [String]
-  filterEntryCreatedBy: [UserType!]!
+  filterCreatedBy: [UserType!]!
   filterFigureDisplacementTypes: [DISPLACEMENT_TYPE!]
   filterFigureTerms: [FIGURE_TERMS!]
   filterFigureReviewStatus: [FIGURE_REVIEW_STATUS!]
@@ -1310,7 +1310,7 @@ type ExtractionQueryObjectType {
   filterFigureCategoryTypes: [String]
   filterFigureHasDisaggregatedData: Boolean
   filterContextOfViolence: [ContextOfViolenceType!]!
-  entries(filterEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterEntryCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  entries(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EntryListType
 }
 
 enum FIGURE_CATEGORY_TYPES {
@@ -1699,8 +1699,8 @@ type Mutation {
   createFigureTag(data: FigureTagCreateInputType!): CreateFigureTag
   updateFigureTag(data: FigureTagUpdateInputType!): UpdateFigureTag
   deleteFigureTag(id: ID!): DeleteFigureTag
-  exportEntries(filterEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterEntryCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!]): ExportEntries
-  exportFigures(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterFigureCrises: [ID!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterFigureCrisisTypes: [String!], filterFigureGlideNumber: [String!], filterFigureCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], event: String, filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!]): ExportFigures
+  exportEntries(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!]): ExportEntries
+  exportFigures(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterFigureCrisisTypes: [String!], filterFigureGlideNumber: [String!], filterCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], event: String, filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!]): ExportFigures
   updateFigure(data: FigureUpdateInputType!): updateFigure
   deleteFigure(id: ID!): DeleteFigure
   approveFigure(id: ID!): ApproveFigure
@@ -2283,15 +2283,15 @@ type Query {
   resourceGroupList: [ResourceGroupType!]
   extractionQuery(id: ID!): ExtractionQueryObjectType
   extractionQueryList(id: Float, name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): ExtractionQueryListType
-  extractionEntryList(filterEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterEntryCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EntryListType
-  extractionFigureList(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterFigureCrises: [ID!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterFigureCrisisTypes: [String!], filterFigureGlideNumber: [String!], filterFigureCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], event: String, filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], page: Int = 1, ordering: String, pageSize: Int): FigureListType
+  extractionEntryList(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  extractionFigureList(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterFigureCrisisTypes: [String!], filterFigureGlideNumber: [String!], filterCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], event: String, filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], page: Int = 1, ordering: String, pageSize: Int): FigureListType
   figureTag(id: ID!): FigureTagType
   figureTagList(name_Unaccent_Icontains: String, page: Int = 1, ordering: String, pageSize: Int): FigureTagListType
   figure(id: ID!): FigureType
-  figureList(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterEvents: [ID!], filterFigureCrises: [ID!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterFigureCrisisTypes: [String!], filterFigureGlideNumber: [String!], filterFigureCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], event: String, filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], page: Int = 1, ordering: String, pageSize: Int): FigureListType
+  figureList(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterFigureCrisisTypes: [String!], filterFigureGlideNumber: [String!], filterCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], event: String, filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], page: Int = 1, ordering: String, pageSize: Int): FigureListType
   sourcePreview(id: ID!): SourcePreviewType
   entry(id: ID!): EntryType
-  entryList(filterEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterEntryCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  entryList(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EntryListType
   disaggregatedAge(id: ID!): DisaggregatedAgeType
   disaggregatedAgeList(sex_In: String, ordering: String): DisaggregatedAgeListType
   violenceList(id_Iexact: Float, ordering: String): ViolenceListType
@@ -2474,7 +2474,7 @@ input ReportCreateInputType {
   filterFigureEndBefore: Date
   filterFigureCrisisTypes: [CRISIS_TYPE!]
   filterFigureGeographicalGroups: [ID!]
-  filterEvents: [ID!]
+  filterFigureEvents: [ID!]
   filterFigureTags: [ID!]
   filterFigureDisasterCategories: [ID!]
   filterFigureDisasterSubCategories: [ID!]
@@ -2557,7 +2557,7 @@ type ReportType {
   filterFigureGeographicalGroups: [GeographicalGroupType!]!
   filterFigureRegions: [CountryRegionType!]!
   filterFigureCountries: [CountryType!]!
-  filterEvents: [EventType!]!
+  filterFigureEvents: [EventType!]!
   filterFigureCrises: [CrisisType!]!
   filterFigureCategories: [FIGURE_CATEGORY_TYPES!]
   filterFigureSources: [OrganizationType!]!
@@ -2567,7 +2567,7 @@ type ReportType {
   filterEntryArticleTitle: String
   filterFigureCrisisTypes: EnumDescription
   filterFigureGlideNumber: [String]
-  filterEntryCreatedBy: [UserType!]!
+  filterCreatedBy: [UserType!]!
   filterFigureDisplacementTypes: [Int!]
   filterFigureTerms: [FIGURE_TERMS!]
   filterFigureReviewStatus: [Int!]
@@ -2625,7 +2625,7 @@ input ReportUpdateInputType {
   filterFigureEndBefore: Date
   filterFigureCrisisTypes: [CRISIS_TYPE!]
   filterFigureGeographicalGroups: [ID!]
-  filterEvents: [ID!]
+  filterFigureEvents: [ID!]
   filterFigureTags: [ID!]
   filterFigureDisasterCategories: [ID!]
   filterFigureDisasterSubCategories: [ID!]
@@ -2928,12 +2928,12 @@ input UpdateExtractInputType {
   filterFigureGeographicalGroups: [ID!]
   filterFigureRegions: [ID!]
   filterFigureCountries: [ID!]
-  filterEvents: [ID!]
+  filterFigureEvents: [ID!]
   filterFigureCrises: [ID!]
   filterFigureSources: [ID!]
   filterEntryPublishers: [ID!]
   filterFigureTags: [ID!]
-  filterEntryCreatedBy: [ID!]
+  filterCreatedBy: [ID!]
   filterFigureDisasterCategories: [ID!]
   filterFigureDisasterSubCategories: [ID!]
   filterFigureDisasterTypes: [ID!]
@@ -3039,7 +3039,7 @@ type UserType {
   email: String
   username: String!
   fullName: String!
-  createdEntry(filterEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterEntryCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  createdEntry(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], page: Int = 1, ordering: String, pageSize: Int): EntryListType
   portfolios: [PortfolioType!]
   portfolioRole: USER_ROLE
   portfolioRoleDisplay: String
