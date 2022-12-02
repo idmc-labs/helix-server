@@ -639,7 +639,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
     def update(self, instance, validated_data: dict) -> Entry:
         from apps.event.models import Event
 
-        def _send_notificaiton_and_update_event_status(figure, created):
+        def _send_notificaitons(figure, created):
             # FIXME This function may raise N+1 problem in mutation
             _type = None
             if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
@@ -662,8 +662,6 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                     figure=figure,
                     event=figure.event,
                 )
-            # Update event status
-            figure.update_event_status(figure.event)
 
         figures = validated_data.pop('figures', None)
         if figures:
@@ -690,7 +688,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                     fig_ser._errors = {}
                     figure = fig_ser.save()
                     if figure.event:
-                        _send_notificaiton_and_update_event_status(figure, created)
+                        _send_notificaitons(figure, created)
 
         elif isinstance(figures, list) and not figures:
             # If figure is empty list remove all figures associated with entry
