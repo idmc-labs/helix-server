@@ -963,19 +963,21 @@ class Figure(MetaInformationArchiveAbstractModel,
         ).annotate(
             **Event.annotate_review_figures_count()
         ).first()
+
         review_approved_count = event.review_approved_count
         review_not_started_count = event.review_not_started_count
         total_count = event.total_count
 
         if not total_count:
             event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED.value
-        elif review_approved_count == total_count:
-            event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
         elif review_not_started_count == total_count:
             event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED.value
+        elif review_approved_count == total_count:
+            event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
         else:
             event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value
         event.save()
+
         if event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
             Notification.send_multiple_notifications(
                 recipients=Event.regional_coordinators(event=event),
