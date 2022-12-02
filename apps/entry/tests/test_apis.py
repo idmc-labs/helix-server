@@ -742,6 +742,24 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         self.assertFalse(content['data']['updateEntry']['ok'], content)
         self.assertNotIn('figureCause', json.dumps(content['data']['updateEntry']['errors']))
 
+    def test_should_not_update_event_in_figure(self):
+        self.force_login(self.admin)
+        entry = EntryFactory.create()
+        event1 = EventFactory.create()
+        event2 = EventFactory.create()
+        figure = FigureFactory.create(entry=entry, event=event1)
+        self.input['figures'] = [
+            {'id': figure.id, 'event': event2.id}
+        ]
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        self.assertResponseNoErrors(response)
+        content = json.loads(response.content)
+        self.assertFalse(content['data']['updateEntry']['ok'], content)
+        self.assertIn('event', json.dumps(content['data']['updateEntry']['errors']))
+
 
 class TestEntryDelete(HelixGraphQLTestCase):
     def setUp(self) -> None:
