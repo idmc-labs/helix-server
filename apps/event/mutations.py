@@ -515,6 +515,9 @@ class SignOffEvent(graphene.Mutation):
         event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
         event.save()
 
+        # Refresh event
+        event.refresh_from_db()
+
         # Update event status
         Figure.update_event_status(event)
 
@@ -527,6 +530,14 @@ class SignOffEvent(graphene.Mutation):
                 actor=info.context.user,
                 event=event,
             )
+        if event.created_by:
+            Notification.send_notification(
+                recipient=event.created_by,
+                type=Notification.Type.EVENT_SIGNED_OFF,
+                actor=info.context.user,
+                event=event,
+            )
+
         return SignOffEvent(result=event, errors=None, ok=True)
 
 
