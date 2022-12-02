@@ -515,7 +515,11 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             countries=(self.country, ),
             created_by=self.admin,
         )
-        figure = FigureFactory.create(event=event, review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS)
+        figure = FigureFactory.create(
+            event=event,
+            country=self.country,
+            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+        )
         self.force_login(self.monitoring_expert)
         self.query(
             self.approve_figure,

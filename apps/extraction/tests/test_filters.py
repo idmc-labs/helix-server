@@ -262,7 +262,7 @@ class TestExtractionFilter(HelixTestCase):
             filter_figure_categories=[self.fig_cat2]
         )
         fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1, self.entry3ev2})
+        self.assertEqual(set(fqs), {self.entry1ev1, self.entry2ev1})
 
     def test_filter_by_category_types(self):
         data = dict(
