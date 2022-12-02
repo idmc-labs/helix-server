@@ -281,6 +281,15 @@ class CommonFigureValidationMixin:
             _attrs['displacement_occurred'] = None
         return _attrs
 
+    def _validate_event(self, attrs):
+        errors = OrderedDict()
+        event = attrs.get('event')
+        if event and self.instance and self.instance.event and self.instance.event.id != event.id:
+            errors.update({
+                'event': 'Event change is not allowed'
+            })
+        return errors
+
     def validate(self, attrs: dict) -> dict:
         if not self.instance and attrs.get('id'):
             self.instance = Figure.objects.get(id=attrs['id'])
@@ -313,6 +322,7 @@ class CommonFigureValidationMixin:
         ))
         errors.update(self._validate_disaggregated_json_sum_against_total_figures(attrs, 'disaggregation_age', 'age'))
         errors.update(self._validate_figure_cause(attrs))
+        errors.update(self._validate_event(attrs))
 
         if errors:
             raise ValidationError(errors)
