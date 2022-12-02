@@ -24,6 +24,13 @@ class GeographicalGroupFactory(DjangoModelFactory):
     name = factory.Faker('first_name')
 
 
+class CountrySubRegionFactory(DjangoModelFactory):
+    class Meta:
+        model = 'country.CountrySubRegion'
+
+    name = factory.Faker('first_name')
+
+
 class MonitoringSubRegionFactory(DjangoModelFactory):
     class Meta:
         model = 'country.MonitoringSubRegion'
