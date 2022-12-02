@@ -8,6 +8,8 @@ from utils.factories import (
     CountryFactory,
     MonitoringSubRegionFactory,
     NotificationFactory,
+    CountryRegionFactory,
+    CountrySubRegionFactory,
 )
 from apps.notification.models import Notification
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -19,8 +21,15 @@ from apps.review.models import UnifiedReviewComment
 
 class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.country = CountryFactory.create()
+        self.region = CountryRegionFactory.create()
+        self.sub_region = CountrySubRegionFactory.create()
         self.monitoring_sub_region = MonitoringSubRegionFactory.create()
+
+        self.country = CountryFactory.create(
+            monitoring_sub_region=self.monitoring_sub_region,
+            region=self.region,
+            sub_region=self.sub_region,
+        )
         self.regional_coordinator = create_user_with_role(
             USER_ROLE.REGIONAL_COORDINATOR.name,
             country=self.country.id,
