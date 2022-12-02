@@ -31,7 +31,7 @@ class TestFigureModel(HelixTestCase):
         )
 
     def test_figure_nd_filtering(self):
-        ref = datetime.today()
+        ref = datetime(year=2022, month=6, day=1)
         nd_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
         idp_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS.value
         f1 = FigureFactory.create(
