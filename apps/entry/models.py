@@ -989,6 +989,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 Notification.send_notification(
                     recipient=event.created_by,
                     event=event,
+                    actor=None,
                     type=Notification.Type.EVENT_APPROVED,
                 )
 
