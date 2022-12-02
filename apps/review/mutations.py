@@ -68,7 +68,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
         if errors := mutation_is_not_valid(serializer):
             return CreateUnifiedReviewComment(errors=errors, ok=False)
         instance = serializer.save()
-        if instance.figure and instance.event:
+        if instance.figure and instance.event and instance.event.assignee:
             Notification.send_notification(
                 recipient=instance.event.assignee,
                 event=instance.event,
