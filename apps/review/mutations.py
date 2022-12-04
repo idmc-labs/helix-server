@@ -57,18 +57,22 @@ class CreateUnifiedReviewComment(graphene.Mutation):
                     ],
                     ok=False
                 )
-            if event:
-                # FIXME:
-                # 1. Re-calculate event status instead of directly changing this
-                event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS
-                event.save()
 
-            if figure:
-                # FIXME:
-                # 1. Change NOT_STARTED to IN_PROGRESS
-                # 2. Change RE_REVIEW_REQUESTED to IN_PROGRESS if commented by event assignee
+            if figure and figure.review_status == Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED:
                 figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
                 figure.save()
+            elif (
+                figure and
+                figure.review_status == Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED and
+                figure.event.assignee and
+                info.context.user.id == figure.event.assignee.id
+            ):
+                figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+                figure.save()
+
+            if event:
+                Figure.update_event_status_and_send_notifications(event)
+                event.refresh_from_db()
 
         if errors := mutation_is_not_valid(serializer):
             return CreateUnifiedReviewComment(errors=errors, ok=False)

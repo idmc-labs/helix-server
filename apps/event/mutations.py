@@ -352,14 +352,14 @@ class SetAssigneeToEvent(graphene.Mutation):
         event = Event.objects.filter(id=event_id).first()
         if not event:
             return SetAssigneeToEvent(errors=[
-                dict(field='event_id', messages=gettext('Event does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
             ])
 
         user = User.objects.filter(id=user_id).first()
         # To prevent users being saved with no permission in event review process. for eg GUEST
         if not user.has_perm('event.self_assign_event'):
             return SetAssigneeToEvent(errors=[
-                dict(field='user_id', messages=gettext('The user does not exist or has enough permissions.'))
+                dict(field='nonFieldErrors', messages=gettext('The user does not exist or has enough permissions.'))
             ])
 
         prev_assignee = event.assignee
@@ -403,7 +403,7 @@ class SetSelfAssigneeToEvent(graphene.Mutation):
         event = Event.objects.filter(id=event_id).first()
         if not event:
             return SetSelfAssigneeToEvent(errors=[
-                dict(field='event_id', messages=gettext('Event does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
             ])
 
         event.assignee = info.context.user
@@ -439,12 +439,18 @@ class ClearAssigneFromEvent(graphene.Mutation):
         event = Event.objects.filter(id=event_id).first()
         if not event:
             return ClearAssigneFromEvent(errors=[
-                dict(field='event_id', messages=gettext('Event does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
             ])
 
-        # FIXME: throw error if there is not prev_assignee
-
         prev_assignee = event.assignee
+
+        if not prev_assignee:
+            return ClearAssigneFromEvent(errors=[
+                dict(
+                    field='nonFieldErrors',
+                    messages=gettext('Cannot clear assignee because event does not have an assignee'),
+                )
+            ])
 
         event.assignee = None
         event.assigner = None
@@ -478,14 +484,14 @@ class ClearSelfAssigneFromEvent(graphene.Mutation):
         event = Event.objects.filter(id=event_id).first()
         if not event:
             return ClearSelfAssigneFromEvent(errors=[
-                dict(field='event_id', messages=gettext('Event does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
             ])
 
         # Admin and RE can clear all other users from assignee except ME
         # FIXME: this logic does not seem right after `or`
         if event.assignee.id != info.context.user.id or info.context.user.has_perm('clear_assignee_from_event'):
             return ClearAssigneFromEvent(errors=[
-                dict(field='event_id', messages=gettext('You are not allowed to clear others from assignee.'))
+                dict(field='nonFieldErrors', messages=gettext('You are not allowed to clear others from assignee.'))
             ])
 
         event.assignee = None
@@ -521,11 +527,11 @@ class SignOffEvent(graphene.Mutation):
         event = Event.objects.filter(id=event_id).first()
         if not event:
             return SignOffEvent(errors=[
-                dict(field='event_id', messages=gettext('Event does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
             ])
         if not event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
             return SignOffEvent(errors=[
-                dict(field='event_id', messages=gettext('Event is not approved yet.'))
+                dict(field='nonFieldErrors', messages=gettext('Event is not approved yet.'))
             ])
 
         event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF

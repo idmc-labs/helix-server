@@ -126,7 +126,8 @@ class Notification(models.Model):
     ):
         recipient_set = set(recipients)
         if actor and actor.id in recipient_set:
-            # TODO: log to sentry if recipient ids has actor
+            # TODO: log to sentry if recipient ids contact actor id
+            # It indicates we have a problem with some logic
             recipient_set.remove(actor.id)
 
         recipient_list = list(recipient_set)
