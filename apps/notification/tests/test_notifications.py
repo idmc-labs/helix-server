@@ -527,7 +527,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         figure = FigureFactory.create(
             event=event,
             country=self.country,
-            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
+            role=Figure.ROLE.RECOMMENDED,
         )
         self.force_login(self.monitoring_expert)
         self.query(
