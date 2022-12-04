@@ -53,8 +53,5 @@ class ParkedItem(MetaInformationAbstractModel):
                                    max_length=255, blank=True, null=True)
     meta_data = JSONField(blank=True, null=True, default=None)
 
-    def move_to_entry(self):
-        ...  # TODO?
-
     def __str__(self):
-        return f'{self.country.name}- {self.title}'
+        return f'{self.country.name} - {self.title}'
