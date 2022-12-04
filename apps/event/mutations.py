@@ -354,34 +354,39 @@ class SetAssigneeToEvent(graphene.Mutation):
             return SetAssigneeToEvent(errors=[
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
+
         user = User.objects.filter(id=user_id).first()
         # To prevent users being saved with no permission in event review process. for eg GUEST
         if not user.has_perm('event.self_assign_event'):
             return SetAssigneeToEvent(errors=[
                 dict(field='user_id', messages=gettext('The user does not exist or has enough permissions.'))
             ])
-        if event.assignee:
-            Notification.send_notification(
-                event=event,
-                recipient=event.assignee,
-                actor=info.context.user,
-                type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
-            )
+
+        prev_assignee = event.assignee
 
         event.assignee = user
         event.assigner = info.context.user
         event.assigned_at = timezone.now()
         event.save()
 
-        # Update event status
-        Figure.update_event_status(event)
-
-        Notification.send_notification(
+        if prev_assignee:
+            Notification.send_safe_multiple_notifications(
+                event=event,
+                recipients=[prev_assignee.id],
+                actor=info.context.user,
+                type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
+            )
+        Notification.send_safe_multiple_notifications(
             event=event,
-            recipient=user,
+            recipients=[user.id],
             actor=info.context.user,
             type=Notification.Type.EVENT_ASSIGNED,
         )
+
+        # Update event status
+        Figure.update_event_status_and_send_notifications(event)
+        event.refresh_from_db()
+
         return SetAssigneeToEvent(result=event, errors=None, ok=True)
 
 
@@ -400,22 +405,23 @@ class SetSelfAssigneeToEvent(graphene.Mutation):
             return SetSelfAssigneeToEvent(errors=[
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
+
         event.assignee = info.context.user
         event.assigner = info.context.user
         event.assigned_at = timezone.now()
         event.save()
 
-        # Update event status
-        Figure.update_event_status(event)
-
-        Notification.send_multiple_notifications(
-            recipients=event.regional_coordinators(
-                event=event
-            ),
+        recipients = [user['id'] for user in Event.regional_coordinators(event)]
+        Notification.send_safe_multiple_notifications(
+            recipients=recipients,
             type=Notification.Type.EVENT_SELF_ASSIGNED,
             actor=info.context.user,
             event=event,
         )
+
+        Figure.update_event_status_and_send_notifications(event)
+        event.refresh_from_db()
+
         return SetSelfAssigneeToEvent(result=event, errors=None, ok=True)
 
 
@@ -435,20 +441,26 @@ class ClearAssigneFromEvent(graphene.Mutation):
             return ClearAssigneFromEvent(errors=[
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
-        if event.assignee:
-            Notification.send_notification(
-                event=event,
-                recipient=event.assignee,
-                actor=info.context.user,
-                type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
-            )
+
+        # FIXME: throw error if there is not prev_assignee
+
+        prev_assignee = event.assignee
+
         event.assignee = None
         event.assigner = None
         event.assigned_at = None
         event.save()
 
-        # Update event status
-        Figure.update_event_status(event)
+        if prev_assignee:
+            Notification.send_safe_multiple_notifications(
+                event=event,
+                recipients=[prev_assignee.id],
+                actor=info.context.user,
+                type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
+            )
+
+        Figure.update_event_status_and_send_notifications(event)
+        event.refresh_from_db()
 
         return ClearAssigneFromEvent(result=event, errors=None, ok=True)
 
@@ -468,28 +480,31 @@ class ClearSelfAssigneFromEvent(graphene.Mutation):
             return ClearSelfAssigneFromEvent(errors=[
                 dict(field='event_id', messages=gettext('Event does not exist.'))
             ])
+
         # Admin and RE can clear all other users from assignee except ME
+        # FIXME: this logic does not seem right after `or`
         if event.assignee.id != info.context.user.id or info.context.user.has_perm('clear_assignee_from_event'):
             return ClearAssigneFromEvent(errors=[
                 dict(field='event_id', messages=gettext('You are not allowed to clear others from assignee.'))
             ])
+
         event.assignee = None
         event.assigner = None
         event.assigned_at = None
         event.save()
 
-        # Update event status
-        Figure.update_event_status(event)
-
         if event.regional_coordinators:
-            Notification.send_multiple_notifications(
-                recipients=event.regional_coordinators(
-                    event=event
-                ),
+            recipients = [user['id'] for user in Event.regional_coordinators(event)]
+            Notification.send_safe_multiple_notifications(
+                recipients=recipients,
                 type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
                 actor=info.context.user,
                 event=event,
             )
+
+        Figure.update_event_status_and_send_notifications(event)
+        event.refresh_from_db()
+
         return ClearSelfAssigneFromEvent(result=event, errors=None, ok=True)
 
 
@@ -512,31 +527,19 @@ class SignOffEvent(graphene.Mutation):
             return SignOffEvent(errors=[
                 dict(field='event_id', messages=gettext('Event is not approved yet.'))
             ])
+
         event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
         event.save()
 
-        # Refresh event
-        event.refresh_from_db()
-
-        # Update event status
-        Figure.update_event_status(event)
-
-        if event.regional_coordinators:
-            Notification.send_multiple_notifications(
-                recipients=event.regional_coordinators(
-                    event=event
-                ),
-                type=Notification.Type.EVENT_SIGNED_OFF,
-                actor=info.context.user,
-                event=event,
-            )
+        recipients = [user['id'] for user in Event.regional_coordinators(event)]
         if event.created_by:
-            Notification.send_notification(
-                recipient=event.created_by,
-                type=Notification.Type.EVENT_SIGNED_OFF,
-                actor=info.context.user,
-                event=event,
-            )
+            recipients.append(event.created_by.id)
+        Notification.send_safe_multiple_notifications(
+            recipients=recipients,
+            type=Notification.Type.EVENT_SIGNED_OFF,
+            actor=info.context.user,
+            event=event,
+        )
 
         return SignOffEvent(result=event, errors=None, ok=True)
 

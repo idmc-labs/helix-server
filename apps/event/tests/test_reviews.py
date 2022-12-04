@@ -286,7 +286,12 @@ class TestEventRewviewCount(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.event = EventFactory.create()
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.f1, self.f2, self.f3 = FigureFactory.create_batch(3, event=self.event, role=Figure.ROLE.RECOMMENDED)
+        self.f1, self.f2, self.f3 = FigureFactory.create_batch(
+            3,
+            event=self.event,
+            role=Figure.ROLE.RECOMMENDED,
+            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
+        )
         self.event_query = '''
         query MyQuery {
           eventList {

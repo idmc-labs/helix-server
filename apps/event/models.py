@@ -331,9 +331,9 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             )
         }
 
+    # FIXME: this is wrong, this should see event and user not event and figure
     @staticmethod
     def regional_coordinators(event, figure=None):
-
         figure_regional_coordinators = User.objects.none()
         event_regional_coordinators = User.objects.none()
 

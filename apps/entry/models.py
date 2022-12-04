@@ -955,11 +955,22 @@ class Figure(MetaInformationArchiveAbstractModel,
         return entry.can_be_updated_by(user)
 
     @classmethod
-    def update_event_status(cls, event):
+    def update_figure_status(cls, figure):
+        # Change figure status
+        figure.review_status = (
+            Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+            if figure.figure_review_comments.count() > 0
+            else Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
+        )
+        figure.save()
+
+    # TODO: move this to event model
+    @classmethod
+    def update_event_status_and_send_notifications(cls, event_from_args):
         from apps.event.models import Event
 
         event = Event.objects.filter(
-            id=event.id
+            id=event_from_args.id
         ).annotate(
             **Event.annotate_review_figures_count()
         ).first()
@@ -968,29 +979,30 @@ class Figure(MetaInformationArchiveAbstractModel,
         review_not_started_count = event.review_not_started_count
         total_count = event.total_count
 
-        if not total_count:
+        prev_status = event.review_status
+
+        if not total_count or review_not_started_count == total_count:
             event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED.value
-        elif review_not_started_count == total_count:
-            event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED.value
+        elif review_approved_count == total_count and prev_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+            event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF.value
         elif review_approved_count == total_count:
             event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
         else:
             event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value
         event.save()
 
-        if event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-            Notification.send_multiple_notifications(
-                recipients=Event.regional_coordinators(event=event),
-                type=Notification.Type.EVENT_APPROVED,
-                event=event,
-                actor=None,
-            )
-            if event.created_by:
-                Notification.send_notification(
-                    recipient=event.created_by,
+        # TODO: add notification for un-approved and un-signed off
+        if prev_status != event.review_status:
+            recipients = [user['id'] for user in Event.regional_coordinators(event)]
+            if (event.created_by):
+                recipients.append(event.created_by.id)
+
+            if event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+                Notification.send_safe_multiple_notifications(
+                    recipients=recipients,
+                    type=Notification.Type.EVENT_APPROVED,
                     event=event,
                     actor=None,
-                    type=Notification.Type.EVENT_APPROVED,
                 )
 
     def can_be_updated_by(self, user: User) -> bool:

@@ -84,51 +84,18 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         }
         """
         self.event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
-        self.figure = FigureFactory.create(event=self.event)
         self.country = CountryFactory.create()
-
-        source = dict(
-            uuid=str(uuid4()),
-            rank=101,
-            country=str(self.country.name),
-            countryCode=self.country.iso2,
-            osmId='ted',
-            osmType='okay',
-            displayName='okay',
-            lat=68.88,
-            lon=46.66,
-            name='name',
-            accuracy=OSMName.OSM_ACCURACY.ADM0.name,
-            identifier=OSMName.IDENTIFIER.ORIGIN.name
-        )
-        self.figures = [
-            {
-                "uuid": str(uuid4()),
-                "country": self.country.id,
-                "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
-                "reported": 10,
-                "unit": Figure.UNIT.HOUSEHOLD.name,  # missing household_size
-                "term": Figure.FIGURE_TERMS.EVACUATED.name,
-                "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.name,
-                "role": Figure.ROLE.RECOMMENDED.name,
-                "startDate": "2020-10-10",
-                "includeIdu": True,
-                "excerptIdu": "excerpt abc",
-                "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
-                "geoLocations": [source],
-                "householdSize": 20,
-                "tags": [],
-                "contextOfViolence": [],
-                "sources": [],
-            }
-
-        ]
 
     def test_all_users_can_approve_figure_except_guest(self) -> None:
         users = [self.admin, self.monitoring_expert, self.regional_coordinator]
         for user in users:
+            figure = FigureFactory.create(
+                event=self.event,
+                review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
+            )
+
             self.force_login(user)
-            input = {'id': self.figure.id}
+            input = {'id': figure.id}
             response = self.query(
                 self.approve_figure,
                 variables=input,
@@ -138,7 +105,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertTrue(content['data']['approveFigure']['ok'], content)
             self.assertIsNone(content['data']['approveFigure']['errors'], content)
 
-            self.assertEqual(content['data']['approveFigure']['result']['id'], str(self.figure.id))
+            self.assertEqual(content['data']['approveFigure']['result']['id'], str(figure.id))
             self.assertEqual(
                 content['data']['approveFigure']['result']['reviewStatus'],
                 Figure.FIGURE_REVIEW_STATUS.APPROVED.name
@@ -147,8 +114,13 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
     def test_all_users_can_unapprove_figure_except_guest(self) -> None:
         users = [self.admin, self.monitoring_expert, self.regional_coordinator]
         for user in users:
+            figure = FigureFactory.create(
+                event=self.event,
+                review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
+            )
+
             self.force_login(user)
-            input = {'id': self.figure.id}
+            input = {'id': figure.id}
             response = self.query(
                 self.unapprove_figure,
                 variables=input,
@@ -158,7 +130,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertTrue(content['data']['unapproveFigure']['ok'], content)
             self.assertIsNone(content['data']['unapproveFigure']['errors'], content)
 
-            self.assertEqual(content['data']['unapproveFigure']['result']['id'], str(self.figure.id))
+            self.assertEqual(content['data']['unapproveFigure']['result']['id'], str(figure.id))
             self.assertEqual(
                 content['data']['unapproveFigure']['result']['reviewStatus'],
                 Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED.name
@@ -167,8 +139,13 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
     def test_all_users_can_re_request_review_figure_except_guest(self) -> None:
         users = [self.admin, self.monitoring_expert, self.regional_coordinator]
         for user in users:
+            figure = FigureFactory.create(
+                event=self.event,
+                review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
+            )
+
             self.force_login(user)
-            input = {'id': self.figure.id}
+            input = {'id': figure.id}
             response = self.query(
                 self.re_request_review_figure,
                 variables=input,
@@ -178,7 +155,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertTrue(content['data']['reRequestReviewFigure']['ok'], content)
             self.assertIsNone(content['data']['reRequestReviewFigure']['errors'], content)
 
-            self.assertEqual(content['data']['reRequestReviewFigure']['result']['id'], str(self.figure.id))
+            self.assertEqual(content['data']['reRequestReviewFigure']['result']['id'], str(figure.id))
             self.assertEqual(
                 content['data']['reRequestReviewFigure']['result']['reviewStatus'],
                 Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED.name
@@ -186,10 +163,15 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
 
     def test_review_status_should_be_review_in_progress_if_figure_has_review_comments_during_unapprove(self) -> None:
         users = [self.admin, self.monitoring_expert, self.regional_coordinator]
-        UnifiedReviewCommentFactory.create(figure=self.figure, event=self.event)
         for user in users:
+            figure = FigureFactory.create(
+                event=self.event,
+                review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
+            )
+            UnifiedReviewCommentFactory.create(figure=figure, event=self.event)
+
             self.force_login(user)
-            input = {'id': self.figure.id}
+            input = {'id': figure.id}
             response = self.query(
                 self.unapprove_figure,
                 variables=input,
@@ -198,7 +180,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertResponseNoErrors(response)
             self.assertTrue(content['data']['unapproveFigure']['ok'], content)
             self.assertIsNone(content['data']['unapproveFigure']['errors'], content)
-            self.assertEqual(content['data']['unapproveFigure']['result']['id'], str(self.figure.id))
+            self.assertEqual(content['data']['unapproveFigure']['result']['id'], str(figure.id))
             self.assertEqual(
                 content['data']['unapproveFigure']['result']['reviewStatus'],
                 Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS.name
@@ -212,8 +194,13 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             3,
             event=event,
             role=Figure.ROLE.RECOMMENDED,
+            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
         )
-        f4 = FigureFactory.create(event=event, role=Figure.ROLE.TRIANGULATION)
+        f4 = FigureFactory.create(
+            event=event,
+            role=Figure.ROLE.TRIANGULATION,
+            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
+        )
 
         # Initially event type should be REVIEW_NOT_STARTED
         self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED)
@@ -237,9 +224,9 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         event.refresh_from_db()
         self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.APPROVED)
 
-        # If review re-requested event status should be changes to REVIEW_IN_PROGRESS
+        # If figure is un-approved event status should be changes to REVIEW_IN_PROGRESS
         response = self.query(
-            self.re_request_review_figure,
+            self.unapprove_figure,
             variables={'id': f1.id}
         )
         self.assertResponseNoErrors(response)
@@ -278,7 +265,41 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             event=event,
             country=self.country,
         )
-        figures = self.figures
+        source = dict(
+            uuid=str(uuid4()),
+            rank=101,
+            country=str(self.country.name),
+            countryCode=self.country.iso2,
+            osmId='ted',
+            osmType='okay',
+            displayName='okay',
+            lat=68.88,
+            lon=46.66,
+            name='name',
+            accuracy=OSMName.OSM_ACCURACY.ADM0.name,
+            identifier=OSMName.IDENTIFIER.ORIGIN.name
+        )
+        figures = [
+            {
+                "uuid": str(uuid4()),
+                "country": self.country.id,
+                "quantifier": Figure.QUANTIFIER.MORE_THAN.name,
+                "reported": 10,
+                "unit": Figure.UNIT.HOUSEHOLD.name,  # missing household_size
+                "term": Figure.FIGURE_TERMS.EVACUATED.name,
+                "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.name,
+                "role": Figure.ROLE.RECOMMENDED.name,
+                "startDate": "2020-10-10",
+                "includeIdu": True,
+                "excerptIdu": "excerpt abc",
+                "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
+                "geoLocations": [source],
+                "householdSize": 20,
+                "tags": [],
+                "contextOfViolence": [],
+                "sources": [],
+            },
+        ]
         figures[0]['event'] = event.id
         figures[0]['country'] = self.country.id
         figures[0]['id'] = figure.id
