@@ -114,13 +114,7 @@ class Notification(models.Model):
         return str(self.type)
 
     @classmethod
-    def send_notification(cls, **kwargs):
-        Notification.objects.create(
-            **kwargs
-        )
-
-    @classmethod
-    def send_multiple_notifications(
+    def send_safe_multiple_notifications(
         cls,
         recipients,
         actor,
@@ -130,16 +124,23 @@ class Notification(models.Model):
         entry=None,
         text=None,
     ):
+        recipient_set = set(recipients)
+        if actor and actor.id in recipient_set:
+            # TODO: log to sentry if recipient ids has actor
+            recipient_set.remove(actor.id)
+
+        recipient_list = list(recipient_set)
+
         Notification.objects.bulk_create(
             [
                 Notification(
-                    recipient_id=recipient['id'],
+                    recipient_id=recipient_id,
                     type=type,
                     actor=actor,
                     figure=figure,
                     event=event,
                     entry=entry,
                     text=text,
-                ) for recipient in recipients
+                ) for recipient_id in recipient_list
             ]
         )

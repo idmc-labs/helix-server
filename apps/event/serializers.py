@@ -188,31 +188,29 @@ class EventSerializer(MetaInformationSerializerMixin,
 
     def update(self, instance, validated_data):
         # Update event status if include_triangulation_in_qa is changed
-        is_include_triangulation_in_qa_changed = False
         validated_data['last_modified_by'] = self.context['request'].user
+
+        is_include_triangulation_in_qa_changed = False
         if 'include_triangulation_in_qa' in validated_data:
             new_include_triangulation_in_qa = validated_data.get('include_triangulation_in_qa')
-            if new_include_triangulation_in_qa != instance.include_triangulation_in_qa:
-                is_include_triangulation_in_qa_changed = True
-                Notification.send_multiple_notifications(
-                    recipients=instance.regional_coordinators(
-                        event=instance
-                    ),
-                    type=Notification.Type.EVENT_INCLUDE_TRIANGULATION_CHANGED,
-                    actor=self.context['request'].user,
-                    event=instance,
-                )
-                if instance.created_by:
-                    Notification.send_notification(
-                        recipient=instance.created_by,
-                        type=Notification.Type.EVENT_INCLUDE_TRIANGULATION_CHANGED,
-                        actor=self.context['request'].user,
-                        event=instance,
-                    )
+            is_include_triangulation_in_qa_changed = new_include_triangulation_in_qa != instance.include_triangulation_in_qa
+
         instance = super().update(instance, validated_data)
+
         if is_include_triangulation_in_qa_changed:
-            # Update event status
-            Figure.update_event_status(instance)
+            recipients = [user['id'] for user in Event.regional_coordinators(instance)]
+            if (instance.created_by):
+                recipients.append(instance.created_by.id)
+
+            Notification.send_safe_multiple_notifications(
+                recipients=recipients,
+                type=Notification.Type.EVENT_INCLUDE_TRIANGULATION_CHANGED,
+                actor=self.context['request'].user,
+                event=instance,
+            )
+
+            Figure.update_event_status_and_send_notifications(instance)
+            instance.refresh_from_db()
         return instance
 
 

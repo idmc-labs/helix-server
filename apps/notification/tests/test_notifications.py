@@ -402,9 +402,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.EVENT_ASSIGNEE_CLEARED.name, notification_data['type'])
 
-    def test_should_send_notification_to_co_ordinator_if_figure_is_un_approved_and_event_is_signed_off_and_approved(self):
+    def test_should_send_notification_to_co_ordinator_if_figure_is_un_approved_and_event_is_signed_off(self):
         # Ref: 7
-
         # Signed off case
         event = EventFactory.create(
             assignee=self.monitoring_expert,
@@ -431,13 +430,28 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.FIGURE_UNAPPROVED_IN_SIGNED_EVENT.name, notification_data['type'])
 
+    def test_should_send_notification_to_co_ordinator_if_figure_is_un_approved_and_event_is_approved(self):
+        # Ref: 7
         # Approved case
-        event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED
-        event.save()
+        event2 = EventFactory.create(
+            assignee=self.monitoring_expert,
+            assigner=self.regional_coordinator,
+            countries=(self.country, ),
+        )
+        figure2 = FigureFactory.create(
+            event=event2,
+            country=self.country,
+            review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
+        )
+        event2.review_status = Event.EVENT_REVIEW_STATUS.APPROVED
+        event2.save()
+
+        self.force_login(self.monitoring_expert)
         self.query(
             self.unapprove_figure,
-            variables={'id': figure.id}
+            variables={'id': figure2.id}
         )
+
         self.force_login(self.regional_coordinator)
         response = self.query(
             self.notification_query,
@@ -502,7 +516,10 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             assignee=self.monitoring_expert,
             assigner=self.regional_coordinator,
         )
-        figure = FigureFactory.create(event=event)
+        figure = FigureFactory.create(
+            event=event,
+            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
+        )
         self.force_login(self.regional_coordinator)
         self.query(
             self.re_request_review_figure,
@@ -527,7 +544,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         figure = FigureFactory.create(
             event=event,
             country=self.country,
-            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
+            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
             role=Figure.ROLE.RECOMMENDED,
         )
         self.force_login(self.monitoring_expert)
@@ -590,10 +607,9 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         )
 
         # Create figure in already approved event
-        self.force_login(self.admin)
+        self.force_login(self.monitoring_expert)
         figures = self.figures
         figures[0]['event'] = event.id
-
         response = self.query(
             self.create_update_figure,
             input_data={
@@ -613,10 +629,10 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertEqual(Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT.name, notification_data['type'])
 
         # Update figure in already approved event
+        self.force_login(self.monitoring_expert)
         event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED
         event.save()
 
-        self.force_login(self.admin)
         figures = self.figures
         figures[0]['id'] = figure_id
         response = self.query(
@@ -626,6 +642,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 'figures': figures
             }
         )
+
         self.force_login(self.regional_coordinator)
         response = self.query(
             self.notification_query,
@@ -635,15 +652,17 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertEqual(Notification.Type.FIGURE_UPDATED_IN_APPROVED_EVENT.name, notification_data['type'])
 
         # Delete figure
+        self.force_login(self.monitoring_expert)
         event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED
         event.save()
-
         self.query(
             self.delete_figure,
             variables={
                 'id': figure_id,
             }
         )
+
+        self.force_login(self.regional_coordinator)
         response = self.query(
             self.notification_query,
             variables={'recipient': self.regional_coordinator.id}
@@ -661,11 +680,11 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
         )
         entry = EntryFactory.create()
-        self.force_login(self.regional_coordinator)
         figures = self.figures
         figures[0]['event'] = event.id
 
         # Create figure
+        self.force_login(self.monitoring_expert)
         response = self.query(
             self.create_update_figure,
             input_data={
@@ -676,6 +695,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         content = json.loads(response.content)
         figure_id = content['data']['updateEntry']['result']['figures'][0]['id']
 
+        self.force_login(self.regional_coordinator)
         response = self.query(
             self.notification_query,
             variables={'recipient': self.regional_coordinator.id}
@@ -684,6 +704,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertEqual(Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT.name, notification_data['type'])
 
         # Update figure
+        self.force_login(self.monitoring_expert)
         event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
         event.save()
 
@@ -695,6 +716,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 'figures': figures,
             }
         )
+
+        self.force_login(self.regional_coordinator)
         response = self.query(
             self.notification_query,
             variables={'recipient': self.regional_coordinator.id}
@@ -703,6 +726,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertEqual(Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT.name, notification_data['type'])
 
         # Delete figure
+        self.force_login(self.monitoring_expert)
         event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
         event.save()
         response = self.query(
@@ -711,7 +735,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 'id': figure_id,
             }
         )
-        print(json.loads(response.content))
+
+        self.force_login(self.regional_coordinator)
         response = self.query(
             self.notification_query,
             variables={'recipient': self.regional_coordinator.id}
@@ -722,12 +747,13 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
 
     def test_should_send_notification_when_include_triangulation_in_qa_has_changed(self):
         # Ref: 15
-        self.force_login(self.regional_coordinator)
         event = EventFactory.create(
             assignee=self.monitoring_expert,
             assigner=self.regional_coordinator,
             countries=(self.country, )
         )
+
+        self.force_login(self.monitoring_expert)
         self.query(
             self.update_event,
             input_data={
@@ -735,6 +761,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 'includeTriangulationInQa': True
             }
         )
+
+        self.force_login(self.regional_coordinator)
         response = self.query(
             self.notification_query,
             variables={'recipient': self.regional_coordinator.id}
