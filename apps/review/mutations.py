@@ -71,7 +71,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
                 figure.save()
 
             if event:
-                Figure.update_event_status_and_send_notifications(event)
+                Figure.update_event_status_and_send_notifications(event.id)
                 event.refresh_from_db()
 
         if errors := mutation_is_not_valid(serializer):

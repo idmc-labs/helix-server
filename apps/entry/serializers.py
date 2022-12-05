@@ -719,7 +719,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                     affected_events.append(figure.event)
 
                 for figure in deleted_figures_for_signed_off_events:
-                    recipients = [user['id'] for user in Event.regional_coordinators(figure.event, figure=figure)]
+                    recipients = [user['id'] for user in Event.regional_coordinators(
+                        figure.event,
+                        actor=self.context['request'].user,
+                    )]
                     Notification.send_safe_multiple_notifications(
                         recipients=recipients,
                         actor=self.context['request'].user,
@@ -727,7 +730,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         event=figure.event,
                     )
                 for figure in deleted_figures_for_approved_events:
-                    recipients = [user['id'] for user in Event.regional_coordinators(figure.event, figure=figure)]
+                    recipients = [user['id'] for user in Event.regional_coordinators(
+                        figure.event,
+                        actor=self.context['request'].user,
+                    )]
                     Notification.send_safe_multiple_notifications(
                         recipients=recipients,
                         actor=self.context['request'].user,
@@ -735,7 +741,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         event=figure.event,
                     )
                 for figure in updated_figures_for_signed_off_events:
-                    recipients = [user['id'] for user in Event.regional_coordinators(figure.event, figure=figure)]
+                    recipients = [user['id'] for user in Event.regional_coordinators(
+                        figure.event,
+                        actor=self.context['request'].user,
+                    )]
                     Notification.send_safe_multiple_notifications(
                         recipients=recipients,
                         actor=self.context['request'].user,
@@ -746,7 +755,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                     Figure.update_figure_status(figure)
                     figure.refresh_from_db()
                 for figure in updated_figures_for_approved_events:
-                    recipients = [user['id'] for user in Event.regional_coordinators(figure.event, figure=figure)]
+                    recipients = [user['id'] for user in Event.regional_coordinators(
+                        figure.event,
+                        actor=self.context['request'].user,
+                    )]
                     Notification.send_safe_multiple_notifications(
                         recipients=recipients,
                         actor=self.context['request'].user,
@@ -760,7 +772,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                     Figure.update_figure_status(figure)
                     figure.refresh_from_db()
                 for figure in created_figures_for_signed_off_events:
-                    recipients = [user['id'] for user in Event.regional_coordinators(figure.event, figure=figure)]
+                    recipients = [user['id'] for user in Event.regional_coordinators(
+                        figure.event,
+                        actor=self.context['request'].user,
+                    )]
                     Notification.send_safe_multiple_notifications(
                         recipients=recipients,
                         actor=self.context['request'].user,
@@ -769,7 +784,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         figure=figure,
                     )
                 for figure in created_figures_for_approved_events:
-                    recipients = [user['id'] for user in Event.regional_coordinators(figure.event, figure=figure)]
+                    recipients = [user['id'] for user in Event.regional_coordinators(
+                        figure.event,
+                        actor=self.context['request'].user,
+                    )]
                     Notification.send_safe_multiple_notifications(
                         recipients=recipients,
                         actor=self.context['request'].user,
@@ -780,7 +798,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
 
                 # FIXME: check if unique works
                 for event in list(set(affected_events)):
-                    Figure.update_event_status_and_send_notifications(event)
+                    Figure.update_event_status_and_send_notifications(event.id)
                     event.refresh_from_db()
 
         entry = super().update(instance, validated_data)

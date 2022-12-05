@@ -966,11 +966,11 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     # TODO: move this to event model
     @classmethod
-    def update_event_status_and_send_notifications(cls, event_from_args):
+    def update_event_status_and_send_notifications(cls, event_id):
         from apps.event.models import Event
 
         event = Event.objects.filter(
-            id=event_from_args.id
+            id=event_id
         ).annotate(
             **Event.annotate_review_figures_count()
         ).first()
