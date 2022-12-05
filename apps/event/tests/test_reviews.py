@@ -176,7 +176,6 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertIsNotNone(content['errors'])
 
     def test_self_event_assignment(self) -> None:
-
         # Admin, regional coordinator can assign self in an event
         users = [self.regional_coordinator, self.admin, self.monitoring_expert]
         for user in users:
@@ -187,19 +186,29 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 self.set_self_assignee_to_event_mutation,
                 variables=input,
             )
-            content = json.loads(response.content)
             self.assertResponseNoErrors(response)
+
+            content = json.loads(response.content)
             self.assertTrue(content['data']['setSelfAssigneeToEvent']['ok'], content)
             self.assertEqual(content['data']['setSelfAssigneeToEvent']['result']['assigner']['id'], str(user.id))
             self.assertEqual(content['data']['setSelfAssigneeToEvent']['result']['assignee']['id'], str(user.id))
 
     def test_user_can_clear_assignee_on_an_event(self) -> None:
-
         # Test assigner or assignee or admin can clear assignee
         users = [self.regional_coordinator, self.admin]
         event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
         for user in users:
             self.force_login(user)
+
+            # Let's assigne user
+            assign_input = {'event_id': event.id}
+            assign_response = self.query(
+                self.set_self_assignee_to_event_mutation,
+                variables=assign_input,
+            )
+            self.assertResponseNoErrors(assign_response)
+
+            # Let's un-assign user
             input = {'event_id': event.id}
             response = self.query(
                 self.clear_assignee_from_event_mutation,

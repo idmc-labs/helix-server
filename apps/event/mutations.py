@@ -384,7 +384,7 @@ class SetAssigneeToEvent(graphene.Mutation):
         )
 
         # Update event status
-        Figure.update_event_status_and_send_notifications(event)
+        Figure.update_event_status_and_send_notifications(event.id)
         event.refresh_from_db()
 
         return SetAssigneeToEvent(result=event, errors=None, ok=True)
@@ -411,7 +411,10 @@ class SetSelfAssigneeToEvent(graphene.Mutation):
         event.assigned_at = timezone.now()
         event.save()
 
-        recipients = [user['id'] for user in Event.regional_coordinators(event)]
+        recipients = [user['id'] for user in Event.regional_coordinators(
+            event,
+            actor=info.context.user,
+        )]
         Notification.send_safe_multiple_notifications(
             recipients=recipients,
             type=Notification.Type.EVENT_SELF_ASSIGNED,
@@ -419,7 +422,7 @@ class SetSelfAssigneeToEvent(graphene.Mutation):
             event=event,
         )
 
-        Figure.update_event_status_and_send_notifications(event)
+        Figure.update_event_status_and_send_notifications(event.id)
         event.refresh_from_db()
 
         return SetSelfAssigneeToEvent(result=event, errors=None, ok=True)
@@ -464,7 +467,7 @@ class ClearAssigneFromEvent(graphene.Mutation):
                 type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
             )
 
-        Figure.update_event_status_and_send_notifications(event)
+        Figure.update_event_status_and_send_notifications(event.id)
         event.refresh_from_db()
 
         return ClearAssigneFromEvent(result=event, errors=None, ok=True)
@@ -499,7 +502,10 @@ class ClearSelfAssigneFromEvent(graphene.Mutation):
         event.save()
 
         if event.regional_coordinators:
-            recipients = [user['id'] for user in Event.regional_coordinators(event)]
+            recipients = [user['id'] for user in Event.regional_coordinators(
+                event,
+                actor=info.context.user,
+            )]
             Notification.send_safe_multiple_notifications(
                 recipients=recipients,
                 type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
@@ -507,7 +513,7 @@ class ClearSelfAssigneFromEvent(graphene.Mutation):
                 event=event,
             )
 
-        Figure.update_event_status_and_send_notifications(event)
+        Figure.update_event_status_and_send_notifications(event.id)
         event.refresh_from_db()
 
         return ClearSelfAssigneFromEvent(result=event, errors=None, ok=True)
@@ -539,6 +545,7 @@ class SignOffEvent(graphene.Mutation):
         recipients = [user['id'] for user in Event.regional_coordinators(event)]
         if event.created_by_id:
             recipients.append(event.created_by_id)
+
         Notification.send_safe_multiple_notifications(
             recipients=recipients,
             type=Notification.Type.EVENT_SIGNED_OFF,
