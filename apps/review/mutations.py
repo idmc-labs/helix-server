@@ -32,7 +32,6 @@ class CreateUnifiedReviewComment(graphene.Mutation):
     @staticmethod
     @permission_checker(['review.add_reviewcomment'])
     def mutate(root, info, data):
-        from apps.event.models import Event
         from apps.entry.models import Figure
 
         serializer = UnifiedReviewCommentSerializer(
