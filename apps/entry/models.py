@@ -957,11 +957,9 @@ class Figure(MetaInformationArchiveAbstractModel,
     @classmethod
     def update_figure_status(cls, figure):
         # Change figure status
-        figure.review_status = (
-            Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
-            if figure.figure_review_comments.count() > 0
-            else Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
-        )
+        figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
+        if figure.figure_review_comments.count() > 0:
+            figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
         figure.save()
 
     # TODO: move this to event model
