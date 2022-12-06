@@ -668,11 +668,9 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                     event__review_status=Event.EVENT_REVIEW_STATUS.APPROVED
                 )
 
-                affected_events = Event.objects.none()
-                if figures_to_delete:
-                    affected_events = Event.objects.filter(
-                        id=figures_to_delete
-                    ).distinct('id')
+                affected_events = Event.objects.filter(
+                    id__in=figures_to_delete.values('event__id')
+                ).distinct('id')
 
                 for each in figures:
                     is_new_figure = not each.get('id')
