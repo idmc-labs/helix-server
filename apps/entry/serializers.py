@@ -4,6 +4,7 @@ from copy import copy
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import transaction
+from django.db.models import Q
 from django.utils.translation import gettext, gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.fields import CharField
@@ -284,7 +285,7 @@ class CommonFigureValidationMixin:
     def _validate_event(self, attrs):
         errors = OrderedDict()
         event = attrs.get('event')
-        if event and self.instance and self.instance.event and self.instance.event_id != event.id:
+        if event and self.instance and self.instance.event and self.instance.event.id != event.id:
             errors.update({
                 'event': 'Event change is not allowed'
             })
@@ -644,7 +645,6 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
         if isinstance(figures, list):
             with transaction.atomic():
                 deleted_figures_for_signed_off_events = []
-                deleted_figures_for_approved_events = []
 
                 created_figures_for_signed_off_events = []
                 created_figures_for_approved_events = []
@@ -652,8 +652,6 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                 updated_figures_for_signed_off_events = []
                 updated_figures_for_approved_events = []
                 updated_figures_for_other_events = []
-
-                affected_events = []
 
                 entry = super().update(instance, validated_data)
 
@@ -663,20 +661,18 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                 )
                 figures_to_delete.delete()
 
-                deleted_figures_for_signed_off_events.extend([
-                    figure
-                    for figure in figures_to_delete
-                    if figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF
-                ])
-                deleted_figures_for_approved_events.extend([
-                    figure
-                    for figure in figures_to_delete
-                    if figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED
-                ])
+                deleted_figures_for_signed_off_events = figures_to_delete.filter(
+                    event__review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF
+                )
+                deleted_figures_for_approved_events = figures_to_delete.filter(
+                    event__review_status=Event.EVENT_REVIEW_STATUS.APPROVED
+                )
 
-                affected_events.extend([
-                    figure.event for figure in figures_to_delete
-                ])
+                affected_events = Event.objects.none()
+                if figures_to_delete:
+                    affected_events = Event.objects.filter(
+                        id=figures_to_delete
+                    ).distinct('id')
 
                 for each in figures:
                     is_new_figure = not each.get('id')
@@ -716,7 +712,14 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                             figure
                         )
 
-                    affected_events.append(figure.event)
+                    if affected_events:
+                        affected_events = Event.objects.filter(
+                            Q(id__in=affected_events.values('id')) | Q(id=figure.event_id)
+                        ).distinct()
+                    else:
+                        affected_events = Event.objects.filter(
+                            id=figure.event_id
+                        ).distinct()
 
                 for figure in deleted_figures_for_signed_off_events:
                     recipients = [user['id'] for user in Event.regional_coordinators(
@@ -795,9 +798,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         event=figure.event,
                         figure=figure,
                     )
-
-                # FIXME: check if unique works
-                for event in list(set(affected_events)):
+                for event in affected_events:
                     Figure.update_event_status_and_send_notifications(event.id)
                     event.refresh_from_db()
 
