@@ -4,7 +4,6 @@ from copy import copy
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import transaction
-from django.db.models import Q
 from django.utils.translation import gettext, gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.fields import CharField
@@ -655,11 +654,9 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
 
                 entry = super().update(instance, validated_data)
 
-                # delete missing figures
                 figures_to_delete = entry.figures.exclude(
                     id__in=[each['id'] for each in figures if each.get('id')]
                 )
-                figures_to_delete.delete()
 
                 deleted_figures_for_signed_off_events = figures_to_delete.filter(
                     event__review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF
@@ -671,6 +668,9 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                 affected_events = Event.objects.filter(
                     id__in=figures_to_delete.values('event__id')
                 ).distinct('id')
+                affected_event_ids = list(affected_events.values_list('id', flat=True))
+                # delete missing figures
+                figures_to_delete.delete()
 
                 for each in figures:
                     is_new_figure = not each.get('id')
@@ -709,15 +709,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         updated_figures_for_other_events.append(
                             figure
                         )
-
-                    if affected_events:
-                        affected_events = Event.objects.filter(
-                            Q(id__in=affected_events.values('id')) | Q(id=figure.event_id)
-                        ).distinct()
-                    else:
-                        affected_events = Event.objects.filter(
-                            id=figure.event_id
-                        ).distinct()
+                    affected_event_ids.append(figure.event.id)
 
                 for figure in deleted_figures_for_signed_off_events:
                     recipients = [user['id'] for user in Event.regional_coordinators(
@@ -796,12 +788,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         event=figure.event,
                         figure=figure,
                     )
-                for event in affected_events:
+                for event in Event.objects.filter(id__in=affected_event_ids):
                     Figure.update_event_status_and_send_notifications(event.id)
-                    event.refresh_from_db()
-
-        entry = super().update(instance, validated_data)
-        return entry
+        instance.refresh_from_db()
+        return instance
 
 
 class EntryUpdateSerializer(UpdateSerializerMixin,
