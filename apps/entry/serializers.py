@@ -284,7 +284,7 @@ class CommonFigureValidationMixin:
     def _validate_event(self, attrs):
         errors = OrderedDict()
         event = attrs.get('event')
-        if event and self.instance and self.instance.event and self.instance.event.id != event.id:
+        if event and self.instance and self.instance.event and self.instance.event_id != event.id:
             errors.update({
                 'event': 'Event change is not allowed'
             })

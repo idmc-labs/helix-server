@@ -125,6 +125,7 @@ class Notification(models.Model):
         text=None,
     ):
         recipient_set = set(recipients)
+        # FIXME: do we need to just pass actor_id?
         if actor and actor.id in recipient_set:
             # TODO: log to sentry if recipient ids has actor
             recipient_set.remove(actor.id)

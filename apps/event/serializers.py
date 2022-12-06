@@ -199,8 +199,8 @@ class EventSerializer(MetaInformationSerializerMixin,
 
         if is_include_triangulation_in_qa_changed:
             recipients = [user['id'] for user in Event.regional_coordinators(instance)]
-            if (instance.created_by):
-                recipients.append(instance.created_by.id)
+            if (instance.created_by_id):
+                recipients.append(instance.created_by_id)
 
             Notification.send_safe_multiple_notifications(
                 recipients=recipients,
