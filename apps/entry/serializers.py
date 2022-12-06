@@ -657,14 +657,14 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                 figures_to_delete = entry.figures.exclude(
                     id__in=[each['id'] for each in figures if each.get('id')]
                 )
-
-                deleted_figures_for_signed_off_events = figures_to_delete.filter(
-                    event__review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF
+                deleted_figures_for_signed_off_events = list(
+                    figures_to_delete.filter(
+                    event__review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF)
                 )
-                deleted_figures_for_approved_events = figures_to_delete.filter(
-                    event__review_status=Event.EVENT_REVIEW_STATUS.APPROVED
+                deleted_figures_for_approved_events = list(
+                    figures_to_delete.filter(
+                    event__review_status=Event.EVENT_REVIEW_STATUS.APPROVED)
                 )
-
                 affected_events = Event.objects.filter(
                     id__in=figures_to_delete.values('event__id')
                 ).distinct('id')
@@ -777,11 +777,9 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         event=figure.event,
                         figure=figure,
                     )
-
-                for event in Event.objects.filter(id__in=affected_event_ids):
-                    Figure.update_event_status_and_send_notifications(event.id)
-
-            instance.refresh_from_db()
+                for event_id in affected_event_ids:
+                    Figure.update_event_status_and_send_notifications(event_id)
+        instance.refresh_from_db()
         return instance
 
 
