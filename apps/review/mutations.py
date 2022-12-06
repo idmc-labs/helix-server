@@ -63,8 +63,8 @@ class CreateUnifiedReviewComment(graphene.Mutation):
             elif (
                 figure and
                 figure.review_status == Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED and
-                figure.event.assignee and
-                info.context.user.id == figure.event.assignee.id
+                figure.event.assignee_id and
+                info.context.user.id == figure.event.assignee_id
             ):
                 figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
                 figure.save()
