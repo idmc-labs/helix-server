@@ -209,7 +209,7 @@ class EventSerializer(MetaInformationSerializerMixin,
                 event=instance,
             )
 
-            Figure.update_event_status_and_send_notifications(instance)
+            Figure.update_event_status_and_send_notifications(instance.id)
             instance.refresh_from_db()
         return instance
 
