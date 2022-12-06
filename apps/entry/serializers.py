@@ -284,6 +284,7 @@ class CommonFigureValidationMixin:
     def _validate_event(self, attrs):
         errors = OrderedDict()
         event = attrs.get('event')
+        # FIXME: do we use event.id or event_id here?
         if event and self.instance and self.instance.event and self.instance.event.id != event.id:
             errors.update({
                 'event': 'Event change is not allowed'
@@ -641,10 +642,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
 
         figures = validated_data.pop('figures', None)
 
-        if isinstance(figures, list):
-            with transaction.atomic():
-                deleted_figures_for_signed_off_events = []
+        with transaction.atomic():
+            entry = super().update(instance, validated_data)
 
+            if isinstance(figures, list):
                 created_figures_for_signed_off_events = []
                 created_figures_for_approved_events = []
 
@@ -652,8 +653,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                 updated_figures_for_approved_events = []
                 updated_figures_for_other_events = []
 
-                entry = super().update(instance, validated_data)
-
+                # delete missing figures
                 figures_to_delete = entry.figures.exclude(
                     id__in=[each['id'] for each in figures if each.get('id')]
                 )
@@ -669,6 +669,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                     id__in=figures_to_delete.values('event__id')
                 ).distinct('id')
                 affected_event_ids = list(affected_events.values_list('id', flat=True))
+
                 # delete missing figures
                 figures_to_delete.delete()
 
@@ -690,26 +691,17 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                     figure = fig_ser.save()
 
                     if is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
-                        created_figures_for_signed_off_events.append(
-                            figure
-                        )
+                        created_figures_for_signed_off_events.append(figure)
                     elif is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-                        created_figures_for_approved_events.append(
-                            figure
-                        )
+                        created_figures_for_approved_events.append(figure)
                     elif not is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
-                        updated_figures_for_signed_off_events.append(
-                            figure
-                        )
+                        updated_figures_for_signed_off_events.append(figure)
                     elif not is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-                        updated_figures_for_approved_events.append(
-                            figure
-                        )
+                        updated_figures_for_approved_events.append(figure)
                     elif not is_new_figure:
-                        updated_figures_for_other_events.append(
-                            figure
-                        )
-                    affected_event_ids.append(figure.event.id)
+                        updated_figures_for_other_events.append(figure)
+
+                    affected_event_ids.append(figure.event_id)
 
                 for figure in deleted_figures_for_signed_off_events:
                     recipients = [user['id'] for user in Event.regional_coordinators(
@@ -746,7 +738,6 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         figure=figure,
                     )
                     Figure.update_figure_status(figure)
-                    figure.refresh_from_db()
                 for figure in updated_figures_for_approved_events:
                     recipients = [user['id'] for user in Event.regional_coordinators(
                         figure.event,
@@ -760,10 +751,8 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         figure=figure,
                     )
                     Figure.update_figure_status(figure)
-                    figure.refresh_from_db()
                 for figure in updated_figures_for_other_events:
                     Figure.update_figure_status(figure)
-                    figure.refresh_from_db()
                 for figure in created_figures_for_signed_off_events:
                     recipients = [user['id'] for user in Event.regional_coordinators(
                         figure.event,
@@ -788,9 +777,11 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         event=figure.event,
                         figure=figure,
                     )
+
                 for event in Event.objects.filter(id__in=affected_event_ids):
                     Figure.update_event_status_and_send_notifications(event.id)
-        instance.refresh_from_db()
+
+            instance.refresh_from_db()
         return instance
 
 

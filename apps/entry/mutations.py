@@ -321,7 +321,7 @@ class DeleteFigure(graphene.Mutation):
                 event=instance.event,
             )
 
-        Figure.update_event_status_and_send_notifications(instance.event.id)
+        Figure.update_event_status_and_send_notifications(instance.event_id)
         instance.event.refresh_from_db()
 
         return DeleteFigure(errors=None, ok=True)
@@ -355,7 +355,7 @@ class ApproveFigure(graphene.Mutation):
 
         # NOTE: not sending notification when figure is approved as it is not actionable
 
-        Figure.update_event_status_and_send_notifications(figure.event.id)
+        Figure.update_event_status_and_send_notifications(figure.event_id)
         figure.event.refresh_from_db()
 
         return ApproveFigure(result=figure, errors=None, ok=True)
@@ -415,7 +415,7 @@ class UnapproveFigure(graphene.Mutation):
             )
 
         # Update event status
-        Figure.update_event_status_and_send_notifications(figure.event.id)
+        Figure.update_event_status_and_send_notifications(figure.event_id)
         figure.event.refresh_from_db()
 
         return UnapproveFigure(result=figure, errors=None, ok=True)
@@ -458,7 +458,7 @@ class ReRequestReviewFigure(graphene.Mutation):
                 type=Notification.Type.FIGURE_RE_REQUESTED_REVIEW,
             )
 
-        Figure.update_event_status_and_send_notifications(figure.event.id)
+        Figure.update_event_status_and_send_notifications(figure.event_id)
         figure.event.refresh_from_db()
 
         return ReRequestReviewFigure(result=figure, errors=None, ok=True)
