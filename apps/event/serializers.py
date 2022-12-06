@@ -213,6 +213,7 @@ class EventSerializer(MetaInformationSerializerMixin,
             instance.refresh_from_db()
         return instance
 
+
 class EventUpdateSerializer(UpdateSerializerMixin, EventSerializer):
     id = IntegerIDField(required=True)
 

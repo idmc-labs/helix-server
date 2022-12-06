@@ -1,6 +1,5 @@
 from django.utils.translation import gettext
 import graphene
-from django.utils.translation import gettext_lazy as _
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from django.utils import timezone
 
