@@ -1497,61 +1497,6 @@ type FigureType {
   lastReviewCommentStatus: [FigureLastReviewCommentStatusType!]
 }
 
-input FigureUpdateInputType {
-  id: ID
-  wasSubfact: Boolean
-  quantifier: QUANTIFIER
-  reported: Int
-  unit: UNIT
-  householdSize: Float
-  category: FIGURE_CATEGORY_TYPES
-  term: FIGURE_TERMS
-  displacementOccurred: DISPLACEMENT_OCCURRED
-  role: ROLE
-  startDate: Date
-  startDateAccuracy: DATE_ACCURACY
-  endDate: Date
-  endDateAccuracy: DATE_ACCURACY
-  includeIdu: Boolean
-  excerptIdu: String
-  country: ID
-  isDisaggregated: Boolean
-  isHousingDestruction: Boolean
-  geoLocations: [OSMNameInputType!]
-  calculationLogic: String
-  tags: [ID!]
-  sourceExcerpt: String
-  event: ID
-  contextOfViolence: [ID!]
-  figureCause: CRISIS_TYPE
-  violence: ID
-  violenceSubType: ID
-  disasterCategory: ID
-  disasterSubCategory: ID
-  disasterType: ID
-  disasterSubType: ID
-  otherSubType: ID
-  osvSubType: ID
-  sources: [ID!]
-  uuid: String
-  disaggregationDisplacementUrban: Int
-  disaggregationDisplacementRural: Int
-  disaggregationLocationCamp: Int
-  disaggregationLocationNonCamp: Int
-  disaggregationLgbtiq: Int
-  disaggregationDisability: Int
-  disaggregationIndigenousPeople: Int
-  disaggregationSexMale: Int
-  disaggregationSexFemale: Int
-  disaggregationAge: [DisaggregatedAgeInputType!]
-  disaggregationStrataJson: [DisaggregatedStratumInputType!]
-  disaggregationConflict: Int
-  disaggregationConflictPolitical: Int
-  disaggregationConflictCriminal: Int
-  disaggregationConflictCommunal: Int
-  disaggregationConflictOther: Int
-}
-
 enum GENDER_TYPE {
   MALE
   FEMALE
@@ -1701,11 +1646,10 @@ type Mutation {
   deleteFigureTag(id: ID!): DeleteFigureTag
   exportEntries(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!]): ExportEntries
   exportFigures(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterFigureCrisisTypes: [String!], filterFigureGlideNumber: [String!], filterCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], event: String, filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!]): ExportFigures
-  updateFigure(data: FigureUpdateInputType!): updateFigure
   deleteFigure(id: ID!): DeleteFigure
   approveFigure(id: ID!): ApproveFigure
   unapproveFigure(id: ID!): UnapproveFigure
-  reRequestReviewFigure(id: ID!): ReRequestReivewFigure
+  reRequestReviewFigure(id: ID!): ReRequestReviewFigure
   createEvent(data: EventCreateInputType!): CreateEvent
   updateEvent(data: EventUpdateInputType!): UpdateEvent
   deleteEvent(id: ID!): DeleteEvent
@@ -2384,7 +2328,7 @@ enum ROLE {
   TRIANGULATION
 }
 
-type ReRequestReivewFigure {
+type ReRequestReviewFigure {
   errors: [GenericScalar!]
   ok: Boolean
   result: FigureType
@@ -3087,10 +3031,4 @@ type ViolenceType {
   subTypes(id_Iexact: Float, ordering: String): ViolenceSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
-}
-
-type updateFigure {
-  errors: [GenericScalar!]
-  ok: Boolean
-  result: EntryType
 }
