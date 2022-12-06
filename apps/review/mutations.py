@@ -32,7 +32,6 @@ class CreateUnifiedReviewComment(graphene.Mutation):
     @staticmethod
     @permission_checker(['review.add_reviewcomment'])
     def mutate(root, info, data):
-        from apps.event.models import Event
         from apps.entry.models import Figure
 
         serializer = UnifiedReviewCommentSerializer(
@@ -57,20 +56,30 @@ class CreateUnifiedReviewComment(graphene.Mutation):
                     ],
                     ok=False
                 )
-            if event:
-                event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS
-                event.save()
 
-            if figure:
+            if figure and figure.review_status == Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED:
                 figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
                 figure.save()
+            elif (
+                figure and
+                figure.review_status == Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED and
+                figure.event.assignee_id and
+                info.context.user.id == figure.event.assignee_id
+            ):
+                figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+                figure.save()
+
+            if event:
+                Figure.update_event_status_and_send_notifications(event.id)
+                event.refresh_from_db()
 
         if errors := mutation_is_not_valid(serializer):
             return CreateUnifiedReviewComment(errors=errors, ok=False)
         instance = serializer.save()
+
         if instance.figure and instance.event and instance.event.assignee:
-            Notification.send_notification(
-                recipient=instance.event.assignee,
+            Notification.send_safe_multiple_notifications(
+                recipients=[instance.event.assignee_id],
                 event=instance.event,
                 figure=instance.figure,
                 actor=info.context.user,
@@ -78,8 +87,8 @@ class CreateUnifiedReviewComment(graphene.Mutation):
             )
 
         if instance.figure and instance.event and instance.figure.created_by:
-            Notification.send_notification(
-                recipient=instance.figure.created_by,
+            Notification.send_safe_multiple_notifications(
+                recipients=[instance.figure.created_by_id],
                 event=instance.event,
                 figure=instance.figure,
                 actor=info.context.user,

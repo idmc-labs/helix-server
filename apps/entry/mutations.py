@@ -1,6 +1,5 @@
 from django.utils.translation import gettext
 import graphene
-from django.utils.translation import gettext_lazy as _
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from django.utils import timezone
 
@@ -109,77 +108,6 @@ class DeleteEntry(graphene.Mutation):
         return DeleteEntry(result=instance, errors=None, ok=True)
 
 
-class updateFigure(graphene.Mutation):
-
-    class Arguments:
-        data = FigureUpdateInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-    result = graphene.Field(EntryType)
-
-    @staticmethod
-    @permission_checker(['entry.change_figure'])
-    def mutate(root, info, data):
-        try:
-            instance = Figure.objects.get(id=data['id'])
-        except Entry.DoesNotExist:
-            return updateFigure(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
-            ])
-        serializer = NestedFigureUpdateSerializer(
-            instance=instance, data=data,
-            context={'request': info.context.request}, partial=True
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return updateFigure(errors=errors, ok=False)
-        instance = serializer.save()
-        return updateFigure(result=instance, errors=None, ok=True)
-
-
-class DeleteFigure(graphene.Mutation):
-    from apps.event.models import Event
-
-    class Arguments:
-        id = graphene.ID(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-    result = graphene.Field(FigureType)
-
-    @staticmethod
-    @permission_checker(['entry.delete_figure'])
-    def mutate(root, info, id):
-        from apps.event.models import Event
-
-        try:
-            instance = Figure.objects.get(id=id)
-        except Entry.DoesNotExist:
-            return DeleteFigure(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
-            ])
-
-        if instance.event:
-            _type = None
-            if instance.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-                _type = Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT
-            if instance.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
-                _type = Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT
-            if _type:
-                Notification.send_multiple_notifications(
-                    recipients=instance.event.regional_coordinators(
-                        event=instance.event
-                    ),
-                    actor=info.context.user,
-                    type=_type,
-                    entry=instance.entry,
-                    event=instance.event,
-                    text=_('Figure was deleted'),
-                )
-        instance.delete()
-        return DeleteFigure(errors=None, ok=True)
-
-
 SourcePreviewInputType = generate_input_type_for_serializer(
     'SourcePreviewInputType',
     SourcePreviewSerializer
@@ -223,7 +151,6 @@ FigureTagCreateInputType = generate_input_type_for_serializer(
     'FigureTagCreateInputType',
     FigureTagCreateSerializer
 )
-
 
 FigureTagUpdateInputType = generate_input_type_for_serializer(
     'FigureTagUpdateInputType',
@@ -350,6 +277,56 @@ class ExportFigures(graphene.Mutation):
         return ExportFigures(errors=None, ok=True)
 
 
+class DeleteFigure(graphene.Mutation):
+    class Arguments:
+        id = graphene.ID(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(FigureType)
+
+    @staticmethod
+    @permission_checker(['entry.delete_figure'])
+    def mutate(root, info, id):
+        from apps.event.models import Event
+
+        try:
+            instance = Figure.objects.get(id=id)
+        except Entry.DoesNotExist:
+            return DeleteFigure(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
+            ])
+
+        instance.delete()
+
+        def _get_notification_type(event):
+            if event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+                return Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT
+            if event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+                return Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT
+            return None
+
+        _type = _get_notification_type(instance.event)
+
+        if _type:
+            recipients = [user['id'] for user in Event.regional_coordinators(
+                instance.event,
+                actor=info.context.user,
+            )]
+            Notification.send_safe_multiple_notifications(
+                recipients=recipients,
+                actor=info.context.user,
+                type=_type,
+                entry=instance.entry,
+                event=instance.event,
+            )
+
+        Figure.update_event_status_and_send_notifications(instance.event_id)
+        instance.event.refresh_from_db()
+
+        return DeleteFigure(errors=None, ok=True)
+
+
 class ApproveFigure(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
@@ -364,17 +341,23 @@ class ApproveFigure(graphene.Mutation):
         figure = Figure.objects.filter(id=id).first()
         if not figure:
             return ApproveFigure(errors=[
-                dict(field='id', messages=gettext('Figure does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
             ])
+        if figure.review_status == Figure.FIGURE_REVIEW_STATUS.APPROVED:
+            return ApproveFigure(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Approved figures cannot be approved'))
+            ])
+
         figure.review_status = Figure.FIGURE_REVIEW_STATUS.APPROVED.value
         figure.approved_by = info.context.user
         figure.approved_on = timezone.now()
         figure.save()
-        if figure.event:
-            figure.update_event_status(figure.event)
-        # NOTE: Event is updated on figure save using signals.
-        # We are clearing figure and its reference objects (event).
-        figure.refresh_from_db()
+
+        # NOTE: not sending notification when figure is approved as it is not actionable
+
+        Figure.update_event_status_and_send_notifications(figure.event_id)
+        figure.event.refresh_from_db()
+
         return ApproveFigure(result=figure, errors=None, ok=True)
 
 
@@ -394,42 +377,51 @@ class UnapproveFigure(graphene.Mutation):
         figure = Figure.objects.filter(id=id).first()
         if not figure:
             return UnapproveFigure(errors=[
-                dict(field='id', messages=gettext('Figure does not exist.'))
+                dict(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
             ])
-        figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
-        if figure.figure_review_comments.all().count() > 0:
-            figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+        if figure.review_status != Figure.FIGURE_REVIEW_STATUS.APPROVED:
+            return UnapproveFigure(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Only approved figures can be un-approved'))
+            ])
+
+        figure.review_status = (
+            Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+            if figure.figure_review_comments.all().count() > 0
+            else Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
+        )
         figure.approved_by = None
         figure.approved_on = None
         figure.save()
 
-        if figure.event:
-            # Update event status
-            figure.update_event_status(figure.event)
+        def _get_notification_type(event):
+            if event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+                return Notification.Type.FIGURE_UNAPPROVED_IN_APPROVED_EVENT
+            if event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+                return Notification.Type.FIGURE_UNAPPROVED_IN_SIGNED_EVENT
+            return None
 
-            _type = None
-            if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-                _type = Notification.Type.FIGURE_UNAPPROVED_IN_APPROVED_EVENT
-            if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
-                _type = Notification.Type.FIGURE_UNAPPROVED_IN_SIGNED_EVENT
-            if _type:
-                Notification.send_multiple_notifications(
-                    recipients=figure.event.regional_coordinators(
-                        event=figure.event,
-                        figure=figure,
-                    ),
-                    type=_type,
-                    actor=info.context.user,
-                    event=figure.event,
-                    figure=figure,
-                )
-        # NOTE: Event is updated on figure save using signals.
-        # We are clearing figure and its reference objects (event).
-        figure.refresh_from_db()
+        _type = _get_notification_type(figure.event)
+        if _type:
+            recipients = [user['id'] for user in Event.regional_coordinators(
+                figure.event,
+                actor=info.context.user,
+            )]
+            Notification.send_safe_multiple_notifications(
+                recipients=recipients,
+                type=_type,
+                actor=info.context.user,
+                event=figure.event,
+                figure=figure,
+            )
+
+        # Update event status
+        Figure.update_event_status_and_send_notifications(figure.event_id)
+        figure.event.refresh_from_db()
+
         return UnapproveFigure(result=figure, errors=None, ok=True)
 
 
-class ReRequestReivewFigure(graphene.Mutation):
+class ReRequestReviewFigure(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
 
@@ -443,35 +435,40 @@ class ReRequestReivewFigure(graphene.Mutation):
     def mutate(root, info, id):
         figure = Figure.objects.filter(id=id).first()
         if not figure:
-            return ReRequestReivewFigure(errors=[
-                dict(field='id', messages=gettext('Figure does not exist.'))
+            return ReRequestReviewFigure(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
             ])
+
+        if figure.review_status != Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS:
+            return ReRequestReviewFigure(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Only in-progress figures can be re-requested review'))
+            ])
+
         figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED
         figure.approved_by = None
         figure.approved_on = None
         figure.save()
 
-        if figure.event:
-            figure.update_event_status(figure.event)
-
-        # NOTE: Event is updated on figure save using signals.
-        # We are clearing figure and its reference objects (event).
-        figure.refresh_from_db()
-
-        if figure.event and figure.event.assignee:
-            Notification.send_notification(
+        if figure.event.assignee:
+            Notification.send_safe_multiple_notifications(
                 event=figure.event,
-                recipient=figure.event.assignee,
+                figure=figure,
+                recipients=[figure.event.assignee_id],
                 actor=info.context.user,
                 type=Notification.Type.FIGURE_RE_REQUESTED_REVIEW,
             )
-        return ReRequestReivewFigure(result=figure, errors=None, ok=True)
+
+        Figure.update_event_status_and_send_notifications(figure.event_id)
+        figure.event.refresh_from_db()
+
+        return ReRequestReviewFigure(result=figure, errors=None, ok=True)
 
 
 class Mutation(object):
     create_entry = CreateEntry.Field()
     update_entry = UpdateEntry.Field()
     delete_entry = DeleteEntry.Field()
+    # source preview
     create_source_preview = CreateSourcePreview.Field()
     # figure tags
     create_figure_tag = CreateFigureTag.Field()
@@ -481,9 +478,7 @@ class Mutation(object):
     export_entries = ExportEntries.Field()
     export_figures = ExportFigures.Field()
     # figure
-    update_figure = updateFigure.Field()
     delete_figure = DeleteFigure.Field()
-    # figure reviews
     approve_figure = ApproveFigure.Field()
     unapprove_figure = UnapproveFigure.Field()
-    re_request_review_figure = ReRequestReivewFigure.Field()
+    re_request_review_figure = ReRequestReviewFigure.Field()

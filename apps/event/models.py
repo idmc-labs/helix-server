@@ -331,16 +331,18 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             )
         }
 
+    # FIXME: this is wrong, this should see event and user not event and figure
     @staticmethod
-    def regional_coordinators(event, figure=None):
-
-        figure_regional_coordinators = User.objects.none()
+    def regional_coordinators(event, actor=None):
+        actor_regional_coordinators = User.objects.none()
         event_regional_coordinators = User.objects.none()
 
-        if figure and figure.country:
-            figure_regional_coordinators = User.objects.filter(
+        if actor:
+            actor_regional_coordinators = User.objects.filter(
                 portfolios__role=USER_ROLE.REGIONAL_COORDINATOR,
-                portfolios__country=figure.country
+                portfolios__country__in=actor.portfolios.values(
+                    'country'
+                )
             )
 
         if event.countries:
@@ -350,7 +352,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     'portfolio__monitoring_sub_region'
                 )
             )
-        coordinators = figure_regional_coordinators | event_regional_coordinators
+        coordinators = actor_regional_coordinators | event_regional_coordinators
         return coordinators.values('id')
 
     @classmethod

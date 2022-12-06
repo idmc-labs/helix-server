@@ -284,6 +284,7 @@ class CommonFigureValidationMixin:
     def _validate_event(self, attrs):
         errors = OrderedDict()
         event = attrs.get('event')
+        # FIXME: do we use event.id or event_id here?
         if event and self.instance and self.instance.event and self.instance.event.id != event.id:
             errors.update({
                 'event': 'Event change is not allowed'
@@ -639,74 +640,149 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
     def update(self, instance, validated_data: dict) -> Entry:
         from apps.event.models import Event
 
-        def _send_notificaitons_and_update_status(figure, created):
-            # FIXME This function may raise N+1 problem in mutation
-            _type = None
-            if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
-                _type = (
-                    Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT
-                    if created
-                    else Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT
-                )
-            if figure.event and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-                _type = (
-                    Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT
-                    if created
-                    else Notification.Type.FIGURE_UPDATED_IN_APPROVED_EVENT
-                )
-            if _type:
-                Notification.send_multiple_notifications(
-                    recipients=figure.event.regional_coordinators(figure.event, figure=figure),
-                    actor=self.context['request'].user,
-                    type=_type,
-                    figure=figure,
-                    event=figure.event,
-                )
-
-            # Change figure status
-            if figure.figure_review_comments.count() > 0:
-                figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
-            else:
-                figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
-            figure.save()
-
-            # Update event status
-            if figure.event:
-                Figure.update_event_status(figure.event)
-
         figures = validated_data.pop('figures', None)
-        if figures:
-            with transaction.atomic():
-                entry = super().update(instance, validated_data)
+
+        with transaction.atomic():
+            entry = super().update(instance, validated_data)
+
+            if isinstance(figures, list):
+                created_figures_for_signed_off_events = []
+                created_figures_for_approved_events = []
+
+                updated_figures_for_signed_off_events = []
+                updated_figures_for_approved_events = []
+                updated_figures_for_other_events = []
+
                 # delete missing figures
-                entry.figures.exclude(
-                    id__in=[each['id'] for each in figures if each.get('id')]).delete()
-                # create if has no ids
-                created = False
+                figures_to_delete = entry.figures.exclude(
+                    id__in=[each['id'] for each in figures if each.get('id')]
+                )
+                deleted_figures_for_signed_off_events = list(
+                    figures_to_delete.filter(
+                        event__review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF
+                    )
+                )
+                deleted_figures_for_approved_events = list(
+                    figures_to_delete.filter(
+                        event__review_status=Event.EVENT_REVIEW_STATUS.APPROVED
+                    )
+                )
+                affected_events = Event.objects.filter(
+                    id__in=figures_to_delete.values('event__id')
+                ).distinct('id')
+                affected_event_ids = list(affected_events.values_list('id', flat=True))
+
+                # delete missing figures
+                figures_to_delete.delete()
+
                 for each in figures:
+                    is_new_figure = not each.get('id')
+                    # create new figures
                     if not each.get('id'):
-                        created = True
                         fig_ser = NestedFigureCreateSerializer(context=self.context)
-                        fig_ser._validated_data = {**each, 'entry': entry}
+                    # update existing figures
                     else:
-                        created = False
                         fig_ser = NestedFigureUpdateSerializer(
                             instance=entry.figures.get(id=each['id']),
                             partial=True,
                             context=self.context,
                         )
-                        fig_ser._validated_data = {**each, 'entry': entry}
+
+                    fig_ser._validated_data = {**each, 'entry': entry}
                     fig_ser._errors = {}
                     figure = fig_ser.save()
-                    if figure.event:
-                        _send_notificaitons_and_update_status(figure, created)
 
-        elif isinstance(figures, list) and not figures:
-            # If figure is empty list remove all figures associated with entry
-            Figure.objects.filter(entry=instance).delete()
+                    if is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+                        created_figures_for_signed_off_events.append(figure)
+                    elif is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+                        created_figures_for_approved_events.append(figure)
+                    elif not is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+                        updated_figures_for_signed_off_events.append(figure)
+                    elif not is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+                        updated_figures_for_approved_events.append(figure)
+                    elif not is_new_figure:
+                        updated_figures_for_other_events.append(figure)
 
-        entry = super().update(instance, validated_data)
-        return entry
+                    affected_event_ids.append(figure.event_id)
+
+                for figure in deleted_figures_for_signed_off_events:
+                    recipients = [user['id'] for user in Event.regional_coordinators(
+                        figure.event,
+                        actor=self.context['request'].user,
+                    )]
+                    Notification.send_safe_multiple_notifications(
+                        recipients=recipients,
+                        actor=self.context['request'].user,
+                        type=Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT,
+                        event=figure.event,
+                    )
+                for figure in deleted_figures_for_approved_events:
+                    recipients = [user['id'] for user in Event.regional_coordinators(
+                        figure.event,
+                        actor=self.context['request'].user,
+                    )]
+                    Notification.send_safe_multiple_notifications(
+                        recipients=recipients,
+                        actor=self.context['request'].user,
+                        type=Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT,
+                        event=figure.event,
+                    )
+                for figure in updated_figures_for_signed_off_events:
+                    recipients = [user['id'] for user in Event.regional_coordinators(
+                        figure.event,
+                        actor=self.context['request'].user,
+                    )]
+                    Notification.send_safe_multiple_notifications(
+                        recipients=recipients,
+                        actor=self.context['request'].user,
+                        type=Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT,
+                        event=figure.event,
+                        figure=figure,
+                    )
+                    Figure.update_figure_status(figure)
+                for figure in updated_figures_for_approved_events:
+                    recipients = [user['id'] for user in Event.regional_coordinators(
+                        figure.event,
+                        actor=self.context['request'].user,
+                    )]
+                    Notification.send_safe_multiple_notifications(
+                        recipients=recipients,
+                        actor=self.context['request'].user,
+                        type=Notification.Type.FIGURE_UPDATED_IN_APPROVED_EVENT,
+                        event=figure.event,
+                        figure=figure,
+                    )
+                    Figure.update_figure_status(figure)
+                for figure in updated_figures_for_other_events:
+                    Figure.update_figure_status(figure)
+                for figure in created_figures_for_signed_off_events:
+                    recipients = [user['id'] for user in Event.regional_coordinators(
+                        figure.event,
+                        actor=self.context['request'].user,
+                    )]
+                    Notification.send_safe_multiple_notifications(
+                        recipients=recipients,
+                        actor=self.context['request'].user,
+                        type=Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT,
+                        event=figure.event,
+                        figure=figure,
+                    )
+                for figure in created_figures_for_approved_events:
+                    recipients = [user['id'] for user in Event.regional_coordinators(
+                        figure.event,
+                        actor=self.context['request'].user,
+                    )]
+                    Notification.send_safe_multiple_notifications(
+                        recipients=recipients,
+                        actor=self.context['request'].user,
+                        type=Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT,
+                        event=figure.event,
+                        figure=figure,
+                    )
+                for event_id in affected_event_ids:
+                    Figure.update_event_status_and_send_notifications(event_id)
+        instance.refresh_from_db()
+        return instance
 
 
 class EntryUpdateSerializer(UpdateSerializerMixin,

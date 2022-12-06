@@ -104,18 +104,20 @@ def create_user_with_role(role: str, monitoring_sub_region: int = None, country:
             role=USER_ROLE[role],
         )
     if role == USER_ROLE.REGIONAL_COORDINATOR.name:
+        new_mr = monitoring_sub_region or MonitoringSubRegionFactory.create().id
         Portfolio.objects.create(
             user=user,
             role=USER_ROLE[role],
-            monitoring_sub_region_id=monitoring_sub_region or MonitoringSubRegionFactory.create().id
+            monitoring_sub_region_id=new_mr
         )  # assigns a new role
     elif role == USER_ROLE.MONITORING_EXPERT.name:
-        new_mr = MonitoringSubRegionFactory.create()
+        new_mr = monitoring_sub_region or MonitoringSubRegionFactory.create().id
+        new_country = country or CountryFactory.create(monitoring_sub_region_id=new_mr).id
         Portfolio.objects.create(
             user=user,
             role=USER_ROLE[role],
-            monitoring_sub_region_id=monitoring_sub_region or new_mr.id,
-            country_id=country or CountryFactory.create(monitoring_sub_region=new_mr).id
+            monitoring_sub_region_id=new_mr,
+            country_id=new_country,
         )  # assigns a new role
     return user
 
