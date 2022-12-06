@@ -659,11 +659,13 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                 )
                 deleted_figures_for_signed_off_events = list(
                     figures_to_delete.filter(
-                    event__review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF)
+                        event__review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF
+                    )
                 )
                 deleted_figures_for_approved_events = list(
                     figures_to_delete.filter(
-                    event__review_status=Event.EVENT_REVIEW_STATUS.APPROVED)
+                        event__review_status=Event.EVENT_REVIEW_STATUS.APPROVED
+                    )
                 )
                 affected_events = Event.objects.filter(
                     id__in=figures_to_delete.values('event__id')
