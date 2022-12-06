@@ -966,42 +966,43 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     # TODO: move this to event model
     @classmethod
-    def update_event_status_and_send_notifications(cls, event_from_args):
+    def update_event_status_and_send_notifications(cls, event):
         from apps.event.models import Event
 
-        event = Event.objects.filter(
-            id=event_from_args.id
+        # FIXME: should we directly get event_id from the args instead?
+        event_with_stats = Event.objects.filter(
+            id=event.id
         ).annotate(
             **Event.annotate_review_figures_count()
         ).first()
 
-        review_approved_count = event.review_approved_count
-        review_not_started_count = event.review_not_started_count
-        total_count = event.total_count
+        review_approved_count = event_with_stats.review_approved_count
+        review_not_started_count = event_with_stats.review_not_started_count
+        total_count = event_with_stats.total_count
 
-        prev_status = event.review_status
+        prev_status = event_with_stats.review_status
 
         if not total_count or review_not_started_count == total_count:
-            event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED.value
+            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED.value
         elif review_approved_count == total_count and prev_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
-            event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF.value
+            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF.value
         elif review_approved_count == total_count:
-            event.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
+            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
         else:
-            event.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value
-        event.save()
+            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value
+        event_with_stats.save()
 
         # TODO: add notification for un-approved and un-signed off
-        if prev_status != event.review_status:
-            recipients = [user['id'] for user in Event.regional_coordinators(event)]
-            if (event.created_by):
-                recipients.append(event.created_by.id)
+        if prev_status != event_with_stats.review_status:
+            recipients = [user['id'] for user in Event.regional_coordinators(event_with_stats)]
+            if (event_with_stats.created_by_id):
+                recipients.append(event_with_stats.created_by_id)
 
-            if event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+            if event_with_stats.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
                 Notification.send_safe_multiple_notifications(
                     recipients=recipients,
                     type=Notification.Type.EVENT_APPROVED,
-                    event=event,
+                    event=event_with_stats,
                     actor=None,
                 )
 

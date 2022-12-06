@@ -362,17 +362,17 @@ class SetAssigneeToEvent(graphene.Mutation):
                 dict(field='user_id', messages=gettext('The user does not exist or has enough permissions.'))
             ])
 
-        prev_assignee = event.assignee
+        prev_assignee_id = event.assignee_id
 
         event.assignee = user
         event.assigner = info.context.user
         event.assigned_at = timezone.now()
         event.save()
 
-        if prev_assignee:
+        if prev_assignee_id:
             Notification.send_safe_multiple_notifications(
                 event=event,
-                recipients=[prev_assignee.id],
+                recipients=[prev_assignee_id],
                 actor=info.context.user,
                 type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
             )
@@ -444,17 +444,17 @@ class ClearAssigneFromEvent(graphene.Mutation):
 
         # FIXME: throw error if there is not prev_assignee
 
-        prev_assignee = event.assignee
+        prev_assignee_id = event.assignee_id
 
         event.assignee = None
         event.assigner = None
         event.assigned_at = None
         event.save()
 
-        if prev_assignee:
+        if prev_assignee_id:
             Notification.send_safe_multiple_notifications(
                 event=event,
-                recipients=[prev_assignee.id],
+                recipients=[prev_assignee_id],
                 actor=info.context.user,
                 type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
             )
@@ -483,7 +483,7 @@ class ClearSelfAssigneFromEvent(graphene.Mutation):
 
         # Admin and RE can clear all other users from assignee except ME
         # FIXME: this logic does not seem right after `or`
-        if event.assignee.id != info.context.user.id or info.context.user.has_perm('clear_assignee_from_event'):
+        if event.assignee_id != info.context.user.id or info.context.user.has_perm('clear_assignee_from_event'):
             return ClearAssigneFromEvent(errors=[
                 dict(field='event_id', messages=gettext('You are not allowed to clear others from assignee.'))
             ])
@@ -532,8 +532,8 @@ class SignOffEvent(graphene.Mutation):
         event.save()
 
         recipients = [user['id'] for user in Event.regional_coordinators(event)]
-        if event.created_by:
-            recipients.append(event.created_by.id)
+        if event.created_by_id:
+            recipients.append(event.created_by_id)
         Notification.send_safe_multiple_notifications(
             recipients=recipients,
             type=Notification.Type.EVENT_SIGNED_OFF,

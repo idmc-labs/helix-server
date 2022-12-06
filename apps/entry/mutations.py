@@ -454,7 +454,7 @@ class ReRequestReviewFigure(graphene.Mutation):
             Notification.send_safe_multiple_notifications(
                 event=figure.event,
                 figure=figure,
-                recipients=[figure.event.assignee.id],
+                recipients=[figure.event.assignee_id],
                 actor=info.context.user,
                 type=Notification.Type.FIGURE_RE_REQUESTED_REVIEW,
             )

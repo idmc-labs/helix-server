@@ -76,7 +76,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
 
         if instance.figure and instance.event and instance.event.assignee:
             Notification.send_safe_multiple_notifications(
-                recipients=[instance.event.assignee.id],
+                recipients=[instance.event.assignee_id],
                 event=instance.event,
                 figure=instance.figure,
                 actor=info.context.user,
@@ -85,7 +85,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
 
         if instance.figure and instance.event and instance.figure.created_by:
             Notification.send_safe_multiple_notifications(
-                recipients=[instance.figure.created_by.id],
+                recipients=[instance.figure.created_by_id],
                 event=instance.event,
                 figure=instance.figure,
                 actor=info.context.user,
