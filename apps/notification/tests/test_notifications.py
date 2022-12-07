@@ -57,6 +57,14 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 }
             }
         '''
+        self.delete_entry = '''
+            mutation DeleteEntry($id: ID!) {
+                deleteEntry(id: $id) {
+                    ok
+                    errors
+                }
+            }
+        '''
         self.create_update_figure = """
         mutation MyMutation($input: EntryUpdateInputType!) {
           updateEntry(data: $input) {
@@ -798,3 +806,53 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         notification_data = json.loads(response.content)['data']['toggleNotificationRead']['result']
         self.assertEqual(notification_data['id'], str(notification.id))
         self.assertEqual(False, notification_data['isRead'])
+
+    def test_should_send_notification_to_regional_coordinators_when_entry_removed(self):
+        self.force_login(self.admin)
+        event1 = EventFactory.create(
+            assignee=self.monitoring_expert,
+            assigner=self.regional_coordinator,
+            countries=(self.country, ),
+            review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
+        )
+        event2 = EventFactory.create(
+            assignee=self.monitoring_expert,
+            assigner=self.regional_coordinator,
+            countries=(self.country, ),
+            review_status=Event.EVENT_REVIEW_STATUS.APPROVED,
+        )
+        entry = EntryFactory.create()
+        FigureFactory.create(
+            role=Figure.ROLE.RECOMMENDED,
+            country=self.country,
+            review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
+            entry=entry,
+            event=event1,
+        )
+        FigureFactory.create(
+            role=Figure.ROLE.RECOMMENDED,
+            country=self.country,
+            review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
+            entry=entry,
+            event=event2,
+        )
+        response = self.query(
+            self.delete_entry,
+            variables={
+                'id': entry.id,
+            }
+        )
+        self.force_login(self.regional_coordinator)
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.regional_coordinator.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results']
+        notification_types = [item['type'] for item in notification_data]
+        self.assertEqual(
+            set(notification_types),
+            {
+                Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT.name,
+                Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT.name,
+            }
+        )
