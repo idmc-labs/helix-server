@@ -198,7 +198,10 @@ class EventSerializer(MetaInformationSerializerMixin,
         instance = super().update(instance, validated_data)
 
         if is_include_triangulation_in_qa_changed:
-            recipients = [user['id'] for user in Event.regional_coordinators(instance)]
+            recipients = [user['id'] for user in Event.regional_coordinators(
+                instance,
+                actor=self.context['request'].user,
+            )]
             if (instance.created_by_id):
                 recipients.append(instance.created_by_id)
 

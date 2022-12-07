@@ -544,7 +544,8 @@ class SignOffEvent(graphene.Mutation):
 
         recipients = [
             user['id'] for user in Event.regional_coordinators(
-                event, actor=info.context.user
+                event,
+                actor=info.context.user,
             )
         ]
         if event.created_by_id:
