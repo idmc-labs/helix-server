@@ -1,5 +1,6 @@
 import django_filters
-from django.db.models import Q, Count
+from django.db.models import Q, Count, F
+from django.contrib.postgres.aggregates.general import ArrayAgg
 from apps.event.models import Actor, Event, Figure
 from apps.crisis.models import Crisis
 from apps.report.models import Report
@@ -123,7 +124,9 @@ class EventFilter(NameFilterMixin,
         )
         annotated_fields = {
             'stock_figure_count': recommended_stock_figures_count,
-            'flow_figure_count': recommended_flow_figures_count
+            'flow_figure_count': recommended_flow_figures_count,
+            'geo_locations': ArrayAgg('figures__geo_locations__id'),
+            'distinct_geo_locations': ArrayAgg('figures__geo_locations__id', distinct=True),
         }
         if QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name in value:
             event_flow_qs_ids = qs.annotate(**annotated_fields).filter(
@@ -132,14 +135,18 @@ class EventFilter(NameFilterMixin,
             ).values_list("id", flat=True)
         if QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name in value:
             event_stock_qs_ids = qs.annotate(**annotated_fields).filter(
-                Q(stock_figure_count__gt=1) | Q(flow_figure_count__gt=1)
+                (
+                    Q(stock_figure_count__gt=1) |
+                    Q(flow_figure_count__gt=1)
+                ) &
+                ~Q(geo_locations=F('distinct_geo_locations'))
             ).filter(
                 ignore_qa=False,
                 figures__role=Figure.ROLE.RECOMMENDED,
                 figures__category__in=[
                     Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
                     Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
-                ]
+                ],
             ).values_list("id", flat=True)
         event_ids = list(event_flow_qs_ids) + list(event_stock_qs_ids)
         return qs.filter(id__in=event_ids)
