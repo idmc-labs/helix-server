@@ -105,16 +105,20 @@ class DeleteEntry(graphene.Mutation):
             return DeleteEntry(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Entry does not exist.'))
             ])
+
+        affected_event_ids = []
+
         # Send notification to regional co-ordinators
         for review_status in [
-                Event.EVENT_REVIEW_STATUS.APPROVED,
-                Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
+            Event.EVENT_REVIEW_STATUS.APPROVED,
+            Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
         ]:
-            unique_figure_events = instance.figures.filter(
+            figures = instance.figures.filter(
                 entry__id=instance.id,
                 event__review_status=review_status
-            ).distinct('event')
-            for figure in unique_figure_events:
+            )
+
+            for figure in figures:
                 regional_coordinator_ids = [
                     user['id'] for user in Event.regional_coordinators(
                         event=figure.event,
@@ -132,9 +136,14 @@ class DeleteEntry(graphene.Mutation):
                     event=figure.event,
                     text=gettext('Entry and figures were deleted'),
                 )
-                Figure.update_event_status_and_send_notifications(figure.event.id)
+
+                affected_event_ids.append(figure.event_id)
+
+        for event_id in list(set(affected_event_ids)):
+            Figure.update_event_status_and_send_notifications(event_id)
 
         instance.delete()
+
         instance.id = id
         return DeleteEntry(result=instance, errors=None, ok=True)
 
