@@ -58,6 +58,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     # used in report entry table
     report = df.CharFilter(method='filter_report')
     filter_context_of_violences = IDListFilter(method='filter_filter_context_of_violences')
+    filter_is_figure_to_be_reviewed = df.BooleanFilter(method='filter_filter_is_figure_to_be_reviewed')
 
     class Meta:
         model = Entry
@@ -302,6 +303,14 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs
         return qs.filter(figures__approved_by__in=value)
 
+    def filter_filter_is_figure_to_be_reviewed(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(
+            Q(figures__role=Figure.ROLE.RECOMMENDED) |
+            Q(figures__event__include_triangulation_in_qa=True)
+        )
+
     @property
     def qs(self):
         return super().qs.distinct()
@@ -342,6 +351,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_context_of_violences = IDListFilter(method='filter_context_of_violences')
     filter_figure_review_status = StringListFilter(method='filter_filter_figure_review_status')
     filter_figure_approved_by = IDListFilter(method='filter_filter_figure_approved_by')
+    filter_is_figure_to_be_reviewed = df.BooleanFilter(method='filter_filter_is_figure_to_be_reviewed')
 
     class Meta:
         model = Figure
@@ -572,6 +582,14 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         if not value:
             return qs
         return qs.filter(approved_by__in=value)
+
+    def filter_filter_is_figure_to_be_reviewed(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(
+            Q(role=Figure.ROLE.RECOMMENDED) |
+            Q(event__include_triangulation_in_qa=True)
+        )
 
     @property
     def qs(self):
