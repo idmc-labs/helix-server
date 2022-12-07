@@ -167,6 +167,10 @@ class QueryAbstractModel(models.Model):
         verbose_name=_('Context of violence'),
         blank=True,
     )
+    filter_is_figure_to_be_reviewed = models.NullBooleanField(
+        verbose_name=_('Filter to be reviewed'),
+        default=None,
+    )
 
     @property
     def get_filter_kwargs(self):
@@ -194,6 +198,7 @@ class QueryAbstractModel(models.Model):
             filter_figure_category_types=self.filter_figure_category_types,
             filter_figure_has_disaggregated_data=self.filter_figure_has_disaggregated_data,
             filter_context_of_violence=self.filter_context_of_violence.all(),
+            filter_is_figure_to_be_reviewed=self.filter_is_figure_to_be_reviewed,
         )
 
     @property
