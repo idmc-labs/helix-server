@@ -97,12 +97,43 @@ class DeleteEntry(graphene.Mutation):
     @staticmethod
     @permission_checker(['entry.delete_entry'])
     def mutate(root, info, id):
+        from apps.event.models import Event
+
         try:
             instance = Entry.objects.get(id=id)
         except Entry.DoesNotExist:
             return DeleteEntry(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Entry does not exist.'))
             ])
+        # Send notification to regional co-ordinators
+        for review_status in [
+                Event.EVENT_REVIEW_STATUS.APPROVED,
+                Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
+        ]:
+            unique_figure_events = instance.figures.filter(
+                entry__id=instance.id,
+                event__review_status=review_status
+            ).distinct('event')
+            for figure in unique_figure_events:
+                regional_coordinator_ids = [
+                    user['id'] for user in Event.regional_coordinators(
+                        event=figure.event,
+                        actor=info.context.user,
+                    )
+                ]
+                notification_type = Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT
+                if review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+                    notification_type = Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT
+
+                Notification.send_safe_multiple_notifications(
+                    recipients=regional_coordinator_ids,
+                    actor=info.context.user,
+                    type=notification_type,
+                    event=figure.event,
+                    text=gettext('Entry and figures were deleted'),
+                )
+                Figure.update_event_status_and_send_notifications(figure.event.id)
+
         instance.delete()
         instance.id = id
         return DeleteEntry(result=instance, errors=None, ok=True)

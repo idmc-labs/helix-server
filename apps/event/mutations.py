@@ -542,7 +542,11 @@ class SignOffEvent(graphene.Mutation):
         event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
         event.save()
 
-        recipients = [user['id'] for user in Event.regional_coordinators(event)]
+        recipients = [
+            user['id'] for user in Event.regional_coordinators(
+                event, actor=info.context.user
+            )
+        ]
         if event.created_by_id:
             recipients.append(event.created_by_id)
 
