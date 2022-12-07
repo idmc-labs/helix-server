@@ -340,8 +340,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         if actor:
             actor_regional_coordinators = User.objects.filter(
                 portfolios__role=USER_ROLE.REGIONAL_COORDINATOR,
-                portfolios__country__in=actor.portfolios.values(
-                    'country'
+                portfolios__monitoring_sub_region__in=actor.portfolios.values(
+                    'monitoring_sub_region'
                 )
             )
 
