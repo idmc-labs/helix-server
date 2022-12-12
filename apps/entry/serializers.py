@@ -715,6 +715,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         actor=self.context['request'].user,
                         type=Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT,
                         event=figure.event,
+                        entry=figure.entry,
                     )
                 for figure in deleted_figures_for_approved_events:
                     recipients = [user['id'] for user in Event.regional_coordinators(
@@ -726,6 +727,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         actor=self.context['request'].user,
                         type=Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT,
                         event=figure.event,
+                        entry=figure.entry,
                     )
                 for figure in updated_figures_for_signed_off_events:
                     recipients = [user['id'] for user in Event.regional_coordinators(
@@ -737,6 +739,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         actor=self.context['request'].user,
                         type=Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT,
                         event=figure.event,
+                        entry=figure.entry,
                         figure=figure,
                     )
                     Figure.update_figure_status(figure)
@@ -750,6 +753,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         actor=self.context['request'].user,
                         type=Notification.Type.FIGURE_UPDATED_IN_APPROVED_EVENT,
                         event=figure.event,
+                        entry=figure.entry,
                         figure=figure,
                     )
                     Figure.update_figure_status(figure)
@@ -765,6 +769,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         actor=self.context['request'].user,
                         type=Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT,
                         event=figure.event,
+                        entry=figure.entry,
                         figure=figure,
                     )
                 for figure in created_figures_for_approved_events:
@@ -777,6 +782,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         actor=self.context['request'].user,
                         type=Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT,
                         event=figure.event,
+                        entry=figure.entry,
                         figure=figure,
                     )
                 for event_id in affected_event_ids:
