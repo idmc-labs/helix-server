@@ -5,13 +5,18 @@ from apps.crisis.models import Crisis
 from apps.event.models import (
     Event
 )
+from apps.entry.models import Figure
 from utils.factories import (
     CountryFactory,
     EventFactory,
     CrisisFactory,
     ContextOfViolenceFactory,
+    EntryFactory,
+    FigureFactory,
+    OSMNameFactory,
 )
 from utils.tests import HelixTestCase
+from apps.common.enums import QA_RULE_TYPE
 
 
 CONFLICT = Crisis.CRISIS_TYPE.CONFLICT
@@ -158,3 +163,69 @@ class TestEventFilter(HelixTestCase):
             [event],
             obtained
         )
+
+    def test_qs_rules(self):
+        # Create a entry without any recommended figures
+        event_0 = EventFactory.create()
+
+        event_1 = EventFactory.create(name='event 1', ignore_qa=False)
+        event_2 = EventFactory.create(name='event 2', ignore_qa=False)
+        event_3 = EventFactory.create(name='event 3', ignore_qa=False)
+
+        entry_1 = EntryFactory.create()
+        entry_2 = EntryFactory.create()
+        entry_3 = EntryFactory.create()
+
+        geo_location_1 = OSMNameFactory.create(
+            name='one'
+        )
+        geo_location_2 = OSMNameFactory.create(
+            name='tow'
+        )
+        geo_location_3 = OSMNameFactory.create(
+            name='three'
+        )
+
+        # Create 3 figures without duplicated geo locations
+        FigureFactory.create(
+            entry=entry_1,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            role=Figure.ROLE.RECOMMENDED,
+            event=event_1,
+            geo_locations=[geo_location_1, geo_location_2, geo_location_3],
+        )
+
+        # Create 3 figures with 2 duplicated geo locations
+        FigureFactory.create_batch(
+            3,
+            entry=entry_2,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            role=Figure.ROLE.RECOMMENDED,
+            event=event_2,
+            geo_locations=[geo_location_1, geo_location_1, geo_location_2],
+        )
+
+        # Create 3 figures with 3 duplicated geo locations
+        FigureFactory.create_batch(
+            3,
+            entry=entry_3,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            role=Figure.ROLE.RECOMMENDED,
+            event=event_3,
+            geo_locations=[geo_location_1, geo_location_1, geo_location_1],
+        )
+
+        # Test event with multiple recommended figures in same locaiton
+        filtered_data = self.filter_class(data=dict(
+            qa_rule=QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name
+        )).qs
+        self.assertEqual(set(filtered_data), {event_2, event_3})
+
+        # Test events with no recommended figures
+        filtered_data = self.filter_class(data=dict(
+            qa_rule=QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name
+        )).qs
+        self.assertEqual(set(filtered_data), {event_0, })
