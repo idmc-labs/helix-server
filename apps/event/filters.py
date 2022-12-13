@@ -1,5 +1,5 @@
 import django_filters
-from django.db.models import Q, Count, F
+from django.db.models import Q, Count
 from django.contrib.postgres.aggregates.general import ArrayAgg
 from apps.event.models import Actor, Event, Figure
 from apps.crisis.models import Crisis
@@ -25,7 +25,7 @@ class EventFilter(NameFilterMixin,
     violence_types = IDListFilter(method='filter_violence_types')
     violence_sub_types = IDListFilter(method='filter_violence_sub_types')
     created_by_ids = IDListFilter(method='filter_created_by')
-    qa_rules = StringListFilter(method='filter_qa_rules')
+    qa_rule = django_filters.CharFilter(method='filter_qa_rule')
     context_of_violences = IDListFilter(method='filter_context_of_violences')
     review_status = StringListFilter(method='filter_review_status')
     assignees = IDListFilter(method='filter_assignees')
@@ -107,49 +107,50 @@ class EventFilter(NameFilterMixin,
             return qs.filter(~Q(violence__name=OSV) | Q(osv_sub_type__in=value)).distinct()
         return qs
 
-    def filter_qa_rules(self, qs, name, value):
-        event_flow_qs_ids = []
-        event_stock_qs_ids = []
-        recommended_stock_figures_count = Count('figures', filter=(
-            Q(figures__role=Figure.ROLE.RECOMMENDED) &
-            Q(ignore_qa=False) &
-            Q(figures__category=Figure.FIGURE_CATEGORY_TYPES.IDPS)),
-            distinct='figures__id'
-        )
-        recommended_flow_figures_count = Count('figures', filter=(
-            Q(figures__role=Figure.ROLE.RECOMMENDED) &
-            Q(ignore_qa=False) &
-            Q(figures__category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT)),
-            distinct='figures__id'
-        )
-        annotated_fields = {
-            'stock_figure_count': recommended_stock_figures_count,
-            'flow_figure_count': recommended_flow_figures_count,
-            'geo_locations': ArrayAgg('figures__geo_locations__id'),
-            'distinct_geo_locations': ArrayAgg('figures__geo_locations__id', distinct=True),
-        }
-        if QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name in value:
-            event_flow_qs_ids = qs.annotate(**annotated_fields).filter(
-                ignore_qa=False,
-                stock_figure_count=0, flow_figure_count=0
-            ).values_list("id", flat=True)
-        if QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name in value:
-            event_stock_qs_ids = qs.annotate(**annotated_fields).filter(
-                (
-                    Q(stock_figure_count__gt=1) |
-                    Q(flow_figure_count__gt=1)
-                ) &
-                ~Q(geo_locations=F('distinct_geo_locations'))
+    def filter_qa_rule(self, qs, name, value):
+        if QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name == value:
+            return qs.annotate(
+                figure_count=Count(
+                    'figures', filter=Q(
+                        figures__category__in=[
+                            Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                            Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                        ],
+                        ignore_qa=False,
+                        figures__role=Figure.ROLE.RECOMMENDED,
+                        figures__geo_locations__isnull=False,
+                    )
+                )
             ).filter(
-                ignore_qa=False,
-                figures__role=Figure.ROLE.RECOMMENDED,
-                figures__category__in=[
-                    Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-                    Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
+                figure_count=0
+            )
+        elif QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name == value:
+            events_id_qs = Figure.objects.filter(
+                category__in=[
+                    Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                    Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                 ],
-            ).values_list("id", flat=True)
-        event_ids = list(event_flow_qs_ids) + list(event_stock_qs_ids)
-        return qs.filter(id__in=event_ids)
+                event__ignore_qa=False,
+                role=Figure.ROLE.RECOMMENDED,
+                geo_locations__isnull=False,
+            ).annotate(
+                locations=models.Subquery(
+                    Figure.geo_locations.through.objects.filter(
+                        figure=models.OuterRef('pk')
+                    ).order_by().values('figure').annotate(
+                        locations=ArrayAgg(
+                            'osmname__name', distinct=True, ordering='osmname__name'
+                        ),
+                    ).values('locations')[:1],
+                    output_field=models.CharField(),
+                ),
+            ).order_by().values('event', 'category', 'locations').annotate(
+                count=Count('id', distinct=True),
+            )
+            return qs.filter(
+                id__in=events_id_qs.filter(count__gt=1).values('event').distinct()
+            )
+        return qs
 
     def filter_context_of_violences(self, qs, name, value):
         if not value:

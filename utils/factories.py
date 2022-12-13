@@ -5,7 +5,7 @@ from factory.django import DjangoModelFactory
 
 from apps.contact.models import Contact
 from apps.crisis.models import Crisis
-from apps.entry.models import Figure
+from apps.entry.models import Figure, OSMName
 from apps.common.enums import GENDER_TYPE
 
 
@@ -223,6 +223,14 @@ class FigureFactory(DjangoModelFactory):
     category = factory.Iterator(Figure.FIGURE_CATEGORY_TYPES)
     figure_cause = factory.Iterator(Crisis.CRISIS_TYPE)
 
+    @factory.post_generation
+    def geo_locations(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for geo_location in extracted:
+                self.geo_locations.add(geo_location)
+
 
 class ResourceGroupFactory(DjangoModelFactory):
     class Meta:
@@ -286,3 +294,13 @@ class ClientTrackInfoFactory(DjangoModelFactory):
 class NotificationFactory(DjangoModelFactory):
     class Meta:
         model = 'notification.Notification'
+
+
+class OSMNameFactory(DjangoModelFactory):
+    lat = factory.Faker('pyint', min_value=100, max_value=200)
+    lon = factory.Faker('pyint', min_value=100, max_value=200)
+    identifier = factory.Iterator(OSMName.IDENTIFIER)
+    accuracy = factory.Iterator(OSMName.OSM_ACCURACY)
+
+    class Meta:
+        model = 'entry.OSMName'
