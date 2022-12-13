@@ -14,9 +14,11 @@ from utils.factories import (
     EntryFactory,
     FigureFactory,
     OtherSubtypeFactory,
+    OSMNameFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from apps.common.enums import QA_RULE_TYPE
 
 
 class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
@@ -274,10 +276,9 @@ class TestDeleteEvent(HelixGraphQLTestCase):
 
 class TestEventListQuery(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.event1_name = 'blaone'
         self.q = '''
-            query EventList($crisisByIds: [ID!], $name: String, $qaRules: [String!]){
-              eventList(crisisByIds: $crisisByIds, name: $name, qaRules: $qaRules) {
+            query EventList($crisisByIds: [ID!], $name: String, $qaRule: String){
+              eventList(crisisByIds: $crisisByIds, name: $name, qaRule: $qaRule) {
                 results {
                   id
                 }
@@ -286,14 +287,12 @@ class TestEventListQuery(HelixGraphQLTestCase):
             }
         '''
         guest = create_user_with_role(USER_ROLE.GUEST.name)
-        self.event = EventFactory.create(
-            event_type=Crisis.CRISIS_TYPE.OTHER.value,
-        )
         self.force_login(guest)
 
     def test_event_list_filter(self):
+
         event1 = EventFactory.create(
-            name=self.event1_name,
+            name='random event2',
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
         EventFactory.create(
@@ -313,7 +312,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
                          expected)
 
         variables = {
-            "name": self.event1_name
+            "name": 'random event2'
         }
         response = self.query(self.q,
                               variables=variables)
@@ -331,19 +330,25 @@ class TestEventListQuery(HelixGraphQLTestCase):
         event1 = EventFactory.create(
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
+
+        geo_location = OSMNameFactory.create(
+            name='random location'
+        )
         for i in range(3):
             entry1 = EntryFactory.create()
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
                 category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
-                event=self.event
+                event=event1,
+                geo_locations=[geo_location],
             )
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
                 category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-                event=self.event
+                event=event1,
+                geo_locations=[geo_location],
             )
 
         for i in range(3):
@@ -352,68 +357,67 @@ class TestEventListQuery(HelixGraphQLTestCase):
                 entry=entry1,
                 role=Figure.ROLE.TRIANGULATION,
                 category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
-                event=self.event,
+                event=event1,
+                geo_locations=[geo_location],
             )
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.TRIANGULATION,
                 category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
                 event=event1,
+                geo_locations=[geo_location],
             )
 
         # Test event has no figures
         variables = {
-            "qaRules": ['HAS_NO_RECOMMENDED_FIGURES']
+            "qaRule": QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name
         }
         response = self.query(self.q, variables=variables)
         content = response.json()
-        self.assertEqual(content['data']['eventList']['totalCount'], 1)
+        self.assertEqual(content['data']['eventList']['totalCount'], 0)
 
         # Test event with mutiple figures
         variables = {
-            "qaRules": ['HAS_MULTIPLE_RECOMMENDED_FIGURES']
+            "qaRule": QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name
         }
         response = self.query(self.q, variables=variables)
         content = response.json()
         self.assertEqual(content['data']['eventList']['totalCount'], 1)
 
-        # Test should return combined result if both filters passed
-        variables = {
-            "qaRules": [
-                'HAS_MULTIPLE_RECOMMENDED_FIGURES',
-                'HAS_NO_RECOMMENDED_FIGURES'
-            ]
-        }
-        response = self.query(self.q, variables=variables)
-        content = response.json()
-        self.assertEqual(content['data']['eventList']['totalCount'], 2)
-
     def test_should_ignore_events_form_qa_if_ignore_qs_flag_is_true(self):
+        event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
         # Create events with ignore_qa true
+        geo_location = OSMNameFactory.create(
+            name='random location2'
+        )
         for i in range(3):
             entry1 = EntryFactory.create()
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
                 category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
-                event=self.event,
+                event=event,
+                geo_locations=[geo_location],
             )
             FigureFactory.create(
                 entry=entry1,
                 role=Figure.ROLE.RECOMMENDED,
                 category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-                event=self.event,
+                event=event,
+                geo_locations=[geo_location],
             )
 
         variables = {
-            "qaRules": ['HAS_NO_RECOMMENDED_FIGURES']
+            "qaRule": QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name
         }
         response = self.query(self.q, variables=variables)
         content = response.json()
         self.assertEqual(content['data']['eventList']['totalCount'], 0)
 
         variables = {
-            "qaRules": ['HAS_MULTIPLE_RECOMMENDED_FIGURES']
+            "qaRule": QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name
         }
         response = self.query(self.q, variables=variables)
         content = response.json()
