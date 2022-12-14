@@ -2561,6 +2561,7 @@ input ReportUpdateInputType {
   filterFigureViolenceTypes: [ID!]
   filterFigureViolenceSubTypes: [ID!]
   isPublic: Boolean
+  filterFigureRoles: [ROLE!]
 }
 
 type ResetPassword {
