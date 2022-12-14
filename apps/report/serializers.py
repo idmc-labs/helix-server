@@ -22,7 +22,7 @@ class ReportSerializer(MetaInformationSerializerMixin,
     class Meta:
         model = Report
         fields = [
-            'name', 'generated_from', 'analysis', 'methodology',
+            'id', 'name', 'generated_from', 'analysis', 'methodology',
             'significant_updates', 'challenges', 'summary',
             'filter_figure_regions', 'filter_figure_countries',
             'filter_figure_crises', 'filter_figure_categories',
@@ -55,21 +55,6 @@ class ReportSerializer(MetaInformationSerializerMixin,
 
 class ReportUpdateSerializer(UpdateSerializerMixin, ReportSerializer):
     id = IntegerIDField(required=True)
-
-    class Meta:
-        model = Report
-        fields = [
-            'id', 'name', 'generated_from', 'analysis', 'methodology',
-            'significant_updates', 'challenges', 'summary',
-            'filter_figure_regions', 'filter_figure_countries',
-            'filter_figure_crises', 'filter_figure_categories',
-            'filter_figure_start_after', 'filter_figure_end_before',
-            'filter_figure_crisis_types', 'filter_figure_geographical_groups',
-            'filter_events', 'filter_figure_tags', 'filter_figure_disaster_categories',
-            'filter_figure_disaster_sub_categories', 'filter_figure_disaster_types',
-            'filter_figure_disaster_sub_types', 'filter_figure_violence_types', 'filter_figure_violence_sub_types',
-            'is_public'
-        ]
 
 
 class ReportCommentSerializer(MetaInformationSerializerMixin,
