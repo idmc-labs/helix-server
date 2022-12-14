@@ -91,7 +91,7 @@ class ReportType(DjangoObjectType):
     filter_figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
     filter_figure_roles_display = EnumDescription(source='get_filter_figure_roles_display')
     filter_figure_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
-    filter_figure_crisis_types = EnumDescription(source='get_filter_figure_crisis_types')
+    filter_figure_crisis_types_display = EnumDescription(source='get_filter_figure_crisis_types_display')
     countries_report = graphene.Dynamic(lambda: CustomPaginatedListObjectField(
         get_type('apps.country.schema.CountryListType'),
         accessor='countries_report',

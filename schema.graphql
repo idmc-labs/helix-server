@@ -2491,7 +2491,7 @@ type ReportType {
   filterFigureRoles: [ROLE!]
   filterFigureTags: [FigureTagType!]!
   filterEntryArticleTitle: String
-  filterFigureCrisisTypes: EnumDescription
+  filterFigureCrisisTypes: [CRISIS_TYPE!]
   filterEntryReviewStatus: [Int!]
   filterFigureGlideNumber: [String]
   filterEntryCreatedBy: [UserType!]!
@@ -2525,6 +2525,7 @@ type ReportType {
   comments(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, body: String, report: ID, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
   generations(report: ID, ordering: String): ReportGenerationListType
   filterFigureRolesDisplay: EnumDescription
+  filterFigureCrisisTypesDisplay: EnumDescription
   countriesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): CountryListType
   eventsReport(id: String, page: Int = 1, ordering: String, pageSize: Int): EventListType
   entriesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
