@@ -33,6 +33,7 @@ class UnifiedReviewComment(MetaInformationArchiveAbstractModel, models.Model):
         FIGURE_STOCK_REPORTING_DATE = 11
         FIGURE_MAIN_TRIGGER_OF_REPORTED_FIGURE = 12
         FIGURE_COUNTRY = 13
+        FIGURE_UNIT = 14
 
         # Location fields
         LOCATION_TYPE = 100
@@ -55,6 +56,7 @@ class UnifiedReviewComment(MetaInformationArchiveAbstractModel, models.Model):
             FIGURE_COUNTRY: 'Country',
             LOCATION_TYPE: 'Location type',
             LOCATION_ACCURACY: 'Location accuracy',
+            FIGURE_UNIT: 'Figure Unit',
         }
 
     # TODO: Make event non nullable field after review data migration
