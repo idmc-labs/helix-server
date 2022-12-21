@@ -22,6 +22,12 @@ from utils.factories import (
     OrganizationFactory,
     CountryFactory,
     FigureFactory,
+    DisasterCategoryFactory,
+    DisasterSubCategoryFactory,
+    DisasterTypeFactory,
+    DisasterSubTypeFactory,
+    ViolenceFactory,
+    ViolenceSubTypeFactory,
 )
 from utils.tests import HelixTestCase, create_user_with_role
 from apps.crisis.models import Crisis
@@ -570,3 +576,45 @@ class TestFigureSerializer(HelixTestCase):
             context={'request': self.request}
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_should_save_parent_fields_if_sub_field_selected(self):
+
+        disaster_category = DisasterCategoryFactory.create()
+        disaster_sub_category = DisasterSubCategoryFactory.create(category=disaster_category)
+
+        disaster_type = DisasterTypeFactory.create(
+            disaster_sub_category=disaster_sub_category
+        )
+        disaster_sub_type = DisasterSubTypeFactory.create(
+            type=disaster_type,
+        )
+
+        violence = ViolenceFactory.create()
+        violence_sub_type = ViolenceSubTypeFactory.create(violence=violence)
+
+        self.data['disaster_sub_category'] = disaster_sub_category.id
+        self.data['disaster_sub_type'] = disaster_sub_type.id
+        self.data['violence_sub_type'] = violence_sub_type.id
+        data = {
+            'url': 'https://yoko-onos-blog.com',
+            'article_title': 'entry',
+            'publish_date': '2020-09-09',
+            'reviewers': [],
+            'publishers': [],
+            'figures': [self.data],
+        }
+        serializer = EntryCreateSerializer(data=data,
+                                           context={'request': self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        entry = serializer.save()
+
+        figure = entry.figures.first()
+        # Test sub fields
+        self.assertEqual(figure.disaster_sub_category.id, disaster_sub_category.id)
+        self.assertEqual(figure.disaster_sub_type.id, disaster_sub_type.id)
+        self.assertEqual(figure.violence_sub_type.id, violence_sub_type.id)
+
+        # Test parent fields
+        self.assertEqual(figure.disaster_category.id, disaster_category.id)
+        self.assertEqual(figure.disaster_type.id, disaster_type.id)
+        self.assertEqual(figure.violence.id, violence.id)

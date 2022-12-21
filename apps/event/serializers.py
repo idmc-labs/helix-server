@@ -134,8 +134,20 @@ class EventSerializer(MetaInformationSerializerMixin,
             ))
         return errors
 
+    def _update_parent_fields(self, attrs):
+        disaster_sub_category = attrs.get('disaster_sub_category')
+        disaster_sub_type = attrs.get('disaster_sub_type')
+        violence_sub_type = attrs.get('violence_sub_type')
+        if disaster_sub_category:
+            attrs['disaster_category'] = disaster_sub_category.category
+        if disaster_sub_type:
+            attrs['disaster_type'] = disaster_sub_type.type
+        if violence_sub_type:
+            attrs['violence'] = violence_sub_type.violence
+
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
+        self._update_parent_fields(attrs)
         errors = OrderedDict()
         crisis = attrs.get('crisis')
         if crisis:
