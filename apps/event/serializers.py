@@ -138,6 +138,11 @@ class EventSerializer(MetaInformationSerializerMixin,
         disaster_sub_category = attrs.get('disaster_sub_category')
         disaster_sub_type = attrs.get('disaster_sub_type')
         violence_sub_type = attrs.get('violence_sub_type')
+
+        attrs['disaster_category'] = None
+        attrs['disaster_type'] = None
+        attrs['violence'] = None
+
         if disaster_sub_category:
             attrs['disaster_category'] = disaster_sub_category.category
         if disaster_sub_type:
