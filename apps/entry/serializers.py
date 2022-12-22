@@ -332,6 +332,20 @@ class CommonFigureValidationMixin:
         if errors:
             raise ValidationError(errors)
 
+        disaster_sub_category = attrs.get('disaster_sub_category')
+        disaster_sub_type = attrs.get('disaster_sub_type')
+        violence_sub_type = attrs.get('violence_sub_type')
+
+        attrs['disaster_category'] = None
+        attrs['disaster_type'] = None
+        attrs['violence'] = None
+
+        if disaster_sub_category:
+            attrs['disaster_category'] = disaster_sub_category.category
+        if disaster_sub_type:
+            attrs['disaster_type'] = disaster_sub_type.type
+        if violence_sub_type:
+            attrs['violence'] = violence_sub_type.violence
         return attrs
 
 
@@ -415,17 +429,6 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
             },
         }
 
-    def _update_parent_fields(self, validated_data):
-        disaster_sub_category = validated_data.get('disaster_sub_category')
-        disaster_sub_type = validated_data.get('disaster_sub_type')
-        violence_sub_type = validated_data.get('violence_sub_type')
-        if disaster_sub_category:
-            validated_data['disaster_category'] = disaster_sub_category.category
-        if disaster_sub_type:
-            validated_data['disaster_type'] = disaster_sub_type.type
-        if violence_sub_type:
-            validated_data['violence'] = violence_sub_type.violence
-
     def create(self, validated_data: dict) -> Figure:
         validated_data['created_by'] = self.context['request'].user
         geo_locations = validated_data.pop('geo_locations', [])
@@ -442,8 +445,6 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
             disaggregation_ages = DisaggregatedAge.objects.bulk_create(
                 [DisaggregatedAge(**age_dict) for age_dict in disaggregation_ages]
             )
-        # Update parent fields
-        self._update_parent_fields(validated_data)
         instance = Figure.objects.create(**validated_data)
         instance.geo_locations.set(geo_locations)
         instance.tags.set(tags)
@@ -503,8 +504,6 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
         sources = validated_data.pop('sources', [])
         with transaction.atomic():
             instance = super().update(instance, validated_data)
-            # Update parent fields
-            self._update_parent_fields(validated_data)
             self._update_locations(instance=instance,
                                    attr='geo_locations',
                                    data=geo_locations)
