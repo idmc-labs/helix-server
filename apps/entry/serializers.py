@@ -292,6 +292,22 @@ class CommonFigureValidationMixin:
             })
         return errors
 
+    def _update_parent_fields(self, attrs):
+        disaster_sub_category = attrs.get('disaster_sub_category')
+        disaster_sub_type = attrs.get('disaster_sub_type')
+        violence_sub_type = attrs.get('violence_sub_type')
+
+        attrs['disaster_category'] = None
+        attrs['disaster_type'] = None
+        attrs['violence'] = None
+
+        if disaster_sub_category:
+            attrs['disaster_category'] = disaster_sub_category.category
+        if disaster_sub_type:
+            attrs['disaster_type'] = disaster_sub_type.type
+        if violence_sub_type:
+            attrs['violence'] = violence_sub_type.violence
+
     def validate(self, attrs: dict) -> dict:
         instance = None
         if attrs.get('id'):
@@ -329,23 +345,10 @@ class CommonFigureValidationMixin:
         errors.update(self._validate_figure_cause(instance, attrs))
         errors.update(self._validate_event(instance, attrs))
 
+        self._update_parent_fields(attrs)
         if errors:
             raise ValidationError(errors)
 
-        disaster_sub_category = attrs.get('disaster_sub_category')
-        disaster_sub_type = attrs.get('disaster_sub_type')
-        violence_sub_type = attrs.get('violence_sub_type')
-
-        attrs['disaster_category'] = None
-        attrs['disaster_type'] = None
-        attrs['violence'] = None
-
-        if disaster_sub_category:
-            attrs['disaster_category'] = disaster_sub_category.category
-        if disaster_sub_type:
-            attrs['disaster_type'] = disaster_sub_type.type
-        if violence_sub_type:
-            attrs['violence'] = violence_sub_type.violence
         return attrs
 
 
