@@ -228,6 +228,9 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                   entry {
                       id
                   }
+                  reviewComment {
+                      id
+                  }
            }
           }
         }
@@ -238,6 +241,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             ok
             errors
             result {
+              id
               comment
             }
           }
@@ -548,6 +552,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 'commentType': UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREY.name,
             }
         )
+        create_review_comment_data = json.loads(response.content)['data']['createReviewComment']['result']
         self.force_login(self.monitoring_expert)
         response = self.query(
             self.notification_query,
@@ -555,6 +560,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         )
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.REVIEW_COMMENT_CREATED.name, notification_data['type'])
+        self.assertEqual(create_review_comment_data['id'], notification_data['reviewComment']['id'])
 
     def test_should_send_notification_to_the_user_who_created_the_figure_when_assignee_comments_on_figure(self):
         # Ref: 8
@@ -573,6 +579,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 'commentType': UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN.name,
             }
         )
+        create_review_comment_data = json.loads(response.content)['data']['createReviewComment']['result']
+        self.force_login(self.monitoring_expert)
         self.force_login(self.admin)
         response = self.query(
             self.notification_query,
@@ -580,6 +588,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         )
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.REVIEW_COMMENT_CREATED.name, notification_data['type'])
+        self.assertEqual(create_review_comment_data['id'], notification_data['reviewComment']['id'])
 
     def test_should_send_notification_to_the_assignee_when_there_is_a_re_request_review(self):
         # Ref: 10
