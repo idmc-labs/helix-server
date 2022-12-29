@@ -27,6 +27,7 @@ class GenericNotificationType(DjangoObjectType):
             'event',
             'figure',
             'entry',
+            'review_comment',
             'is_read',
             'text',
             'created_at',
