@@ -679,13 +679,17 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertEqual(Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT.name, notification_data['type'])
         self.assertEqual(str(entry.id), notification_data['entry']['id'])
 
-    def test_should_send_notification_to_co_ordinator_if_figure_is_added_edited_deleted_in_signed_off_event(self):
+    def test_should_send_notification_to_event_creator_and_co_ordinator_if_figure_is_changed_in_signed_off_event(self):
+        event_creator = create_user_with_role(
+            USER_ROLE.ADMIN.name,
+        )
         # Ref: 14
         event = EventFactory.create(
             assignee=self.monitoring_expert,
             assigner=self.regional_coordinator,
             countries=(self.country, ),
             review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
+            created_by=event_creator,
         )
         entry = EntryFactory.create()
         figures = self.figures
@@ -724,11 +728,20 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 'figures': figures,
             }
         )
-
+        # Regional coordinator case
         self.force_login(self.regional_coordinator)
         response = self.query(
             self.notification_query,
             variables={'recipient': self.regional_coordinator.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT.name, notification_data['type'])
+
+        # Creator case
+        self.force_login(event_creator)
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': event_creator.id}
         )
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT.name, notification_data['type'])
@@ -743,7 +756,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 'id': figure_id,
             }
         )
-
+        # Regional coordinator case
         self.force_login(self.regional_coordinator)
         response = self.query(
             self.notification_query,
