@@ -251,17 +251,17 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         event.refresh_from_db()
         self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED)
 
-    def test_should_change_figure_status_in_progress_if_figure_is_saved(self):
+    def test_should_change_figure_status_to_in_progress_and_not_started_if_figure_is_saved_by_assignee(self):
         entry = EntryFactory.create()
         event = EventFactory.create(
             assigner=self.regional_coordinator,
-            assignee=self.regional_coordinator,
-            review_status=Event.EVENT_REVIEW_STATUS.APPROVED,
+            assignee=self.monitoring_expert,
+            review_status=Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS,
             countries=[self.country],
         )
         figure = FigureFactory.create(
             entry=entry,
-            review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
+            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
             event=event,
             country=self.country,
         )
@@ -304,8 +304,42 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         figures[0]['country'] = self.country.id
         figures[0]['id'] = figure.id
 
-        # No review comment case on figure
+        # Review status should not change if assigner or other user update or created figures
+        # No review comment
         self.force_login(self.regional_coordinator)
+        response = self.query(
+            self.update_figure,
+            input_data={
+                'id': entry.id,
+                'figures': figures
+            }
+        )
+        content = json.loads(response.content)
+        figure_id = content['data']['updateEntry']['result']['figures'][0]['id']
+        review_status = content['data']['updateEntry']['result']['figures'][0]['reviewStatus']
+        self.assertEqual(str(figure.id), figure_id)
+        self.assertEqual(Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED.name, review_status)
+
+        figure.refresh_from_db()
+        # Review status should not change if assigner or other user update or created figures
+        # Review comment on figure case
+        self.force_login(self.regional_coordinator)
+        response = self.query(
+            self.update_figure,
+            input_data={
+                'id': entry.id,
+                'figures': figures
+            }
+        )
+        content = json.loads(response.content)
+        figure_id = content['data']['updateEntry']['result']['figures'][0]['id']
+        review_status = content['data']['updateEntry']['result']['figures'][0]['reviewStatus']
+        self.assertEqual(str(figure.id), figure_id)
+        self.assertEqual(Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED.name, review_status)
+
+        # Review status should change if assigner or other user update or created figures
+        # No review comment
+        self.force_login(self.monitoring_expert)
         response = self.query(
             self.update_figure,
             input_data={
@@ -323,8 +357,9 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         UnifiedReviewCommentFactory.create(figure=figure, event=event, comment='test comment')
 
         figure.refresh_from_db()
+        # Review status should change if assigner or other user update or created figures
         # Review comment on figure case
-        self.force_login(self.regional_coordinator)
+        self.force_login(self.monitoring_expert)
         response = self.query(
             self.update_figure,
             input_data={

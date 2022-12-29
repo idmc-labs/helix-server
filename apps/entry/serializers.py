@@ -754,7 +754,7 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         entry=figure.entry,
                         figure=figure,
                     )
-                    Figure.update_figure_status(figure)
+                    Figure.update_figure_status(figure, self.context['request'].user)
                 for figure in updated_figures_for_approved_events:
                     recipients = [user['id'] for user in Event.regional_coordinators(
                         figure.event,
@@ -772,9 +772,9 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         entry=figure.entry,
                         figure=figure,
                     )
-                    Figure.update_figure_status(figure)
+                    Figure.update_figure_status(figure, self.context['request'].user)
                 for figure in updated_figures_for_other_events:
-                    Figure.update_figure_status(figure)
+                    Figure.update_figure_status(figure, self.context['request'].user)
                 for figure in created_figures_for_signed_off_events:
                     recipients = [user['id'] for user in Event.regional_coordinators(
                         figure.event,
