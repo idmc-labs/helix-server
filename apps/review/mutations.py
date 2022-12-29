@@ -85,6 +85,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
                 figure=instance.figure,
                 actor=info.context.user,
                 type=Notification.Type.REVIEW_COMMENT_CREATED,
+                review_comment=instance,
             )
 
         if instance.figure and instance.event and instance.figure.created_by_id:
@@ -95,6 +96,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
                 figure=instance.figure,
                 actor=info.context.user,
                 type=Notification.Type.REVIEW_COMMENT_CREATED,
+                review_comment=instance,
             )
         return CreateUnifiedReviewComment(result=instance, errors=None, ok=True)
 
