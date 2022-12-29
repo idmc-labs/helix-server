@@ -1035,7 +1035,7 @@ type EntryType {
   publishDate: Date!
   idmcAnalysis: String
   isConfidential: Boolean!
-  entries: [GenericNotificationType!]!
+  notifications: [GenericNotificationType!]!
   figures: [FigureType!]
 }
 
@@ -1141,7 +1141,7 @@ type EventType {
   reviewStatus: EVENT_REVIEW_STATUS
   includeTriangulationInQa: Boolean!
   eventReviews: [UnifiedReviewCommentType!]!
-  events: [GenericNotificationType!]!
+  notifications: [GenericNotificationType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
   eventTypeDisplay: EnumDescription
@@ -1477,7 +1477,7 @@ type FigureType {
   approvedOn: DateTime
   reviewStatus: FIGURE_REVIEW_STATUS
   figureReviewComments: [UnifiedReviewCommentType!]!
-  figures: [GenericNotificationType!]!
+  notifications: [GenericNotificationType!]!
   reportSet: [ReportType!]!
   getQuantifier: EnumDescription
   unitDisplay: EnumDescription
@@ -1539,6 +1539,7 @@ type GenericNotificationType {
   event: EventType
   figure: FigureType
   entry: EntryType
+  reviewComment: UnifiedReviewCommentType
   text: String
   createdAt: DateTime!
   typeDisplay: EnumDescription
@@ -2794,6 +2795,7 @@ type UnifiedReviewCommentType {
   comment: String
   isEdited: Boolean!
   isDeleted: Boolean!
+  notifications: [GenericNotificationType!]!
   commentDisplay: EnumDescription
   fieldDisplay: EnumDescription
 }
