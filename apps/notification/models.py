@@ -54,13 +54,13 @@ class Notification(models.Model):
     recipient = models.ForeignKey(
         'users.User',
         on_delete=models.CASCADE,
-        related_name='recipient',
+        related_name='recipient_notifications',
         verbose_name=_('For user')
     )
     actor = models.ForeignKey(
         'users.User',
         on_delete=models.CASCADE,
-        related_name='actor',
+        related_name='actor_notifications',
         verbose_name=_('Actor'),
         null=True,
         blank=True,
@@ -73,24 +73,32 @@ class Notification(models.Model):
     event = models.ForeignKey(
         'event.Event',
         verbose_name=_('Event'),
-        related_name='events',
-        on_delete=models.CASCADE,
+        related_name='notifications',
+        on_delete=models.SET_NULL,
         null=True,
         blank=True
     )
     figure = models.ForeignKey(
         'entry.Figure',
         verbose_name=_('Figure'),
-        related_name='figures',
-        on_delete=models.CASCADE,
+        related_name='notifications',
+        on_delete=models.SET_NULL,
         blank=True,
         null=True,
     )
     entry = models.ForeignKey(
         'entry.Entry',
         verbose_name=_('Entry'),
-        related_name='entries',
-        on_delete=models.CASCADE,
+        related_name='notifications',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
+    review_comment = models.ForeignKey(
+        'review.UnifiedReviewComment',
+        verbose_name=_('Unified review comment'),
+        related_name='notifications',
+        on_delete=models.SET_NULL,
         blank=True,
         null=True,
     )
@@ -123,6 +131,7 @@ class Notification(models.Model):
         event=None,
         entry=None,
         text=None,
+        review_comment=None,
     ):
         recipient_set = set(recipients)
         # FIXME: do we need to just pass actor_id?
@@ -143,6 +152,7 @@ class Notification(models.Model):
                     event=event,
                     entry=entry,
                     text=text,
+                    review_comment=review_comment,
                 ) for recipient_id in recipient_list
             ]
         )
