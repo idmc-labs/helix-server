@@ -710,8 +710,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         figure.event,
                         actor=self.context['request'].user,
                     )]
-                    if figure.event.created_by:
-                        recipients.append(figure.event.created_by.id)
+                    if figure.event.created_by_id:
+                        recipients.append(figure.event.created_by_id)
+                    if figure.event.assignee_id:
+                        recipients.append(figure.event.assignee_id)
                     Notification.send_safe_multiple_notifications(
                         recipients=recipients,
                         actor=self.context['request'].user,
@@ -724,6 +726,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         figure.event,
                         actor=self.context['request'].user,
                     )]
+                    if figure.event.created_by_id:
+                        recipients.append(figure.event.created_by_id)
+                    if figure.event.assignee_id:
+                        recipients.append(figure.event.assignee_id)
                     Notification.send_safe_multiple_notifications(
                         recipients=recipients,
                         actor=self.context['request'].user,
@@ -736,8 +742,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         figure.event,
                         actor=self.context['request'].user,
                     )]
-                    if figure.event.created_by:
-                        recipients.append(figure.event.created_by.id)
+                    if figure.event.created_by_id:
+                        recipients.append(figure.event.created_by_id)
+                    if figure.event.assignee_id:
+                        recipients.append(figure.event.assignee_id)
                     Notification.send_safe_multiple_notifications(
                         recipients=recipients,
                         actor=self.context['request'].user,
@@ -752,6 +760,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         figure.event,
                         actor=self.context['request'].user,
                     )]
+                    if figure.event.created_by_id:
+                        recipients.append(figure.event.created_by_id)
+                    if figure.event.assignee_id:
+                        recipients.append(figure.event.assignee_id)
                     Notification.send_safe_multiple_notifications(
                         recipients=recipients,
                         actor=self.context['request'].user,
@@ -768,6 +780,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         figure.event,
                         actor=self.context['request'].user,
                     )]
+                    if figure.event.created_by_id:
+                        recipients.append(figure.event.created_by_id)
+                    if figure.event.assignee_id:
+                        recipients.append(figure.event.assignee_id)
                     Notification.send_safe_multiple_notifications(
                         recipients=recipients,
                         actor=self.context['request'].user,
@@ -781,6 +797,10 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
                         figure.event,
                         actor=self.context['request'].user,
                     )]
+                    if figure.event.created_by_id:
+                        recipients.append(figure.event.created_by_id)
+                    if figure.event.assignee_id:
+                        recipients.append(figure.event.assignee_id)
                     Notification.send_safe_multiple_notifications(
                         recipients=recipients,
                         actor=self.context['request'].user,
