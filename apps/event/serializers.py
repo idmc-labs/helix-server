@@ -204,6 +204,8 @@ class EventSerializer(MetaInformationSerializerMixin,
             )]
             if (instance.created_by_id):
                 recipients.append(instance.created_by_id)
+            if (instance.assignee_id):
+                recipients.append(instance.assignee_id)
 
             Notification.send_safe_multiple_notifications(
                 recipients=recipients,
