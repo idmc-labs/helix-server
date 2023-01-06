@@ -77,7 +77,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
             return CreateUnifiedReviewComment(errors=errors, ok=False)
         instance = serializer.save()
 
-        if instance.figure and instance.event and instance.event.assignee:
+        if instance.figure and instance.event and instance.event.assignee_id:
             Notification.send_safe_multiple_notifications(
                 recipients=[instance.event.assignee_id],
                 event=instance.event,
@@ -87,7 +87,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
                 type=Notification.Type.REVIEW_COMMENT_CREATED,
             )
 
-        if instance.figure and instance.event and instance.figure.created_by:
+        if instance.figure and instance.event and instance.figure.created_by_id:
             Notification.send_safe_multiple_notifications(
                 recipients=[instance.figure.created_by_id],
                 event=instance.event,

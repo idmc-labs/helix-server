@@ -17,7 +17,6 @@ from apps.event.serializers import (
     ContextOfViolenceUpdateSerializer
 )
 from apps.notification.models import Notification
-from apps.entry.models import Figure
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 from utils.mutation import generate_input_type_for_serializer
@@ -363,29 +362,35 @@ class SetAssigneeToEvent(graphene.Mutation):
             ])
 
         prev_assignee_id = event.assignee_id
+        prev_assigner_id = event.assigner_id
 
         event.assignee = user
         event.assigner = info.context.user
         event.assigned_at = timezone.now()
         event.save()
 
+        recipients = []
         if prev_assignee_id:
+            recipients.append(prev_assignee_id)
+        if prev_assigner_id:
+            recipients.append(prev_assigner_id)
+        if recipients:
             Notification.send_safe_multiple_notifications(
                 event=event,
-                recipients=[prev_assignee_id],
+                recipients=recipients,
                 actor=info.context.user,
                 type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
             )
+
+        recipients = [user.id]
+        if prev_assigner_id:
+            recipients.append(prev_assigner_id)
         Notification.send_safe_multiple_notifications(
             event=event,
-            recipients=[user.id],
+            recipients=recipients,
             actor=info.context.user,
             type=Notification.Type.EVENT_ASSIGNED,
         )
-
-        # Update event status
-        Figure.update_event_status_and_send_notifications(event.id)
-        event.refresh_from_db()
 
         return SetAssigneeToEvent(result=event, errors=None, ok=True)
 
@@ -406,24 +411,39 @@ class SetSelfAssigneeToEvent(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
             ])
 
+        prev_assignee_id = event.assignee_id
+        prev_assigner_id = event.assigner_id
+
         event.assignee = info.context.user
         event.assigner = info.context.user
         event.assigned_at = timezone.now()
         event.save()
 
+        recipients = []
+        if prev_assignee_id:
+            recipients.append(prev_assignee_id)
+        if prev_assigner_id:
+            recipients.append(prev_assigner_id)
+        if recipients:
+            Notification.send_safe_multiple_notifications(
+                event=event,
+                recipients=recipients,
+                actor=info.context.user,
+                type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
+            )
+
         recipients = [user['id'] for user in Event.regional_coordinators(
             event,
             actor=info.context.user,
         )]
+        if prev_assigner_id:
+            recipients.append(prev_assigner_id)
         Notification.send_safe_multiple_notifications(
             recipients=recipients,
             type=Notification.Type.EVENT_SELF_ASSIGNED,
             actor=info.context.user,
             event=event,
         )
-
-        Figure.update_event_status_and_send_notifications(event.id)
-        event.refresh_from_db()
 
         return SetSelfAssigneeToEvent(result=event, errors=None, ok=True)
 
@@ -446,6 +466,7 @@ class ClearAssigneFromEvent(graphene.Mutation):
             ])
 
         prev_assignee_id = event.assignee_id
+        prev_assigner_id = event.assigner_id
         if not prev_assignee_id:
             return ClearAssigneFromEvent(errors=[
                 dict(
@@ -459,16 +480,18 @@ class ClearAssigneFromEvent(graphene.Mutation):
         event.assigned_at = None
         event.save()
 
+        recipients = []
         if prev_assignee_id:
+            recipients.append(prev_assignee_id)
+        if prev_assigner_id:
+            recipients.append(prev_assigner_id)
+        if recipients:
             Notification.send_safe_multiple_notifications(
                 event=event,
-                recipients=[prev_assignee_id],
+                recipients=recipients,
                 actor=info.context.user,
                 type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
             )
-
-        Figure.update_event_status_and_send_notifications(event.id)
-        event.refresh_from_db()
 
         return ClearAssigneFromEvent(result=event, errors=None, ok=True)
 
@@ -496,25 +519,29 @@ class ClearSelfAssigneFromEvent(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('You are not allowed to clear others from assignee.'))
             ])
 
+        prev_assigner_id = event.assigner_id
+
         event.assignee = None
         event.assigner = None
         event.assigned_at = None
         event.save()
 
+        recipients = []
         if event.regional_coordinators:
-            recipients = [user['id'] for user in Event.regional_coordinators(
+            recipients.extend([user['id'] for user in Event.regional_coordinators(
                 event,
                 actor=info.context.user,
-            )]
+            )])
+        if prev_assigner_id:
+            recipients.append(prev_assigner_id)
+
+        if recipients:
             Notification.send_safe_multiple_notifications(
                 recipients=recipients,
                 type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
                 actor=info.context.user,
                 event=event,
             )
-
-        Figure.update_event_status_and_send_notifications(event.id)
-        event.refresh_from_db()
 
         return ClearSelfAssigneFromEvent(result=event, errors=None, ok=True)
 
@@ -550,6 +577,8 @@ class SignOffEvent(graphene.Mutation):
         ]
         if event.created_by_id:
             recipients.append(event.created_by_id)
+        if event.assignee_id:
+            recipients.append(event.assignee_id)
 
         Notification.send_safe_multiple_notifications(
             recipients=recipients,

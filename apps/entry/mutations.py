@@ -119,18 +119,23 @@ class DeleteEntry(graphene.Mutation):
             )
 
             for figure in figures:
-                regional_coordinator_ids = [
+                recipients = [
                     user['id'] for user in Event.regional_coordinators(
                         event=figure.event,
                         actor=info.context.user,
                     )
                 ]
+                if figure.event.created_by_id:
+                    recipients.append(figure.event.created_by_id)
+                if figure.event.assignee_id:
+                    recipients.append(figure.event.assignee_id)
+
                 notification_type = Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT
                 if review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
                     notification_type = Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT
 
                 Notification.send_safe_multiple_notifications(
-                    recipients=regional_coordinator_ids,
+                    recipients=recipients,
                     actor=info.context.user,
                     type=notification_type,
                     event=figure.event,
@@ -353,6 +358,11 @@ class DeleteFigure(graphene.Mutation):
                 instance.event,
                 actor=info.context.user,
             )]
+            if instance.event.created_by_id:
+                recipients.append(instance.event.created_by_id)
+            if instance.event.assignee_id:
+                recipients.append(instance.event.assignee_id)
+
             Notification.send_safe_multiple_notifications(
                 recipients=recipients,
                 actor=info.context.user,
@@ -446,6 +456,9 @@ class UnapproveFigure(graphene.Mutation):
                 figure.event,
                 actor=info.context.user,
             )]
+            if figure.event.created_by_id:
+                recipients.append(figure.event.created_by_id)
+
             Notification.send_safe_multiple_notifications(
                 recipients=recipients,
                 type=_type,
@@ -490,7 +503,7 @@ class ReRequestReviewFigure(graphene.Mutation):
         figure.approved_on = None
         figure.save()
 
-        if figure.event.assignee:
+        if figure.event.assignee_id:
             Notification.send_safe_multiple_notifications(
                 event=figure.event,
                 figure=figure,

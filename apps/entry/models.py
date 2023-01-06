@@ -992,18 +992,22 @@ class Figure(MetaInformationArchiveAbstractModel,
         event_with_stats.save()
 
         # TODO: add notification for un-approved and un-signed off
-        if prev_status != event_with_stats.review_status:
+        if (
+            prev_status != event_with_stats.review_status and
+            event_with_stats.review_status == Event.EVENT_REVIEW_STATUS.APPROVED
+        ):
             recipients = [user['id'] for user in Event.regional_coordinators(event_with_stats)]
             if (event_with_stats.created_by_id):
                 recipients.append(event_with_stats.created_by_id)
+            if (event_with_stats.assignee_id):
+                recipients.append(event_with_stats.assignee_id)
 
-            if event_with_stats.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-                Notification.send_safe_multiple_notifications(
-                    recipients=recipients,
-                    type=Notification.Type.EVENT_APPROVED,
-                    event=event_with_stats,
-                    actor=None,
-                )
+            Notification.send_safe_multiple_notifications(
+                recipients=recipients,
+                type=Notification.Type.EVENT_APPROVED,
+                event=event_with_stats,
+                actor=None,
+            )
 
     def can_be_updated_by(self, user: User) -> bool:
         """
