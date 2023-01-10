@@ -1,33 +1,39 @@
-# This YAML file defines the relationship and deployment ordering of your environments.
+# The manifest for the "helix-server-release-staging" pipeline.
+# This YAML file defines your pipeline: the source repository it tracks and the order of the environments to deploy to.
+# For more info: https://aws.github.io/copilot-cli/docs/manifest/pipeline/
 
-# The name of the pipeline
-name: pipeline-helix-helix-server
+# The name of the pipeline.
+name: helix-server-release-staging
 
-# The version of the schema used in this template
+# The version of the schema used in this template.
 version: 1
 
-# This section defines the source artifacts.
+# This section defines your source, changes to which trigger your pipeline.
 source:
   # The name of the provider that is used to store the source artifacts.
+  # (i.e. GitHub, Bitbucket, CodeCommit)
   provider: GitHub
-  # Additional properties that further specifies the exact location
-  # the artifacts should be sourced from. For example, the GitHub provider
-  # has the following properties: repository, branch.
+  # Additional properties that further specify the location of the artifacts.
   properties:
-    branch: release
+    branch: release-staging
     repository: https://github.com/idmc-labs/helix-server
     # Optional: specify the name of an existing CodeStar Connections connection.
     # connection_name: a-connection
 
-# The deployment section defines the order the pipeline will deploy
-# to your environments.
+# This section defines the order of the environments your pipeline will deploy to.
 stages:
-    - # The name of the environment to deploy to.
-      name: nightly
+    - # The name of the environment.
+      name: staging
       # Optional: flag for manual approval action before deployment.
-      # requires_approval: true
-      # Optional: use test commands to validate this stage of your build.
-      # test_commands: [echo 'running tests', make test]
-    - # The name of the environment to deploy to.
-      name: alpha
       requires_approval: true
+      # Optional: use test commands to validate this stage of your build.
+      test_commands:
+        - yum update -y --skip-broken ; yum install -y sudo
+        - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.18.1
+        - mv ./copilot-linux-v1.18.1 ./copilot-linux
+        - chmod +x ./copilot-linux
+        - echo 'Running collectstatic api'
+        - unbuffer ./copilot-linux svc exec -c "python3 manage.py collectstatic --no-input" -n api -e staging --yes
+        - echo 'Running migrations api'
+        - unbuffer ./copilot-linux svc exec -c "python3 manage.py migrate --no-input" -n api -e staging --yes
+
