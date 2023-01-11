@@ -956,12 +956,22 @@ class Figure(MetaInformationArchiveAbstractModel,
         return entry.can_be_updated_by(user)
 
     @classmethod
-    def update_figure_status(cls, figure, current_logged_in_user):
-        # Change figure status
-        if figure.event and figure.event.assignee == current_logged_in_user:
+    def update_figure_status(cls, figure):
+        review_comments_count = figure.figure_review_comments.count()
+
+        if (
+            review_comments_count > 0 and
+            (figure.review_status == Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED or
+                figure.review_status == Figure.FIGURE_REVIEW_STATUS.APPROVED)
+        ):
+            figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+            figure.save()
+        elif (
+            review_comments_count <= 0 and
+            (figure.review_status == Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS or
+                figure.review_status == Figure.FIGURE_REVIEW_STATUS.APPROVED)
+        ):
             figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
-            if figure.figure_review_comments.count() > 0:
-                figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
             figure.save()
 
     # TODO: move this to event model
