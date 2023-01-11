@@ -398,7 +398,7 @@ class ApproveFigure(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('Approved figures cannot be approved'))
             ])
 
-        figure.review_status = Figure.FIGURE_REVIEW_STATUS.APPROVED.value
+        figure.review_status = Figure.FIGURE_REVIEW_STATUS.APPROVED
         figure.approved_by = info.context.user
         figure.approved_on = timezone.now()
         figure.save()

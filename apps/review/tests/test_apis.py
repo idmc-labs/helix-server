@@ -13,7 +13,11 @@ class TestReviewComment(HelixGraphQLTestCase):
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.regional_coordinator = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
         self.monitoring_expert = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        self.event = EventFactory.create(assigner=self.admin, assignee=self.regional_coordinator)
+
+        self.event = EventFactory.create(
+            assigner=self.admin,
+            assignee=self.regional_coordinator,
+        )
         self.figure = FigureFactory.create(
             event=self.event,
             role=Figure.ROLE.RECOMMENDED
@@ -26,6 +30,10 @@ class TestReviewComment(HelixGraphQLTestCase):
             errors
             result {
               comment
+              figure {
+                id
+                reviewStatus
+              }
             }
           }
         }
@@ -38,6 +46,10 @@ class TestReviewComment(HelixGraphQLTestCase):
             errors
             result {
               comment
+              figure {
+                id
+                reviewStatus
+              }
             }
           }
         }
@@ -98,7 +110,7 @@ class TestReviewComment(HelixGraphQLTestCase):
             self.assertEqual(content['data']['createReviewComment']['result']['comment'],
                              self.input['comment'])
 
-    def test_other_than_assignee_can_create_general_comments_only(self):
+    def test_other_than_assignee_can_create_general_comment(self):
         for user in [
             self.admin,
             self.monitoring_expert,
@@ -133,6 +145,72 @@ class TestReviewComment(HelixGraphQLTestCase):
                 content = response.json()
                 self.assertResponseNoErrors(response)
                 self.assertFalse(content['data']['createReviewComment']['ok'])
+
+    def test_new_comment_should_change_review_not_started_to_in_progress(self):
+        self.force_login(self.regional_coordinator)
+
+        figure = FigureFactory.create(
+            event=self.event,
+            role=Figure.ROLE.RECOMMENDED,
+            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
+        )
+
+        self.create_input['commentType'] = UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN.name
+        self.create_input['figure'] = figure.id
+        response = self.query(
+            self.create_comment,
+            input_data=self.create_input
+        )
+        content = response.json()
+        print(content)
+        self.assertEqual(
+            content['data']['createReviewComment']['result']['figure']['reviewStatus'],
+            Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS.name,
+        )
+
+    def test_comment_from_assignee_should_change_review_requested_to_in_progress(self):
+        self.force_login(self.regional_coordinator)
+
+        figure = FigureFactory.create(
+            event=self.event,
+            role=Figure.ROLE.RECOMMENDED,
+            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
+        )
+
+        self.create_input['commentType'] = UnifiedReviewComment.REVIEW_COMMENT_TYPE.RED.name
+        self.create_input['figure'] = figure.id
+        response = self.query(
+            self.create_comment,
+            input_data=self.create_input
+        )
+        content = response.json()
+        print(content)
+        self.assertEqual(
+            content['data']['createReviewComment']['result']['figure']['reviewStatus'],
+            Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS.name,
+        )
+
+    def test_comment_from_non_assignee_should_not_change_review_requested_to_in_progress(self):
+        self.force_login(self.monitoring_expert)
+
+        figure = FigureFactory.create(
+            event=self.event,
+            role=Figure.ROLE.RECOMMENDED,
+            review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
+        )
+
+        self.create_input['commentType'] = UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREY.name
+        self.create_input['figure'] = figure.id
+        response = self.query(
+            self.create_comment,
+            input_data=self.create_input
+        )
+        content = response.json()
+        print(content)
+        self.assertEqual(
+            content['data']['createReviewComment']['result']['figure']['reviewStatus'],
+            Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED.name,
+        )
 
 
 class TestDeleteReviewComment(HelixGraphQLTestCase):
