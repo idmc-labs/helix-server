@@ -36,7 +36,7 @@ class Migration(migrations.Migration):
 
 
     dependencies = [
-        ('event', '0021_auto_20220530_1013'),
+        ('event', '0028_auto_20221114_0519'),
     ]
 
     operations = [
