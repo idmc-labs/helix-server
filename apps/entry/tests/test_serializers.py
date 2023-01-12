@@ -592,7 +592,6 @@ class TestFigureSerializer(HelixTestCase):
         violence = ViolenceFactory.create()
         violence_sub_type = ViolenceSubTypeFactory.create(violence=violence)
 
-        self.data['disaster_sub_category'] = disaster_sub_category.id
         self.data['disaster_sub_type'] = disaster_sub_type.id
         self.data['violence_sub_type'] = violence_sub_type.id
         data = {

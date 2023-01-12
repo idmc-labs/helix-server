@@ -135,18 +135,23 @@ class EventSerializer(MetaInformationSerializerMixin,
         return errors
 
     def _update_parent_fields(self, attrs):
-        disaster_sub_category = attrs.get('disaster_sub_category')
         disaster_sub_type = attrs.get('disaster_sub_type')
         violence_sub_type = attrs.get('violence_sub_type')
 
         attrs['disaster_category'] = None
         attrs['disaster_type'] = None
+        attrs['disaster_sub_category'] = None
         attrs['violence'] = None
 
-        if disaster_sub_category:
-            attrs['disaster_category'] = disaster_sub_category.category
         if disaster_sub_type:
-            attrs['disaster_type'] = disaster_sub_type.type
+            disaster_type = disaster_sub_type.type
+            attrs['disaster_type'] = disaster_type
+            if disaster_type:
+                disaster_sub_category = disaster_type.disaster_sub_category
+                attrs['disaster_sub_category'] = disaster_sub_category
+                if disaster_sub_category:
+                    attrs['disaster_category'] = disaster_sub_category.category
+
         if violence_sub_type:
             attrs['violence'] = violence_sub_type.violence
 
