@@ -283,9 +283,10 @@ class CommonFigureValidationMixin:
 
     def _validate_event(self, attrs):
         errors = OrderedDict()
-        event = attrs.get('event')
+        new_event = attrs.get('event', None)
+        current_event = getattr(self.instance, 'event', None)
         # FIXME: do we use event.id or event_id here?
-        if event and self.instance and self.instance.event and self.instance.event.id != event.id:
+        if new_event and current_event and current_event.id != new_event.id:
             errors.update({
                 'event': 'Event change is not allowed'
             })
