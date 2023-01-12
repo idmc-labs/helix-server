@@ -103,7 +103,6 @@ class TestCreateEventSerializer(HelixTestCase):
             'event_type': Crisis.CRISIS_TYPE.DISASTER.value,
             'start_date': '2020-01-01',
             'end_date': '2021-01-01',
-            'disaster_sub_category': disaster_sub_category.id,
             'disaster_sub_type': disaster_sub_type.id,
             'violence_sub_type': violence_sub_type.id,
         }
