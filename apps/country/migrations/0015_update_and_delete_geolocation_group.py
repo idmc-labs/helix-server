@@ -8,16 +8,37 @@ class Migration(migrations.Migration):
     def update_and_delete_duplicated_geographical_group(apps, schema_editor):
         GeographicalGroup = apps.get_model('country', 'GeographicalGroup')
         Country = apps.get_model('country', 'Country')
+        ExtractionQuery = apps.get_model('extraction', 'ExtractionQuery')
+        Report = apps.get_model('report', 'Report')
 
         location_to_keep = GeographicalGroup.objects.filter(name='Europe and Central Asia').first()
         location_to_delete = GeographicalGroup.objects.filter(name='Europe & Central Asia').first()
 
         if location_to_keep and location_to_delete:
+            # Country
             Country.objects.filter(
                 geographical_group=location_to_delete
             ).update(
                 geographical_group=location_to_keep
             )
+
+            # Extraction
+            extractions = ExtractionQuery.objects.filter(
+                filter_figure_geographical_groups=location_to_delete
+            )
+            for extraction in extractions:
+                extraction.add(location_to_keep)
+                extraction.remove(location_to_delete)
+
+            # Report
+            reports = Report.objects.filter(
+                filter_figure_geographical_groups=location_to_delete
+            )
+            for report in reports:
+                report.add(location_to_keep)
+                report.remove(location_to_delete)
+
+            # Finally remove geographical group
             location_to_delete.delete()
 
     dependencies = [
