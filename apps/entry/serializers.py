@@ -285,6 +285,7 @@ class CommonFigureValidationMixin:
         errors = OrderedDict()
         new_event = attrs.get('event', None)
         current_event = getattr(self.instance, 'event', None)
+
         # FIXME: do we use event.id or event_id here?
         if new_event and current_event and current_event.id != new_event.id:
             errors.update({
