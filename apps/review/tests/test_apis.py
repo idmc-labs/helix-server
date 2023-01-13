@@ -162,7 +162,6 @@ class TestReviewComment(HelixGraphQLTestCase):
             input_data=self.create_input
         )
         content = response.json()
-        print(content)
         self.assertEqual(
             content['data']['createReviewComment']['result']['figure']['reviewStatus'],
             Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS.name,
@@ -184,7 +183,6 @@ class TestReviewComment(HelixGraphQLTestCase):
             input_data=self.create_input
         )
         content = response.json()
-        print(content)
         self.assertEqual(
             content['data']['createReviewComment']['result']['figure']['reviewStatus'],
             Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS.name,
@@ -206,7 +204,6 @@ class TestReviewComment(HelixGraphQLTestCase):
             input_data=self.create_input
         )
         content = response.json()
-        print(content)
         self.assertEqual(
             content['data']['createReviewComment']['result']['figure']['reviewStatus'],
             Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED.name,
