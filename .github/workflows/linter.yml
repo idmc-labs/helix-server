@@ -2,9 +2,13 @@ name: Flake8 Lint
 
 on:
   push:
-    branches: [develop]
+    branches:
+      - 'develop'
+      - 'project/**'
   pull_request:
-    branches: [develop]
+    branches:
+      - 'develop'
+      - 'project/**'
 
 jobs:
   build:
@@ -15,10 +19,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
-        with:
-          python-version: ${{ matrix.python-version }}
       - name: Install Flake8
         run: |
           pip install flake8

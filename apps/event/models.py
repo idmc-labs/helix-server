@@ -14,7 +14,7 @@ from apps.contrib.models import (
 from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
-from apps.users.models import User
+from apps.users.models import User, USER_ROLE
 from django.contrib.postgres.fields import ArrayField
 from django.forms import model_to_dict
 from utils.common import add_clone_prefix
@@ -134,6 +134,19 @@ class DisasterSubType(NameAttributedModels):
 
 
 class Event(MetaInformationArchiveAbstractModel, models.Model):
+    class EVENT_REVIEW_STATUS(enum.Enum):
+        REVIEW_NOT_STARTED = 0
+        REVIEW_IN_PROGRESS = 1
+        APPROVED = 2
+        SIGNED_OFF = 3
+
+        __labels__ = {
+            REVIEW_NOT_STARTED: _("Review not started"),
+            REVIEW_IN_PROGRESS: _("Review in progress"),
+            APPROVED: _("Approved"),
+            SIGNED_OFF: _("Signed-off"),
+        }
+
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
     IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
@@ -205,6 +218,23 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     context_of_violence = models.ManyToManyField(
         'ContextOfViolence', verbose_name=_('Context of violence'), blank=True, related_name='events'
     )
+    assigner = models.ForeignKey(
+        'users.User', verbose_name=_('Assigner'), null=True, blank=True,
+        related_name='event_assigner', on_delete=models.SET_NULL
+    )
+    assignee = models.ForeignKey(
+        'users.User', verbose_name=_('Assignee'), null=True, blank=True,
+        related_name='event_assignee', on_delete=models.SET_NULL
+    )
+    assigned_at = models.DateTimeField(verbose_name='Assigned at', null=True, blank=True)
+    review_status = enum.EnumField(
+        EVENT_REVIEW_STATUS,
+        verbose_name=_('Event status'),
+        default=EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED,
+    )
+    include_triangulation_in_qa = models.BooleanField(
+        verbose_name='Include triangulation in qa?', default=False,
+    )
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
@@ -238,6 +268,92 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 output_field=models.IntegerField()
             ),
         }
+
+    @classmethod
+    def annotate_review_figures_count(cls):
+        return {
+            'review_not_started_count': models.Count(
+                'figures',
+                filter=models.Q(
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
+                    figures__role=Figure.ROLE.RECOMMENDED,
+                ) | models.Q(
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
+                    include_triangulation_in_qa=True,
+                )
+            ),
+            'review_in_progress_count': models.Count(
+                'figures',
+                filter=models.Q(
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
+                    figures__role=Figure.ROLE.RECOMMENDED,
+                ) | models.Q(
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
+                    include_triangulation_in_qa=True,
+                )
+
+            ),
+            'review_re_request_count': models.Count(
+                'figures',
+                filter=models.Q(
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
+                    figures__role=Figure.ROLE.RECOMMENDED,
+                ) | models.Q(
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
+                    include_triangulation_in_qa=True,
+                )
+
+            ),
+            'review_approved_count': models.Count(
+                'figures',
+                filter=models.Q(
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
+                    figures__role=Figure.ROLE.RECOMMENDED,
+                ) | models.Q(
+                    figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
+                    include_triangulation_in_qa=True,
+                )
+
+            ),
+            'total_count': (
+                models.F('review_not_started_count') +
+                models.F('review_in_progress_count') +
+                models.F('review_re_request_count') +
+                models.F('review_approved_count')
+            ),
+            'progress': models.Case(
+                models.When(
+                    total_count__gt=0,
+                    then=models.F('review_approved_count') / models.F('total_count')
+                ),
+                default=models.Value(0),
+                output_field=models.FloatField()
+            )
+        }
+
+    # FIXME: this is wrong, this should see event and user not event and figure
+    @staticmethod
+    def regional_coordinators(event, actor=None):
+        actor_regional_coordinators = User.objects.none()
+        event_regional_coordinators = User.objects.none()
+
+        if actor:
+            actor_regional_coordinators = User.objects.filter(
+                portfolios__role=USER_ROLE.REGIONAL_COORDINATOR,
+                portfolios__monitoring_sub_region__in=actor.portfolios.values(
+                    'monitoring_sub_region'
+                )
+            )
+
+        if event.countries:
+            event_regional_coordinators = User.objects.filter(
+                portfolios__role=USER_ROLE.REGIONAL_COORDINATOR,
+                portfolios__monitoring_sub_region__in=event.countries.values(
+                    'portfolio__monitoring_sub_region'
+                )
+            )
+        coordinators = actor_regional_coordinators | event_regional_coordinators
+        return coordinators.values('id')
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
@@ -321,24 +437,17 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             'transformer': transformer,
         }
 
-    def save(self, *args, **kwargs):
-        if self.disaster_sub_type:
-            self.disaster_type = self.disaster_sub_type.type
-            self.disaster_sub_category = self.disaster_type.disaster_sub_category
-            self.disaster_category = self.disaster_sub_category.category
-        else:
-            self.disaster_type = None
-            self.disaster_sub_category = None
-            self.disaster_category = None
-
-        if self.violence_sub_type:
-            self.violence = self.violence_sub_type.violence
-        else:
-            self.violence = None
-        return super().save(*args, **kwargs)
-
     def __str__(self):
         return self.name or str(self.id)
+
+    class Meta:
+        permissions = (
+            ('assign_event', 'Can assign on event level'),
+            ('self_assign_event', 'Can assign self on event level'),
+            ('clear_assignee_event', 'Can clear any assignee from event'),
+            ('clear_self_assignee_event', 'Can clear self assigned event'),
+            ('sign_off_event', 'Can sign-off event'),
+        )
 
     def clone_and_save_event(self, user: 'User'):
         event_data = model_to_dict(

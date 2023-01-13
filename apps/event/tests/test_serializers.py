@@ -12,6 +12,9 @@ from utils.factories import (
     ViolenceSubTypeFactory,
     DisasterSubCategoryFactory,
     DisasterSubTypeFactory,
+    DisasterCategoryFactory,
+    DisasterTypeFactory,
+    ViolenceFactory,
 )
 from apps.crisis.models import Crisis
 from datetime import datetime, timedelta
@@ -81,6 +84,41 @@ class TestCreateEventSerializer(HelixTestCase):
         serializer = EventSerializer(data=data, context=self.context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
+
+    def test_should_save_parent_categories(self):
+
+        disaster_category = DisasterCategoryFactory.create()
+        disaster_sub_category = DisasterSubCategoryFactory.create(category=disaster_category)
+        disaster_type = DisasterTypeFactory.create(
+            disaster_sub_category=disaster_sub_category
+        )
+        disaster_sub_type = DisasterSubTypeFactory.create(
+            type=disaster_type,
+        )
+        violence = ViolenceFactory.create()
+        violence_sub_type = ViolenceSubTypeFactory.create(violence=violence)
+
+        data = {
+            'name': 'test event',
+            'event_type': Crisis.CRISIS_TYPE.DISASTER.value,
+            'start_date': '2020-01-01',
+            'end_date': '2021-01-01',
+            'disaster_sub_type': disaster_sub_type.id,
+            'violence_sub_type': violence_sub_type.id,
+        }
+        serializer = EventSerializer(data=data, context={'request': self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        event = serializer.save()
+
+        # Test sub fields
+        self.assertEqual(event.disaster_sub_category.id, disaster_sub_category.id)
+        self.assertEqual(event.disaster_sub_type.id, disaster_sub_type.id)
+        self.assertEqual(event.violence_sub_type.id, violence_sub_type.id)
+
+        # Test parent fields
+        self.assertEqual(event.disaster_category.id, disaster_category.id)
+        self.assertEqual(event.disaster_type.id, disaster_type.id)
+        self.assertEqual(event.violence.id, violence.id)
 
 
 class TestUpdateEventSerializer(HelixTestCase):

@@ -1,18 +1,15 @@
 import json
 
-from apps.entry.models import EntryReviewer
 from apps.users.enums import USER_ROLE
-from apps.review.models import Review
-from apps.crisis.models import Crisis
 from utils.factories import (
     CountryFactory,
     CrisisFactory,
-    EntryFactory,
     EventFactory,
     FigureFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from apps.entry.models import Figure
 
 
 class TestCreateCrisis(HelixGraphQLTestCase):
@@ -184,126 +181,69 @@ class TestCrisisDelete(HelixGraphQLTestCase):
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
 
 
-class TestCrisisList(HelixGraphQLTestCase):
-    def setUp(self):
-        self.q = '''
-        query crisisList {
+class TestEventRewviewCount(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.crisis = CrisisFactory.create()
+        self.event = EventFactory.create(crisis=self.crisis)
+        self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.f1, self.f2, self.f3 = FigureFactory.create_batch(3, event=self.event, role=Figure.ROLE.RECOMMENDED)
+        self.event_query = '''
+        query MyQuery {
           crisisList {
             results {
               reviewCount {
-                toBeReviewedCount
-                underReviewCount
-                reviewCompleteCount
-                signedOffCount
+                progress
+                reviewApprovedCount
+                reviewInProgressCount
+                reviewNotStartedCount
+                reviewReRequestCount
+                totalCount
               }
             }
           }
         }
         '''
-        admin = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.force_login(admin)
 
-    def test_crisis_review_count_with_dataloader(self):
-        crisis = CrisisFactory.create()
-        event = EventFactory.create(
-            crisis=crisis,
-            event_type=Crisis.CRISIS_TYPE.OTHER.value,
+    def test_progress(self) -> None:
+        self.force_login(self.admin)
+        response = self.query(
+            self.event_query,
         )
-        r1 = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT.name,
-        )
-        r2 = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT.name,
-        )
-        entry1 = EntryFactory.create()
-        FigureFactory.create(entry=entry1, event=event)
-        entry1.reviewers.set([r1, r2])
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        crisis_data = content['data']['crisisList']['results'][0]
+        self.assertEqual(crisis_data['reviewCount']['progress'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewApprovedCount'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewInProgressCount'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewNotStartedCount'], 3)
+        self.assertEqual(crisis_data['reviewCount']['reviewReRequestCount'], 0)
 
-        r3 = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT.name,
+        self.f1.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+        self.f1.save()
+        response = self.query(
+            self.event_query,
         )
-        entry2 = EntryFactory.create()
-        FigureFactory.create(entry=entry2, event=event)
-        # see that r2 is duplicated across entries
-        # so crisis must show 4 not 3
-        entry2.reviewers.set([r3, r2])
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        crisis_data = content['data']['crisisList']['results'][0]
+        self.assertEqual(crisis_data['reviewCount']['progress'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewApprovedCount'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewInProgressCount'], 1)
+        self.assertEqual(crisis_data['reviewCount']['reviewNotStartedCount'], 2)
+        self.assertEqual(crisis_data['reviewCount']['reviewReRequestCount'], 0)
+
+        for figure in [self.f1, self.f2, self.f3]:
+            figure.review_status = Figure.FIGURE_REVIEW_STATUS.APPROVED
+            figure.save()
 
         response = self.query(
-            self.q,
+            self.event_query,
         )
-        content = response.json()
-        # check the counts
-        data = content['data']
-        self.assertEqual(
-            data['crisisList']['results'][0]['reviewCount']['toBeReviewedCount'],
-            2
-        )
-        self.assertEqual(
-            data['crisisList']['results'][0]['reviewCount']['underReviewCount'],
-            None
-        )
-        self.assertEqual(
-            data['crisisList']['results'][0]['reviewCount']['signedOffCount'],
-            None
-        )
-        self.assertEqual(
-            data['crisisList']['results'][0]['reviewCount']['reviewCompleteCount'],
-            None
-        )
-
-        # one reviewer starts reviewing an entry
-        Review.objects.create(
-            entry=entry1,
-            created_by=r2,
-            field='field',
-            value=0,
-        )
-        response = self.query(
-            self.q,
-        )
-        content = response.json()
-        # check the counts
-        data = content['data']
-        self.assertEqual(
-            data['crisisList']['results'][0]['reviewCount']['toBeReviewedCount'],
-            1
-        )
-        self.assertEqual(
-            data['crisisList']['results'][0]['reviewCount']['underReviewCount'],
-            1
-        )
-        self.assertEqual(
-            data['crisisList']['results'][0]['reviewCount']['signedOffCount'],
-            None
-        )
-        self.assertEqual(
-            data['crisisList']['results'][0]['reviewCount']['reviewCompleteCount'],
-            None
-        )
-
-        # the other entry gets approved
-        entry_reviewer = EntryReviewer.objects.filter(entry=entry2).first()
-        entry_reviewer.status = EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
-        entry_reviewer.save()
-        response = self.query(
-            self.q,
-        )
-        content = response.json()
-        # check the counts
-        data = content['data']
-        self.assertEqual(
-            data['crisisList']['results'][0]['reviewCount']['toBeReviewedCount'],
-            None
-        )
-        self.assertEqual(
-            data['crisisList']['results'][0]['reviewCount']['underReviewCount'],
-            1
-        )
-        self.assertEqual(
-            data['crisisList']['results'][0]['reviewCount']['signedOffCount'],
-            None
-        )
-        self.assertEqual(
-            data['crisisList']['results'][0]['reviewCount']['reviewCompleteCount'],
-            1
-        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        crisis_data = content['data']['crisisList']['results'][0]
+        self.assertEqual(crisis_data['reviewCount']['progress'], 1.0)
+        self.assertEqual(crisis_data['reviewCount']['reviewApprovedCount'], 3)
+        self.assertEqual(crisis_data['reviewCount']['reviewInProgressCount'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewNotStartedCount'], 0)
+        self.assertEqual(crisis_data['reviewCount']['reviewReRequestCount'], 0)

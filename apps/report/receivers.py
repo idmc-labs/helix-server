@@ -5,7 +5,7 @@ from .models import ReportGeneration
 
 
 @receiver(post_save, sender=ReportGeneration)
-def update_entry_reviewer_status(sender, instance, created, **kwargs):
+def update_report_reviewer_status(sender, instance, created, **kwargs):
     if created:
         instance.report.is_signed_off = False
         instance.report.is_signed_off_by = None

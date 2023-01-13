@@ -5,4 +5,4 @@ class ReportConfig(AppConfig):
     name = 'apps.report'
 
     def ready(self):
-        from apps.report import receivers  # noqa F401
+        from apps.report import receivers # noqa :f401

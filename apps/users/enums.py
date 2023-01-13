@@ -13,13 +13,21 @@ class PERMISSION_ACTION(enum.Enum):
     delete = 2
     sign_off = 3
     approve = 4
+    assign = 5
+    self_assign = 6
+    clear_assignee = 7
+    clear_self_assignee = 8
 
     __labels__ = {
         add: _('Add'),
         change: _('Change'),
         delete: _('Delete'),
         sign_off: _('Sign Off'),
-        approve: _('Approve')
+        approve: _('Approve'),
+        assign: _('Assign'),
+        self_assign: _('Self assign'),
+        clear_assignee: _('Clear assignee'),
+        clear_self_assignee: _('Clear self assignee'),
     }
 
 
@@ -87,9 +95,9 @@ class USER_ROLE(enum.Enum):
     }
 
 
-PermissionActionEnum = graphene.Enum.from_enum(PERMISSION_ACTION, enum_description)
-PermissionModelEnum = graphene.Enum.from_enum(PERMISSION_ENTITY, enum_description)
-PermissionRoleEnum = graphene.Enum.from_enum(USER_ROLE, enum_description)
+PermissionActionEnum = graphene.Enum.from_enum(PERMISSION_ACTION, description=enum_description)
+PermissionModelEnum = graphene.Enum.from_enum(PERMISSION_ENTITY, description=enum_description)
+PermissionRoleEnum = graphene.Enum.from_enum(USER_ROLE, description=enum_description)
 
 enum_map = dict(
     PERMISSION_ENTITY=PermissionModelEnum,

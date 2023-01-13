@@ -146,3 +146,66 @@ class Crisis(MetaInformationAbstractModel, models.Model):
 
     def __str__(self):
         return self.name
+
+    @classmethod
+    def annotate_review_figures_count(cls):
+        from apps.entry.models import Figure
+
+        return {
+            'review_not_started_count': models.Count(
+                'events__figures',
+                filter=models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
+                    events__figures__role=Figure.ROLE.RECOMMENDED,
+                ) | models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
+                    events__include_triangulation_in_qa=True,
+                )
+            ),
+            'review_in_progress_count': models.Count(
+                'events__figures',
+                filter=models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
+                    events__figures__role=Figure.ROLE.RECOMMENDED,
+                ) | models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
+                    events__include_triangulation_in_qa=True,
+                )
+
+            ),
+            'review_re_request_count': models.Count(
+                'events__figures',
+                filter=models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
+                    events__figures__role=Figure.ROLE.RECOMMENDED,
+                ) | models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
+                    events__include_triangulation_in_qa=True,
+                )
+
+            ),
+            'review_approved_count': models.Count(
+                'events__figures',
+                filter=models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
+                    events__figures__role=Figure.ROLE.RECOMMENDED,
+                ) | models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
+                    events__include_triangulation_in_qa=True,
+                )
+            ),
+            'total_count': (
+                models.F('review_not_started_count') +
+                models.F('review_in_progress_count') +
+                models.F('review_re_request_count') +
+                models.F('review_approved_count')
+            ),
+            'progress': models.Case(
+                models.When(
+                    total_count__gt=0,
+                    then=models.F('review_approved_count') / models.F('total_count')
+                ),
+                default=models.Value(0),
+                output_field=models.FloatField()
+            )
+        }

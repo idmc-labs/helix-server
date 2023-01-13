@@ -103,6 +103,7 @@ LOCAL_APPS = [
     'parking_lot',
     'contextualupdate',
     'report',
+    'notification',
 ]
 
 THIRD_PARTY_APPS = [
@@ -302,7 +303,7 @@ GRAPHENE = {
 GRAPHENE_DJANGO_EXTRAS = {
     'DEFAULT_PAGINATION_CLASS': 'utils.pagination.PageGraphqlPaginationWithoutCount',
     'DEFAULT_PAGE_SIZE': 20,
-    'MAX_PAGE_SIZE': 50,
+    'MAX_PAGE_SIZE': 100,
     # 'CACHE_ACTIVE': True,
     # 'CACHE_TIMEOUT': 300    # seconds
 }

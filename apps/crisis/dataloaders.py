@@ -1,73 +1,10 @@
 from django.db import models
-from django.db.models import (
-    Count,
-    Subquery,
-    OuterRef,
-    IntegerField,
-)
 from promise import Promise
 from promise.dataloader import DataLoader
 
-from apps.entry.models import Figure, EntryReviewer
+from apps.entry.models import Figure
 from apps.crisis.models import Crisis
 from apps.event.models import Event
-
-
-class CrisisReviewCountLoader(DataLoader):
-    def batch_load_fn(self, keys: list):
-        '''
-        keys: [crisisId]
-        '''
-        qs = Crisis.objects.filter(
-            id__in=keys
-        ).annotate(
-            under_review_count=Subquery(
-                Figure.objects.filter(
-                    event__crisis=OuterRef('pk'),
-                    entry__review_status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
-                ).order_by().values('event__crisis').annotate(c=Count('id')).values('c'),
-                output_field=IntegerField()
-            ),
-            signed_off_count=Subquery(
-                Figure.objects.filter(
-                    event__crisis=OuterRef('pk'),
-                    entry__review_status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF
-                ).order_by().values('event__crisis').annotate(c=Count('id')).values('c'),
-                output_field=IntegerField()
-            ),
-            review_complete_count=Subquery(
-                Figure.objects.filter(
-                    event__crisis=OuterRef('pk'),
-                    entry__review_status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED
-                ).order_by().values('event__crisis').annotate(c=Count('id')).values('c'),
-                output_field=IntegerField()
-            ),
-            to_be_reviewed_count=Subquery(
-                Figure.objects.filter(
-                    event__crisis=OuterRef('pk'),
-                    entry__review_status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
-                ).order_by().values('event__crisis').annotate(c=Count('id')).values('c'),
-                output_field=IntegerField()
-            ),
-        ).values(
-            'id', 'under_review_count', 'signed_off_count',
-            'review_complete_count', 'to_be_reviewed_count',
-        )
-
-        list_to_dict = {
-            item['id']: {
-                'under_review_count': item['under_review_count'],
-                'signed_off_count': item['signed_off_count'],
-                'review_complete_count': item['review_complete_count'],
-                'to_be_reviewed_count': item['to_be_reviewed_count'],
-            }
-            for item in qs
-        }
-
-        return Promise.resolve([
-            list_to_dict.get(crisis_id, dict())
-            for crisis_id in keys
-        ])
 
 
 def batch_load_fn_by_category(keys, category):
@@ -125,6 +62,36 @@ class EventCountLoader(DataLoader):
         batch_load = {
             item['id']: item['event_count']
             for item in qs.values('id', 'event_count')
+        }
+        return Promise.resolve([
+            batch_load.get(key) for key in keys
+        ])
+
+
+class CrisisReviewCountLoader(DataLoader):
+    def batch_load_fn(self, keys: list):
+        qs = Crisis.objects.filter(
+            id__in=keys
+        ).annotate(
+            **Crisis.annotate_review_figures_count()
+        ).values(
+            'id',
+            'review_not_started_count',
+            'review_in_progress_count',
+            'review_re_request_count',
+            'review_approved_count',
+            'total_count',
+            'progress',
+        )
+        batch_load = {
+            item['id']: {
+                'review_not_started_count': item['review_not_started_count'],
+                'review_in_progress_count': item['review_in_progress_count'],
+                'review_re_request_count': item['review_re_request_count'],
+                'review_approved_count': item['review_approved_count'],
+                'total_count': item['total_count'],
+                'progress': item['progress'],
+            } for item in qs
         }
         return Promise.resolve([
             batch_load.get(key) for key in keys

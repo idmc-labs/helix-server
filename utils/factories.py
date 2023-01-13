@@ -5,7 +5,7 @@ from factory.django import DjangoModelFactory
 
 from apps.contact.models import Contact
 from apps.crisis.models import Crisis
-from apps.entry.models import Figure
+from apps.entry.models import Figure, OSMName
 from apps.common.enums import GENDER_TYPE
 
 
@@ -20,6 +20,13 @@ class UserFactory(DjangoModelFactory):
 class GeographicalGroupFactory(DjangoModelFactory):
     class Meta:
         model = 'country.GeographicalGroup'
+
+    name = factory.Faker('first_name')
+
+
+class CountrySubRegionFactory(DjangoModelFactory):
+    class Meta:
+        model = 'country.CountrySubRegion'
 
     name = factory.Faker('first_name')
 
@@ -181,6 +188,14 @@ class EventFactory(DjangoModelFactory):
     disaster_type = factory.SubFactory(DisasterTypeFactory)
     disaster_sub_type = factory.SubFactory(DisasterSubTypeFactory)
 
+    @factory.post_generation
+    def countries(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for country in extracted:
+                self.countries.add(country)
+
 
 class EntryFactory(DjangoModelFactory):
     class Meta:
@@ -200,14 +215,21 @@ class FigureFactory(DjangoModelFactory):
     quantifier = factory.Iterator(Figure.QUANTIFIER)
     reported = factory.Sequence(lambda n: n + 2)
     unit = factory.Iterator(Figure.UNIT)
-    # FIXME: household_size should not be a unit value
-    household_size = 1  # validation based on unit in the serializer
+    household_size = 2  # validation based on unit in the serializer
     role = factory.Iterator(Figure.ROLE)
     start_date = factory.LazyFunction(today().date)
     include_idu = False
     term = factory.Iterator(Figure.FIGURE_TERMS)
     category = factory.Iterator(Figure.FIGURE_CATEGORY_TYPES)
     figure_cause = factory.Iterator(Crisis.CRISIS_TYPE)
+
+    @factory.post_generation
+    def geo_locations(self, create, extracted, **kwargs):
+        if not create:
+            return
+        if extracted:
+            for geo_location in extracted:
+                self.geo_locations.add(geo_location)
 
 
 class ResourceGroupFactory(DjangoModelFactory):
@@ -225,27 +247,9 @@ class ResourceFactory(DjangoModelFactory):
     group = factory.SubFactory(ResourceGroupFactory)
 
 
-class EntryReviewerFactoryFactory(DjangoModelFactory):
+class UnifiedReviewCommentFactory(DjangoModelFactory):
     class Meta:
-        model = 'entry.EntryReviewer'
-
-    entry = factory.SubFactory(EntryFactory)
-    reviewer = factory.SubFactory(UserFactory)
-
-
-class ReviewCommentFactory(DjangoModelFactory):
-    class Meta:
-        model = 'review.ReviewComment'
-
-    entry = factory.SubFactory(EntryFactory)
-
-
-class ReviewFactory(DjangoModelFactory):
-    class Meta:
-        model = 'review.Review'
-
-    entry = factory.SubFactory(EntryFactory)
-    comment = factory.SubFactory(ReviewCommentFactory)
+        model = 'review.UnifiedReviewComment'
 
 
 class TagFactory(DjangoModelFactory):
@@ -285,3 +289,18 @@ class ClientFactory(DjangoModelFactory):
 class ClientTrackInfoFactory(DjangoModelFactory):
     class Meta:
         model = 'contrib.ClientTrackInfo'
+
+
+class NotificationFactory(DjangoModelFactory):
+    class Meta:
+        model = 'notification.Notification'
+
+
+class OSMNameFactory(DjangoModelFactory):
+    lat = factory.Faker('pyint', min_value=100, max_value=200)
+    lon = factory.Faker('pyint', min_value=100, max_value=200)
+    identifier = factory.Iterator(OSMName.IDENTIFIER)
+    accuracy = factory.Iterator(OSMName.OSM_ACCURACY)
+
+    class Meta:
+        model = 'entry.OSMName'

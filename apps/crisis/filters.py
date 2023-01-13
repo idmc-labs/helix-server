@@ -4,8 +4,6 @@ from apps.crisis.models import Crisis
 from apps.report.models import Report
 from utils.filters import StringListFilter, NameFilterMixin, IDListFilter
 from django.db.models import Q, Count
-from apps.entry.models import EntryReviewer
-from django.db import models
 
 
 class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
@@ -66,41 +64,8 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
 
     @property
     def qs(self):
-        from apps.entry.models import Figure
         return super().qs.annotate(
             **Crisis._total_figure_disaggregation_subquery(),
+            **Crisis.annotate_review_figures_count(),
             event_count=Count('events'),
-            total=models.Subquery(
-                Figure.objects.filter(
-                    event__crisis=models.OuterRef('pk')
-                ).order_by().values('entry').annotate(
-                    count=models.Count('entry__reviewing', distinct=True)
-                ).values('count')[:1],
-                output_field=models.IntegerField()
-            ),
-            total_signed_off=models.Subquery(
-                Figure.objects.filter(
-                    event__crisis=models.OuterRef('pk'),
-                    entry__reviewing__status=EntryReviewer.REVIEW_STATUS.SIGNED_OFF,
-                ).order_by().values('entry').annotate(
-                    count=models.Count('entry__reviewing', distinct=True)
-                ).values('count')[:1],
-                output_field=models.IntegerField()
-            ),
-            total_review_completed=models.Subquery(
-                Figure.objects.filter(
-                    event__crisis=models.OuterRef('pk'),
-                    entry__reviewing__status=EntryReviewer.REVIEW_STATUS.REVIEW_COMPLETED,
-                ).order_by().values('entry').annotate(
-                    count=models.Count('entry__reviewing', distinct=True)
-                ).values('count')[:1],
-                output_field=models.IntegerField()
-            ),
-            progress=models.Case(
-                models.When(total__gt=0, then=(
-                    models.F('total_signed_off') + models.F('total_review_completed')) / models.F('total')
-                ),
-                default=None,
-                output_field=models.FloatField()
-            )
         ).prefetch_related('events').distinct()

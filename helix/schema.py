@@ -13,6 +13,7 @@ from apps.extraction import schema as extraction_schema, mutations as extraction
 from apps.report import schema as report_schema, mutations as report_mutations, enums as report_enums
 from apps.resource import schema as resource_schema, mutations as resource_mutations
 from apps.review import schema as review_schema, mutations as review_mutations
+from apps.notification import schema as notification_schema, mutations as notification_mutations
 from apps.contextualupdate import (
     schema as contextual_update_schema,
     mutations as contextual_update_mutations
@@ -34,6 +35,7 @@ class Query(user_schema.Query,
             parking_lot_schema.Query,
             contextual_update_schema.Query,
             report_schema.Query,
+            notification_schema.Query,
             graphene.ObjectType):
     debug = graphene.Field(DjangoDebug, name='_debug')
 
@@ -52,6 +54,7 @@ class Mutation(user_mutations.Mutation,
                review_mutations.Mutation,
                parking_lot_mutations.Mutation,
                contextual_update_mutations.Mutation,
+               notification_mutations.Mutation,
                graphene.ObjectType):
     pass
 

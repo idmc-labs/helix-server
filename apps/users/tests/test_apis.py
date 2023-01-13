@@ -7,7 +7,7 @@ import mock
 
 from apps.users.enums import USER_ROLE
 from apps.users.models import User
-from utils.factories import EntryFactory, UserFactory
+from utils.factories import UserFactory
 from utils.tests import (
     HelixGraphQLTestCase,
     create_user_with_role,
@@ -518,36 +518,6 @@ class TestUserSchema(HelixGraphQLTestCase):
           }
         }
         '''
-
-    def test_fetch_reviews_to_be_reviewed(self):
-        e1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        e2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        entry = EntryFactory.create(created_by=e1)
-        entry.reviewers.set([e1, e2])
-        entry2 = EntryFactory.create(created_by=e1)
-        entry2.reviewers.set([e2])
-        self.assertEqual(entry.reviewers.count(), 2)
-
-        self.force_login(e1)
-        response = self.query(self.reviewer_q)
-        content = json.loads(response.content)
-        self.assertResponseNoErrors(response)
-        self.assertEqual(content['data']['me']['email'], e1.email)
-        self.assertIn(entry, e1.review_entries.all())
-        self.assertEqual(content['data']['me']['reviewing']['results'][0]['entry']['id'],
-                         str(entry.id))
-        self.assertEqual(content['data']['me']['reviewing']['totalCount'], 1)
-
-        self.force_login(e2)
-        response = self.query(self.reviewer_q)
-        content = json.loads(response.content)
-        self.assertResponseNoErrors(response)
-        self.assertIn(entry2, e2.review_entries.all())
-        self.assertEqual(content['data']['me']['reviewing']['totalCount'], 2)
-        self.assertListEqual(
-            [int(each['entry']['id']) for each in content['data']['me']['reviewing']['results']],
-            [entry.id, entry2.id]
-        )
 
 
 class TestUserListSchema(HelixGraphQLTestCase):

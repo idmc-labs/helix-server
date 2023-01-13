@@ -13,7 +13,6 @@ from apps.entry.serializers import (
 )
 from apps.users.enums import USER_ROLE
 from apps.entry.models import (
-    EntryReviewer,
     OSMName,
     Figure,
 )
@@ -23,6 +22,12 @@ from utils.factories import (
     OrganizationFactory,
     CountryFactory,
     FigureFactory,
+    DisasterCategoryFactory,
+    DisasterSubCategoryFactory,
+    DisasterTypeFactory,
+    DisasterSubTypeFactory,
+    ViolenceFactory,
+    ViolenceSubTypeFactory,
 )
 from utils.tests import HelixTestCase, create_user_with_role
 from apps.crisis.models import Crisis
@@ -107,58 +112,6 @@ class TestEntrySerializer(HelixTestCase):
         self.assertEqual(instance.last_modified_by, self.user)
         self.assertIsNotNone(instance.created_at)
         self.assertIsNotNone(instance.modified_at)
-
-    def test_entry_creation_create_entry_reviewers(self):
-        reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        self.data['reviewers'] = [reviewer1.id, reviewer2.id]
-        serializer = EntryCreateSerializer(data=self.data,
-                                           context={'request': self.request})
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        serializer.save()
-        entry = serializer.instance
-        self.assertEqual(entry.reviewers.count(), len([reviewer1, reviewer2]))
-        self.assertEqual(
-            sorted(list(entry.reviewers.through.objects.values_list('reviewer', flat=1))),
-            sorted([reviewer1.id, reviewer2.id])
-        )
-
-    def test_entry_update_entry_reviewers(self):
-        x = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        y = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        z = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        entry = EntryFactory.create()
-        entry.reviewers.set([x, y, z])
-
-        reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        reviewer3 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        entry = EntryFactory.create()
-        entry.reviewers.set([reviewer1, reviewer2, reviewer3])
-        self.assertEqual(
-            sorted(list(
-                entry.reviewers.filter(
-                    reviewing__status=EntryReviewer.REVIEW_STATUS.TO_BE_REVIEWED
-                ).values_list('id', flat=1))
-            ),
-            sorted([each.id for each in [reviewer1, reviewer2, reviewer3]])
-        )
-        entry.reviewing.all().update(
-            status=EntryReviewer.REVIEW_STATUS.UNDER_REVIEW
-        )
-
-        old_count = EntryReviewer.objects.count()
-        serializer = EntryCreateSerializer(instance=entry, data={
-            'reviewers': [reviewer1.id, reviewer2.id]
-        }, context={'request': self.request}, partial=True)
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        serializer.save()
-        self.assertEqual(entry.reviewers.count(), 2)
-        self.assertEqual(entry.reviewing.count(), 2)
-        self.assertEqual(set(entry.reviewing.values_list('status', flat=1)),
-                         {EntryReviewer.REVIEW_STATUS.UNDER_REVIEW})
-
-        self.assertEqual(old_count - 1, EntryReviewer.objects.count())
 
     def test_entry_serializer_with_figures_source(self):
         source1 = dict(
@@ -623,3 +576,44 @@ class TestFigureSerializer(HelixTestCase):
             context={'request': self.request}
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
+
+    def test_should_save_parent_fields_if_sub_field_selected(self):
+
+        disaster_category = DisasterCategoryFactory.create()
+        disaster_sub_category = DisasterSubCategoryFactory.create(category=disaster_category)
+
+        disaster_type = DisasterTypeFactory.create(
+            disaster_sub_category=disaster_sub_category
+        )
+        disaster_sub_type = DisasterSubTypeFactory.create(
+            type=disaster_type,
+        )
+
+        violence = ViolenceFactory.create()
+        violence_sub_type = ViolenceSubTypeFactory.create(violence=violence)
+
+        self.data['disaster_sub_type'] = disaster_sub_type.id
+        self.data['violence_sub_type'] = violence_sub_type.id
+        data = {
+            'url': 'https://yoko-onos-blog.com',
+            'article_title': 'entry',
+            'publish_date': '2020-09-09',
+            'reviewers': [],
+            'publishers': [],
+            'figures': [self.data],
+        }
+        serializer = EntryCreateSerializer(data=data,
+                                           context={'request': self.request})
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        entry = serializer.save()
+
+        figure = entry.figures.first()
+        # Test sub fields
+        self.assertEqual(figure.disaster_sub_category.id, disaster_sub_category.id)
+        self.assertEqual(figure.disaster_sub_type.id, disaster_sub_type.id)
+        self.assertEqual(figure.violence_sub_type.id, violence_sub_type.id)
+
+        # Test parent fields
+        self.assertEqual(figure.disaster_category.id, disaster_category.id)
+        self.assertEqual(figure.disaster_type.id, disaster_type.id)
+        self.assertEqual(figure.violence.id, violence.id)

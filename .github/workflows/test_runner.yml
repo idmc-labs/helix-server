@@ -2,9 +2,13 @@ name: Django Test Runner
 
 on:
   push:
-    branches: [ develop ]
+    branches:
+      - 'develop'
+      - 'project/**'
   pull_request:
-    branches: [ develop ]
+    branches:
+      - 'develop'
+      - 'project/**'
 
 env:
   GITHUB_WORKFLOW: true

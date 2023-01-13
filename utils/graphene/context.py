@@ -9,6 +9,7 @@ from apps.crisis.dataloaders import (
     TotalIDPFigureByCrisisLoader,
     TotalNDFigureByCrisisLoader,
     EventCountLoader,
+    CrisisReviewCountLoader,
 )
 from apps.entry.dataloaders import (
     TotalIDPFigureByEntryLoader,
@@ -16,18 +17,19 @@ from apps.entry.dataloaders import (
     FigureTypologyLoader,
     FigureGeoLocationLoader,
     FigureSourcesReliability,
+    FigureLastReviewCommentStatusLoader,
 )
 from apps.event.dataloaders import (
     TotalIDPFigureByEventLoader,
     TotalNDFigureByEventLoader,
-    EventReviewCountLoader,
     EventEntryCountLoader,
     EventTypologyLoader,
     EventFigureTypologyLoader,
+    EventReviewCountLoader,
 )
-from apps.crisis.dataloaders import CrisisReviewCountLoader
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 from apps.entry.models import Figure
+from apps.users.dataloaders import UserPortfolioRoleLoader
 
 
 class GQLContext:
@@ -125,16 +127,8 @@ class GQLContext:
         return MonitoringSubRegionCountryCountLoader()
 
     @cached_property
-    def event_event_review_count_dataloader(self):
-        return EventReviewCountLoader()
-
-    @cached_property
     def event_entry_count_dataloader(self):
         return EventEntryCountLoader()
-
-    @cached_property
-    def crisis_crisis_review_count_dataloader(self):
-        return CrisisReviewCountLoader()
 
     @cached_property
     def event_typology_dataloader(self):
@@ -157,5 +151,21 @@ class GQLContext:
         return FigureSourcesReliability()
 
     @cached_property
+    def last_review_comment_status_loader(self):
+        return FigureLastReviewCommentStatusLoader()
+
+    @cached_property
     def event_count_dataloader(self):
         return EventCountLoader()
+
+    @cached_property
+    def event_review_count_dataloader(self):
+        return EventReviewCountLoader()
+
+    @cached_property
+    def crisis_review_count_dataloader(self):
+        return CrisisReviewCountLoader()
+
+    @cached_property
+    def user_portfolio_role_loader(self):
+        return UserPortfolioRoleLoader()

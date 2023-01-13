@@ -4,7 +4,6 @@ from django.core.exceptions import ValidationError
 from django.db.models import Min, Max, Q
 from django.utils.translation import gettext
 from rest_framework import serializers
-
 from apps.contrib.serializers import (
     MetaInformationSerializerMixin,
     UpdateSerializerMixin,
@@ -15,6 +14,7 @@ from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 from apps.event.models import Event, Actor, ContextOfViolence
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
+from apps.notification.models import Notification
 
 
 class ActorSerializer(MetaInformationSerializerMixin,
@@ -34,7 +34,7 @@ class EventSerializer(MetaInformationSerializerMixin,
                       serializers.ModelSerializer):
     class Meta:
         model = Event
-        fields = '__all__'
+        exclude = ('assigner', 'assigned_at', 'review_status')
 
     def validate_violence_sub_type_and_type(self, attrs):
         errors = OrderedDict()
@@ -134,8 +134,30 @@ class EventSerializer(MetaInformationSerializerMixin,
             ))
         return errors
 
+    def _update_parent_fields(self, attrs):
+        disaster_sub_type = attrs.get('disaster_sub_type')
+        violence_sub_type = attrs.get('violence_sub_type')
+
+        attrs['disaster_category'] = None
+        attrs['disaster_type'] = None
+        attrs['disaster_sub_category'] = None
+        attrs['violence'] = None
+
+        if disaster_sub_type:
+            disaster_type = disaster_sub_type.type
+            attrs['disaster_type'] = disaster_type
+            if disaster_type:
+                disaster_sub_category = disaster_type.disaster_sub_category
+                attrs['disaster_sub_category'] = disaster_sub_category
+                if disaster_sub_category:
+                    attrs['disaster_category'] = disaster_sub_category.category
+
+        if violence_sub_type:
+            attrs['violence'] = violence_sub_type.violence
+
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
+        self._update_parent_fields(attrs)
         errors = OrderedDict()
         crisis = attrs.get('crisis')
         if crisis:
@@ -185,6 +207,38 @@ class EventSerializer(MetaInformationSerializerMixin,
             event.context_of_violence.set(context_of_violence)
         context_of_violence = validated_data.pop("context_of_violence", None)
         return event
+
+    def update(self, instance, validated_data):
+        # Update event status if include_triangulation_in_qa is changed
+        validated_data['last_modified_by'] = self.context['request'].user
+
+        is_include_triangulation_in_qa_changed = False
+        if 'include_triangulation_in_qa' in validated_data:
+            new_include_triangulation_in_qa = validated_data.get('include_triangulation_in_qa')
+            is_include_triangulation_in_qa_changed = new_include_triangulation_in_qa != instance.include_triangulation_in_qa
+
+        instance = super().update(instance, validated_data)
+
+        if is_include_triangulation_in_qa_changed:
+            recipients = [user['id'] for user in Event.regional_coordinators(
+                instance,
+                actor=self.context['request'].user,
+            )]
+            if (instance.created_by_id):
+                recipients.append(instance.created_by_id)
+            if (instance.assignee_id):
+                recipients.append(instance.assignee_id)
+
+            Notification.send_safe_multiple_notifications(
+                recipients=recipients,
+                type=Notification.Type.EVENT_INCLUDE_TRIANGULATION_CHANGED,
+                actor=self.context['request'].user,
+                event=instance,
+            )
+
+            Figure.update_event_status_and_send_notifications(instance.id)
+            instance.refresh_from_db()
+        return instance
 
 
 class EventUpdateSerializer(UpdateSerializerMixin, EventSerializer):

@@ -1,5 +1,6 @@
 import graphene
 from graphene_django.filter.utils import get_filtering_args_from_filterset
+from django.utils import timezone
 from django.utils.translation import gettext
 
 from apps.contrib.serializers import ExcelDownloadSerializer
@@ -15,6 +16,7 @@ from apps.event.serializers import (
     ContextOfViolenceSerializer,
     ContextOfViolenceUpdateSerializer
 )
+from apps.notification.models import Notification
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 from utils.mutation import generate_input_type_for_serializer
@@ -334,6 +336,260 @@ class DeleteContextOfViolence(graphene.Mutation):
         return DeleteContextOfViolence(result=instance, errors=None, ok=True)
 
 
+class SetAssigneeToEvent(graphene.Mutation):
+    class Arguments:
+        event_id = graphene.ID(required=True)
+        user_id = graphene.ID(required=True)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(EventType)
+
+    @staticmethod
+    @permission_checker(['event.assign_event'])
+    def mutate(root, info, event_id, user_id):
+        from apps.users.models import User
+        event = Event.objects.filter(id=event_id).first()
+        if not event:
+            return SetAssigneeToEvent(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
+            ])
+
+        user = User.objects.filter(id=user_id).first()
+        # To prevent users being saved with no permission in event review process. for eg GUEST
+        if not user.has_perm('event.self_assign_event'):
+            return SetAssigneeToEvent(errors=[
+                dict(field='nonFieldErrors', messages=gettext('The user does not exist or has enough permissions.'))
+            ])
+
+        prev_assignee_id = event.assignee_id
+        prev_assigner_id = event.assigner_id
+
+        event.assignee = user
+        event.assigner = info.context.user
+        event.assigned_at = timezone.now()
+        event.save()
+
+        recipients = []
+        if prev_assignee_id:
+            recipients.append(prev_assignee_id)
+        if prev_assigner_id:
+            recipients.append(prev_assigner_id)
+        if recipients:
+            Notification.send_safe_multiple_notifications(
+                event=event,
+                recipients=recipients,
+                actor=info.context.user,
+                type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
+            )
+
+        recipients = [user.id]
+        if prev_assigner_id:
+            recipients.append(prev_assigner_id)
+        Notification.send_safe_multiple_notifications(
+            event=event,
+            recipients=recipients,
+            actor=info.context.user,
+            type=Notification.Type.EVENT_ASSIGNED,
+        )
+
+        return SetAssigneeToEvent(result=event, errors=None, ok=True)
+
+
+class SetSelfAssigneeToEvent(graphene.Mutation):
+    class Arguments:
+        event_id = graphene.ID(required=True)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(EventType)
+
+    @staticmethod
+    @permission_checker(['event.self_assign_event'])
+    def mutate(root, info, event_id):
+        event = Event.objects.filter(id=event_id).first()
+        if not event:
+            return SetSelfAssigneeToEvent(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
+            ])
+
+        prev_assignee_id = event.assignee_id
+        prev_assigner_id = event.assigner_id
+
+        event.assignee = info.context.user
+        event.assigner = info.context.user
+        event.assigned_at = timezone.now()
+        event.save()
+
+        recipients = []
+        if prev_assignee_id:
+            recipients.append(prev_assignee_id)
+        if prev_assigner_id:
+            recipients.append(prev_assigner_id)
+        if recipients:
+            Notification.send_safe_multiple_notifications(
+                event=event,
+                recipients=recipients,
+                actor=info.context.user,
+                type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
+            )
+
+        recipients = [user['id'] for user in Event.regional_coordinators(
+            event,
+            actor=info.context.user,
+        )]
+        if prev_assigner_id:
+            recipients.append(prev_assigner_id)
+        Notification.send_safe_multiple_notifications(
+            recipients=recipients,
+            type=Notification.Type.EVENT_SELF_ASSIGNED,
+            actor=info.context.user,
+            event=event,
+        )
+
+        return SetSelfAssigneeToEvent(result=event, errors=None, ok=True)
+
+
+class ClearAssigneFromEvent(graphene.Mutation):
+    class Arguments:
+        event_id = graphene.ID(required=True)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(EventType)
+
+    @staticmethod
+    @permission_checker(['event.clear_assignee_event'])
+    def mutate(root, info, event_id):
+        # Admin, assigner and assignee(self) can only clear assignee
+        event = Event.objects.filter(id=event_id).first()
+        if not event:
+            return ClearAssigneFromEvent(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
+            ])
+
+        prev_assignee_id = event.assignee_id
+        prev_assigner_id = event.assigner_id
+        if not prev_assignee_id:
+            return ClearAssigneFromEvent(errors=[
+                dict(
+                    field='nonFieldErrors',
+                    messages=gettext('Cannot clear assignee because event does not have an assignee'),
+                )
+            ])
+
+        event.assignee = None
+        event.assigner = None
+        event.assigned_at = None
+        event.save()
+
+        recipients = []
+        if prev_assignee_id:
+            recipients.append(prev_assignee_id)
+        if prev_assigner_id:
+            recipients.append(prev_assigner_id)
+        if recipients:
+            Notification.send_safe_multiple_notifications(
+                event=event,
+                recipients=recipients,
+                actor=info.context.user,
+                type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
+            )
+
+        return ClearAssigneFromEvent(result=event, errors=None, ok=True)
+
+
+class ClearSelfAssigneFromEvent(graphene.Mutation):
+    class Arguments:
+        event_id = graphene.ID(required=True)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(EventType)
+
+    @staticmethod
+    @permission_checker(['event.clear_self_assignee_event'])
+    def mutate(root, info, event_id):
+        event = Event.objects.filter(id=event_id).first()
+        if not event:
+            return ClearSelfAssigneFromEvent(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
+            ])
+
+        # Admin and RE can clear all other users from assignee except ME
+        # FIXME: this logic does not seem right after `or`
+        if event.assignee_id != info.context.user.id or info.context.user.has_perm('clear_assignee_from_event'):
+            return ClearAssigneFromEvent(errors=[
+                dict(field='nonFieldErrors', messages=gettext('You are not allowed to clear others from assignee.'))
+            ])
+
+        prev_assigner_id = event.assigner_id
+
+        event.assignee = None
+        event.assigner = None
+        event.assigned_at = None
+        event.save()
+
+        recipients = []
+        if event.regional_coordinators:
+            recipients.extend([user['id'] for user in Event.regional_coordinators(
+                event,
+                actor=info.context.user,
+            )])
+        if prev_assigner_id:
+            recipients.append(prev_assigner_id)
+
+        if recipients:
+            Notification.send_safe_multiple_notifications(
+                recipients=recipients,
+                type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
+                actor=info.context.user,
+                event=event,
+            )
+
+        return ClearSelfAssigneFromEvent(result=event, errors=None, ok=True)
+
+
+class SignOffEvent(graphene.Mutation):
+    class Arguments:
+        event_id = graphene.ID(required=True)
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(EventType)
+
+    @staticmethod
+    @permission_checker(['event.sign_off_event'])
+    def mutate(root, info, event_id):
+        event = Event.objects.filter(id=event_id).first()
+        if not event:
+            return SignOffEvent(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
+            ])
+        if not event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+            return SignOffEvent(errors=[
+                dict(field='nonFieldErrors', messages=gettext('Event is not approved yet.'))
+            ])
+
+        event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
+        event.save()
+
+        recipients = [
+            user['id'] for user in Event.regional_coordinators(
+                event,
+                actor=info.context.user,
+            )
+        ]
+        if event.created_by_id:
+            recipients.append(event.created_by_id)
+        if event.assignee_id:
+            recipients.append(event.assignee_id)
+
+        Notification.send_safe_multiple_notifications(
+            recipients=recipients,
+            type=Notification.Type.EVENT_SIGNED_OFF,
+            actor=info.context.user,
+            event=event,
+        )
+
+        return SignOffEvent(result=event, errors=None, ok=True)
+
+
 class Mutation(object):
     create_event = CreateEvent.Field()
     update_event = UpdateEvent.Field()
@@ -349,3 +605,10 @@ class Mutation(object):
     export_events = ExportEvents.Field()
     export_actors = ExportActors.Field()
     clone_event = CloneEvent.Field()
+
+    # review related
+    set_assignee_to_event = SetAssigneeToEvent.Field()
+    set_self_assignee_to_event = SetSelfAssigneeToEvent.Field()
+    clear_assignee_from_event = ClearAssigneFromEvent.Field()
+    clear_self_assignee_from_event = ClearSelfAssigneFromEvent.Field()
+    sign_off_event = SignOffEvent.Field()

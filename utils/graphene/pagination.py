@@ -103,7 +103,6 @@ class PageGraphqlPaginationWithoutCount(PageGraphqlPagination):
             page_size = _nonzero_int(
                 kwargs.get(self.page_size_query_param, self.page_size),
                 strict=True,
-                cutoff=self.max_page_size,
             )
         else:
             page_size = self.page_size
@@ -111,6 +110,9 @@ class PageGraphqlPaginationWithoutCount(PageGraphqlPagination):
 
         assert page > 0, ValueError(
             "Page value for PageGraphqlPagination must be a positive integer"
+        )
+        assert page_size <= self.max_page_size, ValueError(
+            f"Max page size limit {self.max_page_size} exceeded"
         )
         if page_size is None:
             """

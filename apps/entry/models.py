@@ -32,6 +32,8 @@ from apps.contrib.commons import DATE_ACCURACY
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
 from apps.common.enums import GENDER_TYPE
+from apps.notification.models import Notification
+
 logger = logging.getLogger(__name__)
 User = get_user_model()
 CANNOT_UPDATE_MESSAGE = _('You cannot sign off the entry.')
@@ -377,6 +379,19 @@ class Figure(MetaInformationArchiveAbstractModel,
             MULTIPLE_OR_OTHER: _('Multiple/Other'),
         }
 
+    class FIGURE_REVIEW_STATUS(enum.Enum):
+        REVIEW_NOT_STARTED = 0
+        REVIEW_IN_PROGRESS = 1
+        APPROVED = 2
+        REVIEW_RE_REQUESTED = 3
+
+        __labels__ = {
+            REVIEW_NOT_STARTED: _("Review not started"),
+            REVIEW_IN_PROGRESS: _("Review in progress"),
+            APPROVED: _("Approved"),
+            REVIEW_RE_REQUESTED: _("Review re-requested"),
+        }
+
     uuid = models.UUIDField(verbose_name='UUID',
                             blank=True, default=uuid4)
     entry = models.ForeignKey('Entry', verbose_name=_('Entry'),
@@ -506,6 +521,15 @@ class Figure(MetaInformationArchiveAbstractModel,
         'organization.Organization', verbose_name=_('Source'),
         blank=True, related_name='sourced_figures'
     )
+    approved_by = models.ForeignKey(
+        'users.User', verbose_name=_('Approved by'), null=True, blank=True,
+        related_name='figure_approved_by', on_delete=models.SET_NULL
+    )
+    approved_on = models.DateTimeField(verbose_name='Assigned at', null=True, blank=True)
+    review_status = enum.EnumField(
+        enum=FIGURE_REVIEW_STATUS, verbose_name=_('Figure status'),
+        default=FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
+    )
 
     class Meta:
         indexes = [
@@ -516,7 +540,11 @@ class Figure(MetaInformationArchiveAbstractModel,
             models.Index(fields=['role']),
             models.Index(fields=['event']),
         ]
+        permissions = (
+            ('approve_figure', 'Can approve/unapprove figure'),
+        )
 
+    # NOTE: Any change done here on the list should also be done on the client
     SUPPORTED_OSMNAME_COUNTRY_CODES = {
         'AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT',
         'AU', 'AZ', 'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BM',
@@ -531,7 +559,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         'LT', 'LU', 'LV', 'LY', 'MA', 'MC', 'MD', 'ME', 'MG', 'MH', 'MK', 'ML',
         'MM', 'MN', 'MP', 'MR', 'MS', 'MT', 'MU', 'MV', 'MW', 'MX', 'MY', 'MZ',
         'NA', 'NE', 'NG', 'NI', 'NL', 'NO', 'NP', 'NR', 'NU', 'NZ', 'OM', 'PA',
-        'PE', 'PF', 'PG', 'PH', 'PK', 'PL', 'PN', 'PS', 'PT', 'PW', 'PY', 'QA',
+        'PE', 'PG', 'PH', 'PK', 'PL', 'PN', 'PS', 'PT', 'PW', 'PY', 'QA',
         'RO', 'RS', 'RU', 'RW', 'SA', 'SB', 'SC', 'SD', 'SE', 'SG', 'SH', 'SI',
         'SK', 'SL', 'SM', 'SN', 'SO', 'SR', 'SS', 'ST', 'SV', 'SY', 'SZ', 'TA',
         'TC', 'TD', 'TF', 'TG', 'TH', 'TJ', 'TK', 'TL', 'TM', 'TN', 'TO', 'TR',
@@ -927,6 +955,71 @@ class Figure(MetaInformationArchiveAbstractModel,
     def can_be_created_by(cls, user: User, entry: 'Entry') -> bool:
         return entry.can_be_updated_by(user)
 
+    @classmethod
+    def update_figure_status(cls, figure):
+        review_comments_count = figure.figure_review_comments.count()
+
+        if (
+            review_comments_count > 0 and
+            (figure.review_status == Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED or
+                figure.review_status == Figure.FIGURE_REVIEW_STATUS.APPROVED)
+        ):
+            figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
+            figure.save()
+        elif (
+            review_comments_count <= 0 and
+            (figure.review_status == Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS or
+                figure.review_status == Figure.FIGURE_REVIEW_STATUS.APPROVED)
+        ):
+            figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
+            figure.save()
+
+    # TODO: move this to event model
+    @classmethod
+    def update_event_status_and_send_notifications(cls, event_id):
+        from apps.event.models import Event
+
+        # FIXME: should we directly get event_id from the args instead?
+        event_with_stats = Event.objects.filter(
+            id=event_id
+        ).annotate(
+            **Event.annotate_review_figures_count()
+        ).first()
+
+        review_approved_count = event_with_stats.review_approved_count
+        review_not_started_count = event_with_stats.review_not_started_count
+        total_count = event_with_stats.total_count
+
+        prev_status = event_with_stats.review_status
+
+        if not total_count or review_not_started_count == total_count:
+            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED.value
+        elif review_approved_count == total_count and prev_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF.value
+        elif review_approved_count == total_count:
+            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
+        else:
+            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value
+        event_with_stats.save()
+
+        # TODO: add notification for un-approved and un-signed off
+        if (
+            prev_status != event_with_stats.review_status and
+            event_with_stats.review_status == Event.EVENT_REVIEW_STATUS.APPROVED
+        ):
+            recipients = [user['id'] for user in Event.regional_coordinators(event_with_stats)]
+            if (event_with_stats.created_by_id):
+                recipients.append(event_with_stats.created_by_id)
+            if (event_with_stats.assignee_id):
+                recipients.append(event_with_stats.assignee_id)
+
+            Notification.send_safe_multiple_notifications(
+                recipients=recipients,
+                type=Notification.Type.EVENT_APPROVED,
+                event=event_with_stats,
+                actor=None,
+            )
+
     def can_be_updated_by(self, user: User) -> bool:
         """
         used to check before deleting as well
@@ -981,10 +1074,6 @@ class EntryReviewer(MetaInformationAbstractModel, models.Model):
                 and not self.reviewer.has_perms(('entry.sign_off_entry',)):
             raise self.CannotUpdateStatusException()
         self.status = status
-
-    def save(self, *args, **kwargs):
-        self.update_status(self.status)
-        return super().save(*args, **kwargs)
 
 
 class Entry(MetaInformationArchiveAbstractModel, models.Model):
@@ -1226,9 +1315,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         if self.associated_parked_item:
             self.update_associated_parked_item()
         return super().save(*args, **kwargs)
-
-    class Meta:
-        permissions = (('sign_off_entry', 'Can sign off the entry'),)
 
     # Dunders
 

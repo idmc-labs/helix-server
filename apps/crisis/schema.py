@@ -14,10 +14,12 @@ from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 
 
 class CrisisReviewCountType(graphene.ObjectType):
-    under_review_count = graphene.Int(required=False)
-    signed_off_count = graphene.Int(required=False)
-    review_complete_count = graphene.Int(required=False)
-    to_be_reviewed_count = graphene.Int(required=False)
+    review_not_started_count = graphene.Int(required=False)
+    review_in_progress_count = graphene.Int(required=False)
+    review_re_request_count = graphene.Int(required=False)
+    review_approved_count = graphene.Int(required=False)
+    total_count = graphene.Int(required=False)
+    progress = graphene.Float(required=False)
 
 
 class CrisisType(DjangoObjectType):
@@ -40,11 +42,8 @@ class CrisisType(DjangoObjectType):
     start_date_accuracy_display = EnumDescription(source='get_start_date_accuracy_display')
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy_display = EnumDescription(source='get_end_date_accuracy_display')
-    review_count = graphene.Field(CrisisReviewCountType)
     event_count = graphene.Field(graphene.Int)
-
-    def resolve_review_count(root, info, **kwargs):
-        return info.context.crisis_crisis_review_count_dataloader.load(root.id)
+    review_count = graphene.Field(CrisisReviewCountType)
 
     def resolve_total_stock_idp_figures(root, info, **kwargs):
         NULL = 'null'
@@ -70,6 +69,9 @@ class CrisisType(DjangoObjectType):
 
     def resolve_event_count(root, info, **kwargs):
         return info.context.event_count_dataloader.load(root.id)
+
+    def resolve_review_count(root, info, **kwargs):
+        return info.context.crisis_review_count_dataloader.load(root.id)
 
 
 class CrisisListType(CustomDjangoListObjectType):

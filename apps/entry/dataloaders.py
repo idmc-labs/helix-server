@@ -2,9 +2,11 @@ from django.db import models
 from django.contrib.postgres.aggregates.general import StringAgg
 from promise import Promise
 from promise.dataloader import DataLoader
-from django.db.models import Case, F, When, CharField
+from django.db.models import Case, F, When, CharField, Q
+from collections import defaultdict
 
 from apps.entry.models import Entry, Figure
+from apps.review.models import UnifiedReviewComment
 
 
 def batch_load_fn_by_category(keys, category):
@@ -94,3 +96,39 @@ class FigureSourcesReliability(DataLoader):
         return Promise.resolve([
             batch_load.get(key) for key in keys
         ])
+
+
+class FigureLastReviewCommentStatusLoader(DataLoader):
+    def batch_load_fn(self, keys):
+        review_comment_qs = UnifiedReviewComment.objects.filter(
+            Q(figure__in=keys) and
+            Q(comment_type__in=[
+                UnifiedReviewComment.REVIEW_COMMENT_TYPE.GREEN,
+                UnifiedReviewComment.REVIEW_COMMENT_TYPE.RED,
+            ])
+        ).order_by(
+            'figure_id',
+            'field',
+            '-id',
+        ).distinct(
+            'figure_id',
+            'field',
+        ).values(
+            'id',
+            'figure_id',
+            'field',
+            'comment_type',
+        )
+        _map = defaultdict(list)
+        for item in review_comment_qs:
+            id = item['id']
+            field = item['field']
+            comment_type = item['comment_type']
+            _map[item['figure_id']].append(
+                {
+                    'id': id,
+                    'field': field,
+                    'comment_type': comment_type,
+                }
+            )
+        return Promise.resolve([_map[key] for key in keys])
