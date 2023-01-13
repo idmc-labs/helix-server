@@ -747,9 +747,26 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         entry = EntryFactory.create()
         event1 = EventFactory.create()
         event2 = EventFactory.create()
-        figure = FigureFactory.create(entry=entry, event=event1)
+        event3 = EventFactory.create()
+        figure1 = FigureFactory.create(entry=entry, event=event1)
+        figure2 = FigureFactory.create(entry=entry, event=event2)
+
         self.input['figures'] = [
-            {'id': figure.id, 'event': event2.id}
+            {'id': figure1.id, 'event': event1.id},
+            {'id': figure2.id, 'event': event2.id},
+        ]
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        self.assertResponseNoErrors(response)
+        content = json.loads(response.content)
+        self.assertFalse(content['data']['updateEntry']['ok'], content)
+        self.assertNotIn('event', json.dumps(content['data']['updateEntry']['errors']))
+
+        self.input['figures'] = [
+            {'id': figure1.id, 'event': event1.id},
+            {'id': figure2.id, 'event': event3.id},
         ]
         response = self.query(
             self.mutation,
