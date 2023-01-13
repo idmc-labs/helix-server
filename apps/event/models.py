@@ -437,22 +437,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             'transformer': transformer,
         }
 
-    def save(self, *args, **kwargs):
-        if self.disaster_sub_type:
-            self.disaster_type = self.disaster_sub_type.type
-            self.disaster_sub_category = self.disaster_type.disaster_sub_category
-            self.disaster_category = self.disaster_sub_category.category
-        else:
-            self.disaster_type = None
-            self.disaster_sub_category = None
-            self.disaster_category = None
-
-        if self.violence_sub_type:
-            self.violence = self.violence_sub_type.violence
-        else:
-            self.violence = None
-        return super().save(*args, **kwargs)
-
     def __str__(self):
         return self.name or str(self.id)
 
