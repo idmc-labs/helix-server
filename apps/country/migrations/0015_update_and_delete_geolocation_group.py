@@ -42,6 +42,8 @@ class Migration(migrations.Migration):
             location_to_delete.delete()
 
     dependencies = [
+        ('extraction', '0035_extractionquery_filter_is_figure_to_be_reviewed'),
+        ('report', '0045_report_filter_is_figure_to_be_reviewed'),
         ('country', '0014_merge_20210702_0747'),
     ]
 

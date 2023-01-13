@@ -5,7 +5,11 @@ if [ "$CI" == "true" ]; then
 
     set -e
 
-    COVERAGE_PROCESS_START=`pwd`/.coveragerc coverage run -m py.test --durations=10
+    # To show migration logs
+    ./manage.py test --keepdb -v 2 helix.tests
+
+    # Now run all tests
+    COVERAGE_PROCESS_START=`pwd`/.coveragerc coverage run -m py.test --reuse-db --durations=10
 
     # Collect/Generate reports
     coverage report -i
