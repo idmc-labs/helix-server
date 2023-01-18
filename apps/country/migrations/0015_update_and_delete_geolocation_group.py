@@ -27,16 +27,16 @@ class Migration(migrations.Migration):
                 filter_figure_geographical_groups=location_to_delete
             )
             for extraction in extractions:
-                extraction.add(location_to_keep)
-                extraction.remove(location_to_delete)
+                extraction.filter_figure_geographical_groups.add(location_to_keep)
+                extraction.filter_figure_geographical_groups.remove(location_to_delete)
 
             # Report
             reports = Report.objects.filter(
                 filter_figure_geographical_groups=location_to_delete
             )
             for report in reports:
-                report.add(location_to_keep)
-                report.remove(location_to_delete)
+                report.filter_figure_geographical_groups.add(location_to_keep)
+                report.filter_figure_geographical_groups.remove(location_to_delete)
 
             # Finally remove geographical group
             location_to_delete.delete()
