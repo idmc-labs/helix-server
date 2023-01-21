@@ -3,8 +3,6 @@ version: 0.2
 
 env:
   variables:
-    SERVER_BRANCH: develop
-    SERVER_REPO: https://github.com/idmc-labs/helix-server
     region: us-east-1
 
   parameter-store:
@@ -24,26 +22,22 @@ phases:
       - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.18.1
       - mv ./copilot-linux-v1.18.1 ./copilot-linux
       - chmod +x ./copilot-linux
+      - printenv DOCKER_PASSWORD | docker login --username ${DOCKER_USERNAME} --password-stdin
+      # Remove .python-version used in helix repo. Not required here and conflicts with build
+      - rm .python-version
 
   build:
     commands:
-      - echo "Run your tests"
-      - docker login --username $DOCKER_USERNAME --password $DOCKER_PASSWORD
-      - echo "docker login success"
-      - git clone --depth 1 --branch=${SERVER_BRANCH} ${SERVER_REPO} ./server
-      - echo "clone branch success"
       - export DOCKER_IMAGE_SERVER=$AWS_ACCOUNT_ID.dkr.ecr.$region.amazonaws.com/helix-copilot/worker:builder
       - echo "$DOCKER_IMAGE_SERVER"
       - export DOCKER_IMAGE_SERVER_DOMAIN=$(echo $DOCKER_IMAGE_SERVER | cut -d '/' -f 1)
       - echo "$DOCKER_IMAGE_SERVER_DOMAIN"
-      - docker login -u AWS -p $(aws ecr get-login-password --region us-east-1) $DOCKER_IMAGE_SERVER_DOMAIN
+      - aws --version
+      - aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $DOCKER_IMAGE_SERVER_DOMAIN
       - docker pull $DOCKER_IMAGE_SERVER || true
-
-      - echo "******* Login to server domain and docker pull :) :)"
-      - echo "**************************************"
-      - echo "******* Login to server domain and docker pull :) :)"
-      - echo "**************************************"
+      - echo "Run your tests"
       # - make test
+
   post_build:
     commands:
       - ls -l
@@ -99,6 +93,7 @@ phases:
           done;
         done;
       - ls -lah ./infrastructure
+
 artifacts:
   files:
     - "infrastructure/*"
