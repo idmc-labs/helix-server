@@ -11,7 +11,11 @@ RUN apt update -y && apt install -y chromium chromium-driver
 COPY pyproject.toml poetry.lock /code/
 
 # Upgrade pip and install python packages for code
-RUN pip install --upgrade --no-cache-dir pip poetry \
+RUN apt-get update -y \
+    && apt-get install -y \
+        wait-for-it \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install --upgrade --no-cache-dir pip poetry \
     && poetry --version \
     # Configure to use system instead of virtualenvs
     && poetry config virtualenvs.create false \
