@@ -38,7 +38,7 @@ stages:
       - echo 'Running init roles'
       - unbuffer ./copilot-linux svc exec -c "python3 manage.py init_roles" -n api -e staging --yes
 
-  - name: prod# The name of the environment.
+  - name: prod # The name of the environment.
     # Optional: flag for manual approval action before deployment.
     requires_approval: true
     # Optional: use test commands to validate this stage of your build.
