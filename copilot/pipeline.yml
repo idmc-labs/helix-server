@@ -3,7 +3,7 @@
 # For more info: https://aws.github.io/copilot-cli/docs/manifest/pipeline/
 
 # The name of the pipeline.
-name: helix-server-release-staging
+name: helix-pipeline
 
 # The version of the schema used in this template.
 version: 1
@@ -15,25 +15,42 @@ source:
   provider: GitHub
   # Additional properties that further specify the location of the artifacts.
   properties:
-    branch: release-staging
+    branch: release
     repository: https://github.com/idmc-labs/helix-server
     # Optional: specify the name of an existing CodeStar Connections connection.
     # connection_name: a-connection
 
 # This section defines the order of the environments your pipeline will deploy to.
 stages:
-    - # The name of the environment.
-      name: staging
-      # Optional: flag for manual approval action before deployment.
-      requires_approval: true
-      # Optional: use test commands to validate this stage of your build.
-      test_commands:
-        - yum update -y --skip-broken ; yum install -y sudo
-        - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.18.1
-        - mv ./copilot-linux-v1.18.1 ./copilot-linux
-        - chmod +x ./copilot-linux
-        - echo 'Running collectstatic api'
-        - unbuffer ./copilot-linux svc exec -c "python3 manage.py collectstatic --no-input" -n api -e staging --yes
-        - echo 'Running migrations api'
-        - unbuffer ./copilot-linux svc exec -c "python3 manage.py migrate --no-input" -n api -e staging --yes
+  - name: staging # The name of the environment.
+    # Optional: flag for manual approval action before deployment.
+    requires_approval: true
+    # Optional: use test commands to validate this stage of your build.
+    test_commands:
+      - yum update -y --skip-broken ; yum install -y sudo
+      - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.18.1
+      - mv ./copilot-linux-v1.18.1 ./copilot-linux
+      - chmod +x ./copilot-linux
+      - echo 'Running collectstatic api'
+      - unbuffer ./copilot-linux svc exec -c "python3 manage.py collectstatic --no-input" -n api -e staging --yes
+      - echo 'Running migrations api'
+      - unbuffer ./copilot-linux svc exec -c "python3 manage.py migrate --no-input" -n api -e staging --yes
+      - echo 'Running init roles'
+      - unbuffer ./copilot-linux svc exec -c "python3 manage.py init_roles" -n api -e staging --yes
+
+  - name: prod# The name of the environment.
+    # Optional: flag for manual approval action before deployment.
+    requires_approval: true
+    # Optional: use test commands to validate this stage of your build.
+    test_commands:
+      - yum update -y --skip-broken ; yum install -y sudo
+      - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.18.1
+      - mv ./copilot-linux-v1.18.1 ./copilot-linux
+      - chmod +x ./copilot-linux
+      - echo 'Running collectstatic api'
+      - unbuffer ./copilot-linux svc exec -c "python3 manage.py collectstatic --no-input" -n api -e prod --yes
+      - echo 'Running migrations api'
+      - unbuffer ./copilot-linux svc exec -c "python3 manage.py migrate --no-input" -n api -e prod --yes
+      - echo 'Running init roles'
+      - unbuffer ./copilot-linux svc exec -c "python3 manage.py init_roles" -n api -e prod --yes
 
