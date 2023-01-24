@@ -225,7 +225,7 @@ class Report(MetaInformationArchiveAbstractModel,
 
         def transform_filter_figure_category(figure_categories):
             if figure_categories:
-                return get_string_from_list([category.name if category else "" for category in figure_categories])
+                return get_string_from_list([category.label if category else "" for category in figure_categories])
             return ''
 
         def transformer(datum):
