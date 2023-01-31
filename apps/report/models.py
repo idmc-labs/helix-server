@@ -180,6 +180,11 @@ class Report(MetaInformationArchiveAbstractModel,
                                          blank=True, null=True,
                                          related_name='signed_off_reports', on_delete=models.CASCADE)
     is_public = models.BooleanField(default=False)
+    public_figure_analysis = models.TextField(
+        null=True,
+        blank=True,
+        verbose_name=_('Public figure analysis'),
+    )
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):

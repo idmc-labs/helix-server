@@ -2432,6 +2432,7 @@ input ReportCreateInputType {
   filterFigureViolenceSubTypes: [ID!]
   isPublic: Boolean
   filterFigureRoles: [ROLE!]
+  publicFigureAnalysis: String
 }
 
 type ReportGenerationListType {
@@ -2544,6 +2545,7 @@ type ReportType {
   isSignedOff: Boolean!
   isSignedOffBy: UserType
   isPublic: Boolean!
+  publicFigureAnalysis: String
   comments(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, body: String, report: ID, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
   generations(report: ID, ordering: String): ReportGenerationListType
   filterFigureRolesDisplay: EnumDescription
@@ -2585,6 +2587,7 @@ input ReportUpdateInputType {
   filterFigureViolenceSubTypes: [ID!]
   isPublic: Boolean
   filterFigureRoles: [ROLE!]
+  publicFigureAnalysis: String
 }
 
 type ResetPassword {
