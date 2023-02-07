@@ -85,7 +85,7 @@ class Attachment(MetaInformationAbstractModel):
         blank=False,
         null=False,
         upload_to=global_upload_to,
-        max_length=256,
+        max_length=2000,
     )
     attachment_for = enum.EnumField(enum=FOR_CHOICES, verbose_name=_('Attachment for'),
                                     null=True, blank=True,
@@ -154,7 +154,7 @@ class SourcePreview(MetaInformationAbstractModel):
         blank=True,
         null=True,
         upload_to=global_upload_to,
-        max_length=256,
+        max_length=2000,
     )
     status = enum.EnumField(enum=PREVIEW_STATUS, default=PREVIEW_STATUS.PENDING)
     remark = models.TextField(verbose_name=_('Remark'),
@@ -230,7 +230,7 @@ class ExcelDownload(MetaInformationAbstractModel):
         blank=True,
         null=True,
         upload_to=excel_upload_to,
-        max_length=256,
+        max_length=2000,
     )
     file_size = models.IntegerField(
         verbose_name=_('File Size'),
