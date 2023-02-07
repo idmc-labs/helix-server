@@ -95,7 +95,7 @@ class Attachment(MetaInformationAbstractModel):
                                 blank=True, null=True)
     encoding = models.CharField(verbose_name=_('Encoding'), max_length=256,
                                 blank=True, null=True)
-    filetype_detail = models.CharField(verbose_name=_('File type detail'), max_length=256,
+    filetype_detail = models.CharField(verbose_name=_('File type detail'), max_length=2000,
                                        blank=True, null=True)
 
 
