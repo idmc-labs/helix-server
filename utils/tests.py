@@ -143,8 +143,22 @@ class ImmediateOnCommitMixin(object):
 
     @classmethod
     def tearDownClass(cls):
+        '''
+        NOTE:- __exit__() method expecting 3 positional args exc_type, exc_value, traceback after we changed
+        python base from buster to bullseye.
+        '''
         super().tearDownClass()
-        cls.on_commit_mgr.__exit__()
+
+        # TODO:- Pass proper exc_type, exc_value, traceback instead of None in __exit__
+        exc_type = None
+        exc_value = None
+        traceback = None
+
+        cls.on_commit_mgr.__exit__(
+            exc_type,
+            exc_value,
+            traceback,
+        )
 
 
 @override_settings(
