@@ -42,10 +42,10 @@ class Migration(migrations.Migration):
             ) |
             Q(violence__isnull=True, violence_sub_type__isnull=False)
         ).update(
-            disaster_type=Subquery(Event.objects.filter(pk=OuterRef('pk')).values('disaster_sub_type__type')[:1]),
-            disaster_sub_category=Subquery(Event.objects.filter(pk=OuterRef('pk')).values('disaster_sub_type__type__disaster_sub_category')[:1]),
-            disaster_category=Subquery(Event.objects.filter(pk=OuterRef('pk')).values('disaster_sub_type__type__disaster_sub_category__category')[:1]),
-            violence=Subquery(Event.objects.filter(pk=OuterRef('pk')).values('violence_sub_type__violence')[:1]),
+            disaster_type=Subquery(Figure.objects.filter(pk=OuterRef('pk')).values('disaster_sub_type__type')[:1]),
+            disaster_sub_category=Subquery(Figure.objects.filter(pk=OuterRef('pk')).values('disaster_sub_type__type__disaster_sub_category')[:1]),
+            disaster_category=Subquery(Figure.objects.filter(pk=OuterRef('pk')).values('disaster_sub_type__type__disaster_sub_category__category')[:1]),
+            violence=Subquery(Figure.objects.filter(pk=OuterRef('pk')).values('violence_sub_type__violence')[:1]),
         )
 
     dependencies = [
@@ -53,5 +53,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(update_parent_types),
+        migrations.RunPython(update_parent_types, reverse_code=migrations.RunPython.noop),
     ]
