@@ -53,5 +53,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(update_parent_types),
+        migrations.RunPython(update_parent_types, reverse_code=migrations.RunPython.noop),
     ]
