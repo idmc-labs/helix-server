@@ -35,5 +35,5 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(create_source_preview_and_clear_url),
+        migrations.RunPython(create_source_preview_and_clear_url, reverse_code=migrations.RunPython.noop),
     ]
