@@ -11,42 +11,42 @@ class Migration(migrations.Migration):
         Figure = apps.get_model('entry', 'Figure')
         HouseholdSize = apps.get_model('country', 'HouseholdSize')
 
-        # Disaggregated data toggle on for all migrated figures PR: 211
+        # Disaggregated data toggle on for all migrated figures Issue 211
         is_disaggregated_false_figures = Figure.objects.annotate(
             disaggregation_age_count=Count('disaggregation_age')
         ).filter(
+            Q(is_disaggregated=False),
+            Q(old_id__isnull=False),
             (
-                Q(old_id__isnull=False) |
                 Q(disaggregation_displacement_urban__isnull=False) |
                 Q(disaggregation_displacement_rural__isnull=False) |
-                Q(disaggregation_location_camp_isnull=False) |
-                Q(disaggregation_location_non_camp_isnull=False) |
-                Q(disaggregation_disability_isnull=False) |
+                Q(disaggregation_location_camp__isnull=False) |
+                Q(disaggregation_location_non_camp__isnull=False) |
+                Q(disaggregation_disability__isnull=False) |
                 Q(disaggregation_indigenous_people__isnull=False) |
                 Q(disaggregation_age_count__gt=0)
-            ) and
-            Q(is_disaggregated=False)
+            )
         )
         is_disaggregated_false_figures.update(is_disaggregated=True)
 
         is_disaggregated_true_figures = Figure.objects.annotate(
             disaggregation_age_count=Count('disaggregation_age')
         ).filter(
+            Q(is_disaggregated=True),
+            Q(old_id__isnull=False),
             (
-                Q(old_id__isnull=False) |
-                Q(disaggregation_displacement_urban__isnull=True) |
-                Q(disaggregation_displacement_rural__isnull=True) |
-                Q(disaggregation_location_camp__isnull=True) |
-                Q(disaggregation_location_non_camp__isnull=True) |
-                Q(disaggregation_disability__isnull=True) |
-                Q(disaggregation_indigenous_people_isnull=True) |
+                Q(disaggregation_displacement_urban__isnull=True) &
+                Q(disaggregation_displacement_rural__isnull=True) &
+                Q(disaggregation_location_camp__isnull=True) &
+                Q(disaggregation_location_non_camp__isnull=True) &
+                Q(disaggregation_disability__isnull=True) &
+                Q(disaggregation_indigenous_people__isnull=True) &
                 Q(disaggregation_age_count=0)
-            ) and
-            Q(is_disaggregated=True)
+            )
         )
         is_disaggregated_true_figures.update(is_disaggregated=False)
 
-        # URGENT: AHHS needs to be added for 2023 PR:266
+        # URGENT: AHHS needs to be added for 2023 Issue 266
         household_size_2022 = HouseholdSize.objects.filter(year=2022)
         HouseholdSize.objects.bulk_create(
             [
@@ -58,7 +58,7 @@ class Migration(migrations.Migration):
             ]
         )
 
-        # Migrated facts all have displacement occurred field as blank PR:210
+        # Migrated facts all have displacement occurred field as blank Issue 210
         displacement_occurred_before_figure_old_ids = [
             50489, 50539, 50592, 50541, 50540, 50542, 50543, 50544, 50545, 50546, 50547, 50560,
             50593, 50561, 50563, 50562, 50564, 50565, 50594, 50617, 50996, 51012, 51007, 61211,
@@ -72,6 +72,7 @@ class Migration(migrations.Migration):
             46056, 49784, 49984, 50566, 50567, 50455
         ]
         figures_to_update = Figure.objects.filter(
+            old_id__isnull=False,
             term__in=[
                 0, # Figure.FIGURE_TERMS.EVACUATED
                 1, # Figure.FIGURE_TERMS.DISPLACED
@@ -80,7 +81,6 @@ class Migration(migrations.Migration):
                 4, # Figure.FIGURE_TERMS.SHELTERED,
                 5, # Figure.FIGURE_TERMS.IN_RELIEF_CAMP,
             ],
-            old_id__isnull=False
         )
         figures_to_update.filter(
             old_id__in=displacement_occurred_before_figure_old_ids
