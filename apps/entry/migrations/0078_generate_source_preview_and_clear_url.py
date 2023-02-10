@@ -20,7 +20,7 @@ class Migration(migrations.Migration):
         )
         for entry in entries_with_urls_but_no_source_previews:
             source_preview = SourcePreview.objects.create(
-                url=entry.url, status=SourcePreview.PREVIEW_STATUS.FAILED
+                url=entry.url, status=2 # SourcePreview.PREVIEW_STATUS.FAILED
             )
             entry.preview = source_preview
             entry.save()
