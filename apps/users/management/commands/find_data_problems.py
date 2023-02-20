@@ -178,6 +178,8 @@ class Command(BaseCommand):
         wb = Workbook()
 
         ws0 = wb.active
+
+        print(f"Generating {settings['ws1']['code']}")
         # Events with small or large dates
         ws1 = wb.create_sheet(settings['ws1']['code'])
         ws1.append([settings['ws1']['title']])
@@ -202,6 +204,7 @@ class Command(BaseCommand):
                 get_new_event_url(event["id"]),
             )
 
+        print(f"Generating {settings['ws2']['code']}")
         # Recommended stock and flow figures without start date
         ws2 = wb.create_sheet(settings['ws2']['code'])
         ws2.append([settings['ws2']['title']])
@@ -220,6 +223,8 @@ class Command(BaseCommand):
                 id,
                 get_fact_url(id),
             )
+
+        print(f"Generating {settings['ws3']['code']}")
         # Recommended flow figures without end date
         ws3 = wb.create_sheet(settings['ws3']['code'])
         ws3.append([settings['ws3']['title']])
@@ -240,6 +245,7 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
+        print(f"Generating {settings['ws4']['code']}")
         # Recommended stock figures without end date
         ws4 = wb.create_sheet(settings['ws4']['code'])
         ws4.append([settings['ws4']['title']])
@@ -260,6 +266,7 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
+        print(f"Generating {settings['ws5']['code']}")
         # Recommended flow figures where start date is greater than end date
         ws5 = wb.create_sheet(settings['ws5']['code'])
         ws5.append([settings['ws5']['title']])
@@ -281,6 +288,7 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
+        print(f"Generating {settings['ws6']['code']}")
         # Recommended stock figures where start date is greater than end date
         ws6 = wb.create_sheet(settings['ws6']['code'])
         ws6.append([settings['ws6']['title']])
@@ -303,6 +311,7 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
+        print(f"Generating {settings['ws7']['code']}")
         # Recommended stock and flow figures with small/large start/end dates
         ws7 = wb.create_sheet(settings['ws7']['code'])
         ws7.append([settings['ws7']['title']])
@@ -325,11 +334,14 @@ class Command(BaseCommand):
             )
 
         all_reports = Report.objects.all()
+
+        print(f"Generating {settings['ws7']['code']}")
         # Recommended flow figures not included in reports
         ws8 = wb.create_sheet(settings['ws8']['code'])
         ws8.append([settings['ws8']['title']])
         ws8.append(["Masterfact ID", "Masterface URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
 
+        print(f"Generating {settings['ws9']['code']}")
         # Recommended flow figures added in reports
         ws9 = wb.create_sheet(settings['ws9']['code'])
         ws9.append([settings['ws9']['title']])
@@ -379,10 +391,12 @@ class Command(BaseCommand):
                 )
                 added_flow_row = added_flow_row + 1
 
+        print(f"Generating {settings['ws10']['code']}")
         # Recommended flow figures not included in reports
         ws10 = wb.create_sheet(settings['ws10']['code'])
         ws10.append([settings['ws10']['title']])
         ws10.append(["Masterfact ID", "Masterfact URL", "Subfact ID", "Subfact URL", "Report ID", "Report URL"])
+        print(f"Generating {settings['ws11']['code']}")
         # Recommended flow figures added in reports
         ws11 = wb.create_sheet(settings['ws11']['code'])
         ws11.append([settings['ws11']['title']])
@@ -433,6 +447,7 @@ class Command(BaseCommand):
                 )
                 added_stock_row = added_stock_row + 1
 
+        print(f"Generating {settings['ws12']['code']}")
         # Triangulation stock and flow figures without start date
         ws12 = wb.create_sheet(settings['ws12']['code'])
         ws12.append([settings['ws12']['title']])
@@ -451,6 +466,7 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
+        print(f"Generating {settings['ws13']['code']}")
         # Triangulation flow figures without end date
         ws13 = wb.create_sheet(settings['ws13']['code'])
         ws13.append([settings['ws13']['title']])
@@ -471,6 +487,7 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
+        print(f"Generating {settings['ws14']['code']}")
         # Triangulation stock figures without end date
         ws14 = wb.create_sheet(settings['ws14']['code'])
         ws14.append([settings['ws14']['title']])
@@ -490,6 +507,7 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
+        print(f"Generating {settings['ws15']['code']}")
         # Triangulation flow figures where start date is greater than end date
         ws15 = wb.create_sheet(settings['ws15']['code'])
         ws15.append([settings['ws15']['title']])
@@ -512,6 +530,7 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
+        print(f"Generating {settings['ws16']['code']}")
         # Triangulation stock figures where start date is greater than end date
         ws16 = wb.create_sheet(settings['ws16']['code'])
         ws16.append([settings['ws16']['title']])
@@ -534,6 +553,7 @@ class Command(BaseCommand):
                 get_fact_url(id),
             )
 
+        print(f"Generating {settings['ws17']['code']}")
         # Triangulation stock and flow figures with small/large start/end dates
         ws17 = wb.create_sheet(settings['ws17']['code'])
         ws17.append([settings['ws17']['title']])
@@ -557,6 +577,7 @@ class Command(BaseCommand):
 
         all_reports = Report.objects.all()
 
+        print(f"Generating {settings['ws18']['code']}")
         # Old facts Delete and do not include items
         ws18 = wb.create_sheet(settings['ws18']['code'])
         ws18.append([settings['ws18']['title']])
@@ -575,6 +596,7 @@ class Command(BaseCommand):
                 fact_obj.name
             )
 
+        print(f"Generating {settings['ws19']['code']}")
         # Old documents Delete and do not include items
         ws19 = wb.create_sheet(settings['ws19']['code'])
         ws19.append([settings['ws19']['title']])
@@ -594,6 +616,7 @@ class Command(BaseCommand):
                 document_obj.name
             )
 
+        print(f"Generating {settings['ws20']['code']}")
         # Old events Delete and do not include items
         ws20 = wb.create_sheet(settings['ws20']['code'])
         ws20.append([settings['ws20']['title']])
@@ -614,6 +637,7 @@ class Command(BaseCommand):
                 event_obj.name,
             )
 
+        print(f"Generating {settings['ws21']['code']}")
         # Old Named GRID and MYU but not tagged as one
         # (https://github.com/idmc-labs/Helix2.0/issues/243#issuecomment-974207507)
         ws21 = wb.create_sheet(settings['ws21']['code'])
@@ -647,6 +671,7 @@ class Command(BaseCommand):
                 fact_obj.name
             )
 
+        print(f"Generating {settings['ws22']['code']}")
         # Old Facts that are both masterfact and subfact at the same time
         ws22 = wb.create_sheet(settings['ws22']['code'])
         ws22.append([settings['ws22']['title']])
@@ -665,6 +690,7 @@ class Command(BaseCommand):
                 get_document_url(id),
             )
 
+        print(f"Generating {settings['ws23']['code']}")
         # Events with small or large dates
         ws23 = wb.create_sheet(settings['ws23']['code'])
         ws23.append([settings['ws23']['title']])
@@ -687,6 +713,7 @@ class Command(BaseCommand):
                 reports_with_no_subfacts_count += 1
 
         # Summary page
+        print('Generating Summary Page')
         ws0.title = "summary"
         ws0.append(["Code", "Title", "Count", "Remarks"])
         ws0.append(
