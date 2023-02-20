@@ -16,7 +16,7 @@ from apps.entry.constants import STOCK, FLOW
 class QueryAbstractModel(models.Model):
     name = models.CharField(
         verbose_name=_('Name'),
-        max_length=128
+        max_length=1024
     )
     filter_figure_geographical_groups = models.ManyToManyField(
         'country.GeographicalGroup',
