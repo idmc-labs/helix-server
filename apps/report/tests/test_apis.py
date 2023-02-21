@@ -411,19 +411,18 @@ class TestReportFilter(HelixGraphQLTestCase):
     def test_report_should_list_entries_between_figure_start_date_and_figure_end_date(self):
         # Create entries such that report end date is between figure start
         # date and figure end date
-        for i in range(3):
+        for _ in range(3):
             entry = EntryFactory.create()
             FigureFactory.create(
                 entry=entry,
                 start_date=timezone.now() + timezone.timedelta(days=-15),
-                end_date=timezone.now() + timezone.timedelta(days=20),
+                end_date=timezone.now() + timezone.timedelta(days=-10),
                 category=self.category,
                 event=self.event
             )
-
-        # Creat reports where  reference point is not in renge
+        # Create reports where  reference point is not in range
         # Should exclude these figures
-        for i in range(2):
+        for _ in range(2):
             entry = EntryFactory.create()
             FigureFactory.create(
                 entry=entry,
@@ -463,7 +462,7 @@ class TestReportFilter(HelixGraphQLTestCase):
         self.assertEqual(figures_count, 3)
 
     def test_report_should_include_figures_without_end_date_in_range(self):
-        for i in range(3):
+        for _ in range(3):
             entry = EntryFactory.create()
             FigureFactory.create(
                 entry=entry,
@@ -472,9 +471,9 @@ class TestReportFilter(HelixGraphQLTestCase):
                 event=self.event,
             )
 
-        # Creat reports where reference point is not in renge
+        # Create reports where reference point is not in range
         # Should exclude these figures
-        for i in range(2):
+        for _ in range(2):
             entry = EntryFactory.create()
             FigureFactory.create(
                 entry=entry,
