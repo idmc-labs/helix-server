@@ -744,6 +744,22 @@ class Figure(MetaInformationArchiveAbstractModel,
         return qs
 
     @classmethod
+    def filtered_idp_figures_for_listing(
+        cls,
+        qs: QuerySet,
+        start_date,
+        end_date
+    ):
+        # NOTE: For the date range filter in table start_date and end_date is required arguments.
+        if start_date and end_date:
+            qs = qs.filter(
+                Q(end_date__lte=end_date, start_date__gte=start_date) |
+                Q(end_date__gte=start_date, start_date__lte=end_date) |
+                Q(start_date__gte=start_date, start_date__lte=end_date, end_date__isnull=True)
+            ).distinct()
+        return qs
+
+    @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
         from apps.extraction.filters import FigureExtractionFilterSet
 
