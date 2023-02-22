@@ -14,6 +14,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='disastersubtype',
             name='type',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sub_types', to='event.DisasterType', verbose_name='Disaster Type'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sub_types', to='event.DisasterType', verbose_name='Hazard Type'),
         ),
     ]

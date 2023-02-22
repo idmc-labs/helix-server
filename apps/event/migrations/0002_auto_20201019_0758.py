@@ -29,22 +29,22 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='disaster_category',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='event.DisasterCategory', verbose_name='Disaster Category'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='event.DisasterCategory', verbose_name='Hazard Category'),
         ),
         migrations.AddField(
             model_name='event',
             name='disaster_sub_category',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='event.DisasterSubCategory', verbose_name='Disaster Sub-Type'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='event.DisasterSubCategory', verbose_name='Hazard Sub-Type'),
         ),
         migrations.AddField(
             model_name='event',
             name='disaster_sub_type',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='event.DisasterSubType', verbose_name='Disaster Sub-Type'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='event.DisasterSubType', verbose_name='Hazard Sub-Type'),
         ),
         migrations.AddField(
             model_name='event',
             name='disaster_type',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='event.DisasterType', verbose_name='Disaster Type'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='event.DisasterType', verbose_name='Hazard Type'),
         ),
         migrations.AddField(
             model_name='event',
@@ -74,16 +74,16 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='disastertype',
             name='disaster_sub_category',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='types', to='event.DisasterSubCategory', verbose_name='Disaster Sub Category'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='types', to='event.DisasterSubCategory', verbose_name='Hazard Sub Category'),
         ),
         migrations.AddField(
             model_name='disastersubtype',
             name='type',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sub_types', to='event.DisasterType', verbose_name='Disaster Sub Type'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sub_types', to='event.DisasterType', verbose_name='Hazard Sub Type'),
         ),
         migrations.AddField(
             model_name='disastersubcategory',
             name='category',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sub_categories', to='event.DisasterCategory', verbose_name='Disaster Category'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='sub_categories', to='event.DisasterCategory', verbose_name='Hazard Category'),
         ),
     ]

@@ -14,21 +14,21 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='report',
             name='filter_event_disaster_categories',
-            field=models.ManyToManyField(blank=True, to='event.DisasterCategory', verbose_name='Disaster Category'),
+            field=models.ManyToManyField(blank=True, to='event.DisasterCategory', verbose_name='Hazard Category'),
         ),
         migrations.AddField(
             model_name='report',
             name='filter_event_disaster_sub_categories',
-            field=models.ManyToManyField(blank=True, to='event.DisasterSubCategory', verbose_name='Disaster Sub Category'),
+            field=models.ManyToManyField(blank=True, to='event.DisasterSubCategory', verbose_name='Hazard Sub Category'),
         ),
         migrations.AddField(
             model_name='report',
             name='filter_event_disaster_sub_types',
-            field=models.ManyToManyField(blank=True, to='event.DisasterSubType', verbose_name='Disaster Sub Type'),
+            field=models.ManyToManyField(blank=True, to='event.DisasterSubType', verbose_name='Hazard Sub Type'),
         ),
         migrations.AddField(
             model_name='report',
             name='filter_event_disaster_types',
-            field=models.ManyToManyField(blank=True, to='event.DisasterType', verbose_name='Disaster Type'),
+            field=models.ManyToManyField(blank=True, to='event.DisasterType', verbose_name='Hazard Type'),
         ),
     ]
