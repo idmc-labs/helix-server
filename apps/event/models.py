@@ -104,13 +104,13 @@ class Actor(MetaInformationAbstractModel, NameAttributedModels):
 
 class DisasterCategory(NameAttributedModels):
     """
-    Holds the possible disaster category choices
+    Holds the possible hazard category choices
     """
 
 
 class DisasterSubCategory(NameAttributedModels):
     """
-    Holds the possible disaster sub categories
+    Holds the possible hazard sub categories
     """
     category = models.ForeignKey('DisasterCategory', verbose_name=_('Hazard Category'),
                                  related_name='sub_categories', on_delete=models.CASCADE)
@@ -118,7 +118,7 @@ class DisasterSubCategory(NameAttributedModels):
 
 class DisasterType(NameAttributedModels):
     """
-    Holds the possible disaster types
+    Holds the possible hazard types
     """
     disaster_sub_category = models.ForeignKey('DisasterSubCategory',
                                               verbose_name=_('Hazard Sub Category'),
@@ -127,7 +127,7 @@ class DisasterType(NameAttributedModels):
 
 class DisasterSubType(NameAttributedModels):
     """
-    Holds the possible disaster sub types
+    Holds the possible hazard sub types
     """
     type = models.ForeignKey('DisasterType', verbose_name=_('Hazard Type'),
                              related_name='sub_types', on_delete=models.CASCADE)
