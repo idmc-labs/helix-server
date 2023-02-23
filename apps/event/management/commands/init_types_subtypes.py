@@ -48,14 +48,14 @@ class Command(BaseCommand):
                 else:
                     sub_category = DisasterSubCategory.objects.create(name=subcat, category=category)
                 for dtype in DISASTERS[cat][subcat]:
-                    # disaster types
+                    # hazard types
                     if DisasterType.objects.filter(name__iexact=dtype,
                                                    disaster_sub_category__name__iexact=sub_category.name).exists():
                         disaster_type = DisasterType.objects.get(
                             name__iexact=dtype, disaster_sub_category__name__iexact=sub_category.name)
                     else:
                         disaster_type = DisasterType.objects.create(name=dtype, disaster_sub_category=sub_category)
-                    # disaster sub types
+                    # hazard sub types
                     for dsubtype in DISASTERS[cat][subcat][dtype]:
                         if DisasterSubType.objects.filter(name__iexact=dsubtype,
                                                           type__name__iexact=disaster_type.name).exists():
@@ -63,15 +63,15 @@ class Command(BaseCommand):
                                 name__iexact=dsubtype, type__name__iexact=disaster_type.name)
                         else:
                             DisasterSubType.objects.create(name=dsubtype, type=disaster_type)
-        self.stdout.write(self.style.SUCCESS('Saved {} disaster categories.'.format(
+        self.stdout.write(self.style.SUCCESS('Saved {} hazard categories.'.format(
             DisasterCategory.objects.count(),
         )))
-        self.stdout.write(self.style.SUCCESS('Saved {} disaster sub categories.'.format(
+        self.stdout.write(self.style.SUCCESS('Saved {} hazard sub categories.'.format(
             DisasterSubCategory.objects.count(),
         )))
-        self.stdout.write(self.style.SUCCESS('Saved {} disaster types.'.format(
+        self.stdout.write(self.style.SUCCESS('Saved {} hazard types.'.format(
             DisasterType.objects.count(),
         )))
-        self.stdout.write(self.style.SUCCESS('Saved {} disaster sub types.'.format(
+        self.stdout.write(self.style.SUCCESS('Saved {} hazard sub types.'.format(
             DisasterSubType.objects.count(),
         )))

@@ -104,32 +104,32 @@ class Actor(MetaInformationAbstractModel, NameAttributedModels):
 
 class DisasterCategory(NameAttributedModels):
     """
-    Holds the possible disaster category choices
+    Holds the possible hazard category choices
     """
 
 
 class DisasterSubCategory(NameAttributedModels):
     """
-    Holds the possible disaster sub categories
+    Holds the possible hazard sub categories
     """
-    category = models.ForeignKey('DisasterCategory', verbose_name=_('Disaster Category'),
+    category = models.ForeignKey('DisasterCategory', verbose_name=_('Hazard Category'),
                                  related_name='sub_categories', on_delete=models.CASCADE)
 
 
 class DisasterType(NameAttributedModels):
     """
-    Holds the possible disaster types
+    Holds the possible hazard types
     """
     disaster_sub_category = models.ForeignKey('DisasterSubCategory',
-                                              verbose_name=_('Disaster Sub Category'),
+                                              verbose_name=_('Hazard Sub Category'),
                                               related_name='types', on_delete=models.CASCADE)
 
 
 class DisasterSubType(NameAttributedModels):
     """
-    Holds the possible disaster sub types
+    Holds the possible hazard sub types
     """
-    type = models.ForeignKey('DisasterType', verbose_name=_('Disaster Type'),
+    type = models.ForeignKey('DisasterType', verbose_name=_('Hazard Type'),
                              related_name='sub_types', on_delete=models.CASCADE)
 
 
@@ -177,16 +177,16 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                               blank=True, null=True,
                               related_name='events', on_delete=models.SET_NULL)
     # disaster related fields
-    disaster_category = models.ForeignKey('DisasterCategory', verbose_name=_('Disaster Category'),
+    disaster_category = models.ForeignKey('DisasterCategory', verbose_name=_('Hazard Category'),
                                           blank=True, null=True,
                                           related_name='events', on_delete=models.SET_NULL)
-    disaster_sub_category = models.ForeignKey('DisasterSubCategory', verbose_name=_('Disaster Sub Category'),
+    disaster_sub_category = models.ForeignKey('DisasterSubCategory', verbose_name=_('Hazard Sub Category'),
                                               blank=True, null=True,
                                               related_name='events', on_delete=models.SET_NULL)
-    disaster_type = models.ForeignKey('DisasterType', verbose_name=_('Disaster Type'),
+    disaster_type = models.ForeignKey('DisasterType', verbose_name=_('Hazard Type'),
                                       blank=True, null=True,
                                       related_name='events', on_delete=models.SET_NULL)
-    disaster_sub_type = models.ForeignKey('DisasterSubType', verbose_name=_('Disaster Sub Type'),
+    disaster_sub_type = models.ForeignKey('DisasterSubType', verbose_name=_('Hazard Sub Type'),
                                           blank=True, null=True,
                                           related_name='events', on_delete=models.SET_NULL)
 
@@ -373,11 +373,11 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             end_date='End Date',
             end_date_accuracy='End Date Accuracy',
             event_type='Event Cause',
-            disaster_category__name='Disaster Category',
-            disaster_sub_category__name='Disaster Sub Category',
-            disaster_type__name='Disaster Type',
-            disaster_sub_type__name='Disaster Sub Type',
-            disaster_sub_type='Diaster Sub Type Id',
+            disaster_category__name='Hazard Category',
+            disaster_sub_category__name='Hazard Sub Category',
+            disaster_type__name='Hazard Type',
+            disaster_sub_type__name='Hazard Sub Type',
+            disaster_sub_type='Hazard Sub Type Id',
             countries_iso3='ISO3',
             countries_name='Countries',
             regions_name='Regions',

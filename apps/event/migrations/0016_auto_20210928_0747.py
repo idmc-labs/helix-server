@@ -15,12 +15,12 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='event',
             name='disaster_sub_category',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='event.DisasterSubCategory', verbose_name='Disaster Sub Category'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='event.DisasterSubCategory', verbose_name='Hazard Sub Category'),
         ),
         migrations.AlterField(
             model_name='event',
             name='disaster_sub_type',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='event.DisasterSubType', verbose_name='Disaster Sub Type'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='events', to='event.DisasterSubType', verbose_name='Hazard Sub Type'),
         ),
         migrations.AlterField(
             model_name='event',

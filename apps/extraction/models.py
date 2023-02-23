@@ -121,22 +121,22 @@ class QueryAbstractModel(models.Model):
     )
     filter_figure_disaster_categories = models.ManyToManyField(
         'event.DisasterCategory',
-        verbose_name=_('Disaster Category'),
+        verbose_name=_('Hazard Category'),
         blank=True,
     )
     filter_figure_disaster_sub_categories = models.ManyToManyField(
         'event.DisasterSubCategory',
-        verbose_name=_('Disaster Sub Category'),
+        verbose_name=_('Hazard Sub Category'),
         blank=True,
     )
     filter_figure_disaster_types = models.ManyToManyField(
         'event.DisasterType',
-        verbose_name=_('Disaster Type'),
+        verbose_name=_('Hazard Type'),
         blank=True,
     )
     filter_figure_disaster_sub_types = models.ManyToManyField(
         'event.DisasterSubType',
-        verbose_name=_('Disaster Sub Type'),
+        verbose_name=_('Hazard Sub Type'),
         blank=True,
     )
     filter_figure_violence_types = models.ManyToManyField(

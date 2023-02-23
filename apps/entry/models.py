@@ -489,22 +489,22 @@ class Figure(MetaInformationArchiveAbstractModel,
         related_name='figures', on_delete=models.SET_NULL
     )
     disaster_category = models.ForeignKey(
-        'event.DisasterCategory', verbose_name=_('Figure Disaster Category'),
+        'event.DisasterCategory', verbose_name=_('Figure Hazard Category'),
         blank=True, null=True,
         related_name='figures', on_delete=models.SET_NULL
     )
     disaster_sub_category = models.ForeignKey(
-        'event.DisasterSubCategory', verbose_name=_('Figure Disaster Sub Category'),
+        'event.DisasterSubCategory', verbose_name=_('Figure Hazard Sub Category'),
         blank=True, null=True,
         related_name='figures', on_delete=models.SET_NULL
     )
     disaster_type = models.ForeignKey(
-        'event.DisasterType', verbose_name=_('Figure Disaster Type'),
+        'event.DisasterType', verbose_name=_('Figure Hazard Type'),
         blank=True, null=True,
         related_name='figures', on_delete=models.SET_NULL
     )
     disaster_sub_type = models.ForeignKey(
-        'event.DisasterSubType', verbose_name=_('Figure Disaster Sub Type'),
+        'event.DisasterSubType', verbose_name=_('Figure Hazard Sub Type'),
         blank=True, null=True,
         related_name='figures', on_delete=models.SET_NULL
     )
@@ -790,11 +790,11 @@ class Figure(MetaInformationArchiveAbstractModel,
             figure_link='Link',
             violence__name='Violence',
             violence_sub_type__name='Violence Sub Type',
-            disaster_type__name='Disaster Type',
-            disaster_sub_type__name='Disaster Sub Type',
+            disaster_type__name='Hazard Type',
+            disaster_sub_type__name='Hazard Sub Type',
             osv_sub_type__name="OSV Sub Type",
-            disaster_category__name='Disaster Category',
-            disaster_sub_category__name='Disaster Sub Category',
+            disaster_category__name='Hazard Category',
+            disaster_sub_category__name='Hazard Sub Category',
             source_excerpt='Source Excerpt',
             country__region__name='Region',
             event__start_date='Event Start Date',

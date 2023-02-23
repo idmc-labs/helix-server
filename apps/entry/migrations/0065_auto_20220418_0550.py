@@ -17,22 +17,22 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='figure',
             name='disaster_category',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='figures', to='event.DisasterCategory', verbose_name='Figure Disaster Category'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='figures', to='event.DisasterCategory', verbose_name='Figure Hazard Category'),
         ),
         migrations.AddField(
             model_name='figure',
             name='disaster_sub_category',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='figures', to='event.DisasterSubCategory', verbose_name='Figure Disaster Sub Category'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='figures', to='event.DisasterSubCategory', verbose_name='Figure Hazard Sub Category'),
         ),
         migrations.AddField(
             model_name='figure',
             name='disaster_sub_type',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='figures', to='event.DisasterSubType', verbose_name='Figure Disaster Sub Type'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='figures', to='event.DisasterSubType', verbose_name='Figure Hazard Sub Type'),
         ),
         migrations.AddField(
             model_name='figure',
             name='disaster_type',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='figures', to='event.DisasterType', verbose_name='Figure Disaster Type'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='figures', to='event.DisasterType', verbose_name='Figure Hazard Type'),
         ),
         migrations.AddField(
             model_name='figure',
