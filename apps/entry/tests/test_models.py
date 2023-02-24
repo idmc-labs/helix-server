@@ -34,6 +34,14 @@ class TestFigureModel(HelixTestCase):
         ref = datetime(year=2022, month=6, day=1)
         nd_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
         idp_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS.value
+
+        f0 = FigureFactory.create(
+            start_date=ref - timedelta(days=300),
+            end_date=ref + timedelta(days=100),
+            category=nd_cat,
+            role=Figure.ROLE.RECOMMENDED,
+            event=self.event,
+        )
         f1 = FigureFactory.create(
             start_date=ref - timedelta(days=300),
             end_date=ref + timedelta(days=300),
@@ -68,8 +76,11 @@ class TestFigureModel(HelixTestCase):
             start_date=ref,
             end_date=ref + timedelta(days=400),
         )
-
-        self.assertEqual(nd.count(), 3)
+        self.assertEqual(nd.count(), 4)
+        self.assertIn(f0, nd)
+        self.assertIn(f1, nd)
+        self.assertIn(f2, nd)
+        self.assertIn(f3, nd)
         self.assertNotIn(f4, nd)
 
         nd = Figure.filtered_nd_figures(
@@ -77,8 +88,11 @@ class TestFigureModel(HelixTestCase):
             start_date=ref,
             end_date=ref + timedelta(days=100),
         )
-        self.assertEqual(nd.count(), 2)
-
+        self.assertEqual(nd.count(), 3)
+        self.assertIn(f0, nd)
+        self.assertNotIn(f1, nd)
+        self.assertIn(f2, nd)
+        self.assertIn(f3, nd)
         self.assertNotIn(f4, nd)
 
         nd = Figure.filtered_nd_figures(
@@ -87,7 +101,22 @@ class TestFigureModel(HelixTestCase):
             end_date=ref + timedelta(days=60),
         )
         self.assertEqual(nd.count(), 2)
-        self.assertNotIn({f1, f2, f3}, set(nd))
+        self.assertNotIn(f0, nd)
+        self.assertNotIn(f1, nd)
+        self.assertIn(f2, nd)
+        self.assertIn(f3, nd)
+        self.assertNotIn(f4, nd)
+
+        nd = Figure.filtered_nd_figures(
+            qs=Figure.objects.all(),
+            start_date=ref - timedelta(days=15),
+            end_date=ref + timedelta(days=45),
+        )
+        self.assertEqual(nd.count(), 2)
+        self.assertNotIn(f0, nd)
+        self.assertNotIn(f1, nd)
+        self.assertIn(f2, nd)
+        self.assertIn(f3, nd)
         self.assertNotIn(f4, nd)
 
         nd = Figure.filtered_nd_figures(
@@ -95,17 +124,20 @@ class TestFigureModel(HelixTestCase):
             start_date=ref - timedelta(days=15),
             end_date=ref + timedelta(days=15),
         )
-        self.assertEqual(nd.count(), 1)
-        self.assertEqual(set(nd), {f2})
+        self.assertNotIn(f0, nd)
+        self.assertNotIn(f1, nd)
+        self.assertIn(f2, nd)
+        self.assertNotIn(f3, nd)
+        self.assertNotIn(f4, nd)
 
     def test_figure_idp_filtering(self):
-        ref = datetime.today()
-        # TODO: Add test for DISASTER as well, once the logic arrives
+        ref = datetime(year=2022, month=6, day=1)
         event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT)
 
         entry = EntryFactory.create()
         nd_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         idp_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS
+
         f1 = FigureFactory.create(
             entry=entry,
             start_date=ref - timedelta(days=30),
@@ -114,10 +146,10 @@ class TestFigureModel(HelixTestCase):
             role=Figure.ROLE.RECOMMENDED,
             event=event,
         )
-        FigureFactory.create(
+        f2 = FigureFactory.create(
             entry=entry,
             start_date=ref,
-            end_date=None,
+            end_date=ref + timedelta(days=365),
             category=idp_cat,
             role=Figure.ROLE.RECOMMENDED,
             event=event,
@@ -132,6 +164,14 @@ class TestFigureModel(HelixTestCase):
         )
         f4 = FigureFactory.create(
             entry=entry,
+            start_date=ref + timedelta(days=10),
+            end_date=ref + timedelta(days=20),
+            category=idp_cat,
+            role=Figure.ROLE.RECOMMENDED,
+            event=event,
+        )
+        f5 = FigureFactory.create(
+            entry=entry,
             start_date=ref + timedelta(days=1),
             end_date=ref + timedelta(days=2),
             category=nd_cat,  # THIS IS nd
@@ -144,22 +184,44 @@ class TestFigureModel(HelixTestCase):
             reference_point=ref,
         )
         self.assertEqual(idp.count(), 2)
-        self.assertNotIn(f4, idp)
+        self.assertIn(f1, idp)
+        self.assertIn(f2, idp)
         self.assertNotIn(f3, idp)
-
-        idp = Figure.filtered_idp_figures(
+        self.assertNotIn(f4, idp)
+        self.assertNotIn(f5, idp)
+        idp = Figure.filtered_idp_figures_for_listing(
             qs=Figure.objects.all(),
-            reference_point=ref,
+            start_date=ref,
+            end_date=ref,
         )
         self.assertEqual(idp.count(), 2)
+        self.assertIn(f1, idp)
+        self.assertIn(f2, idp)
         self.assertNotIn(f3, idp)
+        self.assertNotIn(f4, idp)
+        self.assertNotIn(f5, idp)
 
         idp = Figure.filtered_idp_figures(
             qs=Figure.objects.all(),
             reference_point=ref - timedelta(days=1),
         )
+        self.assertEqual(idp.count(), 1)
+        self.assertIn(f1, idp)
+        self.assertNotIn(f2, idp)
+        self.assertNotIn(f3, idp)
+        self.assertNotIn(f4, idp)
+        self.assertNotIn(f5, idp)
+        idp = Figure.filtered_idp_figures_for_listing(
+            qs=Figure.objects.all(),
+            start_date=ref - timedelta(days=1),
+            end_date=ref,
+        )
         self.assertEqual(idp.count(), 2)
         self.assertIn(f1, idp)
+        self.assertIn(f2, idp)
+        self.assertNotIn(f3, idp)
+        self.assertNotIn(f4, idp)
+        self.assertNotIn(f5, idp)
 
         idp = Figure.filtered_idp_figures(
             qs=Figure.objects.all(),
@@ -167,7 +229,21 @@ class TestFigureModel(HelixTestCase):
         )
         self.assertEqual(idp.count(), 2)
         self.assertNotIn(f1, idp)
+        self.assertIn(f2, idp)
+        self.assertIn(f3, idp)
         self.assertNotIn(f4, idp)
+        self.assertNotIn(f5, idp)
+        idp = Figure.filtered_idp_figures_for_listing(
+            qs=Figure.objects.all(),
+            start_date=ref,
+            end_date=ref + timedelta(days=30),
+        )
+        self.assertEqual(idp.count(), 4)
+        self.assertIn(f1, idp)
+        self.assertIn(f2, idp)
+        self.assertIn(f3, idp)
+        self.assertIn(f4, idp)
+        self.assertNotIn(f5, idp)
 
 
 class TestEntryModel(HelixTestCase):

@@ -569,36 +569,6 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     # methods
     @classmethod
-    def filtered_nd_figures(
-        cls,
-        qs: QuerySet,
-        start_date: Optional[date],
-        end_date: Optional[date] = None,
-    ):
-        year_difference = ExpressionWrapper(
-            ExtractYear('end_date') - ExtractYear('start_date'),
-            output_field=fields.IntegerField(),
-        )
-        qs = qs.annotate(year_difference=year_difference)
-
-        same_year_figures = qs.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-            year_difference__lt=1,
-        )
-        mutiple_year_figures = qs.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-            year_difference__gte=1,
-        )
-        if start_date:
-            same_year_figures = same_year_figures.filter(start_date__gte=start_date)
-            mutiple_year_figures = mutiple_year_figures.filter(end_date__gte=start_date)
-        if end_date:
-            same_year_figures = same_year_figures.filter(start_date__lte=end_date)
-            mutiple_year_figures = mutiple_year_figures.filter(end_date__lte=end_date)
-
-        return same_year_figures | mutiple_year_figures
-
-    @classmethod
     def annotate_stock_and_flow_dates(cls):
         return {
             'flow_start_date': Case(
@@ -720,6 +690,36 @@ class Figure(MetaInformationArchiveAbstractModel,
         ]
 
     @classmethod
+    def filtered_nd_figures(
+        cls,
+        qs: QuerySet,
+        start_date: Optional[date],
+        end_date: Optional[date] = None,
+    ):
+        year_difference = ExpressionWrapper(
+            ExtractYear('end_date') - ExtractYear('start_date'),
+            output_field=fields.IntegerField(),
+        )
+        qs = qs.annotate(year_difference=year_difference)
+
+        same_year_figures = qs.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+            year_difference__lt=1,
+        )
+        mutiple_year_figures = qs.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+            year_difference__gte=1,
+        )
+        if start_date:
+            same_year_figures = same_year_figures.filter(start_date__gte=start_date)
+            mutiple_year_figures = mutiple_year_figures.filter(end_date__gte=start_date)
+        if end_date:
+            same_year_figures = same_year_figures.filter(start_date__lte=end_date)
+            mutiple_year_figures = mutiple_year_figures.filter(end_date__lte=end_date)
+
+        return same_year_figures | mutiple_year_figures
+
+    @classmethod
     def filtered_idp_figures(
         cls,
         qs: QuerySet,
@@ -727,18 +727,12 @@ class Figure(MetaInformationArchiveAbstractModel,
     ):
         if not reference_point:
             return qs
+
         qs = qs.filter(
             Q(
-                # if end date does not exist, we must make sure that that figure started before given start date
-                end_date__isnull=True
-            ) | Q(
-                # if end date exists (=expired), we must make sure that expiry date is after the given end date,
-                # also figure started before the end date
-                end_date__isnull=False,
                 end_date__gte=reference_point,
                 start_date__lte=reference_point
             ),
-            # start_date__isnull=False,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
         )
         return qs
@@ -750,14 +744,17 @@ class Figure(MetaInformationArchiveAbstractModel,
         start_date,
         end_date
     ):
-        # NOTE: For the date range filter in table start_date and end_date is required arguments.
-        if start_date and end_date:
-            qs = qs.filter(
-                Q(end_date__lte=end_date, start_date__gte=start_date) |
-                Q(end_date__gte=start_date, start_date__lte=end_date) |
-                Q(start_date__gte=start_date, start_date__lte=end_date, end_date__isnull=True)
-            ).distinct()
-        return qs
+        start_check_qs = qs
+        if start_date:
+            start_check_qs = qs.filter(end_date__gte=start_date)
+
+        end_check_qs = qs
+        if end_date:
+            end_check_qs = qs.filter(start_date__lte=end_date)
+
+        return (start_check_qs & end_check_qs).filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
+        )
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
