@@ -65,7 +65,7 @@ class TestReportModel(HelixTestCase):
                          r.countries_report)
 
     def test_001_appropriate_typology_checks(self):
-        figure = FigureFactory.create(
+        FigureFactory.create(
             reported=200,
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             role=Figure.ROLE.RECOMMENDED,
@@ -73,9 +73,13 @@ class TestReportModel(HelixTestCase):
             disaggregation_conflict=100,
             disaggregation_conflict_political=100,
             event=self.event_conflict,
+            start_date='2019-02-01',
+            end_date='2019-04-01',
         )
-        report = ReportFactory.create(generated=False)
-        report.figures.add(figure)
+        report = ReportFactory.create(
+            filter_figure_start_after='2019-01-01',
+            filter_figure_end_before='2019-12-31',
+        )
         gen = ReportGeneration.objects.create(report=report)
 
         assert report.report_figures.count() == 1

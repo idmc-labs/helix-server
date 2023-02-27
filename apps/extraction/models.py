@@ -206,11 +206,11 @@ class QueryAbstractModel(models.Model):
         from apps.extraction.filters import FigureExtractionFilterSet
         return FigureExtractionFilterSet(data=self.get_filter_kwargs).qs
 
+    # FIXME: we may not need this anymore
     @property
     def extract_report_figures(self) -> ['Figure']:  # noqa
         """
-        Use this method in report only, end date is passed as reference point
-        in this method
+        Use this method in report only
         """
         from apps.extraction.filters import ReportFigureExtractionFilterSet
         return ReportFigureExtractionFilterSet(data=self.get_filter_kwargs).qs
