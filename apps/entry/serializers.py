@@ -139,7 +139,7 @@ class CommonFigureValidationMixin:
             # ignore iso2 validation if missing
             return errors
         for location in geo_locations:
-            # If location is moved manually allow to save location of other coutries
+            # If location is moved manually allow to save location of other countries
             # These locations are considered as problematic border issues
             moved = location.get("moved", False)
             if country_code not in Figure.SUPPORTED_OSMNAME_COUNTRY_CODES:
