@@ -27,10 +27,13 @@ class Command(BaseCommand):
             reader = csv.DictReader(input_file)
             osmname_response_error_list = []
             osmname_response = []
+            count = 0
+            error_count = 0
             for row in reader:
                 location_name = row['locations']
                 iso = row['iso']
                 for name in location_name.split(','):
+                    name = name.strip()
                     if iso and iso in Figure.SUPPORTED_OSMNAME_COUNTRY_CODES:
                         try:
                             osm_endpoint = requests.get(f'https://osmnames.idmcdb.org/{iso}/q/{name}.js')
@@ -57,13 +60,19 @@ class Command(BaseCommand):
                         osm_endpoint_response = osm_endpoint_response_json['results'][0]
                         osm_endpoint_response['uuid'] = uuid.uuid4()
                         osm_endpoint_response['id'] = row['id']
+                        osm_endpoint_response['query_string'] = name
+                        osm_endpoint_response['query_iso'] = iso or None
+                        count += 1
                         osmname_response.append(osm_endpoint_response)
                     else:
                         osmname_response_error = dict()
                         osmname_response_error['id'] = row['id']
                         osmname_response_error['location_name'] = name
+                        error_count += 1
                         osmname_response_error_list.append(osmname_response_error)
                     error_data = pd.DataFrame(osmname_response_error_list)
                     error_data.to_csv('location_error.csv', index=False)
                     data = pd.DataFrame(osmname_response)
                     data.to_csv('osmname.csv', index=False)
+                print(f'{count} Locations extracted')
+                print(f'{error_count} Locations extraction error')
