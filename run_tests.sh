@@ -9,7 +9,7 @@ if [ "$CI" == "true" ]; then
     ./manage.py test --keepdb -v 2 helix.tests
 
     # Now run all tests
-    COVERAGE_PROCESS_START=`pwd`/.coveragerc coverage run -m py.test --reuse-db --durations=10
+    COVERAGE_PROCESS_START=`pwd`/.coveragerc coverage run -m pytest --reuse-db --durations=10
 
     # Collect/Generate reports
     coverage report -i
