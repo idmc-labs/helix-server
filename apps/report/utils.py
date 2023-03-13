@@ -662,7 +662,7 @@ def report_disaster_event(report):
     ).values('event').order_by().annotate(
         event_id=F('event_id'),
         event_name=F('event__name'),
-        event_year=Extract('event__start_date', 'year'),
+        event_year=Extract('event__end_date', 'year'),
         event_start_date=F('event__start_date'),
         event_end_date=F('event__end_date'),
         event_category=F('event__disaster_category__name'),

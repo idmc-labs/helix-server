@@ -884,7 +884,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 filter=~Q(entry__publishers__name=''),
                 distinct=True
             ),
-            year=ExtractYear("start_date"),
+            year=ExtractYear("end_date"),
             context_of_violences=StringAgg('context_of_violence__name', '; ', distinct=True),
             tags_name=StringAgg('tags__name', '; ', distinct=True),
             sources_name=StringAgg('sources__name', '; ', distinct=True),
