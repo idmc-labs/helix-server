@@ -252,21 +252,7 @@ class Report(MetaInformationArchiveAbstractModel,
         }
 
     @property
-    def is_legacy(self):
-        # TODO: use generated_from after next migration
-        return self.generated_from or not self.generated
-
-    # FIXME: we need to use dataloader
-    @property
-    def attached_figures(self):
-        figures_ids = (Report.objects.filter(id=self.id) |
-                       Report.objects.get(id=self.id).masterfact_reports.all()).values('figures')
-        return Figure.objects.filter(id__in=figures_ids)
-
-    @property
     def report_figures(self):
-        if self.is_legacy:
-            return self.attached_figures
         return self.extract_report_figures
 
     @property

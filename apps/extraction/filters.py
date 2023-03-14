@@ -622,8 +622,8 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         flow_qs = Figure.filtered_nd_figures(
             queryset, start_date, end_date
         )
-        stock_qs = Figure.filtered_idp_figures(
-            queryset, reference_point=end_date
+        stock_qs = Figure.filtered_idp_figures_for_listing(
+            queryset, start_date, end_date
         )
         return flow_qs | stock_qs
 
@@ -650,8 +650,8 @@ class ReportFigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         flow_qs = Figure.filtered_nd_figures(
             queryset, start_date, end_date
         )
-        stock_qs = Figure.filtered_idp_figures(
-            queryset, reference_point=end_date
+        stock_qs = Figure.filtered_idp_figures_for_listing(
+            queryset, start_date, end_date
         )
         return flow_qs | stock_qs
 

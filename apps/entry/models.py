@@ -727,21 +727,34 @@ class Figure(MetaInformationArchiveAbstractModel,
     ):
         if not reference_point:
             return qs
+
         qs = qs.filter(
             Q(
-                # if end date does not exist, we must make sure that that figure started before given start date
-                end_date__isnull=True
-            ) | Q(
-                # if end date exists (=expired), we must make sure that expiry date is after the given end date,
-                # also figure started before the end date
-                end_date__isnull=False,
                 end_date__gte=reference_point,
                 start_date__lte=reference_point
             ),
-            # start_date__isnull=False,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
         )
         return qs
+
+    @classmethod
+    def filtered_idp_figures_for_listing(
+        cls,
+        qs: QuerySet,
+        start_date,
+        end_date
+    ):
+        start_check_qs = qs
+        if start_date:
+            start_check_qs = qs.filter(end_date__gte=start_date)
+
+        end_check_qs = qs
+        if end_date:
+            end_check_qs = qs.filter(start_date__lte=end_date)
+
+        return (start_check_qs & end_check_qs).filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
+        )
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
@@ -871,7 +884,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 filter=~Q(entry__publishers__name=''),
                 distinct=True
             ),
-            year=ExtractYear("start_date"),
+            year=ExtractYear("end_date"),
             context_of_violences=StringAgg('context_of_violence__name', '; ', distinct=True),
             tags_name=StringAgg('tags__name', '; ', distinct=True),
             sources_name=StringAgg('sources__name', '; ', distinct=True),

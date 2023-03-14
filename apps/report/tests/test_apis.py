@@ -411,19 +411,18 @@ class TestReportFilter(HelixGraphQLTestCase):
     def test_report_should_list_entries_between_figure_start_date_and_figure_end_date(self):
         # Create entries such that report end date is between figure start
         # date and figure end date
-        for i in range(3):
+        for _ in range(3):
             entry = EntryFactory.create()
             FigureFactory.create(
                 entry=entry,
                 start_date=timezone.now() + timezone.timedelta(days=-15),
-                end_date=timezone.now() + timezone.timedelta(days=20),
+                end_date=timezone.now() + timezone.timedelta(days=-10),
                 category=self.category,
                 event=self.event
             )
-
-        # Creat reports where  reference point is not in renge
+        # Create reports where  reference point is not in range
         # Should exclude these figures
-        for i in range(2):
+        for _ in range(2):
             entry = EntryFactory.create()
             FigureFactory.create(
                 entry=entry,
@@ -461,69 +460,6 @@ class TestReportFilter(HelixGraphQLTestCase):
         figures = response.json()
         figures_count = figures["data"]["report"]["figuresReport"]["totalCount"]
         self.assertEqual(figures_count, 3)
-
-    def test_report_should_include_figures_without_end_date_in_range(self):
-        for i in range(3):
-            entry = EntryFactory.create()
-            FigureFactory.create(
-                entry=entry,
-                start_date=timezone.now() + timezone.timedelta(days=-15),
-                category=self.category,
-                event=self.event,
-            )
-
-        # Creat reports where reference point is not in renge
-        # Should exclude these figures
-        for i in range(2):
-            entry = EntryFactory.create()
-            FigureFactory.create(
-                entry=entry,
-                start_date=timezone.now() + timezone.timedelta(days=50),
-                end_date=timezone.now() + timezone.timedelta(days=50),
-                category=self.category,
-                event=self.event,
-            )
-
-        response = self.query(
-            self.create_report,
-            input_data=self.input,
-        )
-        report = response.json()
-        report_id = report["data"]["createReport"]["result"]["id"]
-
-        saved_report = Report.objects.get(pk=report_id)
-        self.assertEqual(saved_report.report_figures.count(), 3)
-
-        self.assertEqual(
-            Figure.filtered_idp_figures(
-                Figure.objects.all(), self.input['filterFigureEndBefore'],
-            ).count(),
-            3,
-        )
-
-        # Test for entries
-        response = self.query(
-            self.entries_report_query,
-            variables=dict(
-                id=str(report_id),
-            )
-        )
-        entries = response.json()
-        entries_count = entries["data"]["report"]["entriesReport"]["totalCount"]
-        self.assertEqual(len(entries["data"]["report"]["entriesReport"]["results"]), 3)
-        self.assertEqual(entries_count, 3)
-
-        # Test for figures
-        response = self.query(
-            self.figures_report_query,
-            variables=dict(
-                id=str(report_id),
-            )
-        )
-        figures = response.json()
-        self.assertEqual(len(figures["data"]["report"]["figuresReport"]["results"]), 3)
-        entries_count = figures["data"]["report"]["figuresReport"]["totalCount"]
-        self.assertEqual(entries_count, 3)
 
 
 class TestPrivatePublicReports(HelixGraphQLTestCase):
