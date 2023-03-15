@@ -793,6 +793,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             centroid='Centroid',
             centroid_lat='Lat',  # Newly added but related to centroid
             centroid_lon='Lon',  # Newly added but related to centroid
+            geolocation_list="Location List",
             include_idu='Include in IDU',
             excerpt_idu='Excerpt IDU',
             publishers_name='Publishers',
@@ -908,6 +909,12 @@ class Figure(MetaInformationArchiveAbstractModel,
                     )
                 ),
                 default=Value('')
+            ),
+            geolocation_list=ArrayAgg(
+                Concat(
+                    models.F('geo_locations__lat'), Value(', '), F('geo_locations__lat'),
+                    output_field=models.CharField()
+                ), filters=models.Q(geo_locations__isnull=False)
             )
         ).order_by(
             'created_at',
