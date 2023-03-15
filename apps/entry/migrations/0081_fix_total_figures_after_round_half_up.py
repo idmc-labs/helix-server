@@ -18,7 +18,7 @@ class Migration(migrations.Migration):
             reported__isnull=False,
             unit=1 # Figure.UNIT.HOUSEHOLD
         ):
-            total_figures = round_half_up(Decimal(figure.household_size) * figure.reported)
+            total_figures = round_half_up(Decimal(str(figure.household_size)) * figure.reported)
             if figure.total_figures != total_figures:
                 figure.total_figures = total_figures
                 figure.save()
