@@ -7,6 +7,7 @@ class Migration(migrations.Migration):
     def fix_total_figures(apps, schema_editor):
 
         # Import util
+        from decimal import Decimal
         from utils.common import round_half_up
 
         # Import model
@@ -17,7 +18,7 @@ class Migration(migrations.Migration):
             reported__isnull=False,
             unit=1 # Figure.UNIT.HOUSEHOLD
         ):
-            total_figures = round_half_up(figure.household_size * figure.reported)
+            total_figures = round_half_up(Decimal(figure.household_size) * figure.reported)
             if figure.total_figures != total_figures:
                 figure.total_figures = total_figures
                 figure.save()
