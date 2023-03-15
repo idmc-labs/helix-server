@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from copy import copy
+from decimal import Decimal
 
 from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
@@ -265,7 +266,7 @@ class CommonFigureValidationMixin:
 
         total_figures = 0
         if unit == Figure.UNIT.HOUSEHOLD:
-            total_figures = round_half_up(reported * household_size)
+            total_figures = round_half_up(reported * Decimal(str(household_size)))
         else:
             total_figures = reported
         _attrs['total_figures'] = total_figures
