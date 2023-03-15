@@ -14,7 +14,8 @@ class Migration(migrations.Migration):
         Figure = apps.get_model('entry', 'Figure')
 
         # Taken from github issue
-        event_ids = [
+        # https://github.com/idmc-labs/helix2.0-meta/issues/324
+        old_event_ids = [
             11,
             137,
             156,
@@ -78,22 +79,31 @@ class Migration(migrations.Migration):
             12267,
             12532,
         ]
-        extreme_temprature_type = DisasterType.objects.filter(name='Extreme Temperature').first()
-        cold_wave_sub_type = DisasterSubType.objects.filter(name='Cold wave').first()
-        meteorological_sub_category = DisasterSubCategory.objects.filter(name='Meteorological').first()
+
+
+        event_qs = Event.objects.filter(old_id__in=old_event_ids)
+        if event_qs.count() == 0:
+            # Skip migration if there are no events in the system
+            print('Skipping data migration...')
+            return
+
+        extreme_temprature_type = DisasterType.objects.get(name='Extreme Temperature')
+        cold_wave_sub_type = DisasterSubType.objects.get(name='Cold wave')
+        meteorological_sub_category = DisasterSubCategory.objects.get(name='Meteorological')
 
         # Update event that were migrated wrong
-        Event.objects.filter(id__in=event_ids).update(
+        event_qs.update(
             disaster_type=extreme_temprature_type,
             disaster_sub_type=cold_wave_sub_type,
             disaster_sub_category=meteorological_sub_category,
         )
         # Update figures that were migrated wrong
-        Figure.objects.filter(event_id__in=event_ids).update(
+        Figure.objects.filter(event__in=event_qs).update(
             disaster_type=extreme_temprature_type,
             disaster_sub_type=cold_wave_sub_type,
             disaster_sub_category=meteorological_sub_category,
         )
+
 
     dependencies = [
         ('event', '0030_auto_20230216_0726'),
