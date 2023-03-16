@@ -909,16 +909,15 @@ class Figure(MetaInformationArchiveAbstractModel,
                 Concat(
                     models.F('geo_locations__lat'), Value(', '), F('geo_locations__lon'),
                     output_field=models.CharField()
-                ),
-                filter=models.Q(geo_locations__isnull=False)
+                ), filter=models.Q(geo_locations__isnull=False)
             ),
         ).annotate(
             geolocation_list=StringAgg(
                 Concat(
-                    models.F('geo_locations__lat'), Value(', '), F('geo_locations__lon'),
+                    models.F('geo_locations__lat'), Value(','), F('geo_locations__lon'),
                     output_field=models.CharField()
                 ),
-                ';',
+                '; ',
                 filter=models.Q(geo_locations__isnull=False)
             ),
         ).order_by(
@@ -939,11 +938,12 @@ class Figure(MetaInformationArchiveAbstractModel,
                 if geo_locations:
                     lat_long_list = []
                     for geo_location in geo_locations:
-                        geo_location_list = geo_location.split(',')
+                        geo_location_list = geo_location.strip().split(',')
                         lat = geo_location_list[0]
                         long = geo_location_list[1]
                         lat_long_list.append((lat, long))
-                    return json.dumps(mapping(MultiPoint(lat_long_list).centroid)['coordinates'])
+                    coordinates = json.dumps(mapping(MultiPoint(lat_long_list).centroid)['coordinates'])
+                    return coordinates.replace('[', '').replace(']', '')
                 return ''
 
             return {
