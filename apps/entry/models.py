@@ -1,9 +1,14 @@
 import re
+import json
+
 from collections import OrderedDict
 from datetime import date
 import logging
 from typing import Optional
 from uuid import uuid4
+from shapely import MultiPoint
+from shapely.geometry import mapping
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.aggregates.general import StringAgg, ArrayAgg
@@ -768,6 +773,7 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     @classmethod
     def get_figure_excel_sheets_data(cls, figures):
+
         from apps.crisis.models import Crisis
         headers = OrderedDict(
             id='Id',
@@ -793,7 +799,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             centroid='Centroid',
             centroid_lat='Lat',  # Newly added but related to centroid
             centroid_lon='Lon',  # Newly added but related to centroid
-            geolocation_list="Location List",
+            geolocation_list='Location List',
             include_idu='Include in IDU',
             excerpt_idu='Excerpt IDU',
             publishers_name='Publishers',
@@ -843,8 +849,8 @@ class Figure(MetaInformationArchiveAbstractModel,
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
             **Figure.annotate_sources_reliability(),
-            centroid_lat=Avg('geo_locations__lat'),
-            centroid_lon=Avg('geo_locations__lon'),
+            centroid_lat=models.Avg('geo_locations__lat'),
+            centroid_lon=models.Avg('geo_locations__lon'),
             entry_url_or_document_url=models.Case(
                 models.When(
                     entry__document__isnull=False,
@@ -898,24 +904,22 @@ class Figure(MetaInformationArchiveAbstractModel,
             geo_locations_identifier=ArrayAgg(
                 Cast('geo_locations__identifier', models.IntegerField()),
                 distinct=True, filter=Q(geo_locations__identifier__isnull=False)
-            )
-        ).annotate(
-            centroid=models.Case(
-                models.When(
-                    centroid_lat__isnull=False,
-                    then=Concat(
-                        F('centroid_lat'), Value(', '), F('centroid_lon'),
-                        output_field=models.CharField()
-                    )
-                ),
-                default=Value('')
             ),
-            geolocation_list=ArrayAgg(
+            centroid=ArrayAgg(
                 Concat(
-                    models.F('geo_locations__lat'), Value(', '), F('geo_locations__lat'),
+                    models.F('geo_locations__lat'), Value(', '), F('geo_locations__lon'),
                     output_field=models.CharField()
                 ), filters=models.Q(geo_locations__isnull=False)
-            )
+            ),
+        ).annotate(
+            geolocation_list=StringAgg(
+                Concat(
+                    models.F('geo_locations__lat'), Value(', '), F('geo_locations__lon'),
+                    output_field=models.CharField()
+                ),
+                ';',
+                filters=models.Q(geo_locations__isnull=False)
+            ),
         ).order_by(
             'created_at',
         ).values(*[header for header in headers.keys()])
@@ -929,6 +933,17 @@ class Figure(MetaInformationArchiveAbstractModel,
                 if len(document_name) == 0 or document_name[0] == url:
                     return ''
                 return document_name[0]
+
+            def get_centroid(geo_locations):
+                if geo_locations:
+                    lat_long_list = []
+                    for geo_location in geo_locations:
+                        geo_location_list = geo_location.split(',')
+                        lat = geo_location_list[0]
+                        long = geo_location_list[1]
+                        lat_long_list.append((lat, long))
+                    return json.dumps(mapping(MultiPoint(lat_long_list).centroid)['coordinates'])
+                return ''
 
             return {
                 **datum,
@@ -952,6 +967,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ]),
                 'sources_reliability': getattr(Figure.SOURCES_RELIABILITY.get(datum['sources_reliability']), 'label', ''),
                 'source_document': get_document_name_from_url(datum['source_document']),
+                'centroid': get_centroid(datum['centroid'])
             }
 
         return {
