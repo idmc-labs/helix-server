@@ -775,74 +775,91 @@ class Figure(MetaInformationArchiveAbstractModel,
         from apps.crisis.models import Crisis
         headers = OrderedDict(
             id='Id',
+            old_id='Old Id',
             created_at='Created at',
-            created_by__full_name='Created by',
+            modified_at='Last modifield at',
             country__iso3='ISO3',
+            country__name='Country',
+            country__region__name='Region',
+            # TODO: geographcal_regions ??
             figure_cause='Figure cause',
+            year='Year',
+            category='Figure Category',
+            role='Figure Role',
             total_figures='Total figures',
+            reported='Reported',
             term='Figure term',
-            stock_date='Stock date',
-            stock_date_accuracy='Stock date accuracy',
-            stock_reporting_date='Stock reporting date',
+            unit='Unit',
+            quantifier='Quantifier',
+            household_size='Household Size',
+            is_housing_destruction='Is housing destruction',
+            displacement_occurred='Displacement Occurred',
+            include_idu='Include in IDU',
+            excerpt_idu='Excerpt IDU',
+            violence__name='Violence',
+            violence_sub_type__name='Violence Sub Type',
+            osv_sub_type__name="OSV Sub Type",
+            context_of_violences='Context of violences',
+            disaster_category__name='Hazard Category',
+            disaster_sub_category__name='Hazard Sub Category',
+            disaster_type__name='Hazard Type',
+            disaster_sub_type__name='Hazard Sub Type',
+            event__other_sub_type__name='Other Event Sub Type',
             flow_start_date='Start date',
             flow_start_date_accuracy='Start date accuracy',
             flow_end_date='End date',
             flow_end_date_accuracy='End date accuracy',
-            role='Figure Role',
-            event__id='Event Id',
-            year='Year',
-            entry_id='Entry Id',
-            event__name='Event Name',
+            stock_date='Stock date',
+            stock_date_accuracy='Stock date accuracy',
+            stock_reporting_date='Stock reporting date',
+            calculation_logic='Analysis and Calculation Logic',
+            figure_link='Link',
+            publishers_name='Publishers',
             sources_name='Sources',
+            sources_type='Sources Types',
+            sources_reliability='Sources reliability',
+            sources_methodology='Sources methodology',
+            source_excerpt='Sources Excerpt',
+            entry_url_or_document_url='Source url',
+            source_document='Source document',
+            geolocations='Locations names',
             centroid='Centroid',
             centroid_lat='Lat',  # Newly added but related to centroid
             centroid_lon='Lon',  # Newly added but related to centroid
             geolocation_list='Location List',
-            include_idu='Include in IDU',
-            excerpt_idu='Excerpt IDU',
-            publishers_name='Publishers',
-            figure_link='Link',
-            violence__name='Violence',
-            violence_sub_type__name='Violence Sub Type',
-            disaster_type__name='Hazard Type',
-            disaster_sub_type__name='Hazard Sub Type',
-            osv_sub_type__name="OSV Sub Type",
-            disaster_category__name='Hazard Category',
-            disaster_sub_category__name='Hazard Sub Category',
-            source_excerpt='Source Excerpt',
-            country__region__name='Region',
-            event__start_date='Event Start Date',
-            reported='Reported',
+            # TODO: sex ??
+            geo_locations_identifier='Type of point',
+            entry__id='Entry Id',
+            entry__old_id='Entry Old Id',
+            entry__article_title='Entry Title',
+            entry_link='Entry link',
             disaggregation_displacement_urban='Displacement: Urban',
             disaggregation_displacement_rural='Displacement: Rural',
             disaggregation_location_camp='Location: Camp',
             disaggregation_location_non_camp='Location: Non-Camp',
-            # Extra added fields
-            old_id='Old Id',
-            entry_url_or_document_url='Source url',
-            source_document='Source document',
-            entry_link='Entry link',
-            country__idmc_short_name='Country',
-            entry__old_id='Entry Old Id',
-            unit='Unit',
-            quantifier='Quantifier',
-            household_size='Household Size',
-            category='Figure Category',
-            displacement_occurred='Displacement Occurred',
-            geolocations='Locations names',
-            is_housing_destruction='Is housing destruction',
-            tags_name='Tags',
-            calculation_logic='Analysis and Calculation Logic',
-            geo_locations_identifier='Type of point',
+            # TODO: gender ???
+            # TODO: age ???
             disaggregation_disability='Disability',
             disaggregation_indigenous_people='Indigenous People',
-            entry__article_title='Entry Title',
-            event__crisis_id='Crisis Id',
+            event__id='Event Id',
             event__old_id='Event Old Id',
+            event__name='Event Name',
+            event__glide_numbers='Event Code',
+            event__event_type='Event Cause',
+            # TODO: event main trigger ??
+            event__start_date='Event Start Date',
+            event__end_date='Event End Date',
+            event__start_date_accuracy='Event start date accuracy',
+            event__end_date_accuracy='Event End date accuracy',
+            # TODO: Event tag ??
+            event__event_narrative='Event Narrative',
+            event__crisis_id='Crisis Id',
             event__crisis__name='Crisis Name',
-            event__other_sub_type__name='Other Event Sub Type',
-            context_of_violences='Context of violences',
-            sources_reliability='Sources reliability'
+            tags_name='Tags',
+            # TODO: has_age_disaggregated_data
+            # TODO: revision_progress
+            event__assignee__full_name='Assignee',
+            created_by__full_name='Created by',
         )
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
@@ -887,18 +904,35 @@ class Figure(MetaInformationArchiveAbstractModel,
                 '; ',
                 filter=~Q(
                     Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name='')
-                ), distinct=True
+                ), distinct=True, output_field=models.CharField()
             ),
             publishers_name=StringAgg(
                 'entry__publishers__name',
                 '; ',
                 filter=~Q(entry__publishers__name=''),
-                distinct=True
+                distinct=True, output_field=models.CharField()
             ),
             year=ExtractYear("end_date"),
-            context_of_violences=StringAgg('context_of_violence__name', '; ', distinct=True),
-            tags_name=StringAgg('tags__name', '; ', distinct=True),
-            sources_name=StringAgg('sources__name', '; ', distinct=True),
+            context_of_violences=StringAgg(
+                'context_of_violence__name', '; ',
+                distinct=True, output_field=models.CharField()
+            ),
+            tags_name=StringAgg(
+                'tags__name', '; ',
+                distinct=True, output_field=models.CharField()
+            ),
+            sources_name=StringAgg(
+                'sources__name', '; ',
+                distinct=True, output_field=models.CharField()
+            ),
+            sources_type=StringAgg(
+                'sources__organization_kind__name', '; ',
+                distinct=True, output_field=models.CharField()
+            ),
+            sources_methodology=StringAgg(
+                'sources__methodology', '; ',
+                distinct=True, output_field=models.CharField()
+            ),
             geo_locations_identifier=ArrayAgg(
                 Cast('geo_locations__identifier', models.IntegerField()),
                 distinct=True, filter=Q(geo_locations__identifier__isnull=False)
@@ -916,6 +950,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 '; ',
                 filter=models.Q(geo_locations__isnull=False),
+                output_field=models.CharField(),
                 distinct=True,
             ),
         ).order_by(
@@ -931,6 +966,11 @@ class Figure(MetaInformationArchiveAbstractModel,
                 if len(document_name) == 0 or document_name[0] == url:
                     return ''
                 return document_name[0]
+
+            def format_glide_numbers(glide_numbers):
+                if not glide_numbers:
+                    return ''
+                return get_string_from_list(str(glide_number) for glide_number in glide_numbers)
 
             return {
                 **datum,
@@ -954,7 +994,11 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ]),
                 'sources_reliability': getattr(Figure.SOURCES_RELIABILITY.get(datum['sources_reliability']), 'label', ''),
                 'source_document': get_document_name_from_url(datum['source_document']),
-                'centroid': datum['centroid']
+                'centroid': datum['centroid'],
+                'event__glide_numbers': format_glide_numbers(datum['event__glide_numbers']),
+                'event__event_type': getattr(Crisis.CRISIS_TYPE.get(datum['event__event_type']), 'name', ''),
+                'event__start_date_accuracy': getattr(DATE_ACCURACY.get(datum['event__start_date_accuracy']), 'label', ''),
+                'event__end_date_accuracy': getattr(DATE_ACCURACY.get(datum['event__end_date_accuracy']), 'label', ''),
             }
 
         return {
