@@ -909,7 +909,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                 Concat(
                     models.F('geo_locations__lat'), Value(', '), F('geo_locations__lon'),
                     output_field=models.CharField()
-                ), filters=models.Q(geo_locations__isnull=False)
+                ),
+                filter=models.Q(geo_locations__isnull=False)
             ),
         ).annotate(
             geolocation_list=StringAgg(
@@ -918,7 +919,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                     output_field=models.CharField()
                 ),
                 ';',
-                filters=models.Q(geo_locations__isnull=False)
+                filter=models.Q(geo_locations__isnull=False)
             ),
         ).order_by(
             'created_at',
