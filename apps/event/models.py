@@ -261,7 +261,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                         event=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
-                    reference_point=timezone.now().date(),
+                    start_date=None,
+                    end_date=timezone.now().date(),
                 ).order_by().values('event').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],

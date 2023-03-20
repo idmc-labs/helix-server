@@ -181,11 +181,12 @@ class TestFigureModel(HelixTestCase):
 
         idp = Figure.filtered_idp_figures(
             qs=Figure.objects.all(),
-            reference_point=ref,
+            start_date=ref,
+            end_date=ref,
         )
-        self.assertEqual(idp.count(), 2)
+        self.assertEqual(idp.count(), 1)
         self.assertIn(f1, idp)
-        self.assertIn(f2, idp)
+        self.assertNotIn(f2, idp)
         self.assertNotIn(f3, idp)
         self.assertNotIn(f4, idp)
         self.assertNotIn(f5, idp)
@@ -194,16 +195,17 @@ class TestFigureModel(HelixTestCase):
             start_date=ref,
             end_date=ref,
         )
-        self.assertEqual(idp.count(), 2)
+        self.assertEqual(idp.count(), 1)
         self.assertIn(f1, idp)
-        self.assertIn(f2, idp)
+        self.assertNotIn(f2, idp)
         self.assertNotIn(f3, idp)
         self.assertNotIn(f4, idp)
         self.assertNotIn(f5, idp)
 
         idp = Figure.filtered_idp_figures(
             qs=Figure.objects.all(),
-            reference_point=ref - timedelta(days=1),
+            start_date=ref - timedelta(days=1),
+            end_date=ref,
         )
         self.assertEqual(idp.count(), 1)
         self.assertIn(f1, idp)
@@ -216,21 +218,22 @@ class TestFigureModel(HelixTestCase):
             start_date=ref - timedelta(days=1),
             end_date=ref,
         )
-        self.assertEqual(idp.count(), 2)
+        self.assertEqual(idp.count(), 1)
         self.assertIn(f1, idp)
-        self.assertIn(f2, idp)
+        self.assertNotIn(f2, idp)
         self.assertNotIn(f3, idp)
         self.assertNotIn(f4, idp)
         self.assertNotIn(f5, idp)
 
         idp = Figure.filtered_idp_figures(
             qs=Figure.objects.all(),
-            reference_point=ref + timedelta(days=30),
+            start_date=ref,
+            end_date=ref + timedelta(days=30),
         )
-        self.assertEqual(idp.count(), 2)
+        self.assertEqual(idp.count(), 0)
         self.assertNotIn(f1, idp)
-        self.assertIn(f2, idp)
-        self.assertIn(f3, idp)
+        self.assertNotIn(f2, idp)
+        self.assertNotIn(f3, idp)
         self.assertNotIn(f4, idp)
         self.assertNotIn(f5, idp)
         idp = Figure.filtered_idp_figures_for_listing(
@@ -238,10 +241,10 @@ class TestFigureModel(HelixTestCase):
             start_date=ref,
             end_date=ref + timedelta(days=30),
         )
-        self.assertEqual(idp.count(), 4)
+        self.assertEqual(idp.count(), 2)
         self.assertIn(f1, idp)
-        self.assertIn(f2, idp)
-        self.assertIn(f3, idp)
+        self.assertNotIn(f2, idp)
+        self.assertNotIn(f3, idp)
         self.assertIn(f4, idp)
         self.assertNotIn(f5, idp)
 
