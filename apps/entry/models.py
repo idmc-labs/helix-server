@@ -723,38 +723,33 @@ class Figure(MetaInformationArchiveAbstractModel,
     def filtered_idp_figures(
         cls,
         qs: QuerySet,
-        reference_point: Optional[date] = None,
+        start_date: Optional[date],
+        end_date: Optional[date] = None,
     ):
-        if not reference_point:
-            return qs
-
         qs = qs.filter(
-            Q(
-                end_date__gte=reference_point,
-                start_date__lte=reference_point
-            ),
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
         )
+        if start_date:
+            qs = qs.filter(end_date__gte=start_date)
+        if end_date:
+            qs = qs.filter(end_date=end_date)
         return qs
 
     @classmethod
     def filtered_idp_figures_for_listing(
         cls,
         qs: QuerySet,
-        start_date,
-        end_date
+        start_date: Optional[date],
+        end_date: Optional[date] = None,
     ):
-        start_check_qs = qs
-        if start_date:
-            start_check_qs = qs.filter(end_date__gte=start_date)
-
-        end_check_qs = qs
-        if end_date:
-            end_check_qs = qs.filter(start_date__lte=end_date)
-
-        return (start_check_qs & end_check_qs).filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
+        qs = qs.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
         )
+        if start_date:
+            qs = qs.filter(end_date__gte=start_date)
+        if end_date:
+            qs = qs.filter(end_date__lte=end_date)
+        return qs
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
@@ -1155,7 +1150,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                         entry=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
-                    reference_point=timezone.now().date(),
+                    start_date=None,
+                    end_date=timezone.now().date(),
                 ).order_by().values('entry').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],

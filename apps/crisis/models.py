@@ -73,7 +73,8 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                         event__crisis=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
-                    reference_point=timezone.now().date(),
+                    start_date=None,
+                    end_date=timezone.now().date(),
                 ).order_by().values('event__crisis').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],

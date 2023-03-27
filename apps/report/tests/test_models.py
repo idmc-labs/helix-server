@@ -57,7 +57,7 @@ class TestReportModel(HelixTestCase):
         f2.category = Figure.FIGURE_CATEGORY_TYPES.IDPS
         f2.save()
         r = Report(filter_figure_start_after=f1.start_date,
-                   filter_figure_end_before=f1.end_date - timedelta(days=1))
+                   filter_figure_end_before=f1.end_date)
         r.save()
         assert r.report_figures.count() == 1
         self.assertEqual(r.countries_report[0].total_stock_conflict,
