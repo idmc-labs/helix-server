@@ -1,4 +1,4 @@
-FROM python:3.8.16-bullseye
+FROM python:3.10-bullseye
 
 LABEL maintainer="dev@togglecorp.com"
 
@@ -6,7 +6,7 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /code
 
-RUN apt update -y && apt install -y chromium chromium-driver
+RUN apt update -y && apt install -y chromium chromium-driver && apt install -y python3-setuptools
 
 COPY pyproject.toml poetry.lock /code/
 

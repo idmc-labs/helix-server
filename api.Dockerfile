@@ -1,4 +1,4 @@
-FROM python:3.8.16-bullseye
+FROM python:3.10-bullseye
 
 LABEL maintainer="dev@togglecorp.com"
 
@@ -7,6 +7,8 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /code
 
 COPY pyproject.toml poetry.lock /code/
+
+RUN apt update -y && apt install -y python3-setuptools
 
 # Upgrade pip and install python packages for code
 RUN pip install --upgrade --no-cache-dir pip poetry \
