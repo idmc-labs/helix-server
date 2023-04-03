@@ -7,7 +7,8 @@ from uuid import uuid4
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.aggregates.general import StringAgg, ArrayAgg
-from django.contrib.postgres.fields import ArrayField, JSONField
+from django.db.models import JSONField
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models.query import QuerySet
 from django.db.models import (
