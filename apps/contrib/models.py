@@ -3,7 +3,7 @@ import uuid
 from uuid import uuid4
 
 from django.apps import apps
-from django.contrib.postgres.fields import JSONField
+from django.db.models import JSONField
 from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
