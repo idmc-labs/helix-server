@@ -399,6 +399,7 @@ GZIP_CONTENT_TYPES = [
 
 # Sentry Config
 SENTRY_DSN = env('SENTRY_DSN')
+SENTRY_ENABLED = False
 
 if SENTRY_DSN:
     SENTRY_CONFIG = {
@@ -417,6 +418,7 @@ if SENTRY_DSN:
         app_type='server',
         **SENTRY_CONFIG,
     )
+    SENTRY_ENABLED = True
 
 RESOURCE_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
 RESOURCEGROUP_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
@@ -572,3 +574,5 @@ CORS_ALLOW_HEADERS = (
     'x-requested-with',
     'sentry-trace',
 )
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
