@@ -5,12 +5,12 @@ from django.conf import settings
 from strawberry.types import ExecutionResult
 # NOTE: Quick dirty fix.
 from .strawberry_graphql_overrides import *  # noqa
-from apps.country.strawberry_schema import Query as GiddCountryQuery
+from apps.gidd.schema import Query as GiddQuery
 
 
 @strawberry.type
 class Query(
-    GiddCountryQuery,
+    GiddQuery,
 ):
     pass
 
