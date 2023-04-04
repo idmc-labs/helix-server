@@ -44,6 +44,7 @@ django-environ = "^0.8.1"
 strawberry-graphql = "^0.168.1"
 strawberry-django-plus = "^2.0.6"
 starlette = "^0.26.1"
+drf-nested-routers = "^0.93.4"
 
 [tool.poetry.dev-dependencies]
 pytest-django = "3.9.0"
