@@ -104,6 +104,7 @@ LOCAL_APPS = [
     'contextualupdate',
     'report',
     'notification',
+    'gidd',
 ]
 
 THIRD_PARTY_APPS = [
