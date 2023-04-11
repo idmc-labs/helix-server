@@ -86,11 +86,11 @@ class Command(BaseCommand):
                     except requests.exceptions.ConnectionError:
                         # TODO: also add a column on osmname_response_error to log what the error was
                         logger.error(f'Couldnot query osmname for {query}')
-                        # Store the id and location_name
+                        # Store the figure_id and location_name
                         osmname_response_error = dict()
-                        osmname_response_error['id'] = row['id']
+                        osmname_response_error['figure_id'] = row['id']
                         osmname_response_error['location_name'] = query
-                        osmname_response_error['type'] = 'connection_error'
+                        osmname_response_error['error_discription'] = 'connection_error'
                         osmname_response_error_list.append(osmname_response_error)
 
                         print_stats()
@@ -106,9 +106,9 @@ class Command(BaseCommand):
                         logger.error(f'Couldnot query osmname for {query}')
                         # Store the id and location_name
                         osmname_response_error = dict()
-                        osmname_response_error['id'] = row['id']
+                        osmname_response_error['figure_id'] = row['id']
                         osmname_response_error['location_name'] = query
-                        osmname_response_error['type'] = 'connection_error'
+                        osmname_response_error['error_discription'] = 'connection_error'
                         osmname_response_error_list.append(osmname_response_error)
 
                         print_stats()
@@ -119,9 +119,9 @@ class Command(BaseCommand):
                     logger.error(f'Couldnot query osmname for {query}: Status Code: {osm_endpoint.status_code}')
                     # Store the id and location_name
                     osmname_response_error = dict()
-                    osmname_response_error['id'] = row['id']
+                    osmname_response_error['figure_id'] = row['id']
                     osmname_response_error['location_name'] = query
-                    osmname_response_error['type'] = f'status_code: {osm_endpoint.status_code}'
+                    osmname_response_error['error_discription'] = f'status_code: {osm_endpoint.status_code}'
                     osmname_response_error_list.append(osmname_response_error)
 
                     print_stats()
@@ -134,9 +134,9 @@ class Command(BaseCommand):
                     logger.error(f'Couldnot query osmname for {query}')
                     # Store the id and location_name
                     osmname_response_error = dict()
-                    osmname_response_error['id'] = row['id']
+                    osmname_response_error['figure_id'] = row['id']
                     osmname_response_error['location_name'] = query
-                    osmname_response_error['type'] = 'json_parse_error'
+                    osmname_response_error['error_discription'] = 'json_parse_error'
                     osmname_response_error_list.append(osmname_response_error)
                     print_stats()
                     update_csv_error()
@@ -146,7 +146,7 @@ class Command(BaseCommand):
                     # extract the first response
                     osm_endpoint_response = osm_endpoint_response_json['results'][0]
                     osm_endpoint_response['uuid'] = uuid.uuid4()
-                    osm_endpoint_response['id'] = row['id']
+                    osm_endpoint_response['figure_id'] = row['id']
                     osm_endpoint_response['query_string'] = query
                     osm_endpoint_response['query_iso'] = iso or None
                     osmname_response.append(osm_endpoint_response)
@@ -158,9 +158,9 @@ class Command(BaseCommand):
                 else:
                     # TODO: also add a column on osmname_response_error to log what the error was
                     osmname_response_error = dict()
-                    osmname_response_error['id'] = row['id']
+                    osmname_response_error['figure_id'] = row['id']
                     osmname_response_error['location_name'] = query
-                    osmname_response_error['type'] = 'empty_response'
+                    osmname_response_error['error_discription'] = 'empty_response'
                     osmname_response_error_list.append(osmname_response_error)
                     print_stats()
                     update_csv_error()
