@@ -27,7 +27,7 @@ from apps.country.models import Country
 def disaster_statistics_qs(disaster_qs) -> DisasterStatisticsType:
     timeseries_qs = disaster_qs.filter(new_displacement__gt=0).values('year').annotate(
         total=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
-    ).order_by('year').values('year', 'total', 'country_id', 'country__name', 'country__iso3')
+    ).order_by('year').values('year', 'total')
 
     # FIXME should we filter out not labeld hazard type?
     categories_qs = disaster_qs.filter(hazard_type__isnull=False).values('hazard_type').annotate(
@@ -43,18 +43,13 @@ def disaster_statistics_qs(disaster_qs) -> DisasterStatisticsType:
             total_new_displacement=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
         )['total_new_displacement'],
 
-        total_events=disaster_qs.filter(new_displacement__gt=0).values('event_name').annotate(
+        total_events=disaster_qs.filter(new_displacement__gt=0).values('event__name').annotate(
             events=Count('id')
         ).aggregate(total_events=Coalesce(Sum('events', output_field=IntegerField()), 0))['total_events'],
 
         timeseries=[DisasterTimeSeriesStatisticsType(
             year=item['year'],
             total=item['total'],
-            country=DisasterCountryType(
-                id=item['country_id'],
-                iso3=item['country__iso3'],
-                country_name=item['country__name']
-            )
         ) for item in timeseries_qs],
 
         categories=[CategoryStatisticsType(**item) for item in categories_qs]
