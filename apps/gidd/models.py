@@ -1,6 +1,5 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from django.contrib.postgres.fields import ArrayField
 
 
 class Conflict(models.Model):
@@ -33,12 +32,12 @@ class Disaster(models.Model):
         null=True, blank=True
     )
     year = models.BigIntegerField()
-    iso3 = ArrayField(verbose_name=_(
-        "Iso3's"), base_field=models.CharField(max_length=5), blank=True, null=True
+    country = models.ForeignKey(
+        'country.Country', related_name='country_disaster', on_delete=models.PROTECT,
+        verbose_name=_('Country'), null=True, blank=True
     )
-    country_names = ArrayField(verbose_name=_(
-        'Country names'), base_field=models.CharField(max_length=256), blank=True, null=True
-    )
+    country_name = models.CharField(verbose_name=_('Name'), max_length=256, null=True, blank=True)
+    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5, null=True, blank=True)
 
     # Dates
     start_date = models.DateField(blank=True, null=True)
