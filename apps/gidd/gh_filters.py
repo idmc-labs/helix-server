@@ -42,6 +42,11 @@ class ConflictStatisticsFilter:
     end_year: int | None
     countries_iso3: List[str] | None
 
+    def filter_countries(self, queryset):
+        if not self.countries:
+            return queryset
+        return queryset.filter(country__in=self.countries)
+
     def filter_start_year(self, queryset):
         if not self.start_year:
             return queryset
@@ -71,6 +76,11 @@ class DisasterStatisticsFilter:
             return queryset
         return queryset.filter(hazard_type__in=self.categories)
 
+    def filter_countries(self, queryset):
+        if not self.countries:
+            return queryset
+        return queryset.filter(country__in=self.countries)
+
     def filter_start_year(self, queryset):
         if not self.start_year:
             return queryset
@@ -84,4 +94,4 @@ class DisasterStatisticsFilter:
     def filter_countries_iso3(self, queryset):
         if not self.countries_iso3:
             return queryset
-        return queryset.filter(iso3__overlap=self.countries_iso3)
+        return queryset.filter(country__iso3__in=self.countries_iso3)

@@ -32,6 +32,7 @@ class DisasterCountryType:
 class DisasterTimeSeriesStatisticsType:
     year: str
     total: int
+    country: DisasterCountryType
 
 
 @strawberry.type
