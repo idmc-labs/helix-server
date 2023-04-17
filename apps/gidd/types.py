@@ -2,7 +2,6 @@
 import strawberry
 import datetime
 from strawberry import auto, ID
-import strawberry_django
 from apps.country.models import Country
 from .models import (
     Conflict,
@@ -14,7 +13,6 @@ from .gh_filters import (
     DisasterFilter,
 )
 from typing import List, Optional
-from strawberry.types import Info
 
 
 @strawberry.type
@@ -34,7 +32,6 @@ class DisasterCountryType:
 class DisasterTimeSeriesStatisticsType:
     year: str
     total: int
-    country: DisasterCountryType
 
 
 @strawberry.type
@@ -96,30 +93,9 @@ class ConflictType:
     id: auto
     year: auto
     total_displacement: auto
-    total_displacement_source: auto
     new_displacement: auto
-    new_displacement_source: auto
-    returns: auto
-    returns_source: auto
-    local_integration: auto
-    local_integration_source: auto
-    resettlement: auto
-    resettlement_source: auto
-    cross_border_flight: auto
-    cross_border_flight_source: auto
-    children_born_to_idps: auto
-    children_born_to_idps_source: auto
-    idp_deaths: auto
-    idp_deaths_source: auto
-    total_displacement_since: auto
-    new_displacement_since: auto
-    returns_since: auto
-    resettlement_since: auto
-    local_integration_since: auto
-    cross_border_flight_since: auto
-    children_born_to_idps_since: auto
-    idp_deaths_since: auto
-    country: CountryListType
+    country_name: auto
+    iso3: auto
 
 
 @strawberry.django.type(Conflict, pagination=True, filters=ConflictFilter)
@@ -131,9 +107,7 @@ class ConflictListType(ConflictType):
 class DisasterType:
     id: auto
     year: auto
-    glide_number: auto
-    event_name: auto
-    location_text: auto
+    event: auto
     start_date: auto
     start_date_accuracy: auto
     end_date: auto
@@ -143,9 +117,8 @@ class DisasterType:
     hazard_sub_type: auto
     hazard_type: auto
     new_displacement: auto
-    new_displacement_source: auto
-    new_displacement_since: auto
-    country: CountryListType
+    country_names: List[str]
+    iso3: List[str]
 
 
 @strawberry.django.type(Disaster, pagination=True, filters=DisasterFilter)
