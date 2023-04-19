@@ -458,6 +458,10 @@ GRAPHENE_NODES_WHITELIST = (
     'me',
     'generateResetPasswordToken',
     'resetPassword',
+    'conflict',
+    'disaster',
+    'giddConflictStatistics',
+    'giddDisasterStatistics',
     # __ double underscore nodes
     '__schema',
     '__type',

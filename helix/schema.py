@@ -19,6 +19,7 @@ from apps.contextualupdate import (
     mutations as contextual_update_mutations
 )
 from apps.parking_lot import schema as parking_lot_schema, mutations as parking_lot_mutations
+from apps.gidd import schema as gidd_schema
 
 
 class Query(user_schema.Query,
@@ -36,6 +37,7 @@ class Query(user_schema.Query,
             contextual_update_schema.Query,
             report_schema.Query,
             notification_schema.Query,
+            gidd_schema.Query,
             graphene.ObjectType):
     debug = graphene.Field(DjangoDebug, name='_debug')
 

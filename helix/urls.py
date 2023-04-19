@@ -28,8 +28,6 @@ from utils.graphene.context import GQLContext
 from django_otp.admin import OTPAdminSite
 from django.http import HttpRequest
 from sentry_sdk.api import start_transaction
-from helix.strawberry_utils import CustomAsyncGraphQLView
-from helix.gidd_schema import schema as gidd_schema
 
 
 class CustomGraphQLView(FileUploadGraphQLView):
@@ -81,7 +79,6 @@ if not settings.DEBUG:
 urlpatterns = [
     path('admin/', admin.site.urls),
     re_path('^graphql/?$', csrf_exempt(CustomGraphQLView.as_view())),
-    re_path("^gidd-graphql/?$", CustomAsyncGraphQLView.as_view(schema=gidd_schema, graphiql=False)),
     path('api/', include(rest_urls)),
     path('external-api/', include(external_rest_urls))
 ]
@@ -91,7 +88,6 @@ if settings.DEBUG:
     urlpatterns = urlpatterns + [
         path('__debug__/', include(debug_toolbar.urls)),
         re_path('^graphiql/?$', csrf_exempt(CustomGraphQLView.as_view(graphiql=True))),
-        re_path("^gidd-graphiql/?$", CustomAsyncGraphQLView.as_view(schema=gidd_schema, graphiql=True)),
     ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) \
       + static(settings.EXTERNAL_MEDIA_URL, document_root=settings.EXTERNAL_MEDIA_ROOT) \
       + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
