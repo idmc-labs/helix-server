@@ -28,13 +28,13 @@ type ActorListType {
 }
 
 type ActorType {
+  id: ID!
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  id: ID!
   country: CountryType
   torg: String
 }
@@ -70,12 +70,12 @@ input AttachmentCreateInputType {
 }
 
 type AttachmentType {
+  id: ID!
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   attachment: String!
   attachmentFor: FOR_CHOICES
   mimetype: String
@@ -93,6 +93,11 @@ enum CRISIS_TYPE {
   CONFLICT
   DISASTER
   OTHER
+}
+
+type CategoryStatisticsType {
+  label: String
+  total: Int
 }
 
 type ChangeUserPassword {
@@ -184,6 +189,32 @@ input CommunicationUpdateInputType {
   attachment: ID
 }
 
+type ConflictListType {
+  results: [ConflictType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ConflictStatisticsType {
+  newDisplacements: Int
+  totalIdps: Int
+  newDisplacementTimeseries: [TimeSeriesStatisticsType]
+  idpsTimeseries: [TimeSeriesStatisticsType]
+}
+
+type ConflictType {
+  id: ID!
+  country: CountryType
+  totalDisplacement: Int
+  newDisplacement: Int
+  year: Int!
+  countryName: String
+  iso3: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
 input ContactCreateInputType {
   oldId: String
   versionId: String
@@ -210,13 +241,13 @@ type ContactListType {
 }
 
 type ContactType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   designation: DESIGNATION
   firstName: String!
   lastName: String!
@@ -267,13 +298,13 @@ type ContextOfViolenceListType {
 }
 
 type ContextOfViolenceType {
+  id: ID!
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  id: ID!
   figures: [FigureType!]!
   events: [EventType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
@@ -301,13 +332,13 @@ type ContextualAnalysisListType {
 }
 
 type ContextualAnalysisType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   update: String!
   publishDate: Date
   crisisType: CRISIS_TYPE
@@ -338,13 +369,13 @@ type ContextualUpdateListType {
 }
 
 type ContextualUpdateType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   url: String
   preview: SourcePreviewType
   document: AttachmentType
@@ -379,8 +410,8 @@ input ContextualUpdateUpdateInputType {
 }
 
 type CountryHouseholdSizeType {
-  oldId: String
   id: ID!
+  oldId: String
   country: CountryType!
   year: Int!
   size: Float!
@@ -443,6 +474,8 @@ type CountryType {
   actors: [ActorType!]!
   events(createdAt_Lte: DateTime, createdAt_Lt: DateTime, createdAt_Gte: DateTime, createdAt_Gt: DateTime, startDate_Lte: Date, startDate_Lt: Date, startDate_Gte: Date, startDate_Gt: Date, endDate_Lte: Date, endDate_Lt: Date, endDate_Gte: Date, endDate_Gt: Date, ignoreQa: Boolean, name: String, crisisByIds: [ID!], eventTypes: [String!], countries: [ID!], glideNumbers: [String!], osvSubTypeByIds: [ID!], report: String, disasterSubTypes: [ID!], violenceTypes: [ID!], violenceSubTypes: [ID!], createdByIds: [ID!], qaRule: String, contextOfViolences: [ID!], reviewStatus: [String!], assignees: [ID!], assigners: [ID!], page: Int = 1, ordering: String, pageSize: Int): EventListType
   contextualupdateSet: [ContextualUpdateType!]!
+  countryConflict: [ConflictType!]!
+  countryDisaster: [DisasterType!]!
   lastSummary: SummaryType
   lastContextualAnalysis: ContextualAnalysisType
   entries(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], filterIsFigureToBeReviewed: Boolean, page: Int = 1, ordering: String, pageSize: Int): EntryListType
@@ -656,12 +689,12 @@ type CrisisReviewCountType {
 }
 
 type CrisisType {
+  id: ID!
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   name: String!
   crisisType: CRISIS_TYPE
   crisisNarrative: String!
@@ -903,12 +936,32 @@ type DisasterCategoryListType {
 }
 
 type DisasterCategoryType {
-  name: String!
   id: ID!
+  name: String!
   figures: [FigureType!]!
   subCategories(name_Unaccent_Icontains: String, ordering: String): DisasterSubCategoryListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
+}
+
+type DisasterCountryType {
+  id: Int
+  iso3: String
+  countryName: String
+}
+
+type DisasterListType {
+  results: [DisasterType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type DisasterStatisticsType {
+  newDisplacements: Int
+  totalEvents: Int
+  timeseries: [DisasterTimeSeriesStatisticsType]
+  categories: [CategoryStatisticsType]
 }
 
 type DisasterSubCategoryListType {
@@ -919,8 +972,8 @@ type DisasterSubCategoryListType {
 }
 
 type DisasterSubCategoryType {
-  name: String!
   id: ID!
+  name: String!
   figures: [FigureType!]!
   types(name_Unaccent_Icontains: String, ordering: String): DisasterTypeObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
@@ -935,11 +988,37 @@ type DisasterSubObjectListType {
 }
 
 type DisasterSubObjectType {
-  name: String!
   id: ID!
+  name: String!
   figures: [FigureType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
+}
+
+type DisasterTimeSeriesStatisticsType {
+  year: String
+  total: Int
+  country: DisasterCountryType
+}
+
+type DisasterType {
+  id: ID!
+  event: EventType
+  year: Int!
+  country: CountryType
+  countryName: String
+  iso3: String
+  startDate: Date
+  startDateAccuracy: String
+  endDate: Date
+  endDateAccuracy: String
+  hazardCategory: String
+  hazardSubCategory: String
+  hazardSubType: String
+  hazardType: String
+  newDisplacement: Int
+  createdAt: DateTime!
+  updatedAt: DateTime!
 }
 
 type DisasterTypeObjectListType {
@@ -950,8 +1029,8 @@ type DisasterTypeObjectListType {
 }
 
 type DisasterTypeObjectType {
-  name: String!
   id: ID!
+  name: String!
   figures: [FigureType!]!
   subTypes(name_Unaccent_Icontains: String, ordering: String): DisasterSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
@@ -1018,13 +1097,13 @@ type EntryListType {
 }
 
 type EntryType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   url: String
   associatedParkedItem: ParkedItemType
   preview: SourcePreviewType
@@ -1107,13 +1186,13 @@ type EventReviewCountType {
 }
 
 type EventType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   crisis: CrisisType
   name: String!
   eventType: CRISIS_TYPE
@@ -1144,6 +1223,7 @@ type EventType {
   notifications: [GenericNotificationType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
+  giddFigures: [DisasterType!]!
   eventTypeDisplay: EnumDescription
   totalStockIdpFigures: Int
   totalFlowNdFigures: Int
@@ -1188,12 +1268,12 @@ input EventUpdateInputType {
 }
 
 type ExcelExportType {
+  id: ID!
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   startedAt: DateTime
   completedAt: DateTime
   downloadType: DOWNLOAD_TYPES
@@ -1276,12 +1356,12 @@ type ExtractionQueryListType {
 }
 
 type ExtractionQueryObjectType {
+  id: ID!
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   name: String!
   filterFigureGeographicalGroups: [GeographicalGroupType!]!
   filterFigureRegions: [CountryRegionType!]!
@@ -1395,12 +1475,12 @@ type FigureTagListType {
 }
 
 type FigureTagType {
+  id: ID!
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   name: String!
   figureSet: [FigureType!]!
   contextualupdateSet: [ContextualUpdateType!]!
@@ -1413,13 +1493,13 @@ input FigureTagUpdateInputType {
 }
 
 type FigureType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   disaggregationDisplacementUrban: Int
   disaggregationDisplacementRural: Int
   disaggregationLocationCamp: Int
@@ -1560,6 +1640,28 @@ type GeographicalGroupType {
   countrySet: [CountryType!]!
 }
 
+type GiddLogListType {
+  results: [GiddLogType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+enum GiddLogStatusTypeEnum {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+type GiddLogType {
+  id: ID!
+  triggeredBy: UserType
+  triggeredAt: DateTime!
+  completedAt: DateTime
+  status: GiddLogStatusTypeEnum
+  statusDisplay: EnumDescription
+}
+
 enum IDENTIFIER {
   ORIGIN
   DESTINATION
@@ -1609,6 +1711,7 @@ type MonitoringSubRegionType {
 }
 
 type Mutation {
+  giddUpdateData: UpdateGiddData
   toggleNotificationRead(id: ID!): ToggleNotificationRead
   createContextualUpdate(data: ContextualUpdateCreateInputType!): CreateContextualUpdate
   updateContextualUpdate(data: ContextualUpdateUpdateInputType!): UpdateContextualUpdate
@@ -1957,13 +2060,13 @@ type OrganizationKindListType {
 }
 
 type OrganizationKindObjectType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   name: String!
   reliability: ORGANIZATION_RELIABILITY
   organizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], orderCountryFirst: [ID!], page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
@@ -1986,13 +2089,13 @@ type OrganizationListType {
 }
 
 type OrganizationType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   deletedOn: DateTime
   name: String!
   shortName: String
@@ -2029,8 +2132,8 @@ input OrganizationUpdateInputType {
 }
 
 type OsvSubObjectType {
-  name: String!
   id: ID!
+  name: String!
   figures: [FigureType!]!
   events: [EventType!]!
 }
@@ -2050,13 +2153,13 @@ type OtherSubTypeList {
 }
 
 type OtherSubTypeObjectType {
+  id: ID!
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
   name: String!
-  id: ID!
   figures: [FigureType!]!
   events: [EventType!]!
 }
@@ -2140,12 +2243,12 @@ type ParkedItemListType {
 }
 
 type ParkedItemType {
+  id: ID!
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   country: CountryType
   title: String!
   url: String!
@@ -2211,6 +2314,14 @@ enum QUANTIFIER {
 }
 
 type Query {
+  giddConflict(id: ID!): ConflictType
+  giddConflicts(id_Iexact: Float, page: Int = 1, ordering: String, pageSize: Int): ConflictListType
+  giddDisaster(id: ID!): DisasterType
+  giddDisasters(id_Iexact: Float, page: Int = 1, ordering: String, pageSize: Int): DisasterListType
+  giddConflictStatistics(countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): ConflictStatisticsType
+  giddDisasterStatistics(categories: [String!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): DisasterStatisticsType
+  giddLog(id: ID!): GiddLogType
+  giddLogs(triggeredBy: ID, triggeredAt: DateTime, completedAt: DateTime, status: String, page: Int = 1, ordering: String, pageSize: Int): GiddLogListType
   notification(id: ID!): GenericNotificationType
   notifications(recipient: ID, isRead: Boolean, events: [ID!], figures: [ID!], types: [String!], createdAtAfter: Date, createdAtBefore: Date, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType
@@ -2369,12 +2480,12 @@ type ReportApprovalListType {
 }
 
 type ReportApprovalType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   generation: ReportGenerationType!
   createdBy: UserType!
   isApproved: Boolean!
@@ -2393,13 +2504,13 @@ type ReportCommentListType {
 }
 
 type ReportCommentType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   body: String!
   report: ReportType!
 }
@@ -2445,13 +2556,13 @@ type ReportGenerationListType {
 }
 
 type ReportGenerationType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   report: ReportType!
   isSignedOff: Boolean!
   isSignedOffOn: DateTime
@@ -2482,6 +2593,7 @@ type ReportTotalsType {
 }
 
 type ReportType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
@@ -2532,7 +2644,6 @@ type ReportType {
   filterFigureHasDisaggregatedData: Boolean
   filterContextOfViolence: [ContextOfViolenceType!]!
   filterIsFigureToBeReviewed: Boolean
-  id: ID!
   generatedFrom: REPORT_TYPE
   generated: Boolean!
   filterFigureStartAfter: Date
@@ -2621,13 +2732,13 @@ input ResourceGroupCreateInputType {
 }
 
 type ResourceGroupType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   name: String!
   resources: [ResourceType!]!
 }
@@ -2640,13 +2751,13 @@ input ResourceGroupUpdateInputType {
 }
 
 type ResourceType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   name: String!
   url: String!
   group: ResourceGroupType
@@ -2714,12 +2825,12 @@ input SourcePreviewInputType {
 }
 
 type SourcePreviewType {
+  id: ID!
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   url: String!
   pdf: String
   status: PREVIEW_STATUS
@@ -2741,14 +2852,19 @@ type SummaryListType {
 }
 
 type SummaryType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   summary: String!
+}
+
+type TimeSeriesStatisticsType {
+  year: Int
+  total: Int
 }
 
 type ToggleNotificationRead {
@@ -2794,13 +2910,13 @@ type UnifiedReviewCommentListType {
 }
 
 type UnifiedReviewCommentType {
+  id: ID!
   oldId: String
   createdAt: DateTime!
   modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  id: ID!
   event: EventType
   figure: FigureType
   field: REVIEW_FIELD_TYPE!
@@ -2918,6 +3034,12 @@ type UpdateFigureTag {
   errors: [GenericScalar!]
   ok: Boolean
   result: FigureTagType
+}
+
+type UpdateGiddData {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: GiddLogType
 }
 
 type UpdateOrganization {
@@ -3044,8 +3166,8 @@ type ViolenceSubObjectType {
 }
 
 type ViolenceType {
-  name: String!
   id: ID!
+  name: String!
   figures: [FigureType!]!
   subTypes(id_Iexact: Float, ordering: String): ViolenceSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
