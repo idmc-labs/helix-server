@@ -1,5 +1,6 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django_enumfield import enum
 
 
 class Conflict(models.Model):
@@ -61,3 +62,34 @@ class Disaster(models.Model):
 
     def __str__(self):
         return str(self.id)
+
+
+class GiddLog(models.Model):
+
+    class Status(enum.Enum):
+        PENDING = 0
+        SUCCESS = 1
+        FAILED = 2
+
+        __labels__ = {
+            PENDING: _("Pending"),
+            SUCCESS: _("Success"),
+            FAILED: _("Failed"),
+        }
+    triggered_by = models.ForeignKey(
+        'users.User', verbose_name=_('Triggered by'), null=True, blank=True,
+        related_name='gidd_data_triggered_by', on_delete=models.SET_NULL
+    )
+    triggered_at = models.DateTimeField(verbose_name='Triggered at', auto_now_add=True)
+    completed_at = models.DateTimeField(verbose_name='Completed at', null=True, blank=True)
+    status = enum.EnumField(
+        verbose_name=_('Status'), enum=Status, default=Status.PENDING
+    )
+
+    class Meta:
+        permissions = (
+            ('update_gidd_data', 'Can update gidd data'),
+        )
+
+    def __str__(self):
+        return str(self.triggered_at)

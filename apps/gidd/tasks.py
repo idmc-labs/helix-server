@@ -10,6 +10,7 @@ from apps.entry.models import Figure
 from apps.event.models import Event
 from apps.event.models import Crisis
 from .models import Conflict, Disaster
+from .models import GiddLog
 
 
 logging.basicConfig(level=logging.INFO)
@@ -44,8 +45,7 @@ def annotate_conflict(qs, year):
     ).order_by('year')
 
 
-@celery_app.task
-def sync_gidd_data():
+def update_conflict_and_disaster_data():
     # Delete all the conflicts TODO: Find way to update records
     Conflict.objects.all().delete()
 
@@ -167,4 +167,14 @@ def sync_gidd_data():
                 ) for item in events
             ]
         )
-    logger.info('Gidd synced.')
+
+
+@celery_app.task
+def update_gidd_data(log_id):
+    try:
+        update_conflict_and_disaster_data()
+        GiddLog.objects.filter(id=log_id).update(status=GiddLog.Status.SUCCESS)
+        logger.info('Gidd data updated.')
+    except Exception as e:
+        GiddLog.objects.filter(id=log_id).update(status=GiddLog.Status.FAILED)
+        logger.error('Failed update data: ' + str(e))

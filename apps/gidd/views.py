@@ -4,11 +4,8 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
-from django.db.models import  Q
-from rest_framework.views import APIView
+from django.db.models import Q
 from django.http import HttpResponse
-from rest_framework import status
-from rest_framework.response import Response
 
 from apps.country.models import Country
 from .models import Conflict, Disaster
@@ -18,7 +15,6 @@ from .serializers import (
     DisasterSerializer,
 )
 from utils.common import round_and_remove_zero
-from .tasks import sync_gidd_data
 
 
 def export_disasters(request, iso3=None):
@@ -153,10 +149,3 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
     lookup_field = 'id'
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
     filterset_fields = ['id']
-
-
-class SyncConflictView(APIView):
-
-    def post(self, request):
-        sync_gidd_data.delay()
-        return Response("Gidd data synced.", status.HTTP_200_OK)

@@ -33,7 +33,6 @@ class ConflictStatisticsFilter(django_filters.FilterSet):
         model = Conflict
         fields = ()
 
-
     def filter_countries(self, queryset, name, value):
         return queryset.filter(country__in=value)
 

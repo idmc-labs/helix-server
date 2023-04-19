@@ -1,13 +1,13 @@
 # types.py
 import graphene
-import datetime
 from graphene_django_extras import DjangoObjectField
 from graphene_django.filter.utils import get_filtering_args_from_filterset
-from utils.graphene.types import CustomDjangoListObjectType, CustomListObjectType
+from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.enums import EnumDescription
 
-from django.db.models  import (
+from django.db.models import (
     Sum,
     Case,
     When,
@@ -21,6 +21,7 @@ from django.db.models.functions import Coalesce
 from .models import (
     Conflict,
     Disaster,
+    GiddLog,
 )
 from graphene_django import DjangoObjectType
 from .gh_filters import (
@@ -29,6 +30,7 @@ from .gh_filters import (
     ConflictStatisticsFilter,
     DisasterStatisticsFilter,
 )
+from .enums import GiddLogStatusEnum
 
 
 class TimeSeriesStatisticsType(graphene.ObjectType):
@@ -59,29 +61,46 @@ class ConflictStatisticsType(graphene.ObjectType):
     new_displacement_timeseries = graphene.List(TimeSeriesStatisticsType)
     idps_timeseries = graphene.List(TimeSeriesStatisticsType)
 
+
 class DisasterStatisticsType(graphene.ObjectType):
     new_displacements = graphene.Int()
     total_events = graphene.Int()
     timeseries = graphene.List(DisasterTimeSeriesStatisticsType)
     categories = graphene.List(CategoryStatisticsType)
 
+
 class ConflictType(DjangoObjectType):
     class Meta:
         model = Conflict
+
 
 class ConflictListType(CustomDjangoListObjectType):
     class Meta:
         model = Conflict
         filterset_class = ConflictFilter
 
+
 class DisasterType(DjangoObjectType):
     class Meta:
         model = Disaster
+
 
 class DisasterListType(CustomDjangoListObjectType):
     class Meta:
         model = Disaster
         filterset_class = DisasterFilter
+
+
+class GiddLogType(DjangoObjectType):
+    class Meta:
+        model = GiddLog
+    status = graphene.Field(GiddLogStatusEnum)
+    status_display = EnumDescription(source='get_status_display')
+
+
+class GiddLogListType(CustomDjangoListObjectType):
+    class Meta:
+        model = GiddLog
 
 
 class Query(graphene.ObjectType):
@@ -109,6 +128,13 @@ class Query(graphene.ObjectType):
         DisasterStatisticsType,
         **get_filtering_args_from_filterset(
             DisasterStatisticsFilter, DisasterStatisticsType
+        )
+    )
+    gidd_log = DjangoObjectField(GiddLogType)
+    gidd_logs = DjangoPaginatedListObjectField(
+        GiddLogListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
         )
     )
 
