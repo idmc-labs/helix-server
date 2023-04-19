@@ -166,9 +166,7 @@ class Query(graphene.ObjectType):
 
     @staticmethod
     def resolve_gidd_disaster_statistics(parent, info, **kwargs):
-        print(kwargs, '$$$$')
         disaster_qs = DisasterStatisticsFilter(data=kwargs).qs
-        print(disaster_qs.count())
         timeseries_qs = disaster_qs.filter(new_displacement__gt=0).values('year').annotate(
             total=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
         ).order_by('year').values('year', 'total', 'country_id', 'country_name', 'iso3')
