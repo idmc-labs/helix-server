@@ -43,7 +43,7 @@ class ConflictStatisticsFilter(django_filters.FilterSet):
         return queryset.filter(year__lte=value)
 
     def filter_countries_iso3(self, queryset, name, value):
-        return queryset.filter(country__iso3__in=value)
+        return queryset.filter(country__in=value)
 
 
 class DisasterStatisticsFilter(django_filters.FilterSet):
@@ -70,4 +70,4 @@ class DisasterStatisticsFilter(django_filters.FilterSet):
         return queryset.filter(year__lte=value)
 
     def filter_countries_iso3(self, queryset, name, value):
-        return queryset.filter(country__iso3__in=value)
+        return queryset.filter(iso3__in=value)
