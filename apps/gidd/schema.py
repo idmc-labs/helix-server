@@ -1,116 +1,179 @@
-import strawberry
-from typing import List, Optional
-from django.db.models.functions import Coalesce
-from .types import (
-    ConflictType,
-    DisasterType,
-    CountryType,
-    ConflictListType,
-    DisasterListType,
-    CountryListType,
-    DisasterStatisticsType,
-    TimeSeriesStatisticsType,
-    DisasterTimeSeriesStatisticsType,
-    CategoryStatisticsType,
-    ConflictStatisticsType,
-    DisasterCountryType,
+# types.py
+import graphene
+import datetime
+from graphene_django_extras import DjangoObjectField
+from graphene_django.filter.utils import get_filtering_args_from_filterset
+from utils.graphene.types import CustomDjangoListObjectType, CustomListObjectType
+from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+
+from django.db.models  import (
+    Sum,
+    Case,
+    When,
+    F,
+    Count,
+    Value,
+    IntegerField,
+    CharField,
 )
-from .models import Disaster, Conflict
-from django.db.models import Value, Sum, F, Count, CharField, Case, When, IntegerField
-from .gh_filters import DisasterStatisticsFilter, ConflictStatisticsFilter
-from strawberry_django.filters import apply as filter_apply
-from asgiref.sync import sync_to_async
-from apps.country.models import Country
+from django.db.models.functions import Coalesce
+from .models import (
+    Conflict,
+    Disaster,
+)
+from graphene_django import DjangoObjectType
+from .gh_filters import (
+    ConflictFilter,
+    DisasterFilter,
+    ConflictStatisticsFilter,
+    DisasterStatisticsFilter,
+)
 
 
-@sync_to_async
-def disaster_statistics_qs(disaster_qs) -> DisasterStatisticsType:
-    timeseries_qs = disaster_qs.filter(new_displacement__gt=0).values('year').annotate(
-        total=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
-    ).order_by('year').values('year', 'total', 'country_id', 'country_name', 'iso3')
+class TimeSeriesStatisticsType(graphene.ObjectType):
+    year = graphene.Int()
+    total = graphene.Int()
 
-    # FIXME should we filter out not labeld hazard type?
-    categories_qs = disaster_qs.filter(hazard_type__isnull=False).values('hazard_type').annotate(
-        total=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0),
-        label=Case(
-            When(hazard_sub_category=None, then=Value('Not labeled')),
-            default=F('hazard_type'),
-            output_field=CharField()
+
+class DisasterCountryType(graphene.ObjectType):
+    id = graphene.Int()
+    iso3 = graphene.String()
+    country_name = graphene.String()
+
+
+class DisasterTimeSeriesStatisticsType(graphene.ObjectType):
+    year = graphene.String()
+    total = graphene.Int()
+    country = graphene.Field(DisasterCountryType)
+
+
+class CategoryStatisticsType(graphene.ObjectType):
+    label = graphene.String()
+    total = graphene.Int()
+
+
+class ConflictStatisticsType(graphene.ObjectType):
+    new_displacements = graphene.Int()
+    total_idps = graphene.Int()
+    new_displacement_timeseries = graphene.List(TimeSeriesStatisticsType)
+    idps_timeseries = graphene.List(TimeSeriesStatisticsType)
+
+class DisasterStatisticsType(graphene.ObjectType):
+    new_displacements = graphene.Int()
+    total_events = graphene.Int()
+    timeseries = graphene.List(DisasterTimeSeriesStatisticsType)
+    categories = graphene.List(CategoryStatisticsType)
+
+class ConflictType(DjangoObjectType):
+    class Meta:
+        model = Conflict
+
+class ConflictListType(CustomDjangoListObjectType):
+    class Meta:
+        model = Conflict
+        filterset_class = ConflictFilter
+
+class DisasterType(DjangoObjectType):
+    class Meta:
+        model = Disaster
+
+class DisasterListType(CustomDjangoListObjectType):
+    class Meta:
+        model = Disaster
+        filterset_class = DisasterFilter
+
+
+class Query(graphene.ObjectType):
+    gidd_conflict = DjangoObjectField(ConflictType)
+    gidd_conflicts = DjangoPaginatedListObjectField(
+        ConflictListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
         )
-    ).filter(total__gte=1).values('label', 'total')
-    return DisasterStatisticsType(
-        new_displacements=disaster_qs.aggregate(
-            total_new_displacement=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
-        )['total_new_displacement'],
+    )
+    gidd_disaster = DjangoObjectField(DisasterType)
+    gidd_disasters = DjangoPaginatedListObjectField(
+        DisasterListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        )
+    )
+    gidd_conflict_statistics = graphene.Field(
+        ConflictStatisticsType,
+        **get_filtering_args_from_filterset(
+            ConflictStatisticsFilter, ConflictStatisticsType
+        )
+    )
+    gidd_disaster_statistics = graphene.Field(
+        DisasterStatisticsType,
+        **get_filtering_args_from_filterset(
+            DisasterStatisticsFilter, DisasterStatisticsType
+        )
+    )
 
-        total_events=disaster_qs.filter(new_displacement__gt=0).values('event__name').annotate(
-            events=Count('id')
-        ).aggregate(total_events=Coalesce(Sum('events', output_field=IntegerField()), 0))['total_events'],
+    @staticmethod
+    def resolve_gidd_conflict_statistics(parent, info, **kwargs):
+        conflict_qs = ConflictStatisticsFilter(data=kwargs).qs
+        new_displacement_timeseries_qs = conflict_qs.filter(
+            new_displacement__gt=0
+        ).values('year').annotate(
+            total=Sum('new_displacement', output_field=IntegerField()),
+        ).order_by('year').values('year', 'total')
 
-        timeseries=[DisasterTimeSeriesStatisticsType(
-            year=item['year'],
-            total=item['total'],
-            country=DisasterCountryType(
-                id=item['country_id'],
-                iso3=item['iso3'],
-                country_name=item['country_name']
+        idps_timeseries_qs = conflict_qs.filter(
+            total_displacement__isnull=False
+        ).values('year').annotate(
+            total=Sum('total_displacement', output_field=IntegerField())
+        ).order_by('year').values('year', 'total')
+        total_idps = conflict_qs.order_by('-year').first().total_displacement if conflict_qs.order_by('-year') else 0
+
+        return ConflictStatisticsType(
+            total_idps=total_idps if total_idps else 0,
+            new_displacements=conflict_qs.aggregate(
+                total_new_displacement=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
+            )['total_new_displacement'],
+
+            new_displacement_timeseries=[TimeSeriesStatisticsType(**item) for item in new_displacement_timeseries_qs],
+            idps_timeseries=[TimeSeriesStatisticsType(**item) for item in idps_timeseries_qs],
+        )
+
+    @staticmethod
+    def resolve_gidd_disaster_statistics(parent, info, **kwargs):
+        print(kwargs, '$$$$')
+        disaster_qs = DisasterStatisticsFilter(data=kwargs).qs
+        print(disaster_qs.count())
+        timeseries_qs = disaster_qs.filter(new_displacement__gt=0).values('year').annotate(
+            total=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
+        ).order_by('year').values('year', 'total', 'country_id', 'country_name', 'iso3')
+
+        # FIXME should we filter out not labeld hazard type?
+        categories_qs = disaster_qs.filter(hazard_type__isnull=False).values('hazard_type').annotate(
+            total=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0),
+            label=Case(
+                When(hazard_sub_category=None, then=Value('Not labeled')),
+                default=F('hazard_type'),
+                output_field=CharField()
             )
-        ) for item in timeseries_qs],
+        ).filter(total__gte=1).values('label', 'total')
+        return DisasterStatisticsType(
+            new_displacements=disaster_qs.aggregate(
+                total_new_displacement=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
+            )['total_new_displacement'],
 
-        categories=[CategoryStatisticsType(**item) for item in categories_qs]
-    )
+            total_events=disaster_qs.filter(new_displacement__gt=0).values('event__name').annotate(
+                events=Count('id')
+            ).aggregate(total_events=Coalesce(Sum('events', output_field=IntegerField()), 0))['total_events'],
 
+            timeseries=[DisasterTimeSeriesStatisticsType(
+                year=item['year'],
+                total=item['total'],
+                country=DisasterCountryType(
+                    id=item['country_id'],
+                    iso3=item['iso3'],
+                    country_name=item['country_name']
+                )
+            ) for item in timeseries_qs],
 
-@sync_to_async
-def conflict_statistics_qs(conflict_qs) -> ConflictStatisticsType:
-    new_displacement_timeseries_qs = conflict_qs.filter(
-        new_displacement__gt=0
-    ).values('year').annotate(
-        total=Sum('new_displacement', output_field=IntegerField()),
-    ).order_by('year').values('year', 'total')
-
-    idps_timeseries_qs = conflict_qs.filter(
-        total_displacement__isnull=False
-    ).values('year').annotate(
-        total=Sum('total_displacement', output_field=IntegerField())
-    ).order_by('year').values('year', 'total')
-    total_idps = conflict_qs.order_by('-year').first().total_displacement if conflict_qs.order_by('-year') else 0
-    return ConflictStatisticsType(
-        total_idps=total_idps if total_idps else 0,
-        new_displacements=conflict_qs.aggregate(
-            total_new_displacement=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
-        )['total_new_displacement'],
-
-        new_displacement_timeseries=[TimeSeriesStatisticsType(**item) for item in new_displacement_timeseries_qs],
-        idps_timeseries=[TimeSeriesStatisticsType(**item) for item in idps_timeseries_qs],
-    )
-
-
-@sync_to_async
-def get_country_object(pk, iso3):
-    if pk:
-        return Country.objects.get(pk=pk)
-    if iso3:
-        return Country.objects.get(iso3=iso3)
-
-
-@strawberry.type
-class Query:
-    conflicts: List[ConflictListType] = strawberry.django.field()
-    disasters: List[DisasterListType] = strawberry.django.field()
-    countries: List[CountryListType] = strawberry.django.field()
-    conflict: ConflictType = strawberry.django.field()
-    disaster: DisasterType = strawberry.django.field()
-
-    @strawberry.field
-    def country(self, pk: Optional[strawberry.ID] = None, iso3: Optional[str] = None) -> CountryType:
-        return get_country_object(pk, iso3)
-
-    @strawberry.field
-    def disaster_statistics(self, filters: DisasterStatisticsFilter) -> DisasterStatisticsType:
-        return disaster_statistics_qs(filter_apply(filters, Disaster.objects.all()))
-
-    @strawberry.field
-    def conflict_statistics(self, filters: ConflictStatisticsFilter) -> ConflictStatisticsType:
-        return conflict_statistics_qs(filter_apply(filters, Conflict.objects.all()))
-
+            categories=[CategoryStatisticsType(**item) for item in categories_qs]
+        )

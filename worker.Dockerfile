@@ -1,12 +1,10 @@
-FROM python:3.10-bullseye
+FROM python:3.8.16-bullseye
 
 LABEL maintainer="dev@togglecorp.com"
 
 ENV PYTHONUNBUFFERED 1
 
 WORKDIR /code
-
-RUN apt update -y && apt install -y chromium chromium-driver && apt install -y python3-setuptools
 
 COPY pyproject.toml poetry.lock /code/
 
@@ -21,4 +19,4 @@ RUN pip install --upgrade --no-cache-dir pip poetry \
 
 COPY . /code/
 
-CMD ./deploy/scripts/run_tasks.sh
+CMD ./deploy/scripts/run_prod.sh

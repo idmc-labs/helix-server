@@ -1,97 +1,74 @@
-import strawberry
-from strawberry import auto
-from django.db.models import Q
-from apps.country.models import Country
+import django_filters
+
+from utils.filters import StringListFilter
 from .models import (
     Conflict,
     Disaster,
 )
-from typing import List
 
 
-@strawberry.django.filters.filter(Country, lookups=True)
-class CountryFilter:
-    id: auto
-    iso3: auto
-    name: auto
-    search: str | None
-
-    def filter_search(self, queryset):
-        if not self.search:
-            return queryset
-        return queryset.filter(
-            Q(name__icontains=self.search) |
-            Q(iso3__icontains=self.search)
-        )
+class ConflictFilter(django_filters.FilterSet):
+    class Meta:
+        model = Conflict
+        fields = {
+            'id': ['iexact']
+        }
 
 
-@strawberry.django.filters.filter(Conflict, lookups=True)
-class ConflictFilter:
-    id: auto
+class DisasterFilter(django_filters.FilterSet):
+    class Meta:
+        model = Disaster
+        fields = {
+            'id': ['iexact']
+        }
 
 
-@strawberry.django.filters.filter(Disaster, lookups=True)
-class DisasterFilter:
-    id: auto
+class ConflictStatisticsFilter(django_filters.FilterSet):
+    countries = StringListFilter(method='filter_countries')
+    start_year = django_filters.NumberFilter(method='filter_start_year')
+    end_year = django_filters.NumberFilter(method='filter_end_year')
+    countries_iso3 = StringListFilter(method='filter_countries_iso3')
+
+    class Meta:
+        model = Conflict
+        fields = ()
 
 
-@strawberry.django.filters.filter(Conflict, lookups=True)
-class ConflictStatisticsFilter:
-    countries: List[strawberry.ID] | None
-    start_year: int | None
-    end_year: int | None
-    countries_iso3: List[str] | None
+    def filter_countries(self, queryset, name, value):
+        return queryset.filter(country__in=value)
 
-    def filter_countries(self, queryset):
-        if not self.countries:
-            return queryset
-        return queryset.filter(country__in=self.countries)
+    def filter_start_year(self, queryset, name, value):
+        return queryset.filter(year__gte=value)
 
-    def filter_start_year(self, queryset):
-        if not self.start_year:
-            return queryset
-        return queryset.filter(year__gte=self.start_year)
+    def filter_end_year(self, queryset, name, value):
+        return queryset.filter(year__lte=value)
 
-    def filter_end_year(self, queryset):
-        if not self.end_year:
-            return queryset
-        return queryset.filter(year__lte=self.end_year)
-
-    def filter_countries_iso3(self, queryset):
-        if not self.countries_iso3:
-            return queryset
-        return queryset.filter(country__iso3__in=self.countries_iso3)
+    def filter_countries_iso3(self, queryset, name, value):
+        return queryset.filter(country__iso3__in=value)
 
 
-@strawberry.django.filters.filter(Disaster, lookups=True)
-class DisasterStatisticsFilter:
-    categories: List[str] | None
-    countries: List[strawberry.ID] | None
-    start_year: int | None
-    end_year: int | None
-    countries_iso3: List[str] | None
+class DisasterStatisticsFilter(django_filters.FilterSet):
+    categories = StringListFilter(method='filter_categories')
+    countries = StringListFilter(method='filter_countries')
+    start_year = django_filters.NumberFilter(method='filter_end_year')
+    end_year = django_filters.NumberFilter(method='filter_end_year')
+    countries_iso3 = StringListFilter(method='filter_countries_iso3')
 
-    def filter_categories(self, queryset):
-        if not self.categories:
-            return queryset
-        return queryset.filter(hazard_type__in=self.categories)
+    class Meta:
+        model = Disaster
+        fields = ()
 
-    def filter_countries(self, queryset):
-        if not self.countries:
-            return queryset
-        return queryset.filter(country__in=self.countries)
+    def filter_categories(self, queryset, name, value):
+        return queryset.filter(hazard_type__in=value)
 
-    def filter_start_year(self, queryset):
-        if not self.start_year:
-            return queryset
-        return queryset.filter(year__gte=self.start_year)
+    def filter_countries(self, queryset, name, value):
+        return queryset.filter(country__in=value)
 
-    def filter_end_year(self, queryset):
-        if not self.end_year:
-            return queryset
-        return queryset.filter(year__lte=self.end_year)
+    def filter_start_year(self, queryset, name, value):
+        return queryset.filter(year__gte=value)
 
-    def filter_countries_iso3(self, queryset):
-        if not self.countries_iso3:
-            return queryset
-        return queryset.filter(country__iso3__in=self.countries_iso3)
+    def filter_end_year(self, queryset, name, value):
+        return queryset.filter(year__lte=value)
+
+    def filter_countries_iso3(self, queryset, name, value):
+        return queryset.filter(country__iso3__in=value)
