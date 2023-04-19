@@ -10,7 +10,8 @@ from apps.entry.models import Figure
 from apps.event.models import Event
 from apps.event.models import Crisis
 from .models import Conflict, Disaster
-from .models import GiddLog
+from .models import GiddLog, DisasterLegacy, ConflictLegacy
+from apps.country.models import Country
 
 
 logging.basicConfig(level=logging.INFO)
@@ -46,16 +47,11 @@ def annotate_conflict(qs, year):
 
 
 def update_conflict_and_disaster_data():
-    # Delete all the conflicts TODO: Find way to update records
-    Conflict.objects.all().delete()
-
-    # Delete disasters
-    Disaster.objects.all().delete()
 
     figure_queryset = Figure.objects.filter(
         role=Figure.ROLE.RECOMMENDED
     )
-    start_year = 2016
+    start_year = 1990
     end_year = 2023
     for year in range(start_year, end_year):
         nd_figure_qs = Figure.filtered_nd_figures(
@@ -119,6 +115,7 @@ def update_conflict_and_disaster_data():
         ).order_by('year').values(
             'year',
             'id',
+            'name',
             'start_date',
             'start_date_accuracy',
             'end_date',
@@ -134,6 +131,7 @@ def update_conflict_and_disaster_data():
         ).distinct(
             'year',
             'id',
+            'name',
             'start_date',
             'start_date_accuracy',
             'end_date',
@@ -151,6 +149,7 @@ def update_conflict_and_disaster_data():
             [
                 Disaster(
                     event_id=item['id'],
+                    event_name=item['name'],
                     year=item['year'],
                     start_date=item['start_date'],
                     start_date_accuracy=item['start_date_accuracy'],
@@ -171,6 +170,68 @@ def update_conflict_and_disaster_data():
 
 @celery_app.task
 def update_gidd_data(log_id):
+
+    # Delete all the conflicts TODO: Find way to update records
+    Conflict.objects.all().delete()
+
+    # Delete disasters
+    Disaster.objects.all().delete()
+
+    countries = Country.objects.values('iso3', 'id')
+
+    iso3_to_country_id_map = {country['iso3'] : country['id'] for country in countries}
+
+    # Bulk create conflict legacy data
+    Conflict.objects.bulk_create(
+        [
+            Conflict(
+                total_displacement=item['total_displacement'],
+                new_displacement=item['new_displacement'],
+                year=item['year'],
+                iso3=item['iso3'],
+                country_id=iso3_to_country_id_map[item['iso3']],
+            ) for item in ConflictLegacy.objects.values(
+                'total_displacement',
+                'new_displacement',
+                'year',
+                'iso3',
+            )
+        ]
+    )
+
+    # Bulk create legacy disaster data
+    Disaster.objects.bulk_create(
+        [
+            Disaster(
+                event_name=item['event_name'],
+                year=item['year'],
+                start_date=item['start_date'],
+                start_date_accuracy=item['start_date_accuracy'],
+                end_date=item['end_date'],
+                end_date_accuracy=item['end_date_accuracy'],
+                hazard_category=item['hazard_category'],
+                hazard_sub_category=item['hazard_sub_category'],
+                hazard_type=item['hazard_type'],
+                hazard_sub_type=item['hazard_sub_type'],
+                new_displacement=item['new_displacement'],
+                iso3=item['iso3'],
+                country_id=iso3_to_country_id_map[item['iso3']],
+            ) for item in DisasterLegacy.objects.values(
+                'event_name',
+                'year',
+                'start_date',
+                'start_date_accuracy',
+                'end_date',
+                'end_date_accuracy',
+                'hazard_category',
+                'hazard_sub_category',
+                'hazard_type',
+                'hazard_sub_type',
+                'new_displacement',
+                'iso3',
+            )
+        ]
+    )
     try:
         update_conflict_and_disaster_data()
         GiddLog.objects.filter(id=log_id).update(status=GiddLog.Status.SUCCESS)
