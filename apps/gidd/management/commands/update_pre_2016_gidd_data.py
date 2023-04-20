@@ -24,6 +24,14 @@ class Command(BaseCommand):
         ConflictLegacy.objects.all().delete()
         DisasterLegacy.objects.all().delete()
 
+        def format_gidd_number(number):
+            if number == 0:
+                return number
+            elif number:
+                return number
+            else:
+                return None
+
         with open(conflict_csv_file, 'r') as conflict_csv_file:
             reader = csv.DictReader(conflict_csv_file)
             ConflictLegacy.objects.bulk_create(
@@ -32,8 +40,8 @@ class Command(BaseCommand):
                         iso3=old_conflict['iso3'],
                         year=old_conflict['year'],
                         country_name=country_iso3_map[old_conflict['iso3']],
-                        new_displacement=old_conflict['new_displacement'] or 0,
-                        total_displacement=old_conflict['total_displacement'] or 0,
+                        new_displacement=format_gidd_number(old_conflict['new_displacement']),
+                        total_displacement=format_gidd_number(old_conflict['total_displacement']),
                     ) for old_conflict in reader
                 ]
             )
@@ -55,7 +63,7 @@ class Command(BaseCommand):
                         hazard_sub_category=old_disaster['hazard_sub_category'],
                         hazard_type=old_disaster['hazard_type'],
                         hazard_sub_type=old_disaster['hazard_sub_type'],
-                        new_displacement=old_disaster['new_displacement'] or None,
+                        new_displacement=format_gidd_number(old_disaster['new_displacement']),
                     ) for old_disaster in reader
                 ]
             )

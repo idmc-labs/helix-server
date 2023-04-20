@@ -1004,6 +1004,7 @@ type DisasterTimeSeriesStatisticsType {
 type DisasterType {
   id: ID!
   event: EventType
+  eventName: String
   year: Int!
   country: CountryType
   countryName: String
