@@ -17,7 +17,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         country_data = Country.objects.values('iso3', 'idmc_short_name')
-        country_iso3_map = {item['iso3'] : item['idmc_short_name'] for item in country_data}
+        country_iso3_map = {item['iso3']: item['idmc_short_name'] for item in country_data}
         conflict_csv_file = kwargs['conflict_csv_file']
         disaster_csv_file = kwargs['disaster_csv_file']
 

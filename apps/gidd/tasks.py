@@ -3,11 +3,9 @@ import logging
 from helix.celery import app as celery_app
 
 from django.db.models import (
-    Sum, Case, When, IntegerField, Value,
-    F, Subquery, OuterRef
+    Sum, Case, When, IntegerField, Value, F
 )
 from apps.entry.models import Figure
-from apps.event.models import Event
 from apps.event.models import Crisis
 from .models import Conflict, Disaster
 from .models import GiddLog, DisasterLegacy, ConflictLegacy
@@ -51,8 +49,14 @@ def update_conflict_and_disaster_data():
     figure_queryset = Figure.objects.filter(
         role=Figure.ROLE.RECOMMENDED
     )
-    start_year = 1990
-    end_year = 2023
+    # Get start year and end year
+    start_year = Figure.objects.filter(
+        role=Figure.ROLE.RECOMMENDED
+    ).order_by('start_date').first().start_date.year
+    end_year = Figure.objects.filter(
+        role=Figure.ROLE.RECOMMENDED
+    ).order_by('-end_date').first().end_date.year
+
     for year in range(start_year, end_year):
         nd_figure_qs = Figure.filtered_nd_figures(
             qs=figure_queryset,
@@ -83,55 +87,37 @@ def update_conflict_and_disaster_data():
             ]
         )
 
+        disaster_nd_figure_qs = nd_figure_qs.filter(event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+        disaster_stock_figure_qs = stock_figure_qs.filter(event__event_type=Crisis.CRISIS_TYPE.DISASTER)
+        disaster_figures = disaster_nd_figure_qs | disaster_stock_figure_qs
+        disaster_qs = Figure.objects.filter(id__in=disaster_figures.values('id'))
+
         # Sync disaster data
-        events = Event.objects.filter(
-            disaster_category__isnull=False,
-            disaster_type__isnull=False
-        ).annotate(
-            **{
-                'new_displacement': Subquery(
-                    Figure.filtered_nd_figures(
-                        figure_queryset.filter(
-                            event=OuterRef('pk'),
-                        ),
-                        start_date=datetime.datetime(year=year, month=1, day=1),
-                        end_date=datetime.datetime(year=year, month=12, day=31),
-                    ).order_by().values('event').annotate(
-                        _total=Sum('total_figures')
-                    ).values('_total')[:1],
-                    output_field=IntegerField()
-                ),
-            },
+        disasters = disaster_qs.annotate(
+            new_displacement=Sum(
+                Case(
+                    When(
+                        category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                        then=F('total_figures')
+                    ),
+                    output_field=IntegerField(),
+                    default=0
+                )
+            ),
             year=Value(year, output_field=IntegerField()),
-            hazard_category=F('disaster_category__name'),
-            hazard_sub_category=F('disaster_sub_category__name'),
-            hazard_type=F('disaster_type__name'),
-            hazard_sub_type=F('disaster_sub_type__name'),
-            country=F('figures__country'),
-            iso3=F('figures__country__iso3'),
-            country_name=F('figures__country__name'),
+            hazard_category=F('event__disaster_category__name'),
+            hazard_sub_category=F('event__disaster_sub_category__name'),
+            hazard_type=F('event__disaster_type__name'),
+            hazard_sub_type=F('event__disaster_sub_type__name'),
+            iso3=F('country__iso3'),
+            country_name=F('country__name'),
+            event_name=F('event__name'),
         ).filter(
             new_displacement__isnull=False,
         ).order_by('year').values(
             'year',
-            'id',
-            'name',
-            'start_date',
-            'start_date_accuracy',
-            'end_date',
-            'end_date_accuracy',
-            'hazard_category',
-            'hazard_sub_category',
-            'hazard_type',
-            'hazard_sub_type',
-            'new_displacement',
-            'country',
-            'iso3',
-            'country_name',
-        ).distinct(
-            'year',
-            'id',
-            'name',
+            'event_id',
+            'event_name',
             'start_date',
             'start_date_accuracy',
             'end_date',
@@ -148,8 +134,8 @@ def update_conflict_and_disaster_data():
         Disaster.objects.bulk_create(
             [
                 Disaster(
-                    event_id=item['id'],
-                    event_name=item['name'],
+                    event_id=item['event_id'],
+                    event_name=item['event_name'],
                     year=item['year'],
                     start_date=item['start_date'],
                     start_date_accuracy=item['start_date_accuracy'],
@@ -163,7 +149,7 @@ def update_conflict_and_disaster_data():
                     iso3=item['iso3'],
                     country_id=item['country'],
                     country_name=item['country_name'],
-                ) for item in events
+                ) for item in disasters
             ]
         )
 
@@ -179,7 +165,7 @@ def update_gidd_data(log_id):
 
     countries = Country.objects.values('iso3', 'id')
 
-    iso3_to_country_id_map = {country['iso3'] : country['id'] for country in countries}
+    iso3_to_country_id_map = {country['iso3']: country['id'] for country in countries}
 
     # Bulk create conflict legacy data
     Conflict.objects.bulk_create(

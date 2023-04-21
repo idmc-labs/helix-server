@@ -22,6 +22,7 @@ from .models import (
     Conflict,
     Disaster,
     GiddLog,
+    ReleaseMetadata,
 )
 from graphene_django import DjangoObjectType
 from .gh_filters import (
@@ -103,6 +104,11 @@ class GiddLogListType(CustomDjangoListObjectType):
         model = GiddLog
 
 
+class ReleaseMetadataType(DjangoObjectType):
+    class Meta:
+        model = ReleaseMetadata
+
+
 class Query(graphene.ObjectType):
     gidd_conflict = DjangoObjectField(ConflictType)
     gidd_conflicts = DjangoPaginatedListObjectField(
@@ -137,6 +143,11 @@ class Query(graphene.ObjectType):
             page_size_query_param='pageSize'
         )
     )
+    gidd_release_meta_data = graphene.Field(ReleaseMetadataType)
+
+    @staticmethod
+    def resolve_gidd_release_meta_data(parent, info, **kwargs):
+        return ReleaseMetadata.objects.first()
 
     @staticmethod
     def resolve_gidd_conflict_statistics(parent, info, **kwargs):
