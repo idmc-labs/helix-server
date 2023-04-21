@@ -350,6 +350,28 @@ class ExportReport(graphene.Mutation):
         return ExportReport(errors=None, ok=True)
 
 
+class SetPfaVisibleInGidd(graphene.Mutation):
+    class Arguments:
+        report_id = graphene.ID(required=True)
+        is_pfa_visible_in_gidd = graphene.Boolean(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(ReportType)
+
+    @staticmethod
+    @permission_checker(['report.add_report'])
+    def mutate(root, info, report_id, is_pfa_visible_in_gidd):
+        report = Report.objects.filter(id=report_id).first()
+        if not report:
+            return SetPfaVisibleInGidd(errors=[
+                dict(field='nonFieldErrors', messages='Report does not exist.')
+            ])
+        report.is_pfa_visible_in_gidd = is_pfa_visible_in_gidd
+        report.save()
+        return SetPfaVisibleInGidd(result=report, errors=None, ok=True)
+
+
 class Mutation(object):
     create_report = CreateReport.Field()
     update_report = UpdateReport.Field()
@@ -366,3 +388,4 @@ class Mutation(object):
     export_report_figures = ExportReportFigures.Field()
     export_reports = ExportReports.Field()
     export_report = ExportReport.Field()
+    set_pfa_visible_in_gidd = SetPfaVisibleInGidd.Field()
