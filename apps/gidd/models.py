@@ -143,3 +143,16 @@ class DisasterLegacy(models.Model):
 
     def __str__(self):
         return str(self.id)
+
+
+class ReleaseMetadata(models.Model):
+    production_year = models.IntegerField(verbose_name=_('Production year'))
+    staging_year = models.IntegerField(verbose_name=_('Staging year'))
+    modified_by = models.ForeignKey(
+        'users.User', verbose_name=_('Modified by'), null=True, blank=True,
+        related_name='+', on_delete=models.SET_NULL
+    )
+    modified_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return str(self.production_year)

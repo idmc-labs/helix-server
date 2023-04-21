@@ -49,7 +49,7 @@ class ConflictStatisticsFilter(django_filters.FilterSet):
 class DisasterStatisticsFilter(django_filters.FilterSet):
     categories = StringListFilter(method='filter_categories')
     countries = StringListFilter(method='filter_countries')
-    start_year = django_filters.NumberFilter(method='filter_end_year')
+    start_year = django_filters.NumberFilter(method='filter_start_year')
     end_year = django_filters.NumberFilter(method='filter_end_year')
     countries_iso3 = StringListFilter(method='filter_countries_iso3')
 
