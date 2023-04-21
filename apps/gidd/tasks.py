@@ -114,6 +114,7 @@ def update_conflict_and_disaster_data():
             event_name=F('event__name'),
         ).filter(
             new_displacement__isnull=False,
+            year__gte=2016,
         ).order_by('year').values(
             'year',
             'event_id',
