@@ -185,6 +185,10 @@ class Report(MetaInformationArchiveAbstractModel,
         blank=True,
         verbose_name=_('Public figure analysis'),
     )
+    is_pfa_visible_in_gidd = models.BooleanField(
+        default=False,
+        verbose_name=_('Is public figure analysis visible in Gidd'),
+    )
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
