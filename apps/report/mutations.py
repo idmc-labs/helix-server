@@ -366,7 +366,7 @@ class SetPfaVisibleInGidd(graphene.Mutation):
         report = Report.objects.filter(id=report_id).first()
         if not report:
             return SetPfaVisibleInGidd(errors=[
-                dict(field='nonFieldErrors', messages='Report does not exits')
+                dict(field='nonFieldErrors', messages='Report does not exist')
             ])
         if is_pfa_visible_in_gidd is True:
             errors = check_is_pfa_visible_in_gidd(report)
