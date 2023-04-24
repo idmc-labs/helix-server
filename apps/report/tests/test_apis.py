@@ -640,21 +640,41 @@ class TestPaf(HelixGraphQLTestCase):
         self.admin = create_user_with_role(
             USER_ROLE.ADMIN.name,
         )
-        self.report = ReportFactory.create(is_pfa_visible_in_gidd=False)
+        self.report = ReportFactory.create(
+            is_pfa_visible_in_gidd=False,
+            filter_figure_start_after='2022-01-01',
+            filter_figure_end_before='2022-12-31',
+            is_public=True,
+            filter_figure_categories=[Figure.FIGURE_CATEGORY_TYPES.IDPS.value],
+            filter_figure_crisis_types=[Crisis.CRISIS_TYPE.CONFLICT.value]
+        )
+        self.report.filter_figure_countries.add(self.country)
         self.set_pfa_visible_in_gidd = '''
-            mutation setPfaVisibleInGidd($reportId: ID!, $isPfaVisibleInGidd: Boolean!) {
-                setPfaVisibleInGidd(reportId: $reportId, isPfaVisibleInGidd: $isPfaVisibleInGidd) {
-                    ok
-                    errors
-                    result {
-                        id
-                        isPfaVisibleInGidd
-                    }
-                }
+          mutation setPfaVisibleInGidd($reportId: ID!, $isPfaVisibleInGidd: Boolean!) {
+              setPfaVisibleInGidd(reportId: $reportId, isPfaVisibleInGidd: $isPfaVisibleInGidd) {
+                  ok
+                  errors
+                  result {
+                      id
+                      isPfaVisibleInGidd
+                  }
+              }
+          }
+        '''
+
+        self.update_report = '''
+          mutation MyMutation($input: ReportUpdateInputType!) {
+            updateReport(data: $input) {
+              ok
+              result {
+                isPfaVisibleInGidd
+              }
             }
+          }
         '''
 
     def test_only_admin_can_change_is_pfa_visible_in_gidd(self):
+        # Valid case
         self.force_login(self.admin)
         response = self.query(
             self.set_pfa_visible_in_gidd,
@@ -662,6 +682,14 @@ class TestPaf(HelixGraphQLTestCase):
         )
         is_pfa_visible_in_gidd = response.json()['data']['setPfaVisibleInGidd']['result']['isPfaVisibleInGidd']
         self.assertEqual(is_pfa_visible_in_gidd, True)
+
+        # Update report with invalid values for PFA
+        update_response = self.query(
+            self.update_report,
+            input_data={'id': self.report.id, 'isPublic': False}
+        )
+        is_pfa_visible_in_gidd = update_response.json()['data']['updateReport']['result']['isPfaVisibleInGidd']
+        self.assertEqual(is_pfa_visible_in_gidd, False)
 
         self.force_login(self.regional_coordinator)
         response = self.query(

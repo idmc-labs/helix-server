@@ -15,6 +15,47 @@ from apps.report.models import (
     ReportGeneration,
     ReportApproval,
 )
+from apps.entry.models import Figure
+from apps.crisis.models import Crisis
+
+
+def check_is_pfa_visible_in_gidd(report):
+    errors = []
+    if not report:
+        errors.append('Report does not exist.')
+
+    if not (report.filter_figure_start_after and report.filter_figure_end_before):
+        errors.append('Start date and end date are required.')
+    else:
+        start_date_month = report.filter_figure_start_after.month
+        start_date_day = report.filter_figure_start_after.month
+        end_date_month = report.filter_figure_end_before.month
+        end_date_day = report.filter_figure_end_before.month
+        if start_date_month != 1 and start_date_day != 1 and end_date_month != 12 and end_date_day != 31:
+            errors.append('The report spans for the full year.')
+
+    if not report.is_public:
+        errors.append('Report should be public.')
+
+    if report.filter_figure_countries.count() == 0:
+        errors.append('Report should should have at least one country.')
+
+    if not report.filter_figure_crisis_types:
+        errors.append('Figure crisis type is required.')
+    elif not set(report.filter_figure_crisis_types) and {
+        Crisis.CRISIS_TYPE.DISASTER,
+        Crisis.CRISIS_TYPE.CONFLICT
+    }:
+        errors.append('Report should have conflict or disaster crisis type.')
+
+    if not report.filter_figure_categories:
+        errors.append('Figure crisis category is required.')
+    elif not set(report.filter_figure_categories) and {
+        Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+        Figure.FIGURE_CATEGORY_TYPES.IDPS,
+    }:
+        errors.append('Figure category should be IDPs or New Displacement')
+    return errors
 
 
 class ReportSerializer(MetaInformationSerializerMixin,
@@ -51,6 +92,14 @@ class ReportSerializer(MetaInformationSerializerMixin,
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
+
+    def update(self, instance, validated_data):
+        validated_data['last_modified_by'] = self.context['request'].user
+        instance = super().update(instance, validated_data)
+        if check_is_pfa_visible_in_gidd(instance):
+            instance.is_pfa_visible_in_gidd = False
+            instance.save()
+        return instance
 
 
 class ReportUpdateSerializer(UpdateSerializerMixin, ReportSerializer):

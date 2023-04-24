@@ -16,6 +16,7 @@ from apps.report.serializers import (
     ReportGenerationSerializer,
     ReportApproveSerializer,
     ReportSignoffSerializer,
+    check_is_pfa_visible_in_gidd,
 )
 from utils.mutation import generate_input_type_for_serializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
@@ -363,9 +364,11 @@ class SetPfaVisibleInGidd(graphene.Mutation):
     @permission_checker(['report.update_pfa_visibility_report'])
     def mutate(root, info, report_id, is_pfa_visible_in_gidd):
         report = Report.objects.filter(id=report_id).first()
-        if not report:
+        report = Report.objects.filter(id=report_id).first()
+        errors = check_is_pfa_visible_in_gidd(report)
+        if errors:
             return SetPfaVisibleInGidd(errors=[
-                dict(field='nonFieldErrors', messages='Report does not exist.')
+                dict(field='nonFieldErrors', messages=errors)
             ])
         report.is_pfa_visible_in_gidd = is_pfa_visible_in_gidd
         report.save()
