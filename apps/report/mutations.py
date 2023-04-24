@@ -360,7 +360,7 @@ class SetPfaVisibleInGidd(graphene.Mutation):
     result = graphene.Field(ReportType)
 
     @staticmethod
-    @permission_checker(['report.add_report'])
+    @permission_checker(['report.update_pfa_visibility_report'])
     def mutate(root, info, report_id, is_pfa_visible_in_gidd):
         report = Report.objects.filter(id=report_id).first()
         if not report:

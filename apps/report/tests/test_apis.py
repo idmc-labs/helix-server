@@ -9,7 +9,10 @@ from utils.factories import (
     ReportCommentFactory,
     EntryFactory,
     FigureFactory,
+    MonitoringSubRegionFactory,
     EventFactory,
+    CountryRegionFactory,
+    CountrySubRegionFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -608,3 +611,75 @@ class TestIndividualReportExport(HelixGraphQLTestCase):
         content = response.json()
         self.assertResponseNoErrors(response)
         self.assertIsNone(content['data']['exportReport']['errors'], content)
+
+
+class TestPaf(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.region = CountryRegionFactory.create()
+        self.sub_region = CountrySubRegionFactory.create()
+        self.monitoring_sub_region = MonitoringSubRegionFactory.create()
+
+        self.country = CountryFactory.create(
+            monitoring_sub_region=self.monitoring_sub_region,
+            region=self.region,
+            sub_region=self.sub_region,
+        )
+        self.regional_coordinator = create_user_with_role(
+            USER_ROLE.REGIONAL_COORDINATOR.name,
+            country=self.country.id,
+            monitoring_sub_region=self.monitoring_sub_region.id,
+        )
+        self.monitoring_expert = create_user_with_role(
+            USER_ROLE.MONITORING_EXPERT.name,
+            country=self.country.id,
+            monitoring_sub_region=self.monitoring_sub_region.id,
+        )
+        self.guest = create_user_with_role(
+            USER_ROLE.GUEST.name,
+        )
+        self.admin = create_user_with_role(
+            USER_ROLE.ADMIN.name,
+        )
+        self.report = ReportFactory.create(is_pfa_visible_in_gidd=False)
+        self.set_pfa_visible_in_gidd = '''
+            mutation setPfaVisibleInGidd($reportId: ID!, $isPfaVisibleInGidd: Boolean!) {
+                setPfaVisibleInGidd(reportId: $reportId, isPfaVisibleInGidd: $isPfaVisibleInGidd) {
+                    ok
+                    errors
+                    result {
+                        id
+                        isPfaVisibleInGidd
+                    }
+                }
+            }
+        '''
+
+    def test_only_admin_can_change_is_pfa_visible_in_gidd(self):
+        self.force_login(self.admin)
+        response = self.query(
+            self.set_pfa_visible_in_gidd,
+            variables={'reportId': self.report.id, 'isPfaVisibleInGidd': True}
+        )
+        is_pfa_visible_in_gidd = response.json()['data']['setPfaVisibleInGidd']['result']['isPfaVisibleInGidd']
+        self.assertEqual(is_pfa_visible_in_gidd, True)
+
+        self.force_login(self.regional_coordinator)
+        response = self.query(
+            self.set_pfa_visible_in_gidd,
+            variables={'reportId': self.report.id, 'isPfaVisibleInGidd': True}
+        )
+        self.assertIn(PERMISSION_DENIED_MESSAGE, response.json()['errors'][0]['message'])
+
+        self.force_login(self.monitoring_expert)
+        response = self.query(
+            self.set_pfa_visible_in_gidd,
+            variables={'reportId': self.report.id, 'isPfaVisibleInGidd': True}
+        )
+        self.assertIn(PERMISSION_DENIED_MESSAGE, response.json()['errors'][0]['message'])
+
+        self.force_login(self.guest)
+        response = self.query(
+            self.set_pfa_visible_in_gidd,
+            variables={'reportId': self.report.id, 'isPfaVisibleInGidd': True}
+        )
+        self.assertIn(PERMISSION_DENIED_MESSAGE, response.json()['errors'][0]['message'])

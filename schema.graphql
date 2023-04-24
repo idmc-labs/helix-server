@@ -2083,6 +2083,7 @@ enum PERMISSION_ACTION {
   self_assign
   clear_assignee
   clear_self_assignee
+  update_pfa_visibility
 }
 
 enum PERMISSION_ENTITY {
