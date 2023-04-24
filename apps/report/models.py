@@ -398,6 +398,7 @@ class Report(MetaInformationArchiveAbstractModel,
         permissions = (
             ('sign_off_report', 'Can sign off the report'),
             ('approve_report', 'Can approve the report'),
+            ('update_pfa_visibility_report', 'Can update public figure visibility in GIDD'),
         )
 
     def __str__(self):
