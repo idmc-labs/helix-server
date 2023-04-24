@@ -15,6 +15,58 @@ from apps.report.models import (
     ReportGeneration,
     ReportApproval,
 )
+from apps.entry.models import Figure
+from apps.crisis.models import Crisis
+
+
+def check_is_pfa_visible_in_gidd(report):
+
+    errors = []
+    if not report:
+        errors.append('Report does not exist.')
+
+    if not (report.filter_figure_start_after and report.filter_figure_end_before):
+        errors.append('Start date and end date are required.')
+    else:
+        start_date_year = report.filter_figure_start_after.year
+        start_date_month = report.filter_figure_start_after.month
+        start_date_day = report.filter_figure_start_after.day
+
+        end_date_year = report.filter_figure_end_before.year
+        end_date_month = report.filter_figure_end_before.month
+        end_date_day = report.filter_figure_end_before.day
+
+        if not (
+                start_date_year == end_date_year and
+                start_date_month == 1 and
+                start_date_day == 1 and
+                end_date_month == 12 and
+                end_date_day == 31
+        ):
+            errors.append('The report should span for the full year.')
+
+    if not report.is_public:
+        errors.append('Report should be public.')
+
+    if report.filter_figure_countries.count() != 1:
+        errors.append('Report should have exactly one country.')
+
+    if not report.filter_figure_crisis_types:
+        errors.append('Report should have conflict or disaster crisis type.')
+    elif len(set(report.filter_figure_crisis_types).intersection({
+        Crisis.CRISIS_TYPE.DISASTER,
+        Crisis.CRISIS_TYPE.CONFLICT}
+    )) != 1:
+        errors.append('Report should have conflict or disaster crisis type.')
+
+    if not report.filter_figure_categories:
+        errors.append('Report should have IDPs or New Displacement category.')
+    elif len(set(report.filter_figure_categories).intersection({
+        Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+        Figure.FIGURE_CATEGORY_TYPES.IDPS,
+    })) != 1:
+        errors.append('Report should have IDPs or New Displacement category.')
+    return errors
 
 
 class ReportSerializer(MetaInformationSerializerMixin,
@@ -51,6 +103,14 @@ class ReportSerializer(MetaInformationSerializerMixin,
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
+
+    def update(self, instance, validated_data):
+        validated_data['last_modified_by'] = self.context['request'].user
+        instance = super().update(instance, validated_data)
+        if check_is_pfa_visible_in_gidd(instance):
+            instance.is_pfa_visible_in_gidd = False
+            instance.save()
+        return instance
 
 
 class ReportUpdateSerializer(UpdateSerializerMixin, ReportSerializer):

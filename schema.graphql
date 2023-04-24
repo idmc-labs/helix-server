@@ -1637,6 +1637,7 @@ type Mutation {
   exportReportFigures(report: ID!): ExportReportFigures
   exportReports(name_Unaccent_Icontains: String, filterFigureCountries: [ID!], reviewStatus: [String!], startDateAfter: Date, endDateBefore: Date, isPublic: Boolean): ExportReports
   exportReport(id: ID!): ExportReport
+  setPfaVisibleInGidd(isPfaVisibleInGidd: Boolean!, reportId: ID!): SetPfaVisibleInGidd
   createExtraction(data: CreateExtractInputType!): CreateExtraction
   updateExtraction(data: UpdateExtractInputType!): UpdateExtraction
   deleteExtraction(id: ID!): DeleteExtraction
@@ -2082,6 +2083,7 @@ enum PERMISSION_ACTION {
   self_assign
   clear_assignee
   clear_self_assignee
+  update_pfa_visibility
 }
 
 enum PERMISSION_ENTITY {
@@ -2546,6 +2548,7 @@ type ReportType {
   isSignedOffBy: UserType
   isPublic: Boolean!
   publicFigureAnalysis: String
+  isPfaVisibleInGidd: Boolean!
   comments(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, body: String, report: ID, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
   generations(report: ID, ordering: String): ReportGenerationListType
   filterFigureRolesDisplay: EnumDescription
@@ -2675,6 +2678,12 @@ type SetAssigneeToEvent {
   errors: [GenericScalar!]
   ok: Boolean
   result: EventType
+}
+
+type SetPfaVisibleInGidd {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ReportType
 }
 
 type SetSelfAssigneeToEvent {

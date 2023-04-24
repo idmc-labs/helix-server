@@ -185,6 +185,10 @@ class Report(MetaInformationArchiveAbstractModel,
         blank=True,
         verbose_name=_('Public figure analysis'),
     )
+    is_pfa_visible_in_gidd = models.BooleanField(
+        default=False,
+        verbose_name=_('Is public figure analysis visible in Gidd'),
+    )
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
@@ -394,6 +398,7 @@ class Report(MetaInformationArchiveAbstractModel,
         permissions = (
             ('sign_off_report', 'Can sign off the report'),
             ('approve_report', 'Can approve the report'),
+            ('update_pfa_visibility_report', 'Can update public figure visibility in GIDD'),
         )
 
     def __str__(self):
