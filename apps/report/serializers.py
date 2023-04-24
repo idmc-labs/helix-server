@@ -36,7 +36,6 @@ def check_is_pfa_visible_in_gidd(report):
         end_date_month = report.filter_figure_end_before.month
         end_date_day = report.filter_figure_end_before.day
 
-        print(start_date_year, end_date_year, start_date_day, end_date_day, start_date_month, end_date_month)
         if not (
                 start_date_year == end_date_year and
                 start_date_month == 1 and
@@ -54,18 +53,18 @@ def check_is_pfa_visible_in_gidd(report):
 
     if not report.filter_figure_crisis_types:
         errors.append('Figure crisis type is required.')
-    elif not len(set(report.filter_figure_crisis_types) and {
+    elif len(set(report.filter_figure_crisis_types).intersection({
         Crisis.CRISIS_TYPE.DISASTER,
         Crisis.CRISIS_TYPE.CONFLICT}
-    ) != 1:
+    )) != 1:
         errors.append('Report should have conflict or disaster crisis type.')
 
     if not report.filter_figure_categories:
         errors.append('Figure crisis category is required.')
-    elif not len(set(report.filter_figure_categories) and {
+    elif len(set(report.filter_figure_categories).intersection({
         Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
         Figure.FIGURE_CATEGORY_TYPES.IDPS,
-    }) != 1:
+    })) != 1:
         errors.append('Figure category should be IDPs or New Displacement')
     return errors
 
