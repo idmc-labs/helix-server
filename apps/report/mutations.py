@@ -364,12 +364,16 @@ class SetPfaVisibleInGidd(graphene.Mutation):
     @permission_checker(['report.update_pfa_visibility_report'])
     def mutate(root, info, report_id, is_pfa_visible_in_gidd):
         report = Report.objects.filter(id=report_id).first()
-        report = Report.objects.filter(id=report_id).first()
-        errors = check_is_pfa_visible_in_gidd(report)
-        if errors:
+        if not report:
             return SetPfaVisibleInGidd(errors=[
-                dict(field='nonFieldErrors', messages=errors)
+                dict(field='nonFieldErrors', messages='Report does not exits')
             ])
+        if is_pfa_visible_in_gidd is True:
+            errors = check_is_pfa_visible_in_gidd(report)
+            if errors:
+                return SetPfaVisibleInGidd(errors=[
+                    dict(field='nonFieldErrors', messages=errors)
+                ])
         report.is_pfa_visible_in_gidd = is_pfa_visible_in_gidd
         report.save()
         return SetPfaVisibleInGidd(result=report, errors=None, ok=True)

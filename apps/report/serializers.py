@@ -52,7 +52,7 @@ def check_is_pfa_visible_in_gidd(report):
         errors.append('Report should have exactly one country.')
 
     if not report.filter_figure_crisis_types:
-        errors.append('Figure crisis type is required.')
+        errors.append('Report should have conflict or disaster crisis type.')
     elif len(set(report.filter_figure_crisis_types).intersection({
         Crisis.CRISIS_TYPE.DISASTER,
         Crisis.CRISIS_TYPE.CONFLICT}
@@ -60,12 +60,12 @@ def check_is_pfa_visible_in_gidd(report):
         errors.append('Report should have conflict or disaster crisis type.')
 
     if not report.filter_figure_categories:
-        errors.append('Figure crisis category is required.')
+        errors.append('Report should have IDPs or New Displacement category.')
     elif len(set(report.filter_figure_categories).intersection({
         Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
         Figure.FIGURE_CATEGORY_TYPES.IDPS,
     })) != 1:
-        errors.append('Figure category should be IDPs or New Displacement')
+        errors.append('Report should have IDPs or New Displacement category.')
     return errors
 
 
