@@ -49,6 +49,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_assignee: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_self_assignee: {PERMISSION_ENTITY.event},
+        PERMISSION_ACTION.update_pfa_visibility: {PERMISSION_ENTITY.report},
     },
     USER_ROLE.REGIONAL_COORDINATOR: {
         PERMISSION_ACTION.add: REGIONAL_COORDINATOR_MODELS,
@@ -60,6 +61,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_assignee: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_self_assignee: {PERMISSION_ENTITY.event},
+        PERMISSION_ACTION.update_pfa_visibility: set(),
     },
     USER_ROLE.MONITORING_EXPERT: {
         PERMISSION_ACTION.add: MONITORING_EXPERT_MODELS,
@@ -71,6 +73,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_assignee: set(),
         PERMISSION_ACTION.clear_self_assignee: {PERMISSION_ENTITY.event},
+        PERMISSION_ACTION.update_pfa_visibility: set(),
     },
     USER_ROLE.GUEST: {
         PERMISSION_ACTION.add: set(),
