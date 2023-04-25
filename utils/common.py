@@ -3,10 +3,14 @@ import re
 import decimal
 from django.core.files.storage import get_storage_class
 from django.conf import settings
+from rest_framework.exceptions import PermissionDenied
 import tempfile
 import logging
 from helix import redis
 from datetime import timedelta
+
+from helix.caches import external_api_cache
+from apps.contrib.redis_client_track import track_client
 
 
 logger = logging.getLogger(__name__)
@@ -141,3 +145,13 @@ def round_and_remove_zero(num):
     if absolute_num < 10000:
         return sign * round(absolute_num / 100) * 100
     return sign * round(num / 1000) * 1000
+
+
+def track_gidd(client_id, endpoint_type):
+    if client_id not in external_api_cache.get('client_ids', []):
+        raise PermissionDenied('Client is not registered.')
+    # Track client
+    track_client(
+        endpoint_type,
+        client_id,
+    )
