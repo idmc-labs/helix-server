@@ -655,22 +655,6 @@ files = [
 ]
 
 [[package]]
-name = "drf-nested-routers"
-version = "0.93.4"
-description = "Nested resources for the Django Rest Framework"
-category = "main"
-optional = false
-python-versions = ">=3.5"
-files = [
-    {file = "drf-nested-routers-0.93.4.tar.gz", hash = "sha256:01aa556b8c08608bb74fb34f6ca065a5183f2cda4dc0478192cc17a2581d71b0"},
-    {file = "drf_nested_routers-0.93.4-py2.py3-none-any.whl", hash = "sha256:996b77f3f4dfaf64569e7b8f04e3919945f90f95366838ca5b8bed9dd709d6c5"},
-]
-
-[package.dependencies]
-Django = ">=1.11"
-djangorestframework = ">=3.6.0"
-
-[[package]]
 name = "et-xmlfile"
 version = "1.1.0"
 description = "An implementation of lxml.xmlfile for the standard library"
@@ -1984,4 +1968,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8"
-content-hash = "e28c50f5ba461ab4f9979b7a69cb1aafcff8851fdb571a878a53d41f0533d860"
+content-hash = "aeacb35350a42aadbf5028e4e28785f07e19289dffbab7ab7b9a94ea05de7a77"
