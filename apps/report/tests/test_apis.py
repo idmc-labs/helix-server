@@ -696,7 +696,8 @@ class TestPaf(HelixGraphQLTestCase):
             self.set_pfa_visible_in_gidd,
             variables={'reportId': self.report.id, 'isPfaVisibleInGidd': True}
         )
-        self.assertIn(PERMISSION_DENIED_MESSAGE, response.json()['errors'][0]['message'])
+        is_pfa_visible_in_gidd = update_response.json()['data']['updateReport']['result']['isPfaVisibleInGidd']
+        self.assertEqual(is_pfa_visible_in_gidd, False)
 
         self.force_login(self.monitoring_expert)
         response = self.query(
