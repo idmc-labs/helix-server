@@ -59,3 +59,6 @@ python manage.py addstatictoken -t 123456 "admin@idmcdb.org"
 ```bash
 ./manage.py graphql_schema --out schema.graphql
 ```
+
+## Populate pre 2016 conflict and disaster data
+docker-compose exec server python manage.py update_pre_2016_gidd_data.py old_conflict_data.csv old_disaster_data.csv
