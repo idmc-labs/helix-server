@@ -91,34 +91,34 @@ class TestReportModel(HelixTestCase):
         ).values('country').order_by()
 
         data = filtered_report_figures.filter(disaggregation_conflict__gt=0).annotate(
-            name=models.F('country__name'),
+            name=models.F('country__idmc_short_name'),
             iso3=models.F('country__iso3'),
             total=models.Sum('disaggregation_conflict', filter=models.Q(disaggregation_conflict__gt=0)),
             typology=models.Value('Armed Conflict', output_field=models.CharField())
         ).values('name', 'iso3', 'total', 'typology').union(
             filtered_report_figures.filter(disaggregation_conflict_political__gt=0).annotate(
-                name=models.F('country__name'),
+                name=models.F('country__idmc_short_name'),
                 iso3=models.F('country__iso3'),
                 total=models.Sum('disaggregation_conflict_political',
                                  filter=models.Q(disaggregation_conflict_political__gt=0)),
                 typology=models.Value('Violence - Political', output_field=models.CharField())
             ).values('name', 'iso3', 'total', 'typology'),
             filtered_report_figures.filter(disaggregation_conflict_criminal__gt=0).annotate(
-                name=models.F('country__name'),
+                name=models.F('country__idmc_short_name'),
                 iso3=models.F('country__iso3'),
                 total=models.Sum('disaggregation_conflict_criminal',
                                  filter=models.Q(disaggregation_conflict_criminal__gt=0)),
                 typology=models.Value('Violence - Criminal', output_field=models.CharField())
             ).values('name', 'iso3', 'total', 'typology'),
             filtered_report_figures.filter(disaggregation_conflict_communal__gt=0).annotate(
-                name=models.F('country__name'),
+                name=models.F('country__idmc_short_name'),
                 iso3=models.F('country__iso3'),
                 total=models.Sum('disaggregation_conflict_communal',
                                  filter=models.Q(disaggregation_conflict_communal__gt=0)),
                 typology=models.Value('Violence - Communal', output_field=models.CharField())
             ).values('name', 'iso3', 'total', 'typology'),
             filtered_report_figures.filter(disaggregation_conflict_other__gt=0).annotate(
-                name=models.F('country__name'),
+                name=models.F('country__idmc_short_name'),
                 iso3=models.F('country__iso3'),
                 total=models.Sum('disaggregation_conflict_other', filter=models.Q(disaggregation_conflict_other__gt=0)),
                 typology=models.Value('Other', output_field=models.CharField())

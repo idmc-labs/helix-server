@@ -117,7 +117,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
             countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
-            countries_name=StringAgg('countries__name', '; ', distinct=True),
+            countries_name=StringAgg('countries__idmc_short_name', '; ', distinct=True),
             regions_name=StringAgg('countries__region__name', '; ', distinct=True),
             events_count=models.Count('events', distinct=True),
             min_event_start=models.Min('events__start_date'),

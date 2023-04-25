@@ -33,7 +33,7 @@ def get_idu_data():
         ~(Q(entry__document_url__isnull=True) | Q(entry__document_url='')) |
         ~(Q(entry__url__isnull=True) | Q(entry__url=''))
     ).annotate(
-        country_name=F('country__name'),
+        country_name=F('country__idmc_short_name'),
         iso3=F('country__iso3'),
         centroid_lat=Avg('geo_locations__lat'),
         centroid_lon=Avg('geo_locations__lon'),
@@ -94,7 +94,7 @@ def get_idu_data():
                 total_figures=1,
                 category=Figure.FIGURE_CATEGORY_TYPES.RETURN.value,
                 then=Concat(
-                    F('country__name'),
+                    F('country__idmc_short_name'),
                     Value(': '),
                     F('total_figures_text'),
                     Value(' return '),
@@ -121,7 +121,7 @@ def get_idu_data():
                     ~Q(total_figures=1) & Q(category=Figure.FIGURE_CATEGORY_TYPES.RETURN.value)
                 ),
                 then=Concat(
-                    F('country__name'),
+                    F('country__idmc_short_name'),
                     Value(': '),
                     F('total_figures_text'),
                     Value(' returns '),
@@ -149,7 +149,7 @@ def get_idu_data():
                     ~Q(term=Figure.FIGURE_TERMS.DISPLACED.value)
                 ),
                 then=Concat(
-                    F('country__name'),
+                    F('country__idmc_short_name'),
                     Value(': '),
                     F('total_figures_text'),
                     Value(' displacement '),
@@ -180,7 +180,7 @@ def get_idu_data():
                     )
                 ),
                 then=Concat(
-                    F('country__name'),
+                    F('country__idmc_short_name'),
                     Value(': '),
                     F('total_figures_text'),
                     Value(' displacements, '),
@@ -209,7 +209,7 @@ def get_idu_data():
                     ~Q(term=Figure.FIGURE_TERMS.DISPLACED.value)
                 ),
                 then=Concat(
-                    F('country__name'),
+                    F('country__idmc_short_name'),
                     Value(': '),
                     F('total_figures_text'),
                     Value(' displacements '),

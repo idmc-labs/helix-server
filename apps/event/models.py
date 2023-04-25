@@ -82,7 +82,7 @@ class Actor(MetaInformationAbstractModel, NameAttributedModels):
             created_at='Created At',
             created_by__full_name='Created By',
             name='Name',
-            country__name='Country',
+            country__idmc_short_name='Country',
             country__iso3='ISO3',
             torg='TORG',
         )
@@ -407,7 +407,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
             countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
-            countries_name=StringAgg('countries__name', '; ', distinct=True),
+            countries_name=StringAgg('countries__idmc_short_name', '; ', distinct=True),
             regions_name=StringAgg('countries__region__name', '; ', distinct=True),
             figures_count=models.Count('figures', distinct=True),
             entries_count=models.Count('figures__entry', distinct=True),
