@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from apps.country.models import Country
-from .models import Conflict, Disaster, GiddLog, ReleaseMetadata
+from .models import Conflict, Disaster, StatusLog, ReleaseMetadata
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -28,9 +28,9 @@ class DisasterSerializer(serializers.ModelSerializer):
         lookup_field = 'id'
 
 
-class GiddLogSerializer(serializers.ModelSerializer):
+class StatusLogSerializer(serializers.ModelSerializer):
     class Meta:
-        model = GiddLog
+        model = StatusLog
         fields = '__all__'
 
 

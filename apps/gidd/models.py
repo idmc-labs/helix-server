@@ -29,7 +29,7 @@ class Conflict(models.Model):
 class Disaster(models.Model):
     event = models.ForeignKey(
         'event.Event', verbose_name=_('Event'),
-        related_name='gidd_figures', on_delete=models.CASCADE,
+        related_name='gidd_events', on_delete=models.CASCADE,
         null=True, blank=True
     )
     event_name = models.CharField(verbose_name=_('Event name'), max_length=256, null=True, blank=True)
@@ -65,7 +65,7 @@ class Disaster(models.Model):
         return str(self.id)
 
 
-class GiddLog(models.Model):
+class StatusLog(models.Model):
 
     class Status(enum.Enum):
         PENDING = 0
