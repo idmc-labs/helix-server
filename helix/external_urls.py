@@ -1,6 +1,5 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework_nested.routers import NestedDefaultRouter
 from apps.entry.views import (
     IdusFlatCachedView,
     IdusAllFlatCachedView,
@@ -14,7 +13,6 @@ from apps.gidd.views import (
 
 router = DefaultRouter()
 router.register("countries", CountryViewSet, "countries-view")
-country_router = NestedDefaultRouter(router, "countries", lookup="id")
 router.register("conflicts", ConflictViewSet, "conflicts-view")
 router.register("disasters", DisasterViewSet, "diasters-view")
 

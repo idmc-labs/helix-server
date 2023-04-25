@@ -105,12 +105,19 @@ def update_conflict_and_disaster_data():
                 )
             ),
             year=Value(year, output_field=IntegerField()),
-            hazard_category=F('event__disaster_category__name'),
-            hazard_sub_category=F('event__disaster_sub_category__name'),
-            hazard_type=F('event__disaster_type__name'),
-            hazard_sub_type=F('event__disaster_sub_type__name'),
+
+            hazard_category=F('event__disaster_category'),
+            hazard_sub_category=F('event__disaster_sub_category'),
+            hazard_type=F('event__disaster_type'),
+            hazard_sub_type=F('event__disaster_sub_type'),
+
+            hazard_category_name=F('event__disaster_category__name'),
+            hazard_sub_category_name=F('event__disaster_sub_category__name'),
+            hazard_type_name=F('event__disaster_type__name'),
+            hazard_sub_type_name=F('event__disaster_sub_type__name'),
+
             iso3=F('country__iso3'),
-            country_name=F('country__name'),
+            country_name=F('country__idmc_short_name'),
             event_name=F('event__name'),
         ).filter(
             new_displacement__isnull=False,
@@ -123,10 +130,17 @@ def update_conflict_and_disaster_data():
             'start_date_accuracy',
             'end_date',
             'end_date_accuracy',
+
             'hazard_category',
             'hazard_sub_category',
             'hazard_type',
             'hazard_sub_type',
+
+            'hazard_category_name',
+            'hazard_sub_category_name',
+            'hazard_type_name',
+            'hazard_sub_type_name',
+
             'new_displacement',
             'country',
             'iso3',
@@ -142,10 +156,17 @@ def update_conflict_and_disaster_data():
                     start_date_accuracy=item['start_date_accuracy'],
                     end_date=item['end_date'],
                     end_date_accuracy=item['end_date_accuracy'],
-                    hazard_category=item['hazard_category'],
-                    hazard_sub_category=item['hazard_sub_category'],
-                    hazard_type=item['hazard_type'],
-                    hazard_sub_type=item['hazard_sub_type'],
+
+                    hazard_category_id=item['hazard_category'],
+                    hazard_sub_category_id=item['hazard_sub_category'],
+                    hazard_type_id=item['hazard_type'],
+                    hazard_sub_type_id=item['hazard_sub_type'],
+
+                    hazard_category_name=item['hazard_category_name'],
+                    hazard_sub_category_name=item['hazard_sub_category_name'],
+                    hazard_type_name=item['hazard_type_name'],
+                    hazard_sub_type_name=item['hazard_sub_type_name'],
+
                     new_displacement=item['new_displacement'],
                     iso3=item['iso3'],
                     country_id=item['country'],
@@ -164,9 +185,12 @@ def update_gidd_data(log_id):
     # Delete disasters
     Disaster.objects.all().delete()
 
-    countries = Country.objects.values('iso3', 'id')
-
-    iso3_to_country_id_map = {country['iso3']: country['id'] for country in countries}
+    iso3_to_country_id_map = {
+        country['iso3']: country['id'] for country in Country.objects.values('iso3', 'id')
+    }
+    iso3_to_country_name_map = {
+        country['iso3']: country['idmc_short_name'] for country in Country.objects.values('iso3', 'idmc_short_name')
+    }
 
     # Bulk create conflict legacy data
     Conflict.objects.bulk_create(
@@ -177,6 +201,7 @@ def update_gidd_data(log_id):
                 year=item['year'],
                 iso3=item['iso3'],
                 country_id=iso3_to_country_id_map[item['iso3']],
+                country_name=iso3_to_country_name_map[item['iso3']],
             ) for item in ConflictLegacy.objects.values(
                 'total_displacement',
                 'new_displacement',
@@ -196,13 +221,21 @@ def update_gidd_data(log_id):
                 start_date_accuracy=item['start_date_accuracy'],
                 end_date=item['end_date'],
                 end_date_accuracy=item['end_date_accuracy'],
-                hazard_category=item['hazard_category'],
-                hazard_sub_category=item['hazard_sub_category'],
-                hazard_type=item['hazard_type'],
-                hazard_sub_type=item['hazard_sub_type'],
+
+                hazard_category_id=item['hazard_category'],
+                hazard_sub_category_id=item['hazard_sub_category'],
+                hazard_type_id=item['hazard_type'],
+                hazard_sub_type_id=item['hazard_sub_type'],
+
+                hazard_category_name=item['hazard_category_name'],
+                hazard_sub_category_name=item['hazard_sub_category_name'],
+                hazard_type_name=item['hazard_type_name'],
+                hazard_sub_type_name=item['hazard_sub_type_name'],
+
                 new_displacement=item['new_displacement'],
                 iso3=item['iso3'],
                 country_id=iso3_to_country_id_map[item['iso3']],
+                country_name=iso3_to_country_name_map[item['iso3']],
             ) for item in DisasterLegacy.objects.values(
                 'event_name',
                 'year',
@@ -214,6 +247,10 @@ def update_gidd_data(log_id):
                 'hazard_sub_category',
                 'hazard_type',
                 'hazard_sub_type',
+                'hazard_category_name',
+                'hazard_sub_category_name',
+                'hazard_type_name',
+                'hazard_sub_type_name',
                 'new_displacement',
                 'iso3',
             )

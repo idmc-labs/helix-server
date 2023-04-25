@@ -187,7 +187,7 @@ class Query(graphene.ObjectType):
             total=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0),
             label=Case(
                 When(hazard_sub_category=None, then=Value('Not labeled')),
-                default=F('hazard_type'),
+                default=F('hazard_type_name'),
                 output_field=CharField()
             )
         ).filter(total__gte=1).values('label', 'total')
