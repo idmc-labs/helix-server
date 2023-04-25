@@ -195,3 +195,8 @@ class ReleaseMetadata(models.Model):
 
     def __str__(self):
         return str(self.production_year)
+
+    class Meta:
+        permissions = (
+            ('update_release_meta_data', 'Can update release meta data'),
+        )
