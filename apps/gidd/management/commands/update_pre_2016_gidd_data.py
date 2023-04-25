@@ -1,5 +1,6 @@
 import csv
 import logging
+import datetime
 from django.core.management.base import BaseCommand
 from django.db.models import Q, Subquery, OuterRef
 from apps.country.models import Country
@@ -27,15 +28,20 @@ class Command(BaseCommand):
         DisasterLegacy.objects.all().delete()
 
         hazard_sub_type_map = {
-            disaster_sub_type['name']: disaster_sub_type[
-                'id'
-            ] for disaster_sub_type in DisasterSubType.objects.values('id', 'name')
+            disaster_sub_type['name']: disaster_sub_type for disaster_sub_type in DisasterSubType.objects.values('id', 'name')
         }
+
+        def get_event_name(event_name, country_name, start_date, hazard_sub_type):
+            if event_name:
+                return event_name
+            date = datetime.datetime.strptime(start_date, '%Y-%m-%d')
+            formatted_date = date.strftime('%d/%m/%Y')
+            return f'{country_name}: {hazard_sub_type["name"]} - {formatted_date}'
 
         def get_new_hazard_sub_type_id(hazard_sub_type):
             old_to_new_hazard_sub_type_map = {
                 'Drought': 'Drought',
-                'Extreme temp, Winter Conditions / Cold Wave': 'Drought',
+                'Extreme temp, Winter Conditions / Cold Wave': 'Cold wave',
                 'Wildfire': 'Wildfire',
                 'Wildfire - Forest': 'Wildfire',
                 'Wildfire - Land fire': 'Wildfire',
@@ -83,7 +89,7 @@ class Command(BaseCommand):
                 'Other': 'Unknown',
                 # Extra added mapping by bimal, IDMC should review
                 'Landslide': 'Landslide/Wet mass movement',
-                'Sudden subsidence': 'Sinkhole',
+                'Sudden subsidence': 'Landslide/Wet mass movement',
                 'Landslide, avalanche': 'Avalanche',
                 'Storm, tropical, cyclone': 'Typhoon/Hurricane/Cyclone',
                 'Storm, tropical, typhoon': 'Typhoon/Hurricane/Cyclone',
@@ -96,15 +102,15 @@ class Command(BaseCommand):
                 'Storm, wind storm': 'Storm',
                 'Glacial lake outburst floods (glof)': 'Landslide/Wet mass movement',
                 'Extreme temp, winter conditions / cold wave': 'Cold wave',
-                'Storm, dust storm': 'Storm',
+                'Storm, dust storm': 'Sand/dust storm',
                 'Storm, inter-tropical convergence zone': 'Storm',
-                'Melting glacier flood': 'Flood',
-                'Earthquake, tsunami': 'Earthquake',
-                'Exterme temp, severe winter conditions/dzud': 'Drought',
+                'Melting glacier flood': 'Landslide/Wet mass movement',
+                'Earthquake, tsunami': 'Tsunami',
+                'Exterme temp, severe winter conditions/dzud': 'Cold wave',
                 'Monsoon': 'Storm',
                 'Mudslide': 'Landslide/Wet mass movement',
                 'Storm, tropical, depression': 'Storm',
-                'Extreme temp, severe winter condition': 'Drought',
+                'Extreme temp, severe winter condition': 'Cold wave',
             }
             new_disaster_sub_type = old_to_new_hazard_sub_type_map.get(hazard_sub_type)
             return hazard_sub_type_map.get(new_disaster_sub_type)
@@ -138,8 +144,14 @@ class Command(BaseCommand):
                     DisasterLegacy(
                         iso3=old_disaster['iso3'],
                         year=old_disaster['year'],
-                        event_name=old_disaster['event_name'],
+                        event_name=get_event_name(
+                            old_disaster['event_name'],
+                            country_iso3_map[old_disaster['iso3']],
+                            old_disaster['start_date'] or None,
+                            get_new_hazard_sub_type_id(old_disaster['hazard_sub_type']),
+                        ),
 
+                        # FIXME: we will not need to migrate this
                         country_name=country_iso3_map[old_disaster['iso3']],
 
                         start_date=old_disaster['start_date'] or None,
@@ -147,11 +159,15 @@ class Command(BaseCommand):
                         end_date=old_disaster['end_date'] or None,
                         end_date_accuracy=old_disaster['end_date_accuracy'],
 
+                        # FIXME: we will need to update these from helix or not event migrate this
                         hazard_category_name=old_disaster['hazard_category'],
                         hazard_sub_category_name=old_disaster['hazard_sub_category'],
                         hazard_type_name=old_disaster['hazard_type'],
                         hazard_sub_type_name=old_disaster['hazard_sub_type'],
-                        hazard_sub_type_id=get_new_hazard_sub_type_id(old_disaster['hazard_sub_type']),
+
+                        hazard_sub_type_id=get_new_hazard_sub_type_id(old_disaster['hazard_sub_type'])['id'],
+
+                        # FIXME: we should not use format_gidd_number here.
                         new_displacement=format_gidd_number(old_disaster['new_displacement']),
                     ) for old_disaster in reader
                 ]

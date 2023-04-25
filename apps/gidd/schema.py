@@ -35,39 +35,39 @@ from .enums import GiddStatusLogEnum
 
 
 class GiddTimeSeriesStatisticsType(graphene.ObjectType):
-    year = graphene.Int()
+    year = graphene.Int(required=True)
     total = graphene.Int()
 
 
 class GiddDisasterCountryType(graphene.ObjectType):
-    id = graphene.Int()
-    iso3 = graphene.String()
-    country_name = graphene.String()
+    id = graphene.Int(required=True)
+    iso3 = graphene.String(required=True)
+    country_name = graphene.String(required=True)
 
 
 class GiddDisasterTimeSeriesStatisticsType(graphene.ObjectType):
-    year = graphene.String()
+    year = graphene.String(required=True)
     total = graphene.Int()
-    country = graphene.Field(GiddDisasterCountryType)
+    country = graphene.Field(GiddDisasterCountryType, required=True)
 
 
 class GiddCategoryStatisticsType(graphene.ObjectType):
-    label = graphene.String()
+    label = graphene.String(required=True)
     total = graphene.Int()
 
 
 class GiddConflictStatisticsType(graphene.ObjectType):
     new_displacements = graphene.Int()
     total_idps = graphene.Int()
-    new_displacement_timeseries = graphene.List(GiddTimeSeriesStatisticsType)
-    idps_timeseries = graphene.List(GiddTimeSeriesStatisticsType)
+    new_displacement_timeseries = graphene.List(graphene.NonNull(GiddTimeSeriesStatisticsType))
+    idps_timeseries = graphene.List(graphene.NonNull(GiddTimeSeriesStatisticsType))
 
 
 class GiddDisasterStatisticsType(graphene.ObjectType):
     new_displacements = graphene.Int()
     total_events = graphene.Int()
-    timeseries = graphene.List(GiddDisasterTimeSeriesStatisticsType)
-    categories = graphene.List(GiddCategoryStatisticsType)
+    timeseries = graphene.List(graphene.NonNull(GiddDisasterTimeSeriesStatisticsType))
+    categories = graphene.List(graphene.NonNull(GiddCategoryStatisticsType))
 
 
 class GiddConflictType(DjangoObjectType):
@@ -128,13 +128,15 @@ class Query(graphene.ObjectType):
         GiddConflictStatisticsType,
         **get_filtering_args_from_filterset(
             ConflictStatisticsFilter, GiddConflictStatisticsType
-        )
+        ),
+        required=True,
     )
     gidd_disaster_statistics = graphene.Field(
         GiddDisasterStatisticsType,
         **get_filtering_args_from_filterset(
             DisasterStatisticsFilter, GiddDisasterStatisticsType
-        )
+        ),
+        required=True,
     )
     gidd_log = DjangoObjectField(GiddStatusLogType)
     gidd_logs = DjangoPaginatedListObjectField(

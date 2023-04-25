@@ -227,6 +227,7 @@ def update_gidd_data(log_id):
                 hazard_type_id=item['hazard_type'],
                 hazard_sub_type_id=item['hazard_sub_type'],
 
+                # FIXME: we should get this from database
                 hazard_category_name=item['hazard_category_name'],
                 hazard_sub_category_name=item['hazard_sub_category_name'],
                 hazard_type_name=item['hazard_type_name'],
