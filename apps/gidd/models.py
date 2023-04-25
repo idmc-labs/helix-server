@@ -106,7 +106,7 @@ class StatusLog(models.Model):
 
     class Meta:
         permissions = (
-            ('update_gidd_data', 'Can update gidd data'),
+            ('update_gidd_data_gidd', 'Can update gidd data'),
         )
 
     def __str__(self):
@@ -198,5 +198,5 @@ class ReleaseMetadata(models.Model):
 
     class Meta:
         permissions = (
-            ('update_release_meta_data', 'Can update release meta data'),
+            ('update_release_meta_data_gidd', 'Can update release meta data'),
         )

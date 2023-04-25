@@ -15,7 +15,7 @@ class GiddUpdateData(graphene.Mutation):
 
     @staticmethod
     @is_authenticated()
-    @permission_checker(['gidd.update_gidd_data'])
+    @permission_checker(['gidd.update_gidd_data_gidd'])
     def mutate(root, info):
         user = info.context.user
         serializer = StatusLogSerializer(data=dict(triggered_by=user.id))
@@ -44,7 +44,7 @@ class GiddUpdateReleaseMetaData(graphene.Mutation):
 
     @staticmethod
     @is_authenticated()
-    @permission_checker(['gidd.update_release_meta_data'])
+    @permission_checker(['gidd.update_release_meta_data_gidd'])
     def mutate(root, info, data):
         serializer = ReleaseMetadataSerializer(data=data, context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
