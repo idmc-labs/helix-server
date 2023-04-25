@@ -51,7 +51,7 @@ def export_disasters(request, iso3=None):
                 disaster.country.iso3,
                 disaster.country.name,
                 disaster.year,
-                disaster.event__name,
+                disaster.event_name,
                 disaster.start_date,
                 round_and_remove_zero(disaster.new_displacement),
                 disaster.hazard_category,
