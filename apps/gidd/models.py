@@ -6,13 +6,13 @@ from django_enumfield import enum
 class Conflict(models.Model):
     country = models.ForeignKey(
         'country.Country', related_name='country_conflict', on_delete=models.PROTECT,
-        verbose_name=_('Country'), null=True, blank=True
+        verbose_name=_('Country')
     )
     total_displacement = models.BigIntegerField(blank=True, null=True)
     new_displacement = models.BigIntegerField(blank=True, null=True)
     year = models.BigIntegerField()
-    country_name = models.CharField(verbose_name=_('Name'), max_length=256, null=True, blank=True)
-    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5, null=True, blank=True)
+    country_name = models.CharField(verbose_name=_('Name'), max_length=256)
+    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -29,17 +29,16 @@ class Conflict(models.Model):
 class Disaster(models.Model):
     event = models.ForeignKey(
         'event.Event', verbose_name=_('Event'),
-        related_name='gidd_events', on_delete=models.CASCADE,
-        null=True, blank=True
+        related_name='gidd_events', on_delete=models.CASCADE, null=True, blank=True
     )
-    event_name = models.CharField(verbose_name=_('Event name'), max_length=256, null=True, blank=True)
+    event_name = models.CharField(verbose_name=_('Event name'), max_length=256)
     year = models.BigIntegerField()
     country = models.ForeignKey(
         'country.Country', related_name='country_disaster', on_delete=models.PROTECT,
-        verbose_name=_('Country'), null=True, blank=True
+        verbose_name=_('Country')
     )
-    country_name = models.CharField(verbose_name=_('Name'), max_length=256, null=True, blank=True)
-    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5, null=True, blank=True)
+    country_name = models.CharField(verbose_name=_('Name'), max_length=256)
+    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
 
     # Dates
     start_date = models.DateField(blank=True, null=True)
@@ -47,10 +46,28 @@ class Disaster(models.Model):
     end_date = models.DateField(blank=True, null=True)
     end_date_accuracy = models.TextField(blank=True, null=True)
 
-    hazard_category = models.TextField(blank=True, null=True)
-    hazard_sub_category = models.TextField(blank=True, null=True)
-    hazard_sub_type = models.TextField(blank=True, null=True)
-    hazard_type = models.TextField(blank=True, null=True)
+    hazard_category_name = models.CharField(max_length=256, blank=True)
+    hazard_sub_category_name = models.CharField(max_length=256, blank=True)
+    hazard_sub_type_name = models.CharField(max_length=256, blank=True)
+    hazard_type_name = models.CharField(max_length=256, blank=True)
+
+    hazard_category = models.ForeignKey(
+        'event.DisasterCategory', verbose_name=_('Hazard Category'),
+        related_name='disasters', null=True, on_delete=models.SET_NULL
+    )
+    hazard_sub_category = models.ForeignKey(
+        'event.DisasterSubCategory', verbose_name=_('Hazard Sub Category'),
+        related_name='disasters', null=True, on_delete=models.SET_NULL
+    )
+    hazard_type = models.ForeignKey(
+        'event.DisasterType', verbose_name=_('Hazard Type'),
+        related_name='disasters', null=True, on_delete=models.SET_NULL
+    )
+    hazard_sub_type = models.ForeignKey(
+        'event.DisasterSubType', verbose_name=_('Hazard Sub Type'),
+        related_name='disasters', null=True, on_delete=models.SET_NULL
+    )
+
     new_displacement = models.BigIntegerField(blank=True, null=True)
 
     # Timestamps
@@ -100,8 +117,8 @@ class ConflictLegacy(models.Model):
     total_displacement = models.BigIntegerField(blank=True, null=True)
     new_displacement = models.BigIntegerField(blank=True, null=True)
     year = models.BigIntegerField()
-    country_name = models.CharField(verbose_name=_('Name'), max_length=256, null=True, blank=True)
-    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5, null=True, blank=True)
+    country_name = models.CharField(verbose_name=_('Name'), max_length=256)
+    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -117,9 +134,9 @@ class ConflictLegacy(models.Model):
 
 class DisasterLegacy(models.Model):
     year = models.BigIntegerField()
-    country_name = models.CharField(verbose_name=_('Name'), max_length=256, null=True, blank=True)
-    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5, null=True, blank=True)
-    event_name = models.CharField(verbose_name=_('Event name'), max_length=256, null=True, blank=True)
+    country_name = models.CharField(verbose_name=_('Name'), max_length=256)
+    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
+    event_name = models.CharField(verbose_name=_('Event name'), max_length=256)
 
     # Dates
     start_date = models.DateField(blank=True, null=True)
@@ -127,10 +144,32 @@ class DisasterLegacy(models.Model):
     end_date = models.DateField(blank=True, null=True)
     end_date_accuracy = models.TextField(blank=True, null=True)
 
-    hazard_category = models.TextField(blank=True, null=True)
-    hazard_sub_category = models.TextField(blank=True, null=True)
-    hazard_sub_type = models.TextField(blank=True, null=True)
-    hazard_type = models.TextField(blank=True, null=True)
+    hazard_category_name = models.CharField(max_length=256, blank=True)
+    hazard_sub_category_name = models.CharField(max_length=256, blank=True)
+    hazard_sub_type_name = models.CharField(max_length=256, blank=True)
+    hazard_type_name = models.CharField(max_length=256, blank=True)
+
+    hazard_category = models.ForeignKey(
+        'event.DisasterCategory', verbose_name=_('Hazard Category'),
+        null=True,
+        related_name='legacy_disasters', on_delete=models.SET_NULL
+    )
+    hazard_sub_category = models.ForeignKey(
+        'event.DisasterSubCategory', verbose_name=_('Hazard Sub Category'),
+        null=True,
+        related_name='legacy_disasters', on_delete=models.SET_NULL
+    )
+    hazard_type = models.ForeignKey(
+        'event.DisasterType', verbose_name=_('Hazard Type'),
+        null=True,
+        related_name='legacy_disasters', on_delete=models.SET_NULL
+    )
+    hazard_sub_type = models.ForeignKey(
+        'event.DisasterSubType', verbose_name=_('Hazard Sub Type'),
+        null=True,
+        related_name='legacy_disasters', on_delete=models.SET_NULL
+    )
+
     new_displacement = models.BigIntegerField(blank=True, null=True)
 
     # Timestamps

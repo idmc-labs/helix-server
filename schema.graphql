@@ -909,6 +909,7 @@ type DisasterCategoryType {
   subCategories(name_Unaccent_Icontains: String, ordering: String): DisasterSubCategoryListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
+  disasters: [GiddDisasterType!]!
 }
 
 type DisasterSubCategoryListType {
@@ -925,6 +926,7 @@ type DisasterSubCategoryType {
   types(name_Unaccent_Icontains: String, ordering: String): DisasterTypeObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
+  disasters: [GiddDisasterType!]!
 }
 
 type DisasterSubObjectListType {
@@ -940,6 +942,7 @@ type DisasterSubObjectType {
   figures: [FigureType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
+  disasters: [GiddDisasterType!]!
 }
 
 type DisasterTypeObjectListType {
@@ -956,6 +959,7 @@ type DisasterTypeObjectType {
   subTypes(name_Unaccent_Icontains: String, ordering: String): DisasterSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
+  disasters: [GiddDisasterType!]!
 }
 
 type DjangoDebug {
@@ -1581,12 +1585,12 @@ type GiddConflictStatisticsType {
 
 type GiddConflictType {
   id: ID!
-  country: CountryType
+  country: CountryType!
   totalDisplacement: Int
   newDisplacement: Int
   year: Int!
-  countryName: String
-  iso3: String
+  countryName: String!
+  iso3: String!
   createdAt: DateTime!
   updatedAt: DateTime!
 }
@@ -1620,19 +1624,23 @@ type GiddDisasterTimeSeriesStatisticsType {
 type GiddDisasterType {
   id: ID!
   event: EventType
-  eventName: String
+  eventName: String!
   year: Int!
-  country: CountryType
-  countryName: String
-  iso3: String
+  country: CountryType!
+  countryName: String!
+  iso3: String!
   startDate: Date
   startDateAccuracy: String
   endDate: Date
   endDateAccuracy: String
-  hazardCategory: String
-  hazardSubCategory: String
-  hazardSubType: String
-  hazardType: String
+  hazardCategoryName: String!
+  hazardSubCategoryName: String!
+  hazardSubTypeName: String!
+  hazardTypeName: String!
+  hazardCategory: DisasterCategoryType
+  hazardSubCategory: DisasterSubCategoryType
+  hazardType: DisasterTypeObjectType
+  hazardSubType: DisasterSubObjectType
   newDisplacement: Int
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -1671,6 +1679,18 @@ enum GiddStatusLogTypeEnum {
 type GiddTimeSeriesStatisticsType {
   year: Int
   total: Int
+}
+
+type GiddUpdateData {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: GiddStatusLogType
+}
+
+type GiddUpdateReleaseMetaData {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: GiddReleaseMetadataType
 }
 
 enum IDENTIFIER {
@@ -1722,8 +1742,8 @@ type MonitoringSubRegionType {
 }
 
 type Mutation {
-  giddUpdateData: UpdateGiddData
-  giddUpdateReleaseMetaData(data: ReleaseMetadataInputType!): UpdateReleaseMetaData
+  giddUpdateData: GiddUpdateData
+  giddUpdateReleaseMetaData(data: ReleaseMetadataInputType!): GiddUpdateReleaseMetaData
   toggleNotificationRead(id: ID!): ToggleNotificationRead
   createContextualUpdate(data: ContextualUpdateCreateInputType!): CreateContextualUpdate
   updateContextualUpdate(data: ContextualUpdateUpdateInputType!): UpdateContextualUpdate
@@ -3049,12 +3069,6 @@ type UpdateFigureTag {
   result: FigureTagType
 }
 
-type UpdateGiddData {
-  errors: [GenericScalar!]
-  ok: Boolean
-  result: GiddStatusLogType
-}
-
 type UpdateOrganization {
   errors: [GenericScalar!]
   ok: Boolean
@@ -3077,12 +3091,6 @@ type UpdateRegionalCoordinatorPortfolio {
   errors: [GenericScalar!]
   ok: Boolean
   result: MonitoringSubRegionType
-}
-
-type UpdateReleaseMetaData {
-  errors: [GenericScalar!]
-  ok: Boolean
-  result: GiddReleaseMetadataType
 }
 
 type UpdateReport {
