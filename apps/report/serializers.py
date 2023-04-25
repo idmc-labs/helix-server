@@ -83,7 +83,7 @@ class ReportSerializer(MetaInformationSerializerMixin,
             'filter_figure_events', 'filter_figure_tags', 'filter_figure_disaster_categories',
             'filter_figure_disaster_sub_categories', 'filter_figure_disaster_types',
             'filter_figure_disaster_sub_types', 'filter_figure_violence_types', 'filter_figure_violence_sub_types',
-            'is_public', 'filter_figure_roles', 'public_figure_analysis',
+            'is_public', 'filter_figure_roles', 'public_figure_analysis', 'is_gidd_report', 'gidd_report_year'
         ]
 
     def validate_dates(self, attrs):
