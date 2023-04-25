@@ -21,7 +21,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('triggered_at', models.DateTimeField(auto_now_add=True, verbose_name='Triggered at')),
                 ('completed_at', models.DateTimeField(blank=True, null=True, verbose_name='Completed at')),
-                ('status', django_enumfield.db.fields.EnumField(default=0, enum=apps.gidd.models.GiddLog.Status)),
+                ('status', django_enumfield.db.fields.EnumField(default=0, enum=apps.gidd.models.StatusLog.Status)),
                 ('triggered_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='gidd_data_triggered_by', to=settings.AUTH_USER_MODEL, verbose_name='Triggered by')),
             ],
             options={

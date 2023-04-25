@@ -21,7 +21,7 @@ from django.db.models.functions import Coalesce
 from .models import (
     Conflict,
     Disaster,
-    GiddLog,
+    StatusLog,
     ReleaseMetadata,
 )
 from graphene_django import DjangoObjectType
@@ -31,119 +31,119 @@ from .gh_filters import (
     ConflictStatisticsFilter,
     DisasterStatisticsFilter,
 )
-from .enums import GiddLogStatusEnum
+from .enums import GiddStatusLogEnum
 
 
-class TimeSeriesStatisticsType(graphene.ObjectType):
+class GiddTimeSeriesStatisticsType(graphene.ObjectType):
     year = graphene.Int()
     total = graphene.Int()
 
 
-class DisasterCountryType(graphene.ObjectType):
+class GiddDisasterCountryType(graphene.ObjectType):
     id = graphene.Int()
     iso3 = graphene.String()
     country_name = graphene.String()
 
 
-class DisasterTimeSeriesStatisticsType(graphene.ObjectType):
+class GiddDisasterTimeSeriesStatisticsType(graphene.ObjectType):
     year = graphene.String()
     total = graphene.Int()
-    country = graphene.Field(DisasterCountryType)
+    country = graphene.Field(GiddDisasterCountryType)
 
 
-class CategoryStatisticsType(graphene.ObjectType):
+class GiddCategoryStatisticsType(graphene.ObjectType):
     label = graphene.String()
     total = graphene.Int()
 
 
-class ConflictStatisticsType(graphene.ObjectType):
+class GiddConflictStatisticsType(graphene.ObjectType):
     new_displacements = graphene.Int()
     total_idps = graphene.Int()
-    new_displacement_timeseries = graphene.List(TimeSeriesStatisticsType)
-    idps_timeseries = graphene.List(TimeSeriesStatisticsType)
+    new_displacement_timeseries = graphene.List(GiddTimeSeriesStatisticsType)
+    idps_timeseries = graphene.List(GiddTimeSeriesStatisticsType)
 
 
-class DisasterStatisticsType(graphene.ObjectType):
+class GiddDisasterStatisticsType(graphene.ObjectType):
     new_displacements = graphene.Int()
     total_events = graphene.Int()
-    timeseries = graphene.List(DisasterTimeSeriesStatisticsType)
-    categories = graphene.List(CategoryStatisticsType)
+    timeseries = graphene.List(GiddDisasterTimeSeriesStatisticsType)
+    categories = graphene.List(GiddCategoryStatisticsType)
 
 
-class ConflictType(DjangoObjectType):
+class GiddConflictType(DjangoObjectType):
     class Meta:
         model = Conflict
 
 
-class ConflictListType(CustomDjangoListObjectType):
+class GiddConflictListType(CustomDjangoListObjectType):
     class Meta:
         model = Conflict
         filterset_class = ConflictFilter
 
 
-class DisasterType(DjangoObjectType):
+class GiddDisasterType(DjangoObjectType):
     class Meta:
         model = Disaster
 
 
-class DisasterListType(CustomDjangoListObjectType):
+class GiddDisasterListType(CustomDjangoListObjectType):
     class Meta:
         model = Disaster
         filterset_class = DisasterFilter
 
 
-class GiddLogType(DjangoObjectType):
+class GiddStatusLogType(DjangoObjectType):
     class Meta:
-        model = GiddLog
-    status = graphene.Field(GiddLogStatusEnum)
+        model = StatusLog
+    status = graphene.Field(GiddStatusLogEnum)
     status_display = EnumDescription(source='get_status_display')
 
 
-class GiddLogListType(CustomDjangoListObjectType):
+class GiddStatusLogListType(CustomDjangoListObjectType):
     class Meta:
-        model = GiddLog
+        model = StatusLog
 
 
-class ReleaseMetadataType(DjangoObjectType):
+class GiddReleaseMetadataType(DjangoObjectType):
     class Meta:
         model = ReleaseMetadata
 
 
 class Query(graphene.ObjectType):
-    gidd_conflict = DjangoObjectField(ConflictType)
+    gidd_conflict = DjangoObjectField(GiddConflictType)
     gidd_conflicts = DjangoPaginatedListObjectField(
-        ConflictListType,
+        GiddConflictListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
         )
     )
-    gidd_disaster = DjangoObjectField(DisasterType)
+    gidd_disaster = DjangoObjectField(GiddDisasterType)
     gidd_disasters = DjangoPaginatedListObjectField(
-        DisasterListType,
+        GiddDisasterListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
         )
     )
     gidd_conflict_statistics = graphene.Field(
-        ConflictStatisticsType,
+        GiddConflictStatisticsType,
         **get_filtering_args_from_filterset(
-            ConflictStatisticsFilter, ConflictStatisticsType
+            ConflictStatisticsFilter, GiddConflictStatisticsType
         )
     )
     gidd_disaster_statistics = graphene.Field(
-        DisasterStatisticsType,
+        GiddDisasterStatisticsType,
         **get_filtering_args_from_filterset(
-            DisasterStatisticsFilter, DisasterStatisticsType
+            DisasterStatisticsFilter, GiddDisasterStatisticsType
         )
     )
-    gidd_log = DjangoObjectField(GiddLogType)
+    gidd_log = DjangoObjectField(GiddStatusLogType)
     gidd_logs = DjangoPaginatedListObjectField(
-        GiddLogListType,
+        GiddStatusLogListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
         )
     )
-    gidd_release_meta_data = graphene.Field(ReleaseMetadataType)
+    gidd_release_meta_data = graphene.Field(GiddReleaseMetadataType)
 
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):
@@ -165,14 +165,14 @@ class Query(graphene.ObjectType):
         ).order_by('year').values('year', 'total')
         total_idps = conflict_qs.order_by('-year').first().total_displacement if conflict_qs.order_by('-year') else 0
 
-        return ConflictStatisticsType(
+        return GiddConflictStatisticsType(
             total_idps=total_idps if total_idps else 0,
             new_displacements=conflict_qs.aggregate(
                 total_new_displacement=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
             )['total_new_displacement'],
 
-            new_displacement_timeseries=[TimeSeriesStatisticsType(**item) for item in new_displacement_timeseries_qs],
-            idps_timeseries=[TimeSeriesStatisticsType(**item) for item in idps_timeseries_qs],
+            new_displacement_timeseries=[GiddTimeSeriesStatisticsType(**item) for item in new_displacement_timeseries_qs],
+            idps_timeseries=[GiddTimeSeriesStatisticsType(**item) for item in idps_timeseries_qs],
         )
 
     @staticmethod
@@ -191,7 +191,7 @@ class Query(graphene.ObjectType):
                 output_field=CharField()
             )
         ).filter(total__gte=1).values('label', 'total')
-        return DisasterStatisticsType(
+        return GiddDisasterStatisticsType(
             new_displacements=disaster_qs.aggregate(
                 total_new_displacement=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
             )['total_new_displacement'],
@@ -200,15 +200,15 @@ class Query(graphene.ObjectType):
                 events=Count('id')
             ).aggregate(total_events=Coalesce(Sum('events', output_field=IntegerField()), 0))['total_events'],
 
-            timeseries=[DisasterTimeSeriesStatisticsType(
+            timeseries=[GiddDisasterTimeSeriesStatisticsType(
                 year=item['year'],
                 total=item['total'],
-                country=DisasterCountryType(
+                country=GiddDisasterCountryType(
                     id=item['country_id'],
                     iso3=item['iso3'],
                     country_name=item['country_name']
                 )
             ) for item in timeseries_qs],
 
-            categories=[CategoryStatisticsType(**item) for item in categories_qs]
+            categories=[GiddCategoryStatisticsType(**item) for item in categories_qs]
         )

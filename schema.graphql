@@ -95,11 +95,6 @@ enum CRISIS_TYPE {
   OTHER
 }
 
-type CategoryStatisticsType {
-  label: String
-  total: Int
-}
-
 type ChangeUserPassword {
   errors: [GenericScalar!]
   ok: Boolean
@@ -187,32 +182,6 @@ input CommunicationUpdateInputType {
   country: ID
   medium: ID
   attachment: ID
-}
-
-type ConflictListType {
-  results: [ConflictType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
-type ConflictStatisticsType {
-  newDisplacements: Int
-  totalIdps: Int
-  newDisplacementTimeseries: [TimeSeriesStatisticsType]
-  idpsTimeseries: [TimeSeriesStatisticsType]
-}
-
-type ConflictType {
-  id: ID!
-  country: CountryType
-  totalDisplacement: Int
-  newDisplacement: Int
-  year: Int!
-  countryName: String
-  iso3: String
-  createdAt: DateTime!
-  updatedAt: DateTime!
 }
 
 input ContactCreateInputType {
@@ -474,8 +443,6 @@ type CountryType {
   actors: [ActorType!]!
   events(createdAt_Lte: DateTime, createdAt_Lt: DateTime, createdAt_Gte: DateTime, createdAt_Gt: DateTime, startDate_Lte: Date, startDate_Lt: Date, startDate_Gte: Date, startDate_Gt: Date, endDate_Lte: Date, endDate_Lt: Date, endDate_Gte: Date, endDate_Gt: Date, ignoreQa: Boolean, name: String, crisisByIds: [ID!], eventTypes: [String!], countries: [ID!], glideNumbers: [String!], osvSubTypeByIds: [ID!], report: String, disasterSubTypes: [ID!], violenceTypes: [ID!], violenceSubTypes: [ID!], createdByIds: [ID!], qaRule: String, contextOfViolences: [ID!], reviewStatus: [String!], assignees: [ID!], assigners: [ID!], page: Int = 1, ordering: String, pageSize: Int): EventListType
   contextualupdateSet: [ContextualUpdateType!]!
-  countryConflict: [ConflictType!]!
-  countryDisaster: [DisasterType!]!
   lastSummary: SummaryType
   lastContextualAnalysis: ContextualAnalysisType
   entries(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], filterIsFigureToBeReviewed: Boolean, page: Int = 1, ordering: String, pageSize: Int): EntryListType
@@ -944,26 +911,6 @@ type DisasterCategoryType {
   reportSet: [ReportType!]!
 }
 
-type DisasterCountryType {
-  id: Int
-  iso3: String
-  countryName: String
-}
-
-type DisasterListType {
-  results: [DisasterType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
-type DisasterStatisticsType {
-  newDisplacements: Int
-  totalEvents: Int
-  timeseries: [DisasterTimeSeriesStatisticsType]
-  categories: [CategoryStatisticsType]
-}
-
 type DisasterSubCategoryListType {
   results: [DisasterSubCategoryType!]
   totalCount: Int
@@ -993,33 +940,6 @@ type DisasterSubObjectType {
   figures: [FigureType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
-}
-
-type DisasterTimeSeriesStatisticsType {
-  year: String
-  total: Int
-  country: DisasterCountryType
-}
-
-type DisasterType {
-  id: ID!
-  event: EventType
-  eventName: String
-  year: Int!
-  country: CountryType
-  countryName: String
-  iso3: String
-  startDate: Date
-  startDateAccuracy: String
-  endDate: Date
-  endDateAccuracy: String
-  hazardCategory: String
-  hazardSubCategory: String
-  hazardSubType: String
-  hazardType: String
-  newDisplacement: Int
-  createdAt: DateTime!
-  updatedAt: DateTime!
 }
 
 type DisasterTypeObjectListType {
@@ -1224,7 +1144,6 @@ type EventType {
   notifications: [GenericNotificationType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
-  giddFigures: [DisasterType!]!
   eventTypeDisplay: EnumDescription
   totalStockIdpFigures: Int
   totalFlowNdFigures: Int
@@ -1641,26 +1560,117 @@ type GeographicalGroupType {
   countrySet: [CountryType!]!
 }
 
-type GiddLogListType {
-  results: [GiddLogType!]
+type GiddCategoryStatisticsType {
+  label: String
+  total: Int
+}
+
+type GiddConflictListType {
+  results: [GiddConflictType!]
   totalCount: Int
   page: Int
   pageSize: Int
 }
 
-enum GiddLogStatusTypeEnum {
+type GiddConflictStatisticsType {
+  newDisplacements: Int
+  totalIdps: Int
+  newDisplacementTimeseries: [GiddTimeSeriesStatisticsType]
+  idpsTimeseries: [GiddTimeSeriesStatisticsType]
+}
+
+type GiddConflictType {
+  id: ID!
+  country: CountryType
+  totalDisplacement: Int
+  newDisplacement: Int
+  year: Int!
+  countryName: String
+  iso3: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type GiddDisasterCountryType {
+  id: Int
+  iso3: String
+  countryName: String
+}
+
+type GiddDisasterListType {
+  results: [GiddDisasterType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type GiddDisasterStatisticsType {
+  newDisplacements: Int
+  totalEvents: Int
+  timeseries: [GiddDisasterTimeSeriesStatisticsType]
+  categories: [GiddCategoryStatisticsType]
+}
+
+type GiddDisasterTimeSeriesStatisticsType {
+  year: String
+  total: Int
+  country: GiddDisasterCountryType
+}
+
+type GiddDisasterType {
+  id: ID!
+  event: EventType
+  eventName: String
+  year: Int!
+  country: CountryType
+  countryName: String
+  iso3: String
+  startDate: Date
+  startDateAccuracy: String
+  endDate: Date
+  endDateAccuracy: String
+  hazardCategory: String
+  hazardSubCategory: String
+  hazardSubType: String
+  hazardType: String
+  newDisplacement: Int
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type GiddReleaseMetadataType {
+  id: ID!
+  productionYear: Int!
+  stagingYear: Int!
+  modifiedBy: UserType
+  modifiedAt: DateTime!
+}
+
+type GiddStatusLogListType {
+  results: [GiddStatusLogType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type GiddStatusLogType {
+  id: ID!
+  triggeredBy: UserType
+  triggeredAt: DateTime!
+  completedAt: DateTime
+  status: GiddStatusLogTypeEnum
+  statusDisplay: EnumDescription
+}
+
+enum GiddStatusLogTypeEnum {
   PENDING
   SUCCESS
   FAILED
 }
 
-type GiddLogType {
-  id: ID!
-  triggeredBy: UserType
-  triggeredAt: DateTime!
-  completedAt: DateTime
-  status: GiddLogStatusTypeEnum
-  statusDisplay: EnumDescription
+type GiddTimeSeriesStatisticsType {
+  year: Int
+  total: Int
 }
 
 enum IDENTIFIER {
@@ -2316,15 +2326,15 @@ enum QUANTIFIER {
 }
 
 type Query {
-  giddConflict(id: ID!): ConflictType
-  giddConflicts(id_Iexact: Float, page: Int = 1, ordering: String, pageSize: Int): ConflictListType
-  giddDisaster(id: ID!): DisasterType
-  giddDisasters(id_Iexact: Float, page: Int = 1, ordering: String, pageSize: Int): DisasterListType
-  giddConflictStatistics(countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): ConflictStatisticsType
-  giddDisasterStatistics(categories: [String!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): DisasterStatisticsType
-  giddLog(id: ID!): GiddLogType
-  giddLogs(triggeredBy: ID, triggeredAt: DateTime, completedAt: DateTime, status: String, page: Int = 1, ordering: String, pageSize: Int): GiddLogListType
-  giddReleaseMetaData: ReleaseMetadataType
+  giddConflict(id: ID!): GiddConflictType
+  giddConflicts(id_Iexact: Float, page: Int = 1, ordering: String, pageSize: Int): GiddConflictListType
+  giddDisaster(id: ID!): GiddDisasterType
+  giddDisasters(id_Iexact: Float, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
+  giddConflictStatistics(countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddConflictStatisticsType
+  giddDisasterStatistics(categories: [String!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddDisasterStatisticsType
+  giddLog(id: ID!): GiddStatusLogType
+  giddLogs(triggeredBy: ID, triggeredAt: DateTime, completedAt: DateTime, status: String, page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
+  giddReleaseMetaData: GiddReleaseMetadataType
   notification(id: ID!): GenericNotificationType
   notifications(recipient: ID, isRead: Boolean, events: [ID!], figures: [ID!], types: [String!], createdAtAfter: Date, createdAtBefore: Date, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType
@@ -2478,14 +2488,6 @@ input RegisterInputType {
 input ReleaseMetadataInputType {
   stagingYear: Int!
   productionYear: Int!
-}
-
-type ReleaseMetadataType {
-  id: ID!
-  productionYear: Int!
-  stagingYear: Int!
-  modifiedBy: UserType
-  modifiedAt: DateTime!
 }
 
 type ReportApprovalListType {
@@ -2878,11 +2880,6 @@ type SummaryType {
   summary: String!
 }
 
-type TimeSeriesStatisticsType {
-  year: Int
-  total: Int
-}
-
 type ToggleNotificationRead {
   ok: Boolean
   errors: [GenericScalar!]
@@ -3055,7 +3052,7 @@ type UpdateFigureTag {
 type UpdateGiddData {
   errors: [GenericScalar!]
   ok: Boolean
-  result: GiddLogType
+  result: GiddStatusLogType
 }
 
 type UpdateOrganization {
@@ -3085,7 +3082,7 @@ type UpdateRegionalCoordinatorPortfolio {
 type UpdateReleaseMetaData {
   errors: [GenericScalar!]
   ok: Boolean
-  result: ReleaseMetadataType
+  result: GiddReleaseMetadataType
 }
 
 type UpdateReport {

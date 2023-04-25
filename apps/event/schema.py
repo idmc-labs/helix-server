@@ -189,7 +189,7 @@ class EventType(DjangoObjectType):
 
     class Meta:
         model = Event
-        exclude_fields = ('figures',)
+        exclude_fields = ('figures', 'gidd_events')
 
     event_type = graphene.Field(CrisisTypeGrapheneEnum)
     event_type_display = EnumDescription(source='get_event_type_display')

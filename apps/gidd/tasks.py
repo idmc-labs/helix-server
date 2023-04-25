@@ -8,7 +8,7 @@ from django.db.models import (
 from apps.entry.models import Figure
 from apps.event.models import Crisis
 from .models import Conflict, Disaster
-from .models import GiddLog, DisasterLegacy, ConflictLegacy
+from .models import StatusLog, DisasterLegacy, ConflictLegacy
 from apps.country.models import Country
 
 
@@ -221,8 +221,8 @@ def update_gidd_data(log_id):
     )
     try:
         update_conflict_and_disaster_data()
-        GiddLog.objects.filter(id=log_id).update(status=GiddLog.Status.SUCCESS)
+        StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.SUCCESS)
         logger.info('Gidd data updated.')
     except Exception as e:
-        GiddLog.objects.filter(id=log_id).update(status=GiddLog.Status.FAILED)
+        StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.FAILED)
         logger.error('Failed update data: ' + str(e))

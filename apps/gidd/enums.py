@@ -2,10 +2,10 @@ from utils.graphene.enums import (
     convert_enum_to_graphene_enum,
 )
 
-from apps.gidd.models import GiddLog
+from apps.gidd.models import StatusLog
 
-GiddLogStatusEnum = convert_enum_to_graphene_enum(GiddLog.Status, name='GiddLogStatusTypeEnum')
+GiddStatusLogEnum = convert_enum_to_graphene_enum(StatusLog.Status, name='GiddStatusLogTypeEnum')
 
 enum_map = dict(
-    GiddLogStatusEnum=GiddLogStatusEnum
+    GiddLogStatusEnum=GiddStatusLogEnum
 )
