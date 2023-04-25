@@ -1347,6 +1347,15 @@ class ExternalApiDump(models.Model):
         IDUS_ALL = 'idus-all', _('Idus all')
         IDUS_ALL_DISASTER = 'idus-all-disaster', _('Idus all disaster')
 
+        GIDD_COUNTRIES_DISASTER_EXPORT_REST = 'gidd-countries-disaster-export-rest', _('Countries disaster export REST')
+        GIDD_CONFLICT_EXPORT_REST = 'gidd-conflict-export-rest', _('Conflict export REST')
+        GIDD_DISASTER_EXPORT_REST = 'gidd-disaster-export-rest', _('Disaster export REST')
+
+        GIDD_CONFLICT_GRAPHQL = 'gidd-conflict', _('Gidd conflict')
+        GIDD_DISASTER_GRAPHQL = 'gidd-disaster', _('Gidd disaster')
+        GIDD_CONFLICT_STAT = 'gidd-conflict-stat', _('Gidd conflict stat')
+        GIDD_DISASTER_STAT = 'gidd-disaster-stat', _('Gidd disaster stat')
+
     class Status(models.IntegerChoices):
         PENDING = 0, 'Pending'
         COMPLETED = 1, 'Completed'

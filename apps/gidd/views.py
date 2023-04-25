@@ -14,7 +14,8 @@ from .serializers import (
     ConflictSerializer,
     DisasterSerializer,
 )
-from utils.common import round_and_remove_zero
+from utils.common import round_and_remove_zero, track_gidd
+from apps.entry.models import ExternalApiDump
 
 
 def export_disasters(request, iso3=None):
@@ -79,6 +80,11 @@ class CountryViewSet(viewsets.ReadOnlyModelViewSet):
         """
         Export conflict
         """
+
+        track_gidd(
+            request.GET.get('client_id'),
+            ExternalApiDump.ExternalApiType.GIDD_CONFLICT_EXPORT_REST
+        )
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = 'attachment; filename="conflict-data.csv"'
         writer = csv.writer(response, delimiter=',')
@@ -120,6 +126,10 @@ class CountryViewSet(viewsets.ReadOnlyModelViewSet):
         """
         Export disaster
         """
+        track_gidd(
+            request.GET.get('client_id'),
+            ExternalApiDump.ExternalApiType.GIDD_DISASTER_EXPORT_REST
+        )
         return export_disasters(request, iso3)
 
     @action(
@@ -132,6 +142,10 @@ class CountryViewSet(viewsets.ReadOnlyModelViewSet):
         """
         Export disaster
         """
+        track_gidd(
+            request.GET.get('client_id'),
+            ExternalApiDump.ExternalApiType.GIDD_COUNTRIES_DISASTER_EXPORT_REST
+        )
         return export_disasters(request)
 
 
