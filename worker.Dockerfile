@@ -6,6 +6,8 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /code
 
+RUN apt update -y && apt install -y chromium chromium-driver
+
 COPY pyproject.toml poetry.lock /code/
 
 # Upgrade pip and install python packages for code
@@ -19,4 +21,4 @@ RUN pip install --upgrade --no-cache-dir pip poetry \
 
 COPY . /code/
 
-CMD ./deploy/scripts/run_prod.sh
+CMD ./deploy/scripts/run_tasks.sh
