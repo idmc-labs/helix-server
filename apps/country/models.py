@@ -348,7 +348,7 @@ class Country(models.Model):
             # contacts_count=Count('contacts', distinct=True),
             # operating_contacts_count=Count('operating_contacts', distinct=True),
             **cls._total_figure_disaggregation_subquery(year=year),
-        ).order_by('name')
+        ).order_by('idmc_short_name')
 
         return {
             'headers': headers,

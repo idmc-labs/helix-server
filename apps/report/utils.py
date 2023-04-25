@@ -191,7 +191,7 @@ def report_stat_flow_country(report):
     headers = {
         'id': 'ID',
         'iso3': 'ISO3',
-        'name': 'Country',
+        'idmc_short_name': 'Country',
         'region__name': 'Region',
         Country.ND_CONFLICT_ANNOTATE: f'Conflict ND {report.name}',
         Country.ND_DISASTER_ANNOTATE: f'Disaster ND {report.name}',
@@ -315,7 +315,7 @@ def report_stat_conflict_country(report, include_history):
             ).values('population')
         ),
         iso3=F('country__iso3'),
-        name=F('country__name'),
+        name=F('country__idmc_short_name'),
         flow_total=Sum('total_figures', filter=Q(
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             **global_filter
@@ -533,13 +533,13 @@ def report_stat_conflict_typology(report):
     ).values('country').order_by()
 
     data = filtered_report_figures.filter(disaggregation_conflict__gt=0).annotate(
-        name=F('country__name'),
+        name=F('country__idmc_short_name'),
         iso3=F('country__iso3'),
         total=Sum('disaggregation_conflict', filter=Q(disaggregation_conflict__gt=0)),
         typology=models.Value('Armed Conflict', output_field=models.CharField())
     ).values('name', 'iso3', 'total', 'typology').union(
         filtered_report_figures.filter(disaggregation_conflict_political__gt=0).annotate(
-            name=F('country__name'),
+            name=F('country__idmc_short_name'),
             iso3=F('country__iso3'),
             total=Sum(
                 'disaggregation_conflict_political',
@@ -548,7 +548,7 @@ def report_stat_conflict_typology(report):
             typology=models.Value('Violence - Political', output_field=models.CharField())
         ).values('name', 'iso3', 'total', 'typology'),
         filtered_report_figures.filter(disaggregation_conflict_criminal__gt=0).annotate(
-            name=F('country__name'),
+            name=F('country__idmc_short_name'),
             iso3=F('country__iso3'),
             total=Sum(
                 'disaggregation_conflict_criminal',
@@ -557,7 +557,7 @@ def report_stat_conflict_typology(report):
             typology=models.Value('Violence - Criminal', output_field=models.CharField())
         ).values('name', 'iso3', 'total', 'typology'),
         filtered_report_figures.filter(disaggregation_conflict_communal__gt=0).annotate(
-            name=F('country__name'),
+            name=F('country__idmc_short_name'),
             iso3=F('country__iso3'),
             total=Sum(
                 'disaggregation_conflict_communal',
@@ -566,7 +566,7 @@ def report_stat_conflict_typology(report):
             typology=models.Value('Violence - Communal', output_field=models.CharField())
         ).values('name', 'iso3', 'total', 'typology'),
         filtered_report_figures.filter(disaggregation_conflict_other__gt=0).annotate(
-            name=F('country__name'),
+            name=F('country__idmc_short_name'),
             iso3=F('country__iso3'),
             total=Sum(
                 'disaggregation_conflict_other',
@@ -672,7 +672,7 @@ def report_disaster_event(report):
         flow_total=Sum('total_figures', filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT)),
         affected_countries=Count('country', distinct=True),
         affected_iso3=StringAgg('country__iso3', '; ', distinct=True),
-        affected_names=StringAgg('country__name', ';  ', distinct=True),
+        affected_names=StringAgg('country__idmc_short_name', ';  ', distinct=True),
     )
     return {
         'headers': headers,
@@ -717,7 +717,7 @@ def report_disaster_country(report, include_history):
         **global_filter
     ).values('country').order_by().annotate(
         country_iso3=F('country__iso3'),
-        country_name=F('country__name'),
+        country_name=F('country__idmc_short_name'),
         country_region=F('country__region__name'),
         events_count=Count('event', distinct=True),
         country_population=Subquery(

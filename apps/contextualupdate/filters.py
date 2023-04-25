@@ -23,6 +23,7 @@ class ContextualUpdateFilter(django_filters.FilterSet):
     def filter_article_title(self, queryset, name, value):
         if not value:
             return queryset
+        # FIXME: Shouldn't 'name' be 'article_title' on line 31?
         return queryset.annotate(
             lname=Lower('article_title')
         ).annotate(

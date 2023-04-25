@@ -92,7 +92,7 @@ class EventSerializer(MetaInformationSerializerMixin,
         if diffs := set(figures_countries).difference(countries):
             errors['countries'] = gettext(
                 'The included figures have following countries not mentioned in the event: %s'
-            ) % ', '.join([item for item in Country.objects.filter(id__in=diffs).values_list('name', flat=True)])
+            ) % ', '.join([item for item in Country.objects.filter(id__in=diffs).values_list('idmc_short_name', flat=True)])
 
         return errors
 

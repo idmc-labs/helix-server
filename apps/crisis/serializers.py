@@ -74,7 +74,7 @@ class CrisisSerializer(serializers.ModelSerializer, MetaInformationSerializerMix
         if diffs := set(event_countries).difference(countries):
             errors['countries'] = gettext(
                 'The included events have following countries not mentioned in this crisis: %s'
-            ) % ', '.join([item for item in Country.objects.filter(id__in=diffs).values_list('name', flat=True)])
+            ) % ', '.join([item for item in Country.objects.filter(id__in=diffs).values_list('idmc_short_name', flat=True)])
         return errors
 
     def validate_event_types(self, attrs):

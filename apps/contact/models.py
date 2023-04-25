@@ -79,7 +79,7 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
             gender='Gender',
             organization__name='Organization',
             job_title='Job Title',
-            country__name='Country',
+            country__idmc_short_name='Country',
             operating_countries='Countries of operation',
             operating_countries_regions='Countries of operation regions',
             # Extra added fields
@@ -92,7 +92,7 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
             operating_countries=StringAgg(
-                'countries_of_operation__name', '; ', distinct=True
+                'countries_of_operation__idmc_short_name', '; ', distinct=True
             ),
             operating_countries_regions=StringAgg(
                 'countries_of_operation__region__name', '; ', distinct=True
