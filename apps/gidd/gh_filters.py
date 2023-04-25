@@ -58,7 +58,7 @@ class DisasterStatisticsFilter(django_filters.FilterSet):
         fields = ()
 
     def filter_categories(self, queryset, name, value):
-        return queryset.filter(hazard_type__in=value)
+        return queryset.filter(hazard_type_name__in=value)
 
     def filter_countries(self, queryset, name, value):
         return queryset.filter(country__in=value)
