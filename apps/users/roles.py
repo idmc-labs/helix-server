@@ -61,7 +61,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_assignee: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_self_assignee: {PERMISSION_ENTITY.event},
-        PERMISSION_ACTION.update_pfa_visibility: set(),
+        PERMISSION_ACTION.update_pfa_visibility: {PERMISSION_ENTITY.report},
     },
     USER_ROLE.MONITORING_EXPERT: {
         PERMISSION_ACTION.add: MONITORING_EXPERT_MODELS,
