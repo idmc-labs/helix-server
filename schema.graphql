@@ -1787,7 +1787,7 @@ type Mutation {
   startReportGeneration(id: ID!): GenerateReport
   signOffReport(id: ID!, includeHistory: Boolean): SignOffReport
   exportReportFigures(report: ID!): ExportReportFigures
-  exportReports(name_Unaccent_Icontains: String, filterFigureCountries: [ID!], reviewStatus: [String!], startDateAfter: Date, endDateBefore: Date, isPublic: Boolean): ExportReports
+  exportReports(name_Unaccent_Icontains: String, filterFigureCountries: [ID!], reviewStatus: [String!], startDateAfter: Date, endDateBefore: Date, isPublic: Boolean, isGiddReport: Boolean, isPfaVisibleInGidd: Boolean): ExportReports
   exportReport(id: ID!): ExportReport
   setPfaVisibleInGidd(isPfaVisibleInGidd: Boolean!, reportId: ID!): SetPfaVisibleInGidd
   createExtraction(data: CreateExtractInputType!): CreateExtraction
@@ -2381,7 +2381,7 @@ type Query {
   notifications(recipient: ID, isRead: Boolean, events: [ID!], figures: [ID!], types: [String!], createdAtAfter: Date, createdAtBefore: Date, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType
   report(id: ID!): ReportType
-  reportList(name_Unaccent_Icontains: String, filterFigureCountries: [ID!], reviewStatus: [String!], startDateAfter: Date, endDateBefore: Date, isPublic: Boolean, page: Int = 1, ordering: String, pageSize: Int): ReportListType
+  reportList(name_Unaccent_Icontains: String, filterFigureCountries: [ID!], reviewStatus: [String!], startDateAfter: Date, endDateBefore: Date, isPublic: Boolean, isGiddReport: Boolean, isPfaVisibleInGidd: Boolean, page: Int = 1, ordering: String, pageSize: Int): ReportListType
   reportComment(id: ID!): ReportCommentType
   reportCommentList(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, body: String, report: ID, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
   reportGeneration(id: ID!): ReportGenerationType
