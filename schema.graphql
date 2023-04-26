@@ -1663,6 +1663,20 @@ type GiddPublicCountryType {
   region: GiddPublicCountryRegionType
 }
 
+type GiddPublicFigureAnalysisListType {
+  results: [GiddPublicFigureAnalysisType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type GiddPublicFigureAnalysisType {
+  iso3: String!
+  year: Int!
+  figures: Int!
+  description: String!
+}
+
 type GiddReleaseMetadataType {
   id: ID!
   productionYear: Int!
@@ -2377,6 +2391,8 @@ type Query {
   giddReleaseMetaData: GiddReleaseMetadataType
   giddPublicCountries: [GiddPublicCountryType!]
   giddHazardSubTypes: [GiddHazardSubType]
+  giddPublicFigureAnalysis(id: ID!): GiddPublicFigureAnalysisType
+  giddPublicFigureAnalysisList(iso3_Iexact: String, year_Iexact: Int, page: Int = 1, ordering: String, pageSize: Int): GiddPublicFigureAnalysisListType
   notification(id: ID!): GenericNotificationType
   notifications(recipient: ID, isRead: Boolean, events: [ID!], figures: [ID!], types: [String!], createdAtAfter: Date, createdAtBefore: Date, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType

@@ -224,4 +224,3 @@ class PublicFigureAnalysis(models.Model):
 
     def __str__(self):
         return self.iso3
-
