@@ -5,6 +5,7 @@ from .models import (
     Conflict,
     Disaster,
     StatusLog,
+    PublicFigureAnalysis,
 )
 
 
@@ -90,3 +91,11 @@ class GiddStatusLogFilter(django_filters.FilterSet):
                 StatusLog.Status.get(item).value for item in value
             ])
         return qs
+
+class PublicFigureAnalysisFilter(django_filters.FilterSet):
+    class Meta:
+        model = PublicFigureAnalysis
+        fields = {
+            'iso3': ['iexact'],
+            'year': ['iexact'],
+        }
