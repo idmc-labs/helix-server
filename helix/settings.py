@@ -456,12 +456,16 @@ GRAPHENE_NODES_WHITELIST = (
     'me',
     'generateResetPasswordToken',
     'resetPassword',
-    'conflict',
-    'disaster',
+
+    # Gidd external queries
+    'giddConflict',
+    'giddDisaster',
     'giddConflictStatistics',
     'giddDisasterStatistics',
     'giddPublicCountries',
     'giddHazardSubTypes',
+    'giddPublicFigureAnalysis',
+    'giddPublicFigureAnalysisList',
     # __ double underscore nodes
     '__schema',
     '__type',
