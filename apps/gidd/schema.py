@@ -15,6 +15,7 @@ from .models import (
     StatusLog,
     ReleaseMetadata,
 )
+from apps.country.models import Country
 from graphene_django import DjangoObjectType
 from .filters import (
     ConflictFilter,
@@ -100,6 +101,18 @@ class GiddReleaseMetadataType(DjangoObjectType):
         model = ReleaseMetadata
 
 
+class GiddPublicCountryRegionType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
+class GiddPublicCountryListType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    iso3 = graphene.String(required=True)
+    idmc_short_name = graphene.String(required=True)
+    region = graphene.Field(GiddPublicCountryRegionType)
+
+
 class Query(graphene.ObjectType):
     gidd_conflict = DjangoObjectField(GiddConflictType)
     gidd_conflicts = DjangoPaginatedListObjectField(
@@ -137,10 +150,27 @@ class Query(graphene.ObjectType):
         )
     )
     gidd_release_meta_data = graphene.Field(GiddReleaseMetadataType)
+    gidd_public_country_list = graphene.List(GiddPublicCountryListType)
 
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):
         return ReleaseMetadata.objects.first()
+
+    @staticmethod
+    def resolve_gidd_public_country_list(parent, info, **kwargs):
+        return [
+            GiddPublicCountryListType(
+                id=country['id'],
+                iso3=country['iso3'],
+                idmc_short_name=country['idmc_short_name'],
+                region=GiddPublicCountryRegionType(
+                    id=country['region__id'],
+                    name=country['region__name'],
+                )
+            ) for country in Country.objects.values(
+                'id', 'idmc_short_name', 'iso3', 'region__id', 'region__name'
+            )
+        ]
 
     @staticmethod
     def resolve_gidd_conflict_statistics(parent, info, **kwargs):
