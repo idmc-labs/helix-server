@@ -113,6 +113,26 @@ class GiddPublicCountryListType(graphene.ObjectType):
     region = graphene.Field(GiddPublicCountryRegionType)
 
 
+class GiddHazardType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
+class GiddHazardSubType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
+class GiddHazardCategoryType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
+class GiddHazardSubCategoryType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
 class Query(graphene.ObjectType):
     gidd_conflict = DjangoObjectField(GiddConflictType)
     gidd_conflicts = DjangoPaginatedListObjectField(
@@ -151,6 +171,10 @@ class Query(graphene.ObjectType):
     )
     gidd_release_meta_data = graphene.Field(GiddReleaseMetadataType)
     gidd_public_country_list = graphene.List(GiddPublicCountryListType)
+    gidd_hazard_type = graphene.List(GiddHazardType)
+    gidd_hazard_sub_type = graphene.List(GiddHazardSubType)
+    gidd_hazard_category = graphene.List(GiddHazardCategoryType)
+    gidd_hazard_sub_category = graphene.List(GiddHazardSubCategoryType)
 
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):
@@ -235,3 +259,59 @@ class Query(graphene.ObjectType):
 
             categories=[GiddCategoryStatisticsType(**item) for item in categories_qs]
         )
+
+    @staticmethod
+    def resolve_gidd_hazard_type(parent, info, **kwargs):
+        return [
+            GiddHazardType(
+                id=hazard['hazard_type__id'],
+                name=hazard['hazard_type__name'],
+
+            ) for hazard in Disaster.objects.values(
+                'hazard_type__id', 'hazard_type__name'
+            ).distinct(
+                'hazard_type__id', 'hazard_type__name'
+            )
+        ]
+
+    @staticmethod
+    def resolve_gidd_hazard_sub_type(parent, info, **kwargs):
+        return [
+            GiddHazardSubType(
+                id=hazard['hazard_sub_type__id'],
+                name=hazard['hazard_sub_type__name'],
+
+            ) for hazard in Disaster.objects.values(
+                'hazard_sub_type__id', 'hazard_sub_type__name'
+            ).distinct(
+                'hazard_sub_type__id', 'hazard_sub_type__name'
+            )
+        ]
+
+    @staticmethod
+    def resolve_gidd_hazard_category(parent, info, **kwargs):
+        return [
+            GiddHazardCategoryType(
+                id=hazard['hazard_category__id'],
+                name=hazard['hazard_category__name'],
+
+            ) for hazard in Disaster.objects.values(
+                'hazard_category__id', 'hazard_category__name'
+            ).distinct(
+                'hazard_category__id', 'hazard_category__name'
+            )
+        ]
+
+    @staticmethod
+    def resolve_gidd_hazard_sub_category(parent, info, **kwargs):
+        return [
+            GiddHazardSubCategoryType(
+                id=hazard['hazard_sub_category__id'],
+                name=hazard['hazard_sub_category__name'],
+
+            ) for hazard in Disaster.objects.values(
+                'hazard_sub_category__id', 'hazard_sub_category__name'
+            ).distinct(
+                'hazard_sub_category__id', 'hazard_sub_category__name'
+            )
+        ]
