@@ -1646,6 +1646,18 @@ type GiddDisasterType {
   hazardTypeName: String!
 }
 
+type GiddPublicCountryListType {
+  id: ID!
+  iso3: String!
+  idmcShortName: String!
+  region: GiddPublicCountryRegionType
+}
+
+type GiddPublicCountryRegionType {
+  id: ID!
+  name: String!
+}
+
 type GiddReleaseMetadataType {
   id: ID!
   productionYear: Int!
@@ -2358,6 +2370,7 @@ type Query {
   giddLog(id: ID!): GiddStatusLogType
   giddLogs(triggeredBy: ID, triggeredAt: DateTime, completedAt: DateTime, status: String, page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
   giddReleaseMetaData: GiddReleaseMetadataType
+  giddPublicCountryList: [GiddPublicCountryListType]
   notification(id: ID!): GenericNotificationType
   notifications(recipient: ID, isRead: Boolean, events: [ID!], figures: [ID!], types: [String!], createdAtAfter: Date, createdAtBefore: Date, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType
