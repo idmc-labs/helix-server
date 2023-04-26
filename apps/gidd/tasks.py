@@ -267,11 +267,11 @@ def update_public_figure_analysis():
             public_figure_analysis__isnull=False,
     ):
         report_countries_aggregation = report.report_figures.filter(
-            figure_cause__in = [
+            figure_cause__in=[
                 Crisis.CRISIS_TYPE.CONFLICT,
                 Crisis.CRISIS_TYPE.DISASTER
             ],
-            category__in = [
+            category__in=[
                 Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
                 Figure.FIGURE_CATEGORY_TYPES.IDPS
             ],
