@@ -28,7 +28,9 @@ class Command(BaseCommand):
         DisasterLegacy.objects.all().delete()
 
         hazard_sub_type_map = {
-            disaster_sub_type['name']: disaster_sub_type for disaster_sub_type in DisasterSubType.objects.values('id', 'name')
+            disaster_sub_type[
+                'name'
+            ]: disaster_sub_type for disaster_sub_type in DisasterSubType.objects.values('id', 'name')
         }
 
         def get_event_name(event_name, country_name, start_date, hazard_sub_type):

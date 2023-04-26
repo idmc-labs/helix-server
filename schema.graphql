@@ -1565,7 +1565,7 @@ type GeographicalGroupType {
 }
 
 type GiddCategoryStatisticsType {
-  label: String
+  label: String!
   total: Int
 }
 
@@ -1579,8 +1579,8 @@ type GiddConflictListType {
 type GiddConflictStatisticsType {
   newDisplacements: Int
   totalIdps: Int
-  newDisplacementTimeseries: [GiddTimeSeriesStatisticsType]
-  idpsTimeseries: [GiddTimeSeriesStatisticsType]
+  newDisplacementTimeseries: [GiddTimeSeriesStatisticsType!]
+  idpsTimeseries: [GiddTimeSeriesStatisticsType!]
 }
 
 type GiddConflictType {
@@ -1596,9 +1596,9 @@ type GiddConflictType {
 }
 
 type GiddDisasterCountryType {
-  id: Int
-  iso3: String
-  countryName: String
+  id: Int!
+  iso3: String!
+  countryName: String!
 }
 
 type GiddDisasterListType {
@@ -1611,14 +1611,14 @@ type GiddDisasterListType {
 type GiddDisasterStatisticsType {
   newDisplacements: Int
   totalEvents: Int
-  timeseries: [GiddDisasterTimeSeriesStatisticsType]
-  categories: [GiddCategoryStatisticsType]
+  timeseries: [GiddDisasterTimeSeriesStatisticsType!]
+  categories: [GiddCategoryStatisticsType!]
 }
 
 type GiddDisasterTimeSeriesStatisticsType {
-  year: String
+  year: String!
   total: Int
-  country: GiddDisasterCountryType
+  country: GiddDisasterCountryType!
 }
 
 type GiddDisasterType {
@@ -1677,7 +1677,7 @@ enum GiddStatusLogTypeEnum {
 }
 
 type GiddTimeSeriesStatisticsType {
-  year: Int
+  year: Int!
   total: Int
 }
 
@@ -2219,6 +2219,8 @@ enum PERMISSION_ACTION {
   clear_assignee
   clear_self_assignee
   update_pfa_visibility
+  update_gidd_data
+  update_release_meta_data
 }
 
 enum PERMISSION_ENTITY {
@@ -2243,6 +2245,7 @@ enum PERMISSION_ENTITY {
   reportcomment
   portfolio
   contextofviolence
+  gidd
 }
 
 enum PREVIEW_STATUS {
@@ -2350,8 +2353,8 @@ type Query {
   giddConflicts(id_Iexact: Float, page: Int = 1, ordering: String, pageSize: Int): GiddConflictListType
   giddDisaster(id: ID!): GiddDisasterType
   giddDisasters(id_Iexact: Float, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
-  giddConflictStatistics(countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddConflictStatisticsType
-  giddDisasterStatistics(categories: [String!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddDisasterStatisticsType
+  giddConflictStatistics(countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddConflictStatisticsType!
+  giddDisasterStatistics(categories: [String!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddDisasterStatisticsType!
   giddLog(id: ID!): GiddStatusLogType
   giddLogs(triggeredBy: ID, triggeredAt: DateTime, completedAt: DateTime, status: String, page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
   giddReleaseMetaData: GiddReleaseMetadataType
@@ -2584,6 +2587,8 @@ input ReportCreateInputType {
   isPublic: Boolean
   filterFigureRoles: [ROLE!]
   publicFigureAnalysis: String
+  isGiddReport: Boolean
+  giddReportYear: Int
 }
 
 type ReportGenerationListType {
@@ -2698,6 +2703,8 @@ type ReportType {
   isPublic: Boolean!
   publicFigureAnalysis: String
   isPfaVisibleInGidd: Boolean!
+  isGiddReport: Boolean!
+  giddReportYear: Int
   comments(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, body: String, report: ID, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
   generations(report: ID, ordering: String): ReportGenerationListType
   filterFigureRolesDisplay: EnumDescription
@@ -2740,6 +2747,8 @@ input ReportUpdateInputType {
   isPublic: Boolean
   filterFigureRoles: [ROLE!]
   publicFigureAnalysis: String
+  isGiddReport: Boolean
+  giddReportYear: Int
 }
 
 type ResetPassword {
