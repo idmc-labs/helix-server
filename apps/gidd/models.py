@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
+from apps.crisis.models import Crisis
+from apps.entry.models import Figure
 
 
 class Conflict(models.Model):
@@ -203,3 +205,23 @@ class ReleaseMetadata(models.Model):
         permissions = (
             ('update_release_meta_data_gidd', 'Can update release meta data'),
         )
+
+
+class PublicFigureAnalysis(models.Model):
+    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
+    figure_cause = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Figure Cause'))
+    figure_category = enum.EnumField(
+        enum=Figure.FIGURE_CATEGORY_TYPES,
+        verbose_name=_('Figure Category'),
+    )
+    year = models.IntegerField(verbose_name=_('Year'))
+    figures = models.IntegerField(verbose_name=_('Figures'))
+    description = models.TextField(verbose_name=_('Description'))
+    report = models.ForeignKey(
+        'report.Report', verbose_name=_('Report'),
+        related_name='+', on_delete=models.PROTECT
+    )
+
+    def __str__(self):
+        return self.iso3
+
