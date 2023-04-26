@@ -6,6 +6,9 @@ from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 from utils.graphene.enums import EnumDescription
+from apps.crisis.enums import CrisisTypeGrapheneEnum
+from apps.entry.enums import FigureCategoryTypeEnum
+
 
 from django.db import models
 from django.db.models.functions import Coalesce
@@ -14,6 +17,7 @@ from .models import (
     Disaster,
     StatusLog,
     ReleaseMetadata,
+    PublicFigureAnalysis,
 )
 from apps.country.models import Country
 from graphene_django import DjangoObjectType
@@ -23,6 +27,7 @@ from .filters import (
     ConflictStatisticsFilter,
     DisasterStatisticsFilter,
     GiddStatusLogFilter,
+    PublicFigureAnalysisFilter,
 )
 from .enums import GiddStatusLogEnum
 
@@ -98,6 +103,28 @@ class GiddStatusLogListType(CustomDjangoListObjectType):
         filterset_class = GiddStatusLogFilter
 
 
+class GiddPublicFigureAnalysisType(DjangoObjectType):
+    class Meta:
+        model = PublicFigureAnalysis
+        fields = (
+            'iso3',
+            'year',
+            'figures',
+            'description',
+        )
+
+        figure_cause = graphene.Field(CrisisTypeGrapheneEnum)
+        figure_cause_display = EnumDescription(source='get_figure_cause_display')
+        figure_category = graphene.Field(FigureCategoryTypeEnum)
+        figure_category_display = EnumDescription(source='get_figure_category_display')
+
+
+class GiddPublicFigureAnalysisListType(CustomDjangoListObjectType):
+    class Meta:
+        model = PublicFigureAnalysis
+        filterset_class = PublicFigureAnalysisFilter
+
+
 class GiddReleaseMetadataType(DjangoObjectType):
     class Meta:
         model = ReleaseMetadata
@@ -159,6 +186,13 @@ class Query(graphene.ObjectType):
     gidd_release_meta_data = graphene.Field(GiddReleaseMetadataType)
     gidd_public_countries = graphene.List(graphene.NonNull(GiddPublicCountryType))
     gidd_hazard_sub_types = graphene.List(GiddHazardSubType)
+    gidd_public_figure_analysis = DjangoObjectField(GiddPublicFigureAnalysisType)
+    gidd_public_figure_analysis_list = DjangoPaginatedListObjectField(
+        GiddPublicFigureAnalysisListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        )
+    )
 
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):
