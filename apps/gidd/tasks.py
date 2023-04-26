@@ -8,8 +8,14 @@ from django.db.models import (
 from apps.entry.models import Figure
 from apps.event.models import Crisis
 from .models import Conflict, Disaster
-from .models import StatusLog, DisasterLegacy, ConflictLegacy
+from .models import (
+    StatusLog,
+    DisasterLegacy,
+    ConflictLegacy,
+    PublicFigureAnalysis,
+)
 from apps.country.models import Country
+from apps.report.models import Report
 
 
 logging.basicConfig(level=logging.INFO)
@@ -42,6 +48,81 @@ def annotate_conflict(qs, year):
         ),
         country=F('country'),
     ).order_by('year')
+
+
+def update_gidd_legacy_data():
+    iso3_to_country_id_map = {
+        country['iso3']: country['id'] for country in Country.objects.values('iso3', 'id')
+    }
+    iso3_to_country_name_map = {
+        country['iso3']: country['idmc_short_name'] for country in Country.objects.values('iso3', 'idmc_short_name')
+    }
+
+    # Bulk create conflict legacy data
+    Conflict.objects.bulk_create(
+        [
+            Conflict(
+                total_displacement=item['total_displacement'],
+                new_displacement=item['new_displacement'],
+                year=item['year'],
+                iso3=item['iso3'],
+                country_id=iso3_to_country_id_map[item['iso3']],
+                country_name=iso3_to_country_name_map[item['iso3']],
+            ) for item in ConflictLegacy.objects.values(
+                'total_displacement',
+                'new_displacement',
+                'year',
+                'iso3',
+            )
+        ]
+    )
+
+    # Bulk create legacy disaster data
+    Disaster.objects.bulk_create(
+        [
+            Disaster(
+                event_name=item['event_name'],
+                year=item['year'],
+                start_date=item['start_date'],
+                start_date_accuracy=item['start_date_accuracy'],
+                end_date=item['end_date'],
+                end_date_accuracy=item['end_date_accuracy'],
+
+                hazard_category_id=item['hazard_category'],
+                hazard_sub_category_id=item['hazard_sub_category'],
+                hazard_type_id=item['hazard_type'],
+                hazard_sub_type_id=item['hazard_sub_type'],
+
+                # FIXME: we should get this from database
+                hazard_category_name=item['hazard_category_name'],
+                hazard_sub_category_name=item['hazard_sub_category_name'],
+                hazard_type_name=item['hazard_type_name'],
+                hazard_sub_type_name=item['hazard_sub_type_name'],
+
+                new_displacement=item['new_displacement'],
+                iso3=item['iso3'],
+                country_id=iso3_to_country_id_map[item['iso3']],
+                country_name=iso3_to_country_name_map[item['iso3']],
+            ) for item in DisasterLegacy.objects.values(
+                'event_name',
+                'year',
+                'start_date',
+                'start_date_accuracy',
+                'end_date',
+                'end_date_accuracy',
+                'hazard_category',
+                'hazard_sub_category',
+                'hazard_type',
+                'hazard_sub_type',
+                'hazard_category_name',
+                'hazard_sub_category_name',
+                'hazard_type_name',
+                'hazard_sub_type_name',
+                'new_displacement',
+                'iso3',
+            )
+        ]
+    )
 
 
 def update_conflict_and_disaster_data():
@@ -176,6 +257,87 @@ def update_conflict_and_disaster_data():
         )
 
 
+def update_public_figure_analysis():
+    # Delete all the public figure analysis objects
+    PublicFigureAnalysis.objects.all().delete()
+    data = []
+    for report in Report.objects.filter(
+            is_public=True,
+            is_pfa_visible_in_gidd=True,
+            public_figure_analysis__isnull=False,
+    ):
+        report_countries_aggregation = report.report_figures.filter(
+            figure_cause__in = [
+                Crisis.CRISIS_TYPE.CONFLICT,
+                Crisis.CRISIS_TYPE.DISASTER
+            ],
+            category__in = [
+                Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                Figure.FIGURE_CATEGORY_TYPES.IDPS
+            ],
+        ).annotate(
+            **report.TOTAL_FIGURE_DISAGGREGATIONS,
+        ).values(
+            'country__iso3',
+            'total_stock_conflict',
+            'total_stock_disaster',
+            'total_flow_conflict',
+            'total_flow_disaster',
+        )
+        for report_country in report_countries_aggregation:
+            if report_country['total_stock_conflict']:
+                data.append(
+                    PublicFigureAnalysis(
+                        iso3=report_country['country__iso3'],
+                        figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+                        figure_category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                        year=report.filter_figure_end_before.year,
+                        figures=report_country['total_stock_conflict'],
+                        description=report.public_figure_analysis,
+                        report=report
+                    )
+                )
+            if report_country['total_stock_disaster']:
+                data.append(
+                    PublicFigureAnalysis(
+                        iso3=report_country['country__iso3'],
+                        figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+                        figure_category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                        year=report.filter_figure_end_before.year,
+                        figures=report_country['total_stock_disaster'],
+                        description=report.public_figure_analysis,
+                        report=report
+                    )
+                )
+            if report_country['total_flow_conflict']:
+                data.append(
+                    PublicFigureAnalysis(
+                        iso3=report_country['country__iso3'],
+                        figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+                        figure_category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                        year=report.filter_figure_end_before.year,
+                        figures=report_country['total_flow_conflict'],
+                        description=report.public_figure_analysis,
+                        report=report
+                    )
+                )
+
+            if report_country['total_flow_disaster']:
+                data.append(
+                    PublicFigureAnalysis(
+                        iso3=report_country['country__iso3'],
+                        figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+                        figure_category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                        year=report.filter_figure_end_before.year,
+                        fitures=report_country['total_flow_disaster'],
+                        description=report.public_figure_analysis,
+                        report=report
+                    )
+                )
+    # Bulk create public analysis
+    PublicFigureAnalysis.objects.bulk_create(data)
+
+
 @celery_app.task
 def update_gidd_data(log_id):
 
@@ -185,85 +347,15 @@ def update_gidd_data(log_id):
     # Delete disasters
     Disaster.objects.all().delete()
 
-    iso3_to_country_id_map = {
-        country['iso3']: country['id'] for country in Country.objects.values('iso3', 'id')
-    }
-    iso3_to_country_name_map = {
-        country['iso3']: country['idmc_short_name'] for country in Country.objects.values('iso3', 'idmc_short_name')
-    }
-
-    # Bulk create conflict legacy data
-    Conflict.objects.bulk_create(
-        [
-            Conflict(
-                total_displacement=item['total_displacement'],
-                new_displacement=item['new_displacement'],
-                year=item['year'],
-                iso3=item['iso3'],
-                country_id=iso3_to_country_id_map[item['iso3']],
-                country_name=iso3_to_country_name_map[item['iso3']],
-            ) for item in ConflictLegacy.objects.values(
-                'total_displacement',
-                'new_displacement',
-                'year',
-                'iso3',
-            )
-        ]
-    )
-
-    # Bulk create legacy disaster data
-    Disaster.objects.bulk_create(
-        [
-            Disaster(
-                event_name=item['event_name'],
-                year=item['year'],
-                start_date=item['start_date'],
-                start_date_accuracy=item['start_date_accuracy'],
-                end_date=item['end_date'],
-                end_date_accuracy=item['end_date_accuracy'],
-
-                hazard_category_id=item['hazard_category'],
-                hazard_sub_category_id=item['hazard_sub_category'],
-                hazard_type_id=item['hazard_type'],
-                hazard_sub_type_id=item['hazard_sub_type'],
-
-                # FIXME: we should get this from database
-                hazard_category_name=item['hazard_category_name'],
-                hazard_sub_category_name=item['hazard_sub_category_name'],
-                hazard_type_name=item['hazard_type_name'],
-                hazard_sub_type_name=item['hazard_sub_type_name'],
-
-                new_displacement=item['new_displacement'],
-                iso3=item['iso3'],
-                country_id=iso3_to_country_id_map[item['iso3']],
-                country_name=iso3_to_country_name_map[item['iso3']],
-            ) for item in DisasterLegacy.objects.values(
-                'event_name',
-                'year',
-                'start_date',
-                'start_date_accuracy',
-                'end_date',
-                'end_date_accuracy',
-                'hazard_category',
-                'hazard_sub_category',
-                'hazard_type',
-                'hazard_sub_type',
-                'hazard_category_name',
-                'hazard_sub_category_name',
-                'hazard_type_name',
-                'hazard_sub_type_name',
-                'new_displacement',
-                'iso3',
-            )
-        ]
-    )
     try:
+        update_gidd_legacy_data()
         update_conflict_and_disaster_data()
+        update_public_figure_analysis()
         StatusLog.objects.filter(id=log_id).update(
             status=StatusLog.Status.SUCCESS,
             completed_at=timezone.now()
         )
-        logger.info('GIDD data updated.')
+        logger.info('Gidd data updated.')
     except Exception as e:
         StatusLog.objects.filter(id=log_id).update(
             status=StatusLog.Status.FAILED,
