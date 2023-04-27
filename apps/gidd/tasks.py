@@ -263,10 +263,10 @@ def update_gidd_data(log_id):
             status=StatusLog.Status.SUCCESS,
             completed_at=timezone.now()
         )
-        logger.info('Gidd data updated.')
+        logger.info('Gidd data updated.', exc_info=True)
     except Exception as e:
         StatusLog.objects.filter(id=log_id).update(
             status=StatusLog.Status.FAILED,
             completed_at=timezone.now()
         )
-        logger.error('Failed update data: ' + str(e))
+        logger.error('Failed update data: ' + str(e), exc_info=True)
