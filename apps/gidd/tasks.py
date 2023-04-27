@@ -3,16 +3,20 @@ import logging
 from helix.celery import app as celery_app
 from django.utils import timezone
 from django.db.models import (
-    Sum, Case, When, IntegerField, Value, F
+    Sum, Case, When, IntegerField, Value, F,
+    Subquery, OuterRef,
 )
+from django.db.models.functions import Coalesce
 from apps.entry.models import Figure
 from apps.event.models import Crisis
-from .models import Conflict, Disaster
 from .models import (
     StatusLog,
     DisasterLegacy,
     ConflictLegacy,
     PublicFigureAnalysis,
+    Conflict,
+    Disaster,
+    DisplacementData,
 )
 from apps.country.models import Country
 from apps.report.models import Report
@@ -185,6 +189,16 @@ def update_conflict_and_disaster_data():
                     default=0
                 )
             ),
+            total_displacement=Sum(
+                Case(
+                    When(
+                        category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                        then=F('total_figures')
+                    ),
+                    output_field=IntegerField(),
+                    default=0
+                )
+            ),
             year=Value(year, output_field=IntegerField()),
 
             hazard_category=F('event__disaster_category'),
@@ -223,6 +237,7 @@ def update_conflict_and_disaster_data():
             'hazard_sub_type_name',
 
             'new_displacement',
+            'total_displacement',
             'country',
             'iso3',
             'country_name',
@@ -249,6 +264,7 @@ def update_conflict_and_disaster_data():
                     hazard_sub_type_name=item['hazard_sub_type_name'],
 
                     new_displacement=item['new_displacement'],
+                    total_displacement=item['total_displacement'],
                     iso3=item['iso3'],
                     country_id=item['country'],
                     country_name=item['country_name'],
@@ -318,6 +334,87 @@ def update_public_figure_analysis():
     # Bulk create public analysis
     PublicFigureAnalysis.objects.bulk_create(data)
 
+def update_displacement_data():
+    DisplacementData.objects.all().delete()
+    start_year = max(
+        Disaster.objects.order_by('year').first().year,
+        Conflict.objects.order_by('year').first().year
+    )
+    end_year = max(
+        Disaster.objects.order_by('-year').first().year,
+        Conflict.objects.order_by('-year').first().year
+    )
+    for year in range(start_year, end_year):
+        displacement_data = Country.objects.annotate(
+            conflict_total_displacement=Coalesce(
+                Subquery(
+                    Conflict.objects.filter(
+                        year=year,
+                        country_id=OuterRef('pk'),
+                    ).values('total_displacement')[:1]
+                ), 0
+            ),
+            conflict_new_displacement=Coalesce(
+                Subquery(
+                    Conflict.objects.filter(
+                        year=year,
+                        country_id=OuterRef('pk'),
+                    ).values('new_displacement')[:1]
+                ), 0
+            ),
+            disaster_total_displacement=Coalesce(
+                Subquery(
+                    Disaster.objects.filter(
+                        year=year,
+                        country_id=OuterRef('pk'),
+                    ).values('iso3').order_by().annotate(
+                        disaster_total_displacement=Coalesce(Sum('total_displacement'), 0)
+                    ).values('disaster_total_displacement')[:1]
+                ), 0
+            ),
+            disaster_new_displacement=Coalesce(
+                Subquery(
+                    Disaster.objects.filter(
+                        year=year,
+                        country_id=OuterRef('pk'),
+                    ).values('iso3').order_by().annotate(
+                        disaster_new_displacement=Coalesce(Sum('new_displacement'), 0)
+                    ).values('disaster_new_displacement')[:1]
+                ), 0
+            ),
+            total_internal_displacement=F('conflict_total_displacement') + F('disaster_total_displacement'),
+            total_new_displacement=F('conflict_new_displacement') + F('disaster_new_displacement'),
+            year=Value(year, output_field=IntegerField()),
+        ).values(
+            'iso3',
+            'idmc_short_name',
+            'id',
+            'conflict_total_displacement',
+            'conflict_new_displacement',
+            'disaster_new_displacement',
+            'disaster_total_displacement',
+            'total_internal_displacement',
+            'total_new_displacement',
+            'year',
+        )
+
+        DisplacementData.objects.bulk_create(
+            [
+                DisplacementData(
+                    iso3=item['iso3'],
+                    country_name=item['idmc_short_name'],
+                    country_id=item['id'],
+                    conflict_total_displacement=item['conflict_total_displacement'],
+                    conflict_new_displacement=item['conflict_new_displacement'],
+                    disaster_new_displacement=item['disaster_new_displacement'],
+                    disaster_total_displacement=item['disaster_total_displacement'],
+                    total_internal_displacement=item['total_internal_displacement'],
+                    total_new_displacement=item['total_new_displacement'],
+                    year=item['year'],
+                ) for item in displacement_data
+            ]
+        )
+
 
 @celery_app.task
 def update_gidd_data(log_id):
@@ -332,6 +429,7 @@ def update_gidd_data(log_id):
         update_gidd_legacy_data()
         update_conflict_and_disaster_data()
         update_public_figure_analysis()
+        update_displacement_data()
         StatusLog.objects.filter(id=log_id).update(
             status=StatusLog.Status.SUCCESS,
             completed_at=timezone.now()
