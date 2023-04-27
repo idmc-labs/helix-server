@@ -53,4 +53,5 @@ class ReleaseMetadataSerializer(serializers.ModelSerializer):
             meta_data.production_year = validated_data.get('production_year')
             meta_data.staging_year = validated_data.get('staging_year')
             meta_data.modified_by = user
+            meta_data.save()
             return meta_data

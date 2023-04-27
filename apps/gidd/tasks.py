@@ -1,7 +1,7 @@
 import datetime
 import logging
 from helix.celery import app as celery_app
-
+from django.utils import timezone
 from django.db.models import (
     Sum, Case, When, IntegerField, Value, F
 )
@@ -259,8 +259,14 @@ def update_gidd_data(log_id):
     )
     try:
         update_conflict_and_disaster_data()
-        StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.SUCCESS)
+        StatusLog.objects.filter(id=log_id).update(
+            status=StatusLog.Status.SUCCESS,
+            completed_at=timezone.now()
+        )
         logger.info('Gidd data updated.')
     except Exception as e:
-        StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.FAILED)
+        StatusLog.objects.filter(id=log_id).update(
+            status=StatusLog.Status.FAILED,
+            completed_at=timezone.now()
+        )
         logger.error('Failed update data: ' + str(e))
