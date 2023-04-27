@@ -91,7 +91,7 @@ class Command(BaseCommand):
                 'Other': 'Unknown',
                 # Extra added mapping by bimal, IDMC should review
                 'Landslide': 'Landslide/Wet mass movement',
-                'Sudden subsidence': 'Landslide/Wet mass movement',
+                'Sudden subsidence': 'Sinkhole',
                 'Landslide, avalanche': 'Avalanche',
                 'Storm, tropical, cyclone': 'Typhoon/Hurricane/Cyclone',
                 'Storm, tropical, typhoon': 'Typhoon/Hurricane/Cyclone',
@@ -106,7 +106,7 @@ class Command(BaseCommand):
                 'Extreme temp, winter conditions / cold wave': 'Cold wave',
                 'Storm, dust storm': 'Sand/dust storm',
                 'Storm, inter-tropical convergence zone': 'Storm',
-                'Melting glacier flood': 'Landslide/Wet mass movement',
+                'Melting glacier flood': 'Flood',
                 'Earthquake, tsunami': 'Tsunami',
                 'Exterme temp, severe winter conditions/dzud': 'Cold wave',
                 'Monsoon': 'Storm',
