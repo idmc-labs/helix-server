@@ -65,6 +65,7 @@ class Disaster(models.Model):
     )
 
     new_displacement = models.BigIntegerField(blank=True, null=True)
+    total_displacement = models.BigIntegerField(blank=True, null=True)
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -221,6 +222,22 @@ class PublicFigureAnalysis(models.Model):
         'report.Report', verbose_name=_('Report'), null=True,
         related_name='+', on_delete=models.SET_NULL
     )
+
+
+class DisplacementData(models.Model):
+    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
+    country_name = models.CharField(verbose_name=_('Country name'), max_length=256)
+    country = models.ForeignKey(
+        'country.Country', related_name='displacements', on_delete=models.PROTECT,
+        verbose_name=_('Country')
+    )
+    conflict_total_displacement = models.BigIntegerField(verbose_name=_('Conflict total displacement'))
+    disaster_total_displacement = models.BigIntegerField(verbose_name=_('Disaster total displacement'))
+    conflict_new_displacement = models.BigIntegerField(verbose_name=_('Conflict new displacement'))
+    disaster_new_displacement = models.BigIntegerField(verbose_name=_('Disaster new displacement'))
+    total_internal_displacement = models.BigIntegerField(verbose_name=_('Total internal displacement'))
+    total_new_displacement = models.BigIntegerField(verbose_name=_('Total new displacement'))
+    year = models.IntegerField(verbose_name=_('Year'))
 
     def __str__(self):
         return self.iso3
