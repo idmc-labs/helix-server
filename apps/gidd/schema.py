@@ -7,16 +7,7 @@ from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 from utils.graphene.enums import EnumDescription
 
-from django.db.models import (
-    Sum,
-    Case,
-    When,
-    F,
-    Count,
-    Value,
-    IntegerField,
-    CharField,
-)
+from django.db import models
 from django.db.models.functions import Coalesce
 from .models import (
     Conflict,
@@ -157,20 +148,20 @@ class Query(graphene.ObjectType):
         new_displacement_timeseries_qs = conflict_qs.filter(
             new_displacement__gt=0
         ).values('year').annotate(
-            total=Sum('new_displacement', output_field=IntegerField()),
+            total=models.Sum('new_displacement', output_field=models.IntegerField()),
         ).order_by('year').values('year', 'total')
 
         idps_timeseries_qs = conflict_qs.filter(
             total_displacement__isnull=False
         ).values('year').annotate(
-            total=Sum('total_displacement', output_field=IntegerField())
+            total=models.Sum('total_displacement', output_field=models.IntegerField())
         ).order_by('year').values('year', 'total')
         total_idps = conflict_qs.order_by('-year').first().total_displacement if conflict_qs.order_by('-year') else 0
 
         return GiddConflictStatisticsType(
             total_idps=total_idps if total_idps else 0,
             new_displacements=conflict_qs.aggregate(
-                total_new_displacement=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
+                total_new_displacement=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
             )['total_new_displacement'],
 
             new_displacement_timeseries=[GiddTimeSeriesStatisticsType(**item) for item in new_displacement_timeseries_qs],
@@ -181,26 +172,26 @@ class Query(graphene.ObjectType):
     def resolve_gidd_disaster_statistics(parent, info, **kwargs):
         disaster_qs = DisasterStatisticsFilter(data=kwargs).qs
         timeseries_qs = disaster_qs.filter(new_displacement__gt=0).values('year').annotate(
-            total=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
+            total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
         ).order_by('year').values('year', 'total', 'country_id', 'country_name', 'iso3')
 
         # FIXME should we filter out not labeld hazard type?
         categories_qs = disaster_qs.values('hazard_type').annotate(
-            total=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0),
-            label=Case(
-                When(hazard_sub_category=None, then=Value('Not labeled')),
-                default=F('hazard_type_name'),
-                output_field=CharField()
+            total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0),
+            label=models.Case(
+                models.When(hazard_sub_category=None, then=models.Value('Not labeled')),
+                default=models.F('hazard_type_name'),
+                output_field=models.CharField()
             )
         ).filter(total__gte=1).values('label', 'total')
         return GiddDisasterStatisticsType(
             new_displacements=disaster_qs.aggregate(
-                total_new_displacement=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0)
+                total_new_displacement=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
             )['total_new_displacement'],
 
             total_events=disaster_qs.filter(new_displacement__gt=0).values('event__name').annotate(
-                events=Count('id')
-            ).aggregate(total_events=Coalesce(Sum('events', output_field=IntegerField()), 0))['total_events'],
+                events=models.Count('id')
+            ).aggregate(total_events=Coalesce(models.Sum('events', output_field=models.IntegerField()), 0))['total_events'],
 
             timeseries=[GiddDisasterTimeSeriesStatisticsType(
                 year=item['year'],
