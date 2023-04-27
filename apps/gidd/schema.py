@@ -185,7 +185,7 @@ class Query(graphene.ObjectType):
         ).order_by('year').values('year', 'total', 'country_id', 'country_name', 'iso3')
 
         # FIXME should we filter out not labeld hazard type?
-        categories_qs = disaster_qs.filter(hazard_type__isnull=False).values('hazard_type').annotate(
+        categories_qs = disaster_qs.values('hazard_type').annotate(
             total=Coalesce(Sum('new_displacement', output_field=IntegerField()), 0),
             label=Case(
                 When(hazard_sub_category=None, then=Value('Not labeled')),
