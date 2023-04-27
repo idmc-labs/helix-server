@@ -11,7 +11,7 @@ class CountrySerializer(serializers.ModelSerializer):
 
 
 class ConflictSerializer(serializers.ModelSerializer):
-    country = CountrySerializer(many=False)
+    country = CountrySerializer()
 
     class Meta:
         model = Conflict
@@ -20,7 +20,7 @@ class ConflictSerializer(serializers.ModelSerializer):
 
 
 class DisasterSerializer(serializers.ModelSerializer):
-    country = CountrySerializer(many=False)
+    country = CountrySerializer()
 
     class Meta:
         model = Disaster
