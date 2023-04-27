@@ -18,6 +18,7 @@ from .models import (
     StatusLog,
     ReleaseMetadata,
     PublicFigureAnalysis,
+    DisplacementData,
 )
 from apps.country.models import Country
 from graphene_django import DjangoObjectType
@@ -28,6 +29,7 @@ from .filters import (
     DisasterStatisticsFilter,
     GiddStatusLogFilter,
     PublicFigureAnalysisFilter,
+    DisplacementDataFilter,
 )
 from .enums import GiddStatusLogEnum
 
@@ -147,6 +149,33 @@ class GiddHazardSubType(graphene.ObjectType):
     name = graphene.String(required=True)
 
 
+class GiddHazardSubCategoryType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    name = graphene.String(required=True)
+
+
+class GiddDisplacementDataType(DjangoObjectType):
+    class Meta:
+        model = DisplacementData
+        fields = (
+            'iso3',
+            'country_name',
+            'conflict_total_displacement',
+            'conflict_new_displacement',
+            'disaster_new_displacement',
+            'disaster_total_displacement',
+            'total_internal_displacement',
+            'total_new_displacement',
+            'year',
+        )
+
+
+class GiddDisplacementDataListType(CustomDjangoListObjectType):
+    class Meta:
+        model = DisplacementData
+        filterset_class = DisplacementDataFilter
+
+
 class Query(graphene.ObjectType):
     gidd_conflict = DjangoObjectField(GiddConflictType)
     gidd_conflicts = DjangoPaginatedListObjectField(
@@ -189,6 +218,12 @@ class Query(graphene.ObjectType):
     gidd_public_figure_analysis = DjangoObjectField(GiddPublicFigureAnalysisType)
     gidd_public_figure_analysis_list = DjangoPaginatedListObjectField(
         GiddPublicFigureAnalysisListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        )
+    )
+    gidd_displacement_list = DjangoPaginatedListObjectField(
+        GiddDisplacementDataListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
         )
