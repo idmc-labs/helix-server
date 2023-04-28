@@ -1,4 +1,5 @@
 import graphene
+from django.db import transaction
 from utils.mutation import generate_input_type_for_serializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker, is_authenticated
@@ -23,7 +24,7 @@ class GiddUpdateData(graphene.Mutation):
             return GiddUpdateData(errors=errors, ok=False)
         instance = serializer.save()
         # Update date in background
-        update_gidd_data.delay(log_id=instance.id)
+        transaction.on_commit(lambda: update_gidd_data.delay(log_id=instance.id))
         return GiddUpdateData(result=instance, errors=None, ok=True)
 
 
@@ -51,7 +52,7 @@ class GiddUpdateReleaseMetaData(graphene.Mutation):
             return GiddUpdateReleaseMetaData(errors=errors, ok=False)
         instance = serializer.save()
         # Update date in background
-        update_gidd_data.delay(log_id=instance.id)
+        transaction.on_commit(lambda: update_gidd_data.delay(log_id=instance.id))
         return GiddUpdateReleaseMetaData(result=instance, errors=None, ok=True)
 
 

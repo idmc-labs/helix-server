@@ -89,7 +89,7 @@ class Command(BaseCommand):
                 'Hailstorm': 'Hailstorm',
                 'Winter storm': 'Winter storm/Blizzard',
                 'Other': 'Unknown',
-                # Extra added mapping by bimal, IDMC should review
+                # Extra mappings
                 'Landslide': 'Landslide/Wet mass movement',
                 'Sudden subsidence': 'Sinkhole',
                 'Landslide, avalanche': 'Avalanche',
@@ -118,12 +118,8 @@ class Command(BaseCommand):
             return hazard_sub_type_map.get(new_disaster_sub_type)
 
         def format_gidd_number(number):
-            if number == 0:
+            if number == 0 or number:
                 return number
-            elif number:
-                return number
-            else:
-                return None
 
         with open(conflict_csv_file, 'r') as conflict_csv_file:
             reader = csv.DictReader(conflict_csv_file)

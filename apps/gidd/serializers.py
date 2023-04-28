@@ -41,17 +41,10 @@ class ReleaseMetadataSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         # Always update a object instead of create
-        meta_data = ReleaseMetadata.objects.first()
         user = self.context['request'].user
-        if not meta_data:
-            return ReleaseMetadata.objects.create(
-                production_year=validated_data.get('production_year'),
-                staging_year=validated_data.get('staging_year'),
-                modified_by=user
-            )
-        else:
-            meta_data.production_year = validated_data.get('production_year')
-            meta_data.staging_year = validated_data.get('staging_year')
-            meta_data.modified_by = user
-            meta_data.save()
-            return meta_data
+        meta_data = ReleaseMetadata.objects.first() or ReleaseMetadata()
+        meta_data.production_year = validated_data.get('production_year')
+        meta_data.staging_year = validated_data.get('staging_year')
+        meta_data.modified_by = user
+        meta_data.save()
+        return meta_data
