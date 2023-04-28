@@ -31,7 +31,7 @@ class Conflict(models.Model):
 class Disaster(models.Model):
     event = models.ForeignKey(
         'event.Event', verbose_name=_('Event'),
-        related_name='gidd_events', on_delete=models.PROTECT, null=True, blank=True
+        related_name='gidd_events', on_delete=models.SET_NULL, null=True, blank=True
     )
     year = models.IntegerField()
     country = models.ForeignKey(
