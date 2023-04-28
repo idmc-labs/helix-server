@@ -1624,19 +1624,12 @@ type GiddDisasterTimeSeriesStatisticsType {
 type GiddDisasterType {
   id: ID!
   event: EventType
-  eventName: String!
   year: Int!
   country: CountryType!
-  countryName: String!
-  iso3: String!
   startDate: Date
   startDateAccuracy: String
   endDate: Date
   endDateAccuracy: String
-  hazardCategoryName: String!
-  hazardSubCategoryName: String!
-  hazardSubTypeName: String!
-  hazardTypeName: String!
   hazardCategory: DisasterCategoryType
   hazardSubCategory: DisasterSubCategoryType
   hazardType: DisasterTypeObjectType
@@ -1644,13 +1637,20 @@ type GiddDisasterType {
   newDisplacement: Int
   createdAt: DateTime!
   updatedAt: DateTime!
+  eventName: String!
+  iso3: String!
+  countryName: String!
+  hazardCategoryName: String!
+  hazardSubCategoryName: String!
+  hazardSubTypeName: String!
+  hazardTypeName: String!
 }
 
 type GiddReleaseMetadataType {
   id: ID!
   productionYear: Int!
   stagingYear: Int!
-  modifiedBy: UserType
+  modifiedBy: UserType!
   modifiedAt: DateTime!
 }
 
