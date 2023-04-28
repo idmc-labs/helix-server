@@ -1351,10 +1351,10 @@ class ExternalApiDump(models.Model):
         GIDD_CONFLICT_EXPORT_REST = 'gidd-conflict-export-rest', _('Conflict export REST')
         GIDD_DISASTER_EXPORT_REST = 'gidd-disaster-export-rest', _('Disaster export REST')
 
-        GIDD_CONFLICT_GRAPHQL = 'gidd-conflict', _('Gidd conflict')
-        GIDD_DISASTER_GRAPHQL = 'gidd-disaster', _('Gidd disaster')
-        GIDD_CONFLICT_STAT = 'gidd-conflict-stat', _('Gidd conflict stat')
-        GIDD_DISASTER_STAT = 'gidd-disaster-stat', _('Gidd disaster stat')
+        GIDD_CONFLICT_GRAPHQL = 'gidd-conflict', _('GIDD conflict')
+        GIDD_DISASTER_GRAPHQL = 'gidd-disaster', _('GIDD disaster')
+        GIDD_CONFLICT_STAT = 'gidd-conflict-stat', _('GIDD conflict stat')
+        GIDD_DISASTER_STAT = 'gidd-disaster-stat', _('GIDD disaster stat')
 
     class Status(models.IntegerChoices):
         PENDING = 0, 'Pending'

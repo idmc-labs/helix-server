@@ -187,14 +187,14 @@ class Report(MetaInformationArchiveAbstractModel,
     )
     is_pfa_visible_in_gidd = models.BooleanField(
         default=False,
-        verbose_name=_('Is public figure analysis visible in Gidd'),
+        verbose_name=_('Is public figure analysis visible in GIDD'),
     )
     is_gidd_report = models.BooleanField(
         default=False,
         verbose_name=_('Is GIDD report?'),
     )
     gidd_report_year = models.PositiveIntegerField(
-        verbose_name=_('Gidd report year'), null=True, unique=True
+        verbose_name=_('GIDD report year'), null=True, unique=True
     )
 
     @classmethod

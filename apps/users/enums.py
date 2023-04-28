@@ -32,7 +32,7 @@ class PERMISSION_ACTION(enum.Enum):
         clear_assignee: _('Clear assignee'),
         clear_self_assignee: _('Clear self assignee'),
         update_pfa_visibility: _('Update public figure visibility in GIDD'),
-        update_gidd_data: _('Update gidd data'),
+        update_gidd_data: _('Update GIDD data'),
         update_release_meta_data: _('Update release meta data'),
     }
 
@@ -83,7 +83,7 @@ class PERMISSION_ENTITY(enum.Enum):
         reportcomment: _('Report Comment'),
         portfolio: _('Portfolio'),
         contextofviolence: _('Context of violence'),
-        gidd: _('Gidd'),
+        gidd: _('GIDD'),
     }
 
 
