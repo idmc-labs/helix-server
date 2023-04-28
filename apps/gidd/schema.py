@@ -16,7 +16,7 @@ from .models import (
     ReleaseMetadata,
 )
 from graphene_django import DjangoObjectType
-from .gh_filters import (
+from .filters import (
     ConflictFilter,
     DisasterFilter,
     ConflictStatisticsFilter,

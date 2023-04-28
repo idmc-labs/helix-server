@@ -10,7 +10,9 @@ class Conflict(models.Model):
     )
     total_displacement = models.BigIntegerField(blank=True, null=True)
     new_displacement = models.BigIntegerField(blank=True, null=True)
-    year = models.BigIntegerField()
+    year = models.IntegerField()
+
+    # Cached/Snapshot values
     country_name = models.CharField(verbose_name=_('Name'), max_length=256)
     iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
 
@@ -29,27 +31,19 @@ class Conflict(models.Model):
 class Disaster(models.Model):
     event = models.ForeignKey(
         'event.Event', verbose_name=_('Event'),
-        related_name='gidd_events', on_delete=models.CASCADE, null=True, blank=True
+        related_name='gidd_events', on_delete=models.PROTECT, null=True, blank=True
     )
-    event_name = models.CharField(verbose_name=_('Event name'), max_length=256)
-    year = models.BigIntegerField()
+    year = models.IntegerField()
     country = models.ForeignKey(
         'country.Country', related_name='country_disaster', on_delete=models.PROTECT,
         verbose_name=_('Country')
     )
-    country_name = models.CharField(verbose_name=_('Name'), max_length=256)
-    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
 
     # Dates
     start_date = models.DateField(blank=True, null=True)
     start_date_accuracy = models.TextField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
     end_date_accuracy = models.TextField(blank=True, null=True)
-
-    hazard_category_name = models.CharField(max_length=256, blank=True)
-    hazard_sub_category_name = models.CharField(max_length=256, blank=True)
-    hazard_sub_type_name = models.CharField(max_length=256, blank=True)
-    hazard_type_name = models.CharField(max_length=256, blank=True)
 
     hazard_category = models.ForeignKey(
         'event.DisasterCategory', verbose_name=_('Hazard Category'),
@@ -73,6 +67,15 @@ class Disaster(models.Model):
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # Cached/Snapshot values
+    event_name = models.CharField(verbose_name=_('Event name'), max_length=256)
+    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
+    country_name = models.CharField(verbose_name=_('Name'), max_length=256)
+    hazard_category_name = models.CharField(max_length=256, blank=True)
+    hazard_sub_category_name = models.CharField(max_length=256, blank=True)
+    hazard_sub_type_name = models.CharField(max_length=256, blank=True)
+    hazard_type_name = models.CharField(max_length=256, blank=True)
 
     class Meta:
         verbose_name = _('Disaster')
@@ -116,7 +119,7 @@ class StatusLog(models.Model):
 class ConflictLegacy(models.Model):
     total_displacement = models.BigIntegerField(blank=True, null=True)
     new_displacement = models.BigIntegerField(blank=True, null=True)
-    year = models.BigIntegerField()
+    year = models.IntegerField()
     country_name = models.CharField(verbose_name=_('Name'), max_length=256)
     iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
 
@@ -133,7 +136,7 @@ class ConflictLegacy(models.Model):
 
 
 class DisasterLegacy(models.Model):
-    year = models.BigIntegerField()
+    year = models.IntegerField()
     country_name = models.CharField(verbose_name=_('Name'), max_length=256)
     iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
     event_name = models.CharField(verbose_name=_('Event name'), max_length=256)
@@ -188,8 +191,8 @@ class ReleaseMetadata(models.Model):
     production_year = models.IntegerField(verbose_name=_('Production year'))
     staging_year = models.IntegerField(verbose_name=_('Staging year'))
     modified_by = models.ForeignKey(
-        'users.User', verbose_name=_('Modified by'), null=True, blank=True,
-        related_name='+', on_delete=models.SET_NULL
+        'users.User', verbose_name=_('Modified by'),
+        related_name='+', on_delete=models.PROTECT
     )
     modified_at = models.DateTimeField(auto_now=True)
 
