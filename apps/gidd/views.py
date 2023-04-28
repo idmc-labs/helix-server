@@ -14,53 +14,12 @@ from .serializers import (
     ConflictSerializer,
     DisasterSerializer,
 )
+from .rest_filters import (
+    RestConflictFilterSet,
+    RestDisasterFilterSet,
+)
 from utils.common import round_and_remove_zero, track_gidd
 from apps.entry.models import ExternalApiDump
-
-
-def export_disasters(request, iso3=None):
-    response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="disaster-data.csv"'
-    writer = csv.writer(response, delimiter=',')
-    writer.writerow([
-        'ISO3', 'Country / Territory', 'Year', 'Event Name', 'Date of Event (start)',
-        'Disaster Internal Displacements', 'Hazard Category', 'Hazard Type', 'Hazard Sub Type'
-    ])
-    countries_iso3 = request.GET.get('countries_iso3', None)
-    if not countries_iso3:
-        disaster_qs = Disaster.objects.filter(country__iso3=iso3, new_displacement__gt=0)
-    else:
-        countries_iso3_list = countries_iso3.split(',')
-        disaster_qs = Disaster.objects.filter(country__iso3__in=countries_iso3_list, new_displacement__gt=0)
-
-    hazard_type = request.GET.get('hazard_type', None)
-    start_year = request.GET.get('start_year', None)
-    end_year = request.GET.get('end_year', None)
-    if start_year:
-        disaster_qs = disaster_qs.filter(year__gte=start_year)
-    if end_year:
-        disaster_qs = disaster_qs.filter(year__lte=end_year)
-    if hazard_type:
-        if "-" in hazard_type:
-            hazard_type_list = [x.strip() for x in hazard_type.split(',')][:-1]
-        else:
-            hazard_type_list = [hazard_type]
-        disaster_qs = disaster_qs.filter(hazard_type__in=hazard_type_list)
-    for disaster in disaster_qs:
-        writer.writerow(
-            [
-                disaster.country.iso3,
-                disaster.country.name,
-                disaster.year,
-                disaster.event_name,
-                disaster.start_date,
-                round_and_remove_zero(disaster.new_displacement),
-                disaster.hazard_category,
-                disaster.hazard_type,
-                disaster.hazard_sub_type,
-            ]
-        )
-    return response
 
 
 class CountryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -70,17 +29,22 @@ class CountryViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
     filterset_fields = ['id']
 
+
+class ConflictViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = ConflictSerializer
+    queryset = Conflict.objects.all().select_related('country')
+    filterset_class = RestConflictFilterSet
+
     @action(
-        detail=True,
+        detail=False,
         methods=["get"],
         url_path="conflict-export",
         permission_classes=[AllowAny],
     )
-    def conflict_export(self, request, iso3=None):
+    def export(self, request, iso3=None):
         """
         Export conflict
         """
-
         track_gidd(
             request.GET.get('client_id'),
             ExternalApiDump.ExternalApiType.GIDD_CONFLICT_EXPORT_REST
@@ -95,16 +59,11 @@ class CountryViewSet(viewsets.ReadOnlyModelViewSet):
             'Total number of IDPs',
             'Conflict Internal Displacements',
         ])
-        conflict_qs = Conflict.objects.filter(
-            Q(country__iso3=iso3) & (Q(new_displacement__gt=0) | ~Q(total_displacement=None))
+
+        qs = self.filter_queryset(self.get_queryset()).filter(
+            (Q(new_displacement__gt=0) | ~Q(total_displacement=None))
         )
-        start_year = request.GET.get('start_year', None)
-        end_year = request.GET.get('end_year', None)
-        if start_year:
-            conflict_qs = conflict_qs.filter(year__gte=start_year)
-        if end_year:
-            conflict_qs = conflict_qs.filter(year__lte=end_year)
-        for conflict in conflict_qs:
+        for conflict in qs:
             writer.writerow(
                 [
                     conflict.country.iso3,
@@ -116,50 +75,46 @@ class CountryViewSet(viewsets.ReadOnlyModelViewSet):
             )
         return response
 
-    @action(
-        detail=True,
-        methods=["get"],
-        url_path="disaster-export",
-        permission_classes=[AllowAny],
-    )
-    def disaster_export(self, request, iso3=None):
-        """
-        Export disaster
-        """
-        track_gidd(
-            request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_DISASTER_EXPORT_REST
-        )
-        return export_disasters(request, iso3)
-
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="multiple-countries-disaster-export",
-        permission_classes=[AllowAny],
-    )
-    def multiple_countries_disaster_export(self, request):
-        """
-        Export disaster
-        """
-        track_gidd(
-            request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_COUNTRIES_DISASTER_EXPORT_REST
-        )
-        return export_disasters(request)
-
-
-class ConflictViewSet(viewsets.ReadOnlyModelViewSet):
-    serializer_class = ConflictSerializer
-    queryset = Conflict.objects.all().select_related('country')
-    lookup_field = 'id'
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
-    filterset_fields = ['id']
-
 
 class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = DisasterSerializer
     queryset = Disaster.objects.all().select_related('country')
-    lookup_field = 'id'
-    filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
-    filterset_fields = ['id']
+    filterset_class = RestDisasterFilterSet
+
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="disaster-export",
+        permission_classes=[AllowAny],
+    )
+    def export(self, request, iso3=None):
+        """
+        Export disaster
+        """
+        qs = self.filter_queryset(self.get_queryset())
+        track_gidd(
+            request.GET.get('client_id'),
+            ExternalApiDump.ExternalApiType.GIDD_DISASTER_EXPORT_REST
+        )
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="disaster-data.csv"'
+        writer = csv.writer(response, delimiter=',')
+        writer.writerow([
+            'ISO3', 'Country / Territory', 'Year', 'Event Name', 'Date of Event (start)',
+            'Disaster Internal Displacements', 'Hazard Category', 'Hazard Type', 'Hazard Sub Type'
+        ])
+        for disaster in qs:
+            writer.writerow(
+                [
+                    disaster.country.iso3,
+                    disaster.country.name,
+                    disaster.year,
+                    disaster.event_name,
+                    disaster.start_date,
+                    round_and_remove_zero(disaster.new_displacement),
+                    disaster.hazard_category,
+                    disaster.hazard_type,
+                    disaster.hazard_sub_type,
+                ]
+            )
+        return response
