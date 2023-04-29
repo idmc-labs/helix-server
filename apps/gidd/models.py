@@ -225,10 +225,8 @@ class PublicFigureAnalysis(models.Model):
 
 
 class DisasterByHazardSubType(models.Model):
-    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
     disaster_total_idps = models.BigIntegerField(null=True, verbose_name=_('Disaster total nds'))
     disaster_total_nd = models.BigIntegerField(null=True, verbose_name=_('Disaster total nd'))
-    year = models.IntegerField(verbose_name=_('Year'))
     hazard_sub_type = models.ForeignKey(
         'event.DisasterSubType', verbose_name=_('Hazard Sub Type'),
         null=True,
@@ -263,8 +261,6 @@ class DisplacementData(models.Model):
                 'disaster_total_nd': models.Subquery(
                     DisasterByHazardSubType.objects.filter(
                         displacement_id=models.OuterRef('pk'),
-                        year=models.OuterRef('year'),
-                        iso3=models.OuterRef('iso3'),
                         **hazard_filter,
                     ).annotate(
                         total=models.Sum('disaster_total_nd'),
@@ -281,8 +277,6 @@ class DisplacementData(models.Model):
                 'disaster_total_idps': models.Subquery(
                     DisasterByHazardSubType.objects.filter(
                         displacement_id=models.OuterRef('pk'),
-                        year=models.OuterRef('year'),
-                        iso3=models.OuterRef('iso3'),
                         **hazard_filter,
                     ).annotate(
                         total=models.Sum('disaster_total_idps'),
