@@ -443,7 +443,6 @@ type CountryType {
   actors: [ActorType!]!
   events(createdAt_Lte: DateTime, createdAt_Lt: DateTime, createdAt_Gte: DateTime, createdAt_Gt: DateTime, startDate_Lte: Date, startDate_Lt: Date, startDate_Gte: Date, startDate_Gt: Date, endDate_Lte: Date, endDate_Lt: Date, endDate_Gte: Date, endDate_Gt: Date, ignoreQa: Boolean, name: String, crisisByIds: [ID!], eventTypes: [String!], countries: [ID!], glideNumbers: [String!], osvSubTypeByIds: [ID!], report: String, disasterSubTypes: [ID!], violenceTypes: [ID!], violenceSubTypes: [ID!], createdByIds: [ID!], qaRule: String, contextOfViolences: [ID!], reviewStatus: [String!], assignees: [ID!], assigners: [ID!], page: Int = 1, ordering: String, pageSize: Int): EventListType
   contextualupdateSet: [ContextualUpdateType!]!
-  displacements: [GiddDisplacementDataType!]!
   lastSummary: SummaryType
   lastContextualAnalysis: ContextualAnalysisType
   entries(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], filterIsFigureToBeReviewed: Boolean, page: Int = 1, ordering: String, pageSize: Int): EntryListType
@@ -2420,7 +2419,7 @@ type Query {
   giddPublicFigureAnalysis(id: ID!): GiddPublicFigureAnalysisType
   giddPublicFigureAnalysisList(iso3: String, year: Int, page: Int = 1, ordering: String, pageSize: Int): GiddPublicFigureAnalysisListType
   giddDisplacement(id: ID!): GiddDisplacementDataType
-  giddDisplacementList(startYear: Float, endYear: Float, countriesIso3: [String!], hazardSubTypes: [ID!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
+  giddDisplacements(startYear: Float, endYear: Float, countriesIso3: [String!], hazardSubTypes: [ID!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
   notification(id: ID!): GenericNotificationType
   notifications(recipient: ID, isRead: Boolean, events: [ID!], figures: [ID!], types: [String!], createdAtAfter: Date, createdAtBefore: Date, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType

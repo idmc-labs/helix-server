@@ -466,6 +466,8 @@ GRAPHENE_NODES_WHITELIST = (
     'giddHazardSubTypes',
     'giddPublicFigureAnalysis',
     'giddPublicFigureAnalysisList',
+    'giddDisplacements',
+    'giddDisplacement',
     # __ double underscore nodes
     '__schema',
     '__type',
