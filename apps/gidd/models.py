@@ -224,6 +224,23 @@ class PublicFigureAnalysis(models.Model):
     )
 
 
+class DisasterByHazardSubType(models.Model):
+    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
+    disaster_total_idps = models.BigIntegerField(null=True, verbose_name=_('Disaster total nds'))
+    disaster_total_nd = models.BigIntegerField(null=True, verbose_name=_('Disaster total nd'))
+    year = models.IntegerField(verbose_name=_('Year'))
+    hazard_sub_type = models.ForeignKey(
+        'event.DisasterSubType', verbose_name=_('Hazard Sub Type'),
+        null=True,
+        related_name='displacements', on_delete=models.SET_NULL
+    )
+    displacement = models.ForeignKey(
+        'gidd.DisplacementData', verbose_name=_('Displacements'),
+        related_name='disasters',
+        on_delete=models.SET_NULL, null=True,
+    )
+
+
 class DisplacementData(models.Model):
     iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
     country_name = models.CharField(verbose_name=_('Country name'), max_length=256)
@@ -231,13 +248,46 @@ class DisplacementData(models.Model):
         'country.Country', related_name='displacements', on_delete=models.PROTECT,
         verbose_name=_('Country')
     )
-    conflict_total_displacement = models.BigIntegerField(verbose_name=_('Conflict total displacement'))
-    disaster_total_displacement = models.BigIntegerField(verbose_name=_('Disaster total displacement'))
-    conflict_new_displacement = models.BigIntegerField(verbose_name=_('Conflict new displacement'))
-    disaster_new_displacement = models.BigIntegerField(verbose_name=_('Disaster new displacement'))
-    total_internal_displacement = models.BigIntegerField(verbose_name=_('Total internal displacement'))
-    total_new_displacement = models.BigIntegerField(verbose_name=_('Total new displacement'))
+    conflict_total_idps = models.BigIntegerField(null=True, verbose_name=_('Conflict total idps'))
+    conflict_total_nd = models.BigIntegerField(null=True, verbose_name=_('Conflict total nd'))
+    cause = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Cause'))
     year = models.IntegerField(verbose_name=_('Year'))
 
     def __str__(self):
         return self.iso3
+
+    @classmethod
+    def annotate_disaster_nd(cls, hazard_filter=None):
+        if hazard_filter and hazard_filter['hazard_sub_type__in']:
+            return {
+                'disaster_total_nd': models.Subquery(
+                        DisasterByHazardSubType.objects.filter(
+                            displacement_id=models.OuterRef('pk'),
+                            year=models.OuterRef('year'),
+                            iso3=models.OuterRef('iso3'),
+                            **hazard_filter,
+                        ).annotate(
+                            total=models.Sum('disaster_total_nd'),
+                        ).order_by().values('total')[:1]
+                    )
+            }
+        else:
+            return {'disaster_total_nd': models.Sum('disasters__disaster_total_nd')}
+
+    @classmethod
+    def annotate_disaster_idps(cls, hazard_filter=None):
+        if hazard_filter and hazard_filter['hazard_sub_type__in']:
+            return {
+                'disaster_total_idps':  models.Subquery(
+                    DisasterByHazardSubType.objects.filter(
+                        displacement_id=models.OuterRef('pk'),
+                        year=models.OuterRef('year'),
+                        iso3=models.OuterRef('iso3'),
+                        **hazard_filter,
+                    ).annotate(
+                        total=models.Sum('disaster_total_idps'),
+                    ).order_by().values('total')[:1]
+                )
+            }
+        else:
+            return {'disaster_total_idps': models.Sum('disasters__disaster_total_idps')}
