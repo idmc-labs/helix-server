@@ -3,9 +3,11 @@ from django.db import transaction
 from utils.mutation import generate_input_type_for_serializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker, is_authenticated
+from django.utils.translation import gettext
 from .serializers import StatusLogSerializer, ReleaseMetadataSerializer
 from .schema import GiddStatusLogType, GiddReleaseMetadataType
 from .tasks import update_gidd_data
+from .models import StatusLog
 
 
 class GiddUpdateData(graphene.Mutation):
@@ -19,6 +21,19 @@ class GiddUpdateData(graphene.Mutation):
     @permission_checker(['gidd.update_gidd_data_gidd'])
     def mutate(root, info):
         user = info.context.user
+        # Check if any pending updates
+        status_log = StatusLog.objects.last()
+        if status_log and status_log.status == StatusLog.Status.PENDING:
+            return GiddUpdateData(
+                errors=[dict(
+                    field='nonFieldErrors',
+                    messages=gettext(
+                        'Genereting GIDD data in background, you can re-generate once generation will complete'
+                    )
+                )],
+                ok=False
+            )
+
         serializer = StatusLogSerializer(data=dict(triggered_by=user.id))
         if errors := mutation_is_not_valid(serializer):
             return GiddUpdateData(errors=errors, ok=False)
