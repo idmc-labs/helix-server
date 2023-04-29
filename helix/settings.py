@@ -460,8 +460,8 @@ GRAPHENE_NODES_WHITELIST = (
     'disaster',
     'giddConflictStatistics',
     'giddDisasterStatistics',
-    'giddPublicCountryList',
-    'giddHazardSubType',
+    'giddPublicCountries',
+    'giddHazardSubTypes',
     # __ double underscore nodes
     '__schema',
     '__type',
