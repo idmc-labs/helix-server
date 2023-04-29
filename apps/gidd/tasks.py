@@ -258,82 +258,61 @@ def update_conflict_and_disaster_data():
 
 
 def update_public_figure_analysis():
+    # NOTE:- Exactly one aggregation should obtained for PFA
+    # NOTE:- There must be exaclty one country
     # Delete all the public figure analysis objects
     PublicFigureAnalysis.objects.all().delete()
     data = []
     for report in Report.objects.filter(
-            is_public=True,
             is_pfa_visible_in_gidd=True,
-            public_figure_analysis__isnull=False,
     ):
-        report_countries_aggregation = report.report_figures.filter(
-            figure_cause__in=[
-                Crisis.CRISIS_TYPE.CONFLICT,
-                Crisis.CRISIS_TYPE.DISASTER
-            ],
-            category__in=[
-                Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-                Figure.FIGURE_CATEGORY_TYPES.IDPS
-            ],
-        ).annotate(
+        report_country_aggregation = report.report_figures.aggregate(
             **report.TOTAL_FIGURE_DISAGGREGATIONS,
-        ).values(
-            'country__iso3',
-            'total_stock_conflict',
-            'total_stock_disaster',
-            'total_flow_conflict',
-            'total_flow_disaster',
         )
-        for report_country in report_countries_aggregation:
-            if report_country['total_stock_conflict']:
-                data.append(
-                    PublicFigureAnalysis(
-                        iso3=report_country['country__iso3'],
-                        figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
-                        figure_category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-                        year=report.filter_figure_end_before.year,
-                        figures=report_country['total_stock_conflict'],
-                        description=report.public_figure_analysis,
-                        report=report
-                    )
-                )
-            if report_country['total_stock_disaster']:
-                data.append(
-                    PublicFigureAnalysis(
-                        iso3=report_country['country__iso3'],
-                        figure_cause=Crisis.CRISIS_TYPE.DISASTER,
-                        figure_category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-                        year=report.filter_figure_end_before.year,
-                        figures=report_country['total_stock_disaster'],
-                        description=report.public_figure_analysis,
-                        report=report
-                    )
-                )
-            if report_country['total_flow_conflict']:
-                data.append(
-                    PublicFigureAnalysis(
-                        iso3=report_country['country__iso3'],
-                        figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
-                        figure_category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-                        year=report.filter_figure_end_before.year,
-                        figures=report_country['total_flow_conflict'],
-                        description=report.public_figure_analysis,
-                        report=report
-                    )
-                )
 
-            if report_country['total_flow_disaster']:
-                data.append(
-                    PublicFigureAnalysis(
-                        iso3=report_country['country__iso3'],
-                        figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
-                        figure_category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-                        year=report.filter_figure_end_before.year,
-                        fitures=report_country['total_flow_disaster'],
-                        description=report.public_figure_analysis,
-                        report=report
-                    )
-                )
+        # There must be exactly one country if is_pfa_visible_in_gidd is enabled.
+        # This is validated in serializer
+        iso3=report.filter_figure_countries.first().iso3
+
+        data.extend([
+            PublicFigureAnalysis(
+                iso3=iso3,
+                figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+                figure_category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                year=report.filter_figure_end_before.year,
+                figures=report_country_aggregation['total_stock_conflict'],
+                description=report.public_figure_analysis,
+                report=report
+            ),
+            PublicFigureAnalysis(
+                iso3=iso3,
+                figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+                figure_category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                year=report.filter_figure_end_before.year,
+                figures=report_country_aggregation['total_stock_disaster'],
+                description=report.public_figure_analysis,
+                report=report
+            ),
+            PublicFigureAnalysis(
+                iso3=iso3,
+                figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+                figure_category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                year=report.filter_figure_end_before.year,
+                figures=report_country_aggregation['total_flow_conflict'],
+                description=report.public_figure_analysis,
+                report=report
+            ),
+            PublicFigureAnalysis(
+                iso3=iso3,
+                figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+                figure_category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                year=report.filter_figure_end_before.year,
+                figures=report_country_aggregation['total_flow_disaster'],
+                description=report.public_figure_analysis,
+                report=report
+            )
+        ])
+
     # Bulk create public analysis
     PublicFigureAnalysis.objects.bulk_create(data)
 

@@ -113,10 +113,10 @@ class GiddPublicFigureAnalysisType(DjangoObjectType):
             'description',
         )
 
-        figure_cause = graphene.Field(CrisisTypeGrapheneEnum)
-        figure_cause_display = EnumDescription(source='get_figure_cause_display')
-        figure_category = graphene.Field(FigureCategoryTypeEnum)
-        figure_category_display = EnumDescription(source='get_figure_category_display')
+    figure_cause = graphene.Field(CrisisTypeGrapheneEnum)
+    figure_cause_display = EnumDescription(source='get_figure_cause_display')
+    figure_category = graphene.Field(FigureCategoryTypeEnum)
+    figure_category_display = EnumDescription(source='get_figure_category_display')
 
 
 class GiddPublicFigureAnalysisListType(CustomDjangoListObjectType):
