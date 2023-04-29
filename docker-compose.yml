@@ -37,7 +37,7 @@ x-server: &base_server_setup
 
 services:
   db:
-    image: postgres:13
+    image: postgres:11
     environment:
       POSTGRES_PASSWORD: postgres
     volumes:
