@@ -215,11 +215,11 @@ class PublicFigureAnalysis(models.Model):
         verbose_name=_('Figure Category'),
     )
     year = models.IntegerField(verbose_name=_('Year'))
-    figures = models.IntegerField(verbose_name=_('Figures'))
-    description = models.TextField(verbose_name=_('Description'))
+    figures = models.IntegerField(verbose_name=_('Figures'), null=True)
+    description = models.TextField(verbose_name=_('Description'), null=True)
     report = models.ForeignKey(
-        'report.Report', verbose_name=_('Report'),
-        related_name='+', on_delete=models.PROTECT
+        'report.Report', verbose_name=_('Report'), null=True,
+        related_name='+', on_delete=models.SET_NULL
     )
 
     def __str__(self):
