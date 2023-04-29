@@ -1673,8 +1673,12 @@ type GiddPublicFigureAnalysisListType {
 type GiddPublicFigureAnalysisType {
   iso3: String!
   year: Int!
-  figures: Int!
-  description: String!
+  figures: Int
+  description: String
+  figureCause: CRISIS_TYPE
+  figureCauseDisplay: EnumDescription
+  figureCategory: FIGURE_CATEGORY_TYPES
+  figureCategoryDisplay: EnumDescription
 }
 
 type GiddReleaseMetadataType {

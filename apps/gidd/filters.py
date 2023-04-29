@@ -92,6 +92,7 @@ class GiddStatusLogFilter(django_filters.FilterSet):
             ])
         return qs
 
+
 class PublicFigureAnalysisFilter(django_filters.FilterSet):
     class Meta:
         model = PublicFigureAnalysis
