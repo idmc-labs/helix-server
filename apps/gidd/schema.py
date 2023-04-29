@@ -22,6 +22,7 @@ from .filters import (
     DisasterFilter,
     ConflictStatisticsFilter,
     DisasterStatisticsFilter,
+    GiddStatusLogFilter,
 )
 from .enums import GiddStatusLogEnum
 
@@ -94,6 +95,7 @@ class GiddStatusLogType(DjangoObjectType):
 class GiddStatusLogListType(CustomDjangoListObjectType):
     class Meta:
         model = StatusLog
+        filterset_class = GiddStatusLogFilter
 
 
 class GiddReleaseMetadataType(DjangoObjectType):

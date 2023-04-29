@@ -3,6 +3,7 @@ from collections import OrderedDict
 from django.utils.translation import gettext
 from django.conf import settings
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from apps.contrib.serializers import (
     MetaInformationSerializerMixin,
@@ -71,6 +72,18 @@ def check_is_pfa_visible_in_gidd(report):
 
 class ReportSerializer(MetaInformationSerializerMixin,
                        serializers.ModelSerializer):
+
+    gidd_report_year = serializers.IntegerField(
+        allow_null=True,
+        required=False,
+        validators=[
+            UniqueValidator(
+                queryset=Report.objects.all(),
+                message=('GIDD report with this year already exists.'),
+            ),
+        ],
+    )
+
     class Meta:
         model = Report
         fields = [

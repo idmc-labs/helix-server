@@ -109,7 +109,7 @@ class StatusLog(models.Model):
 
     class Meta:
         permissions = (
-            ('update_gidd_data_gidd', 'Can update gidd data'),
+            ('update_gidd_data_gidd', 'Can update GIDD data'),
         )
 
     def __str__(self):

@@ -21,6 +21,8 @@ class ReportFilter(df.FilterSet):
     start_date_after = df.DateFilter(method='filter_date_after')
     end_date_before = df.DateFilter(method='filter_end_date_before')
     is_public = df.BooleanFilter(method='filter_is_public', initial=False)
+    is_gidd_report = df.BooleanFilter(method='filter_is_gidd_report', initial=False)
+    is_pfa_visible_in_gidd = df.BooleanFilter(method='filter_is_pfa_visible_in_gidd', initial=False)
 
     class Meta:
         model = Report
@@ -89,6 +91,20 @@ class ReportFilter(df.FilterSet):
         if value is False:
             user = self.request.user
             return qs.filter(is_public=False, created_by=user)
+        return qs
+
+    def filter_is_gidd_report(self, qs, name, value):
+        if value is True:
+            return qs.filter(is_gidd_report=True)
+        if value is False:
+            return qs.filter(is_gidd_report=False)
+        return qs
+
+    def filter_is_pfa_visible_in_gidd(self, qs, name, value):
+        if value is True:
+            return qs.filter(is_pfa_visible_in_gidd=True)
+        if value is False:
+            return qs.filter(is_pfa_visible_in_gidd=False)
         return qs
 
     @property

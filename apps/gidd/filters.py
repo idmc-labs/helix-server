@@ -4,6 +4,7 @@ from utils.filters import StringListFilter
 from .models import (
     Conflict,
     Disaster,
+    StatusLog,
 )
 
 
@@ -71,3 +72,21 @@ class DisasterStatisticsFilter(django_filters.FilterSet):
 
     def filter_countries_iso3(self, queryset, name, value):
         return queryset.filter(iso3__in=value)
+
+
+class GiddStatusLogFilter(django_filters.FilterSet):
+    status = StringListFilter(method='filter_by_status')
+
+    class Meta:
+        model = StatusLog
+        fields = ()
+
+    def filter_by_status(self, qs, name, value):
+        if value:
+            if isinstance(value[0], int):
+                # coming from saved query
+                return qs.filter(status__in=value)
+            return qs.filter(status__in=[
+                StatusLog.Status.get(item).value for item in value
+            ])
+        return qs
