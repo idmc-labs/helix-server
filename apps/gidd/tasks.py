@@ -272,7 +272,7 @@ def update_public_figure_analysis():
 
         # There must be exactly one country if is_pfa_visible_in_gidd is enabled.
         # This is validated in serializer
-        iso3=report.filter_figure_countries.first().iso3
+        iso3 = report.filter_figure_countries.first().iso3
 
         data.extend([
             PublicFigureAnalysis(
