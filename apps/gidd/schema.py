@@ -155,19 +155,22 @@ class GiddHazardSubCategoryType(graphene.ObjectType):
 
 
 class GiddDisplacementDataType(DjangoObjectType):
+    disaster_total_idps = graphene.Int()
+    disaster_total_nd = graphene.Int()
+
     class Meta:
         model = DisplacementData
         fields = (
+            'id',
             'iso3',
             'country_name',
-            'conflict_total_displacement',
-            'conflict_new_displacement',
-            'disaster_new_displacement',
-            'disaster_total_displacement',
-            'total_internal_displacement',
-            'total_new_displacement',
             'year',
+            'conflict_total_nd',
+            'conflict_total_idps',
         )
+
+    cause = graphene.Field(CrisisTypeGrapheneEnum)
+    cause_display = EnumDescription(source='get_cause_display')
 
 
 class GiddDisplacementDataListType(CustomDjangoListObjectType):
@@ -222,6 +225,7 @@ class Query(graphene.ObjectType):
             page_size_query_param='pageSize'
         )
     )
+    gidd_displacement = DjangoObjectField(GiddDisplacementDataType)
     gidd_displacement_list = DjangoPaginatedListObjectField(
         GiddDisplacementDataListType,
         pagination=PageGraphqlPaginationWithoutCount(

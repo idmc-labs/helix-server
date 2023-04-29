@@ -261,15 +261,15 @@ class DisplacementData(models.Model):
         if hazard_filter and hazard_filter['hazard_sub_type__in']:
             return {
                 'disaster_total_nd': models.Subquery(
-                        DisasterByHazardSubType.objects.filter(
-                            displacement_id=models.OuterRef('pk'),
-                            year=models.OuterRef('year'),
-                            iso3=models.OuterRef('iso3'),
-                            **hazard_filter,
-                        ).annotate(
-                            total=models.Sum('disaster_total_nd'),
-                        ).order_by().values('total')[:1]
-                    )
+                    DisasterByHazardSubType.objects.filter(
+                        displacement_id=models.OuterRef('pk'),
+                        year=models.OuterRef('year'),
+                        iso3=models.OuterRef('iso3'),
+                        **hazard_filter,
+                    ).annotate(
+                        total=models.Sum('disaster_total_nd'),
+                    ).order_by().values('total')[:1]
+                )
             }
         else:
             return {'disaster_total_nd': models.Sum('disasters__disaster_total_nd')}
@@ -278,7 +278,7 @@ class DisplacementData(models.Model):
     def annotate_disaster_idps(cls, hazard_filter=None):
         if hazard_filter and hazard_filter['hazard_sub_type__in']:
             return {
-                'disaster_total_idps':  models.Subquery(
+                'disaster_total_idps': models.Subquery(
                     DisasterByHazardSubType.objects.filter(
                         displacement_id=models.OuterRef('pk'),
                         year=models.OuterRef('year'),

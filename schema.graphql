@@ -1656,15 +1656,16 @@ type GiddDisplacementDataListType {
 }
 
 type GiddDisplacementDataType {
+  id: ID!
   iso3: String!
   countryName: String!
-  conflictTotalDisplacement: Int!
-  disasterTotalDisplacement: Int!
-  conflictNewDisplacement: Int!
-  disasterNewDisplacement: Int!
-  totalInternalDisplacement: Int!
-  totalNewDisplacement: Int!
+  conflictTotalIdps: Int
+  conflictTotalNd: Int
   year: Int!
+  disasterTotalIdps: Int
+  disasterTotalNd: Int
+  cause: CRISIS_TYPE
+  causeDisplay: EnumDescription
 }
 
 type GiddHazardSubType {
@@ -2418,7 +2419,8 @@ type Query {
   giddHazardSubTypes: [GiddHazardSubType]
   giddPublicFigureAnalysis(id: ID!): GiddPublicFigureAnalysisType
   giddPublicFigureAnalysisList(iso3: String, year: Int, page: Int = 1, ordering: String, pageSize: Int): GiddPublicFigureAnalysisListType
-  giddDisplacementList(startYear: Float, endYear: Float, countriesIso3: [String!], hazardSubTypes: [ID!], hazardSubCategories: [ID!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
+  giddDisplacement(id: ID!): GiddDisplacementDataType
+  giddDisplacementList(startYear: Float, endYear: Float, countriesIso3: [String!], hazardSubTypes: [ID!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
   notification(id: ID!): GenericNotificationType
   notifications(recipient: ID, isRead: Boolean, events: [ID!], figures: [ID!], types: [String!], createdAtAfter: Date, createdAtBefore: Date, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType
