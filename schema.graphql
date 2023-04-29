@@ -2373,7 +2373,7 @@ type Query {
   giddConflictStatistics(countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddConflictStatisticsType!
   giddDisasterStatistics(categories: [String!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddDisasterStatisticsType!
   giddLog(id: ID!): GiddStatusLogType
-  giddLogs(triggeredBy: ID, triggeredAt: DateTime, completedAt: DateTime, status: String, page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
+  giddLogs(status: [String!], page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
   giddReleaseMetaData: GiddReleaseMetadataType
   giddPublicCountries: [GiddPublicCountryType!]
   giddHazardSubTypes: [GiddHazardSubType]
