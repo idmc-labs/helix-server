@@ -263,6 +263,29 @@ def update_public_figure_analysis():
     # Delete all the public figure analysis objects
     PublicFigureAnalysis.objects.all().delete()
     data = []
+
+    def _get_figures(figure_category, figure_cause, report_country_aggregation):
+        if (
+            figure_category == Figure.FIGURE_CATEGORY_TYPES.IDPS and
+            figure_cause == Crisis.CRISIS_TYPE.CONFLICT
+        ):
+            return report_country_aggregation['total_stock_conflict']
+        elif (
+            figure_category == Figure.FIGURE_CATEGORY_TYPES.IDPS and
+            figure_cause == Crisis.CRISIS_TYPE.DISASTER
+        ):
+            return report_country_aggregation['total_stock_disaster']
+        elif (
+            figure_category == Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT and
+            figure_cause == Crisis.CRISIS_TYPE.CONFLICT
+        ):
+            return report_country_aggregation['total_flow_conflict']
+        elif (
+            figure_category == Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT and
+            figure_cause == Crisis.CRISIS_TYPE.DISASTER
+        ):
+            return report_country_aggregation['total_flow_disaster']
+
     for report in Report.objects.filter(
             is_pfa_visible_in_gidd=True,
     ):
@@ -274,44 +297,23 @@ def update_public_figure_analysis():
         # This is validated in serializer
         iso3 = report.filter_figure_countries.first().iso3
 
-        data.extend([
+        # PFA always have either IDPS or ND categories
+        figure_category = report.filter_figure_categories[0]
+
+        # PFA always have either conflict or disaster cause
+        figure_cause = report.filter_figure_crisis_types[0]
+
+        data.append(
             PublicFigureAnalysis(
                 iso3=iso3,
-                figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
-                figure_category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                figure_cause=figure_cause,
+                figure_category=figure_category,
                 year=report.filter_figure_end_before.year,
-                figures=report_country_aggregation['total_stock_conflict'],
+                figures=_get_figures(figure_category, figure_cause, report_country_aggregation),
                 description=report.public_figure_analysis,
                 report=report
             ),
-            PublicFigureAnalysis(
-                iso3=iso3,
-                figure_cause=Crisis.CRISIS_TYPE.DISASTER,
-                figure_category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-                year=report.filter_figure_end_before.year,
-                figures=report_country_aggregation['total_stock_disaster'],
-                description=report.public_figure_analysis,
-                report=report
-            ),
-            PublicFigureAnalysis(
-                iso3=iso3,
-                figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
-                figure_category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-                year=report.filter_figure_end_before.year,
-                figures=report_country_aggregation['total_flow_conflict'],
-                description=report.public_figure_analysis,
-                report=report
-            ),
-            PublicFigureAnalysis(
-                iso3=iso3,
-                figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
-                figure_category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-                year=report.filter_figure_end_before.year,
-                figures=report_country_aggregation['total_flow_disaster'],
-                description=report.public_figure_analysis,
-                report=report
-            )
-        ])
+        )
 
     # Bulk create public analysis
     PublicFigureAnalysis.objects.bulk_create(data)
@@ -334,7 +336,7 @@ def update_gidd_data(log_id):
             status=StatusLog.Status.SUCCESS,
             completed_at=timezone.now()
         )
-        logger.info('Gidd data updated.')
+        logger.info('GIDD data updated.')
     except Exception as e:
         StatusLog.objects.filter(id=log_id).update(
             status=StatusLog.Status.FAILED,
