@@ -112,6 +112,7 @@ class ReportSerializer(MetaInformationSerializerMixin,
     def validate(self, attrs) -> dict:
         attrs = super().validate(attrs)
         errors = OrderedDict()
+        errors.update(self.validate_dates(attrs))
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
