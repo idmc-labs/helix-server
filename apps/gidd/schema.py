@@ -226,7 +226,7 @@ class Query(graphene.ObjectType):
         )
     )
     gidd_displacement = DjangoObjectField(GiddDisplacementDataType)
-    gidd_displacement_list = DjangoPaginatedListObjectField(
+    gidd_displacements = DjangoPaginatedListObjectField(
         GiddDisplacementDataListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
