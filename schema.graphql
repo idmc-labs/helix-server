@@ -1651,16 +1651,16 @@ type GiddHazardSubType {
   name: String!
 }
 
-type GiddPublicCountryListType {
+type GiddPublicCountryRegionType {
+  id: ID!
+  name: String!
+}
+
+type GiddPublicCountryType {
   id: ID!
   iso3: String!
   idmcShortName: String!
   region: GiddPublicCountryRegionType
-}
-
-type GiddPublicCountryRegionType {
-  id: ID!
-  name: String!
 }
 
 type GiddReleaseMetadataType {
@@ -2375,8 +2375,8 @@ type Query {
   giddLog(id: ID!): GiddStatusLogType
   giddLogs(triggeredBy: ID, triggeredAt: DateTime, completedAt: DateTime, status: String, page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
   giddReleaseMetaData: GiddReleaseMetadataType
-  giddPublicCountryList: [GiddPublicCountryListType]
-  giddHazardSubType: [GiddHazardSubType]
+  giddPublicCountries: [GiddPublicCountryType!]
+  giddHazardSubTypes: [GiddHazardSubType]
   notification(id: ID!): GenericNotificationType
   notifications(recipient: ID, isRead: Boolean, events: [ID!], figures: [ID!], types: [String!], createdAtAfter: Date, createdAtBefore: Date, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType

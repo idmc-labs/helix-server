@@ -106,7 +106,7 @@ class GiddPublicCountryRegionType(graphene.ObjectType):
     name = graphene.String(required=True)
 
 
-class GiddPublicCountryListType(graphene.ObjectType):
+class GiddPublicCountryType(graphene.ObjectType):
     id = graphene.ID(required=True)
     iso3 = graphene.String(required=True)
     idmc_short_name = graphene.String(required=True)
@@ -155,8 +155,8 @@ class Query(graphene.ObjectType):
         )
     )
     gidd_release_meta_data = graphene.Field(GiddReleaseMetadataType)
-    gidd_public_country_list = graphene.List(GiddPublicCountryListType)
-    gidd_hazard_sub_type = graphene.List(GiddHazardSubType)
+    gidd_public_countries = graphene.List(graphene.NonNull(GiddPublicCountryType))
+    gidd_hazard_sub_types = graphene.List(GiddHazardSubType)
 
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):
@@ -165,7 +165,7 @@ class Query(graphene.ObjectType):
     @staticmethod
     def resolve_gidd_public_country_list(parent, info, **kwargs):
         return [
-            GiddPublicCountryListType(
+            GiddPublicCountryType(
                 id=country['id'],
                 iso3=country['iso3'],
                 idmc_short_name=country['idmc_short_name'],
@@ -241,7 +241,6 @@ class Query(graphene.ObjectType):
 
             categories=[GiddCategoryStatisticsType(**item) for item in categories_qs]
         )
-
 
     @staticmethod
     def resolve_gidd_hazard_sub_type(parent, info, **kwargs):
