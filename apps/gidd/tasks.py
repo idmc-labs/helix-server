@@ -36,7 +36,6 @@ def annotate_conflict(qs, year):
                     then=F('total_figures')
                 ),
                 output_field=IntegerField(),
-                default=0
             )
         ),
         new_displacement=Sum(
@@ -46,7 +45,6 @@ def annotate_conflict(qs, year):
                     then=F('total_figures')
                 ),
                 output_field=IntegerField(),
-                default=0
             )
         ),
         country=F('country'),
@@ -185,7 +183,6 @@ def update_conflict_and_disaster_data():
                         then=F('total_figures')
                     ),
                     output_field=IntegerField(),
-                    default=0
                 )
             ),
             total_displacement=Sum(
@@ -195,7 +192,6 @@ def update_conflict_and_disaster_data():
                         then=F('total_figures')
                     ),
                     output_field=IntegerField(),
-                    default=0
                 )
             ),
             year=Value(year, output_field=IntegerField()),
@@ -370,10 +366,8 @@ def update_displacement_data():
     DisasterByHazardSubType.objects.bulk_create(
         [
             DisasterByHazardSubType(
-                iso3=item['iso3'],
                 disaster_total_nd=item['disaster_total_nd'],
                 disaster_total_idps=item['disaster_total_idps'],
-                year=item['year'],
                 hazard_sub_type_id=item['hazard_sub_type'],
                 displacement=DisplacementData.objects.filter(
                     cause=Crisis.CRISIS_TYPE.DISASTER,
