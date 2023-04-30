@@ -179,6 +179,10 @@ class GiddDisplacementDataListType(CustomDjangoListObjectType):
         filterset_class = DisplacementDataFilter
 
 
+class GiddYearType(graphene.ObjectType):
+    year = graphene.Int(required=True)
+
+
 class Query(graphene.ObjectType):
     gidd_conflict = DjangoObjectField(GiddConflictType)
     gidd_conflicts = DjangoPaginatedListObjectField(
@@ -232,6 +236,7 @@ class Query(graphene.ObjectType):
             page_size_query_param='pageSize'
         )
     )
+    gidd_year = graphene.Field(GiddYearType, release_environment=graphene.String(required=True))
 
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):
@@ -318,7 +323,7 @@ class Query(graphene.ObjectType):
         )
 
     @staticmethod
-    def resolve_gidd_hazard_sub_type(parent, info, **kwargs):
+    def resolve_gidd_hazard_sub_types(parent, info, **kwargs):
         return [
             GiddHazardSubType(
                 id=hazard['hazard_sub_type__id'],
@@ -330,3 +335,11 @@ class Query(graphene.ObjectType):
                 'hazard_sub_type__id', 'hazard_sub_type__name'
             )
         ]
+
+    @staticmethod
+    def resolve_gidd_year(parent, info, **kwargs):
+        gidd_meta_data = ReleaseMetadata.objects.last()
+        if kwargs['release_environment'] == ReleaseMetadata.ReleaseEnvironment.STAGING.name:
+            return GiddYearType(year=gidd_meta_data.staging_year)
+        if kwargs['release_environment'] == ReleaseMetadata.ReleaseEnvironment.PRODUCTION.name:
+            return GiddYearType(year=gidd_meta_data.production_year)

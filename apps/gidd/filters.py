@@ -6,10 +6,23 @@ from .models import (
     StatusLog,
     PublicFigureAnalysis,
     DisplacementData,
+    ReleaseMetadata,
 )
 
 
-class ConflictFilter(django_filters.FilterSet):
+class ReleaseMetadataFilter(django_filters.FilterSet):
+    release_environment = django_filters.CharFilter(method='filter_release_environment')
+
+    def filter_release_environment(self, qs, name, value):
+        release_meta_data = ReleaseMetadata.objects.last()
+        if value == ReleaseMetadata.ReleaseEnvironment.STAGING.name:
+            return qs.filter(year__lte=release_meta_data.staging_year)
+        elif value == ReleaseMetadata.ReleaseEnvironment.PRODUCTION.name:
+            return qs.filter(year__lte=release_meta_data.production_year)
+        return qs
+
+
+class ConflictFilter(ReleaseMetadataFilter):
     class Meta:
         model = Conflict
         fields = {
@@ -17,7 +30,7 @@ class ConflictFilter(django_filters.FilterSet):
         }
 
 
-class DisasterFilter(django_filters.FilterSet):
+class DisasterFilter(ReleaseMetadataFilter):
     class Meta:
         model = Disaster
         fields = {
@@ -25,7 +38,7 @@ class DisasterFilter(django_filters.FilterSet):
         }
 
 
-class ConflictStatisticsFilter(django_filters.FilterSet):
+class ConflictStatisticsFilter(ReleaseMetadataFilter):
     countries = StringListFilter(method='filter_countries')
     start_year = django_filters.NumberFilter(method='filter_start_year')
     end_year = django_filters.NumberFilter(method='filter_end_year')
@@ -48,7 +61,7 @@ class ConflictStatisticsFilter(django_filters.FilterSet):
         return queryset.filter(iso3__in=value)
 
 
-class DisasterStatisticsFilter(django_filters.FilterSet):
+class DisasterStatisticsFilter(ReleaseMetadataFilter):
     categories = StringListFilter(method='filter_categories')
     countries = StringListFilter(method='filter_countries')
     start_year = django_filters.NumberFilter(method='filter_start_year')
@@ -93,7 +106,7 @@ class GiddStatusLogFilter(django_filters.FilterSet):
         return qs
 
 
-class PublicFigureAnalysisFilter(django_filters.FilterSet):
+class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
     class Meta:
         model = PublicFigureAnalysis
         fields = {
@@ -102,7 +115,7 @@ class PublicFigureAnalysisFilter(django_filters.FilterSet):
         }
 
 
-class DisplacementDataFilter(django_filters.FilterSet):
+class DisplacementDataFilter(ReleaseMetadataFilter):
     start_year = django_filters.NumberFilter(method='filter_start_year')
     end_year = django_filters.NumberFilter(method='filter_end_year')
     countries_iso3 = StringListFilter(method='filter_countries_iso3')

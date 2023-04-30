@@ -19,7 +19,7 @@ from apps.contextualupdate import (
     mutations as contextual_update_mutations
 )
 from apps.parking_lot import schema as parking_lot_schema, mutations as parking_lot_mutations
-from apps.gidd import schema as gidd_schema, mutations as gidd_mutations
+from apps.gidd import schema as gidd_schema, mutations as gidd_mutations, enums as gidd_enums
 
 
 class Query(user_schema.Query,
@@ -63,6 +63,7 @@ class Mutation(user_mutations.Mutation,
 
 
 class Enum(report_enums.ReportEnumType,
+           gidd_enums.GiddEnumType,
            graphene.ObjectType):
     pass
 

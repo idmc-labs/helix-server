@@ -180,6 +180,16 @@ class DisasterLegacy(models.Model):
 
 
 class ReleaseMetadata(models.Model):
+
+    class ReleaseEnvironment(enum.Enum):
+        STAGING = 0
+        PRODUCTION = 1
+
+        __labels__ = {
+            STAGING: _("Staging"),
+            PRODUCTION: _("Production"),
+        }
+
     production_year = models.IntegerField(verbose_name=_('Production year'))
     staging_year = models.IntegerField(verbose_name=_('Staging year'))
     modified_by = models.ForeignKey(
