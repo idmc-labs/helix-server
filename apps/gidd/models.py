@@ -49,19 +49,19 @@ class Disaster(models.Model):
 
     hazard_category = models.ForeignKey(
         'event.DisasterCategory', verbose_name=_('Hazard Category'),
-        related_name='disasters', null=True, on_delete=models.SET_NULL
+        related_name='disasters', on_delete=models.PROTECT
     )
     hazard_sub_category = models.ForeignKey(
         'event.DisasterSubCategory', verbose_name=_('Hazard Sub Category'),
-        related_name='disasters', null=True, on_delete=models.SET_NULL
+        related_name='disasters', on_delete=models.PROTECT
     )
     hazard_type = models.ForeignKey(
         'event.DisasterType', verbose_name=_('Hazard Type'),
-        related_name='disasters', null=True, on_delete=models.SET_NULL
+        related_name='disasters', on_delete=models.PROTECT
     )
     hazard_sub_type = models.ForeignKey(
         'event.DisasterSubType', verbose_name=_('Hazard Sub Type'),
-        related_name='disasters', null=True, on_delete=models.SET_NULL
+        related_name='disasters', on_delete=models.PROTECT
     )
 
     new_displacement = models.BigIntegerField(blank=True, null=True)
@@ -101,8 +101,8 @@ class StatusLog(models.Model):
             FAILED: _("Failed"),
         }
     triggered_by = models.ForeignKey(
-        'users.User', verbose_name=_('Triggered by'), null=True, blank=True,
-        related_name='gidd_data_triggered_by', on_delete=models.SET_NULL
+        'users.User', verbose_name=_('Triggered by'),
+        related_name='gidd_data_triggered_by', on_delete=models.PROTECT
     )
     triggered_at = models.DateTimeField(verbose_name='Triggered at', auto_now_add=True)
     completed_at = models.DateTimeField(verbose_name='Completed at', null=True, blank=True)
@@ -150,23 +150,19 @@ class DisasterLegacy(models.Model):
 
     hazard_category = models.ForeignKey(
         'event.DisasterCategory', verbose_name=_('Hazard Category'),
-        null=True,
-        related_name='legacy_disasters', on_delete=models.SET_NULL
+        related_name='legacy_disasters', on_delete=models.PROTECT
     )
     hazard_sub_category = models.ForeignKey(
         'event.DisasterSubCategory', verbose_name=_('Hazard Sub Category'),
-        null=True,
-        related_name='legacy_disasters', on_delete=models.SET_NULL
+        related_name='legacy_disasters', on_delete=models.PROTECT
     )
     hazard_type = models.ForeignKey(
         'event.DisasterType', verbose_name=_('Hazard Type'),
-        null=True,
-        related_name='legacy_disasters', on_delete=models.SET_NULL
+        related_name='legacy_disasters', on_delete=models.PROTECT
     )
     hazard_sub_type = models.ForeignKey(
         'event.DisasterSubType', verbose_name=_('Hazard Sub Type'),
-        null=True,
-        related_name='legacy_disasters', on_delete=models.SET_NULL
+        related_name='legacy_disasters', on_delete=models.PROTECT
     )
 
     new_displacement = models.BigIntegerField(blank=True, null=True)
@@ -222,8 +218,7 @@ class DisasterByHazardSubType(models.Model):
     disaster_total_nd = models.BigIntegerField(null=True, verbose_name=_('Disaster total nd'))
     hazard_sub_type = models.ForeignKey(
         'event.DisasterSubType', verbose_name=_('Hazard Sub Type'),
-        null=True,
-        related_name='displacements', on_delete=models.SET_NULL
+        related_name='displacements', on_delete=models.PROTECT
     )
     displacement = models.ForeignKey(
         'gidd.DisplacementData', verbose_name=_('Displacements'),
