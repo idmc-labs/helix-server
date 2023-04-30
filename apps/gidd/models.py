@@ -222,8 +222,7 @@ class DisasterByHazardSubType(models.Model):
     )
     displacement = models.ForeignKey(
         'gidd.DisplacementData', verbose_name=_('Displacements'),
-        related_name='disasters',
-        on_delete=models.SET_NULL, null=True,
+        related_name='disasters', on_delete=models.CASCADE,
     )
 
 
