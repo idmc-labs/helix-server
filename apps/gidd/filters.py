@@ -97,6 +97,6 @@ class PublicFigureAnalysisFilter(django_filters.FilterSet):
     class Meta:
         model = PublicFigureAnalysis
         fields = {
-            'iso3': ['iexact'],
-            'year': ['iexact'],
+            'iso3': ['exact'],
+            'year': ['exact'],
         }
