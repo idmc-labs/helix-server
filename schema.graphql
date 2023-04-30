@@ -1061,6 +1061,7 @@ input EntryUpdateInputType {
 }
 
 type Enum {
+  giddReleaseMetaData: GiddReleaseEnvironmentsEnum
   reviewFilter: REPORT_REVIEW_FILTER
 }
 
@@ -1702,6 +1703,11 @@ type GiddPublicFigureAnalysisType {
   figureCategoryDisplay: EnumDescription
 }
 
+enum GiddReleaseEnvironmentsEnum {
+  STAGING
+  PRODUCTION
+}
+
 type GiddReleaseMetadataType {
   id: ID!
   productionYear: Int!
@@ -1747,6 +1753,10 @@ type GiddUpdateReleaseMetaData {
   errors: [GenericScalar!]
   ok: Boolean
   result: GiddReleaseMetadataType
+}
+
+type GiddYearType {
+  year: Int!
 }
 
 enum IDENTIFIER {
@@ -2406,20 +2416,21 @@ enum QUANTIFIER {
 
 type Query {
   giddConflict(id: ID!): GiddConflictType
-  giddConflicts(id_Iexact: Float, page: Int = 1, ordering: String, pageSize: Int): GiddConflictListType
+  giddConflicts(id_Iexact: Float, releaseEnvironment: String, page: Int = 1, ordering: String, pageSize: Int): GiddConflictListType
   giddDisaster(id: ID!): GiddDisasterType
-  giddDisasters(id_Iexact: Float, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
-  giddConflictStatistics(countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddConflictStatisticsType!
-  giddDisasterStatistics(categories: [String!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddDisasterStatisticsType!
+  giddDisasters(id_Iexact: Float, releaseEnvironment: String, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
+  giddConflictStatistics(releaseEnvironment: String, countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddConflictStatisticsType!
+  giddDisasterStatistics(releaseEnvironment: String, categories: [String!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddDisasterStatisticsType!
   giddLog(id: ID!): GiddStatusLogType
   giddLogs(status: [String!], page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
   giddReleaseMetaData: GiddReleaseMetadataType
   giddPublicCountries: [GiddPublicCountryType!]
   giddHazardSubTypes: [GiddHazardSubType]
   giddPublicFigureAnalysis(id: ID!): GiddPublicFigureAnalysisType
-  giddPublicFigureAnalysisList(iso3: String, year: Int, page: Int = 1, ordering: String, pageSize: Int): GiddPublicFigureAnalysisListType
+  giddPublicFigureAnalysisList(iso3: String, year: Int, releaseEnvironment: String, page: Int = 1, ordering: String, pageSize: Int): GiddPublicFigureAnalysisListType
   giddDisplacement(id: ID!): GiddDisplacementDataType
-  giddDisplacements(startYear: Float, endYear: Float, countriesIso3: [String!], hazardSubTypes: [ID!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
+  giddDisplacements(releaseEnvironment: String, startYear: Float, endYear: Float, countriesIso3: [String!], hazardSubTypes: [ID!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
+  giddYear(releaseEnvironment: String!): GiddYearType
   notification(id: ID!): GenericNotificationType
   notifications(recipient: ID, isRead: Boolean, events: [ID!], figures: [ID!], types: [String!], createdAtAfter: Date, createdAtBefore: Date, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType
