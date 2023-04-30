@@ -123,7 +123,6 @@ class ConflictLegacy(models.Model):
     total_displacement = models.BigIntegerField(blank=True, null=True)
     new_displacement = models.BigIntegerField(blank=True, null=True)
     year = models.IntegerField()
-    country_name = models.CharField(verbose_name=_('Name'), max_length=256)
     iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
 
     # Timestamps

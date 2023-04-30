@@ -235,7 +235,7 @@ class Query(graphene.ObjectType):
 
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):
-        return ReleaseMetadata.objects.first()
+        return ReleaseMetadata.objects.last()
 
     @staticmethod
     def resolve_gidd_public_country_list(parent, info, **kwargs):
