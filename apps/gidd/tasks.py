@@ -95,10 +95,10 @@ def update_gidd_legacy_data():
                 hazard_sub_type_id=item['hazard_sub_type'],
 
                 # FIXME: we should get this from database
-                hazard_category_name=item['hazard_category_name'],
-                hazard_sub_category_name=item['hazard_sub_category_name'],
-                hazard_type_name=item['hazard_type_name'],
-                hazard_sub_type_name=item['hazard_sub_type_name'],
+                hazard_category_name=item['hazard_category__name'],
+                hazard_sub_category_name=item['hazard_sub_category__name'],
+                hazard_type_name=item['hazard_type__name'],
+                hazard_sub_type_name=item['hazard_sub_type__name'],
 
                 new_displacement=item['new_displacement'],
                 iso3=item['iso3'],
@@ -115,10 +115,10 @@ def update_gidd_legacy_data():
                 'hazard_sub_category',
                 'hazard_type',
                 'hazard_sub_type',
-                'hazard_category_name',
-                'hazard_sub_category_name',
-                'hazard_type_name',
-                'hazard_sub_type_name',
+                'hazard_category__name',
+                'hazard_sub_category__name',
+                'hazard_type__name',
+                'hazard_sub_type__name',
                 'new_displacement',
                 'iso3',
             )

@@ -139,7 +139,6 @@ class ConflictLegacy(models.Model):
 
 class DisasterLegacy(models.Model):
     year = models.IntegerField()
-    country_name = models.CharField(verbose_name=_('Name'), max_length=256)
     iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
     event_name = models.CharField(verbose_name=_('Event name'), max_length=256)
 
@@ -148,11 +147,6 @@ class DisasterLegacy(models.Model):
     start_date_accuracy = models.TextField(blank=True, null=True)
     end_date = models.DateField(blank=True, null=True)
     end_date_accuracy = models.TextField(blank=True, null=True)
-
-    hazard_category_name = models.CharField(max_length=256, blank=True)
-    hazard_sub_category_name = models.CharField(max_length=256, blank=True)
-    hazard_sub_type_name = models.CharField(max_length=256, blank=True)
-    hazard_type_name = models.CharField(max_length=256, blank=True)
 
     hazard_category = models.ForeignKey(
         'event.DisasterCategory', verbose_name=_('Hazard Category'),

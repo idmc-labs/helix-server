@@ -128,7 +128,6 @@ class Command(BaseCommand):
                     ConflictLegacy(
                         iso3=old_conflict['iso3'],
                         year=old_conflict['year'],
-                        country_name=country_iso3_map[old_conflict['iso3']],
                         new_displacement=format_gidd_number(old_conflict['new_displacement']),
                         total_displacement=format_gidd_number(old_conflict['total_displacement']),
                     ) for old_conflict in reader
@@ -149,24 +148,12 @@ class Command(BaseCommand):
                             get_new_hazard_sub_type_id(old_disaster['hazard_sub_type']),
                         ),
 
-                        # FIXME: we will not need to migrate this
-                        country_name=country_iso3_map[old_disaster['iso3']],
-
                         start_date=old_disaster['start_date'] or None,
                         start_date_accuracy=old_disaster['start_date_accuracy'],
                         end_date=old_disaster['end_date'] or None,
                         end_date_accuracy=old_disaster['end_date_accuracy'],
-
-                        # FIXME: we will need to update these from helix or not event migrate this
-                        hazard_category_name=old_disaster['hazard_category'],
-                        hazard_sub_category_name=old_disaster['hazard_sub_category'],
-                        hazard_type_name=old_disaster['hazard_type'],
-                        hazard_sub_type_name=old_disaster['hazard_sub_type'],
-
                         hazard_sub_type_id=get_new_hazard_sub_type_id(old_disaster['hazard_sub_type'])['id'],
-
-                        # FIXME: we should not use format_gidd_number here.
-                        new_displacement=format_gidd_number(old_disaster['new_displacement']),
+                        new_displacement=old_disaster['new_displacement'],
                     ) for old_disaster in reader
                 ]
             )
