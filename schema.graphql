@@ -1630,10 +1630,10 @@ type GiddDisasterType {
   startDateAccuracy: String
   endDate: Date
   endDateAccuracy: String
-  hazardCategory: DisasterCategoryType
-  hazardSubCategory: DisasterSubCategoryType
-  hazardType: DisasterTypeObjectType
-  hazardSubType: DisasterSubObjectType
+  hazardCategory: DisasterCategoryType!
+  hazardSubCategory: DisasterSubCategoryType!
+  hazardType: DisasterTypeObjectType!
+  hazardSubType: DisasterSubObjectType!
   newDisplacement: Int
   totalDisplacement: Int
   createdAt: DateTime!
@@ -1719,7 +1719,7 @@ type GiddStatusLogListType {
 
 type GiddStatusLogType {
   id: ID!
-  triggeredBy: UserType
+  triggeredBy: UserType!
   triggeredAt: DateTime!
   completedAt: DateTime
   status: GiddStatusLogTypeEnum
