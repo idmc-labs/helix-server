@@ -40,11 +40,6 @@ class ReleaseMetadataSerializer(serializers.ModelSerializer):
         fields = ('staging_year', 'production_year')
 
     def create(self, validated_data):
-        # Always update a object instead of create
         user = self.context['request'].user
-        meta_data = ReleaseMetadata.objects.first() or ReleaseMetadata()
-        meta_data.production_year = validated_data.get('production_year')
-        meta_data.staging_year = validated_data.get('staging_year')
-        meta_data.modified_by = user
-        meta_data.save()
-        return meta_data
+        validated_data['modified_by'] = user
+        return ReleaseMetadata.objects.create(**validated_data)
