@@ -174,7 +174,25 @@ def update_conflict_and_disaster_data():
         disaster_qs = Figure.objects.filter(id__in=disaster_figures.values('id'))
 
         # Sync disaster data
-        disasters = disaster_qs.annotate(
+        disasters = disaster_qs.values(
+            'event__id',
+            'event__name',
+            'event__disaster_category',
+            'event__disaster_sub_category',
+            'event__disaster_type',
+            'event__disaster_sub_type',
+            'event__disaster_category__name',
+            'event__disaster_sub_category__name',
+            'event__disaster_type__name',
+            'event__disaster_sub_category__name',
+            'event__start_date',
+            'event__end_date',
+            'event__start_date_accuracy',
+            'event__end_date_accuracy',
+            'country',
+            'country__iso3',
+            'country__idmc_short_name',
+        ).order_by().annotate(
             new_displacement=Sum(
                 Case(
                     When(
@@ -194,73 +212,36 @@ def update_conflict_and_disaster_data():
                 )
             ),
             year=Value(year, output_field=IntegerField()),
-
-            hazard_category=F('event__disaster_category'),
-            hazard_sub_category=F('event__disaster_sub_category'),
-            hazard_type=F('event__disaster_type'),
-            hazard_sub_type=F('event__disaster_sub_type'),
-
-            hazard_category_name=F('event__disaster_category__name'),
-            hazard_sub_category_name=F('event__disaster_sub_category__name'),
-            hazard_type_name=F('event__disaster_type__name'),
-            hazard_sub_type_name=F('event__disaster_sub_type__name'),
-
-            iso3=F('country__iso3'),
-            country_name=F('country__idmc_short_name'),
-            event_name=F('event__name'),
         ).filter(
             year__gte=2016,
-        ).order_by('year').values(
-            'year',
-            'event_id',
-            'event_name',
-            'start_date',
-            'start_date_accuracy',
-            'end_date',
-            'end_date_accuracy',
-
-            'hazard_category',
-            'hazard_sub_category',
-            'hazard_type',
-            'hazard_sub_type',
-
-            'hazard_category_name',
-            'hazard_sub_category_name',
-            'hazard_type_name',
-            'hazard_sub_type_name',
-
-            'new_displacement',
-            'total_displacement',
-            'country',
-            'iso3',
-            'country_name',
         )
+
         Disaster.objects.bulk_create(
             [
                 Disaster(
-                    event_id=item['event_id'],
-                    event_name=item['event_name'],
+                    event_id=item['event__id'],
+                    event_name=item['event__name'],
                     year=item['year'],
-                    start_date=item['start_date'],
-                    start_date_accuracy=item['start_date_accuracy'],
-                    end_date=item['end_date'],
-                    end_date_accuracy=item['end_date_accuracy'],
+                    start_date=item['event__start_date'],
+                    start_date_accuracy=item['event__start_date_accuracy'],
+                    end_date=item['event__end_date'],
+                    end_date_accuracy=item['event__end_date_accuracy'],
 
-                    hazard_category_id=item['hazard_category'],
-                    hazard_sub_category_id=item['hazard_sub_category'],
-                    hazard_type_id=item['hazard_type'],
-                    hazard_sub_type_id=item['hazard_sub_type'],
+                    hazard_category_id=item['event__disaster_category'],
+                    hazard_sub_category_id=item['event__disaster_sub_category'],
+                    hazard_type_id=item['event__disaster_type'],
+                    hazard_sub_type_id=item['event__disaster_sub_type'],
 
-                    hazard_category_name=item['hazard_category_name'],
-                    hazard_sub_category_name=item['hazard_sub_category_name'],
-                    hazard_type_name=item['hazard_type_name'],
-                    hazard_sub_type_name=item['hazard_sub_type_name'],
+                    hazard_category_name=item['event__disaster_category__name'],
+                    hazard_sub_category_name=item['event__disaster_sub_category__name'],
+                    hazard_type_name=item['event__disaster_type__name'],
+                    hazard_sub_type_name=item['event__disaster_type__name'],
 
                     new_displacement=item['new_displacement'],
                     total_displacement=item['total_displacement'],
-                    iso3=item['iso3'],
+                    iso3=item['country__iso3'],
                     country_id=item['country'],
-                    country_name=item['country_name'],
+                    country_name=item['country__idmc_short_name'],
                 ) for item in disasters
             ]
         )
