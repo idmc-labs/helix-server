@@ -36,6 +36,7 @@ class TestCreateReport(HelixGraphQLTestCase):
                     isGiddReport
                     isPublic
                     id
+                    isPfaVisibleInGidd
                 }
                 ok
                 errors
@@ -100,6 +101,7 @@ class TestCreateReport(HelixGraphQLTestCase):
         self.assertEqual(data['filterFigureStartAfter'], '2022-01-01')
         self.assertEqual(data['filterFigureEndBefore'], '2022-12-31')
         self.assertEqual(data['isPublic'], True)
+        self.assertEqual(data['isPfaVisibleInGidd'], False)
 
 
 class TestReportSignOff(HelixGraphQLTestCase):

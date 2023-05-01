@@ -137,7 +137,6 @@ class ReportSerializer(MetaInformationSerializerMixin,
             # Set these attrs when create or update
             attrs['filter_figure_start_after'] = datetime.datetime(year=year, month=1, day=1)
             attrs['filter_figure_end_before'] = datetime.datetime(year=year, month=12, day=31)
-            attrs['name'] = f'GIDD {year}'
             attrs['is_public'] = True
             attrs['is_pfa_visible_in_gidd'] = False
             return attrs
