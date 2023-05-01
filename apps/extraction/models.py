@@ -13,10 +13,6 @@ from apps.entry.constants import STOCK, FLOW
 
 
 class QueryAbstractModel(models.Model):
-    name = models.CharField(
-        verbose_name=_('Name'),
-        max_length=128
-    )
     filter_figure_geographical_groups = models.ManyToManyField(
         'country.GeographicalGroup',
         verbose_name=_('Geographical Group'),
@@ -231,4 +227,7 @@ class QueryAbstractModel(models.Model):
 
 
 class ExtractionQuery(MetaInformationAbstractModel, QueryAbstractModel):
-    pass
+    name = models.CharField(
+        verbose_name=_('Name'),
+        max_length=128
+    )

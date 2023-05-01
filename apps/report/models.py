@@ -144,6 +144,10 @@ class Report(MetaInformationArchiveAbstractModel,
             ),
         )
 
+    name = models.CharField(
+        verbose_name=_('Name'),
+        max_length=128
+    )
     generated_from = enum.EnumField(REPORT_TYPE,
                                     blank=True, null=True, editable=False)
     # TODO: Remove me after next migration run
