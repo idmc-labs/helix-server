@@ -3,7 +3,7 @@ import logging
 from helix.celery import app as celery_app
 from django.utils import timezone
 from django.db.models import (
-    Sum, Case, When, IntegerField, Value, F, Subquery, OuterRef
+    Sum, Case, When, IntegerField, Value, F, Subquery, OuterRef, Q
 )
 from apps.entry.models import Figure
 from apps.event.models import Crisis
@@ -371,6 +371,11 @@ def update_displacement_data():
             total_internal_displacement=F('conflict_total_displacement') + F('disaster_total_displacement'),
             total_new_displacement=F('conflict_new_displacement') + F('disaster_new_displacement'),
             year=Value(year, output_field=IntegerField()),
+        ).filter(
+            Q(conflict_new_displacement__isnull=False) |
+            Q(conflict_total_displacement__isnull=False) |
+            Q(disaster_new_displacement__isnull=False) |
+            Q(disaster_total_displacement__isnull=False)
         ).values(
             'iso3',
             'idmc_short_name',
