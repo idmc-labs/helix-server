@@ -139,7 +139,10 @@ class ReportSerializer(MetaInformationSerializerMixin,
             attrs['filter_figure_end_before'] = datetime.datetime(year=year, month=12, day=31)
             attrs['name'] = f'GIDD {year}'
             attrs['is_public'] = True
+            attrs['is_pfa_visible_in_gidd'] = False
             return attrs
+        else:
+            attrs['gidd_report_year'] = None
         return attrs
 
     def validate(self, attrs) -> dict:
