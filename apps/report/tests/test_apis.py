@@ -30,6 +30,12 @@ class TestCreateReport(HelixGraphQLTestCase):
                     filterFigureCountries {
                         id
                     }
+                    filterFigureCategories
+                    filterFigureRoles
+                    filterFigureCrisisTypes
+                    isGiddReport
+                    isPublic
+                    id
                 }
                 ok
                 errors
@@ -68,6 +74,32 @@ class TestCreateReport(HelixGraphQLTestCase):
 
         content = response.json()
         self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+
+    def test_is_gidd_report(self) -> None:
+
+        admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.force_login(admin)
+        self.input['filterFigureCategories'] = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.name
+        self.input['filterFigureRoles'] = [Figure.ROLE.RECOMMENDED.name]
+        self.input['filterFigureCrisisTypes'] = [Crisis.CRISIS_TYPE.DISASTER.name]
+        self.input['isGiddReport'] = True
+        self.input['isPublic'] = False
+        self.input['giddReportYear'] = 2022
+
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+
+        content = response.json()
+        data = content['data']['createReport']['result']
+
+        self.assertEqual(data['filterFigureCategories'], [])
+        self.assertEqual(data['filterFigureRoles'], [])
+        self.assertEqual(data['filterFigureCrisisTypes'], [])
+        self.assertEqual(data['filterFigureStartAfter'], '2022-01-01')
+        self.assertEqual(data['filterFigureEndBefore'], '2022-12-31')
+        self.assertEqual(data['isPublic'], True)
 
 
 class TestReportSignOff(HelixGraphQLTestCase):

@@ -1,5 +1,5 @@
 from collections import OrderedDict
-
+import datetime
 from django.utils.translation import gettext
 from django.conf import settings
 from rest_framework import serializers
@@ -18,6 +18,11 @@ from apps.report.models import (
 )
 from apps.entry.models import Figure
 from apps.crisis.models import Crisis
+from apps.extraction.models import QueryAbstractModel
+
+from django.contrib.postgres.fields.array import ArrayField
+from django.db.models.fields.related import ManyToManyField
+from django.db.models.fields import BooleanField, CharField, DateField, TextField
 
 
 def check_is_pfa_visible_in_gidd(report):
@@ -109,10 +114,39 @@ class ReportSerializer(MetaInformationSerializerMixin,
             ))
         return errors
 
+    def validate_gidd_report(self, attrs, errors):
+        is_gidd_report = attrs.get('is_gidd_report')
+        if is_gidd_report is True:
+            year = attrs.get('gidd_report_year')
+
+            if not year:
+                raise serializers.ValidationError('For GIDD report year is required.')
+
+            # Clear all query abstraction filter fields
+            for field in QueryAbstractModel._meta.get_fields():
+                # Reset values
+                if type(field) == ArrayField:
+                    attrs[field.name] = []
+                elif type(field) == ManyToManyField:
+                    attrs[field.name] = []
+                elif type(field) in [BooleanField, CharField, DateField, TextField]:
+                    attrs[field.name] = None
+                else:
+                    raise serializers.ValidationError('Unable to set filters for GIDD.')
+
+            # Set these attrs when create or update
+            attrs['filter_figure_start_after'] = datetime.datetime(year=year, month=1, day=1)
+            attrs['filter_figure_end_before'] = datetime.datetime(year=year, month=12, day=31)
+            attrs['name'] = f'GIDD {year}'
+            attrs['is_public'] = True
+            return attrs
+        return attrs
+
     def validate(self, attrs) -> dict:
         attrs = super().validate(attrs)
         errors = OrderedDict()
         errors.update(self.validate_dates(attrs))
+        self.validate_gidd_report(attrs, errors)
         if errors:
             raise serializers.ValidationError(errors)
         return attrs
