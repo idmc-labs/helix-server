@@ -2438,7 +2438,7 @@ type Query {
   giddPublicFigureAnalysis(id: ID!): GiddPublicFigureAnalysisType
   giddPublicFigureAnalysisList(iso3: String, year: Int, releaseEnvironment: String!, page: Int = 1, ordering: String, pageSize: Int): GiddPublicFigureAnalysisListType
   giddDisplacement(id: ID!): GiddDisplacementDataType
-  giddDisplacements(releaseEnvironment: String!, startYear: Float, endYear: Float, countriesIso3: [String!], hazardSubTypes: [ID!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
+  giddDisplacements(releaseEnvironment: String!, startYear: Float, endYear: Float, countriesIso3: [String!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
   giddYear(releaseEnvironment: String!): GiddYearType!
   notification(id: ID!): GenericNotificationType
   notifications(recipient: ID, isRead: Boolean, events: [ID!], figures: [ID!], types: [String!], createdAtAfter: Date, createdAtBefore: Date, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType

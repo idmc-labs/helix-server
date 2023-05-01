@@ -121,7 +121,6 @@ class DisplacementDataFilter(ReleaseMetadataFilter):
     start_year = django_filters.NumberFilter(method='filter_start_year')
     end_year = django_filters.NumberFilter(method='filter_end_year')
     countries_iso3 = StringListFilter(method='filter_countries_iso3')
-    hazard_sub_types = IDListFilter(method='filter_hazard_sub_types')
 
     class Meta:
         model = DisplacementData
