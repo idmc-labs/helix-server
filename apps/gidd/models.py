@@ -223,19 +223,6 @@ class PublicFigureAnalysis(models.Model):
     )
 
 
-class DisasterByHazardSubType(models.Model):
-    disaster_total_idps = models.BigIntegerField(null=True, verbose_name=_('Disaster total nds'))
-    disaster_total_nd = models.BigIntegerField(null=True, verbose_name=_('Disaster total nd'))
-    hazard_sub_type = models.ForeignKey(
-        'event.DisasterSubType', verbose_name=_('Hazard Sub Type'),
-        related_name='displacements', on_delete=models.PROTECT
-    )
-    displacement = models.ForeignKey(
-        'gidd.DisplacementData', verbose_name=_('Displacements'),
-        related_name='disasters', on_delete=models.CASCADE,
-    )
-
-
 class DisplacementData(models.Model):
     iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
     country_name = models.CharField(verbose_name=_('Country name'), max_length=256)
@@ -243,42 +230,17 @@ class DisplacementData(models.Model):
         'country.Country', related_name='displacements', on_delete=models.PROTECT,
         verbose_name=_('Country')
     )
-    conflict_total_idps = models.BigIntegerField(null=True, verbose_name=_('Conflict total idps'))
-    conflict_total_nd = models.BigIntegerField(null=True, verbose_name=_('Conflict total nd'))
-    cause = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Cause'))
+
+    conflict_total_displacement = models.BigIntegerField(null=True, verbose_name=_('Conflict total idps'))
+    conflict_new_displacement = models.BigIntegerField(null=True, verbose_name=_('Conflict total nd'))
+
+    disaster_total_displacement = models.BigIntegerField(null=True, verbose_name=_('Disaster total nds'))
+    disaster_new_displacement = models.BigIntegerField(null=True, verbose_name=_('Disaster total nd'))
+
+    total_internal_displacement = models.BigIntegerField(null=True, verbose_name=_('Total internal displacement'))
+    total_new_displacement = models.BigIntegerField(null=True, verbose_name=_('Total new displacement'))
+
     year = models.IntegerField(verbose_name=_('Year'))
 
     def __str__(self):
         return self.iso3
-
-    @classmethod
-    def annotate_disaster_nd(cls, hazard_filter=None):
-        if hazard_filter and hazard_filter['hazard_sub_type__in']:
-            return {
-                'disaster_total_nd': models.Subquery(
-                    DisasterByHazardSubType.objects.filter(
-                        displacement_id=models.OuterRef('pk'),
-                        **hazard_filter,
-                    ).annotate(
-                        total=models.Sum('disaster_total_nd'),
-                    ).order_by().values('total')[:1]
-                )
-            }
-        else:
-            return {'disaster_total_nd': models.Sum('disasters__disaster_total_nd')}
-
-    @classmethod
-    def annotate_disaster_idps(cls, hazard_filter=None):
-        if hazard_filter and hazard_filter['hazard_sub_type__in']:
-            return {
-                'disaster_total_idps': models.Subquery(
-                    DisasterByHazardSubType.objects.filter(
-                        displacement_id=models.OuterRef('pk'),
-                        **hazard_filter,
-                    ).annotate(
-                        total=models.Sum('disaster_total_idps'),
-                    ).order_by().values('total')[:1]
-                )
-            }
-        else:
-            return {'disaster_total_idps': models.Sum('disasters__disaster_total_idps')}

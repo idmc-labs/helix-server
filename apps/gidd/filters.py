@@ -135,15 +135,3 @@ class DisplacementDataFilter(ReleaseMetadataFilter):
 
     def filter_countries_iso3(self, queryset, name, value):
         return queryset.filter(iso3__in=value)
-
-    def filter_hazard_sub_types(self, queryset, name, value):
-        return queryset.filter(disasters__hazard_sub_type__in=value,)
-
-    @property
-    def qs(self):
-        hazard_sub_types = self.data.get('hazard_sub_types', [])
-        hazard_filter = {'hazard_sub_type__in': hazard_sub_types}
-        return super().qs.annotate(
-            **DisplacementData.annotate_disaster_nd(hazard_filter=hazard_filter),
-            **DisplacementData.annotate_disaster_idps(hazard_filter=hazard_filter),
-        )
