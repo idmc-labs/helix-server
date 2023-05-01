@@ -236,7 +236,9 @@ class Query(graphene.ObjectType):
             page_size_query_param='pageSize'
         )
     )
-    gidd_year = graphene.Field(GiddYearType, release_environment=graphene.String(required=True))
+    gidd_year = graphene.Field(
+        graphene.NonNull(GiddYearType), release_environment=graphene.String(required=True)
+    )
 
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):

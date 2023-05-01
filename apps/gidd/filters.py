@@ -11,15 +11,17 @@ from .models import (
 
 
 class ReleaseMetadataFilter(django_filters.FilterSet):
-    release_environment = django_filters.CharFilter(method='filter_release_environment')
+    release_environment = django_filters.CharFilter(method='filter_release_environment', required=True)
 
     def filter_release_environment(self, qs, name, value):
         release_meta_data = ReleaseMetadata.objects.last()
-        if value == ReleaseMetadata.ReleaseEnvironment.STAGING.name:
+        if not release_meta_data:
+            return qs.filter(year__lte=0)
+        elif value == ReleaseMetadata.ReleaseEnvironment.STAGING.name:
             return qs.filter(year__lte=release_meta_data.staging_year)
         elif value == ReleaseMetadata.ReleaseEnvironment.PRODUCTION.name:
             return qs.filter(year__lte=release_meta_data.production_year)
-        return qs
+        return qs.filter(year__lte=0)
 
 
 class ConflictFilter(ReleaseMetadataFilter):
