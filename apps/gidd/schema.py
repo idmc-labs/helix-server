@@ -308,12 +308,13 @@ class Query(graphene.ObjectType):
         ).order_by('year').values('year', 'total', 'country_id', 'country_name', 'iso3')
 
         return GiddConflictStatisticsType(
-            new_displacements=conflict_qs.order_by(
-                '-year'
-            ).first().new_displacement if conflict_qs.order_by('-year') else 0,
-            total_displacements=conflict_qs.order_by(
-                '-year'
-            ).first().total_displacement if conflict_qs.order_by('-year') else 0,
+            new_displacements=conflict_qs.aggregate(
+                total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
+            )['total'],
+
+            total_displacements=conflict_qs.aggregate(
+                total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
+            )['total'],
             total_countries=conflict_qs.filter(
                 new_displacement__gt=0
             ).distinct('iso3').count(),
