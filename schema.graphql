@@ -517,7 +517,6 @@ type CreateEvent {
 
 input CreateExtractInputType {
   versionId: String
-  name: String!
   filterFigureCategories: [FIGURE_CATEGORY_TYPES!]
   filterFigureStartAfter: Date
   filterFigureEndBefore: Date
@@ -531,6 +530,7 @@ input CreateExtractInputType {
   filterFigureCategoryTypes: [String!]
   filterFigureHasDisaggregatedData: Boolean
   filterIsFigureToBeReviewed: Boolean
+  name: String!
   filterFigureGeographicalGroups: [ID!]
   filterFigureRegions: [ID!]
   filterFigureCountries: [ID!]
@@ -1287,7 +1287,6 @@ type ExtractionQueryObjectType {
   createdBy: UserType
   lastModifiedBy: UserType
   versionId: String
-  name: String!
   filterFigureGeographicalGroups: [GeographicalGroupType!]!
   filterFigureRegions: [CountryRegionType!]!
   filterFigureCountries: [CountryType!]!
@@ -1317,6 +1316,7 @@ type ExtractionQueryObjectType {
   filterFigureHasDisaggregatedData: Boolean
   filterContextOfViolence: [ContextOfViolenceType!]!
   filterIsFigureToBeReviewed: Boolean
+  name: String!
   entries(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], report: String, filterContextOfViolences: [ID!], filterIsFigureToBeReviewed: Boolean, page: Int = 1, ordering: String, pageSize: Int): EntryListType
 }
 
@@ -2732,7 +2732,6 @@ type ReportType {
   disaggregationConflictCriminal: Int
   disaggregationConflictCommunal: Int
   disaggregationConflictOther: Int
-  name: String!
   filterFigureGeographicalGroups: [GeographicalGroupType!]!
   filterFigureRegions: [CountryRegionType!]!
   filterFigureCountries: [CountryType!]!
@@ -2760,6 +2759,7 @@ type ReportType {
   filterFigureHasDisaggregatedData: Boolean
   filterContextOfViolence: [ContextOfViolenceType!]!
   filterIsFigureToBeReviewed: Boolean
+  name: String!
   generatedFrom: REPORT_TYPE
   generated: Boolean!
   filterFigureStartAfter: Date
@@ -3107,7 +3107,6 @@ type UpdateEvent {
 input UpdateExtractInputType {
   id: ID!
   versionId: String
-  name: String
   filterFigureCategories: [FIGURE_CATEGORY_TYPES!]
   filterFigureStartAfter: Date
   filterFigureEndBefore: Date
@@ -3121,6 +3120,7 @@ input UpdateExtractInputType {
   filterFigureCategoryTypes: [String!]
   filterFigureHasDisaggregatedData: Boolean
   filterIsFigureToBeReviewed: Boolean
+  name: String
   filterFigureGeographicalGroups: [ID!]
   filterFigureRegions: [ID!]
   filterFigureCountries: [ID!]
