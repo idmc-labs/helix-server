@@ -965,7 +965,7 @@ type DisasterTypeObjectType {
 type DisplacementByHazardType {
   id: ID!
   label: String!
-  totalDisplacements: Int
+  newDisplacements: Int
 }
 
 type DjangoDebug {
