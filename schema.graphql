@@ -1662,13 +1662,13 @@ type GiddDisplacementDataType {
   id: ID!
   iso3: String!
   countryName: String!
-  conflictTotalIdps: Int
-  conflictTotalNd: Int
+  conflictTotalDisplacement: Int
+  conflictNewDisplacement: Int
+  disasterTotalDisplacement: Int
+  disasterNewDisplacement: Int
+  totalInternalDisplacement: Int
+  totalNewDisplacement: Int
   year: Int!
-  disasterTotalIdps: Int
-  disasterTotalNd: Int
-  cause: CRISIS_TYPE
-  causeDisplay: EnumDescription
 }
 
 type GiddHazardSubType {
