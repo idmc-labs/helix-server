@@ -1,5 +1,5 @@
 import django_filters
-from utils.filters import StringListFilter, IDListFilter
+from utils.filters import StringListFilter
 from .models import (
     Conflict,
     Disaster,
