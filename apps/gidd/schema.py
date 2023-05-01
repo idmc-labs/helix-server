@@ -54,7 +54,7 @@ class GiddTimeSeriesStatisticsByCountryType(graphene.ObjectType):
 class DisplacementByHazardType(graphene.ObjectType):
     id = graphene.ID(required=True)
     label = graphene.String(required=True)
-    total_displacements = graphene.Int()
+    new_displacements = graphene.Int()
 
 
 class GiddConflictStatisticsType(graphene.ObjectType):
@@ -78,10 +78,8 @@ class GiddConflictStatisticsType(graphene.ObjectType):
 class GiddDisasterStatisticsType(graphene.ObjectType):
     new_displacements = graphene.Int()
     total_events = graphene.Int()
-    # timeseries = graphene.List(graphene.NonNull(GiddDisasterTimeSeriesStatisticsType))
     displacements_by_hazard_type = graphene.List(graphene.NonNull(DisplacementByHazardType))
 
-    # NEW
     total_countries = graphene.Int()
     total_displacements = graphene.Int()
 
@@ -442,7 +440,7 @@ class Query(graphene.ObjectType):
                 DisplacementByHazardType(
                     id=item['hazard_type__id'],
                     label=item['label'],
-                    total_displacements=item['total'],
+                    new_displacements=item['total'],
                 ) for item in categories_qs
             ]
         )
