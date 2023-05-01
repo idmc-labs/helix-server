@@ -962,6 +962,12 @@ type DisasterTypeObjectType {
   disasters: [GiddDisasterType!]!
 }
 
+type DisplacementByHazardType {
+  id: ID!
+  label: String!
+  totalDisplacements: Int
+}
+
 type DjangoDebug {
   sql: [DjangoDebugSQL]
 }
@@ -1565,11 +1571,6 @@ type GeographicalGroupType {
   countrySet: [CountryType!]!
 }
 
-type GiddCategoryStatisticsType {
-  label: String!
-  total: Int
-}
-
 type GiddConflictListType {
   results: [GiddConflictType!]
   totalCount: Int
@@ -1579,9 +1580,12 @@ type GiddConflictListType {
 
 type GiddConflictStatisticsType {
   newDisplacements: Int
-  totalIdps: Int
-  newDisplacementTimeseries: [GiddTimeSeriesStatisticsType!]
-  idpsTimeseries: [GiddTimeSeriesStatisticsType!]
+  totalDisplacements: Int
+  totalCountries: Int
+  newDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
+  newDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
+  totalDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
+  totalDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
 }
 
 type GiddConflictType {
@@ -1612,14 +1616,13 @@ type GiddDisasterListType {
 type GiddDisasterStatisticsType {
   newDisplacements: Int
   totalEvents: Int
-  timeseries: [GiddDisasterTimeSeriesStatisticsType!]
-  categories: [GiddCategoryStatisticsType!]
-}
-
-type GiddDisasterTimeSeriesStatisticsType {
-  year: String!
-  total: Int
-  country: GiddDisasterCountryType!
+  displacementsByHazardType: [DisplacementByHazardType!]
+  totalCountries: Int
+  totalDisplacements: Int
+  newDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
+  newDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
+  totalDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
+  totalDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
 }
 
 type GiddDisasterType {
@@ -1738,8 +1741,14 @@ enum GiddStatusLogTypeEnum {
   FAILED
 }
 
-type GiddTimeSeriesStatisticsType {
-  year: Int!
+type GiddTimeSeriesStatisticsByCountryType {
+  year: String!
+  total: Int
+  country: GiddDisasterCountryType!
+}
+
+type GiddTimeSeriesStatisticsByYearType {
+  year: String!
   total: Int
 }
 

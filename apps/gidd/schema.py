@@ -34,40 +34,69 @@ from .filters import (
 from .enums import GiddStatusLogEnum
 
 
-class GiddTimeSeriesStatisticsType(graphene.ObjectType):
-    year = graphene.Int(required=True)
-    total = graphene.Int()
-
-
 class GiddDisasterCountryType(graphene.ObjectType):
     id = graphene.Int(required=True)
     iso3 = graphene.String(required=True)
     country_name = graphene.String(required=True)
 
 
-class GiddDisasterTimeSeriesStatisticsType(graphene.ObjectType):
+class GiddTimeSeriesStatisticsByYearType(graphene.ObjectType):
+    year = graphene.String(required=True)
+    total = graphene.Int()
+
+
+class GiddTimeSeriesStatisticsByCountryType(graphene.ObjectType):
     year = graphene.String(required=True)
     total = graphene.Int()
     country = graphene.Field(GiddDisasterCountryType, required=True)
 
 
-class GiddCategoryStatisticsType(graphene.ObjectType):
+class DisplacementByHazardType(graphene.ObjectType):
+    id = graphene.ID(required=True)
     label = graphene.String(required=True)
-    total = graphene.Int()
+    total_displacements = graphene.Int()
 
 
 class GiddConflictStatisticsType(graphene.ObjectType):
     new_displacements = graphene.Int()
-    total_idps = graphene.Int()
-    new_displacement_timeseries = graphene.List(graphene.NonNull(GiddTimeSeriesStatisticsType))
-    idps_timeseries = graphene.List(graphene.NonNull(GiddTimeSeriesStatisticsType))
+    total_displacements = graphene.Int()
+    total_countries = graphene.Int()
+    new_displacement_timeseries_by_year = graphene.List(
+        graphene.NonNull(GiddTimeSeriesStatisticsByYearType)
+    )
+    new_displacement_timeseries_by_country = graphene.List(
+        graphene.NonNull(GiddTimeSeriesStatisticsByCountryType)
+    )
+    total_displacement_timeseries_by_year = graphene.List(
+        graphene.NonNull(GiddTimeSeriesStatisticsByYearType)
+    )
+    total_displacement_timeseries_by_country = graphene.List(
+        graphene.NonNull(GiddTimeSeriesStatisticsByCountryType)
+    )
 
 
 class GiddDisasterStatisticsType(graphene.ObjectType):
     new_displacements = graphene.Int()
     total_events = graphene.Int()
-    timeseries = graphene.List(graphene.NonNull(GiddDisasterTimeSeriesStatisticsType))
-    categories = graphene.List(graphene.NonNull(GiddCategoryStatisticsType))
+    # timeseries = graphene.List(graphene.NonNull(GiddDisasterTimeSeriesStatisticsType))
+    displacements_by_hazard_type = graphene.List(graphene.NonNull(DisplacementByHazardType))
+
+    # NEW
+    total_countries = graphene.Int()
+    total_displacements = graphene.Int()
+
+    new_displacement_timeseries_by_year = graphene.List(
+        graphene.NonNull(GiddTimeSeriesStatisticsByYearType)
+    )
+    new_displacement_timeseries_by_country = graphene.List(
+        graphene.NonNull(GiddTimeSeriesStatisticsByCountryType)
+    )
+    total_displacement_timeseries_by_year = graphene.List(
+        graphene.NonNull(GiddTimeSeriesStatisticsByYearType)
+    )
+    total_displacement_timeseries_by_country = graphene.List(
+        graphene.NonNull(GiddTimeSeriesStatisticsByCountryType)
+    )
 
 
 class GiddConflictType(DjangoObjectType):
@@ -263,65 +292,159 @@ class Query(graphene.ObjectType):
     @staticmethod
     def resolve_gidd_conflict_statistics(parent, info, **kwargs):
         conflict_qs = ConflictStatisticsFilter(data=kwargs).qs
-        new_displacement_timeseries_qs = conflict_qs.filter(
-            new_displacement__gt=0
-        ).values('year').annotate(
-            total=models.Sum('new_displacement', output_field=models.IntegerField()),
+
+        new_displacement_timeseries_by_year_qs = conflict_qs.filter(new_displacement__gt=0).values('year').annotate(
+            total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
         ).order_by('year').values('year', 'total')
 
-        idps_timeseries_qs = conflict_qs.filter(
-            total_displacement__isnull=False
-        ).values('year').annotate(
-            total=models.Sum('total_displacement', output_field=models.IntegerField())
+        new_displacement_timeseries_by_country_qs = conflict_qs.filter(new_displacement__gt=0).values('year').annotate(
+            total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
+        ).order_by('year').values('year', 'total', 'country_id', 'country_name', 'iso3')
+
+        total_displacement_timeseries_by_year_qs = conflict_qs.filter(total_displacement__gt=0).values('year').annotate(
+            total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
         ).order_by('year').values('year', 'total')
-        total_idps = conflict_qs.order_by('-year').first().total_displacement if conflict_qs.order_by('-year') else 0
+
+        total_displacement_timeseries_by_country_qs = conflict_qs.filter(total_displacement__gt=0).values('year').annotate(
+            total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
+        ).order_by('year').values('year', 'total', 'country_id', 'country_name', 'iso3')
 
         return GiddConflictStatisticsType(
-            total_idps=total_idps if total_idps else 0,
-            new_displacements=conflict_qs.aggregate(
-                total_new_displacement=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
-            )['total_new_displacement'],
+            new_displacements=conflict_qs.order_by(
+                '-year'
+            ).first().new_displacement if conflict_qs.order_by('-year') else 0,
+            total_displacements=conflict_qs.order_by(
+                '-year'
+            ).first().total_displacement if conflict_qs.order_by('-year') else 0,
+            total_countries=conflict_qs.filter(
+                new_displacement__gt=0
+            ).distinct('iso3').count(),
+            new_displacement_timeseries_by_year=[
+                GiddTimeSeriesStatisticsByYearType(
+                    year=item['year'],
+                    total=item['total'],
+                ) for item in new_displacement_timeseries_by_year_qs
+            ],
 
-            new_displacement_timeseries=[GiddTimeSeriesStatisticsType(**item) for item in new_displacement_timeseries_qs],
-            idps_timeseries=[GiddTimeSeriesStatisticsType(**item) for item in idps_timeseries_qs],
+            new_displacement_timeseries_by_country=[
+                GiddTimeSeriesStatisticsByCountryType(
+                    year=item['year'],
+                    total=item['total'],
+                    country=GiddDisasterCountryType(
+                        id=item['country_id'],
+                        iso3=item['iso3'],
+                        country_name=item['country_name']
+                    )
+                ) for item in new_displacement_timeseries_by_country_qs
+            ],
+            total_displacement_timeseries_by_year=[
+                GiddTimeSeriesStatisticsByYearType(
+                    year=item['year'],
+                    total=item['total'],
+                ) for item in total_displacement_timeseries_by_year_qs
+            ],
+
+            total_displacement_timeseries_by_country=[
+                GiddTimeSeriesStatisticsByCountryType(
+                    year=item['year'],
+                    total=item['total'],
+                    country=GiddDisasterCountryType(
+                        id=item['country_id'],
+                        iso3=item['iso3'],
+                        country_name=item['country_name']
+                    )
+                ) for item in total_displacement_timeseries_by_country_qs
+            ],
         )
 
     @staticmethod
     def resolve_gidd_disaster_statistics(parent, info, **kwargs):
         disaster_qs = DisasterStatisticsFilter(data=kwargs).qs
-        timeseries_qs = disaster_qs.filter(new_displacement__gt=0).values('year').annotate(
+
+        new_displacement_timeseries_by_year_qs = disaster_qs.filter(new_displacement__gt=0).values('year').annotate(
+            total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
+        ).order_by('year').values('year', 'total')
+
+        new_displacement_timeseries_by_country_qs = disaster_qs.filter(new_displacement__gt=0).values('year').annotate(
             total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
         ).order_by('year').values('year', 'total', 'country_id', 'country_name', 'iso3')
 
-        # FIXME should we filter out not labeld hazard type?
-        categories_qs = disaster_qs.values('hazard_type').annotate(
+        total_displacement_timeseries_by_year_qs = disaster_qs.filter(total_displacement__gt=0).values('year').annotate(
+            total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
+        ).order_by('year').values('year', 'total')
+
+        total_displacement_timeseries_by_country_qs = disaster_qs.filter(total_displacement__gt=0).values('year').annotate(
+            total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
+        ).order_by('year').values('year', 'total', 'country_id', 'country_name', 'iso3')
+
+        categories_qs = disaster_qs.values('hazard_type', 'hazard_type__id').annotate(
             total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0),
             label=models.Case(
                 models.When(hazard_sub_category=None, then=models.Value('Not labeled')),
                 default=models.F('hazard_type_name'),
                 output_field=models.CharField()
             )
-        ).filter(total__gte=1).values('label', 'total')
+        ).filter(total__gte=1)
+
         return GiddDisasterStatisticsType(
             new_displacements=disaster_qs.aggregate(
-                total_new_displacement=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
-            )['total_new_displacement'],
+                total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
+            )['total'],
+
+            total_displacements=disaster_qs.aggregate(
+                total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
+            )['total'],
 
             total_events=disaster_qs.filter(new_displacement__gt=0).values('event__name').annotate(
                 events=models.Count('id')
             ).aggregate(total_events=Coalesce(models.Sum('events', output_field=models.IntegerField()), 0))['total_events'],
 
-            timeseries=[GiddDisasterTimeSeriesStatisticsType(
-                year=item['year'],
-                total=item['total'],
-                country=GiddDisasterCountryType(
-                    id=item['country_id'],
-                    iso3=item['iso3'],
-                    country_name=item['country_name']
-                )
-            ) for item in timeseries_qs],
+            total_countries=disaster_qs.filter(new_displacement__gt=0).distinct('iso3').count(),
 
-            categories=[GiddCategoryStatisticsType(**item) for item in categories_qs]
+            new_displacement_timeseries_by_year=[
+                GiddTimeSeriesStatisticsByYearType(
+                    year=item['year'],
+                    total=item['total'],
+                ) for item in new_displacement_timeseries_by_year_qs
+            ],
+
+            new_displacement_timeseries_by_country=[
+                GiddTimeSeriesStatisticsByCountryType(
+                    year=item['year'],
+                    total=item['total'],
+                    country=GiddDisasterCountryType(
+                        id=item['country_id'],
+                        iso3=item['iso3'],
+                        country_name=item['country_name']
+                    )
+                ) for item in new_displacement_timeseries_by_country_qs
+            ],
+            total_displacement_timeseries_by_year=[
+                GiddTimeSeriesStatisticsByYearType(
+                    year=item['year'],
+                    total=item['total'],
+                ) for item in total_displacement_timeseries_by_year_qs
+            ],
+
+            total_displacement_timeseries_by_country=[
+                GiddTimeSeriesStatisticsByCountryType(
+                    year=item['year'],
+                    total=item['total'],
+                    country=GiddDisasterCountryType(
+                        id=item['country_id'],
+                        iso3=item['iso3'],
+                        country_name=item['country_name']
+                    )
+                ) for item in total_displacement_timeseries_by_country_qs
+            ],
+
+            displacements_by_hazard_type=[
+                DisplacementByHazardType(
+                    id=item['hazard_type__id'],
+                    label=item['label'],
+                    total_displacements=item['total'],
+                ) for item in categories_qs
+            ]
         )
 
     @staticmethod
