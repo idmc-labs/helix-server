@@ -232,14 +232,12 @@ class GiddEventType(graphene.ObjectType):
 
 
 class Query(graphene.ObjectType):
-    gidd_conflict = DjangoObjectField(GiddConflictType)
     gidd_conflicts = DjangoPaginatedListObjectField(
         GiddConflictListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
         )
     )
-    gidd_disaster = DjangoObjectField(GiddDisasterType)
     gidd_disasters = DjangoPaginatedListObjectField(
         GiddDisasterListType,
         pagination=PageGraphqlPaginationWithoutCount(
@@ -270,14 +268,12 @@ class Query(graphene.ObjectType):
     gidd_release_meta_data = graphene.Field(GiddReleaseMetadataType)
     gidd_public_countries = graphene.List(graphene.NonNull(GiddPublicCountryType))
     gidd_hazard_sub_types = graphene.List(GiddHazardSubType)
-    gidd_public_figure_analysis = DjangoObjectField(GiddPublicFigureAnalysisType)
     gidd_public_figure_analysis_list = DjangoPaginatedListObjectField(
         GiddPublicFigureAnalysisListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
         )
     )
-    gidd_displacement = DjangoObjectField(GiddDisplacementDataType)
     gidd_displacements = DjangoPaginatedListObjectField(
         GiddDisplacementDataListType,
         pagination=PageGraphqlPaginationWithoutCount(

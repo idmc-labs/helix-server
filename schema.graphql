@@ -2441,9 +2441,7 @@ enum QUANTIFIER {
 }
 
 type Query {
-  giddConflict(id: ID!): GiddConflictType
   giddConflicts(id_Iexact: Float, releaseEnvironment: String!, page: Int = 1, ordering: String, pageSize: Int): GiddConflictListType
-  giddDisaster(id: ID!): GiddDisasterType
   giddDisasters(id_Iexact: Float, releaseEnvironment: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
   giddConflictStatistics(releaseEnvironment: String!, countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddConflictStatisticsType!
   giddDisasterStatistics(releaseEnvironment: String!, categories: [String!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddDisasterStatisticsType!
@@ -2452,9 +2450,7 @@ type Query {
   giddReleaseMetaData: GiddReleaseMetadataType
   giddPublicCountries: [GiddPublicCountryType!]
   giddHazardSubTypes: [GiddHazardSubType]
-  giddPublicFigureAnalysis(id: ID!): GiddPublicFigureAnalysisType
   giddPublicFigureAnalysisList(iso3: String, year: Int, releaseEnvironment: String!, page: Int = 1, ordering: String, pageSize: Int): GiddPublicFigureAnalysisListType
-  giddDisplacement(id: ID!): GiddDisplacementDataType
   giddDisplacements(releaseEnvironment: String!, startYear: Float, endYear: Float, countriesIso3: [String!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
   giddYear(releaseEnvironment: String!): GiddYearType!
   giddEvent(eventId: ID!): GiddEventType
