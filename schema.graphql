@@ -1649,6 +1649,7 @@ type GiddDisasterType {
   hazardSubCategoryName: String!
   hazardSubTypeName: String!
   hazardTypeName: String!
+  glideNumbers: [String]
 }
 
 type GiddDisplacementDataListType {
@@ -1669,6 +1670,22 @@ type GiddDisplacementDataType {
   totalInternalDisplacement: Int
   totalNewDisplacement: Int
   year: Int!
+}
+
+type GiddEventAffectedCountryType {
+  iso3: String!
+  countryName: String!
+  newDisplacement: Int
+}
+
+type GiddEventType {
+  eventName: String!
+  newDisplacement: Int
+  startDate: Date!
+  endDate: Date!
+  glideNumbers: [String!]
+  affectedCountries: [GiddEventAffectedCountryType]
+  hazardSubTypes: [GiddHazardSubType]
 }
 
 type GiddHazardSubType {
@@ -2440,6 +2457,7 @@ type Query {
   giddDisplacement(id: ID!): GiddDisplacementDataType
   giddDisplacements(releaseEnvironment: String!, startYear: Float, endYear: Float, countriesIso3: [String!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
   giddYear(releaseEnvironment: String!): GiddYearType!
+  giddEvent(eventId: ID!): GiddEventType
   notification(id: ID!): GenericNotificationType
   notifications(recipient: ID, isRead: Boolean, events: [ID!], figures: [ID!], types: [String!], createdAtAfter: Date, createdAtBefore: Date, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType
