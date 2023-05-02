@@ -2438,17 +2438,17 @@ enum QUANTIFIER {
 }
 
 type Query {
-  giddConflicts(id_Iexact: Float, releaseEnvironment: String!, page: Int = 1, ordering: String, pageSize: Int): GiddConflictListType
-  giddDisasters(id_Iexact: Float, releaseEnvironment: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
-  giddConflictStatistics(releaseEnvironment: String!, countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddConflictStatisticsType!
-  giddDisasterStatistics(releaseEnvironment: String!, hazardSubTypes: [String!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddDisasterStatisticsType!
+  giddConflicts(id_Iexact: Float, releaseEnvironment: String, page: Int = 1, ordering: String, pageSize: Int): GiddConflictListType
+  giddDisasters(id_Iexact: Float, releaseEnvironment: String, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
+  giddConflictStatistics(releaseEnvironment: String, countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddConflictStatisticsType!
+  giddDisasterStatistics(releaseEnvironment: String, hazardSubTypes: [String!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddDisasterStatisticsType!
   giddLog(id: ID!): GiddStatusLogType
   giddLogs(status: [String!], page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
   giddReleaseMetaData: GiddReleaseMetadataType
   giddPublicCountries: [GiddPublicCountryType!]
   giddHazardSubTypes: [GiddHazardSubType]
-  giddPublicFigureAnalysisList(iso3: String, year: Int, releaseEnvironment: String!, page: Int = 1, ordering: String, pageSize: Int): GiddPublicFigureAnalysisListType
-  giddDisplacements(releaseEnvironment: String!, startYear: Float, endYear: Float, countriesIso3: [String!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
+  giddPublicFigureAnalysisList(iso3: String, year: Int, releaseEnvironment: String, page: Int = 1, ordering: String, pageSize: Int): GiddPublicFigureAnalysisListType
+  giddDisplacements(releaseEnvironment: String, startYear: Float, endYear: Float, countriesIso3: [String!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
   giddYear(releaseEnvironment: String!): GiddYearType!
   giddEvent(eventId: ID!): GiddEventType
   notification(id: ID!): GenericNotificationType
