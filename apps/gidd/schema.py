@@ -362,7 +362,7 @@ class Query(graphene.ObjectType):
         return ReleaseMetadata.objects.last()
 
     @staticmethod
-    def resolve_gidd_public_country_list(parent, info, **kwargs):
+    def resolve_gidd_public_countries(parent, info, **kwargs):
         return [
             GiddPublicCountryType(
                 id=country['id'],
