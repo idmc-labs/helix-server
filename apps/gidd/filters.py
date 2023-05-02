@@ -44,11 +44,16 @@ class ConflictFilter(ReleaseMetadataFilter):
 
 
 class DisasterFilter(ReleaseMetadataFilter):
+    event_name = django_filters.CharFilter(method='filter_event_name')
+
     class Meta:
         model = Disaster
         fields = {
             'id': ['iexact']
         }
+
+    def filter_event_name(self, queryset, name, value):
+        return queryset.filter(event_name__icontains=value)
 
 
 class ConflictStatisticsFilter(ReleaseMetadataFilter):
