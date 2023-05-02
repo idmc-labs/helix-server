@@ -82,10 +82,9 @@ class Disaster(models.Model):
     hazard_type_name = models.CharField(max_length=256, blank=True)
     glide_numbers = ArrayField(
         models.CharField(
-            verbose_name=_('Event Codes'), max_length=256, null=True, blank=True
+            verbose_name=_('Event Codes'), max_length=256
         ),
         default=list,
-        null=True, blank=True
     )
 
     class Meta:

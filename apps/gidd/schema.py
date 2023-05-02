@@ -221,6 +221,7 @@ class GiddEventType(graphene.ObjectType):
     end_date = graphene.Date(required=True)
     glide_numbers = graphene.List(
         graphene.NonNull(graphene.String),
+        required=True,
     )
     affected_countries = graphene.List(
         GiddEventAffectedCountryType,
@@ -494,6 +495,8 @@ class Query(graphene.ObjectType):
         event_id = kwargs['event_id']
         disaster_qs = Disaster.objects.filter(event_id=event_id)
 
+        # NOTE:- There is always one object after group by event_name attrs
+        # so first objects is taken directly from queryset instead of iterating
         event_data = disaster_qs.values(
             'event_name',
             'glide_numbers',
