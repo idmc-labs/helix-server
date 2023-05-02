@@ -2450,7 +2450,7 @@ type Query {
   giddPublicFigureAnalysisList(iso3: String, year: Int, releaseEnvironment: String, page: Int = 1, ordering: String, pageSize: Int): GiddPublicFigureAnalysisListType
   giddDisplacements(releaseEnvironment: String, startYear: Float, endYear: Float, countriesIso3: [String!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
   giddYear(releaseEnvironment: String!): GiddYearType!
-  giddEvent(eventId: ID!): GiddEventType
+  giddEvent(eventId: ID!, releaseEnvironment: String): GiddEventType
   notification(id: ID!): GenericNotificationType
   notifications(recipient: ID, isRead: Boolean, events: [ID!], figures: [ID!], types: [String!], createdAtAfter: Date, createdAtBefore: Date, page: Int = 1, ordering: String, pageSize: Int): GenericNotificationListType
   generation(id: ID!): ReportGenerationType

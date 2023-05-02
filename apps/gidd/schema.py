@@ -9,7 +9,6 @@ from utils.graphene.enums import EnumDescription
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.entry.enums import FigureCategoryTypeEnum
 
-
 from django.db import models
 from django.db.models.functions import Coalesce
 from .models import (
@@ -30,6 +29,7 @@ from .filters import (
     GiddStatusLogFilter,
     PublicFigureAnalysisFilter,
     DisplacementDataFilter,
+    ReleaseMetadataFilter,
 )
 from .enums import GiddStatusLogEnum
 
@@ -348,7 +348,14 @@ class Query(graphene.ObjectType):
     gidd_year = graphene.Field(
         graphene.NonNull(GiddYearType), release_environment=graphene.String(required=True)
     )
-    gidd_event = graphene.Field(GiddEventType, event_id=graphene.ID(required=True))
+    gidd_event = graphene.Field(
+        GiddEventType,
+        event_id=graphene.ID(required=True),
+        **get_filtering_args_from_filterset(
+            ReleaseMetadataFilter, GiddEventType
+        ),
+
+    )
 
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):
@@ -554,7 +561,7 @@ class Query(graphene.ObjectType):
     @staticmethod
     def resolve_gidd_event(parent, info, **kwargs):
         event_id = kwargs['event_id']
-        disaster_qs = Disaster.objects.filter(event_id=event_id)
+        disaster_qs = DisasterFilter(data=kwargs).qs.filter(event_id=event_id)
 
         if not disaster_qs.exists():
             return None
