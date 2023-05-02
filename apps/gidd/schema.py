@@ -41,12 +41,12 @@ class GiddDisasterCountryType(graphene.ObjectType):
 
 
 class GiddTimeSeriesStatisticsByYearType(graphene.ObjectType):
-    year = graphene.String(required=True)
+    year = graphene.Int(required=True)
     total = graphene.Int()
 
 
 class GiddTimeSeriesStatisticsByCountryType(graphene.ObjectType):
-    year = graphene.String(required=True)
+    year = graphene.Int(required=True)
     total = graphene.Int()
     country = graphene.Field(GiddDisasterCountryType, required=True)
 
