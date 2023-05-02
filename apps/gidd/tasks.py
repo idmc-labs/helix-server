@@ -24,10 +24,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-# NOTE: Generate gidd data for these years only
-gidd_years = Report.objects.filter(
-    is_gidd_report=True
-).values_list('gidd_report_year').order_by('gidd_report_year').distinct('gidd_report_year')
+def get_gidd_years():
+    return Report.objects.filter(is_gidd_report=True)\
+        .order_by('gidd_report_year')\
+        .distinct('gidd_report_year')\
+        .values_list('gidd_report_year', flat=True)
 
 
 def annotate_conflict(qs, year):
@@ -136,7 +137,7 @@ def update_conflict_and_disaster_data():
     figure_queryset = Figure.objects.filter(
         role=Figure.ROLE.RECOMMENDED
     )
-    for year in gidd_years:
+    for year in get_gidd_years():
         nd_figure_qs = Figure.filtered_nd_figures(
             qs=figure_queryset,
             start_date=datetime.datetime(year=year, month=1, day=1),
@@ -275,7 +276,8 @@ def update_public_figure_analysis():
             return report_country_aggregation['total_flow_disaster']
 
     for report in Report.objects.filter(
-            is_pfa_visible_in_gidd=True, gidd_report_year__in=gidd_years
+        is_pfa_visible_in_gidd=True,
+        filter_figure_start_after__year__in=get_gidd_years(),
     ):
         report_country_aggregation = report.report_figures.aggregate(
             **report.TOTAL_FIGURE_DISAGGREGATIONS,
@@ -309,7 +311,16 @@ def update_public_figure_analysis():
 
 def update_displacement_data():
     DisplacementData.objects.all().delete()
-    for year in gidd_years:
+    start_year = min(
+        Disaster.objects.order_by('year').first().year,
+        Conflict.objects.order_by('year').first().year
+    )
+    end_year = max(
+        Disaster.objects.order_by('-year').first().year,
+        Conflict.objects.order_by('-year').first().year
+    )
+
+    for year in range(start_year, end_year):
         displacement_data = Country.objects.annotate(
             conflict_total_displacement=Subquery(
                 Conflict.objects.filter(
