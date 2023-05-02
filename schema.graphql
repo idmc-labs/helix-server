@@ -1649,7 +1649,7 @@ type GiddDisasterType {
   hazardSubCategoryName: String!
   hazardSubTypeName: String!
   hazardTypeName: String!
-  glideNumbers: [String]
+  glideNumbers: [String!]!
 }
 
 type GiddDisplacementDataListType {
@@ -1683,7 +1683,7 @@ type GiddEventType {
   newDisplacement: Int
   startDate: Date!
   endDate: Date!
-  glideNumbers: [String!]
+  glideNumbers: [String!]!
   affectedCountries: [GiddEventAffectedCountryType]
   hazardSubTypes: [GiddHazardSubType]
 }
