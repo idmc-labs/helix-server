@@ -37,7 +37,7 @@ class StatusLogSerializer(serializers.ModelSerializer):
 class ReleaseMetadataSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReleaseMetadata
-        fields = ('staging_year', 'production_year')
+        fields = ('pre_release_year', 'release_year')
 
     def create(self, validated_data):
         user = self.context['request'].user

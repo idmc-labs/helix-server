@@ -189,16 +189,16 @@ class DisasterLegacy(models.Model):
 class ReleaseMetadata(models.Model):
 
     class ReleaseEnvironment(enum.Enum):
-        STAGING = 0
-        PRODUCTION = 1
+        PRE_RELEASE = 0
+        RELEASE = 1
 
         __labels__ = {
-            STAGING: _("Staging"),
-            PRODUCTION: _("Production"),
+            RELEASE: _("Release"),
+            PRE_RELEASE: _("Pre Release"),
         }
 
-    production_year = models.IntegerField(verbose_name=_('Production year'))
-    staging_year = models.IntegerField(verbose_name=_('Staging year'))
+    release_year = models.IntegerField(verbose_name=_('Release year'))
+    pre_release_year = models.IntegerField(verbose_name=_('Pre Release year'))
     modified_by = models.ForeignKey(
         'users.User', verbose_name=_('Modified by'),
         related_name='+', on_delete=models.PROTECT
