@@ -133,7 +133,6 @@ def update_gidd_legacy_data():
 
 
 def update_conflict_and_disaster_data():
-
     figure_queryset = Figure.objects.filter(
         role=Figure.ROLE.RECOMMENDED
     )
@@ -393,7 +392,6 @@ def update_displacement_data():
 
 @celery_app.task
 def update_gidd_data(log_id):
-
     # Delete all the conflicts TODO: Find way to update records
     Conflict.objects.all().delete()
 

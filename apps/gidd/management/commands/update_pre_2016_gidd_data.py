@@ -156,6 +156,7 @@ class Command(BaseCommand):
         def format_gidd_number(number):
             if number == 0 or number:
                 return number
+            return None
 
         with open(conflict_csv_file, 'r') as conflict_csv_file:
             reader = csv.DictReader(conflict_csv_file)
