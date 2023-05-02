@@ -208,6 +208,28 @@ class GiddYearType(graphene.ObjectType):
     year = graphene.Int(required=True)
 
 
+class GiddEventAffectedCountryType(graphene.ObjectType):
+    iso3 = graphene.String(required=True)
+    country_name = graphene.String(required=True)
+    new_displacement = graphene.Int()
+
+
+class GiddEventType(graphene.ObjectType):
+    event_name = graphene.String(required=True)
+    new_displacement = graphene.Int()
+    start_date = graphene.Date(required=True)
+    end_date = graphene.Date(required=True)
+    glide_numbers = graphene.List(
+        graphene.NonNull(graphene.String),
+    )
+    affected_countries = graphene.List(
+        GiddEventAffectedCountryType,
+    )
+    hazard_sub_types = graphene.List(
+        GiddHazardSubType,
+    )
+
+
 class Query(graphene.ObjectType):
     gidd_conflict = DjangoObjectField(GiddConflictType)
     gidd_conflicts = DjangoPaginatedListObjectField(
@@ -264,6 +286,7 @@ class Query(graphene.ObjectType):
     gidd_year = graphene.Field(
         graphene.NonNull(GiddYearType), release_environment=graphene.String(required=True)
     )
+    gidd_event = graphene.Field(GiddEventType, event_id=graphene.ID(required=True))
 
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):
@@ -465,3 +488,48 @@ class Query(graphene.ObjectType):
             return GiddYearType(year=gidd_meta_data.staging_year)
         if kwargs['release_environment'] == ReleaseMetadata.ReleaseEnvironment.PRODUCTION.name:
             return GiddYearType(year=gidd_meta_data.production_year)
+
+    @staticmethod
+    def resolve_gidd_event(parent, info, **kwargs):
+        event_id = kwargs['event_id']
+        disaster_qs = Disaster.objects.filter(event_id=event_id)
+
+        event_data = disaster_qs.values(
+            'event_name',
+            'glide_numbers',
+            'start_date',
+            'end_date',
+        ).order_by().annotate(
+            total_new_displacement=models.Sum('new_displacement'),
+        )[0]
+
+        affected_countries_qs = disaster_qs.values(
+            'country_name',
+            'iso3',
+        ).order_by().annotate(
+            total_new_displacement=models.Sum('new_displacement'),
+        )
+
+        hazard_sub_types_qs = disaster_qs.values(
+            'hazard_sub_type_id', 'hazard_sub_type__name'
+        )
+        return GiddEventType(
+            event_name=event_data.get('event_name'),
+            new_displacement=event_data.get('total_new_displacement'),
+            start_date=event_data.get('start_date'),
+            end_date=event_data.get('end_date'),
+            glide_numbers=event_data.get('glide_numbers'),
+            affected_countries=[
+                GiddEventAffectedCountryType(
+                    iso3=country_data['iso3'],
+                    country_name=country_data['country_name'],
+                    new_displacement=country_data['total_new_displacement'],
+                ) for country_data in affected_countries_qs
+            ],
+            hazard_sub_types=[
+                GiddHazardSubType(
+                    id=hazard_sub_type['hazard_sub_type_id'],
+                    name=hazard_sub_type['hazard_sub_type__name'],
+                ) for hazard_sub_type in hazard_sub_types_qs
+            ],
+        )
