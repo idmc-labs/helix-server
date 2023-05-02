@@ -1,12 +1,12 @@
 import django_filters
-
+from .filters import ReleaseMetadataFilter
 from .models import (
     Conflict,
     Disaster,
 )
 
 
-class RestConflictFilterSet(django_filters.FilterSet):
+class RestConflictFilterSet(ReleaseMetadataFilter):
     start_year = django_filters.NumberFilter(field_name='start_year', method='filter_start_year')
     end_year = django_filters.NumberFilter(field_name='end_year', method='filter_end_year')
 
@@ -25,7 +25,7 @@ class RestConflictFilterSet(django_filters.FilterSet):
         return queryset.filter(year__lte=value)
 
 
-class RestDisasterFilterSet(django_filters.FilterSet):
+class RestDisasterFilterSet(ReleaseMetadataFilter):
     start_year = django_filters.NumberFilter(field_name='start_year', method='filter_start_year')
     end_year = django_filters.NumberFilter(field_name='end_year', method='filter_end_year')
 
