@@ -98,19 +98,60 @@ class GiddDisasterStatisticsType(graphene.ObjectType):
 
 
 class GiddConflictType(DjangoObjectType):
+    country_id = graphene.ID(required=True)
+
     class Meta:
         model = Conflict
+        fields = (
+            'iso3',
+            'country_name',
+            'year',
+            'new_displacement',
+            'total_displacement',
+        )
+
+    @staticmethod
+    def resolve_country_id(root, info, **kwargs):
+        return root.country_id
 
 
 class GiddConflictListType(CustomDjangoListObjectType):
+
     class Meta:
         model = Conflict
         filterset_class = ConflictFilter
 
 
 class GiddDisasterType(DjangoObjectType):
+    country_id = graphene.ID(required=True)
+    event_id = graphene.ID()
+
     class Meta:
         model = Disaster
+        fields = (
+            'year',
+            'start_date',
+            'start_date_accuracy',
+            'end_date',
+            'end_date_accuracy',
+            'new_displacement',
+            'total_displacement',
+            'event_name',
+            'iso3',
+            'country_name',
+            'hazard_category_name',
+            'hazard_sub_category_name',
+            'hazard_type_name',
+            'hazard_sub_type_name',
+        )
+
+    @staticmethod
+    def resolve_country_id(root, info, **kwargs):
+        return root.country_id
+
+    @staticmethod
+    def resolve_event_id(root, info, **kwargs):
+        return root.event_id
 
 
 class GiddDisasterListType(CustomDjangoListObjectType):
