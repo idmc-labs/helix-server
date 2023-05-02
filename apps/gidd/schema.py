@@ -103,6 +103,7 @@ class GiddConflictType(DjangoObjectType):
     class Meta:
         model = Conflict
         fields = (
+            'id',
             'iso3',
             'country_name',
             'year',
@@ -125,10 +126,15 @@ class GiddConflictListType(CustomDjangoListObjectType):
 class GiddDisasterType(DjangoObjectType):
     country_id = graphene.ID(required=True)
     event_id = graphene.ID()
+    hazard_category_id = graphene.ID()
+    hazard_sub_category_id = graphene.ID()
+    hazard_type_id = graphene.ID()
+    hazard_sub_type_id = graphene.ID()
 
     class Meta:
         model = Disaster
         fields = (
+            'id',
             'year',
             'start_date',
             'start_date_accuracy',
@@ -143,6 +149,7 @@ class GiddDisasterType(DjangoObjectType):
             'hazard_sub_category_name',
             'hazard_type_name',
             'hazard_sub_type_name',
+            'glide_numbers',
         )
 
     @staticmethod
@@ -152,6 +159,22 @@ class GiddDisasterType(DjangoObjectType):
     @staticmethod
     def resolve_event_id(root, info, **kwargs):
         return root.event_id
+
+    @staticmethod
+    def resolve_hazard_category_id(root, info, **kwargs):
+        return root.hazard_category_id
+
+    @staticmethod
+    def resolve_hazard_sub_category_id(root, info, **kwargs):
+        return root.hazard_sub_category_id
+
+    @staticmethod
+    def resolve_hazard_type_id(root, info, **kwargs):
+        return root.hazard_type_id
+
+    @staticmethod
+    def resolve_hazard_sub_type_id(root, info, **kwargs):
+        return root.hazard_sub_type_id
 
 
 class GiddDisasterListType(CustomDjangoListObjectType):
@@ -177,6 +200,7 @@ class GiddPublicFigureAnalysisType(DjangoObjectType):
     class Meta:
         model = PublicFigureAnalysis
         fields = (
+            'id',
             'iso3',
             'year',
             'figures',

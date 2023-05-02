@@ -1589,6 +1589,7 @@ type GiddConflictStatisticsType {
 }
 
 type GiddConflictType {
+  id: ID!
   totalDisplacement: Int
   newDisplacement: Int
   year: Int!
@@ -1623,6 +1624,7 @@ type GiddDisasterStatisticsType {
 }
 
 type GiddDisasterType {
+  id: ID!
   year: Int!
   startDate: Date
   startDateAccuracy: String
@@ -1637,8 +1639,13 @@ type GiddDisasterType {
   hazardSubCategoryName: String!
   hazardSubTypeName: String!
   hazardTypeName: String!
+  glideNumbers: [String!]!
   countryId: ID!
   eventId: ID
+  hazardCategoryId: ID
+  hazardSubCategoryId: ID
+  hazardTypeId: ID
+  hazardSubTypeId: ID
 }
 
 type GiddDisplacementDataListType {
@@ -1702,6 +1709,7 @@ type GiddPublicFigureAnalysisListType {
 }
 
 type GiddPublicFigureAnalysisType {
+  id: ID!
   iso3: String!
   year: Int!
   figures: Int

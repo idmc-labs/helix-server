@@ -198,7 +198,7 @@ class ReleaseMetadata(models.Model):
         }
 
     release_year = models.IntegerField(verbose_name=_('Release year'))
-    pre_release_year = models.IntegerField(verbose_name=_('Pre Release year'))
+    pre_release_year = models.IntegerField(verbose_name=_('Pre-Release year'))
     modified_by = models.ForeignKey(
         'users.User', verbose_name=_('Modified by'),
         related_name='+', on_delete=models.PROTECT
