@@ -188,6 +188,7 @@ def update_conflict_and_disaster_data():
             'event__end_date',
             'event__start_date_accuracy',
             'event__end_date_accuracy',
+            'event__glide_numbers',
             'country',
             'country__iso3',
             'country__idmc_short_name',
@@ -235,6 +236,7 @@ def update_conflict_and_disaster_data():
                     hazard_sub_category_name=item['event__disaster_sub_category__name'],
                     hazard_type_name=item['event__disaster_type__name'],
                     hazard_sub_type_name=item['event__disaster_type__name'],
+                    glide_numbers=item['event__glide_numbers'],
 
                     new_displacement=item['new_displacement'],
                     total_displacement=item['total_displacement'],
