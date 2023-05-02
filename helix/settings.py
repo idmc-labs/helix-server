@@ -468,6 +468,7 @@ GRAPHENE_NODES_WHITELIST = (
     'giddPublicFigureAnalysisList',
     'giddDisplacements',
     'giddDisplacement',
+    'giddEvent',
     # __ double underscore nodes
     '__schema',
     '__type',
