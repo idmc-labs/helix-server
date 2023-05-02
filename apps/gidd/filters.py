@@ -17,10 +17,10 @@ class ReleaseMetadataFilter(django_filters.FilterSet):
         release_meta_data = ReleaseMetadata.objects.last()
         if not release_meta_data:
             return qs.filter(year__lte=0)
-        elif value == ReleaseMetadata.ReleaseEnvironment.STAGING.name:
-            return qs.filter(year__lte=release_meta_data.staging_year)
-        elif value == ReleaseMetadata.ReleaseEnvironment.PRODUCTION.name:
-            return qs.filter(year__lte=release_meta_data.production_year)
+        elif value == ReleaseMetadata.ReleaseEnvironment.PRE_RELEASE.name:
+            return qs.filter(year__lte=release_meta_data.pre_release_year)
+        elif value == ReleaseMetadata.ReleaseEnvironment.RELEASE.name:
+            return qs.filter(year__lte=release_meta_data.release_year)
         return qs.filter(year__lte=0)
 
 

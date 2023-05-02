@@ -485,9 +485,9 @@ class Query(graphene.ObjectType):
     @staticmethod
     def resolve_gidd_year(parent, info, **kwargs):
         gidd_meta_data = ReleaseMetadata.objects.last()
-        if kwargs['release_environment'] == ReleaseMetadata.ReleaseEnvironment.STAGING.name:
-            return GiddYearType(year=gidd_meta_data.staging_year)
-        if kwargs['release_environment'] == ReleaseMetadata.ReleaseEnvironment.PRODUCTION.name:
+        if kwargs['release_environment'] == ReleaseMetadata.ReleaseEnvironment.PRE_RELEASE.name:
+            return GiddYearType(year=gidd_meta_data.pre_release_year)
+        if kwargs['release_environment'] == ReleaseMetadata.ReleaseEnvironment.RELEASE.name:
             return GiddYearType(year=gidd_meta_data.production_year)
 
     @staticmethod

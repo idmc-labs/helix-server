@@ -1724,14 +1724,14 @@ type GiddPublicFigureAnalysisType {
 }
 
 enum GiddReleaseEnvironmentsEnum {
-  STAGING
-  PRODUCTION
+  PRE_RELEASE
+  RELEASE
 }
 
 type GiddReleaseMetadataType {
   id: ID!
-  productionYear: Int!
-  stagingYear: Int!
+  releaseYear: Int!
+  preReleaseYear: Int!
   modifiedBy: UserType!
   modifiedAt: DateTime!
 }
@@ -2609,8 +2609,8 @@ input RegisterInputType {
 }
 
 input ReleaseMetadataInputType {
-  stagingYear: Int!
-  productionYear: Int!
+  preReleaseYear: Int!
+  releaseYear: Int!
 }
 
 type ReportApprovalListType {
