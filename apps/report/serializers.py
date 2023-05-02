@@ -66,12 +66,12 @@ def check_is_pfa_visible_in_gidd(report):
         errors.append('Report should have conflict or disaster crisis type.')
 
     if not report.filter_figure_categories:
-        errors.append('Report should have IDPs or New Displacement category.')
+        errors.append('Report should have IDPs or New Displacements category.')
     elif len(set(report.filter_figure_categories).intersection({
         Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
         Figure.FIGURE_CATEGORY_TYPES.IDPS,
     })) != 1:
-        errors.append('Report should have IDPs or New Displacement category.')
+        errors.append('Report should have IDPs or New Displacements category.')
     return errors
 
 

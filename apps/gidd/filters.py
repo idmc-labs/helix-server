@@ -1,4 +1,5 @@
 import django_filters
+from rest_framework import serializers
 from utils.filters import StringListFilter
 from .models import (
     Conflict,
@@ -11,17 +12,27 @@ from .models import (
 
 
 class ReleaseMetadataFilter(django_filters.FilterSet):
-    release_environment = django_filters.CharFilter(method='filter_release_environment', required=True)
+    release_environment = django_filters.CharFilter(method='filter_release_environment')
 
-    def filter_release_environment(self, qs, name, value):
+    def get_release_metadata(self):
         release_meta_data = ReleaseMetadata.objects.last()
         if not release_meta_data:
-            return qs.filter(year__lte=0)
-        elif value == ReleaseMetadata.ReleaseEnvironment.PRE_RELEASE.name:
+            raise serializers.ValidationError('Release metadata is not configured.')
+        return release_meta_data
+
+    def filter_release_environment(self, qs, name, value):
+        release_meta_data = self.get_release_metadata()
+        if value == ReleaseMetadata.ReleaseEnvironment.PRE_RELEASE.name:
             return qs.filter(year__lte=release_meta_data.pre_release_year)
-        elif value == ReleaseMetadata.ReleaseEnvironment.RELEASE.name:
+        return qs.filter(year__lte=release_meta_data.release_year)
+
+    @property
+    def qs(self):
+        qs = super().qs
+        if 'release_environment' not in self.data:
+            release_meta_data = self.get_release_metadata()
             return qs.filter(year__lte=release_meta_data.release_year)
-        return qs.filter(year__lte=0)
+        return qs
 
 
 class ConflictFilter(ReleaseMetadataFilter):
