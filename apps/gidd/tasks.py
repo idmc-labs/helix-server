@@ -236,7 +236,7 @@ def update_conflict_and_disaster_data():
                     hazard_sub_category_name=item['event__disaster_sub_category__name'],
                     hazard_type_name=item['event__disaster_type__name'],
                     hazard_sub_type_name=item['event__disaster_type__name'],
-                    glide_numbers=item['event__glide_numbers'],
+                    glide_numbers=item['event__glide_numbers'] or list(),
 
                     new_displacement=item['new_displacement'],
                     total_displacement=item['total_displacement'],
