@@ -495,6 +495,9 @@ class Query(graphene.ObjectType):
         event_id = kwargs['event_id']
         disaster_qs = Disaster.objects.filter(event_id=event_id)
 
+        if not disaster_qs.exists():
+            return None
+
         # NOTE:- There is always one object after group by event_name attrs
         # so first objects is taken directly from queryset instead of iterating
         event_data = disaster_qs.values(
