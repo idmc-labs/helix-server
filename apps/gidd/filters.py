@@ -75,7 +75,7 @@ class ConflictStatisticsFilter(ReleaseMetadataFilter):
 
 
 class DisasterStatisticsFilter(ReleaseMetadataFilter):
-    categories = StringListFilter(method='filter_categories')
+    hazard_sub_types = StringListFilter(method='filter_hazard_sub_types')
     countries = StringListFilter(method='filter_countries')
     start_year = django_filters.NumberFilter(method='filter_start_year')
     end_year = django_filters.NumberFilter(method='filter_end_year')
@@ -85,8 +85,8 @@ class DisasterStatisticsFilter(ReleaseMetadataFilter):
         model = Disaster
         fields = ()
 
-    def filter_categories(self, queryset, name, value):
-        return queryset.filter(hazard_type_name__in=value)
+    def filter_hazard_sub_types(self, queryset, name, value):
+        return queryset.filter(hazard_sub_type__in=value)
 
     def filter_countries(self, queryset, name, value):
         return queryset.filter(country__in=value)
