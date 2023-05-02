@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
+from django.contrib.postgres.fields import ArrayField
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 
@@ -79,6 +80,13 @@ class Disaster(models.Model):
     hazard_sub_category_name = models.CharField(max_length=256, blank=True)
     hazard_sub_type_name = models.CharField(max_length=256, blank=True)
     hazard_type_name = models.CharField(max_length=256, blank=True)
+    glide_numbers = ArrayField(
+        models.CharField(
+            verbose_name=_('Event Codes'), max_length=256, null=True, blank=True
+        ),
+        default=list,
+        null=True, blank=True
+    )
 
     class Meta:
         verbose_name = _('Disaster')
