@@ -586,6 +586,8 @@ class Query(graphene.ObjectType):
 
         hazard_sub_types_qs = disaster_qs.values(
             'hazard_sub_type_id', 'hazard_sub_type__name'
+        ).distinct(
+            'hazard_sub_type_id', 'hazard_sub_type__name'
         )
         return GiddEventType(
             event_name=event_data.get('event_name'),
