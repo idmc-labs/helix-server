@@ -556,7 +556,7 @@ class Query(graphene.ObjectType):
         if kwargs['release_environment'] == ReleaseMetadata.ReleaseEnvironment.PRE_RELEASE.name:
             return GiddYearType(year=gidd_meta_data.pre_release_year)
         if kwargs['release_environment'] == ReleaseMetadata.ReleaseEnvironment.RELEASE.name:
-            return GiddYearType(year=gidd_meta_data.production_year)
+            return GiddYearType(year=gidd_meta_data.release_year)
 
     @staticmethod
     def resolve_gidd_event(parent, info, **kwargs):

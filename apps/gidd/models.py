@@ -206,7 +206,7 @@ class ReleaseMetadata(models.Model):
     modified_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return str(self.production_year)
+        return str(self.release_year)
 
     class Meta:
         permissions = (
