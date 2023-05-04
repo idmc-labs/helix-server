@@ -1347,9 +1347,9 @@ class ExternalApiDump(models.Model):
         IDUS_ALL = 'idus-all', _('Idus all')
         IDUS_ALL_DISASTER = 'idus-all-disaster', _('Idus all disaster')
 
-        GIDD_COUNTRIES_DISASTER_EXPORT_REST = 'gidd-countries-disaster-export-rest', _('Countries disaster export REST')
         GIDD_CONFLICT_EXPORT_REST = 'gidd-conflict-export-rest', _('Conflict export REST')
         GIDD_DISASTER_EXPORT_REST = 'gidd-disaster-export-rest', _('Disaster export REST')
+        GIDD_DISPLACEMENT_EXPORT_REST = 'gidd-displacement-export-rest', _('Displacement export REST')
 
         GIDD_CONFLICT_GRAPHQL = 'gidd-conflict', _('GIDD conflict')
         GIDD_DISASTER_GRAPHQL = 'gidd-disaster', _('GIDD disaster')
