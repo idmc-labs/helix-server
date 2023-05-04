@@ -52,6 +52,11 @@ python manage.py graphql_schema --out schema.graphql
 ```bash
 python manage.py update_pre_2016_gidd_data.py old_conflict_data.csv old_disaster_data.csv
 ```
+### Populate IDPs SADD estimates table
+```bash
+python manage.py update_idps_sadd_estimates idps_sadd_estimates.csv
+```
+
 ### Setup S3 buckets
 
 This will create appropriate buckets with required policies based on the `.env`.
