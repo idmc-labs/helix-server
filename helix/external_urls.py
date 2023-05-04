@@ -9,12 +9,14 @@ from apps.gidd.views import (
     CountryViewSet,
     ConflictViewSet,
     DisasterViewSet,
+    DisplacementDataViewSet,
 )
 
 router = DefaultRouter()
 router.register("countries", CountryViewSet, "countries-view")
 router.register("conflicts", ConflictViewSet, "conflicts-view")
 router.register("disasters", DisasterViewSet, "diasters-view")
+router.register("displacements", DisplacementDataViewSet, "displacements-view")
 
 urlpatterns = [
     path('idus', IdusFlatCachedView.as_view()),

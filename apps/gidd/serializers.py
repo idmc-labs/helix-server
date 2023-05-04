@@ -1,6 +1,9 @@
 from rest_framework import serializers
 from apps.country.models import Country
-from .models import Conflict, Disaster, StatusLog, ReleaseMetadata
+from .models import (
+    Conflict, Disaster, StatusLog, ReleaseMetadata,
+    DisplacementData,
+)
 
 
 class CountrySerializer(serializers.ModelSerializer):
@@ -43,3 +46,9 @@ class ReleaseMetadataSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         validated_data['modified_by'] = user
         return ReleaseMetadata.objects.create(**validated_data)
+
+
+class DisplacementDataSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DisplacementData
+        fields = '__all__'
