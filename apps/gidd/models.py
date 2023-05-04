@@ -251,3 +251,33 @@ class DisplacementData(models.Model):
 
     def __str__(self):
         return self.iso3
+
+
+class IdpsSaddEstimate(models.Model):
+    iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
+    country_name = models.CharField(verbose_name=_('Country name'), max_length=256)
+    country = models.ForeignKey(
+        'country.Country', related_name='ipds_sadd_estimates', on_delete=models.PROTECT,
+        verbose_name=_('Country')
+    )
+    year = models.IntegerField()
+    sex = models.CharField(verbose_name=_('Country name'), max_length=256)
+    cause = enum.EnumField(Crisis.CRISIS_TYPE, verbose_name=_('Cause'))
+
+    # This can be null
+    zero_to_one = models.IntegerField(verbose_name=_('0-1'), null=True)
+    zero_to_four = models.IntegerField(verbose_name=_('0-4'), null=True)
+    zero_to_forteen = models.IntegerField(verbose_name=_('0-14'), null=True)
+    zero_to_sventeen = models.IntegerField(verbose_name=_('0-17'), null=True)
+    zero_to_twenty_four = models.IntegerField(verbose_name=_('0-24'), null=True)
+    five_to_elaven = models.IntegerField(verbose_name=_('5-11'), null=True)
+    five_to_fourteen = models.IntegerField(verbose_name=_('5-14'), null=True)
+    twelve_to_fourteen = models.IntegerField(verbose_name=_('12-14'), null=True)
+    twelve_to_sixteen = models.IntegerField(verbose_name=_('12-16'), null=True)
+    fifteen_to_seventeen = models.IntegerField(verbose_name=_('15-17'), null=True)
+    fifteen_to_twentyfour = models.IntegerField(verbose_name=_('15-24'), null=True)
+    twenty_five_to_sixty_four = models.IntegerField(verbose_name=_('25-64'), null=True)
+    sixty_five_plus = models.IntegerField(verbose_name=_('65+'), null=True)
+
+    def __str__(self):
+        return self.iso3
