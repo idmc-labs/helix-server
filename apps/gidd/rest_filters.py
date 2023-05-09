@@ -48,12 +48,13 @@ class RestDisasterFilterSet(ReleaseMetadataFilter):
 class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
     start_year = django_filters.NumberFilter(field_name='start_year', method='filter_start_year')
     end_year = django_filters.NumberFilter(field_name='end_year', method='filter_end_year')
-    is_conflict = django_filters.BooleanFilter(method='filter_is_conflict')
-    is_disaster = django_filters.BooleanFilter(method='filter_is_disaster')
+    cause = django_filters.CharFilter(method='filter_cause')
 
     class Meta:
         model = DisplacementData
-        fields = ()
+        fields = {
+            'iso3': ['in'],
+        }
 
     def filter_start_year(self, queryset, name, value):
         return queryset.filter(year__gte=value)
@@ -61,14 +62,15 @@ class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
     def filter_end_year(self, queryset, name, value):
         return queryset.filter(year__lte=value)
 
-    def filter_is_conflict(self, queryset, name, value):
-        return queryset.filter(
-            conflict_total_displacement__isnull=False,
-            conflict_new_displacement__isnull=False
-        )
-
-    def filter_is_disaster(self, queryset, name, value):
-        return queryset.filter(
-            disaster_total_displacement__isnull=False,
-            disaster_new_displacement__isnull=False
-        )
+    def filter_cause(self, queryset, name, value):
+        if value == 'conflict':
+            return queryset.filter(
+                conflict_total_displacement__isnull=False,
+                conflict_new_displacement__isnull=False
+            )
+        elif value == 'disaster':
+            return queryset.filter(
+                disaster_total_displacement__isnull=False,
+                disaster_new_displacement__isnull=False
+            )
+        return queryset
