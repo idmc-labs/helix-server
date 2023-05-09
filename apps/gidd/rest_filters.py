@@ -1,4 +1,5 @@
 import django_filters
+from django.db.models import Q
 from .filters import ReleaseMetadataFilter
 from .models import (
     Conflict,
@@ -65,12 +66,12 @@ class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
     def filter_cause(self, queryset, name, value):
         if value == 'conflict':
             return queryset.filter(
-                conflict_total_displacement__isnull=False,
-                conflict_new_displacement__isnull=False
+                Q(conflict_total_displacement__isnull=False) |
+                Q(conflict_new_displacement__isnull=False)
             )
         elif value == 'disaster':
             return queryset.filter(
-                disaster_total_displacement__isnull=False,
-                disaster_new_displacement__isnull=False
+                Q(disaster_total_displacement__isnull=False) |
+                Q(disaster_new_displacement__isnull=False)
             )
         return queryset
