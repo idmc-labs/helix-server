@@ -15,6 +15,7 @@ from .models import (
     Conflict,
     Disaster,
     DisplacementData,
+    IdpsSaddEstimate,
 )
 from apps.country.models import Country
 from apps.report.models import Report
@@ -390,6 +391,15 @@ def update_displacement_data():
         )
 
 
+def update_idps_sadd_estimates_country_names():
+    country_name_map = {
+        country['id']: country['idmc_short_name'] for country in Country.objects.values('id', 'idmc_short_name')
+    }
+    for obj in IdpsSaddEstimate.objects.all():
+        obj.country_name = country_name_map.get(obj.country_id)
+        obj.save()
+
+
 @celery_app.task
 def update_gidd_data(log_id):
     # Delete all the conflicts TODO: Find way to update records
@@ -407,6 +417,7 @@ def update_gidd_data(log_id):
             status=StatusLog.Status.SUCCESS,
             completed_at=timezone.now()
         )
+        update_idps_sadd_estimates_country_names()
         logger.info('GIDD data updated.')
     except Exception as e:
         StatusLog.objects.filter(id=log_id).update(
