@@ -178,9 +178,9 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
                 item.country_name,
                 item.year,
                 item.conflict_total_displacement,
-                item.conflict_total_displacement,
+                item.conflict_total_displacement_rounded,
                 item.conflict_new_displacement,
-                item.conflict_new_displacement,
+                item.conflict_new_displacement_rounded,
             ])
 
     def export_disasters(self, ws, qs):
@@ -203,9 +203,9 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
                 item.country_name,
                 item.year,
                 item.disaster_new_displacement,
-                item.disaster_new_displacement,
+                item.disaster_new_displacement_rounded,
                 item.disaster_total_displacement,
-                item.disaster_total_displacement,
+                item.disaster_total_displacement_rounded,
             ])
 
     def export_displacements(self, ws, qs):
@@ -232,13 +232,13 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
                 item.country_name,
                 item.year,
                 item.conflict_total_displacement,
-                item.conflict_total_displacement,
+                item.conflict_total_displacement_rounded,
                 item.conflict_new_displacement,
-                item.conflict_new_displacement,
+                item.conflict_new_displacement_rounded,
                 item.disaster_new_displacement,
-                item.disaster_new_displacement,
+                item.disaster_new_displacement_rounded,
                 item.disaster_total_displacement,
-                item.disaster_total_displacement,
+                item.disaster_total_displacement_rounded,
             ])
 
     @action(
