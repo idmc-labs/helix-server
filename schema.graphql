@@ -1719,6 +1719,7 @@ type GiddPublicFigureAnalysisType {
   iso3: String!
   year: Int!
   figures: Int
+  figuresRounded: Int
   description: String
   figureCause: CRISIS_TYPE
   figureCauseDisplay: EnumDescription
