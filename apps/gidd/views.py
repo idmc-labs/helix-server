@@ -25,7 +25,7 @@ from .rest_filters import (
     RestDisplacementDataFilterSet,
     IdpsSaddEstimateFilter,
 )
-from utils.common import round_and_remove_zero, track_gidd
+from utils.common import track_gidd
 from apps.entry.models import ExternalApiDump
 
 
@@ -80,7 +80,7 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
                     disaster.year,
                     disaster.event_name,
                     disaster.start_date,
-                    round_and_remove_zero(disaster.new_displacement),
+                    disaster.new_displacement_rounded,
                     disaster.hazard_category_name,
                     disaster.hazard_type_name,
                     disaster.hazard_sub_type_name,
@@ -177,10 +177,10 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
                 item.iso3,
                 item.country_name,
                 item.year,
-                item.conflict_total_displacement,
                 item.conflict_total_displacement_rounded,
-                item.conflict_new_displacement,
+                item.conflict_total_displacement,
                 item.conflict_new_displacement_rounded,
+                item.conflict_new_displacement,
             ])
 
     def export_disasters(self, ws, qs):
@@ -202,10 +202,10 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
                 item.iso3,
                 item.country_name,
                 item.year,
-                item.disaster_new_displacement,
                 item.disaster_new_displacement_rounded,
-                item.disaster_total_displacement,
+                item.disaster_new_displacement,
                 item.disaster_total_displacement_rounded,
+                item.disaster_total_displacement,
             ])
 
     def export_displacements(self, ws, qs):
@@ -231,14 +231,14 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
                 item.iso3,
                 item.country_name,
                 item.year,
-                item.conflict_total_displacement,
                 item.conflict_total_displacement_rounded,
-                item.conflict_new_displacement,
+                item.conflict_total_displacement,
                 item.conflict_new_displacement_rounded,
-                item.disaster_new_displacement,
+                item.conflict_new_displacement,
                 item.disaster_new_displacement_rounded,
-                item.disaster_total_displacement,
+                item.disaster_new_displacement,
                 item.disaster_total_displacement_rounded,
+                item.disaster_total_displacement,
             ])
 
     @action(
