@@ -119,9 +119,6 @@ def update_gidd_legacy_data():
                 new_displacement_rounded=round_and_remove_zero(
                     item['new_displacement']
                 ),
-                total_displacement_rounded=round_and_remove_zero(
-                    item['total_displacement']
-                ),
                 iso3=item['iso3'],
                 country_id=iso3_to_country_id_map[item['iso3']],
                 country_name=iso3_to_country_name_map[item['iso3']],
@@ -328,6 +325,9 @@ def update_public_figure_analysis():
                 figure_category=figure_category,
                 year=report.filter_figure_end_before.year,
                 figures=_get_figures(figure_category, figure_cause, report_country_aggregation),
+                figures_rounded=round_and_remove_zero(
+                    _get_figures(figure_category, figure_cause, report_country_aggregation)
+                ),
                 description=report.public_figure_analysis,
                 report=report
             ),
@@ -392,8 +392,6 @@ def update_displacement_data():
             'conflict_new_displacement',
             'disaster_new_displacement',
             'disaster_total_displacement',
-            'total_internal_displacement',
-            'total_new_displacement',
             'year',
         )
 
@@ -408,9 +406,6 @@ def update_displacement_data():
                     conflict_new_displacement=item['conflict_new_displacement'],
                     disaster_new_displacement=item['disaster_new_displacement'],
                     disaster_total_displacement=item['disaster_total_displacement'],
-                    total_internal_displacement=item['total_internal_displacement'],
-                    total_new_displacement=item['total_new_displacement'],
-
                     conflict_total_displacement_rounded=round_and_remove_zero(
                         item['conflict_total_displacement']
                     ),
