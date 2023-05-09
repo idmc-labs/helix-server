@@ -378,8 +378,6 @@ def update_displacement_data():
                     disaster_new_displacement=Sum('new_displacement')
                 ).values('disaster_new_displacement')[:1]
             ),
-            total_internal_displacement=F('conflict_total_displacement') + F('disaster_total_displacement'),
-            total_new_displacement=F('conflict_new_displacement') + F('disaster_new_displacement'),
             year=Value(year, output_field=IntegerField()),
         ).filter(
             Q(conflict_new_displacement__isnull=False) |
@@ -425,13 +423,6 @@ def update_displacement_data():
                     disaster_total_displacement_rounded=round_and_remove_zero(
                         item['disaster_total_displacement']
                     ),
-                    total_internal_displacement_rounded=round_and_remove_zero(
-                        item['total_internal_displacement']
-                    ),
-                    total_new_displacement_rounded=round_and_remove_zero(
-                        item['total_new_displacement']
-                    ),
-
                     year=item['year'],
                 ) for item in displacement_data
             ]

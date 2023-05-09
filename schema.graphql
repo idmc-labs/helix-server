@@ -1667,15 +1667,11 @@ type GiddDisplacementDataType {
   conflictNewDisplacement: Int
   disasterTotalDisplacement: Int
   disasterNewDisplacement: Int
-  totalInternalDisplacement: Int
-  totalNewDisplacement: Int
   year: Int!
   conflictTotalDisplacementRounded: Int
   conflictNewDisplacementRounded: Int
   disasterTotalDisplacementRounded: Int
   disasterNewDisplacementRounded: Int
-  totalInternalDisplacementRounded: Int
-  totalNewDisplacementRounded: Int
 }
 
 type GiddEventAffectedCountryType {
