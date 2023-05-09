@@ -44,11 +44,13 @@ class GiddDisasterCountryType(graphene.ObjectType):
 class GiddTimeSeriesStatisticsByYearType(graphene.ObjectType):
     year = graphene.Int(required=True)
     total = graphene.Int()
+    total_rounded = graphene.Int()
 
 
 class GiddTimeSeriesStatisticsByCountryType(graphene.ObjectType):
     year = graphene.Int(required=True)
     total = graphene.Int()
+    total_rounded = graphene.Int()
     country = graphene.Field(GiddDisasterCountryType, required=True)
 
 
@@ -56,11 +58,14 @@ class DisplacementByHazardType(graphene.ObjectType):
     id = graphene.ID(required=True)
     label = graphene.String(required=True)
     new_displacements = graphene.Int()
+    new_displacements_rounded = graphene.Int()
 
 
 class GiddConflictStatisticsType(graphene.ObjectType):
     new_displacements = graphene.Int()
+    new_displacements_rounded = graphene.Int()
     total_displacements = graphene.Int()
+    total_displacements_rounded = graphene.Int()
     total_countries = graphene.Int()
     new_displacement_timeseries_by_year = graphene.List(
         graphene.NonNull(GiddTimeSeriesStatisticsByYearType)
@@ -78,11 +83,13 @@ class GiddConflictStatisticsType(graphene.ObjectType):
 
 class GiddDisasterStatisticsType(graphene.ObjectType):
     new_displacements = graphene.Int()
+    new_displacements_rounded = graphene.Int()
     total_events = graphene.Int()
     displacements_by_hazard_type = graphene.List(graphene.NonNull(DisplacementByHazardType))
 
     total_countries = graphene.Int()
     total_displacements = graphene.Int()
+    total_displacements_rounded = graphene.Int()
 
     new_displacement_timeseries_by_year = graphene.List(
         graphene.NonNull(GiddTimeSeriesStatisticsByYearType)
@@ -285,11 +292,13 @@ class GiddEventAffectedCountryType(graphene.ObjectType):
     iso3 = graphene.String(required=True)
     country_name = graphene.String(required=True)
     new_displacement = graphene.Int()
+    new_displacement_rounded = graphene.Int()
 
 
 class GiddEventType(graphene.ObjectType):
     event_name = graphene.String(required=True)
     new_displacement = graphene.Int()
+    new_displacement_rounded = graphene.Int()
     start_date = graphene.Date(required=True)
     end_date = graphene.Date(required=True)
     glide_numbers = graphene.List(
@@ -406,31 +415,39 @@ class Query(graphene.ObjectType):
         ).order_by('year').values('year', 'total', 'country_id', 'country_name', 'iso3')
 
         return GiddConflictStatisticsType(
-            new_displacements=round_and_remove_zero(
+            new_displacements_rounded=round_and_remove_zero(
                 conflict_qs.aggregate(
                     total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
                 )['total']
             ),
+            new_displacements=conflict_qs.aggregate(
+                total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
+            )['total'],
 
-            total_displacements=round_and_remove_zero(
+            total_displacements_rounded=round_and_remove_zero(
                 conflict_qs.aggregate(
                     total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
                 )['total']
             ),
+            total_displacements=conflict_qs.aggregate(
+                total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
+            )['total'],
             total_countries=conflict_qs.filter(
                 new_displacement__gt=0
             ).distinct('iso3').count(),
             new_displacement_timeseries_by_year=[
                 GiddTimeSeriesStatisticsByYearType(
                     year=item['year'],
-                    total=round_and_remove_zero(item['total']),
+                    total=item['total'],
+                    total_rounded=round_and_remove_zero(item['total']),
                 ) for item in new_displacement_timeseries_by_year_qs
             ],
 
             new_displacement_timeseries_by_country=[
                 GiddTimeSeriesStatisticsByCountryType(
                     year=item['year'],
-                    total=round_and_remove_zero(item['total']),
+                    total_rounded=round_and_remove_zero(item['total']),
+                    total=item['total'],
                     country=GiddDisasterCountryType(
                         id=item['country_id'],
                         iso3=item['iso3'],
@@ -441,14 +458,16 @@ class Query(graphene.ObjectType):
             total_displacement_timeseries_by_year=[
                 GiddTimeSeriesStatisticsByYearType(
                     year=item['year'],
-                    total=round_and_remove_zero(item['total']),
+                    total=item['total'],
+                    total_rounded=round_and_remove_zero(item['total']),
                 ) for item in total_displacement_timeseries_by_year_qs
             ],
 
             total_displacement_timeseries_by_country=[
                 GiddTimeSeriesStatisticsByCountryType(
                     year=item['year'],
-                    total=round_and_remove_zero(item['total']),
+                    total_rounded=round_and_remove_zero(item['total']),
+                    total=item['total'],
                     country=GiddDisasterCountryType(
                         id=item['country_id'],
                         iso3=item['iso3'],
@@ -488,18 +507,22 @@ class Query(graphene.ObjectType):
         ).filter(total__gte=1)
 
         return GiddDisasterStatisticsType(
-            new_displacements=round_and_remove_zero(
+            new_displacements_rounded=round_and_remove_zero(
                 disaster_qs.aggregate(
                     total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
                 )['total']
             ),
-
-            total_displacements=round_and_remove_zero(
+            new_displacements=disaster_qs.aggregate(
+                total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
+            )['total'],
+            total_displacements_rounded=round_and_remove_zero(
                 disaster_qs.aggregate(
                     total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
                 )['total']
             ),
-
+            total_displacements=disaster_qs.aggregate(
+                total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
+            )['total'],
             total_events=disaster_qs.filter(new_displacement__gt=0).values('event__name').annotate(
                 events=models.Count('id')
             ).aggregate(total_events=Coalesce(models.Sum('events', output_field=models.IntegerField()), 0))['total_events'],
@@ -509,14 +532,16 @@ class Query(graphene.ObjectType):
             new_displacement_timeseries_by_year=[
                 GiddTimeSeriesStatisticsByYearType(
                     year=item['year'],
-                    total=round_and_remove_zero(item['total']),
+                    total_rounded=round_and_remove_zero(item['total']),
+                    total=item['total'],
                 ) for item in new_displacement_timeseries_by_year_qs
             ],
 
             new_displacement_timeseries_by_country=[
                 GiddTimeSeriesStatisticsByCountryType(
                     year=item['year'],
-                    total=round_and_remove_zero(item['total']),
+                    total_rounded=round_and_remove_zero(item['total']),
+                    total=item['total'],
                     country=GiddDisasterCountryType(
                         id=item['country_id'],
                         iso3=item['iso3'],
@@ -527,14 +552,16 @@ class Query(graphene.ObjectType):
             total_displacement_timeseries_by_year=[
                 GiddTimeSeriesStatisticsByYearType(
                     year=item['year'],
-                    total=round_and_remove_zero(item['total']),
+                    total_rounded=round_and_remove_zero(item['total']),
+                    total=item['total'],
                 ) for item in total_displacement_timeseries_by_year_qs
             ],
 
             total_displacement_timeseries_by_country=[
                 GiddTimeSeriesStatisticsByCountryType(
                     year=item['year'],
-                    total=round_and_remove_zero(item['total']),
+                    total=item['total'],
+                    total_rounded=round_and_remove_zero(item['total']),
                     country=GiddDisasterCountryType(
                         id=item['country_id'],
                         iso3=item['iso3'],
@@ -547,7 +574,8 @@ class Query(graphene.ObjectType):
                 DisplacementByHazardType(
                     id=item['hazard_type__id'],
                     label=item['label'],
-                    new_displacements=round_and_remove_zero(item['total']),
+                    new_displacements=item['total'],
+                    new_displacements_rounded=round_and_remove_zero(item['total']),
                 ) for item in categories_qs
             ]
         )
@@ -607,7 +635,8 @@ class Query(graphene.ObjectType):
         )
         return GiddEventType(
             event_name=event_data.get('event_name'),
-            new_displacement=round_and_remove_zero(event_data.get('total_new_displacement')),
+            new_displacement_rounded=round_and_remove_zero(event_data.get('total_new_displacement')),
+            new_displacement=event_data.get('total_new_displacement'),
             start_date=event_data.get('start_date'),
             end_date=event_data.get('end_date'),
             glide_numbers=event_data.get('glide_numbers'),
@@ -615,7 +644,8 @@ class Query(graphene.ObjectType):
                 GiddEventAffectedCountryType(
                     iso3=country_data['iso3'],
                     country_name=country_data['country_name'],
-                    new_displacement=round_and_remove_zero(country_data['total_new_displacement']),
+                    new_displacement_rounded=round_and_remove_zero(country_data['total_new_displacement']),
+                    new_displacement=country_data['total_new_displacement'],
                 ) for country_data in affected_countries_qs
             ],
             hazard_types=[
