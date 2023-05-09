@@ -262,14 +262,10 @@ class GiddDisplacementDataType(DjangoObjectType):
             'conflict_new_displacement',
             'disaster_new_displacement',
             'disaster_total_displacement',
-            'total_internal_displacement',
-            'total_new_displacement',
             'conflict_total_displacement_rounded',
             'conflict_new_displacement_rounded',
             'disaster_new_displacement_rounded',
             'disaster_total_displacement_rounded',
-            'total_internal_displacement_rounded',
-            'total_new_displacement_rounded',
         )
 
 

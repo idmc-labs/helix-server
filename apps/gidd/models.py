@@ -269,9 +269,6 @@ class DisplacementData(models.Model):
     disaster_total_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_('Disaster total nds'))
     disaster_new_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_('Disaster total nd'))
 
-    total_internal_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_('Total internal displacement'))
-    total_new_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_('Total new displacement'))
-
     def __str__(self):
         return self.iso3
 
