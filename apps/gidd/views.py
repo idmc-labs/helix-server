@@ -23,6 +23,7 @@ from .rest_filters import (
     RestConflictFilterSet,
     RestDisasterFilterSet,
     RestDisplacementDataFilterSet,
+    IdpsSaddEstimateFilter,
 )
 from utils.common import round_and_remove_zero, track_gidd
 from apps.entry.models import ExternalApiDump
@@ -207,26 +208,6 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
                 item.disaster_total_displacement,
             ])
 
-    def get_idps_sadd_filters(self, request):
-
-        idps_sadd_filters = {}
-
-        if request.GET.get('start_year'):
-            idps_sadd_filters.update({
-                'year__gte': request.GET.get('start_year'),
-            })
-
-        if request.GET.get('end_year'):
-            idps_sadd_filters.update({
-                'year__lte': request.GET.get('end_year'),
-            })
-
-        if request.GET.get('iso3__in'):
-            idps_sadd_filters.update({
-                'iso3__in': request.GET.get('iso3__in')
-            })
-        return idps_sadd_filters
-
     def export_displacements(self, ws, qs):
         track_gidd(
             self.request.GET.get('client_id'),
@@ -309,9 +290,10 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
             '25-64',
             '65+',
         ])
-        for item in IdpsSaddEstimate.objects.filter(
-            **self.get_idps_sadd_filters(request),
-        ).all():
+        idps_sadd_qs = IdpsSaddEstimateFilter(
+            data=self.request.query_params, queryset=IdpsSaddEstimate.objects.all()
+        ).qs
+        for item in idps_sadd_qs:
             ws2.append([
                 item.iso3,
                 item.country_name,
