@@ -89,7 +89,7 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
         ws2 = wb.create_sheet('README')
         readme_text = [
             ['Title', 'Global Internal Displacement Database (GIDD)'],
-            ['File name', 'IDMC_GIDD_Disasters_Internal_Displacement_Data_2022'],
+            ['File name', 'IDMC_GIDD_Disasters_Internal_Displacement_Data'],
             ['Creator', 'Internal Displacement monitoring Centre (IDMC)'],
             ['Date extracted', datetime.now().strftime("%d/%m/%Y")],
             ['Last update', StatusLog.last_release_date()],
@@ -318,7 +318,7 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
         ws3 = wb.create_sheet('README')
         readme_text = [
             ['Title: Global Internal Displacement Database (GIDD)'],
-            ['File name: IDMC_Internal_Displacement_Conflict-Violence_Disasters_2022'],
+            ['File name: IDMC_Internal_Displacement_Conflict-Violence_Disasters'],
             ['Creator: Internal Displacement monitoring Centre (IDMC)'],
 
             ['Date extracted', datetime.now().strftime("%d/%m/%Y")],
