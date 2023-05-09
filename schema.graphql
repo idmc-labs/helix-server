@@ -966,6 +966,7 @@ type DisplacementByHazardType {
   id: ID!
   label: String!
   newDisplacements: Int
+  newDisplacementsRounded: Int
 }
 
 type DjangoDebug {
@@ -1580,7 +1581,9 @@ type GiddConflictListType {
 
 type GiddConflictStatisticsType {
   newDisplacements: Int
+  newDisplacementsRounded: Int
   totalDisplacements: Int
+  totalDisplacementsRounded: Int
   totalCountries: Int
   newDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
   newDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
@@ -1615,10 +1618,12 @@ type GiddDisasterListType {
 
 type GiddDisasterStatisticsType {
   newDisplacements: Int
+  newDisplacementsRounded: Int
   totalEvents: Int
   displacementsByHazardType: [DisplacementByHazardType!]
   totalCountries: Int
   totalDisplacements: Int
+  totalDisplacementsRounded: Int
   newDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
   newDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
   totalDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
@@ -1678,11 +1683,13 @@ type GiddEventAffectedCountryType {
   iso3: String!
   countryName: String!
   newDisplacement: Int
+  newDisplacementRounded: Int
 }
 
 type GiddEventType {
   eventName: String!
   newDisplacement: Int
+  newDisplacementRounded: Int
   startDate: Date!
   endDate: Date!
   glideNumbers: [String!]!
@@ -1765,12 +1772,14 @@ enum GiddStatusLogTypeEnum {
 type GiddTimeSeriesStatisticsByCountryType {
   year: Int!
   total: Int
+  totalRounded: Int
   country: GiddDisasterCountryType!
 }
 
 type GiddTimeSeriesStatisticsByYearType {
   year: Int!
   total: Int
+  totalRounded: Int
 }
 
 type GiddUpdateData {
