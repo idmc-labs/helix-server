@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.db.models import (
     Sum, Case, When, IntegerField, Value, F, Subquery, OuterRef, Q
 )
+from utils.common import round_and_remove_zero
 from apps.entry.models import Figure
 from apps.event.models import Crisis
 from .models import (
@@ -72,6 +73,12 @@ def update_gidd_legacy_data():
             Conflict(
                 total_displacement=item['total_displacement'],
                 new_displacement=item['new_displacement'],
+                total_displacement_rounded=round_and_remove_zero(
+                    item['total_displacement']
+                ),
+                new_displacement_rounded=round_and_remove_zero(
+                    item['new_displacement']
+                ),
                 year=item['year'],
                 iso3=item['iso3'],
                 country_id=iso3_to_country_id_map[item['iso3']],
@@ -108,6 +115,13 @@ def update_gidd_legacy_data():
                 hazard_sub_type_name=item['hazard_sub_type__name'],
 
                 new_displacement=item['new_displacement'],
+
+                new_displacement_rounded=round_and_remove_zero(
+                    item['new_displacement']
+                ),
+                total_displacement_rounded=round_and_remove_zero(
+                    item['total_displacement']
+                ),
                 iso3=item['iso3'],
                 country_id=iso3_to_country_id_map[item['iso3']],
                 country_name=iso3_to_country_name_map[item['iso3']],
@@ -160,6 +174,12 @@ def update_conflict_and_disaster_data():
                     country_id=figure['country'],
                     total_displacement=figure['total_displacement'],
                     new_displacement=figure['new_displacement'],
+                    total_displacement_rounded=round_and_remove_zero(
+                        figure['total_displacement']
+                    ),
+                    new_displacement_rounded=round_and_remove_zero(
+                        figure['new_displacement']
+                    ),
                     year=figure['year'],
                     iso3=figure['country__iso3'],
                     country_name=figure['country__idmc_short_name'],
@@ -240,6 +260,12 @@ def update_conflict_and_disaster_data():
 
                     new_displacement=item['new_displacement'],
                     total_displacement=item['total_displacement'],
+                    new_displacement_rounded=round_and_remove_zero(
+                        item['new_displacement']
+                    ),
+                    total_displacement_rounded=round_and_remove_zero(
+                        item['total_displacement']
+                    ),
                     iso3=item['country__iso3'],
                     country_id=item['country'],
                     country_name=item['country__idmc_short_name'],
@@ -379,12 +405,33 @@ def update_displacement_data():
                     iso3=item['iso3'],
                     country_name=item['idmc_short_name'],
                     country_id=item['id'],
+
                     conflict_total_displacement=item['conflict_total_displacement'],
                     conflict_new_displacement=item['conflict_new_displacement'],
                     disaster_new_displacement=item['disaster_new_displacement'],
                     disaster_total_displacement=item['disaster_total_displacement'],
                     total_internal_displacement=item['total_internal_displacement'],
                     total_new_displacement=item['total_new_displacement'],
+
+                    conflict_total_displacement_rounded=round_and_remove_zero(
+                        item['conflict_total_displacement']
+                    ),
+                    conflict_new_displacement_rounded=round_and_remove_zero(
+                        item['conflict_new_displacement']
+                    ),
+                    disaster_new_displacement_rounded=round_and_remove_zero(
+                        item['disaster_new_displacement']
+                    ),
+                    disaster_total_displacement_rounded=round_and_remove_zero(
+                        item['disaster_total_displacement']
+                    ),
+                    total_internal_displacement_rounded=round_and_remove_zero(
+                        item['total_internal_displacement']
+                    ),
+                    total_new_displacement_rounded=round_and_remove_zero(
+                        item['total_new_displacement']
+                    ),
+
                     year=item['year'],
                 ) for item in displacement_data
             ]
