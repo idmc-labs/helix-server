@@ -125,6 +125,10 @@ class StatusLog(models.Model):
     def __str__(self):
         return str(self.triggered_at)
 
+    @classmethod
+    def last_release_date(cls):
+        return StatusLog.objects.last().completed_at.strftime("%d/%m/%Y")
+
 
 class ConflictLegacy(models.Model):
     total_displacement = models.BigIntegerField(blank=True, null=True)
