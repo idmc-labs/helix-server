@@ -1,3 +1,4 @@
+from datetime import datetime
 from rest_framework import viewsets
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
@@ -7,10 +8,10 @@ from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
 
-from utils.common import strtobool
 from apps.country.models import Country
 from .models import (
-    Conflict, Disaster, DisplacementData, IdpsSaddEstimate
+    Conflict, Disaster, DisplacementData, IdpsSaddEstimate,
+    StatusLog,
 )
 from .serializers import (
     CountrySerializer,
@@ -89,8 +90,8 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
             ['Title', 'Global Internal Displacement Database (GIDD)'],
             ['File name', 'IDMC_GIDD_disasters_internal_displacement_data_2022'],
             ['Creator', 'Internal Displacement monitoring Centre (IDMC)'],
-            ['Date extracted', 'XX/XX/XXXX'],
-            ['Last update', '11/05/2023'],
+            ['Date extracted', datetime.now().strftime("%d/%m/%Y")],
+            ['Last update', StatusLog.last_release_date],
             [],
             [
                 'Description',
@@ -159,7 +160,7 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
     def export_conflicts(self, ws, qs):
         track_gidd(
             self.request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_CONFLICT_EXPORT_REST
+            ExternalApiDump.ExternalApiType.GIDD_DISASTER_EXPORT_REST
         )
         ws.append([
             'ISO3',
@@ -184,7 +185,7 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
     def export_disasters(self, ws, qs):
         track_gidd(
             self.request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_DISASTER_EXPORT_REST
+            ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_EXPORT_REST
         )
         ws.append([
             'ISO3',
@@ -259,9 +260,9 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
         ws = wb.active
         # Tab 1
         ws.title = "1_Displacement data"
-        if strtobool(request.GET.get('is_conflict')) is True:
+        if request.GET.get('cause') == 'conflict':
             self.export_conflicts(ws, qs)
-        elif strtobool(request.GET.get('is_disaster')) is True:
+        elif request.GET.get('cause') == 'disaster':
             self.export_disasters(ws, qs)
         else:
             self.export_displacements(ws, qs)
@@ -314,8 +315,9 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
             ['Title: Global Internal Displacement Database (GIDD)'],
             ['File name: IDMC_Internal_Displacement_Conflict-Violence_Disasters_2023'],
             ['Creator: Internal Displacement monitoring Centre (IDMC)'],
-            ['Date extracted: XX/XX/XXXX'],
-            ['Last update: 11/05/2023'],
+
+            ['Date extracted', datetime.now().strftime("%d/%m/%Y")],
+            ['Last update', StatusLog.last_release_date()],
             [''],
             [
                 'Description: The data includes figures on internal displacement '
