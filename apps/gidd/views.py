@@ -88,10 +88,10 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
         ws2 = wb.create_sheet('README')
         readme_text = [
             ['Title', 'Global Internal Displacement Database (GIDD)'],
-            ['File name', 'IDMC_GIDD_disasters_internal_displacement_data_2022'],
+            ['File name', 'IDMC_GIDD_Disasters_Internal_Displacement_Data_2022'],
             ['Creator', 'Internal Displacement monitoring Centre (IDMC)'],
             ['Date extracted', datetime.now().strftime("%d/%m/%Y")],
-            ['Last update', StatusLog.last_release_date],
+            ['Last update', StatusLog.last_release_date()],
             [],
             [
                 'Description',
@@ -147,7 +147,7 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
         for item in table:
             ws2.append(item)
         response = HttpResponse(content=save_virtual_workbook(wb))
-        filename = 'IDMC_GIDD_disasters_internal_displacement_data.xlsx'
+        filename = 'IDMC_GIDD_Disasters_Internal_Displacement_Data.xlsx'
         response['Content-Disposition'] = f'attachment; filename={filename}'
         return response
 
@@ -243,7 +243,7 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
     @action(
         detail=False,
         methods=["get"],
-        url_path="displacements-export",
+        url_path="displacement-export",
         permission_classes=[AllowAny],
     )
     def export(self, request):
@@ -313,7 +313,7 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
         ws3 = wb.create_sheet('README')
         readme_text = [
             ['Title: Global Internal Displacement Database (GIDD)'],
-            ['File name: IDMC_Internal_Displacement_Conflict-Violence_Disasters_2023'],
+            ['File name: IDMC_Internal_Displacement_Conflict-Violence_Disasters_2022'],
             ['Creator: Internal Displacement monitoring Centre (IDMC)'],
 
             ['Date extracted', datetime.now().strftime("%d/%m/%Y")],

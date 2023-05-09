@@ -25,7 +25,7 @@ class Command(BaseCommand):
                 return Crisis.CRISIS_TYPE.DISASTER.value
 
         def format_number(number):
-            return number.replace(',', '').replace('-', '').strip() or None
+            return number.strip() or None
 
         csv_file = kwargs['csv_file']
 
@@ -47,7 +47,7 @@ class Command(BaseCommand):
                         iso3=item['ISO3'],
                         country_name=iso3_to_country_name_map.get(item['ISO3']),
                         country_id=iso3_to_country_id_map.get(item['ISO3']),
-                        year=datetime.datetime.strptime(item['Year'], "%d/%m/%Y").date().year,
+                        year=datetime.datetime.strptime(item['Date'], "%d/%m/%Y").date().year,
                         sex=item['Sex'],
                         cause=_format_cause(item['Cause']),
                         zero_to_one=format_number(item['0-1']),
