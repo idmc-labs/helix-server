@@ -105,6 +105,14 @@ class GiddDisasterStatisticsType(graphene.ObjectType):
     )
 
 
+class GiddCombinedStatisticsType(graphene.ObjectType):
+    total_internal_displacements = graphene.Int()
+    total_new_displacements = graphene.Int()
+    total_internal_displacements_rounded = graphene.Int()
+    total_new_displacements_rounded = graphene.Int()
+    total_countries = graphene.Int()
+
+
 class GiddConflictType(DjangoObjectType):
     country_id = graphene.ID(required=True)
 
@@ -372,6 +380,13 @@ class Query(graphene.ObjectType):
             ReleaseMetadataFilter, GiddEventType
         ),
 
+    )
+    gidd_combined_statistics = graphene.Field(
+        GiddCombinedStatisticsType,
+        **get_filtering_args_from_filterset(
+            DisasterStatisticsFilter, GiddCombinedStatisticsType
+        ),
+        required=True,
     )
 
     @staticmethod
@@ -654,4 +669,49 @@ class Query(graphene.ObjectType):
                     name=hazard_type['hazard_type__name'],
                 ) for hazard_type in hazard_types_qs
             ],
+        )
+
+    @staticmethod
+    def resolve_gidd_combined_statistics(parent, info, **kwargs):
+        disaster_qs = DisasterStatisticsFilter(data=kwargs).qs
+        disaster_data = disaster_qs.values('country').order_by().annotate(
+            total_idps=models.Sum('total_displacement'),
+            total_nds=models.Sum('new_displacement')
+        )
+        if kwargs.get('hazard_type'):
+            # Conflict doesn't has hazard_type
+            kwargs = kwargs.pop('hazard_type')
+        conflict_qs = ConflictStatisticsFilter(data=kwargs).qs
+
+        conflict_data = conflict_qs.values('country').order_by().annotate(
+            total_idps=models.Sum('total_displacement'),
+            total_nds=models.Sum('new_displacement')
+        )
+        total_internal_displacements = sum(
+            [
+                item['total_idps'] if item['total_idps'] else 0 for item in conflict_data
+            ] +
+            [item['total_idps'] if item['total_idps'] else 0 for item in disaster_data]
+        )
+        total_new_displacements = sum(
+            [item['total_nds'] if item['total_nds'] else 0 for item in conflict_data] +
+            [item['total_nds'] if item['total_nds'] else 0 for item in disaster_data]
+        )
+        distinct_countries_count = len(
+            set(
+                [item['country'] for item in conflict_data] +
+                [item['country'] for item in disaster_data]
+            )
+        )
+
+        return GiddCombinedStatisticsType(
+            total_internal_displacements=total_internal_displacements,
+            total_new_displacements=total_new_displacements,
+            total_internal_displacements_rounded=round_and_remove_zero(
+                total_internal_displacements
+            ),
+            total_new_displacements_rounded=round_and_remove_zero(
+                total_new_displacements
+            ),
+            total_countries=distinct_countries_count,
         )
