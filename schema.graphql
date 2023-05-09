@@ -1573,11 +1573,12 @@ type GeographicalGroupType {
 }
 
 type GiddCombinedStatisticsType {
-  totalInternalDisplacements: Int
-  totalNewDisplacements: Int
-  totalInternalDisplacementsRounded: Int
-  totalNewDisplacementsRounded: Int
-  totalCountries: Int
+  internalDisplacements: Int
+  totalDisplacements: Int
+  internalDisplacementsRounded: Int
+  totalDisplacementsRounded: Int
+  internalDisplacementCountries: Int
+  totalDisplacementCountries: Int
 }
 
 type GiddConflictListType {
@@ -1592,7 +1593,8 @@ type GiddConflictStatisticsType {
   newDisplacementsRounded: Int
   totalDisplacements: Int
   totalDisplacementsRounded: Int
-  totalCountries: Int
+  totalDisplacementCountries: Int
+  internalDisplacementCountries: Int
   newDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
   newDisplacementTimeseriesByCountry: [GiddTimeSeriesStatisticsByCountryType!]
   totalDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
@@ -1629,7 +1631,8 @@ type GiddDisasterStatisticsType {
   newDisplacementsRounded: Int
   totalEvents: Int
   displacementsByHazardType: [DisplacementByHazardType!]
-  totalCountries: Int
+  totalDisplacementCountries: Int
+  internalDisplacementCountries: Int
   totalDisplacements: Int
   totalDisplacementsRounded: Int
   newDisplacementTimeseriesByYear: [GiddTimeSeriesStatisticsByYearType!]
