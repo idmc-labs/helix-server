@@ -50,7 +50,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='displacementdata',
             name='total_new_displacement',
-            field=models.BigIntegerField(null=True, verbose_name='Total new displacement'),
+            field=models.BigIntegerField(null=True, verbose_name='Total internal displacement'),
         ),
         migrations.DeleteModel(
             name='DisasterByHazardSubType',

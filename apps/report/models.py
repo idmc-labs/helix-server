@@ -354,7 +354,7 @@ class Report(MetaInformationArchiveAbstractModel,
         ):
             return 'The numbers do no match'
         if not bool(set([item.value for item in self.filter_figure_categories]) & set(figure_categories_to_check)):
-            return "The figure category is not 'new displacement' or 'idps'"
+            return "The figure category is not 'internal displacement' or 'idps'"
         return ''
 
     @cached_property

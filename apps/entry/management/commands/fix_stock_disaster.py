@@ -1,7 +1,9 @@
 import csv
 import json
 from django.core.management.base import BaseCommand
+from django.db.models import F
 from apps.entry.models import Figure
+from datetime import date
 
 
 class Command(BaseCommand):
@@ -29,7 +31,6 @@ class Command(BaseCommand):
                             figures_to_clone_as_stock.append(figure['id'])
                         elif figure["category"] == 0 and figure["role"] == 1:
                             figures_to_convert_to_recommended.append(figure["id"])
-
                     elif status == 'Two figures returned and one figure is stock and the other is ND':
                         figure = figures[0] if figures[0]["category"] == 0 else figures[1]
                         if figure["role"] == 1:
@@ -40,7 +41,13 @@ class Command(BaseCommand):
                 end_date__isnull=True,
                 start_date__isnull=False,
             )
-            figures_to_convert_to_recommended_qs.update(role=Figure.ROLE.TRIANGULATION)
+            figures_to_convert_to_recommended_qs.update(role=Figure.ROLE.RECOMMENDED)
+
+            # Make a list of figures that were converted to recommended
+            print(
+                f'Updated {figures_to_convert_to_recommended_qs.count()} figures as recommended',
+                figures_to_convert_to_recommended_qs.values('id')
+            )
 
             # Clone figures_to_clone_as_stock and update end_date as last day of year of start date
             figures_cloned_list = []
@@ -52,14 +59,17 @@ class Command(BaseCommand):
                 year = int(figure.start_date.year)
                 end_date = f'{year}-12-31'
                 figure.end_date = end_date
+                figure.role = Figure.ROLE.RECOMMENDED
                 figure.save()
+
+                # TODO: Also clone disaggregatedage and osmname relations
+                # figure.geo_locations.__dict__;
+                # figure.disaggregation_age.__dict__;
+
                 figures_cloned_list.append(figure.id)
 
-            # Make a list of figures that were converted to recommended
-            print(
-                f'Updated {figures_to_convert_to_recommended_qs.count()} figures as triangulation',
-                figures_to_convert_to_recommended_qs.values('id')
-            )
-
             # Make a list of new figures that were cloned (clear old_id when cloning or we are going to have a bad time)
-            print(f'{len(figures_cloned_list)} Figures cloned with follow ids, {figures_cloned_list}')
+            print(
+                f'Cloned {len(figures_cloned_list)} figures',
+                figures_cloned_list,
+            )

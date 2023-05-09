@@ -152,7 +152,7 @@ def report_global_numbers(report):
             one='',
         ),
         dict(
-            one='Total New Displacements (Conflict + Disaster)',
+            one='Total Internal Displacements (Conflict + Disaster)',
             two=data['flow_total']
         ),
         dict(
