@@ -1,9 +1,7 @@
 import csv
 import json
 from django.core.management.base import BaseCommand
-from django.db.models import F
 from apps.entry.models import Figure
-from datetime import date
 
 
 class Command(BaseCommand):
@@ -62,9 +60,20 @@ class Command(BaseCommand):
                 figure.role = Figure.ROLE.RECOMMENDED
                 figure.save()
 
-                # TODO: Also clone disaggregatedage and osmname relations
-                # figure.geo_locations.__dict__;
-                # figure.disaggregation_age.__dict__;
+                # Also clone disaggregatedage and osmname relations
+                geo_locations_list = []
+                for geo_location in figure.geo_locations.all():
+                    geo_location.id = None
+                    geo_location_obj = geo_location.save()
+                    geo_locations_list.append(geo_location_obj)
+                figure.geo_locations.set(geo_locations_list)
+
+                disaggregation_age_list = []
+                for disaggregation_age in figure.disaggregation_age.all():
+                    disaggregation_age.id = None
+                    disaggregation_age = disaggregation_age.save()
+                    disaggregation_age_list.append(disaggregation_age)
+                figure.disaggregation_age.set(disaggregation_age_list)
 
                 figures_cloned_list.append(figure.id)
 
