@@ -236,6 +236,7 @@ class PublicFigureAnalysis(models.Model):
     )
     year = models.IntegerField(verbose_name=_('Year'))
     figures = models.IntegerField(verbose_name=_('Figures'), null=True)
+    figures_rounded = models.IntegerField(verbose_name=_('Figures rounded'), null=True)
     description = models.TextField(verbose_name=_('Description'), null=True)
     report = models.ForeignKey(
         'report.Report', verbose_name=_('Report'), null=True,
@@ -256,9 +257,6 @@ class DisplacementData(models.Model):
 
     disaster_total_displacement = models.BigIntegerField(null=True, verbose_name=_('Disaster total nds'))
     disaster_new_displacement = models.BigIntegerField(null=True, verbose_name=_('Disaster total nd'))
-
-    total_internal_displacement = models.BigIntegerField(null=True, verbose_name=_('Total internal displacement'))
-    total_new_displacement = models.BigIntegerField(null=True, verbose_name=_('Total new displacement'))
 
     year = models.IntegerField(verbose_name=_('Year'))
 
