@@ -1592,6 +1592,8 @@ type GiddConflictType {
   id: ID!
   totalDisplacement: Int
   newDisplacement: Int
+  totalDisplacementRounded: Int
+  newDisplacementRounded: Int
   year: Int!
   countryName: String!
   iso3: String!
@@ -1632,6 +1634,8 @@ type GiddDisasterType {
   endDateAccuracy: String
   newDisplacement: Int
   totalDisplacement: Int
+  totalDisplacementRounded: Int
+  newDisplacementRounded: Int
   eventName: String!
   iso3: String!
   countryName: String!
@@ -1666,6 +1670,12 @@ type GiddDisplacementDataType {
   totalInternalDisplacement: Int
   totalNewDisplacement: Int
   year: Int!
+  conflictTotalDisplacementRounded: Int
+  conflictNewDisplacementRounded: Int
+  disasterTotalDisplacementRounded: Int
+  disasterNewDisplacementRounded: Int
+  totalInternalDisplacementRounded: Int
+  totalNewDisplacementRounded: Int
 }
 
 type GiddEventAffectedCountryType {

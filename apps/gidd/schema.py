@@ -109,6 +109,8 @@ class GiddConflictType(DjangoObjectType):
             'year',
             'new_displacement',
             'total_displacement',
+            'new_displacement_rounded',
+            'total_displacement_rounded',
         )
 
     @staticmethod
@@ -142,6 +144,8 @@ class GiddDisasterType(DjangoObjectType):
             'end_date_accuracy',
             'new_displacement',
             'total_displacement',
+            'new_displacement_rounded',
+            'total_displacement_rounded',
             'event_name',
             'iso3',
             'country_name',
@@ -260,6 +264,12 @@ class GiddDisplacementDataType(DjangoObjectType):
             'disaster_total_displacement',
             'total_internal_displacement',
             'total_new_displacement',
+            'conflict_total_displacement_rounded',
+            'conflict_new_displacement_rounded',
+            'disaster_new_displacement_rounded',
+            'disaster_total_displacement_rounded',
+            'total_internal_displacement_rounded',
+            'total_new_displacement_rounded',
         )
 
 
