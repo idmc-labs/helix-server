@@ -13,6 +13,11 @@ class Conflict(models.Model):
     )
     total_displacement = models.BigIntegerField(blank=True, null=True)
     new_displacement = models.BigIntegerField(blank=True, null=True)
+
+    # Don't use these rounded fields to aggregate, just used to display and sort
+    total_displacement_rounded = models.BigIntegerField(blank=True, null=True)
+    new_displacement_rounded = models.BigIntegerField(blank=True, null=True)
+
     year = models.IntegerField()
 
     # Cached/Snapshot values
@@ -67,6 +72,10 @@ class Disaster(models.Model):
 
     new_displacement = models.BigIntegerField(blank=True, null=True)
     total_displacement = models.BigIntegerField(blank=True, null=True)
+
+    # Don't use these rounded fields to aggregate, just used to display and sort
+    total_displacement_rounded = models.BigIntegerField(blank=True, null=True)
+    new_displacement_rounded = models.BigIntegerField(blank=True, null=True)
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -252,6 +261,17 @@ class DisplacementData(models.Model):
     total_new_displacement = models.BigIntegerField(null=True, verbose_name=_('Total new displacement'))
 
     year = models.IntegerField(verbose_name=_('Year'))
+
+    # Don't use these rounded fields to aggregate, just used to display and sort
+    conflict_total_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_('Conflict total idps'))
+    conflict_new_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_('Conflict total nd'))
+
+    disaster_total_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_('Disaster total nds'))
+    disaster_new_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_('Disaster total nd'))
+
+    total_internal_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_('Total internal displacement'))
+    total_new_displacement_rounded = models.BigIntegerField(null=True, verbose_name=_('Total new displacement'))
+
 
     def __str__(self):
         return self.iso3
