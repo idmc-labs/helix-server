@@ -236,7 +236,7 @@ class GiddPublicCountryType(graphene.ObjectType):
     region = graphene.Field(GiddPublicCountryRegionType)
 
 
-class GiddHazardSubType(graphene.ObjectType):
+class GiddHazardType(graphene.ObjectType):
     id = graphene.ID(required=True)
     name = graphene.String(required=True)
 
@@ -291,8 +291,8 @@ class GiddEventType(graphene.ObjectType):
     affected_countries = graphene.List(
         GiddEventAffectedCountryType,
     )
-    hazard_sub_types = graphene.List(
-        GiddHazardSubType,
+    hazard_types = graphene.List(
+        GiddHazardType,
     )
 
 
@@ -332,7 +332,7 @@ class Query(graphene.ObjectType):
     )
     gidd_release_meta_data = graphene.Field(GiddReleaseMetadataType)
     gidd_public_countries = graphene.List(graphene.NonNull(GiddPublicCountryType))
-    gidd_hazard_sub_types = graphene.List(GiddHazardSubType)
+    gidd_hazard_types = graphene.List(GiddHazardType)
     gidd_public_figure_analysis_list = DjangoPaginatedListObjectField(
         GiddPublicFigureAnalysisListType,
         pagination=PageGraphqlPaginationWithoutCount(
@@ -537,16 +537,16 @@ class Query(graphene.ObjectType):
         )
 
     @staticmethod
-    def resolve_gidd_hazard_sub_types(parent, info, **kwargs):
+    def resolve_gidd_hazard_types(parent, info, **kwargs):
         return [
-            GiddHazardSubType(
-                id=hazard['hazard_sub_type__id'],
-                name=hazard['hazard_sub_type__name'],
+            GiddHazardType(
+                id=hazard['hazard_type__id'],
+                name=hazard['hazard_type__name'],
 
             ) for hazard in Disaster.objects.values(
-                'hazard_sub_type__id', 'hazard_sub_type__name'
+                'hazard_type__id', 'hazard_type__name'
             ).distinct(
-                'hazard_sub_type__id', 'hazard_sub_type__name'
+                'hazard_type__id', 'hazard_type__name'
             )
         ]
 
@@ -584,10 +584,10 @@ class Query(graphene.ObjectType):
             total_new_displacement=models.Sum('new_displacement'),
         )
 
-        hazard_sub_types_qs = disaster_qs.values(
-            'hazard_sub_type_id', 'hazard_sub_type__name'
+        hazard_types_qs = disaster_qs.values(
+            'hazard_type_id', 'hazard_type__name'
         ).distinct(
-            'hazard_sub_type_id', 'hazard_sub_type__name'
+            'hazard_type_id', 'hazard_type__name'
         )
         return GiddEventType(
             event_name=event_data.get('event_name'),
@@ -602,10 +602,10 @@ class Query(graphene.ObjectType):
                     new_displacement=country_data['total_new_displacement'],
                 ) for country_data in affected_countries_qs
             ],
-            hazard_sub_types=[
-                GiddHazardSubType(
-                    id=hazard_sub_type['hazard_sub_type_id'],
-                    name=hazard_sub_type['hazard_sub_type__name'],
-                ) for hazard_sub_type in hazard_sub_types_qs
+            hazard_types=[
+                GiddHazardType(
+                    id=hazard_type['hazard_type_id'],
+                    name=hazard_type['hazard_type__name'],
+                ) for hazard_type in hazard_types_qs
             ],
         )
