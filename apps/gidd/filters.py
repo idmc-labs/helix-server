@@ -1,6 +1,6 @@
 import django_filters
 from rest_framework import serializers
-from utils.filters import StringListFilter
+from utils.filters import StringListFilter, IDListFilter
 from .models import (
     Conflict,
     Disaster,
@@ -36,6 +36,7 @@ class ReleaseMetadataFilter(django_filters.FilterSet):
 
 
 class ConflictFilter(ReleaseMetadataFilter):
+
     class Meta:
         model = Conflict
         fields = {
@@ -44,7 +45,11 @@ class ConflictFilter(ReleaseMetadataFilter):
 
 
 class DisasterFilter(ReleaseMetadataFilter):
+    hazard_types = IDListFilter(method='filter_hazard_types')
     event_name = django_filters.CharFilter(method='filter_event_name')
+    start_year = django_filters.NumberFilter(method='filter_start_year')
+    end_year = django_filters.NumberFilter(method='filter_end_year')
+    countries_iso3 = StringListFilter(method='filter_countries_iso3')
 
     class Meta:
         model = Disaster
@@ -54,6 +59,18 @@ class DisasterFilter(ReleaseMetadataFilter):
 
     def filter_event_name(self, queryset, name, value):
         return queryset.filter(event_name__icontains=value)
+
+    def filter_hazard_types(self, queryset, name, value):
+        return queryset.filter(hazard_type__in=value)
+
+    def filter_start_year(self, queryset, name, value):
+        return queryset.filter(year__gte=value)
+
+    def filter_end_year(self, queryset, name, value):
+        return queryset.filter(year__lte=value)
+
+    def filter_countries_iso3(self, queryset, name, value):
+        return queryset.filter(iso3__in=value)
 
 
 class ConflictStatisticsFilter(ReleaseMetadataFilter):
@@ -80,7 +97,7 @@ class ConflictStatisticsFilter(ReleaseMetadataFilter):
 
 
 class DisasterStatisticsFilter(ReleaseMetadataFilter):
-    hazard_sub_types = StringListFilter(method='filter_hazard_sub_types')
+    hazard_types = IDListFilter(method='filter_hazard_types')
     countries = StringListFilter(method='filter_countries')
     start_year = django_filters.NumberFilter(method='filter_start_year')
     end_year = django_filters.NumberFilter(method='filter_end_year')
@@ -90,8 +107,8 @@ class DisasterStatisticsFilter(ReleaseMetadataFilter):
         model = Disaster
         fields = ()
 
-    def filter_hazard_sub_types(self, queryset, name, value):
-        return queryset.filter(hazard_sub_type__in=value)
+    def filter_hazard_types(self, queryset, name, value):
+        return queryset.filter(hazard_type__in=value)
 
     def filter_countries(self, queryset, name, value):
         return queryset.filter(country__in=value)
