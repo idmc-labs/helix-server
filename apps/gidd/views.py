@@ -117,7 +117,10 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
                 'phenomena. When a disaster event has an internationally recognized name, IDMC adopts that name. '
                 'Otherwise, the event is coded based on the country, type of hazard, location, and start date of the event.'
             ],
-            ['Usage licence ', 'https	//creativecommons.org/licenses/by/4.0/'],
+            [
+                'Usage licence : Content is licensed under CC BY-NC (See: '
+                'https://creativecommons.org/licenses/by/4.0/)'
+            ],
             ['Coverage', 'Worldwide'],
             ['Contact', 'ch-idmcdataandanalysishub@idmc.ch'],
         ]
@@ -125,7 +128,7 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
         for item in readme_text:
             ws2.append(item)
         ws2.append([])
-        ws2.append(['Table description'])
+        ws2.append(['Table description:'])
         ws2.append([])
 
         table = [
@@ -347,7 +350,10 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
                 'displacement as of the end of the reporting year.'
             ],
             [''],
-            ['Usage licence : https://creativecommons.org/licenses/by/4.0/'],
+            [
+                'Usage licence : Content is licensed under CC BY-NC (See: '
+                'https://creativecommons.org/licenses/by/4.0/)'
+            ],
 
             ['Coverage: Worldwide'],
             ['Contact: ch-idmcdataandanalysishub@idmc.ch'],
@@ -364,8 +370,10 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
                 'these IDPs did not cross an international border at the time of their '
                 'displacement and to harmonise IDMC’s IDP estimates with those of the '
                 'Government of Serbia and the UN agencies.'
+            ],
+            [
                 '− As part of a methodological revision, IDMC has decided not to publish '
-                'IDP total figures and New displacements for the countries listed below. '
+                'IDP total figures and Internal displacements for the countries listed below. '
                 'This decision is aimed at maintaining the accuracy and integrity of our '
                 'data and ensuring that it meets the highest standards of quality.'
             ],
@@ -382,13 +390,13 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
             ['Ghana', '2019', 'IDPs'],
             ['Malawi', '2019', 'IDPs'],
             ['Tunisia', '2019', 'IDPs'],
-            ['Togo', '2019', 'New Displacements'],
-            ['Madagascar', '2019', 'New Displacements'],
-            ['Benin', '2019', 'New Displacements'],
-            ['Malawi', '2019', 'New Displacements'],
-            ['Tunisia', '2019', 'New Displacements'],
+            ['Togo', '2019', 'Internal Displacements'],
+            ['Madagascar', '2019', 'Internal Displacements'],
+            ['Benin', '2019', 'Internal Displacements'],
+            ['Malawi', '2019', 'Internal Displacements'],
+            ['Tunisia', '2019', 'Internal Displacements'],
             ['South Africa', '2020', 'IDPs'],
-            ['South Africa', '2020', 'New Displacements'],
+            ['South Africa', '2020', 'Internal Displacements'],
         ]
         for item in table:
             ws3.append(item)
@@ -397,7 +405,7 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
         ws3.append([])
 
         ws3.append([
-            '− As part of a methodological revision and our ongoing commitment to providing'
+            '− As part of a methodological revision and our ongoing commitment to providing '
             'the most accurate and reliable information on internal displacement, IDMC is '
             'pleased to announce the publication of IDP total figures and new '
             'displacements for certain countries and years that were not previously available.'
@@ -409,13 +417,13 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
 
         table2 = [
             ['Country', 'Year', 'Displacement category'],
-            ['Israel', '2016', 'New displacements'],
-            ['Israel', '2017 ', 'New displacements'],
-            ['Israel', '2018', 'New displacements'],
+            ['Israel', '2016', 'Internal displacements'],
+            ['Israel', '2017 ', 'Internal displacements'],
+            ['Israel', '2018', 'Internal displacements'],
             ['Kyrgyzstan', '2019', 'IDPs'],
-            ['Israel', '2019', 'New displacements'],
+            ['Israel', '2019', 'Internal displacements'],
             ['Nicaragua', '2020', 'IDPs'],
-            ['Nicaragua', '2020', 'New displacements'],
+            ['Nicaragua', '2020', 'Internal displacements'],
             ['Nicaragua', '2021', 'IDPs'],
         ]
 
@@ -447,22 +455,22 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
                 'a result, of Conflict and Violence as of the end of the reporting year.'
             ],
             [
-                'Conflict Internal Displacement: Total number of internal displacements '
+                'Conflict Internal Displacements: Total number of internal displacements '
                 'reported (rounded figures at national level), as a result of Conflict and '
                 'Violence over the reporting year.'
             ],
             [
-                'Conflict Internal Displacement raw: Total number of internal displacements '
+                'Conflict Internal Displacements raw: Total number of internal displacements '
                 'reported (not rounded), as a result of Conflict and Violence over the '
                 'reporting year.'
             ],
             [
-                'Disaster Internal Displacement: Total number of new displacements reported '
+                'Disaster Internal Displacements: Total number of new displacements reported '
                 '(rounded figures at national '
                 'level), as a result of disasters over the reporting year.'
             ],
             [
-                'Disaster Internal Displacement raw: Total number of new displacements reported '
+                'Disaster Internal Displacements raw: Total number of new displacements reported '
                 '(not rounded), as a result of disasters over the reporting year.'
             ],
             [
