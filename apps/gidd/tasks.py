@@ -413,11 +413,11 @@ def update_gidd_data(log_id):
         update_conflict_and_disaster_data()
         update_public_figure_analysis()
         update_displacement_data()
+        update_idps_sadd_estimates_country_names()
         StatusLog.objects.filter(id=log_id).update(
             status=StatusLog.Status.SUCCESS,
             completed_at=timezone.now()
         )
-        update_idps_sadd_estimates_country_names()
         logger.info('GIDD data updated.')
     except Exception as e:
         StatusLog.objects.filter(id=log_id).update(
