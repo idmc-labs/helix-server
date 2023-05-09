@@ -348,7 +348,7 @@ def update_displacement_data():
         Conflict.objects.order_by('-year').first().year
     )
 
-    for year in range(start_year, end_year):
+    for year in range(start_year, end_year + 1):
         displacement_data = Country.objects.annotate(
             conflict_total_displacement=Subquery(
                 Conflict.objects.filter(

@@ -141,7 +141,7 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
             ],
             ['Date of event (start)	 Approximate starting date of the event'],
             [
-                'Disaster Internal Displacements	 Total number of new displacements '
+                'Disaster Internal Displacements	 Total number of internal displacements '
                 'reported (rounded figures at national level), as a result of disasters over the reporting year.'
             ],
             ['Hazard Category	 Hazard category based on CRED EM-DAT.'],
@@ -365,7 +365,7 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
                 'https://www.internal-displacement.org/monitoring-tools'],
             [
                 '− This is the first time IDMC reports on IDPs in Serbia since 2015, which '
-                'is not due to new displacements in 2022 but to a review of the context in '
+                'is not due to internal displacements in 2022 but to a review of the context in '
                 'which displacement occurred. This decision was made to acknowledge that '
                 'these IDPs did not cross an international border at the time of their '
                 'displacement and to harmonise IDMC’s IDP estimates with those of the '
@@ -465,12 +465,12 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
                 'reporting year.'
             ],
             [
-                'Disaster Internal Displacements: Total number of new displacements reported '
+                'Disaster Internal Displacements: Total number of internal displacements reported '
                 '(rounded figures at national '
                 'level), as a result of disasters over the reporting year.'
             ],
             [
-                'Disaster Internal Displacements raw: Total number of new displacements reported '
+                'Disaster Internal Displacements raw: Total number of internal displacements reported '
                 '(not rounded), as a result of disasters over the reporting year.'
             ],
             [
