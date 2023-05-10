@@ -13,10 +13,6 @@ from apps.entry.constants import STOCK, FLOW
 
 
 class QueryAbstractModel(models.Model):
-    name = models.CharField(
-        verbose_name=_('Name'),
-        max_length=128
-    )
     filter_figure_geographical_groups = models.ManyToManyField(
         'country.GeographicalGroup',
         verbose_name=_('Geographical Group'),
@@ -158,8 +154,9 @@ class QueryAbstractModel(models.Model):
             (FLOW, FLOW),
         ), null=True, blank=True), null=True, blank=True,
     )
-    filter_figure_has_disaggregated_data = models.NullBooleanField(
+    filter_figure_has_disaggregated_data = models.BooleanField(
         verbose_name=_('Has disaggregated data'),
+        null=True,
         default=None,
     )
     filter_context_of_violence = models.ManyToManyField(
@@ -167,8 +164,9 @@ class QueryAbstractModel(models.Model):
         verbose_name=_('Context of violence'),
         blank=True,
     )
-    filter_is_figure_to_be_reviewed = models.NullBooleanField(
+    filter_is_figure_to_be_reviewed = models.BooleanField(
         verbose_name=_('Filter to be reviewed'),
+        null=True,
         default=None,
     )
 
@@ -229,4 +227,7 @@ class QueryAbstractModel(models.Model):
 
 
 class ExtractionQuery(MetaInformationAbstractModel, QueryAbstractModel):
-    pass
+    name = models.CharField(
+        verbose_name=_('Name'),
+        max_length=128
+    )

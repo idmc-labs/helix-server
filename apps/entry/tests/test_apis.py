@@ -95,7 +95,7 @@ class TestEntryQuery(HelixGraphQLTestCase):
     #         figure5.total_figures
     #     )
         # category based filter for entry stock/flow figures will not be used,
-        # since it is directly filtered by IDP or NEW DISPLACEMENT
+        # since it is directly filtered by IDP or INTERNAL DISPLACEMENT
 
 
 class TestEntryCreation(HelixGraphQLTestCase):

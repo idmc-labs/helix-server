@@ -1,5 +1,5 @@
 import graphene
-from django.contrib.postgres.fields import JSONField
+from django.db.models import JSONField
 from graphene import ObjectType
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType

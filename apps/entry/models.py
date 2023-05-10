@@ -7,7 +7,8 @@ from uuid import uuid4
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.aggregates.general import StringAgg, ArrayAgg
-from django.contrib.postgres.fields import ArrayField, JSONField
+from django.db.models import JSONField
+from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models.query import QuerySet
 from django.db.models import (
@@ -329,7 +330,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             LOCALLY_INTEGRATED_IDPS: _('Locally Integrated IDPs'),
             IDPS_SETTLED_ELSEWHERE: _('IDPs Settled Elsewhere'),
             PEOPLE_DISPLACED_ACROSS_BORDERS: _('People displaced across borders'),
-            NEW_DISPLACEMENT: _('New Displacement'),
+            NEW_DISPLACEMENT: _('Internal Displacements'),
             MULTIPLE_DISPLACEMENT: _('Multiple Displacement'),
             PARTIAL_STOCK: _('Partial stock'),
             PARTIAL_FLOW: _('Partial flow'),
@@ -861,10 +862,20 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 output_field=models.CharField()
             ),
-            entry_link=Concat(Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id')),
+            entry_link=Concat(
+                Value(settings.FRONTEND_BASE_URL),
+                Value('/entries/'),
+                F('entry__id'),
+                output_field=models.CharField()
+            ),
             figure_link=Concat(
-                Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id'),
-                Value('/?id='), F('id'), Value('#/figures-and-analysis')
+                Value(settings.FRONTEND_BASE_URL),
+                Value('/entries/'),
+                F('entry__id'),
+                Value('/?id='),
+                F('id'),
+                Value('#/figures-and-analysis'),
+                output_field=models.CharField()
             ),
             geolocations=StringAgg(
                 'geo_locations__display_name',
@@ -1345,6 +1356,14 @@ class ExternalApiDump(models.Model):
         IDUS = 'idus', _('Idus')
         IDUS_ALL = 'idus-all', _('Idus all')
         IDUS_ALL_DISASTER = 'idus-all-disaster', _('Idus all disaster')
+
+        GIDD_DISASTER_EXPORT_REST = 'gidd-disaster-export-rest', _('Disaster export REST')
+        GIDD_DISPLACEMENT_EXPORT_REST = 'gidd-displacement-export-rest', _('Displacement export REST')
+
+        GIDD_CONFLICT_GRAPHQL = 'gidd-conflict', _('GIDD conflict')
+        GIDD_DISASTER_GRAPHQL = 'gidd-disaster', _('GIDD disaster')
+        GIDD_CONFLICT_STAT = 'gidd-conflict-stat', _('GIDD conflict stat')
+        GIDD_DISASTER_STAT = 'gidd-disaster-stat', _('GIDD disaster stat')
 
     class Status(models.IntegerChoices):
         PENDING = 0, 'Pending'

@@ -5,13 +5,13 @@ description = "Helix Server"
 authors = ["Dev <dev@togglecorp.io>"]
 
 [tool.poetry.dependencies]
-Django = "3.0.14"
+Django = "3.2"
 bleach = "3.3.0"
 boto3 = "1.14.63"
 celery = "5.1.1"
 django-cors-headers = "3.4.0"
 django-debug-toolbar = "2.2"
-django-enumfield = "2.0.1"
+django-enumfield = "3.1"
 django-extensions = "3.0.4"
 django-filter = "2.3.0"
 django-graphiql-debug-toolbar = "0.1.4"

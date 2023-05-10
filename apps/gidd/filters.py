@@ -1,0 +1,169 @@
+import django_filters
+from rest_framework import serializers
+from utils.filters import StringListFilter, IDListFilter
+from .models import (
+    Conflict,
+    Disaster,
+    StatusLog,
+    PublicFigureAnalysis,
+    DisplacementData,
+    ReleaseMetadata,
+)
+
+
+class ReleaseMetadataFilter(django_filters.FilterSet):
+    release_environment = django_filters.CharFilter(method='filter_release_environment')
+
+    def get_release_metadata(self):
+        release_meta_data = ReleaseMetadata.objects.last()
+        if not release_meta_data:
+            raise serializers.ValidationError('Release metadata is not configured.')
+        return release_meta_data
+
+    def filter_release_environment(self, qs, name, value):
+        release_meta_data = self.get_release_metadata()
+        if value == ReleaseMetadata.ReleaseEnvironment.PRE_RELEASE.name:
+            return qs.filter(year__lte=release_meta_data.pre_release_year)
+        return qs.filter(year__lte=release_meta_data.release_year)
+
+    @property
+    def qs(self):
+        qs = super().qs
+        if 'release_environment' not in self.data:
+            release_meta_data = self.get_release_metadata()
+            return qs.filter(year__lte=release_meta_data.release_year)
+        return qs
+
+
+class ConflictFilter(ReleaseMetadataFilter):
+
+    class Meta:
+        model = Conflict
+        fields = {
+            'id': ['iexact']
+        }
+
+
+class DisasterFilter(ReleaseMetadataFilter):
+    hazard_types = IDListFilter(method='filter_hazard_types')
+    event_name = django_filters.CharFilter(method='filter_event_name')
+    start_year = django_filters.NumberFilter(method='filter_start_year')
+    end_year = django_filters.NumberFilter(method='filter_end_year')
+    countries_iso3 = StringListFilter(method='filter_countries_iso3')
+
+    class Meta:
+        model = Disaster
+        fields = {
+            'id': ['iexact']
+        }
+
+    def filter_event_name(self, queryset, name, value):
+        return queryset.filter(event_name__icontains=value)
+
+    def filter_hazard_types(self, queryset, name, value):
+        return queryset.filter(hazard_type__in=value)
+
+    def filter_start_year(self, queryset, name, value):
+        return queryset.filter(year__gte=value)
+
+    def filter_end_year(self, queryset, name, value):
+        return queryset.filter(year__lte=value)
+
+    def filter_countries_iso3(self, queryset, name, value):
+        return queryset.filter(iso3__in=value)
+
+
+class ConflictStatisticsFilter(ReleaseMetadataFilter):
+    countries = StringListFilter(method='filter_countries')
+    start_year = django_filters.NumberFilter(method='filter_start_year')
+    end_year = django_filters.NumberFilter(method='filter_end_year')
+    countries_iso3 = StringListFilter(method='filter_countries_iso3')
+
+    class Meta:
+        model = Conflict
+        fields = ()
+
+    def filter_countries(self, queryset, name, value):
+        return queryset.filter(country__in=value)
+
+    def filter_start_year(self, queryset, name, value):
+        return queryset.filter(year__gte=value)
+
+    def filter_end_year(self, queryset, name, value):
+        return queryset.filter(year__lte=value)
+
+    def filter_countries_iso3(self, queryset, name, value):
+        return queryset.filter(iso3__in=value)
+
+
+class DisasterStatisticsFilter(ReleaseMetadataFilter):
+    hazard_types = IDListFilter(method='filter_hazard_types')
+    countries = StringListFilter(method='filter_countries')
+    start_year = django_filters.NumberFilter(method='filter_start_year')
+    end_year = django_filters.NumberFilter(method='filter_end_year')
+    countries_iso3 = StringListFilter(method='filter_countries_iso3')
+
+    class Meta:
+        model = Disaster
+        fields = ()
+
+    def filter_hazard_types(self, queryset, name, value):
+        return queryset.filter(hazard_type__in=value)
+
+    def filter_countries(self, queryset, name, value):
+        return queryset.filter(country__in=value)
+
+    def filter_start_year(self, queryset, name, value):
+        return queryset.filter(year__gte=value)
+
+    def filter_end_year(self, queryset, name, value):
+        return queryset.filter(year__lte=value)
+
+    def filter_countries_iso3(self, queryset, name, value):
+        return queryset.filter(iso3__in=value)
+
+
+class GiddStatusLogFilter(django_filters.FilterSet):
+    status = StringListFilter(method='filter_by_status')
+
+    class Meta:
+        model = StatusLog
+        fields = ()
+
+    def filter_by_status(self, qs, name, value):
+        if value:
+            if isinstance(value[0], int):
+                # coming from saved query
+                return qs.filter(status__in=value)
+            return qs.filter(status__in=[
+                StatusLog.Status.get(item).value for item in value
+            ])
+        return qs
+
+
+class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
+    class Meta:
+        model = PublicFigureAnalysis
+        fields = {
+            'iso3': ['exact'],
+            'year': ['exact'],
+        }
+
+
+class DisplacementDataFilter(ReleaseMetadataFilter):
+    start_year = django_filters.NumberFilter(method='filter_start_year')
+    end_year = django_filters.NumberFilter(method='filter_end_year')
+    countries_iso3 = StringListFilter(method='filter_countries_iso3')
+
+    class Meta:
+        model = DisplacementData
+        fields = ()
+
+    def filter_start_year(self, queryset, name, value):
+        return queryset.filter(year__gte=value)
+
+    def filter_end_year(self, queryset, name, value):
+        return queryset.filter(year__lte=value)
+
+    def filter_countries_iso3(self, queryset, name, value):
+        return queryset.filter(iso3__in=value)

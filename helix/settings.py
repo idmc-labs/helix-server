@@ -104,6 +104,7 @@ LOCAL_APPS = [
     'contextualupdate',
     'report',
     'notification',
+    'gidd',
 ]
 
 THIRD_PARTY_APPS = [
@@ -455,6 +456,20 @@ GRAPHENE_NODES_WHITELIST = (
     'me',
     'generateResetPasswordToken',
     'resetPassword',
+
+    # Gidd external queries
+    'giddCombinedStatistics',
+    'giddConflictStatistics',
+    'giddConflicts',
+    'giddDisasterStatistics',
+    'giddDisasters',
+    'giddDisplacements',
+    'giddEvent',
+    'giddHazardTypes',
+    'giddPublicCountries',
+    'giddPublicFigureAnalysisList',
+    'giddYear',
+
     # __ double underscore nodes
     '__schema',
     '__type',
@@ -538,15 +553,20 @@ CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = [
     # Localhost
     "http://localhost:3080",
     "http://127.0.0.1:3080",
+    # Frontend
+    FRONTEND_BASE_URL,
     # External services
     'https://media-monitoring.idmcdb.org',
+    'https://www.internal-displacement.org',
+
+    'https://staging.internal-displacement.org',
+    'https://release-website-components-idmc.dev.datafriendlyspace.org',
+    'https://preview-website-components-idmc.dev.datafriendlyspace.org',
+    # Obsolete
     'https://idumap.idmcdb.org',
     'https://dev-idmc.datafriendlyspace.org',
     'https://idmc-website.dev.datafriendlyspace.org',
-    'https://www.internal-displacement.org',
     'https://idmc-website-components.idmcdb.org',
-    # Frontend
-    FRONTEND_BASE_URL,
 ]
 
 CORS_URLS_REGEX = r'(^/api/.*$)|(^/graphql$)|(^/external-api/.*$)'
@@ -572,3 +592,5 @@ CORS_ALLOW_HEADERS = (
     'x-requested-with',
     'sentry-trace',
 )
+
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'

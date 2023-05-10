@@ -18,6 +18,8 @@ class PERMISSION_ACTION(enum.Enum):
     clear_assignee = 7
     clear_self_assignee = 8
     update_pfa_visibility = 9
+    update_gidd_data = 10
+    update_release_meta_data = 11
 
     __labels__ = {
         add: _('Add'),
@@ -30,6 +32,8 @@ class PERMISSION_ACTION(enum.Enum):
         clear_assignee: _('Clear assignee'),
         clear_self_assignee: _('Clear self assignee'),
         update_pfa_visibility: _('Update public figure visibility in GIDD'),
+        update_gidd_data: _('Update GIDD data'),
+        update_release_meta_data: _('Update release meta data'),
     }
 
 
@@ -55,6 +59,7 @@ class PERMISSION_ENTITY(enum.Enum):
     reportcomment = 18
     portfolio = 19
     contextofviolence = 20
+    gidd = 21
 
     __labels__ = {
         crisis: _('Crisis'),
@@ -77,7 +82,8 @@ class PERMISSION_ENTITY(enum.Enum):
         report: _('Report'),
         reportcomment: _('Report Comment'),
         portfolio: _('Portfolio'),
-        contextofviolence: _('Context of violence')
+        contextofviolence: _('Context of violence'),
+        gidd: _('GIDD'),
     }
 
 

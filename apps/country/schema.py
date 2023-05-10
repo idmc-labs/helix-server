@@ -126,6 +126,7 @@ class CountryType(DjangoObjectType):
     class Meta:
         model = Country
         filter_fields = {}
+        exclude_fields = ('country_conflict', 'country_disaster', 'displacements')
 
     last_summary = graphene.Field(SummaryType)
     last_contextual_analysis = graphene.Field(ContextualAnalysisType)

@@ -1,8 +1,9 @@
 from collections import OrderedDict
-
+import datetime
 from django.utils.translation import gettext
 from django.conf import settings
 from rest_framework import serializers
+from rest_framework.validators import UniqueValidator
 
 from apps.contrib.serializers import (
     MetaInformationSerializerMixin,
@@ -17,10 +18,14 @@ from apps.report.models import (
 )
 from apps.entry.models import Figure
 from apps.crisis.models import Crisis
+from apps.extraction.models import QueryAbstractModel
+
+from django.contrib.postgres.fields.array import ArrayField
+from django.db.models.fields.related import ManyToManyField
+from django.db.models.fields import BooleanField, CharField, DateField, TextField
 
 
 def check_is_pfa_visible_in_gidd(report):
-
     errors = []
     if not report:
         errors.append('Report does not exist.')
@@ -60,17 +65,29 @@ def check_is_pfa_visible_in_gidd(report):
         errors.append('Report should have conflict or disaster crisis type.')
 
     if not report.filter_figure_categories:
-        errors.append('Report should have IDPs or New Displacement category.')
+        errors.append('Report should have IDPs or Internal Displacements category.')
     elif len(set(report.filter_figure_categories).intersection({
         Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
         Figure.FIGURE_CATEGORY_TYPES.IDPS,
     })) != 1:
-        errors.append('Report should have IDPs or New Displacement category.')
+        errors.append('Report should have IDPs or Internal Displacements category.')
     return errors
 
 
 class ReportSerializer(MetaInformationSerializerMixin,
                        serializers.ModelSerializer):
+
+    gidd_report_year = serializers.IntegerField(
+        allow_null=True,
+        required=False,
+        validators=[
+            UniqueValidator(
+                queryset=Report.objects.all(),
+                message=('GIDD report with this year already exists.'),
+            ),
+        ],
+    )
+
     class Meta:
         model = Report
         fields = [
@@ -83,7 +100,7 @@ class ReportSerializer(MetaInformationSerializerMixin,
             'filter_figure_events', 'filter_figure_tags', 'filter_figure_disaster_categories',
             'filter_figure_disaster_sub_categories', 'filter_figure_disaster_types',
             'filter_figure_disaster_sub_types', 'filter_figure_violence_types', 'filter_figure_violence_sub_types',
-            'is_public', 'filter_figure_roles', 'public_figure_analysis',
+            'is_public', 'filter_figure_roles', 'public_figure_analysis', 'is_gidd_report', 'gidd_report_year'
         ]
 
     def validate_dates(self, attrs):
@@ -96,10 +113,41 @@ class ReportSerializer(MetaInformationSerializerMixin,
             ))
         return errors
 
+    def validate_gidd_report(self, attrs, errors):
+        is_gidd_report = attrs.get('is_gidd_report')
+        if is_gidd_report is True:
+            year = attrs.get('gidd_report_year')
+
+            if not year:
+                raise serializers.ValidationError('For GIDD report year is required.')
+
+            # Clear all query abstraction filter fields
+            for field in QueryAbstractModel._meta.get_fields():
+                # Reset values
+                if type(field) == ArrayField:
+                    attrs[field.name] = []
+                elif type(field) == ManyToManyField:
+                    attrs[field.name] = []
+                elif type(field) in [BooleanField, CharField, DateField, TextField]:
+                    attrs[field.name] = None
+                else:
+                    raise serializers.ValidationError('Unable to set filters for GIDD.')
+
+            # Set these attrs when create or update
+            attrs['filter_figure_start_after'] = datetime.datetime(year=year, month=1, day=1)
+            attrs['filter_figure_end_before'] = datetime.datetime(year=year, month=12, day=31)
+            attrs['is_public'] = True
+            attrs['is_pfa_visible_in_gidd'] = False
+            return attrs
+        else:
+            attrs['gidd_report_year'] = None
+        return attrs
+
     def validate(self, attrs) -> dict:
         attrs = super().validate(attrs)
         errors = OrderedDict()
         errors.update(self.validate_dates(attrs))
+        self.validate_gidd_report(attrs, errors)
         if errors:
             raise serializers.ValidationError(errors)
         return attrs

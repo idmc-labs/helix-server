@@ -24,8 +24,8 @@ docker-compose up
 ```bash
 # Fix the full_name constraint
 docker-compose exec server python manage.py save_users_dummy
-
 docker-compose exec server python manage.py create_dummy_users
+
 docker-compose exec server python manage.py loadtestdata <case sensitive model_names> --count 2
 # eg.
 # docker-compose exec server python manage.py loadtestdata Country --count 2
@@ -37,11 +37,27 @@ Use `localhost:9000/graphql` to interact with the server from the client.
 
 ## One time commands
 
-## Save geojson for each country
+### Save geojson for each country
 
-docker-compose exec server python manage.py split_geojson
+```bash
+python manage.py split_geojson
+```
 
-## Setup S3 buckets
+### Generate fresh graphql schema.
+```bash
+python manage.py graphql_schema --out schema.graphql
+```
+
+## Populate pre 2016 conflict and disaster data for GIDD
+```bash
+python manage.py update_pre_2016_gidd_data.py old_conflict_data.csv old_disaster_data.csv
+```
+### Populate IDPs SADD estimates table
+```bash
+python manage.py update_idps_sadd_estimates idps_sadd_estimates.csv
+```
+
+### Setup S3 buckets
 
 This will create appropriate buckets with required policies based on the `.env`.
 
@@ -49,13 +65,7 @@ This will create appropriate buckets with required policies based on the `.env`.
 sh deploy/scripts/s3_bucket_setup.sh
 ```
 
-## To enable two factor authentication (generate statictoken) of admin user from command line
+### To enable two factor authentication (generate statictoken) of admin user from command line
 ```bash
 python manage.py addstatictoken -t 123456 "admin@idmcdb.org"
-```
-
-
-## Generate fresh graphql schema.
-```bash
-./manage.py graphql_schema --out schema.graphql
 ```

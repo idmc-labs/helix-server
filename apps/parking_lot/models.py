@@ -1,8 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
-from django.contrib.postgres.fields import JSONField
-
+from django.db.models import JSONField
 from apps.contrib.models import MetaInformationAbstractModel
 
 

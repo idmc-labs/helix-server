@@ -144,6 +144,10 @@ class Report(MetaInformationArchiveAbstractModel,
             ),
         )
 
+    name = models.CharField(
+        verbose_name=_('Name'),
+        max_length=128
+    )
     generated_from = enum.EnumField(REPORT_TYPE,
                                     blank=True, null=True, editable=False)
     # TODO: Remove me after next migration run
@@ -187,7 +191,14 @@ class Report(MetaInformationArchiveAbstractModel,
     )
     is_pfa_visible_in_gidd = models.BooleanField(
         default=False,
-        verbose_name=_('Is public figure analysis visible in Gidd'),
+        verbose_name=_('Is public figure analysis visible in GIDD'),
+    )
+    is_gidd_report = models.BooleanField(
+        default=False,
+        verbose_name=_('Is GIDD report?'),
+    )
+    gidd_report_year = models.PositiveIntegerField(
+        verbose_name=_('GIDD report year'), null=True, unique=True
     )
 
     @classmethod
@@ -343,7 +354,7 @@ class Report(MetaInformationArchiveAbstractModel,
         ):
             return 'The numbers do no match'
         if not bool(set([item.value for item in self.filter_figure_categories]) & set(figure_categories_to_check)):
-            return "The figure category is not 'new displacement' or 'idps'"
+            return "The figure category is not 'internal displacement' or 'idps'"
         return ''
 
     @cached_property
