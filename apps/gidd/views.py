@@ -67,7 +67,7 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
 
         wb = Workbook()
         ws = wb.active
-        ws.title = "1_Displacement data"
+        ws.title = "1_Disaster_Displacement_data"
         ws.append([
             'ISO3', 'Country / Territory', 'Year', 'Event Name', 'Date of Event (start)',
             'Disaster Internal Displacements', 'Hazard Category', 'Hazard Type', 'Hazard Sub Type'
@@ -264,7 +264,7 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
         wb = Workbook()
         ws = wb.active
         # Tab 1
-        ws.title = "1_Displacement data"
+        ws.title = "1_Displacement_data"
         if request.GET.get('cause') == 'conflict':
             self.export_conflicts(ws, qs)
         elif request.GET.get('cause') == 'disaster':
@@ -272,7 +272,7 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
         else:
             self.export_displacements(ws, qs)
         # Tab 2
-        ws2 = wb.create_sheet('IDPS_SADD_estimates')
+        ws2 = wb.create_sheet('2_IDPs_SADD_estimates')
         ws2.append([
             'ISO3',
             'Country',
@@ -500,7 +500,7 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
         ]
         ws3.append([])
         ws3.append([
-            '2_IDPS_SADD_estimates (Tab table description):'
+            '2_IDPs_SADD_estimates (Tab table description):'
         ])
         ws3.append([])
         for item in readme_text3:
