@@ -479,7 +479,7 @@ class Query(graphene.ObjectType):
                 total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
             )['total'],
             total_displacement_countries=conflict_total_displacement_qs.distinct('iso3').count(),
-            internal_displacement_countries=conflict_new_displacement_qs.filter.distinct('iso3').count(),
+            internal_displacement_countries=conflict_new_displacement_qs.distinct('iso3').count(),
             new_displacement_timeseries_by_year=[
                 GiddTimeSeriesStatisticsByYearType(
                     year=item['year'],
@@ -522,25 +522,34 @@ class Query(graphene.ObjectType):
 
     @staticmethod
     def resolve_gidd_disaster_statistics(parent, info, **kwargs):
-        disaster_qs = DisasterStatisticsFilter(data=kwargs).qs
+        start_year = kwargs.pop('start_year', None)
+        end_year = kwargs.pop('end_year', None)
+        filters = custom_date_filters(start_year, end_year)
 
-        new_displacement_timeseries_by_year_qs = disaster_qs.filter(new_displacement__gt=0).values('year').annotate(
+        disaster_total_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(
+            **filters.get('idps_date_filters')
+        )
+        disaster_new_displacement_qs = DisasterStatisticsFilter(data=kwargs).qs.filter(
+            **filters.get('nd_date_filters')
+        )
+
+        new_displacement_timeseries_by_year_qs = disaster_new_displacement_qs.values('year').annotate(
             total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
         ).order_by('year').values('year', 'total')
 
-        new_displacement_timeseries_by_country_qs = disaster_qs.filter(new_displacement__gt=0).values('year').annotate(
+        new_displacement_timeseries_by_country_qs = disaster_new_displacement_qs.values('year').annotate(
             total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
         ).order_by('year').values('year', 'total', 'country_id', 'country_name', 'iso3')
 
-        total_displacement_timeseries_by_year_qs = disaster_qs.filter(total_displacement__gt=0).values('year').annotate(
+        total_displacement_timeseries_by_year_qs = disaster_total_displacement_qs.values('year').annotate(
             total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
         ).order_by('year').values('year', 'total')
 
-        total_displacement_timeseries_by_country_qs = disaster_qs.filter(total_displacement__gt=0).values('year').annotate(
+        total_displacement_timeseries_by_country_qs = disaster_total_displacement_qs.values('year').annotate(
             total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
         ).order_by('year').values('year', 'total', 'country_id', 'country_name', 'iso3')
 
-        categories_qs = disaster_qs.values('hazard_type', 'hazard_type__id').annotate(
+        categories_qs = disaster_new_displacement_qs.values('hazard_type', 'hazard_type__id').annotate(
             total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0),
             label=models.Case(
                 models.When(hazard_sub_category=None, then=models.Value('Not labeled')),
@@ -551,31 +560,31 @@ class Query(graphene.ObjectType):
 
         return GiddDisasterStatisticsType(
             new_displacements_rounded=round_and_remove_zero(
-                disaster_qs.aggregate(
+                disaster_new_displacement_qs.aggregate(
                     total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
                 )['total']
             ),
-            new_displacements=disaster_qs.aggregate(
+            new_displacements=disaster_new_displacement_qs.aggregate(
                 total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
             )['total'],
             total_displacements_rounded=round_and_remove_zero(
-                disaster_qs.aggregate(
+                disaster_total_displacement_qs.aggregate(
                     total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
                 )['total']
             ),
-            total_displacements=disaster_qs.aggregate(
+            total_displacements=disaster_total_displacement_qs.aggregate(
                 total=Coalesce(models.Sum('total_displacement', output_field=models.IntegerField()), 0)
             )['total'],
-            total_events=disaster_qs.filter(
+            total_events=disaster_new_displacement_qs.filter(
                 models.Q(new_displacement__gt=0) | models.Q(total_displacement__gt=0)
             ).values('event__name').annotate(
                 events=models.Count('id')
             ).aggregate(total_events=Coalesce(models.Sum('events', output_field=models.IntegerField()), 0))['total_events'],
 
-            total_displacement_countries=disaster_qs.filter(
+            total_displacement_countries=disaster_total_displacement_qs.filter(
                 total_displacement__gt=0
             ).distinct('iso3').count(),
-            internal_displacement_countries=disaster_qs.filter(
+            internal_displacement_countries=disaster_total_displacement_qs.filter(
                 new_displacement__gt=0
             ).distinct('iso3').count(),
 
@@ -750,10 +759,12 @@ class Query(graphene.ObjectType):
             models.Sum('new_displacement'),
         )
 
-        conflict_total_displacement_countries = conflict_total_displacement_qs.order_by()\
-            .values('iso3').distinct()
-        conflict_internal_displacement_countries = conflict_total_displacement_qs.order_by()\
-            .values('iso3').distinct()
+        conflict_total_displacement_countries = conflict_total_displacement_qs.order_by().values(
+            'iso3'
+        ).distinct()
+        conflict_internal_displacement_countries = conflict_total_displacement_qs.order_by().values(
+            'iso3'
+        ).distinct()
 
         total_displacements = (
             (disaster_total_displacement_stats['total_displacement__sum'] or 0) +
