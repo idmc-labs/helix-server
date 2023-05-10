@@ -89,7 +89,7 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
         ws2 = wb.create_sheet('README')
         readme_text = [
             ['Title', 'Global Internal Displacement Database (GIDD)'],
-            ['File name', 'IDMC_GIDD_Disasters_Internal_Displacement_Data'],
+            ['File name', 'IDMC_GIDD_disasters_internal_displacement_data'],
             ['Creator', 'Internal Displacement monitoring Centre (IDMC)'],
             ['Date extracted', datetime.now().strftime("%d/%m/%Y")],
             ['Last update', StatusLog.last_release_date()],
@@ -108,7 +108,7 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
                 'period of time (reporting year). Figures may include individuals who have been displaced more than once.'
             ],
             [
-                '− Total number of IDPs', 'Represents the total number of Internal displaced Person “IDPs”, in a given '
+                '− Total number of IDPs: Represents the total number of Internal displaced Person “IDPs”, in a given '
                 'location at a specific point in time. It could be understood as the total number of people living in a '
                 'situation of displacement as of the end of the reporting year.'
             ],
@@ -118,11 +118,11 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
                 'Otherwise, the event is coded based on the country, type of hazard, location, and start date of the event.'
             ],
             [
-                'Usage licence : Content is licensed under CC BY-NC (See: '
+                'Use license: Content is licensed under CC BY-NC (See: '
                 'https://creativecommons.org/licenses/by/4.0/)'
             ],
-            ['Coverage', 'Worldwide'],
-            ['Contact', 'ch-idmcdataandanalysishub@idmc.ch'],
+            ['Coverage:', 'Worldwide'],
+            ['Contact:', 'ch-idmcdataandanalysishub@idmc.ch'],
         ]
 
         for item in readme_text:
@@ -132,21 +132,21 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
         ws2.append([])
 
         table = [
-            ['ISO3	 ISO 3166-1 alpha-3. The ISO3 "AB9" was assigned to the Abyei Area'],
-            ['Country / Territory	 Country’s or territory short name'],
-            ['Year	 Year of the event figures'],
+            ['ISO3: ISO 3166-1 alpha-3. The ISO3 "AB9" was assigned to the Abyei Area'],
+            ['Country / Territory: Country’s or territory short name'],
+            ['Year: Year of the event figures'],
             [
-                'Event Name	  IDMC adopts that name. Otherwise, the event is coded based'
-                ' on the country, type of hazard, location, and start date of the event.'
+                'Event Name:  IDMC adopts that name. Otherwise, the event is coded based '
+                'on the country, type of hazard, location, and start date of the event.'
             ],
-            ['Date of event (start)	 Approximate starting date of the event'],
+            ['Date of event (start): Approximate starting date of the event'],
             [
-                'Disaster Internal Displacements	 Total number of internal displacements '
+                'Disaster Internal Displacements: Total number of internal displacements '
                 'reported (rounded figures at national level), as a result of disasters over the reporting year.'
             ],
-            ['Hazard Category	 Hazard category based on CRED EM-DAT.'],
-            ['Hazard Type	 Hazard type category based on CRED EM-DAT.'],
-            ['Hazard Sub Type	 Hazard sub-type category based on CRED EM-DAT.'],
+            ['Hazard Category: Hazard category based on CRED EM-DAT.'],
+            ['Hazard Type: Hazard type category based on CRED EM-DAT.'],
+            ['Hazard Sub Type: Hazard sub-type category based on CRED EM-DAT.'],
         ]
         for item in table:
             ws2.append(item)
@@ -340,7 +340,7 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
             [''],
             [
                 '− Internal displacements correspond to the estimated number of internal '
-                'displacements over a given period of time [reporting year]. Figures may '
+                'displacements over a given period of time (reporting year). Figures may '
                 'include individuals who have been displaced more than once.'
             ],
             [
@@ -351,15 +351,15 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
             ],
             [''],
             [
-                'Usage licence : Content is licensed under CC BY-NC (See: '
-                'https://creativecommons.org/licenses/by/4.0/)'
+                'Use license: Content is licensed under CC BY-NC (See: '
+                'https://creativecommons.org/licenses/by-nc/4.0/)'
             ],
 
             ['Coverage: Worldwide'],
             ['Contact: ch-idmcdataandanalysishub@idmc.ch'],
             [''],
             [''],
-            ['Methodological notes:'],
+            ['Methodological notes for the 2023 release:'],
             [
                 '− The description of our methodology is available at '
                 'https://www.internal-displacement.org/monitoring-tools'],
@@ -407,9 +407,9 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
         ws3.append([
             '− As part of a methodological revision and our ongoing commitment to providing '
             'the most accurate and reliable information on internal displacement, IDMC is '
-            'pleased to announce the publication of IDP total figures and new '
-            'displacements for certain countries and years that were not previously available.'
-            ' These figures have been carefully reviewed and verified by our team of experts '
+            'pleased to announce the publication of IDP total figures and Internal '
+            'displacements for certain countries and years that were not previously available. '
+            'These figures have been carefully reviewed and verified by our team of experts '
             'to ensure the highest standards of quality.'
 
         ])
@@ -441,7 +441,7 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
         ws3.append(['1_ Displacement data (Tab table description):'])
         ws3.append([])
         readme_text_2 = [
-            ['Where (raw) means "not rounded".'],
+            ['Where (raw) means “not rounded”.'],
             ['ISO3: ISO 3166-1 alpha-3. The ISO3 “AB9” was assigned to the Abyei Area'],
             ['Name: Country’s or territory short name '],
             ['Year: Year of the reporting figures'],
@@ -494,8 +494,8 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
             ['Sex: Data encoded into male, female and both sexes'],
             ['Cause: Cause of displacement'],
             [
-                'Age groups are organized as follows:  0-1,  0-4,  0-14,  0-17,  0-24,  5-11,  5-14,'
-                '  12-14,  12-16,  15-17,  15-24,  25-64,  65+'
+                'Age groups are organized as follows: 0-1, 0-4, 0-14, 0-17, 0-24, 5-11, 5-14, '
+                '12-14, 12-16, 15-17, 15-24, 25-64, 65+'
             ],
         ]
         ws3.append([])
@@ -505,6 +505,20 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
         ws3.append([])
         for item in readme_text3:
             ws3.append(item)
+        ws3.append([])
+
+        ws3.append([])
+        ws3.append([
+            'Disaggregating IDMC’s IDP Figures by Sex and Age methodological notes:'
+        ])
+        ws3.append([])
+        ws3.append([
+            'Sex and Age Disaggregated Data (SADD) for displacement associated with conflict or '
+            'disasters is often scarce. One way to estimate it is to use SADD available at the national '
+            'level. IDMC employs United Nations Population Estimates and Projections to break down the '
+            'number of internally displaced people by sex and age. The methodology and limitations of '
+            'this approach are described on IDMC’s website at: https://www.internal-displacement.org/monitoring-tools',
+        ])
 
         response = HttpResponse(content=save_virtual_workbook(wb))
         filename = 'IDMC_Internal_Displacement_Conflict-Violence_Disasters.xlsx'
