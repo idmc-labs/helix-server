@@ -66,7 +66,15 @@ class Command(BaseCommand):
             new_figure.disaggregation_age.set(disaggregation_age_list)
 
             success += 1
-            print(f'Cloned flow figure {figure.id} as stock figure {new_figure.id}')
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f'Cloned flow figure {figure.id} as stock figure {new_figure.id}'
+                )
+            )
 
         # Make a list of new figures that were cloned (clear old_id when cloning or we are going to have a bad time)
-        print(f'Cloned {success} flow figures as stock figures')
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'Cloned {success} flow figures as stock figures'
+            )
+        )

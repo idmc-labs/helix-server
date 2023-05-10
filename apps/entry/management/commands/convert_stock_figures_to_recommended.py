@@ -3,7 +3,6 @@ import logging
 from django.db import models, transaction
 from django.db.models.functions import Concat, Cast
 from django.core.management.base import BaseCommand
-from datetime import date
 
 from apps.entry.models import Figure
 
@@ -39,4 +38,9 @@ class Command(BaseCommand):
             ), output_field=models.DateField())
         )
 
-        print(f'Updated {figures_to_convert_to_recommended_qs.count()} stock figures with role as recommended and the end date')
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'Updated {figures_to_convert_to_recommended_qs.count()} stock figures'
+                ' with role as recommended and the end date'
+            )
+        )

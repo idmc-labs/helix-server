@@ -52,10 +52,19 @@ class Command(BaseCommand):
             )
 
             for figure_id in figures_to_convert_to_recommended_qs.values_list('id', flat=True):
-                print(f'Updated stock figure {figure_id} with role as recommended and the end date')
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f'Updated stock figure {figure_id} with role as recommended and the end date'
+                    )
+                )
 
             # Make a list of figures that were converted to recommended
-            print(f'Updated {figures_to_convert_to_recommended_qs.count()} stock figures with role as recommended and the end date')
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f'Updated {figures_to_convert_to_recommended_qs.count()} stock figures'
+                    ' with role as recommended and the end date'
+                )
+            )
 
             # Clone figures_to_clone_as_stock and update end_date as last day of year of start date
             success = 0
@@ -99,7 +108,15 @@ class Command(BaseCommand):
                 new_figure.disaggregation_age.set(disaggregation_age_list)
 
                 success += 1
-                print(f'Cloned flow figure {figure.id} as stock figure {new_figure.id}')
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f'Cloned flow figure {figure.id} as stock figure {new_figure.id}'
+                    )
+                )
 
             # Make a list of new figures that were cloned (clear old_id when cloning or we are going to have a bad time)
-            print(f'Cloned {success} flow figures as stock figures')
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f'Cloned {success} flow figures as stock figures'
+                )
+            )

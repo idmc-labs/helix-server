@@ -29,4 +29,8 @@ class Command(BaseCommand):
         )
         figures_to_convert_to_triangulation_qs.update(role=Figure.ROLE.TRIANGULATION)
 
-        print(f'Updated {figures_to_convert_to_triangulation_qs.count()} figures with role as triangulation')
+        self.stdout.write(
+            self.style.SUCCESS(
+                f'Updated {figures_to_convert_to_triangulation_qs.count()} figures with role as triangulation'
+            )
+        )
