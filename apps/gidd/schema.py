@@ -585,7 +585,7 @@ class Query(graphene.ObjectType):
             ).aggregate(total_events=Coalesce(models.Sum('events', output_field=models.IntegerField()), 0))['total_events'],
 
             total_displacement_countries=disaster_total_displacement_qs.distinct('iso3').count(),
-            internal_displacement_countries=disaster_total_displacement_qs.distinct('iso3').count(),
+            internal_displacement_countries=disaster_new_displacement_qs.distinct('iso3').count(),
 
             new_displacement_timeseries_by_year=[
                 GiddTimeSeriesStatisticsByYearType(
@@ -736,9 +736,9 @@ class Query(graphene.ObjectType):
         )
 
         disaster_total_displacement_countries = disaster_total_displacement_qs.order_by()\
-            .values('iso3').distinct() or []
+            .values_list('iso3', flat=True).distinct()
         disaster_internal_displacement_countries = disaster_internal_displacement_qs.order_by()\
-            .values('iso3').distinct() or []
+            .values_list('iso3', flat=True).distinct()
 
         # Conflict doesn't has hazard_type
         if kwargs.get('hazard_type'):
@@ -758,12 +758,10 @@ class Query(graphene.ObjectType):
             models.Sum('new_displacement'),
         )
 
-        conflict_total_displacement_countries = conflict_total_displacement_qs.order_by().values(
-            'iso3'
-        ).distinct()
-        conflict_internal_displacement_countries = conflict_total_displacement_qs.order_by().values(
-            'iso3'
-        ).distinct()
+        conflict_total_displacement_countries = conflict_total_displacement_qs.order_by()\
+            .values_list('iso3', flat=True).distinct()
+        conflict_internal_displacement_countries = conflict_internal_displacement_qs.order_by()\
+            .values_list('iso3', flat=True).distinct()
 
         total_displacements = (
             (disaster_total_displacement_stats['total_displacement__sum'] or 0) +
@@ -783,12 +781,12 @@ class Query(graphene.ObjectType):
             total_displacements_rounded=round_and_remove_zero(
                 total_displacements
             ),
-            internal_displacement_countries=len(set(
-                [d['iso3'] for d in disaster_internal_displacement_countries] +
-                [d['iso3'] for d in conflict_internal_displacement_countries]
-            )),
-            total_displacement_countries=len(set(
-                [d['iso3'] for d in disaster_total_displacement_countries] +
-                [d['iso3'] for d in conflict_total_displacement_countries]
-            )),
+            internal_displacement_countries=len(set([
+                *disaster_internal_displacement_countries,
+                *conflict_internal_displacement_countries,
+            ])),
+            total_displacement_countries=len(set([
+                *disaster_total_displacement_countries,
+                *conflict_total_displacement_countries,
+            ])),
         )
