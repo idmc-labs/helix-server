@@ -556,6 +556,8 @@ CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = [
     # External services
     'https://media-monitoring.idmcdb.org',
     'https://www.internal-displacement.org',
+
+    'https://staging.internal-displacement.org',
     'https://release-website-components-idmc.dev.datafriendlyspace.org',
     'https://preview-website-components-idmc.dev.datafriendlyspace.org',
     # Obsolete
