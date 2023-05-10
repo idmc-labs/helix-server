@@ -862,10 +862,20 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 output_field=models.CharField()
             ),
-            entry_link=Concat(Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id')),
+            entry_link=Concat(
+                Value(settings.FRONTEND_BASE_URL),
+                Value('/entries/'),
+                F('entry__id'),
+                output_field=models.CharField()
+            ),
             figure_link=Concat(
-                Value(settings.FRONTEND_BASE_URL), Value('/entries/'), F('entry__id'),
-                Value('/?id='), F('id'), Value('#/figures-and-analysis')
+                Value(settings.FRONTEND_BASE_URL),
+                Value('/entries/'),
+                F('entry__id'),
+                Value('/?id='),
+                F('id'),
+                Value('#/figures-and-analysis'),
+                output_field=models.CharField()
             ),
             geolocations=StringAgg(
                 'geo_locations__display_name',
