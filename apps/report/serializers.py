@@ -26,7 +26,6 @@ from django.db.models.fields import BooleanField, CharField, DateField, TextFiel
 
 
 def check_is_pfa_visible_in_gidd(report):
-
     errors = []
     if not report:
         errors.append('Report does not exist.')
