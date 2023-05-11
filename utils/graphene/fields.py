@@ -29,6 +29,7 @@ GIDD_API_TYPE_MAP = {
     'ConflictStatisticsFilter': ExternalApiDump.ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL,
 }
 
+
 def path_has_list(info):
     '''
     Checks if the parent path contains list

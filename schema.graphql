@@ -2469,8 +2469,8 @@ type Query {
   giddDisasters(id_Iexact: Float, releaseEnvironment: String, hazardTypes: [ID!], eventName: String, startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
   giddConflictStatistics(releaseEnvironment: String, countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddConflictStatisticsType!
   giddDisasterStatistics(releaseEnvironment: String, hazardTypes: [ID!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddDisasterStatisticsType!
-  giddLog(clientId: String!, id: ID!): GiddStatusLogType
-  giddLogs(status: [String!], clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
+  giddLog(id: ID!): GiddStatusLogType
+  giddLogs(status: [String!], page: Int = 1, ordering: String, pageSize: Int): GiddStatusLogListType
   giddReleaseMetaData(clientId: String!): GiddReleaseMetadataType
   giddPublicCountries(clientId: String!): [GiddPublicCountryType!]
   giddHazardTypes(clientId: String!): [GiddHazardType]

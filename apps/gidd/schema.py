@@ -376,14 +376,12 @@ class Query(graphene.ObjectType):
     )
     gidd_log = DjangoObjectField(
         GiddStatusLogType,
-        client_id=graphene.String(required=True),
     )
     gidd_logs = DjangoPaginatedListObjectField(
         GiddStatusLogListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
         ),
-        client_id=graphene.String(required=True),
     )
     gidd_release_meta_data = graphene.Field(
         GiddReleaseMetadataType,
