@@ -1,5 +1,6 @@
 import django_filters
 from rest_framework import serializers
+from django.db.models import Q
 from utils.filters import StringListFilter, IDListFilter
 from .models import (
     Conflict,
@@ -71,6 +72,11 @@ class DisasterFilter(ReleaseMetadataFilter):
 
     def filter_countries_iso3(self, queryset, name, value):
         return queryset.filter(iso3__in=value)
+
+    @property
+    def qs(self):
+        qs = super().qs
+        return qs.filter(new_displacement__gt=0)
 
 
 class ConflictStatisticsFilter(ReleaseMetadataFilter):
@@ -154,6 +160,7 @@ class DisplacementDataFilter(ReleaseMetadataFilter):
     start_year = django_filters.NumberFilter(method='filter_start_year')
     end_year = django_filters.NumberFilter(method='filter_end_year')
     countries_iso3 = StringListFilter(method='filter_countries_iso3')
+    cause = django_filters.CharFilter(method='filter_cause')
 
     class Meta:
         model = DisplacementData
@@ -167,3 +174,27 @@ class DisplacementDataFilter(ReleaseMetadataFilter):
 
     def filter_countries_iso3(self, queryset, name, value):
         return queryset.filter(iso3__in=value)
+
+    def filter_cause(self, queryset, name, value):
+        if value == 'conflict':
+            return queryset.filter(
+                Q(conflict_new_displacement__gt=0) |
+                Q(conflict_total_displacement__gt=0)
+            )
+        elif value == 'disaster':
+            return queryset.filter(
+                Q(disaster_new_displacement__gt=0) |
+                Q(disaster_total_displacement__gt=0)
+            )
+
+    @property
+    def qs(self):
+        qs = super().qs
+        if 'cause' not in self.data:
+            return qs.filter(
+                Q(conflict_new_displacement__gt=0) |
+                Q(conflict_total_displacement__gt=0) |
+                Q(disaster_new_displacement__gt=0) |
+                Q(disaster_total_displacement__gt=0)
+            )
+        return qs

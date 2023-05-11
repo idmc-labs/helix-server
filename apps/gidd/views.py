@@ -69,8 +69,16 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
         ws = wb.active
         ws.title = "1_Disaster_Displacement_data"
         ws.append([
-            'ISO3', 'Country / Territory', 'Year', 'Event Name', 'Date of Event (start)',
-            'Disaster Internal Displacements', 'Hazard Category', 'Hazard Type', 'Hazard Sub Type'
+            'ISO3',
+            'Country / Territory',
+            'Year',
+            'Event Name',
+            'Date of Event (start)',
+            'Disaster Internal Displacements',
+            'Disaster Internal Displacements (Raw)',
+            'Hazard Category',
+            'Hazard Type',
+            'Hazard Sub Type'
         ])
         for disaster in qs:
             ws.append(
@@ -81,6 +89,7 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
                     disaster.event_name,
                     disaster.start_date,
                     disaster.new_displacement_rounded,
+                    disaster.new_displacement,
                     disaster.hazard_category_name,
                     disaster.hazard_type_name,
                     disaster.hazard_sub_type_name,
