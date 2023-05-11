@@ -2475,7 +2475,7 @@ type Query {
   giddPublicCountries: [GiddPublicCountryType!]
   giddHazardTypes: [GiddHazardType]
   giddPublicFigureAnalysisList(iso3: String, year: Int, releaseEnvironment: String, page: Int = 1, ordering: String, pageSize: Int): GiddPublicFigureAnalysisListType
-  giddDisplacements(releaseEnvironment: String, startYear: Float, endYear: Float, countriesIso3: [String!], page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
+  giddDisplacements(releaseEnvironment: String, startYear: Float, endYear: Float, countriesIso3: [String!], cause: String, page: Int = 1, ordering: String, pageSize: Int): GiddDisplacementDataListType
   giddYear(releaseEnvironment: String!): GiddYearType!
   giddEvent(eventId: ID!, releaseEnvironment: String): GiddEventType
   giddCombinedStatistics(releaseEnvironment: String, hazardTypes: [ID!], countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!]): GiddCombinedStatisticsType!

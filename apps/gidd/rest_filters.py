@@ -47,6 +47,11 @@ class RestDisasterFilterSet(ReleaseMetadataFilter):
     def filter_end_year(self, queryset, name, value):
         return queryset.filter(year__lte=value)
 
+    @property
+    def qs(self):
+        qs = super().qs
+        return qs.filter(new_displacement__gt=0)
+
 
 class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
     start_year = django_filters.NumberFilter(field_name='start_year', method='filter_start_year')
@@ -68,15 +73,26 @@ class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
     def filter_cause(self, queryset, name, value):
         if value == 'conflict':
             return queryset.filter(
-                Q(conflict_total_displacement__isnull=False) |
-                Q(conflict_new_displacement__isnull=False)
+                Q(conflict_new_displacement__gt=0) |
+                Q(conflict_total_displacement__gt=0)
             )
         elif value == 'disaster':
             return queryset.filter(
-                Q(disaster_total_displacement__isnull=False) |
-                Q(disaster_new_displacement__isnull=False)
+                Q(disaster_new_displacement__gt=0) |
+                Q(disaster_total_displacement__gt=0)
             )
-        return queryset
+
+    @property
+    def qs(self):
+        qs = super().qs
+        if 'cause' not in self.data:
+            return qs.filter(
+                Q(conflict_new_displacement__gt=0) |
+                Q(conflict_total_displacement__gt=0) |
+                Q(disaster_new_displacement__gt=0) |
+                Q(disaster_total_displacement__gt=0)
+            )
+        return qs
 
 
 class IdpsSaddEstimateFilter(ReleaseMetadataFilter):
