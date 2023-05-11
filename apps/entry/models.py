@@ -1362,8 +1362,16 @@ class ExternalApiDump(models.Model):
 
         GIDD_CONFLICT_GRAPHQL = 'gidd-conflict', _('GIDD conflict')
         GIDD_DISASTER_GRAPHQL = 'gidd-disaster', _('GIDD disaster')
-        GIDD_CONFLICT_STAT = 'gidd-conflict-stat', _('GIDD conflict stat')
-        GIDD_DISASTER_STAT = 'gidd-disaster-stat', _('GIDD disaster stat')
+        GIDD_DISPLACEMENT_DATA_GRAPHQL = 'gidd-displacement-data', _('GIDD displacement data')
+        GIDD_PFA_GRAPHQL = 'gidd-public-figure-analysis', _('GIDD public figure analysis')
+        GIDD_CONFLICT_STAT_GRAPHQL = 'gidd-conflict-stat', _('GIDD conflict stat')
+        GIDD_DISASTER_STAT_GRAPHQL = 'gidd-disaster-stat', _('GIDD disaster stat')
+        GIDD_HAZARD_TYPES_GRAPHQL = 'gidd-hazard-type', _('GIDD hazard type')
+        GIDD_YEAR_GRAPHQL = 'gidd-year', _('GIDD year')
+        GIDD_EVENT_GRAPHQL = 'gidd-event', _('GIDD event')
+        GIDD_COMBINED_STAT_GRAPHQL = 'gidd-combined-stat', _('GIDD combined stat')
+        GIDD_RELEASE_META_DATA_GRAPHQL = 'gidd-release-meta-data', _('GIDD release meta data')
+        GIDD_PUBLIC_COUNTRIES_GRAPHQL = 'gidd-public-countries', _('GIDD public countries')
 
     class Status(models.IntegerChoices):
         PENDING = 0, 'Pending'
