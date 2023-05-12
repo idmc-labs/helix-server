@@ -2,6 +2,7 @@ import django_filters
 from rest_framework import serializers
 from django.db.models import Q
 from utils.filters import StringListFilter, IDListFilter
+from apps.entry.models import ExternalApiDump
 from .models import (
     Conflict,
     Disaster,
@@ -198,3 +199,14 @@ class DisplacementDataFilter(ReleaseMetadataFilter):
                 Q(disaster_total_displacement__gt=0)
             )
         return qs
+
+
+# Gidd filtets to api type map
+GIDD_API_TYPE_MAP = {
+    DisasterFilter: ExternalApiDump.ExternalApiType.GIDD_DISASTER_GRAPHQL,
+    ConflictFilter: ExternalApiDump.ExternalApiType.GIDD_CONFLICT_GRAPHQL,
+    DisplacementDataFilter: ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_DATA_GRAPHQL,
+    PublicFigureAnalysisFilter: ExternalApiDump.ExternalApiType.GIDD_PFA_GRAPHQL,
+    DisasterStatisticsFilter: ExternalApiDump.ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL,
+    ConflictStatisticsFilter: ExternalApiDump.ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL,
+}

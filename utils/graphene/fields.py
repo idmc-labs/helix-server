@@ -16,18 +16,7 @@ from graphene_django_extras.utils import get_extra_filters
 
 from utils.graphene.pagination import OrderingOnlyArgumentPagination
 from utils.common import track_gidd
-from apps.entry.models import ExternalApiDump
-
-
-# Track gidd queries
-GIDD_API_TYPE_MAP = {
-    'GrapheneDisasterFilter': ExternalApiDump.ExternalApiType.GIDD_DISASTER_GRAPHQL,
-    'GrapheneConflictFilter': ExternalApiDump.ExternalApiType.GIDD_CONFLICT_GRAPHQL,
-    'GrapheneDisplacementDataFilter': ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_DATA_GRAPHQL,
-    'GraphenePublicFigureAnalysisFilter': ExternalApiDump.ExternalApiType.GIDD_PFA_GRAPHQL,
-    'DisasterStatisticsFilter': ExternalApiDump.ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL,
-    'ConflictStatisticsFilter': ExternalApiDump.ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL,
-}
+from apps.gidd.filters import GIDD_API_TYPE_MAP
 
 
 def path_has_list(info):
@@ -230,7 +219,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
 
         client_id = kwargs.get('client_id')
         if client_id:
-            api_type = GIDD_API_TYPE_MAP.get(filterset_class.__name__)
+            api_type = GIDD_API_TYPE_MAP.get(filterset_class)
             track_gidd(client_id, api_type)
 
         # setup pagination
