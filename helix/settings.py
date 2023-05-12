@@ -122,6 +122,7 @@ THIRD_PARTY_APPS = [
     'django_otp.plugins.otp_email',
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_hotp',
+    'drf_yasg'
 ]
 
 INSTALLED_APPS = [

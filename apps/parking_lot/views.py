@@ -18,3 +18,4 @@ class ParkedItemViewSet(CreateListMixin, viewsets.ModelViewSet):
     serializer_class = ParkedItemSerializer
     permission_classes = [IsAuthenticated]
     pagination_class = None
+    swagger_schema = None
