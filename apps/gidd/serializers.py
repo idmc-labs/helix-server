@@ -9,7 +9,7 @@ from .models import (
 class CountrySerializer(serializers.ModelSerializer):
     class Meta:
         model = Country
-        fields = '__all__'
+        fields = ('iso3', 'idmc_short_name')
         lookup_field = 'id'
 
 
