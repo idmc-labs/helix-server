@@ -113,6 +113,35 @@ type ClearSelfAssigneFromEvent {
   result: EventType
 }
 
+type ClientListType {
+  results: [ClientType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ClientTrackInformationListType {
+  results: [ClientTrackInformationType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type ClientTrackInformationType {
+  id: ID!
+  client: ClientType!
+  apiType: ExternalApiType
+  requestsPerDay: Int!
+  trackedDate: Date!
+  apiTypeDisplay: EnumDescription
+}
+
+type ClientType {
+  id: ID!
+  name: String!
+  code: String!
+}
+
 type CloneEvent {
   errors: [GenericScalar!]
   ok: Boolean
@@ -1278,6 +1307,30 @@ type ExportReportFigures {
 type ExportReports {
   errors: [GenericScalar!]
   ok: Boolean
+}
+
+enum ExternalApiType {
+  IDUS
+  IDUS_ALL
+  IDUS_ALL_DISASTER
+  GIDD_COUNTRY_REST
+  GIDD_CONFLICT_REST
+  GIDD_DISASTER_REST
+  GIDD_DISPLACEMENT_REST
+  GIDD_DISASTER_EXPORT_REST
+  GIDD_DISPLACEMENT_EXPORT_REST
+  GIDD_CONFLICT_GRAPHQL
+  GIDD_DISASTER_GRAPHQL
+  GIDD_DISPLACEMENT_DATA_GRAPHQL
+  GIDD_PFA_GRAPHQL
+  GIDD_CONFLICT_STAT_GRAPHQL
+  GIDD_DISASTER_STAT_GRAPHQL
+  GIDD_HAZARD_TYPES_GRAPHQL
+  GIDD_YEAR_GRAPHQL
+  GIDD_EVENT_GRAPHQL
+  GIDD_COMBINED_STAT_GRAPHQL
+  GIDD_RELEASE_META_DATA_GRAPHQL
+  GIDD_PUBLIC_COUNTRIES_GRAPHQL
 }
 
 type ExtractionQueryListType {
@@ -2539,6 +2592,8 @@ type Query {
   organizationKindList(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, name: String, reliability: String, page: Int = 1, ordering: String, pageSize: Int): OrganizationKindListType
   attachment(id: ID!): AttachmentType
   excelExports(startedAt_Lt: DateTime, startedAt_Gt: DateTime, startedAt_Gte: DateTime, startedAt_Lte: DateTime, statusList: [String!], page: Int = 1, ordering: String, pageSize: Int): ExcelExportsListType
+  clientList(page: Int = 1, ordering: String, pageSize: Int): ClientListType
+  clientTrackInformationList(apiType: [String!], clientCodes: [String!], page: Int = 1, ordering: String, pageSize: Int): ClientTrackInformationListType
   contact(id: ID!): ContactType
   communication(id: ID!): CommunicationType
   contactList(country: ID, id: String, firstNameContains: String, lastNameContains: String, nameContains: String, countriesOfOperation: [String!], page: Int = 1, ordering: String, pageSize: Int): ContactListType
