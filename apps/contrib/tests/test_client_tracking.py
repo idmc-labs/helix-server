@@ -17,9 +17,9 @@ from helix.caches import external_api_cache
 class TestExternalClientTrack(HelixAPITestCase):
     def setUp(self):
         super().setUp()
-        self.idus_url = '/external-api/idus'
-        self.idus_all_url = '/external-api/idus-all'
-        self.idus_all_disaster_url = '/external-api/idus-all-disaster'
+        self.idus_url = '/external-api/idus/last-180-days/'
+        self.idus_all_url = '/external-api/idus/all/'
+        self.idus_all_disaster_url = '/external-api/idus/all/disaster/'
         self.client1 = ClientFactory.create(code='random-code-1')
         self.client2 = ClientFactory.create(code='random-code-2')
 
