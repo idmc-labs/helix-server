@@ -7,37 +7,30 @@ from rest_framework.decorators import action
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
-from drf_yasg import openapi
 from django.utils.decorators import method_decorator
 from drf_yasg.utils import swagger_auto_schema
 
 from apps.country.models import Country
 from .models import (
     Conflict, Disaster, DisplacementData, IdpsSaddEstimate,
-    StatusLog,
+    StatusLog, PublicFigureAnalysis
 )
 from .serializers import (
     CountrySerializer,
     ConflictSerializer,
     DisasterSerializer,
     DisplacementDataSerializer,
+    PublicFigureAnalysisSerializer,
 )
 from .rest_filters import (
     RestConflictFilterSet,
     RestDisasterFilterSet,
     RestDisplacementDataFilterSet,
     IdpsSaddEstimateFilter,
+    PublicFigureAnalysisFilterSet,
 )
-from utils.common import track_gidd
+from utils.common import track_gidd, client_id
 from apps.entry.models import ExternalApiDump
-
-
-client_id = openapi.Parameter(
-    'client_id', openapi.IN_QUERY,
-    description="Registered client id",
-    type=openapi.TYPE_STRING,
-    required=True,
-)
 
 
 @method_decorator(name="list", decorator=swagger_auto_schema(manual_parameters=[client_id]))
@@ -569,3 +562,18 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
         filename = 'IDMC_Internal_Displacement_Conflict-Violence_Disasters.xlsx'
         response['Content-Disposition'] = f'attachment; filename={filename}'
         return response
+
+
+@method_decorator(name="list", decorator=swagger_auto_schema(manual_parameters=[client_id]))
+@method_decorator(name="retrieve", decorator=swagger_auto_schema(manual_parameters=[client_id]))
+class PublicFigureAnalysisViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = PublicFigureAnalysisSerializer
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
+    filterset_class = PublicFigureAnalysisFilterSet
+
+    def get_queryset(self):
+        track_gidd(
+            self.request.GET.get('client_id'),
+            ExternalApiDump.ExternalApiType.GIDD_PUBLIC_FIGURE_ANALYSIS_REST
+        )
+        return PublicFigureAnalysis.objects.all()

@@ -14,6 +14,7 @@ from apps.gidd.views import (
     ConflictViewSet,
     DisasterViewSet,
     DisplacementDataViewSet,
+    PublicFigureAnalysisViewSet,
 )
 
 schema_view = get_schema_view(
@@ -34,6 +35,7 @@ router.register("countries", CountryViewSet, "countries-view")
 router.register("conflicts", ConflictViewSet, "conflicts-view")
 router.register("disasters", DisasterViewSet, "diasters-view")
 router.register("displacements", DisplacementDataViewSet, "displacements-view")
+router.register("public-figure-analysis", PublicFigureAnalysisViewSet, "public-figure-analysis-view-set")
 
 urlpatterns = [
     path('idus', IdusFlatCachedView.as_view()),

@@ -2,7 +2,7 @@ from rest_framework import serializers
 from apps.country.models import Country
 from .models import (
     Conflict, Disaster, StatusLog, ReleaseMetadata,
-    DisplacementData,
+    DisplacementData, PublicFigureAnalysis
 )
 
 
@@ -51,4 +51,10 @@ class ReleaseMetadataSerializer(serializers.ModelSerializer):
 class DisplacementDataSerializer(serializers.ModelSerializer):
     class Meta:
         model = DisplacementData
+        fields = '__all__'
+
+
+class PublicFigureAnalysisSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PublicFigureAnalysis
         fields = '__all__'

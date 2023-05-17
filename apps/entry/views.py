@@ -9,11 +9,13 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import redirect
+from drf_yasg.utils import swagger_auto_schema
 
 from helix.caches import external_api_cache
 
 from apps.contrib.redis_client_track import track_client
 from rest_framework.exceptions import PermissionDenied
+from apps.gidd.views import client_id
 
 
 def get_idu_data():
@@ -281,6 +283,7 @@ class FigureViewSet(viewsets.ReadOnlyModelViewSet):
 class ExternalEndpointBaseCachedViewMixin():
     ENDPOINT_TYPE = None
 
+    @swagger_auto_schema(manual_parameters=[client_id])
     def get(self, request):
         # Check if request is comming from valid client
         client_id = request.GET.get('client_id', None)
