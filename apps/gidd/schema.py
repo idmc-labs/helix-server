@@ -463,7 +463,7 @@ class Query(graphene.ObjectType):
 
         return GiddConflictStatisticsType(
             new_displacements_rounded=round_and_remove_zero(
-                conflict_total_displacement_qs.aggregate(
+                conflict_new_displacement_qs.aggregate(
                     total=Coalesce(models.Sum('new_displacement', output_field=models.IntegerField()), 0)
                 )['total']
             ),
