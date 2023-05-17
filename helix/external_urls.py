@@ -38,9 +38,9 @@ router.register("displacements", DisplacementDataViewSet, "displacements-view")
 router.register("public-figure-analysis", PublicFigureAnalysisViewSet, "public-figure-analysis-view-set")
 
 urlpatterns = [
-    path('idus', IdusFlatCachedView.as_view()),
-    path('idus-all', IdusAllFlatCachedView.as_view()),
-    path('idus-all-disaster', IdusAllDisasterCachedView.as_view()),
+    path('idus/last-180-days/', IdusFlatCachedView.as_view()),
+    path('idus/all/', IdusAllFlatCachedView.as_view()),
+    path('idus/all/disaster/', IdusAllDisasterCachedView.as_view()),
     path('gidd/', include(router.urls)),
     path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 ]
