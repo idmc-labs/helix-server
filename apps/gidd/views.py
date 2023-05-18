@@ -8,6 +8,7 @@ from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
 from django.utils.decorators import method_decorator
+from rest_framework import mixins
 from drf_yasg.utils import swagger_auto_schema
 
 from apps.country.models import Country
@@ -34,8 +35,11 @@ from apps.entry.models import ExternalApiDump
 
 
 @method_decorator(name="list", decorator=swagger_auto_schema(manual_parameters=[client_id]))
-@method_decorator(name="retrieve", decorator=swagger_auto_schema(manual_parameters=[client_id]))
-class CountryViewSet(viewsets.ReadOnlyModelViewSet):
+class ListOnlyViewSetMixin(mixins.ListModelMixin, viewsets.GenericViewSet):
+    pass
+
+
+class CountryViewSet(ListOnlyViewSetMixin):
     serializer_class = CountrySerializer
     lookup_field = 'iso3'
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
@@ -49,9 +53,7 @@ class CountryViewSet(viewsets.ReadOnlyModelViewSet):
         return Country.objects.all()
 
 
-@method_decorator(name="list", decorator=swagger_auto_schema(manual_parameters=[client_id]))
-@method_decorator(name="retrieve", decorator=swagger_auto_schema(manual_parameters=[client_id]))
-class ConflictViewSet(viewsets.ReadOnlyModelViewSet):
+class ConflictViewSet(ListOnlyViewSetMixin):
     serializer_class = ConflictSerializer
     filterset_class = RestConflictFilterSet
 
@@ -63,10 +65,8 @@ class ConflictViewSet(viewsets.ReadOnlyModelViewSet):
         return Conflict.objects.all().select_related('country')
 
 
-@method_decorator(name="list", decorator=swagger_auto_schema(manual_parameters=[client_id]))
-@method_decorator(name="retrieve", decorator=swagger_auto_schema(manual_parameters=[client_id]))
 @method_decorator(name="export", decorator=swagger_auto_schema(manual_parameters=[client_id]))
-class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
+class DisasterViewSet(ListOnlyViewSetMixin):
     serializer_class = DisasterSerializer
     queryset = Disaster.objects.all().select_related('country')
     filterset_class = RestDisasterFilterSet
@@ -193,10 +193,8 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
         return response
 
 
-@method_decorator(name="list", decorator=swagger_auto_schema(manual_parameters=[client_id]))
-@method_decorator(name="retrieve", decorator=swagger_auto_schema(manual_parameters=[client_id]))
 @method_decorator(name="export", decorator=swagger_auto_schema(manual_parameters=[client_id]))
-class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
+class DisplacementDataViewSet(ListOnlyViewSetMixin):
     serializer_class = DisplacementDataSerializer
     filterset_class = RestDisplacementDataFilterSet
 
@@ -564,9 +562,7 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
         return response
 
 
-@method_decorator(name="list", decorator=swagger_auto_schema(manual_parameters=[client_id]))
-@method_decorator(name="retrieve", decorator=swagger_auto_schema(manual_parameters=[client_id]))
-class PublicFigureAnalysisViewSet(viewsets.ReadOnlyModelViewSet):
+class PublicFigureAnalysisViewSet(ListOnlyViewSetMixin):
     serializer_class = PublicFigureAnalysisSerializer
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
     filterset_class = PublicFigureAnalysisFilterSet
