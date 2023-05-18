@@ -17,9 +17,17 @@ from helix.caches import external_api_cache
 class TestExternalClientTrack(HelixAPITestCase):
     def setUp(self):
         super().setUp()
+        # Idus REST endpoints
         self.idus_url = '/external-api/idus/last-180-days/'
         self.idus_all_url = '/external-api/idus/all/'
         self.idus_all_disaster_url = '/external-api/idus/all/disaster/'
+
+        # Gidd public REST endpoints
+        self.countries_url = '/external-api/gidd/countries/'
+        self.conflicts_url = '/external-api/gidd/conflicts/'
+        self.disasters_url = '/external-api/gidd/disasters/'
+        self.displacements_url = '/external-api/gidd/displacements/'
+        self.public_figure_analysis_url = '/external-api/gidd/public-figure-analysis/'
         self.client1 = ClientFactory.create(code='random-code-1')
         self.client2 = ClientFactory.create(code='random-code-2')
 
@@ -139,3 +147,49 @@ class TestExternalClientTrack(HelixAPITestCase):
         # Trigger task
         save_and_delete_tracked_data_from_redis_to_db()
         self.assertEqual(ClientTrackInfo.objects.count(), 14)
+
+    def test_gidd_tracked_data(self):
+        # Test with invalid client ids
+        endpoints = [
+            # For the first client
+            f'{self.countries_url}?client_id={self.client1.code}',
+            f'{self.conflicts_url}?client_id={self.client1.code}',
+            f'{self.disasters_url}?client_id={self.client1.code}',
+            f'{self.displacements_url}?client_id={self.client1.code}',
+            f'{self.public_figure_analysis_url}?client_id={self.client1.code}',
+            # For the second client
+            f'{self.countries_url}?client_id={self.client2.code}',
+            f'{self.conflicts_url}?client_id={self.client2.code}',
+            f'{self.disasters_url}?client_id={self.client2.code}',
+            f'{self.displacements_url}?client_id={self.client2.code}',
+            f'{self.public_figure_analysis_url}?client_id={self.client2.code}',
+        ]
+
+        # Assume yesterdays data
+        self.now_patcher.start().return_value = self.now_datetime - timedelta(days=1)
+        for endpoint in endpoints:
+            self.client.get(endpoint)
+
+        # Sync redis data to database
+        save_and_delete_tracked_data_from_redis_to_db()
+        self.assertEqual(ClientTrackInfo.objects.count(), 10)
+
+        # Again track client ids for same date
+        for endpoint in endpoints:
+            self.client.get(endpoint)
+
+        # Resync redis data for same date
+        save_and_delete_tracked_data_from_redis_to_db()
+        self.assertEqual(ClientTrackInfo.objects.count(), 10)
+
+        # Again track client ids for same date
+        for endpoint in endpoints:
+            self.client.get(endpoint)
+
+        # Resync redis data for same date
+        save_and_delete_tracked_data_from_redis_to_db()
+        self.assertEqual(ClientTrackInfo.objects.count(), 10)
+
+        # For each client track info requests per day should be 1 for each api type
+        for obj in ClientTrackInfo.objects.all():
+            self.assertEqual(obj.requests_per_day, 3)
