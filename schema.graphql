@@ -138,8 +138,18 @@ type ClientTrackInformationType {
 
 type ClientType {
   id: ID!
+  createdBy: UserType
+  lastModifiedBy: UserType
   name: String!
   code: String!
+  isActive: Boolean!
+}
+
+input ClientUpdateInputType {
+  id: ID!
+  name: String
+  code: String
+  isActive: Boolean
 }
 
 type CloneEvent {
@@ -494,6 +504,12 @@ type CreateAttachment {
   errors: [GenericScalar]
   ok: Boolean
   result: AttachmentType
+}
+
+type CreateClient {
+  errors: [GenericScalar]
+  ok: Boolean
+  result: ClientType
 }
 
 type CreateCommunication {
@@ -1991,6 +2007,8 @@ type Mutation {
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
   exportCountries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, year: Float): ExportCountries
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
+  createClient(data: clientCreateInputType!): CreateClient
+  updateClient(data: ClientUpdateInputType!): UpdateClient
   createContact(data: ContactCreateInputType!): CreateContact
   updateContact(data: ContactUpdateInputType!): UpdateContact
   deleteContact(id: ID!): DeleteContact
@@ -3167,6 +3185,12 @@ type UpdateAdminPortfolio {
   result: UserType
 }
 
+type UpdateClient {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ClientType
+}
+
 type UpdateCommunication {
   errors: [GenericScalar!]
   ok: Boolean
@@ -3386,4 +3410,10 @@ type ViolenceType {
   subTypes(id_Iexact: Float, ordering: String): ViolenceSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
+}
+
+input clientCreateInputType {
+  name: String!
+  code: String!
+  isActive: Boolean
 }

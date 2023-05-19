@@ -282,6 +282,10 @@ class Client(MetaInformationAbstractModel):
         help_text=_('Recommended format client-short-name:custom-name:month:day'),
         unique=True
     )
+    is_active = models.BooleanField(
+        verbose_name=_('Is active?'),
+        default=False
+    )
 
     def __str__(self):
         return self.code
