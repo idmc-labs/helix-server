@@ -19,12 +19,10 @@ from apps.gidd.views import (
 
 schema_view = get_schema_view(
     openapi.Info(
-        title="GIDD Open API",
+        title="Helix API",
         default_version='v1',
-        description="Public REST endpoints",
-        terms_of_service="https://www.google.com/policies/terms/",
-        contact=openapi.Contact(email="dev@togglecorp.com"),
-        license=openapi.License(name="BSD License"),
+        description="Public rest API endpoints for Helix",
+        contact=openapi.Contact(email="info@idmc.ch"),
     ),
     public=True,
     permission_classes=[permissions.AllowAny],
@@ -35,7 +33,7 @@ router.register("countries", CountryViewSet, "countries-view")
 router.register("conflicts", ConflictViewSet, "conflicts-view")
 router.register("disasters", DisasterViewSet, "diasters-view")
 router.register("displacements", DisplacementDataViewSet, "displacements-view")
-router.register("public-figure-analysis", PublicFigureAnalysisViewSet, "public-figure-analysis-view-set")
+router.register("public-figure-analyses", PublicFigureAnalysisViewSet, "public-figure-analysis-view-set")
 
 urlpatterns = [
     path('idus/last-180-days/', IdusFlatCachedView.as_view()),
