@@ -6,13 +6,15 @@ from graphene_django_extras import (
 )
 from utils.graphene.enums import EnumDescription
 
-from apps.contrib.models import Attachment, ExcelDownload
+from apps.contrib.models import Attachment, ExcelDownload, Client, ClientTrackInfo
+from apps.contrib.filters import ClientTrackInfoFilter, ClientFilter
 from apps.contrib.filters import ExcelExportFilter
 from apps.contrib.enums import (
     AttachmentForGrapheneEnum,
     DownloadTypeGrapheneEnum,
     ExcelGenerationStatusGrapheneEnum,
 )
+from apps.entry.enums import ExternalApiTypeEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 
@@ -38,6 +40,43 @@ class ExcelExportsListType(CustomDjangoListObjectType):
         filterset_class = ExcelExportFilter
 
 
+class ClientType(DjangoObjectType):
+    class Meta:
+        model = Client
+        fields = (
+            'id',
+            'name',
+            'code',
+        )
+
+
+class ClientListType(CustomDjangoListObjectType):
+    class Meta:
+        model = Client
+        filterset_class = ClientFilter
+
+
+class ClientTrackInformationType(DjangoObjectType):
+    class Meta:
+        model = ClientTrackInfo
+        fields = (
+            'id',
+            'client',
+            'api_type',
+            'requests_per_day',
+            'tracked_date',
+        )
+
+    api_type = graphene.Field(ExternalApiTypeEnum)
+    api_type_display = EnumDescription(source='get_api_type_display')
+
+
+class ClientTrackInformationListType(CustomDjangoListObjectType):
+    class Meta:
+        model = ClientTrackInfo
+        filterset_class = ClientTrackInfoFilter
+
+
 class AttachmentType(DjangoObjectType):
     class Meta:
         model = Attachment
@@ -55,3 +94,15 @@ class Query:
                                                    pagination=PageGraphqlPagination(
                                                        page_size_query_param='pageSize'
                                                    ))
+    client_list = DjangoPaginatedListObjectField(
+        ClientListType,
+        pagination=PageGraphqlPagination(
+            page_size_query_param='pageSize'
+        )
+    )
+    client_track_information_list = DjangoPaginatedListObjectField(
+        ClientTrackInformationListType,
+        pagination=PageGraphqlPagination(
+            page_size_query_param='pageSize'
+        )
+    )

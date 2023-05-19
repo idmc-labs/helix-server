@@ -18,6 +18,7 @@ class UserViewSet(mixins.ListModelMixin,
     search_fields = ['username', 'email']
     # NOTE: In IDU Map currently none paginated api is used, Set pagination simultaneously
     pagination_class = None
+    swagger_schema = None
 
     def get_queryset(self):
         return User.objects.all()
@@ -26,6 +27,7 @@ class UserViewSet(mixins.ListModelMixin,
 class MeView(APIView):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated, ]
+    swagger_schema = None
 
     def get(self, request):
         serializer = UserSerializer(request.user)

@@ -5,6 +5,7 @@ from apps.contrib.models import (
     ExcelDownload,
     SourcePreview,
 )
+from apps.entry.models import ExternalApiDump
 from apps.contact.enums import enum_map as contact_enums
 from apps.crisis.enums import enum_map as crisis_enums
 from apps.entry.enums import enum_map as entry_enums
@@ -28,6 +29,10 @@ DownloadTypeGrapheneEnum = graphene.Enum.from_enum(ExcelDownload.DOWNLOAD_TYPES,
                                                    description=enum_description)
 ExcelGenerationStatusGrapheneEnum = graphene.Enum.from_enum(ExcelDownload.EXCEL_GENERATION_STATUS,
                                                             description=enum_description)
+ExternalApiTypeEnum = graphene.Enum.from_enum(
+    ExternalApiDump.ExternalApiType,
+    description=enum_description
+)
 enum_map = dict(
     FOR_CHOICES=AttachmentForGrapheneEnum,
     PREVIEW_STATUS=PreviewStatusGrapheneEnum,

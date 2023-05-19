@@ -7,6 +7,7 @@ from apps.entry.models import (
     Figure,
     OSMName,
     FigureDisaggregationAbstractModel,
+    ExternalApiDump,
 )
 
 from utils.enums import enum_description
@@ -34,6 +35,10 @@ FigureCategoryTypeEnum = graphene.Enum.from_enum(Figure.FIGURE_CATEGORY_TYPES, d
 FigureTermsEnum = graphene.Enum.from_enum(Figure.FIGURE_TERMS, description=enum_description)
 FigureSourcesReliabilityEnum = graphene.Enum.from_enum(Figure.SOURCES_RELIABILITY, description=enum_description)
 FigureReviewStatusEnum = graphene.Enum.from_enum(Figure.FIGURE_REVIEW_STATUS, description=enum_description)
+ExternalApiTypeEnum = graphene.Enum.from_enum(
+    ExternalApiDump.ExternalApiType,
+    description=enum_description
+)
 
 
 enum_map = dict(
@@ -49,4 +54,5 @@ enum_map = dict(
     FIGURE_TERMS=FigureTermsEnum,
     SOURCES_RELIABILITY=FigureSourcesReliabilityEnum,
     FIGURE_REVIEW_STATUS=FigureReviewStatusEnum,
+    EXTERNAL_API_TYPE=ExternalApiTypeEnum,
 )

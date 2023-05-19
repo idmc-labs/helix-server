@@ -15,6 +15,8 @@ from graphene_django_extras.settings import graphql_api_settings
 from graphene_django_extras.utils import get_extra_filters
 
 from utils.graphene.pagination import OrderingOnlyArgumentPagination
+from utils.common import track_gidd
+from apps.gidd.filters import GIDD_API_TYPE_MAP
 
 
 def path_has_list(info):
@@ -214,6 +216,11 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             self, manager, filterset_class, filtering_args, root, info, **kwargs
     ):
         filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
+
+        client_id = kwargs.get('client_id')
+        if client_id:
+            api_type = GIDD_API_TYPE_MAP.get(filterset_class)
+            track_gidd(client_id, api_type)
 
         # setup pagination
         if getattr(self, "pagination", None):

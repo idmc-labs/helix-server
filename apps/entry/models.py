@@ -1353,17 +1353,30 @@ class ExternalApiDump(models.Model):
 
     class ExternalApiType(models.TextChoices):
         # There might be other external endpoints
-        IDUS = 'idus', _('Idus')
-        IDUS_ALL = 'idus-all', _('Idus all')
-        IDUS_ALL_DISASTER = 'idus-all-disaster', _('Idus all disaster')
+        IDUS = 'idus', _('HELIX idus last 180 days')
+        IDUS_ALL = 'idus-all', _('HELIX idus all')
+        IDUS_ALL_DISASTER = 'idus-all-disaster', _('HELIX idus all disasters')
 
-        GIDD_DISASTER_EXPORT_REST = 'gidd-disaster-export-rest', _('Disaster export REST')
-        GIDD_DISPLACEMENT_EXPORT_REST = 'gidd-displacement-export-rest', _('Displacement export REST')
+        GIDD_COUNTRY_REST = 'gidd-country-rest', _('GIDD countries')
+        GIDD_CONFLICT_REST = 'gidd-conflict-rest', _('GIDD conflicts')
+        GIDD_DISASTER_REST = 'gidd-disaster-rest', _('GIDD disasters')
+        GIDD_DISPLACEMENT_REST = 'gidd-displacement-rest', _('GIDD displacements')
+        GIDD_DISASTER_EXPORT_REST = 'gidd-disaster-export-rest', _('GIDD disasters export')
+        GIDD_DISPLACEMENT_EXPORT_REST = 'gidd-displacement-export-rest', _('GIDD displacements export')
+        GIDD_PUBLIC_FIGURE_ANALYSIS_REST = 'gidd-public-figure-analysis-rest', _('GIDD public figure analyses')
 
-        GIDD_CONFLICT_GRAPHQL = 'gidd-conflict', _('GIDD conflict')
-        GIDD_DISASTER_GRAPHQL = 'gidd-disaster', _('GIDD disaster')
-        GIDD_CONFLICT_STAT = 'gidd-conflict-stat', _('GIDD conflict stat')
-        GIDD_DISASTER_STAT = 'gidd-disaster-stat', _('GIDD disaster stat')
+        GIDD_CONFLICT_GRAPHQL = 'gidd-conflict-graphql', _('GIDD conflicts [graphql]')
+        GIDD_DISASTER_GRAPHQL = 'gidd-disaster-graphql', _('GIDD disasters [graphql]')
+        GIDD_DISPLACEMENT_DATA_GRAPHQL = 'gidd-displacement-data-graphql', _('GIDD displacements [graphql]')
+        GIDD_PFA_GRAPHQL = 'gidd-public-figure-analysis-graphql', _('GIDD public figure analyses [graphql]')
+        GIDD_CONFLICT_STAT_GRAPHQL = 'gidd-conflict-stat-graphql', _('GIDD conflict statistics [graphql]')
+        GIDD_DISASTER_STAT_GRAPHQL = 'gidd-disaster-stat-graphql', _('GIDD disaster statistics [graphql]')
+        GIDD_HAZARD_TYPES_GRAPHQL = 'gidd-hazard-type-graphql', _('GIDD hazard types [graphql]')
+        GIDD_YEAR_GRAPHQL = 'gidd-year-graphql', _('GIDD year [graphql]')
+        GIDD_EVENT_GRAPHQL = 'gidd-event-graphql', _('GIDD event [graphql]')
+        GIDD_COMBINED_STAT_GRAPHQL = 'gidd-combined-stat-graphql', _('GIDD combined statistics [graphql]')
+        GIDD_RELEASE_META_DATA_GRAPHQL = 'gidd-release-meta-data-graphql', _('GIDD release metadata [graphql]')
+        GIDD_PUBLIC_COUNTRIES_GRAPHQL = 'gidd-public-countries-graphql', _('GIDD public countries [graphql]')
 
     class Status(models.IntegerChoices):
         PENDING = 0, 'Pending'

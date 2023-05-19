@@ -8,7 +8,8 @@ from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 from utils.graphene.enums import EnumDescription
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.entry.enums import FigureCategoryTypeEnum
-from utils.common import round_and_remove_zero
+from utils.common import round_and_remove_zero, track_gidd
+from apps.entry.models import ExternalApiDump
 
 from django.db import models
 from django.db.models.functions import Coalesce
@@ -347,13 +348,15 @@ class Query(graphene.ObjectType):
         GiddConflictListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
-        )
+        ),
+        client_id=graphene.String(required=True)
     )
     gidd_disasters = DjangoPaginatedListObjectField(
         GiddDisasterListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
-        )
+        ),
+        client_id=graphene.String(required=True),
     )
     gidd_conflict_statistics = graphene.Field(
         GiddConflictStatisticsType,
@@ -361,6 +364,7 @@ class Query(graphene.ObjectType):
             ConflictStatisticsFilter, GiddConflictStatisticsType
         ),
         required=True,
+        client_id=graphene.String(required=True),
     )
     gidd_disaster_statistics = graphene.Field(
         GiddDisasterStatisticsType,
@@ -368,31 +372,47 @@ class Query(graphene.ObjectType):
             DisasterStatisticsFilter, GiddDisasterStatisticsType
         ),
         required=True,
+        client_id=graphene.String(required=True),
     )
-    gidd_log = DjangoObjectField(GiddStatusLogType)
+    gidd_log = DjangoObjectField(
+        GiddStatusLogType,
+    )
     gidd_logs = DjangoPaginatedListObjectField(
         GiddStatusLogListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
-        )
+        ),
     )
-    gidd_release_meta_data = graphene.Field(GiddReleaseMetadataType)
-    gidd_public_countries = graphene.List(graphene.NonNull(GiddPublicCountryType))
-    gidd_hazard_types = graphene.List(GiddHazardType)
+    gidd_release_meta_data = graphene.Field(
+        GiddReleaseMetadataType,
+        client_id=graphene.String(required=True),
+    )
+    gidd_public_countries = graphene.List(
+        graphene.NonNull(GiddPublicCountryType),
+        client_id=graphene.String(required=True),
+    )
+    gidd_hazard_types = graphene.List(
+        GiddHazardType,
+        client_id=graphene.String(required=True),
+    )
     gidd_public_figure_analysis_list = DjangoPaginatedListObjectField(
         GiddPublicFigureAnalysisListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
-        )
+        ),
+        client_id=graphene.String(required=True),
     )
     gidd_displacements = DjangoPaginatedListObjectField(
         GiddDisplacementDataListType,
         pagination=PageGraphqlPaginationWithoutCount(
             page_size_query_param='pageSize'
-        )
+        ),
+        client_id=graphene.String(required=True),
     )
     gidd_year = graphene.Field(
-        graphene.NonNull(GiddYearType), release_environment=graphene.String(required=True)
+        graphene.NonNull(GiddYearType),
+        release_environment=graphene.String(required=True),
+        client_id=graphene.String(required=True),
     )
     gidd_event = graphene.Field(
         GiddEventType,
@@ -400,7 +420,7 @@ class Query(graphene.ObjectType):
         **get_filtering_args_from_filterset(
             ReleaseMetadataFilter, GiddEventType
         ),
-
+        client_id=graphene.String(required=True),
     )
     gidd_combined_statistics = graphene.Field(
         GiddCombinedStatisticsType,
@@ -408,14 +428,23 @@ class Query(graphene.ObjectType):
             DisasterStatisticsFilter, GiddCombinedStatisticsType
         ),
         required=True,
+        client_id=graphene.String(required=True),
     )
 
     @staticmethod
     def resolve_gidd_release_meta_data(parent, info, **kwargs):
+        # Track
+        client_id = kwargs.pop('client_id')
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_RELEASE_META_DATA_GRAPHQL)
+
         return ReleaseMetadata.objects.last()
 
     @staticmethod
     def resolve_gidd_public_countries(parent, info, **kwargs):
+        # Track
+        client_id = kwargs.pop('client_id')
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_PUBLIC_COUNTRIES_GRAPHQL)
+
         return [
             GiddPublicCountryType(
                 id=country['id'],
@@ -432,8 +461,11 @@ class Query(graphene.ObjectType):
 
     @staticmethod
     def resolve_gidd_conflict_statistics(parent, info, **kwargs):
-        conflict_qs = ConflictStatisticsFilter(data=kwargs).qs
+        # Track
+        client_id = kwargs.pop('client_id')
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL)
 
+        conflict_qs = ConflictStatisticsFilter(data=kwargs).qs
         start_year = kwargs.pop('start_year', None)
         end_year = kwargs.pop('end_year', None)
         filters = custom_date_filters(start_year, end_year)
@@ -523,8 +555,11 @@ class Query(graphene.ObjectType):
 
     @staticmethod
     def resolve_gidd_disaster_statistics(parent, info, **kwargs):
-        disaster_qs = DisasterStatisticsFilter(data=kwargs).qs
+        # Track
+        client_id = kwargs.pop('client_id')
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL)
 
+        disaster_qs = DisasterStatisticsFilter(data=kwargs).qs
         start_year = kwargs.pop('start_year', None)
         end_year = kwargs.pop('end_year', None)
         filters = custom_date_filters(start_year, end_year)
@@ -640,6 +675,10 @@ class Query(graphene.ObjectType):
 
     @staticmethod
     def resolve_gidd_hazard_types(parent, info, **kwargs):
+        # Track
+        client_id = kwargs.pop('client_id')
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_HAZARD_TYPES_GRAPHQL)
+
         return [
             GiddHazardType(
                 id=hazard['hazard_type__id'],
@@ -654,6 +693,10 @@ class Query(graphene.ObjectType):
 
     @staticmethod
     def resolve_gidd_year(parent, info, **kwargs):
+        # Track
+        client_id = kwargs.pop('client_id')
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_YEAR_GRAPHQL)
+
         gidd_meta_data = ReleaseMetadata.objects.last()
         if kwargs['release_environment'] == ReleaseMetadata.ReleaseEnvironment.PRE_RELEASE.name:
             return GiddYearType(year=gidd_meta_data.pre_release_year)
@@ -662,6 +705,10 @@ class Query(graphene.ObjectType):
 
     @staticmethod
     def resolve_gidd_event(parent, info, **kwargs):
+        # Track
+        client_id = kwargs.pop('client_id')
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_EVENT_GRAPHQL)
+
         event_id = kwargs['event_id']
         disaster_qs = DisasterFilter(data=kwargs).qs.filter(event_id=event_id)
 
@@ -716,6 +763,10 @@ class Query(graphene.ObjectType):
 
     @staticmethod
     def resolve_gidd_combined_statistics(parent, info, **kwargs):
+        # Track
+        client_id = kwargs.pop('client_id')
+        track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_COMBINED_STAT_GRAPHQL)
+
         start_year = kwargs.pop('start_year', None)
         end_year = kwargs.pop('end_year', None)
 

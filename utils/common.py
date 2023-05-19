@@ -8,6 +8,7 @@ import tempfile
 import logging
 from helix import redis
 from datetime import timedelta
+from drf_yasg import openapi
 
 from helix.caches import external_api_cache
 from apps.contrib.redis_client_track import track_client
@@ -155,3 +156,11 @@ def track_gidd(client_id, endpoint_type):
         endpoint_type,
         client_id,
     )
+
+
+client_id = openapi.Parameter(
+    'client_id', openapi.IN_QUERY,
+    description="Registered client id",
+    type=openapi.TYPE_STRING,
+    required=True,
+)

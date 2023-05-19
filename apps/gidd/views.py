@@ -7,46 +7,80 @@ from rest_framework.decorators import action
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
+from django.utils.decorators import method_decorator
+from rest_framework import mixins
+from drf_yasg.utils import swagger_auto_schema
 
 from apps.country.models import Country
 from .models import (
     Conflict, Disaster, DisplacementData, IdpsSaddEstimate,
-    StatusLog,
+    StatusLog, PublicFigureAnalysis
 )
 from .serializers import (
     CountrySerializer,
     ConflictSerializer,
     DisasterSerializer,
     DisplacementDataSerializer,
+    PublicFigureAnalysisSerializer,
 )
 from .rest_filters import (
     RestConflictFilterSet,
     RestDisasterFilterSet,
     RestDisplacementDataFilterSet,
     IdpsSaddEstimateFilter,
+    PublicFigureAnalysisFilterSet,
 )
-from utils.common import track_gidd
+from utils.common import track_gidd, client_id
 from apps.entry.models import ExternalApiDump
 
 
-class CountryViewSet(viewsets.ReadOnlyModelViewSet):
+@method_decorator(name="list", decorator=swagger_auto_schema(manual_parameters=[client_id]))
+class ListOnlyViewSetMixin(mixins.ListModelMixin, viewsets.GenericViewSet):
+    pass
+
+
+class CountryViewSet(ListOnlyViewSetMixin):
     serializer_class = CountrySerializer
-    queryset = Country.objects.all()
     lookup_field = 'iso3'
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
     filterset_fields = ['id']
 
+    def get_queryset(self):
+        track_gidd(
+            self.request.GET.get('client_id'),
+            ExternalApiDump.ExternalApiType.GIDD_COUNTRY_REST
+        )
+        return Country.objects.all()
 
-class ConflictViewSet(viewsets.ReadOnlyModelViewSet):
+
+class ConflictViewSet(ListOnlyViewSetMixin):
     serializer_class = ConflictSerializer
-    queryset = Conflict.objects.all().select_related('country')
     filterset_class = RestConflictFilterSet
 
+    def get_queryset(self):
+        track_gidd(
+            self.request.GET.get('client_id'),
+            ExternalApiDump.ExternalApiType.GIDD_CONFLICT_REST
+        )
+        return Conflict.objects.all().select_related('country')
 
-class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
+
+@method_decorator(name="export", decorator=swagger_auto_schema(manual_parameters=[client_id]))
+class DisasterViewSet(ListOnlyViewSetMixin):
     serializer_class = DisasterSerializer
     queryset = Disaster.objects.all().select_related('country')
     filterset_class = RestDisasterFilterSet
+
+    def get_queryset(self):
+        api_type = ExternalApiDump.ExternalApiType.GIDD_DISASTER_REST
+        if self.action == 'export':
+            api_type = ExternalApiDump.ExternalApiType.GIDD_DISASTER_EXPORT_REST
+
+        track_gidd(
+            self.request.GET.get('client_id'),
+            api_type
+        )
+        return Disaster.objects.select_related('country')
 
     @action(
         detail=False,
@@ -58,13 +92,7 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
         """
         Export disaster
         """
-
         qs = self.filter_queryset(self.get_queryset())
-        track_gidd(
-            request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_DISASTER_EXPORT_REST
-        )
-
         wb = Workbook()
         ws = wb.active
         ws.title = "1_Disaster_Displacement_data"
@@ -165,16 +193,23 @@ class DisasterViewSet(viewsets.ReadOnlyModelViewSet):
         return response
 
 
-class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
+@method_decorator(name="export", decorator=swagger_auto_schema(manual_parameters=[client_id]))
+class DisplacementDataViewSet(ListOnlyViewSetMixin):
     serializer_class = DisplacementDataSerializer
-    queryset = DisplacementData.objects.all()
     filterset_class = RestDisplacementDataFilterSet
 
-    def export_conflicts(self, ws, qs):
+    def get_queryset(self):
+        api_type = ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_REST
+        if self.action == 'export':
+            api_type = ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_EXPORT_REST
+
         track_gidd(
             self.request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_DISASTER_EXPORT_REST
+            api_type
         )
+        return DisplacementData.objects.all()
+
+    def export_conflicts(self, ws, qs):
         ws.append([
             'ISO3',
             'Name',
@@ -196,10 +231,6 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
             ])
 
     def export_disasters(self, ws, qs):
-        track_gidd(
-            self.request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_EXPORT_REST
-        )
         ws.append([
             'ISO3',
             'Name',
@@ -221,10 +252,6 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
             ])
 
     def export_displacements(self, ws, qs):
-        track_gidd(
-            self.request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_EXPORT_REST
-        )
         ws.append([
             'ISO3',
             'Name',
@@ -533,3 +560,16 @@ class DisplacementDataViewSet(viewsets.ReadOnlyModelViewSet):
         filename = 'IDMC_Internal_Displacement_Conflict-Violence_Disasters.xlsx'
         response['Content-Disposition'] = f'attachment; filename={filename}'
         return response
+
+
+class PublicFigureAnalysisViewSet(ListOnlyViewSetMixin):
+    serializer_class = PublicFigureAnalysisSerializer
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
+    filterset_class = PublicFigureAnalysisFilterSet
+
+    def get_queryset(self):
+        track_gidd(
+            self.request.GET.get('client_id'),
+            ExternalApiDump.ExternalApiType.GIDD_PUBLIC_FIGURE_ANALYSIS_REST
+        )
+        return PublicFigureAnalysis.objects.all()
