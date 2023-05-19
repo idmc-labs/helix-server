@@ -70,9 +70,6 @@ class ClientTrackInformationType(DjangoObjectType):
     api_type = graphene.Field(ExternalApiTypeEnum)
     api_type_display = EnumDescription(source='get_api_type_display')
 
-    def resolve_client(root, info, **kwargs):
-        return info.context.external_client_loader.load(root.id)
-
 
 class ClientTrackInformationListType(CustomDjangoListObjectType):
     class Meta:

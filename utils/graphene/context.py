@@ -30,7 +30,6 @@ from apps.event.dataloaders import (
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 from apps.entry.models import Figure
 from apps.users.dataloaders import UserPortfolioRoleLoader
-from apps.contrib.dataloaders import ExternalClientLoader
 
 
 class GQLContext:
@@ -170,7 +169,3 @@ class GQLContext:
     @cached_property
     def user_portfolio_role_loader(self):
         return UserPortfolioRoleLoader()
-
-    @cached_property
-    def external_client_loader(self):
-        return ExternalClientLoader()
