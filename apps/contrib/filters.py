@@ -58,7 +58,7 @@ class ClientTrackInfoFilter(django_filters.FilterSet):
     def filter_api_type(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
-                return qs.filter(api_type__in='idus').distinct()
+                return qs.filter(api_type__in=value).distinct()
             return qs.filter(api_type__in=[
                 ExternalApiDump.ExternalApiType.get(item).value for item in value
             ]).distinct()
@@ -71,5 +71,5 @@ class ClientTrackInfoFilter(django_filters.FilterSet):
     def qs(self):
         user = self.request.user
         if user.highest_role == USER_ROLE.ADMIN:
-            return super().qs
+            return super().qs.select_related('client')
         return super().qs.none()
