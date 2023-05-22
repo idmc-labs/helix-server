@@ -2434,6 +2434,7 @@ enum PERMISSION_ENTITY {
   portfolio
   contextofviolence
   gidd
+  client
 }
 
 enum PREVIEW_STATUS {
