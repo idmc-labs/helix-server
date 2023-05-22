@@ -149,8 +149,15 @@ def round_and_remove_zero(num):
 
 
 def track_gidd(client_id, endpoint_type):
+    from apps.contrib.models import Client
+
     if client_id not in external_api_cache.get('client_ids', []):
         raise PermissionDenied('Client is not registered.')
+
+    client = Client.objects.filter(code=client_id).first()
+    if not client.is_active:
+        raise PermissionDenied('Client is deactivated.')
+
     # Track client
     track_client(
         endpoint_type,
