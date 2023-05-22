@@ -13,7 +13,7 @@ from apps.contrib.models import (
     Client,
 )
 from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import is_authenticated
+from utils.permissions import is_authenticated, permission_checker
 
 
 class AttachmentCreateInputType(graphene.InputObjectType):
@@ -60,6 +60,7 @@ class CreateClient(graphene.Mutation):
     result = graphene.Field(ClientType)
 
     @staticmethod
+    @permission_checker(['client.add_client'])
     def mutate(root, info, data):
         serializer = ClientSerializer(
             data=data,
@@ -80,6 +81,7 @@ class UpdateClient(graphene.Mutation):
     result = graphene.Field(ClientType)
 
     @staticmethod
+    @permission_checker(['client.change_client'])
     def mutate(root, info, data):
         try:
             instance = Client.objects.get(id=data['id'])

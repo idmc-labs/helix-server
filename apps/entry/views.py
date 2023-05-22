@@ -11,11 +11,8 @@ from rest_framework.response import Response
 from django.shortcuts import redirect
 from drf_yasg.utils import swagger_auto_schema
 
-from helix.caches import external_api_cache
-
-from apps.contrib.redis_client_track import track_client
-from rest_framework.exceptions import PermissionDenied
 from apps.gidd.views import client_id
+from utils.common import track_gidd
 
 
 def get_idu_data():
@@ -287,12 +284,10 @@ class ExternalEndpointBaseCachedViewMixin():
     def get(self, request):
         # Check if request is comming from valid client
         client_id = request.GET.get('client_id', None)
-        if client_id not in external_api_cache.get('client_ids', []):
-            raise PermissionDenied('Client is not not registered.')
         # Track client
-        track_client(
-            self.ENDPOINT_TYPE,
+        track_gidd(
             client_id,
+            self.ENDPOINT_TYPE,
         )
         api_dump = ExternalApiDump.objects.filter(api_type=self.ENDPOINT_TYPE).first()
         # NOTE: Sending empty array so client don't break.
