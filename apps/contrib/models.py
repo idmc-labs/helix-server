@@ -1,6 +1,7 @@
 import logging
 import uuid
 from uuid import uuid4
+from collections import OrderedDict
 
 from django.apps import apps
 from django.db.models import JSONField
@@ -10,6 +11,7 @@ from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.tasks import generate_excel_file
+from apps.users.models import User
 from apps.entry.tasks import generate_pdf
 from utils.fields import CachedFileField
 from apps.contrib.redis_client_track import set_client_ids_in_redis
@@ -205,6 +207,7 @@ class ExcelDownload(MetaInformationAbstractModel):
         REPORT = 7
         ACTOR = 8
         INDIVIDUAL_REPORT = 9
+        TRACKING_DATA = 10
 
     started_at = models.DateTimeField(
         verbose_name=_('Started at'),
@@ -255,6 +258,7 @@ class ExcelDownload(MetaInformationAbstractModel):
             self.DOWNLOAD_TYPES.REPORT: apps.get_model('report', 'Report'),
             self.DOWNLOAD_TYPES.ACTOR: apps.get_model('event', 'Actor'),
             self.DOWNLOAD_TYPES.INDIVIDUAL_REPORT: apps.get_model('report', 'Report'),
+            self.DOWNLOAD_TYPES.TRACKING_DATA: apps.get_model('contrib', 'ClientTrackInfo'),
         }
         model = mapper.get(self.download_type)
         if not model:
@@ -318,3 +322,34 @@ class ClientTrackInfo(models.Model):
 
     def __str__(self):
         return f'{self.client} - {self.tracked_date}'
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from .filters import ClientTrackInfoFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='Id',
+            client_name='Client Name',
+            client_code='Client Code',
+            api_type='Api Type',
+            tracked_date='Tracked date',
+            requests_per_day='Requests per day',
+        )
+        data = ClientTrackInfoFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.annotate(
+            client_name=models.F('client__name'),
+            client_code=models.F('client__code'),
+        ).order_by('-tracked_date')
+
+        return {
+            'headers': headers,
+            'data': data.values(*[header for header in headers.keys()]),
+            'formulae': None,
+            'transformer': None,
+        }

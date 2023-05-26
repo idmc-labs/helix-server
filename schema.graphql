@@ -468,8 +468,8 @@ type CountryType {
   idmcShortNameEs: String
   idmcShortNameFr: String
   idmcShortNameAr: String
-  parkedItems: [ParkedItemType!]!
   portfolio: PortfolioType
+  parkedItems: [ParkedItemType!]!
   crises(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], report: String, createdByIds: [ID!], page: Int = 1, ordering: String, pageSize: Int): CrisisListType
   figures(unit: String, startDate_Lte: Date, startDate_Gte: Date, page: Int = 1, ordering: String, pageSize: Int): FigureListType
   contextualAnalyses(createdAt_Lte: DateTime, createdAt_Gte: DateTime, page: Int = 1, ordering: String, pageSize: Int): ContextualAnalysisListType
@@ -774,6 +774,7 @@ enum DOWNLOAD_TYPES {
   REPORT
   ACTOR
   INDIVIDUAL_REPORT
+  TRACKING_DATA
 }
 
 scalar Date
@@ -1321,6 +1322,11 @@ type ExportReportFigures {
 }
 
 type ExportReports {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportTrackingData {
   errors: [GenericScalar!]
   ok: Boolean
 }
@@ -2009,6 +2015,7 @@ type Mutation {
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
   createClient(data: clientCreateInputType!): CreateClient
   updateClient(data: ClientUpdateInputType!): UpdateClient
+  exportTrackingData(apiType: [String!], clientCodes: [String!], startTrackDate: Date, endTrackDate: Date): ExportTrackingData
   createContact(data: ContactCreateInputType!): CreateContact
   updateContact(data: ContactUpdateInputType!): UpdateContact
   deleteContact(id: ID!): DeleteContact
