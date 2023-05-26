@@ -60,7 +60,7 @@ class CreateClient(graphene.Mutation):
     result = graphene.Field(ClientType)
 
     @staticmethod
-    @permission_checker(['client.add_client'])
+    @permission_checker(['contrib.add_client'])
     def mutate(root, info, data):
         serializer = ClientSerializer(
             data=data,
@@ -81,7 +81,7 @@ class UpdateClient(graphene.Mutation):
     result = graphene.Field(ClientType)
 
     @staticmethod
-    @permission_checker(['client.change_client'])
+    @permission_checker(['contrib.change_client'])
     def mutate(root, info, data):
         try:
             instance = Client.objects.get(id=data['id'])

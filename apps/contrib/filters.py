@@ -34,10 +34,22 @@ class ExcelExportFilter(django_filters.FilterSet):
 
 
 class ClientFilter(django_filters.FilterSet):
+    name = django_filters.CharFilter(method='filter_name')
+    is_active = django_filters.BooleanFilter(method='filter_is_active', initial=False)
 
     class Meta:
         model = Client
         fields = ()
+
+    def filter_name(self, queryset, name, value):
+        return queryset.filter(name__icontains=value)
+
+    def filter_is_active(self, queryset, name, value):
+        if value is True:
+            return queryset.filter(is_active=True)
+        if value is False:
+            return queryset.filter(is_active=False)
+        return queryset
 
     @property
     def qs(self):
@@ -50,6 +62,8 @@ class ClientFilter(django_filters.FilterSet):
 class ClientTrackInfoFilter(django_filters.FilterSet):
     api_type = StringListFilter(method='filter_api_type')
     client_codes = StringListFilter(method='filter_client_codes')
+    start_track_date = django_filters.DateFilter(method='filter_start_track_date')
+    end_track_date = django_filters.DateFilter(method='filter_end_track_date')
 
     class Meta:
         model = ClientTrackInfo
@@ -66,6 +80,12 @@ class ClientTrackInfoFilter(django_filters.FilterSet):
 
     def filter_client_codes(self, qs, name, value):
         return qs.filter(client__code__in=value)
+
+    def filter_start_track_date(self, qs, name, value):
+        return qs.filter(tracked_date__gte=value)
+
+    def filter_end_track_date(self, qs, name, value):
+        return qs.filter(tracked_date__lte=value)
 
     @property
     def qs(self):
