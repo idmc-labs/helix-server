@@ -91,7 +91,7 @@ class UserType(DjangoObjectType):
 
     @staticmethod
     def resolve_portfolios(root, info, **kwargs):
-        return Portfolio.objects.filter(user=root.id)
+        return Portfolio.objects.filter(user=root.id).select_related('monitoring_sub_region')
 
     def resolve_portfolio_role_display(root, info, **kwargs):
         return info.context.user_portfolio_role_loader.load(root.id)
