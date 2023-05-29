@@ -2620,6 +2620,7 @@ type Query {
   organizationKindList(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, name: String, reliability: String, page: Int = 1, ordering: String, pageSize: Int): OrganizationKindListType
   attachment(id: ID!): AttachmentType
   excelExports(startedAt_Lt: DateTime, startedAt_Gt: DateTime, startedAt_Gte: DateTime, startedAt_Lte: DateTime, statusList: [String!], page: Int = 1, ordering: String, pageSize: Int): ExcelExportsListType
+  client(id: ID!): ClientType
   clientList(name: String, isActive: Boolean, page: Int = 1, ordering: String, pageSize: Int): ClientListType
   clientTrackInformationList(apiType: [String!], clientCodes: [String!], startTrackDate: Date, endTrackDate: Date, page: Int = 1, ordering: String, pageSize: Int): ClientTrackInformationListType
   contact(id: ID!): ContactType
