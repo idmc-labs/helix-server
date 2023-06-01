@@ -74,7 +74,7 @@ class ClientTrackInfoFilter(django_filters.FilterSet):
             if isinstance(value[0], int):
                 return qs.filter(api_type__in=value).distinct()
             return qs.filter(api_type__in=[
-                ExternalApiDump.ExternalApiType.get(item).value for item in value
+                ExternalApiDump.ExternalApiType[item].value for item in value
             ]).distinct()
         return qs
 
