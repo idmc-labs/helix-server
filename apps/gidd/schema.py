@@ -387,6 +387,9 @@ class Query(graphene.ObjectType):
         GiddReleaseMetadataType,
         client_id=graphene.String(required=True),
     )
+    gidd_release_meta_data_internal = graphene.Field(
+        GiddReleaseMetadataType,
+    )
     gidd_public_countries = graphene.List(
         graphene.NonNull(GiddPublicCountryType),
         client_id=graphene.String(required=True),
@@ -437,6 +440,10 @@ class Query(graphene.ObjectType):
         client_id = kwargs.pop('client_id')
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_RELEASE_META_DATA_GRAPHQL)
 
+        return ReleaseMetadata.objects.last()
+
+    @staticmethod
+    def resolve_gidd_release_meta_data_internal(parent, info, **kwargs):
         return ReleaseMetadata.objects.last()
 
     @staticmethod
