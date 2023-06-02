@@ -383,11 +383,11 @@ class Query(graphene.ObjectType):
             page_size_query_param='pageSize'
         ),
     )
-    gidd_release_meta_data = graphene.Field(
+    gidd_release_meta_data_public = graphene.Field(
         GiddReleaseMetadataType,
         client_id=graphene.String(required=True),
     )
-    gidd_release_meta_data_internal = graphene.Field(
+    gidd_release_meta_data = graphene.Field(
         GiddReleaseMetadataType,
     )
     gidd_public_countries = graphene.List(
@@ -435,7 +435,7 @@ class Query(graphene.ObjectType):
     )
 
     @staticmethod
-    def resolve_gidd_release_meta_data(parent, info, **kwargs):
+    def resolve_gidd_release_meta_data_public(parent, info, **kwargs):
         # Track
         client_id = kwargs.pop('client_id')
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_RELEASE_META_DATA_GRAPHQL)
@@ -443,7 +443,7 @@ class Query(graphene.ObjectType):
         return ReleaseMetadata.objects.last()
 
     @staticmethod
-    def resolve_gidd_release_meta_data_internal(parent, info, **kwargs):
+    def resolve_gidd_release_meta_data(parent, info, **kwargs):
         return ReleaseMetadata.objects.last()
 
     @staticmethod

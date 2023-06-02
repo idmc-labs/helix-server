@@ -470,6 +470,7 @@ GRAPHENE_NODES_WHITELIST = (
     'giddPublicCountries',
     'giddPublicFigureAnalysisList',
     'giddYear',
+    'giddReleaseMetaDataPublic',
 
     # __ double underscore nodes
     '__schema',
