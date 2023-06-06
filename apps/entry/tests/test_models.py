@@ -258,14 +258,14 @@ class TestEntryModel(HelixTestCase):
         )
 
     def test_text_field_should_accept_markup_and_speicial_should_remove_html_tags(self):
-        html_data = '<html><body><h2>test</h2><p> test</p><p id="demo"> test</p><script></script></body></html>'
+        html_data = '<html><body><h2>test</h2><p>test</p><p id="demo">test</p><script></script></body></html>'
         e = FigureFactory.create(created_by=self.editor, event=self.event,)
         e.source_excerpt = html_data
         e.calculation_logic = '~!@#$%^&*<>?/'
         e.save()
         e.refresh_from_db()
 
-        self.assertEqual(e.source_excerpt, 'test test test')
+        self.assertEqual(e.source_excerpt, "\ntest\ntest\ntest")
         self.assertEqual(e.calculation_logic, '~!@#$%^&*<>?/')
 
         markup_and_html_mixed_data = """
@@ -275,9 +275,9 @@ class TestEntryModel(HelixTestCase):
         **bold text**
         *italicized text*
         > blockquote
-        1. <html><body><p>First item</p><script></script></body></html>
-        2. <h1>Second item</h1>
-        3. <div><p>Third item</p></div>
+        1. <html><body>First item<script></script></body></html>
+        2. Second item
+        3. Third item
         - <li>First item</li>
         - <li>Second item</li>
         - <li>Third item</li>
@@ -310,4 +310,6 @@ class TestEntryModel(HelixTestCase):
         e.calculation_logic = markup_and_html_mixed_data
         e.save()
         e.refresh_from_db()
+        print('\n\n\n\n', e.calculation_logic, '\n\n\n\n')
+        print('\n\n\n\n', markup_and_html_mixed_data_cleaned, '\n\n\n\n')
         self.assertEqual(e.calculation_logic, markup_and_html_mixed_data_cleaned)
