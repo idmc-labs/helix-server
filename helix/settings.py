@@ -15,9 +15,12 @@ import json
 import socket
 import logging
 import environ
+import django
+from django.utils.encoding import force_str
 
 from . import sentry
 from helix.aws.secrets_manager import fetch_db_credentials_from_secret_arn
+
 
 logger = logging.getLogger(__name__)
 
@@ -152,9 +155,9 @@ MIDDLEWARE = [
 
 ENABLE_DEBUG_TOOLBAR = env('ENABLE_DEBUG_TOOLBAR')
 if ENABLE_DEBUG_TOOLBAR:
+    pass
     MIDDLEWARE.append(
-        # NOTE: DebugToolbarMiddleware will cause mutation to execute twice for the client, works fine with graphiql
-        'utils.middleware.DebugToolbarMiddleware',
+        'graphiql_debug_toolbar.middleware.DebugToolbarMiddleware',
     )
 
 if HELIX_ENVIRONMENT not in (DEVELOPMENT_ENV,):
@@ -600,3 +603,5 @@ CORS_ALLOW_HEADERS = (
 )
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
+django.utils.encoding.force_text = force_str
