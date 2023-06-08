@@ -1,4 +1,4 @@
-# The manifest for the "helix-server-release-staging" pipeline.
+# The manifest for the "helix-pipeline" pipeline.
 # This YAML file defines your pipeline: the source repository it tracks and the order of the environments to deploy to.
 # For more info: https://aws.github.io/copilot-cli/docs/manifest/pipeline/
 
@@ -22,35 +22,30 @@ source:
 
 # This section defines the order of the environments your pipeline will deploy to.
 stages:
-  - name: staging # The name of the environment.
-    # Optional: flag for manual approval action before deployment.
+  - name: staging
     requires_approval: true
-    # Optional: use test commands to validate this stage of your build.
     test_commands:
       - yum update -y --skip-broken ; yum install -y sudo
-      - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.18.1
-      - mv ./copilot-linux-v1.18.1 ./copilot-linux
+      - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.28.0
+      - mv ./copilot-linux-v1.28.0 ./copilot-linux
       - chmod +x ./copilot-linux
       - echo 'Running collectstatic api'
-      - unbuffer ./copilot-linux svc exec -c "python3 manage.py collectstatic --no-input" -n api -e staging --yes
+      - unbuffer ./copilot-linux svc exec -c "./manage.py collectstatic --no-input" -n api -e staging --yes
       - echo 'Running migrations api'
-      - unbuffer ./copilot-linux svc exec -c "python3 manage.py migrate --no-input" -n api -e staging --yes
+      - unbuffer ./copilot-linux svc exec -c "./manage.py migrate --no-input" -n api -e staging --yes
       - echo 'Running init roles'
-      - unbuffer ./copilot-linux svc exec -c "python3 manage.py init_roles" -n api -e staging --yes
+      - unbuffer ./copilot-linux svc exec -c "./manage.py init_roles" -n api -e staging --yes
 
-  - name: prod # The name of the environment.
-    # Optional: flag for manual approval action before deployment.
+  - name: prod
     requires_approval: true
-    # Optional: use test commands to validate this stage of your build.
     test_commands:
       - yum update -y --skip-broken ; yum install -y sudo
-      - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.18.1
-      - mv ./copilot-linux-v1.18.1 ./copilot-linux
+      - wget -q https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.28.0
+      - mv ./copilot-linux-v1.28.0 ./copilot-linux
       - chmod +x ./copilot-linux
       - echo 'Running collectstatic api'
-      - unbuffer ./copilot-linux svc exec -c "python3 manage.py collectstatic --no-input" -n api -e prod --yes
+      - unbuffer ./copilot-linux svc exec -c "./manage.py collectstatic --no-input" -n api -e prod --yes
       - echo 'Running migrations api'
-      - unbuffer ./copilot-linux svc exec -c "python3 manage.py migrate --no-input" -n api -e prod --yes
+      - unbuffer ./copilot-linux svc exec -c "./manage.py migrate --no-input" -n api -e prod --yes
       - echo 'Running init roles'
-      - unbuffer ./copilot-linux svc exec -c "python3 manage.py init_roles" -n api -e prod --yes
-
+      - unbuffer ./copilot-linux svc exec -c "./manage.py init_roles" -n api -e prod --yes
