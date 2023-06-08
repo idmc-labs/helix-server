@@ -1,14 +1,18 @@
 # Buildspec runs in the build stage of your pipeline.
 version: 0.2
 env:
+  variables:
+    region: us-east-1
   parameter-store:
     DOCKER_USERNAME: DOCKER_USERNAME
     DOCKER_PASSWORD: DOCKER_PASSWORD
+
 phases:
   install:
     runtime-versions:
-      docker: 18
+      docker: 19
       ruby: 2.6
+
     commands:
       - echo "cd into $CODEBUILD_SRC_DIR"
       - cd $CODEBUILD_SRC_DIR
@@ -16,10 +20,39 @@ phases:
       - wget https://ecs-cli-v2-release.s3.amazonaws.com/copilot-linux-v1.7.0
       - mv ./copilot-linux-v1.7.0 ./copilot-linux
       - chmod +x ./copilot-linux
+      - printenv DOCKER_PASSWORD | docker login --username ${DOCKER_USERNAME} --password-stdin
+      # Remove .python-version used in helix repo. Not required here and conflicts with build
+      - rm .python-version
+
   build:
     commands:
-      - echo "Run your tests"
-      # - make test
+      - export DOCKER_IMAGE_SERVER=$AWS_ACCOUNT_ID.dkr.ecr.$region.amazonaws.com/helix-copilot/worker
+      - echo "$DOCKER_IMAGE_SERVER"
+      - export DOCKER_IMAGE_SERVER_DOMAIN=$(echo $DOCKER_IMAGE_SERVER | cut -d '/' -f 1)
+      - echo "$DOCKER_IMAGE_SERVER_DOMAIN"
+      - aws --version
+      - aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $DOCKER_IMAGE_SERVER_DOMAIN
+      - docker pull $DOCKER_IMAGE_SERVER || true
+      - docker build -t $DOCKER_IMAGE_SERVER --cache-from $DOCKER_IMAGE_SERVER -f worker.Dockerfile .
+      - echo "[Server] Running tests"
+      - |
+          docker-compose -f gh-docker-compose.yml run --rm server bash -c 'wait-for-it db:5432 && ./manage.py graphql_schema --out schema-latest.graphql' &&
+          cmp --silent schema.graphql schema-latest.graphql || {
+            echo 'The schema.graphql is not up to date with the latest changes. Please update and push latest';
+            diff schema.graphql schema-latest.graphql;
+            exit 1;
+          }
+      - rm schema-latest.graphql
+      - |
+          docker-compose -f gh-docker-compose.yml run --rm server bash -c 'wait-for-it db:5432 && ./manage.py makemigrations --check --dry-run' || {
+            echo 'There are some changes to be reflected in the migration. Make sure to run makemigrations';
+            exit 1;
+          }
+      - docker-compose -f gh-docker-compose.yml run --rm server bash -c 'wait-for-it db:5432 && /code/run_tests.sh'
+      - echo "[Server] Pushing builder image"
+      - aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $DOCKER_IMAGE_SERVER_DOMAIN
+      - docker push $DOCKER_IMAGE_SERVER
+
   post_build:
     commands:
       - ls -l
@@ -69,13 +102,7 @@ phases:
             jq --arg a "https://stackset-helix-beta-infr-pipelinebuiltartifactbuc-15f5oyn6b1l3a.s3.us-east-1.amazonaws.com/manual/$timestamp/$workload.addons.stack.yml" '.Parameters.AddonsTemplateURL = $a' ./infrastructure/$workload-prod.params.json > "$tmp" && mv "$tmp" ./infrastructure/$workload-prod.params.json
           fi
         done;
-      # Build images
-      # - For each manifest file:
-      #   - Read the path to the Dockerfile by translating the YAML file into JSON.
-      #   - Run docker build.
-      #   - For each environment:
-      #     - Retrieve the ECR repository.
-      #     - Login and push the image.
+
       - >
         for workload in $WORKLOADS; do
           manifest=$(cat $CODEBUILD_SRC_DIR/copilot/$workload/manifest.yml | ruby -ryaml -rjson -e 'puts JSON.pretty_generate(YAML.load(ARGF))')
@@ -128,6 +155,7 @@ phases:
             docker push $repo;
           done;
         done;
+
 artifacts:
   files:
     - "infrastructure/*"

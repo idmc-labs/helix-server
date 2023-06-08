@@ -27,7 +27,7 @@ class TestExternalClientTrack(HelixAPITestCase):
         self.conflicts_url = '/external-api/gidd/conflicts/'
         self.disasters_url = '/external-api/gidd/disasters/'
         self.displacements_url = '/external-api/gidd/displacements/'
-        self.public_figure_analysis_url = '/external-api/gidd/public-figure-analysis/'
+        self.public_figure_analysis_url = '/external-api/gidd/public-figure-analyses/'
         self.client1 = ClientFactory.create(code='random-code-1')
         self.client2 = ClientFactory.create(code='random-code-2')
 
