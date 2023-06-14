@@ -2890,7 +2890,7 @@ type ReportType {
   countriesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): CountryListType
   eventsReport(id: String, page: Int = 1, ordering: String, pageSize: Int): EventListType
   entriesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
-  figuresReport(unit: String, startDate_Lte: Date, startDate_Gte: Date, page: Int = 1, ordering: String, pageSize: Int): FigureListType
+  figuresReport(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterFigureCrisisTypes: [String!], filterFigureGlideNumber: [String!], filterCreatedBy: [ID!], filterFigureDisplacementTypes: [String!], filterFigureTerms: [ID!], event: String, filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], filterIsFigureToBeReviewed: Boolean, page: Int = 1, ordering: String, pageSize: Int): FigureListType
   crisesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): CrisisListType
   totalDisaggregation: ReportTotalsType!
   lastGeneration: ReportGenerationType
