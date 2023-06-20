@@ -459,17 +459,18 @@ GRAPHENE_NODES_WHITELIST = (
     'resetPassword',
 
     # Gidd external queries
-    'giddCombinedStatistics',
-    'giddConflictStatistics',
-    'giddConflicts',
-    'giddDisasterStatistics',
-    'giddDisasters',
-    'giddDisplacements',
-    'giddEvent',
-    'giddHazardTypes',
-    'giddPublicCountries',
+    'giddPublicCombinedStatistics',
+    'giddPublicConflictStatistics',
+    'giddPublicConflicts',
+    'giddPublicDisasterStatistics',
+    'giddPublicDisasters',
+    'giddPublicDisplacements',
+    'giddPublicEvent',
+    'giddPublicHazardTypes',
+    'giddPublicPublicCountries',
     'giddPublicFigureAnalysisList',
-    'giddYear',
+    'giddPublicYear',
+    'giddPublicReleaseMetaData',
 
     # __ double underscore nodes
     '__schema',
