@@ -1,13 +1,10 @@
 import re
-import json
 
 from collections import OrderedDict
 from datetime import date
 import logging
 from typing import Optional
 from uuid import uuid4
-from shapely import MultiPoint
-from shapely.geometry import mapping
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -17,12 +14,13 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models.query import QuerySet
 from django.db.models import (
-    Sum, Avg, F, Value, Min, Max, Q, ExpressionWrapper,
+    Sum, F, Value, Min, Max, Q, ExpressionWrapper,
     fields, Case, When,
 )
 from django.db.models.functions import Concat, ExtractYear, Cast
 from django.utils.translation import gettext_lazy as _, gettext
 from django.utils.crypto import get_random_string
+from django.db.models.expressions import RawSQL
 from django.utils import timezone
 from django_enumfield import enum
 from helix.settings import FIGURE_NUMBER
@@ -849,8 +847,8 @@ class Figure(MetaInformationArchiveAbstractModel,
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
             **Figure.annotate_sources_reliability(),
-            centroid_lat=models.Avg('geo_locations__lat'),
-            centroid_lon=models.Avg('geo_locations__lon'),
+            centroid_lat=RawSQL('country_country.centroid[1]', params=()),
+            centroid_lon=RawSQL('country_country.centroid[2]', params=()),
             entry_url_or_document_url=models.Case(
                 models.When(
                     entry__document__isnull=False,
@@ -905,17 +903,16 @@ class Figure(MetaInformationArchiveAbstractModel,
                 Cast('geo_locations__identifier', models.IntegerField()),
                 distinct=True, filter=Q(geo_locations__identifier__isnull=False)
             ),
-            centroid=ArrayAgg(
-                Concat(
-                    models.F('geo_locations__lat'), Value(', '), F('geo_locations__lon'),
-                    output_field=models.CharField()
-                ), filter=models.Q(geo_locations__isnull=False)
-            ),
-        ).annotate(
+            centroid=Concat(F('centroid_lat'), Value(','), F('centroid_lon')),
             geolocation_list=StringAgg(
                 Concat(
-                    models.F('geo_locations__lat'), Value(','), F('geo_locations__lon'),
-                    output_field=models.CharField()
+                    RawSQL(
+                        'country_country.centroid[1]', params=()
+                    ),
+                    Value(','),
+                    RawSQL('country_country.centroid[2]', params=()),
+                    output_field=models.CharField(),
+                    distinct=True
                 ),
                 '; ',
                 filter=models.Q(geo_locations__isnull=False)
@@ -933,18 +930,6 @@ class Figure(MetaInformationArchiveAbstractModel,
                 if len(document_name) == 0 or document_name[0] == url:
                     return ''
                 return document_name[0]
-
-            def get_centroid(geo_locations):
-                if geo_locations:
-                    lat_long_list = []
-                    for geo_location in geo_locations:
-                        geo_location_list = geo_location.strip().split(',')
-                        lat = geo_location_list[0]
-                        long = geo_location_list[1]
-                        lat_long_list.append((lat, long))
-                    coordinates = json.dumps(mapping(MultiPoint(lat_long_list).centroid)['coordinates'])
-                    return coordinates.replace('[', '').replace(']', '')
-                return ''
 
             return {
                 **datum,
@@ -968,7 +953,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ]),
                 'sources_reliability': getattr(Figure.SOURCES_RELIABILITY.get(datum['sources_reliability']), 'label', ''),
                 'source_document': get_document_name_from_url(datum['source_document']),
-                'centroid': get_centroid(datum['centroid'])
+                'centroid': datum['centroid']
             }
 
         return {
@@ -1225,9 +1210,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             publisher_types='Publisher Types',
             idmc_analysis='Trends and patterns of displacement to be highlighted',
             countries_iso3='ISO3s Affected',
-            centroid_lat='Centroid Lat',
-            centroid_lon='Centroid Lon',
-            centroid='Centroid',
             categories='Figure Categories',
             terms='Figure Terms',
             figures_count='Figures Count',
@@ -1254,8 +1236,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             min_fig_end=Min('figures__end_date'),
             max_fig_start=Max('figures__start_date'),
             max_fig_end=Max('figures__end_date'),
-            centroid_lat=Avg('figures__geo_locations__lat'),
-            centroid_lon=Avg('figures__geo_locations__lon'),
             sources_name=StringAgg('figures__sources__name', '; ', distinct=True),
             source_types=StringAgg('figures__sources__organization_kind__name', '; ', distinct=True),
             publishers_name=StringAgg('publishers__name', '; ', distinct=True),
@@ -1263,17 +1243,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             figures_count=models.Count('figures', distinct=True),
             context_of_violences=StringAgg('figures__context_of_violence__name', '; ', distinct=True),
             # **cls._total_figure_disaggregation_subquery(),
-        ).annotate(
-            centroid=models.Case(
-                models.When(
-                    centroid_lat__isnull=False,
-                    then=Concat(
-                        F('centroid_lat'), Value(', '), F('centroid_lon'),
-                        output_field=models.CharField()
-                    )
-                ),
-                default=Value('')
-            )
         ).order_by('created_at')
 
         def transformer(datum):
