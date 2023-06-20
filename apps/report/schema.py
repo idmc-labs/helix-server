@@ -19,6 +19,7 @@ from apps.report.enums import ReportGenerationStatusEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import CustomPaginatedListObjectField, DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from apps.extraction.filters import FigureExtractionFilterSet
 
 
 class ReportTotalsType(graphene.ObjectType):
@@ -116,11 +117,14 @@ class ReportType(DjangoObjectType):
         ),
         filterset_class=DummyFilter
     ))
-    figures_report = DjangoPaginatedListObjectField(FigureListType,
-                                                    accessor='report_figures',
-                                                    pagination=PageGraphqlPaginationWithoutCount(
-                                                        page_size_query_param='pageSize'
-                                                    ))
+    figures_report = DjangoPaginatedListObjectField(
+        FigureListType,
+        accessor='report_figures',
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param='pageSize'
+        ),
+        filterset_class=FigureExtractionFilterSet
+    )
     crises_report = graphene.Dynamic(lambda: CustomPaginatedListObjectField(
         get_type('apps.crisis.schema.CrisisListType'),
         accessor='crises_report',
