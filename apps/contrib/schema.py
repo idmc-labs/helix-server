@@ -59,12 +59,15 @@ class ClientListType(CustomDjangoListObjectType):
 
 
 class ClientTrackInformationType(DjangoObjectType):
+    api_name = graphene.NonNull(graphene.String)
+
     class Meta:
         model = ClientTrackInfo
         fields = (
             'id',
             'client',
             'api_type',
+            'api_name',
             'requests_per_day',
             'tracked_date',
         )

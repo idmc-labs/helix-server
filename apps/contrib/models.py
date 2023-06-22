@@ -360,3 +360,17 @@ class ClientTrackInfo(models.Model):
             'formulae': None,
             'transformer': transformer,
         }
+
+    @classmethod
+    def annotate_api_name(cls):
+        from apps.entry.models import ExternalApiDump
+        return {
+            'api_name': models.Case(
+                *[
+                    models.When(
+                        api_type=enum_obj.value,
+                        then=models.Value(enum_obj.label, output_field=models.CharField())
+                    ) for enum_obj in ExternalApiDump.ExternalApiType
+                ]
+            )
+        }

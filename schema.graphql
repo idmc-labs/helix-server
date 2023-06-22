@@ -133,6 +133,7 @@ type ClientTrackInformationType {
   apiType: ExternalApiType
   requestsPerDay: Int!
   trackedDate: Date!
+  apiName: String!
   apiTypeDisplay: EnumDescription
 }
 

@@ -91,5 +91,7 @@ class ClientTrackInfoFilter(django_filters.FilterSet):
     def qs(self):
         user = self.request.user
         if user.highest_role == USER_ROLE.ADMIN:
-            return super().qs.select_related('client')
+            return super().qs.annotate(
+                **ClientTrackInfo.annotate_api_name()
+            ).select_related('client')
         return super().qs.none()
