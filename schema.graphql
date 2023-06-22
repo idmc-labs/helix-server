@@ -142,7 +142,6 @@ type ClientType {
   lastModifiedBy: UserType
   name: String!
   code: String!
-  isActive: Boolean!
 }
 
 input ClientUpdateInputType {

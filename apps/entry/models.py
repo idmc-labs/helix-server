@@ -1363,7 +1363,9 @@ class ExternalApiDump(models.Model):
         GIDD_DISPLACEMENT_REST = 'gidd-displacement-rest', _('/external-api/gidd/displacements/')
         GIDD_DISASTER_EXPORT_REST = 'gidd-disaster-export-rest', _('/external-api/gidd/disasters/export/')
         GIDD_DISPLACEMENT_EXPORT_REST = 'gidd-displacement-export-rest', _('/external-api/gidd/displacements/export/')
-        GIDD_PUBLIC_FIGURE_ANALYSIS_REST = 'gidd-public-figure-analysis-rest', _('/external-api/gidd/public-figure-analyses/')
+        GIDD_PUBLIC_FIGURE_ANALYSIS_REST = 'gidd-public-figure-analysis-rest', _(
+            '/external-api/gidd/public-figure-analyses/'
+        )
 
         GIDD_CONFLICT_GRAPHQL = 'gidd-conflict-graphql', _('query.giddPublicConflicts')
         GIDD_DISASTER_GRAPHQL = 'gidd-disaster-graphql', _('query.giddPublicDisasters')

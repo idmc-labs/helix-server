@@ -325,6 +325,7 @@ class ClientTrackInfo(models.Model):
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
+        from apps.entry.models import ExternalApiDump
         from .filters import ClientTrackInfoFilter
 
         class DummyRequest:
@@ -332,12 +333,12 @@ class ClientTrackInfo(models.Model):
                 self.user = user
 
         headers = OrderedDict(
-            id='Id',
             client_name='Client Name',
             client_code='Client Code',
             api_type='Api Type',
-            tracked_date='Tracked date',
-            requests_per_day='Requests per day',
+            api_name='Api Name',
+            tracked_date='Date',
+            requests_per_day='Requests',
         )
         data = ClientTrackInfoFilter(
             data=filters,
@@ -345,11 +346,17 @@ class ClientTrackInfo(models.Model):
         ).qs.annotate(
             client_name=models.F('client__name'),
             client_code=models.F('client__code'),
+            api_name=models.F('api_type'),
         ).order_by('-tracked_date')
 
+        def transformer(datum):
+            return {
+                **datum,
+                'api_name': getattr(ExternalApiDump.ExternalApiType(datum['api_type']), 'label', ''),
+            }
         return {
             'headers': headers,
             'data': data.values(*[header for header in headers.keys()]),
             'formulae': None,
-            'transformer': None,
+            'transformer': transformer,
         }
