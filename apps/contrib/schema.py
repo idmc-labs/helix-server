@@ -46,6 +46,7 @@ class ClientType(DjangoObjectType):
         fields = (
             'id',
             'name',
+            'is_active',
             'code',
             'created_by',
             'last_modified_by',
