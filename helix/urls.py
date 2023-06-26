@@ -21,6 +21,7 @@ from django.urls import path, re_path, include
 from django.views.decorators.csrf import csrf_exempt
 # from graphene_django.views import GraphQLView
 from graphene_file_upload.django import FileUploadGraphQLView
+from helix.exceptions import GraphqlNotAllowedException
 
 from . import api_urls as rest_urls
 from . import external_urls as external_rest_urls
@@ -59,6 +60,8 @@ class CustomGraphQLView(FileUploadGraphQLView):
         operation_name,
         show_graphiql,
     ):
+        if request.method == 'GET':
+            raise GraphqlNotAllowedException('Not allowed')
         operation_type = (
             self.get_backend(request)
             .document_from_string(self.schema, query)

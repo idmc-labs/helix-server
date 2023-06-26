@@ -7,12 +7,14 @@ from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 from sentry_sdk.integrations.logging import ignore_logger
 from django.core.exceptions import PermissionDenied
+from helix.exceptions import GraphqlNotAllowedException
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 IGNORED_ERRORS = [
     PermissionDenied,
+    GraphqlNotAllowedException,
 ]
 
 

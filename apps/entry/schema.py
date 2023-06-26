@@ -118,7 +118,8 @@ class FigureType(DjangoObjectType):
     displacement_occurred = graphene.Field(DisplacementOccurredGrapheneEnum)
     displacement_occurred_display = EnumDescription(source='get_displacement_occurred_display')
     disaggregation_age = DjangoPaginatedListObjectField(
-        DisaggregatedAgeListType, related_name="disaggregation_age"
+        DisaggregatedAgeListType,
+        related_name="disaggregation_age"
     )
     disaggregation_strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
     geo_locations = DjangoPaginatedListObjectField(
@@ -208,38 +209,44 @@ class EntryType(DjangoObjectType):
 
     created_by = graphene.Field('apps.users.schema.UserType')
     last_modified_by = graphene.Field('apps.users.schema.UserType')
-    publishers = DjangoPaginatedListObjectField(OrganizationListType,
-                                                related_name='publishers',
-                                                reverse_related_name='published_entries')
-    # total_stock_idp_figures = graphene.Field(graphene.Int,
-    #                                          data=TotalFigureFilterInputType())
-    # total_flow_nd_figures = graphene.Field(graphene.Int,
-    #                                        data=TotalFigureFilterInputType())
+    publishers = DjangoPaginatedListObjectField(
+        OrganizationListType,
+        related_name='publishers',
+        reverse_related_name='published_entries'
+    )
     figures = graphene.List(graphene.NonNull(FigureType))
 
-    # def resolve_total_stock_idp_figures(root, info, **kwargs):
-    #     NULL = 'null'
-    #     value = getattr(
-    #         root,
-    #         Entry.IDP_FIGURES_ANNOTATE,
-    #         NULL
-    #     )
-    #     if value != NULL:
-    #         return value
-    #     return info.context.entry_entry_total_stock_idp_figures.load(root.id)
-    #
-    # def resolve_total_flow_nd_figures(root, info, **kwargs):
-    #     NULL = 'null'
-    #     value = getattr(
-    #         root,
-    #         Entry.ND_FIGURES_ANNOTATE,
-    #         NULL
-    #     )
-    #     if value != NULL:
-    #         return value
-    #     return info.context.entry_entry_total_flow_nd_figures.load(root.id)
     def resolve_figures(root, info, **kwargs):
-        return Figure.objects.filter(entry=root.id)
+        return Figure.objects.filter(entry=root.id).select_related(
+            'event',
+            'violence',
+            'violence_sub_type',
+            'disaster_category',
+            'disaster_sub_category',
+            'disaster_type',
+            'disaster_sub_type',
+            'disaster_category',
+            'disaster_sub_category',
+            'other_sub_type',
+            'osv_sub_type',
+            'approved_by',
+            'country',
+            'event__disaster_category',
+            'event__disaster_sub_category',
+            'event__disaster_type',
+            'event__disaster_sub_type',
+            'event__disaster_category',
+        ).prefetch_related(
+            'tags',
+            'context_of_violence',
+            'geo_locations',
+            'event__disaster_sub_category',
+            'event__countries',
+            'event__context_of_violence',
+            'sources',
+            'sources__countries',
+            'sources__organization_kind',
+        )
 
 
 class EntryListType(CustomDjangoListObjectType):

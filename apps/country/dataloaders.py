@@ -65,13 +65,10 @@ class MonitoringSubRegionCountryCountLoader(DataLoader):
 
 class MonitoringSubRegionCountryLoader(DataLoader):
     def batch_load_fn(self, keys: list):
-        qs = MonitoringSubRegion.objects.filter(
-            id__in=keys
-        ).values('id', 'countries__id')
         country_qs = Country.objects.filter(
             monitoring_sub_region__in=keys
         )
         _map = defaultdict(list)
-        for item in qs:
-            _map[item['id']].append(country_qs.get(id=item['countries__id']))
+        for item in country_qs:
+            _map[item.monitoring_sub_region_id].append(item)
         return Promise.resolve([_map[key] for key in keys])
