@@ -133,13 +133,24 @@ type ClientTrackInformationType {
   apiType: ExternalApiType
   requestsPerDay: Int!
   trackedDate: Date!
+  apiName: String!
   apiTypeDisplay: EnumDescription
 }
 
 type ClientType {
   id: ID!
+  createdBy: UserType
+  lastModifiedBy: UserType
   name: String!
   code: String!
+  isActive: Boolean!
+}
+
+input ClientUpdateInputType {
+  id: ID!
+  name: String
+  code: String
+  isActive: Boolean
 }
 
 type CloneEvent {
@@ -458,8 +469,8 @@ type CountryType {
   idmcShortNameEs: String
   idmcShortNameFr: String
   idmcShortNameAr: String
-  parkedItems: [ParkedItemType!]!
   portfolio: PortfolioType
+  parkedItems: [ParkedItemType!]!
   crises(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], report: String, createdByIds: [ID!], page: Int = 1, ordering: String, pageSize: Int): CrisisListType
   figures(unit: String, startDate_Lte: Date, startDate_Gte: Date, page: Int = 1, ordering: String, pageSize: Int): FigureListType
   contextualAnalyses(createdAt_Lte: DateTime, createdAt_Gte: DateTime, page: Int = 1, ordering: String, pageSize: Int): ContextualAnalysisListType
@@ -494,6 +505,12 @@ type CreateAttachment {
   errors: [GenericScalar]
   ok: Boolean
   result: AttachmentType
+}
+
+type CreateClient {
+  errors: [GenericScalar]
+  ok: Boolean
+  result: ClientType
 }
 
 type CreateCommunication {
@@ -758,6 +775,7 @@ enum DOWNLOAD_TYPES {
   REPORT
   ACTOR
   INDIVIDUAL_REPORT
+  TRACKING_DATA
 }
 
 scalar Date
@@ -1305,6 +1323,11 @@ type ExportReportFigures {
 }
 
 type ExportReports {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportTrackingData {
   errors: [GenericScalar!]
   ok: Boolean
 }
@@ -1991,6 +2014,9 @@ type Mutation {
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
   exportCountries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, year: Float): ExportCountries
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
+  createClient(data: clientCreateInputType!): CreateClient
+  updateClient(data: ClientUpdateInputType!): UpdateClient
+  exportTrackingData(apiType: [String!], clientCodes: [String!], startTrackDate: Date, endTrackDate: Date): ExportTrackingData
   createContact(data: ContactCreateInputType!): CreateContact
   updateContact(data: ContactUpdateInputType!): UpdateContact
   deleteContact(id: ID!): DeleteContact
@@ -2416,6 +2442,7 @@ enum PERMISSION_ENTITY {
   portfolio
   contextofviolence
   gidd
+  client
 }
 
 enum PREVIEW_STATUS {
@@ -2594,8 +2621,9 @@ type Query {
   organizationKindList(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, name: String, reliability: String, page: Int = 1, ordering: String, pageSize: Int): OrganizationKindListType
   attachment(id: ID!): AttachmentType
   excelExports(startedAt_Lt: DateTime, startedAt_Gt: DateTime, startedAt_Gte: DateTime, startedAt_Lte: DateTime, statusList: [String!], page: Int = 1, ordering: String, pageSize: Int): ExcelExportsListType
-  clientList(page: Int = 1, ordering: String, pageSize: Int): ClientListType
-  clientTrackInformationList(apiType: [String!], clientCodes: [String!], page: Int = 1, ordering: String, pageSize: Int): ClientTrackInformationListType
+  client(id: ID!): ClientType
+  clientList(name: String, isActive: Boolean, page: Int = 1, ordering: String, pageSize: Int): ClientListType
+  clientTrackInformationList(apiType: [String!], clientCodes: [String!], startTrackDate: Date, endTrackDate: Date, page: Int = 1, ordering: String, pageSize: Int): ClientTrackInformationListType
   contact(id: ID!): ContactType
   communication(id: ID!): CommunicationType
   contactList(country: ID, id: String, firstNameContains: String, lastNameContains: String, nameContains: String, countriesOfOperation: [String!], page: Int = 1, ordering: String, pageSize: Int): ContactListType
@@ -3167,6 +3195,12 @@ type UpdateAdminPortfolio {
   result: UserType
 }
 
+type UpdateClient {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: ClientType
+}
+
 type UpdateCommunication {
   errors: [GenericScalar!]
   ok: Boolean
@@ -3386,4 +3420,10 @@ type ViolenceType {
   subTypes(id_Iexact: Float, ordering: String): ViolenceSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
+}
+
+input clientCreateInputType {
+  name: String!
+  code: String!
+  isActive: Boolean
 }

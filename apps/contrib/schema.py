@@ -46,7 +46,10 @@ class ClientType(DjangoObjectType):
         fields = (
             'id',
             'name',
+            'is_active',
             'code',
+            'created_by',
+            'last_modified_by',
         )
 
 
@@ -57,12 +60,15 @@ class ClientListType(CustomDjangoListObjectType):
 
 
 class ClientTrackInformationType(DjangoObjectType):
+    api_name = graphene.NonNull(graphene.String)
+
     class Meta:
         model = ClientTrackInfo
         fields = (
             'id',
             'client',
             'api_type',
+            'api_name',
             'requests_per_day',
             'tracked_date',
         )
@@ -94,6 +100,7 @@ class Query:
                                                    pagination=PageGraphqlPagination(
                                                        page_size_query_param='pageSize'
                                                    ))
+    client = DjangoObjectField(ClientType)
     client_list = DjangoPaginatedListObjectField(
         ClientListType,
         pagination=PageGraphqlPagination(

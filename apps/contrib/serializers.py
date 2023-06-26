@@ -12,6 +12,7 @@ from apps.contrib.models import (
     Attachment,
     SourcePreview,
     ExcelDownload,
+    Client,
 )
 
 
@@ -144,3 +145,21 @@ class UpdateSerializerMixin:
         for name in self.fields:
             self.fields[name].required = False
         self.fields['id'].required = True
+
+
+class ClientSerializer(
+    MetaInformationSerializerMixin,
+    serializers.ModelSerializer
+):
+    class Meta:
+        model = Client
+        fields = (
+            'id',
+            'name',
+            'code',
+            'is_active',
+        )
+
+
+class ClientUpdateSerializer(UpdateSerializerMixin, ClientSerializer):
+    id = IntegerIDField(required=True)
