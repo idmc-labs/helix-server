@@ -6,10 +6,10 @@ from django.db.models import Min
 
 from apps.users.models import User, Portfolio
 from apps.users.enums import USER_ROLE
-from utils.filters import AllowInitialFilterSetMixin, StringListFilter, IDListFilter
+from utils.filters import StringListFilter, IDListFilter
 
 
-class UserFilter(AllowInitialFilterSetMixin, django_filters.FilterSet):
+class UserFilter(django_filters.FilterSet):
     role_in = StringListFilter(method='filter_role_in')
     role_not_in = StringListFilter(method='filter_role_not_in')
     monitoring_sub_region_in = IDListFilter(method='filter_monitoring_sub_region_in')
