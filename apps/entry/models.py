@@ -903,7 +903,9 @@ class Figure(MetaInformationArchiveAbstractModel,
                 Cast('geo_locations__identifier', models.IntegerField()),
                 distinct=True, filter=Q(geo_locations__identifier__isnull=False)
             ),
-            centroid=Concat(F('centroid_lat'), Value(','), F('centroid_lon')),
+            centroid=Concat(
+                F('centroid_lat'), Value(','), F('centroid_lon'), output_field=models.CharField()
+            ),
             geolocation_list=StringAgg(
                 Concat(
                     RawSQL(
