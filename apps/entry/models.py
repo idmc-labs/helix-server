@@ -908,16 +908,15 @@ class Figure(MetaInformationArchiveAbstractModel,
             ),
             geolocation_list=StringAgg(
                 Concat(
-                    RawSQL(
-                        'country_country.centroid[1]', params=()
-                    ),
+                    F('geo_locations__lat'),
                     Value(','),
-                    RawSQL('country_country.centroid[2]', params=()),
+                    F('geo_locations__lon'),
                     output_field=models.CharField(),
                     distinct=True
                 ),
                 '; ',
-                filter=models.Q(geo_locations__isnull=False)
+                filter=models.Q(geo_locations__isnull=False),
+                distinct=True,
             ),
         ).order_by(
             'created_at',
