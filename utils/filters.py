@@ -47,22 +47,6 @@ StringListFilter = _generate_list_filter_class(graphene.String)
 IDListFilter = _generate_list_filter_class(graphene.ID)
 
 
-class AllowInitialFilterSetMixin:
-    # https://django-filter.readthedocs.io/en/stable/guide/tips.html#using-initial-values-as-defaults
-    def __init__(self, data=None, *args, **kwargs):
-        # if filterset is bound, use initial values as defaults
-        if data is not None:
-            # get a mutable copy of the QueryDict
-            data = data.copy()
-
-            for name, f in self.base_filters.items():
-                initial = f.extra.get('initial')
-                if not data.get(name):
-                    data[name] = initial
-
-        super().__init__(data, *args, **kwargs)
-
-
 class NameFilterMixin:
     # NOTE: add a `name` django_filter as follows in the child filters
     # name = django_filters.CharFilter(method='_filter_name')

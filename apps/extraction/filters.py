@@ -52,7 +52,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_violence_sub_types = IDListFilter(method='filter_filter_figure_violence_sub_types')
     filter_figure_violence_types = IDListFilter(method='filter_filter_figure_violence_types')
     filter_figure_osv_sub_types = IDListFilter(method='filter_filter_figure_osv_sub_types')
-    filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data', initial=False)
+    filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data')
     filter_figure_review_status = StringListFilter(method='filter_filter_figure_review_status')
     filter_figure_approved_by = IDListFilter(method='filter_filter_figure_approved_by')
     # used in report entry table
@@ -345,7 +345,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_violence_sub_types = IDListFilter(method='filter_filter_figure_violence_sub_types')
     filter_figure_violence_types = IDListFilter(method='filter_filter_figure_violence_types')
     filter_figure_osv_sub_types = IDListFilter(method='filter_filter_figure_osv_sub_types')
-    filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data', initial=False)
+    filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data')
     # used in report entry table
     report = df.CharFilter(method='filter_report')
     filter_context_of_violences = IDListFilter(method='filter_context_of_violences')
