@@ -35,7 +35,7 @@ class ExcelExportFilter(django_filters.FilterSet):
 
 class ClientFilter(django_filters.FilterSet):
     name = django_filters.CharFilter(method='filter_name')
-    is_active = django_filters.BooleanFilter(method='filter_is_active', initial=False)
+    is_active = django_filters.BooleanFilter(method='filter_is_active')
 
     class Meta:
         model = Client

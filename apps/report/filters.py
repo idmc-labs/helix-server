@@ -20,9 +20,9 @@ class ReportFilter(df.FilterSet):
     review_status = StringListFilter(method='filter_by_review_status')
     start_date_after = df.DateFilter(method='filter_date_after')
     end_date_before = df.DateFilter(method='filter_end_date_before')
-    is_public = df.BooleanFilter(method='filter_is_public', initial=False)
-    is_gidd_report = df.BooleanFilter(method='filter_is_gidd_report', initial=False)
-    is_pfa_visible_in_gidd = df.BooleanFilter(method='filter_is_pfa_visible_in_gidd', initial=False)
+    is_public = df.BooleanFilter(method='filter_is_public')
+    is_gidd_report = df.BooleanFilter(method='filter_is_gidd_report')
+    is_pfa_visible_in_gidd = df.BooleanFilter(method='filter_is_pfa_visible_in_gidd')
 
     class Meta:
         model = Report

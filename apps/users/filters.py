@@ -15,8 +15,7 @@ class UserFilter(django_filters.FilterSet):
     monitoring_sub_region_in = IDListFilter(method='filter_monitoring_sub_region_in')
     monitoring_sub_region_not_in = IDListFilter(method='filter_monitoring_sub_region_not_in')
     full_name = django_filters.CharFilter(method='filter_full_name')
-    include_inactive = django_filters.BooleanFilter(method='filter_include_inactive',
-                                                    initial=False)
+    include_inactive = django_filters.BooleanFilter(method='filter_include_inactive')
     id = django_filters.CharFilter(field_name='id', lookup_expr='iexact')
     permissions = StringListFilter(method='filter_permissions')
 
