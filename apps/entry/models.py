@@ -972,33 +972,56 @@ class Figure(MetaInformationArchiveAbstractModel,
                     return ''
                 return get_string_from_list(str(glide_number) for glide_number in glide_numbers)
 
+            def get_enum_label(key, Enum):
+                val = datum[key]
+                obj = Enum.get(val)
+                return getattr(obj, "label", val)
+
             return {
                 **datum,
                 'include_idu': 'Yes' if datum['include_idu'] else 'No',
-                'stock_date_accuracy': getattr(DATE_ACCURACY.get(datum['stock_date_accuracy']), 'label', ''),
-                'flow_start_date_accuracy': getattr(DATE_ACCURACY.get(datum['flow_start_date_accuracy']), 'label', ''),
-                'flow_end_date_accuracy': getattr(DATE_ACCURACY.get(datum['flow_end_date_accuracy']), 'label', ''),
-                'quantifier': getattr(Figure.QUANTIFIER.get(datum['quantifier']), 'label', ''),
-                'unit': getattr(Figure.UNIT.get(datum['unit']), 'label', ''),
-                'role': getattr(Figure.ROLE.get(datum['role']), 'label', ''),
-                'term': getattr(Figure.FIGURE_TERMS.get(datum['term']), 'label', ''),
-                'category': getattr(Figure.FIGURE_CATEGORY_TYPES.get(datum['category']), 'label', ''),
-                'displacement_occurred': getattr(
-                    Figure.DISPLACEMENT_OCCURRED.get(datum['displacement_occurred']), 'label', ''
+                'stock_date_accuracy': get_enum_label(
+                    'stock_date_accuracy', DATE_ACCURACY
                 ),
-                'figure_cause': getattr(Crisis.CRISIS_TYPE.get(
-                    datum['figure_cause']), 'label', ''
+                'flow_start_date_accuracy': get_enum_label(
+                    'flow_start_date_accuracy', DATE_ACCURACY
+                ),
+                'flow_end_date_accuracy': get_enum_label(
+                    'flow_end_date_accuracy', DATE_ACCURACY
+                ),
+                'quantifier': get_enum_label(
+                    'quantifier', Figure.QUANTIFIER
+                ),
+                'unit': get_enum_label('unit', Figure.UNIT),
+                'role': get_enum_label('role', Figure.ROLE),
+                'term': get_enum_label('term', Figure.FIGURE_TERMS),
+                'category': get_enum_label(
+                    'category', Figure.FIGURE_CATEGORY_TYPES
+                ),
+                'displacement_occurred': get_enum_label(
+                    'displacement_occurred', Figure.DISPLACEMENT_OCCURRED
+                ),
+                'figure_cause': get_enum_label(
+                    'figure_cause', Crisis.CRISIS_TYPE
                 ),
                 'geo_locations_identifier': get_string_from_list([
                     OSMName.IDENTIFIER(item).label for item in datum['geo_locations_identifier']
                 ]),
-                'sources_reliability': getattr(Figure.SOURCES_RELIABILITY.get(datum['sources_reliability']), 'label', ''),
+                'sources_reliability': get_enum_label(
+                    'sources_reliability', Figure.SOURCES_RELIABILITY
+                ),
                 'source_document': get_document_name_from_url(datum['source_document']),
                 'centroid': datum['centroid'],
                 'event__glide_numbers': format_glide_numbers(datum['event__glide_numbers']),
-                'event__event_type': getattr(Crisis.CRISIS_TYPE.get(datum['event__event_type']), 'name', ''),
-                'event__start_date_accuracy': getattr(DATE_ACCURACY.get(datum['event__start_date_accuracy']), 'label', ''),
-                'event__end_date_accuracy': getattr(DATE_ACCURACY.get(datum['event__end_date_accuracy']), 'label', ''),
+                'event__event_type': get_enum_label(
+                    'event__event_type', Crisis.CRISIS_TYPE
+                ),
+                'event__start_date_accuracy': get_enum_label(
+                    'event__start_date_accuracy', DATE_ACCURACY
+                ),
+                'event__end_date_accuracy': get_enum_label(
+                    'event__end_date_accuracy', DATE_ACCURACY
+                )
             }
 
         return {
