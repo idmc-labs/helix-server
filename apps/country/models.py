@@ -300,25 +300,25 @@ class Country(models.Model):
         year = filters.get('year', None)
         str_year = filters.get('year', '')
         headers = OrderedDict(
-            id='Id',
-            geographical_group__name='Geographical Group',
+            id='ID',
+            geographical_group__name='Geographical group',
             region__name='Region',
-            sub_region__name='Sub Region',
+            sub_region__name='Sub region',
             name='Name',
             iso2='ISO2',
             iso3='ISO3',
-            country_code='Country Code',
-            idmc_short_name='IDMC Short Name',
-            idmc_full_name='IDMC Full Name',
-            crises_count='Crises Count',
-            events_count='Events Count',
-            entries_count='Entries Count',
-            figures_count='Figures Count',
+            country_code='Country code',
+            idmc_short_name='IDMC short name',
+            idmc_full_name='IDMC full name',
+            crises_count='Crises count',
+            events_count='Events count',
+            entries_count='Entries count',
+            figures_count='Figures count',
             **{
-                cls.IDP_DISASTER_ANNOTATE: f'IDPs Disaster Figure {str_year}',
-                cls.ND_CONFLICT_ANNOTATE: f'ND Conflict Figure {str_year}',
-                cls.IDP_CONFLICT_ANNOTATE: f'IDPs Conflict Figure {str_year}',
-                cls.ND_DISASTER_ANNOTATE: f'ND Disaster Figure {str_year}',
+                cls.IDP_DISASTER_ANNOTATE: f'IDPs disaster figure {str_year}',
+                cls.ND_CONFLICT_ANNOTATE: f'ND conflict figure {str_year}',
+                cls.IDP_CONFLICT_ANNOTATE: f'IDPs conflict figure {str_year}',
+                cls.ND_DISASTER_ANNOTATE: f'ND disaster figure {str_year}',
             }
         )
         data = CountryFilter(

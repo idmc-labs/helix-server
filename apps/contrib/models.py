@@ -333,10 +333,10 @@ class ClientTrackInfo(models.Model):
                 self.user = user
 
         headers = OrderedDict(
-            client_name='Client Name',
-            client_code='Client Code',
-            api_type='Api Type',
-            api_name='Api Name',
+            client_name='Client name',
+            client_code='Client code',
+            api_type='API type',
+            api_name='API name',
             tracked_date='Date',
             requests_per_day='Requests',
         )

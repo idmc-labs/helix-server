@@ -70,7 +70,7 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
                 self.user = user
 
         headers = OrderedDict(
-            id='Id',
+            id='ID',
             created_by__full_name='Created by',
             created_at='Created at',
             last_modified_by__full_name='Updated by',
@@ -78,12 +78,12 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
             full_name='Name',
             gender='Gender',
             organization__name='Organization',
-            job_title='Job Title',
+            job_title='Job title',
             country__idmc_short_name='Country',
             operating_countries='Countries of operation',
-            operating_countries_regions='Countries of operation regions',
+            operating_countries_regions='Regions of operation',
             # Extra added fields
-            old_id='Old Id',
+            old_id='Old ID',
             designation='Designation',
             communications_count='Communications count'
         )

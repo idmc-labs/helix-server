@@ -70,20 +70,20 @@ class Organization(MetaInformationArchiveAbstractModel,
                 self.user = user
 
         headers = OrderedDict(
-            id='Id',
+            id='ID',
             created_by__full_name='Created by',
             created_at='Created at',
             last_modified_by__full_name='Updated by',
             modified_at='Updated at',
             name='Name',
-            organization_kind__name='Organization Type',
+            organization_kind__name='Organization type',
             # Extra added fields
             countries_iso3='ISO3',
-            category='Geographical Coverage',
+            category='Geographical coverage',
             countries_name='Countries',
             # Extra added fields
-            old_id='Old Id',
-            short_name='Short Name',
+            old_id='Old ID',
+            short_name='Short name',
             methodology='Methodology',
         )
         data = OrganizationFilter(
