@@ -781,7 +781,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             country__iso3='ISO3',
             country__name='Country',
             country__region__name='Region',
-            # TODO: geographcal_regions ??
+            country__geographical_group__name='Geographcal regions',
             figure_cause='Figure cause',
             year='Year',
             category='Figure Category',
@@ -819,26 +819,19 @@ class Figure(MetaInformationArchiveAbstractModel,
             sources_type='Sources Types',
             sources_reliability='Sources reliability',
             sources_methodology='Sources methodology',
-            source_excerpt='Sources Excerpt',
+            source_excerpt='Source Excerpt',
             entry_url_or_document_url='Source url',
             source_document='Source document',
             geolocations='Locations names',
+            geolocation_list='Location List',
             centroid='Centroid',
             centroid_lat='Lat',  # Newly added but related to centroid
             centroid_lon='Lon',  # Newly added but related to centroid
-            geolocation_list='Location List',
-            # TODO: sex ??
             geo_locations_identifier='Type of point',
             entry__id='Entry Id',
             entry__old_id='Entry Old Id',
             entry__article_title='Entry Title',
             entry_link='Entry link',
-            disaggregation_displacement_urban='Displacement: Urban',
-            disaggregation_displacement_rural='Displacement: Rural',
-            disaggregation_location_camp='Location: Camp',
-            disaggregation_location_non_camp='Location: Non-Camp',
-            # TODO: gender ???
-            # TODO: age ???
             disaggregation_disability='Disability',
             disaggregation_indigenous_people='Indigenous People',
             event__id='Event Id',
@@ -846,18 +839,17 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__name='Event Name',
             event__glide_numbers='Event Code',
             event__event_type='Event Cause',
-            # TODO: event main trigger ??
+            event_main_trigger='Event main trigger',
             event__start_date='Event Start Date',
             event__end_date='Event End Date',
             event__start_date_accuracy='Event start date accuracy',
             event__end_date_accuracy='Event End date accuracy',
-            # TODO: Event tag ??
             event__event_narrative='Event Narrative',
             event__crisis_id='Crisis Id',
             event__crisis__name='Crisis Name',
             tags_name='Tags',
-            # TODO: has_age_disaggregated_data
-            # TODO: revision_progress
+            has_age_disaggregated_data='Has age disaggregated data',
+            review_status='Revision progress',
             event__assignee__full_name='Assignee',
             created_by__full_name='Created by',
         )
@@ -953,6 +945,26 @@ class Figure(MetaInformationArchiveAbstractModel,
                 output_field=models.CharField(),
                 distinct=True,
             ),
+            has_age_disaggregated_data=Case(
+                When(disaggregation_age__isnull=False, then=Value("Yes")),
+                default=Value('No'),
+                output_field=models.CharField(),
+            ),
+            event_main_trigger=Case(
+                When(
+                    event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                    then=F('event__violence_sub_type__name')
+                ),
+                When(
+                    event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                    then=F('event__disaster_sub_type__name')
+                ),
+                When(
+                    event__event_type=Crisis.CRISIS_TYPE.OTHER,
+                    then=F('event__other_sub_type__name')
+                ),
+                output_field=models.CharField()
+            )
         ).order_by(
             'created_at',
         ).values(*[header for header in headers.keys()])
@@ -980,6 +992,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             return {
                 **datum,
                 'include_idu': 'Yes' if datum['include_idu'] else 'No',
+                'is_housing_destruction': 'Yes' if datum['is_housing_destruction'] else 'No',
                 'stock_date_accuracy': get_enum_label(
                     'stock_date_accuracy', DATE_ACCURACY
                 ),
@@ -1021,7 +1034,10 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 'event__end_date_accuracy': get_enum_label(
                     'event__end_date_accuracy', DATE_ACCURACY
-                )
+                ),
+                'review_status': get_enum_label(
+                    'review_status', Figure.FIGURE_REVIEW_STATUS
+                ),
             }
 
         return {
