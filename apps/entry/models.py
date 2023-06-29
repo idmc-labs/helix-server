@@ -774,75 +774,85 @@ class Figure(MetaInformationArchiveAbstractModel,
 
         from apps.crisis.models import Crisis
         headers = OrderedDict(
-            id='Id',
+            id='ID',
+            old_id='Old ID',
             created_at='Created at',
-            created_by__full_name='Created by',
+            modified_at='Updated at',
             country__iso3='ISO3',
+            country__name='Country',
+            country__region__name='Region',
+            country__geographical_group__name='Geographical region',
             figure_cause='Figure cause',
+            year='Year',
+            category='Figure category',
+            role='Figure role',
             total_figures='Total figures',
+            reported='Reported',
             term='Figure term',
-            stock_date='Stock date',
-            stock_date_accuracy='Stock date accuracy',
-            stock_reporting_date='Stock reporting date',
+            unit='Unit',
+            quantifier='Quantifier',
+            household_size='Household size',
+            is_housing_destruction='Is housing destruction',
+            displacement_occurred='Displacement occurred',
+            include_idu='Include in IDU',
+            excerpt_idu='Excerpt IDU',
+            violence__name='Violence type',
+            violence_sub_type__name='Violence sub type',
+            osv_sub_type__name='OSV sub type',
+            context_of_violences='Context of violences',
+            disaster_category__name='Hazard category',
+            disaster_sub_category__name='Hazard sub category',
+            disaster_type__name='Hazard type',
+            disaster_sub_type__name='Hazard sub type',
+            event__other_sub_type__name='Other event sub type',
             flow_start_date='Start date',
             flow_start_date_accuracy='Start date accuracy',
             flow_end_date='End date',
             flow_end_date_accuracy='End date accuracy',
-            role='Figure Role',
-            event__id='Event Id',
-            year='Year',
-            entry_id='Entry Id',
-            event__name='Event Name',
+            stock_date='Stock date',
+            stock_date_accuracy='Stock date accuracy',
+            stock_reporting_date='Stock reporting date',
+            calculation_logic='Analysis and calculation logic',
+            figure_link='Link',
+            publishers_name='Publishers',
             sources_name='Sources',
+            sources_type='Sources type',
+            sources_reliability='Sources reliability',
+            sources_methodology='Sources methodology',
+            source_excerpt='Source excerpt',
+            entry_url_or_document_url='Source url',
+            source_document='Source document',
+            geolocations='Locations name',
+            geolocation_list='Locations',
             centroid='Centroid',
             centroid_lat='Lat',  # Newly added but related to centroid
             centroid_lon='Lon',  # Newly added but related to centroid
-            geolocation_list='Location List',
-            include_idu='Include in IDU',
-            excerpt_idu='Excerpt IDU',
-            publishers_name='Publishers',
-            figure_link='Link',
-            violence__name='Violence',
-            violence_sub_type__name='Violence Sub Type',
-            disaster_type__name='Hazard Type',
-            disaster_sub_type__name='Hazard Sub Type',
-            osv_sub_type__name="OSV Sub Type",
-            disaster_category__name='Hazard Category',
-            disaster_sub_category__name='Hazard Sub Category',
-            source_excerpt='Source Excerpt',
-            country__region__name='Region',
-            event__start_date='Event Start Date',
-            reported='Reported',
-            disaggregation_displacement_urban='Displacement: Urban',
-            disaggregation_displacement_rural='Displacement: Rural',
-            disaggregation_location_camp='Location: Camp',
-            disaggregation_location_non_camp='Location: Non-Camp',
-            # Extra added fields
-            old_id='Old Id',
-            entry_url_or_document_url='Source url',
-            source_document='Source document',
-            entry_link='Entry link',
-            country__idmc_short_name='Country',
-            entry__old_id='Entry Old Id',
-            unit='Unit',
-            quantifier='Quantifier',
-            household_size='Household Size',
-            category='Figure Category',
-            displacement_occurred='Displacement Occurred',
-            geolocations='Locations names',
-            is_housing_destruction='Is housing destruction',
-            tags_name='Tags',
-            calculation_logic='Analysis and Calculation Logic',
             geo_locations_identifier='Type of point',
+            entry__id='Entry ID',
+            entry__old_id='Entry old ID',
+            entry__article_title='Entry title',
+            entry_link='Entry link',
             disaggregation_disability='Disability',
-            disaggregation_indigenous_people='Indigenous People',
-            entry__article_title='Entry Title',
-            event__crisis_id='Crisis Id',
-            event__old_id='Event Old Id',
-            event__crisis__name='Crisis Name',
-            event__other_sub_type__name='Other Event Sub Type',
-            context_of_violences='Context of violences',
-            sources_reliability='Sources reliability'
+            disaggregation_indigenous_people='Indigenous people',
+            event__id='Event ID',
+            event__old_id='Event old ID',
+            event__name='Event name',
+            event__glide_numbers='Event code',
+            event__event_type='Event cause',
+            event_main_trigger='Event main trigger',
+            event__start_date='Event start date',
+            event__end_date='Event end date',
+            event__start_date_accuracy='Event start date accuracy',
+            event__end_date_accuracy='Event end date accuracy',
+            event__event_narrative='Event narrative',
+            event__crisis_id='Crisis ID',
+            event__crisis__name='Crisis name',
+            tags_name='Tags',
+            has_age_disaggregated_data='Has age disaggregated data',
+            review_status='Revision progress',
+            event__assignee__full_name='Assignee',
+            created_by__full_name='Created by',
+            last_modified_by__full_name='Updated by',
         )
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
@@ -887,18 +897,35 @@ class Figure(MetaInformationArchiveAbstractModel,
                 '; ',
                 filter=~Q(
                     Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name='')
-                ), distinct=True
+                ), distinct=True, output_field=models.CharField()
             ),
             publishers_name=StringAgg(
                 'entry__publishers__name',
                 '; ',
                 filter=~Q(entry__publishers__name=''),
-                distinct=True
+                distinct=True, output_field=models.CharField()
             ),
             year=ExtractYear("end_date"),
-            context_of_violences=StringAgg('context_of_violence__name', '; ', distinct=True),
-            tags_name=StringAgg('tags__name', '; ', distinct=True),
-            sources_name=StringAgg('sources__name', '; ', distinct=True),
+            context_of_violences=StringAgg(
+                'context_of_violence__name', '; ',
+                distinct=True, output_field=models.CharField()
+            ),
+            tags_name=StringAgg(
+                'tags__name', '; ',
+                distinct=True, output_field=models.CharField()
+            ),
+            sources_name=StringAgg(
+                'sources__name', '; ',
+                distinct=True, output_field=models.CharField()
+            ),
+            sources_type=StringAgg(
+                'sources__organization_kind__name', '; ',
+                distinct=True, output_field=models.CharField()
+            ),
+            sources_methodology=StringAgg(
+                'sources__methodology', '; ',
+                distinct=True, output_field=models.CharField()
+            ),
             geo_locations_identifier=ArrayAgg(
                 Cast('geo_locations__identifier', models.IntegerField()),
                 distinct=True, filter=Q(geo_locations__identifier__isnull=False)
@@ -916,8 +943,29 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 '; ',
                 filter=models.Q(geo_locations__isnull=False),
+                output_field=models.CharField(),
                 distinct=True,
             ),
+            has_age_disaggregated_data=Case(
+                When(disaggregation_age__isnull=False, then=Value("Yes")),
+                default=Value('No'),
+                output_field=models.CharField(),
+            ),
+            event_main_trigger=Case(
+                When(
+                    event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
+                    then=F('event__violence_sub_type__name')
+                ),
+                When(
+                    event__event_type=Crisis.CRISIS_TYPE.DISASTER,
+                    then=F('event__disaster_sub_type__name')
+                ),
+                When(
+                    event__event_type=Crisis.CRISIS_TYPE.OTHER,
+                    then=F('event__other_sub_type__name')
+                ),
+                output_field=models.CharField()
+            )
         ).order_by(
             'created_at',
         ).values(*[header for header in headers.keys()])
@@ -932,29 +980,65 @@ class Figure(MetaInformationArchiveAbstractModel,
                     return ''
                 return document_name[0]
 
+            def format_glide_numbers(glide_numbers):
+                if not glide_numbers:
+                    return ''
+                return get_string_from_list(str(glide_number) for glide_number in glide_numbers)
+
+            def get_enum_label(key, Enum):
+                val = datum[key]
+                obj = Enum.get(val)
+                return getattr(obj, "label", val)
+
             return {
                 **datum,
                 'include_idu': 'Yes' if datum['include_idu'] else 'No',
-                'stock_date_accuracy': getattr(DATE_ACCURACY.get(datum['stock_date_accuracy']), 'label', ''),
-                'flow_start_date_accuracy': getattr(DATE_ACCURACY.get(datum['flow_start_date_accuracy']), 'label', ''),
-                'flow_end_date_accuracy': getattr(DATE_ACCURACY.get(datum['flow_end_date_accuracy']), 'label', ''),
-                'quantifier': getattr(Figure.QUANTIFIER.get(datum['quantifier']), 'label', ''),
-                'unit': getattr(Figure.UNIT.get(datum['unit']), 'label', ''),
-                'role': getattr(Figure.ROLE.get(datum['role']), 'label', ''),
-                'term': getattr(Figure.FIGURE_TERMS.get(datum['term']), 'label', ''),
-                'category': getattr(Figure.FIGURE_CATEGORY_TYPES.get(datum['category']), 'label', ''),
-                'displacement_occurred': getattr(
-                    Figure.DISPLACEMENT_OCCURRED.get(datum['displacement_occurred']), 'label', ''
+                'is_housing_destruction': 'Yes' if datum['is_housing_destruction'] else 'No',
+                'stock_date_accuracy': get_enum_label(
+                    'stock_date_accuracy', DATE_ACCURACY
                 ),
-                'figure_cause': getattr(Crisis.CRISIS_TYPE.get(
-                    datum['figure_cause']), 'label', ''
+                'flow_start_date_accuracy': get_enum_label(
+                    'flow_start_date_accuracy', DATE_ACCURACY
+                ),
+                'flow_end_date_accuracy': get_enum_label(
+                    'flow_end_date_accuracy', DATE_ACCURACY
+                ),
+                'quantifier': get_enum_label(
+                    'quantifier', Figure.QUANTIFIER
+                ),
+                'unit': get_enum_label('unit', Figure.UNIT),
+                'role': get_enum_label('role', Figure.ROLE),
+                'term': get_enum_label('term', Figure.FIGURE_TERMS),
+                'category': get_enum_label(
+                    'category', Figure.FIGURE_CATEGORY_TYPES
+                ),
+                'displacement_occurred': get_enum_label(
+                    'displacement_occurred', Figure.DISPLACEMENT_OCCURRED
+                ),
+                'figure_cause': get_enum_label(
+                    'figure_cause', Crisis.CRISIS_TYPE
                 ),
                 'geo_locations_identifier': get_string_from_list([
                     OSMName.IDENTIFIER(item).label for item in datum['geo_locations_identifier']
                 ]),
-                'sources_reliability': getattr(Figure.SOURCES_RELIABILITY.get(datum['sources_reliability']), 'label', ''),
+                'sources_reliability': get_enum_label(
+                    'sources_reliability', Figure.SOURCES_RELIABILITY
+                ),
                 'source_document': get_document_name_from_url(datum['source_document']),
-                'centroid': datum['centroid']
+                'centroid': datum['centroid'],
+                'event__glide_numbers': format_glide_numbers(datum['event__glide_numbers']),
+                'event__event_type': get_enum_label(
+                    'event__event_type', Crisis.CRISIS_TYPE
+                ),
+                'event__start_date_accuracy': get_enum_label(
+                    'event__start_date_accuracy', DATE_ACCURACY
+                ),
+                'event__end_date_accuracy': get_enum_label(
+                    'event__end_date_accuracy', DATE_ACCURACY
+                ),
+                'review_status': get_enum_label(
+                    'review_status', Figure.FIGURE_REVIEW_STATUS
+                ),
             }
 
         return {
@@ -1189,34 +1273,34 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                 self.user = user
 
         headers = OrderedDict(
-            id='Id',
+            id='ID',
             created_by__full_name='Created by',
             created_at='Created at',
             last_modified_by__full_name='Updated by',
             modified_at='Updated at',
             is_confidential='Confidential',
-            publish_date='Publish Date',
+            publish_date='Publish date',
             figure_causes='Figure causes',
-            countries='Countries Affected',
-            article_title='Entry Title',
+            countries='Countries affected',
+            article_title='Entry title',
             url='URL',
             document__attachment='Document',
             document__mimetype='Filetype',
-            document__filetype_detail='Filetype Detail',
+            document__filetype_detail='Filetype detail',
             sources_name='Sources',
-            source_types='Source Types',
+            source_types='Source types',
             # Extra added fields
-            old_id='Old Id',
+            old_id='Old ID',
             publishers_name='Publishers',
-            publisher_types='Publisher Types',
+            publisher_types='Publisher types',
             idmc_analysis='Trends and patterns of displacement to be highlighted',
-            countries_iso3='ISO3s Affected',
-            categories='Figure Categories',
-            terms='Figure Terms',
-            figures_count='Figures Count',
+            countries_iso3='ISO3s affected',
+            categories='Figure categories',
+            terms='Figure terms',
+            figures_count='Figures count',
             # **{
-            #     cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
-            #     cls.ND_FIGURES_ANNOTATE: 'ND Figure',
+            #     cls.IDP_FIGURES_ANNOTATE: 'IDPs figure',
+            #     cls.ND_FIGURES_ANNOTATE: 'ND figure',
             # },
             min_fig_start='Earliest figure start',
             max_fig_start='Latest figure start',

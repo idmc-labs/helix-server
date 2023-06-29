@@ -266,10 +266,10 @@ def report_stat_conflict_country(report, include_history):
         country_population='Population',
         flow_total=f'ND {report.name}',
         stock_total=f'IDPs {report.name}',
-        flow_total_last_year='ND Last Year',
-        stock_total_last_year='IDPs Last Year',
-        flow_historical_average='ND Historical Average',
-        stock_historical_average='IDPs Historical Average',
+        flow_total_last_year='ND last year',
+        stock_total_last_year='IDPs last year',
+        flow_historical_average='ND historical average',
+        stock_historical_average='IDPs historical average',
         # provisional and returns
         # historical average for flow an stock NOTE: coming from different db
     ))
@@ -522,8 +522,8 @@ def report_stat_conflict_region(report, include_history):
 def report_stat_conflict_typology(report):
     headers = OrderedDict(dict(
         iso3='ISO3',
-        name='IDMC Short Name',
-        typology='Conflict Typology',
+        name='IDMC short name',
+        typology='Conflict typology',
         total='Figure',
     ))
     filtered_report_figures = report.report_figures.filter(
@@ -578,8 +578,8 @@ def report_stat_conflict_typology(report):
 
     # further aggregation
     aggregation_headers = OrderedDict(dict(
-        typology='Conflict Typology',
-        total='Sum of Figure',
+        typology='Conflict typology',
+        total='Sum of figure',
     ))
     aggregation_formula = dict()
 
@@ -633,18 +633,18 @@ def report_stat_conflict_typology(report):
 
 def report_disaster_event(report):
     headers = OrderedDict(dict(
-        event_id='Event Id',
-        event_name='Event Name',
-        event_year='Event Year',
-        event_start_date='Start Date',
-        event_end_date='End Date',
-        event_category='Hazard Category',
-        event_sub_category='Hazard Sub Category',
-        dtype='Hazard Type',
-        dsub_type='Hazard Sub Type',
+        event_id='Event ID',
+        event_name='Event name',
+        event_year='Event year',
+        event_start_date='Start date',
+        event_end_date='End date',
+        event_category='Hazard category',
+        event_sub_category='Hazard sub category',
+        dtype='Hazard type',
+        dsub_type='Hazard sub type',
         affected_iso3='Affected ISO3',
-        affected_names='Affected Countries',
-        affected_countries='Number of Affected Countries',
+        affected_names='Affected countries',
+        affected_countries='Number of affected countries',
         flow_total='ND' + report.name,
     ))
 
@@ -686,11 +686,11 @@ def report_disaster_country(report, include_history):
         country_iso3='ISO3',
         country_name='Name',
         country_region='Region',
-        events_count='Events Count',
-        country_population='Country Population',
+        events_count='Events count',
+        country_population='Country population',
         flow_total=f'ND {report.name}',
-        flow_total_last_year='ND Last Year',
-        flow_historical_average='ND Historical Average',
+        flow_total_last_year='ND last year',
+        flow_historical_average='ND historical average',
     ))
 
     def get_key(header):
@@ -774,11 +774,11 @@ def report_disaster_country(report, include_history):
 def report_disaster_region(report, include_history):
     headers = OrderedDict(dict(
         region_name='Region',
-        events_count='Events Count',
-        region_population='Region Population',
+        events_count='Events count',
+        region_population='Region population',
         flow_total=f'ND {report.name}',
-        flow_total_last_year='ND Last Year',
-        flow_historical_average='ND Historical Average',
+        flow_total_last_year='ND last year',
+        flow_historical_average='ND historical average',
     ))
 
     def get_key(header):

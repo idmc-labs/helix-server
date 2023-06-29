@@ -91,25 +91,25 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                 self.user = user
 
         headers = OrderedDict(
-            id='Id',
-            created_at='Created At',
-            created_by__full_name='Created By',
+            id='ID',
+            created_at='Created at',
+            created_by__full_name='Created by',
             name='Name',
-            start_date='Start Date',
-            start_date_accuracy='Start Date Accuracy',
-            end_date='End Date',
-            end_date_accuracy='End Date Accuracy',
+            start_date='Start date',
+            start_date_accuracy='Start date accuracy',
+            end_date='End date',
+            end_date_accuracy='End date accuracy',
             crisis_type='Cause',
             countries_iso3='ISO3s',
             countries_name='Countries',
             regions_name='Regions',
-            events_count='Events Count',
-            figures_count='Figures Count',
-            min_event_start='Earliest Event Start',
-            max_event_end='Latest Event End',
+            events_count='Events count',
+            figures_count='Figures count',
+            min_event_start='Earliest event start',
+            max_event_end='Latest event end',
             **{
-                cls.IDP_FIGURES_ANNOTATE: 'IDPs Figure',
-                cls.ND_FIGURES_ANNOTATE: 'ND Figure',
+                cls.IDP_FIGURES_ANNOTATE: 'IDPs figure',
+                cls.ND_FIGURES_ANNOTATE: 'ND figure',
             },
         )
         data = CrisisFilter(
