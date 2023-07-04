@@ -203,10 +203,10 @@ class DisplacementDataFilter(ReleaseMetadataFilter):
 
 # Gidd filtets to api type map
 GIDD_API_TYPE_MAP = {
-    DisasterFilter: ExternalApiDump.ExternalApiType.GIDD_DISASTER_GRAPHQL,
-    ConflictFilter: ExternalApiDump.ExternalApiType.GIDD_CONFLICT_GRAPHQL,
-    DisplacementDataFilter: ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_DATA_GRAPHQL,
-    PublicFigureAnalysisFilter: ExternalApiDump.ExternalApiType.GIDD_PFA_GRAPHQL,
-    DisasterStatisticsFilter: ExternalApiDump.ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL,
-    ConflictStatisticsFilter: ExternalApiDump.ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL,
+    f'Graphene{DisasterFilter.__name__}': ExternalApiDump.ExternalApiType.GIDD_DISASTER_GRAPHQL,
+    f'Graphene{ConflictFilter.__name__}': ExternalApiDump.ExternalApiType.GIDD_CONFLICT_GRAPHQL,
+    f'Graphene{DisplacementDataFilter.__name__}': ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_DATA_GRAPHQL,
+    f'Graphene{PublicFigureAnalysisFilter.__name__}': ExternalApiDump.ExternalApiType.GIDD_PFA_GRAPHQL,
+    f'Graphene{DisasterStatisticsFilter.__name__}': ExternalApiDump.ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL,
+    f'Graphene{ConflictStatisticsFilter.__name__}': ExternalApiDump.ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL,
 }
