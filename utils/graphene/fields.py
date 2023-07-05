@@ -1,3 +1,4 @@
+import logging
 from functools import partial
 
 from django.db.models import QuerySet
@@ -17,6 +18,10 @@ from graphene_django_extras.utils import get_extra_filters
 from utils.graphene.pagination import OrderingOnlyArgumentPagination
 from utils.common import track_gidd
 from apps.gidd.filters import GIDD_API_TYPE_MAP
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def path_has_list(info):
@@ -219,7 +224,9 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
 
         client_id = kwargs.get('client_id')
         if client_id:
-            api_type = GIDD_API_TYPE_MAP.get(filterset_class)
+            api_type = GIDD_API_TYPE_MAP.get(filterset_class.__name__)
+            if api_type is None:
+                logger.error(f'Client tracking key was not found for filter {filterset_class.__name__}')
             track_gidd(client_id, api_type)
 
         # setup pagination
