@@ -202,11 +202,16 @@ class DisplacementDataFilter(ReleaseMetadataFilter):
 
 
 # Gidd filtets to api type map
+
 GIDD_API_TYPE_MAP = {
-    f'Graphene{DisasterFilter.__name__}': ExternalApiDump.ExternalApiType.GIDD_DISASTER_GRAPHQL,
-    f'Graphene{ConflictFilter.__name__}': ExternalApiDump.ExternalApiType.GIDD_CONFLICT_GRAPHQL,
-    f'Graphene{DisplacementDataFilter.__name__}': ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_DATA_GRAPHQL,
-    f'Graphene{PublicFigureAnalysisFilter.__name__}': ExternalApiDump.ExternalApiType.GIDD_PFA_GRAPHQL,
-    f'Graphene{DisasterStatisticsFilter.__name__}': ExternalApiDump.ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL,
-    f'Graphene{ConflictStatisticsFilter.__name__}': ExternalApiDump.ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL,
+    # WHY? https://github.com/eamigo86/graphene-django-extras/blob/master/graphene_django_extras/filters/filter.py#L29
+    f'Graphene{filter_class.__name__}': api_type
+    for filter_class, api_type in {
+        DisasterFilter: ExternalApiDump.ExternalApiType.GIDD_DISASTER_GRAPHQL,
+        ConflictFilter: ExternalApiDump.ExternalApiType.GIDD_CONFLICT_GRAPHQL,
+        DisplacementDataFilter: ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_DATA_GRAPHQL,
+        PublicFigureAnalysisFilter: ExternalApiDump.ExternalApiType.GIDD_PFA_GRAPHQL,
+        DisasterStatisticsFilter: ExternalApiDump.ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL,
+        ConflictStatisticsFilter: ExternalApiDump.ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL,
+    }.items()
 }
