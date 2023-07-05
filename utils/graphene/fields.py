@@ -225,9 +225,8 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
         client_id = kwargs.get('client_id')
         if client_id:
             api_type = GIDD_API_TYPE_MAP.get(filterset_class.__name__)
-            if api_type in [None, 'None']:
+            if api_type is None:
                 logger.error(f'Client tracking key was found None for filter {filterset_class.__name__}')
-
             track_gidd(client_id, api_type)
 
         # setup pagination

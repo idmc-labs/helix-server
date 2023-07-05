@@ -343,8 +343,8 @@ class ClientTrackInfo(models.Model):
         data = ClientTrackInfoFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
-        ).qs.filter(
-            ~models.Q(api_type='None'),
+        ).qs.exclude(
+            api_type='None',
         ).annotate(
             client_name=models.F('client__name'),
             client_code=models.F('client__code'),
