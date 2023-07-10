@@ -47,7 +47,8 @@ class CountryViewSet(ListOnlyViewSetMixin):
     def get_queryset(self):
         track_gidd(
             self.request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_COUNTRY_REST
+            ExternalApiDump.ExternalApiType.GIDD_COUNTRY_REST,
+            viewset=self,
         )
         return Country.objects.all()
 
@@ -59,7 +60,8 @@ class ConflictViewSet(ListOnlyViewSetMixin):
     def get_queryset(self):
         track_gidd(
             self.request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_CONFLICT_REST
+            ExternalApiDump.ExternalApiType.GIDD_CONFLICT_REST,
+            viewset=self,
         )
         return Conflict.objects.all().select_related('country')
 
@@ -75,7 +77,8 @@ class DisasterViewSet(ListOnlyViewSetMixin):
 
         track_gidd(
             self.request.GET.get('client_id'),
-            api_type
+            api_type,
+            viewset=self,
         )
         return Disaster.objects.select_related('country')
 
@@ -201,7 +204,8 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
 
         track_gidd(
             self.request.GET.get('client_id'),
-            api_type
+            api_type,
+            viewset=self,
         )
         return DisplacementData.objects.all()
 
@@ -566,6 +570,7 @@ class PublicFigureAnalysisViewSet(ListOnlyViewSetMixin):
     def get_queryset(self):
         track_gidd(
             self.request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_PUBLIC_FIGURE_ANALYSIS_REST
+            ExternalApiDump.ExternalApiType.GIDD_PUBLIC_FIGURE_ANALYSIS_REST,
+            viewset=self,
         )
         return PublicFigureAnalysis.objects.all()
