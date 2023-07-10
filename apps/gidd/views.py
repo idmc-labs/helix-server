@@ -7,9 +7,7 @@ from rest_framework.decorators import action
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
-from django.utils.decorators import method_decorator
 from rest_framework import mixins
-from drf_yasg.utils import swagger_auto_schema
 
 from apps.country.models import Country
 from .models import (
@@ -34,9 +32,10 @@ from utils.common import track_gidd, client_id
 from apps.entry.models import ExternalApiDump
 
 
-@method_decorator(name="list", decorator=swagger_auto_schema(manual_parameters=[client_id]))
+@client_id
 class ListOnlyViewSetMixin(mixins.ListModelMixin, viewsets.GenericViewSet):
-    pass
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
 
 
 class CountryViewSet(ListOnlyViewSetMixin):
@@ -65,10 +64,8 @@ class ConflictViewSet(ListOnlyViewSetMixin):
         return Conflict.objects.all().select_related('country')
 
 
-@method_decorator(name="export", decorator=swagger_auto_schema(manual_parameters=[client_id]))
 class DisasterViewSet(ListOnlyViewSetMixin):
     serializer_class = DisasterSerializer
-    queryset = Disaster.objects.all().select_related('country')
     filterset_class = RestDisasterFilterSet
 
     def get_queryset(self):
@@ -193,7 +190,6 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         return response
 
 
-@method_decorator(name="export", decorator=swagger_auto_schema(manual_parameters=[client_id]))
 class DisplacementDataViewSet(ListOnlyViewSetMixin):
     serializer_class = DisplacementDataSerializer
     filterset_class = RestDisplacementDataFilterSet
