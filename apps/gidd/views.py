@@ -8,6 +8,7 @@ from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
 from rest_framework import mixins
+from drf_spectacular.utils import extend_schema
 
 from apps.country.models import Country
 from .models import (
@@ -82,6 +83,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         )
         return Disaster.objects.select_related('country')
 
+    @extend_schema(responses=DisasterSerializer(many=True))
     @action(
         detail=False,
         methods=["get"],
@@ -280,6 +282,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 item.disaster_total_displacement,
             ])
 
+    @extend_schema(responses=DisplacementDataSerializer(many=True))
     @action(
         detail=False,
         methods=["get"],
