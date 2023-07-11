@@ -1,7 +1,3 @@
-from rest_framework import permissions
-from drf_yasg.views import get_schema_view
-from drf_yasg import openapi
-
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from apps.entry.views import (
@@ -16,17 +12,7 @@ from apps.gidd.views import (
     DisplacementDataViewSet,
     PublicFigureAnalysisViewSet,
 )
-
-schema_view = get_schema_view(
-    openapi.Info(
-        title="Helix API",
-        default_version='v1',
-        description="Public rest API endpoints for Helix",
-        contact=openapi.Contact(email="info@idmc.ch"),
-    ),
-    public=True,
-    permission_classes=[permissions.AllowAny],
-)
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
 router = DefaultRouter()
 router.register("countries", CountryViewSet, "countries-view")
@@ -40,5 +26,9 @@ urlpatterns = [
     path('idus/all/', IdusAllFlatCachedView.as_view()),
     path('idus/all/disaster/', IdusAllDisasterCachedView.as_view()),
     path('gidd/', include(router.urls)),
-    path('', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+
+    # OpenAPI
+    path('api-schema/', SpectacularAPIView.as_view(), name='schema'),
+    path('', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
+    path('docs/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 ]

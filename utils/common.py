@@ -1,15 +1,18 @@
 import datetime
 import re
 import decimal
+import tempfile
+import logging
+from datetime import timedelta
+
 from django.core.files.storage import get_storage_class
 from django.conf import settings
 from rest_framework.exceptions import PermissionDenied
-import tempfile
-import logging
-from helix import redis
-from datetime import timedelta
-from drf_yasg import openapi
+from drf_spectacular.types import OpenApiTypes
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from rest_framework import viewsets
 
+from helix import redis
 from helix.caches import external_api_cache
 from apps.contrib.redis_client_track import track_client
 
@@ -148,8 +151,12 @@ def round_and_remove_zero(num):
     return sign * round(num / 1000) * 1000
 
 
-def track_gidd(client_id, endpoint_type):
+def track_gidd(client_id, endpoint_type, viewset: viewsets.GenericViewSet = None):
     from apps.contrib.models import Client
+
+    if viewset and getattr(viewset, "swagger_fake_view", False):
+        # Skip check for swagger view
+        return
 
     if client_id not in external_api_cache.get('client_ids', []):
         raise PermissionDenied('Client is not registered.')
@@ -165,9 +172,13 @@ def track_gidd(client_id, endpoint_type):
     )
 
 
-client_id = openapi.Parameter(
-    'client_id', openapi.IN_QUERY,
-    description="Registered client id",
-    type=openapi.TYPE_STRING,
-    required=True,
+client_id = extend_schema(
+    parameters=[
+        OpenApiParameter(
+            "client_id",
+            OpenApiTypes.STR,
+            location=OpenApiParameter.QUERY,
+            required=True,
+        )
+    ],
 )

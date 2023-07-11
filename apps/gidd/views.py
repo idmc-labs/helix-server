@@ -7,9 +7,8 @@ from rest_framework.decorators import action
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
-from django.utils.decorators import method_decorator
 from rest_framework import mixins
-from drf_yasg.utils import swagger_auto_schema
+from drf_spectacular.utils import extend_schema
 
 from apps.country.models import Country
 from .models import (
@@ -34,9 +33,10 @@ from utils.common import track_gidd, client_id
 from apps.entry.models import ExternalApiDump
 
 
-@method_decorator(name="list", decorator=swagger_auto_schema(manual_parameters=[client_id]))
+@client_id
 class ListOnlyViewSetMixin(mixins.ListModelMixin, viewsets.GenericViewSet):
-    pass
+    def get(self, request, *args, **kwargs):
+        return self.list(request, *args, **kwargs)
 
 
 class CountryViewSet(ListOnlyViewSetMixin):
@@ -48,7 +48,8 @@ class CountryViewSet(ListOnlyViewSetMixin):
     def get_queryset(self):
         track_gidd(
             self.request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_COUNTRY_REST
+            ExternalApiDump.ExternalApiType.GIDD_COUNTRY_REST,
+            viewset=self,
         )
         return Country.objects.all()
 
@@ -60,15 +61,14 @@ class ConflictViewSet(ListOnlyViewSetMixin):
     def get_queryset(self):
         track_gidd(
             self.request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_CONFLICT_REST
+            ExternalApiDump.ExternalApiType.GIDD_CONFLICT_REST,
+            viewset=self,
         )
         return Conflict.objects.all().select_related('country')
 
 
-@method_decorator(name="export", decorator=swagger_auto_schema(manual_parameters=[client_id]))
 class DisasterViewSet(ListOnlyViewSetMixin):
     serializer_class = DisasterSerializer
-    queryset = Disaster.objects.all().select_related('country')
     filterset_class = RestDisasterFilterSet
 
     def get_queryset(self):
@@ -78,10 +78,12 @@ class DisasterViewSet(ListOnlyViewSetMixin):
 
         track_gidd(
             self.request.GET.get('client_id'),
-            api_type
+            api_type,
+            viewset=self,
         )
         return Disaster.objects.select_related('country')
 
+    @extend_schema(responses=DisasterSerializer(many=True))
     @action(
         detail=False,
         methods=["get"],
@@ -193,7 +195,6 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         return response
 
 
-@method_decorator(name="export", decorator=swagger_auto_schema(manual_parameters=[client_id]))
 class DisplacementDataViewSet(ListOnlyViewSetMixin):
     serializer_class = DisplacementDataSerializer
     filterset_class = RestDisplacementDataFilterSet
@@ -205,7 +206,8 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
 
         track_gidd(
             self.request.GET.get('client_id'),
-            api_type
+            api_type,
+            viewset=self,
         )
         return DisplacementData.objects.all()
 
@@ -280,6 +282,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 item.disaster_total_displacement,
             ])
 
+    @extend_schema(responses=DisplacementDataSerializer(many=True))
     @action(
         detail=False,
         methods=["get"],
@@ -570,6 +573,7 @@ class PublicFigureAnalysisViewSet(ListOnlyViewSetMixin):
     def get_queryset(self):
         track_gidd(
             self.request.GET.get('client_id'),
-            ExternalApiDump.ExternalApiType.GIDD_PUBLIC_FIGURE_ANALYSIS_REST
+            ExternalApiDump.ExternalApiType.GIDD_PUBLIC_FIGURE_ANALYSIS_REST,
+            viewset=self,
         )
         return PublicFigureAnalysis.objects.all()

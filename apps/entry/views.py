@@ -9,7 +9,6 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import redirect
-from drf_yasg.utils import swagger_auto_schema
 
 from apps.gidd.views import client_id
 from utils.common import track_gidd
@@ -280,7 +279,7 @@ class FigureViewSet(viewsets.ReadOnlyModelViewSet):
 class ExternalEndpointBaseCachedViewMixin():
     ENDPOINT_TYPE = None
 
-    @swagger_auto_schema(manual_parameters=[client_id])
+    @client_id
     def get(self, request):
         # Check if request is comming from valid client
         client_id = request.GET.get('client_id', None)

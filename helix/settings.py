@@ -122,7 +122,7 @@ THIRD_PARTY_APPS = [
     'django_otp.plugins.otp_email',
     'django_otp.plugins.otp_totp',
     'django_otp.plugins.otp_hotp',
-    'drf_yasg'
+    'drf_spectacular',
 ]
 
 INSTALLED_APPS = [
@@ -197,7 +197,8 @@ CACHES = {
 REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 20
+    'PAGE_SIZE': 20,
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 ROOT_URLCONF = 'helix.urls'
@@ -600,3 +601,20 @@ CORS_ALLOW_HEADERS = (
 )
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Helix API',
+    'DESCRIPTION': 'Public rest API endpoints for Helix',
+    'VERSION': 'v1',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'PREPROCESSING_HOOKS': [
+        'helix.openapi.preprocessing_filter_spec'
+    ],
+    'CONTACT': {'email': 'info@idmc.ch'},
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": True,
+    },
+    'ENABLE_LIST_MECHANICS_ON_NON_2XX': True,
+}
