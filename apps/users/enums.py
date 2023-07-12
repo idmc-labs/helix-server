@@ -96,12 +96,14 @@ class USER_ROLE(enum.Enum):
     REGIONAL_COORDINATOR = 1
     MONITORING_EXPERT = 2
     GUEST = 3
+    DIRECTORS_OFFICE = 4
 
     __labels__ = {
         ADMIN: _('Admin'),
         MONITORING_EXPERT: _('Monitoring Expert'),
         REGIONAL_COORDINATOR: _('Regional Coordinator'),
         GUEST: _('Guest'),
+        DIRECTORS_OFFICE: _("Director's office"),
     }
 
 
