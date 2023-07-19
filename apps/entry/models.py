@@ -780,6 +780,9 @@ class Figure(MetaInformationArchiveAbstractModel,
             modified_at='Updated at',
             country__iso3='ISO3',
             country__idmc_short_name='Country',
+            centroid='Centroid',
+            centroid_lat='Lat',  # Newly added but related to centroid
+            centroid_lon='Lon',  # Newly added but related to centroid
             country__region__name='Region',
             country__geographical_group__name='Geographical region',
             figure_cause='Figure cause',
@@ -824,9 +827,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             source_document='Source document',
             geolocations='Locations name',
             geolocation_list='Locations',
-            centroid='Centroid',
-            centroid_lat='Lat',  # Newly added but related to centroid
-            centroid_lon='Lon',  # Newly added but related to centroid
             geo_locations_identifier='Type of point',
             entry__id='Entry ID',
             entry__old_id='Entry old ID',
