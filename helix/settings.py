@@ -468,7 +468,7 @@ GRAPHENE_NODES_WHITELIST = (
     'giddPublicDisplacements',
     'giddPublicEvent',
     'giddPublicHazardTypes',
-    'giddPublicPublicCountries',
+    'giddPublicCountries',
     'giddPublicFigureAnalysisList',
     'giddPublicYear',
     'giddPublicReleaseMetaData',
