@@ -2,14 +2,13 @@ from copy import copy
 from datetime import timedelta
 from django.utils import timezone
 from uuid import uuid4
-from unittest.mock import patch
 
 from django.test import RequestFactory
 
 from apps.entry.serializers import (
     EntryCreateSerializer,
     EntryUpdateSerializer,
-    NestedFigureCreateSerializer as FigureSerializer,
+    FigureSerializer,
 )
 from apps.users.enums import USER_ROLE
 from apps.entry.models import (
@@ -135,6 +134,10 @@ class TestEntrySerializer(HelixTestCase):
         source3['lon'] = 45.9
         source3['uuid'] = str(uuid4())
         flow = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
+
+        entry_serializer = EntryCreateSerializer(data=self.data, context={'request': self.request})
+        self.assertTrue(entry_serializer.is_valid(), True)
+        entry = entry_serializer.save()
         figures = [{
             "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
             "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
@@ -149,98 +152,17 @@ class TestEntrySerializer(HelixTestCase):
             "geo_locations": [source1, source2, source3],
             "event": self.event.id,
             "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
+            "entry": entry.id,
         }]
-        self.data['figures'] = figures
-
-        serializer = EntryCreateSerializer(instance=None,
-                                           data=self.data,
-                                           context={'request': self.request})
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        entry = serializer.save()
+        figure_serializer = FigureSerializer(
+            instance=None,
+            data=figures,
+            context={'request': self.request},
+            many=True,
+        )
+        self.assertTrue(figure_serializer.is_valid(), True)
+        figure_serializer.save()
         self.assertEqual(entry.figures.count(), len(figures))
-        figure = entry.figures.first()
-        self.assertEqual(figure.geo_locations.count(),
-                         len(figures[0]['geo_locations']))
-
-        # now trying to update
-        new_source = copy(source1)
-        new_source.update({
-            'lat': 33.8,
-            'lon': 33.8,
-            'identifier': OSMName.IDENTIFIER.ORIGIN.value,
-        })
-        new_source['uuid'] = str(uuid4())
-
-        new_source2 = copy(source1)
-        new_source2.update({
-            'lat': 33.8,
-            'lon': 33.8,
-            'identifier': OSMName.IDENTIFIER.ORIGIN.value,
-        })
-        new_source2['uuid'] = str(uuid4())
-        existing = figure.geo_locations.first()
-        old_source = copy(source2)
-        old_source.update({
-            'id': existing.id,
-        })
-        figures = [{
-            "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
-            "id": figure.id,
-            "geo_locations": [new_source, old_source],
-            "term": Figure.FIGURE_TERMS.EVACUATED.value,
-            "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-            "event": self.event.id,
-            "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
-        }, {
-            "uuid": "f1b42e79-da44-4032-8cb6-0dd4b7b97b57",
-            "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
-            "reported": 10,
-            "unit": Figure.UNIT.PERSON.value,
-            "role": Figure.ROLE.RECOMMENDED.value,
-            "start_date": "2020-09-09",
-            "include_idu": False,
-            "country": str(self.country.id),
-            "geo_locations": [new_source2],
-            "term": Figure.FIGURE_TERMS.EVACUATED.value,
-            "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-            "event": self.event.id,
-            "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
-        }]
-        self.data['figures'] = figures
-        serializer = EntryUpdateSerializer(instance=entry,
-                                           data=self.data,
-                                           context={'request': self.request},
-                                           partial=True)
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-        entry = serializer.save()
-        entry.refresh_from_db()
-        self.assertEqual(entry.figures.count(), len(figures))
-
-        expected_sources_count = {len(each['geo_locations']) for each in figures}
-        existing_count = {each.geo_locations.count() for each in entry.figures.all()}
-        self.assertEqual(expected_sources_count, existing_count,
-                         f'expected: {expected_sources_count}, obtained: {existing_count}')
-
-        # now checking if source on a different figure can be updated using this serializer
-        loc1 = OSMName.objects.create(**source1)
-        figure = entry.figures.first()
-        different_source = {
-            'id': loc1.id,
-        }
-
-        figures = [dict(
-            uuid=str(uuid4()),
-            id=figure.id,
-            geo_locations=[different_source]  # I do not belong to above entry figures
-        )]
-        self.data['figures'] = figures
-        serializer = EntryUpdateSerializer(instance=entry,
-                                           data=self.data,
-                                           context={'request': self.request},
-                                           partial=True)
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('figures', serializer.errors)
-        self.assertIn('geo_locations', serializer.errors['figures'][0].keys())
 
     def test_entry_event_with_incoherent_dates_in_figure(self):
         c1 = CountryFactory.create()
@@ -347,74 +269,6 @@ class TestEntrySerializer(HelixTestCase):
             partial=True
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
-
-    @patch('apps.entry.serializers.Entry')
-    def test_limit_entry_figures_count(self, Entry):
-        Entry.FIGURES_PER_ENTRY = 1
-
-        # one figure is allowed
-        source1 = dict(
-            uuid=str(uuid4()),
-            rank=101,
-            country=str(self.country.name),
-            country_code=self.country.iso2,
-            osm_id='ted',
-            osm_type='okay',
-            display_name='okay',
-            lat=68.88,
-            lon=46.66,
-            name='name',
-            accuracy=OSMName.OSM_ACCURACY.ADM0.value,
-            identifier=OSMName.IDENTIFIER.ORIGIN.value,
-        )
-        flow = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
-        figures = [{
-            "uuid": str(uuid4()),
-            "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
-            "reported": 10,
-            "category": flow.value,
-            "country": str(self.country.id),
-            "unit": Figure.UNIT.PERSON.value,
-            "term": Figure.FIGURE_TERMS.EVACUATED.value,
-            "role": Figure.ROLE.RECOMMENDED.value,
-            "start_date": "2020-09-09",
-            "include_idu": False,
-            "geo_locations": [source1],
-            "event": self.event.id,
-            "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
-        }]
-        self.data['figures'] = figures
-
-        serializer = EntryCreateSerializer(instance=None,
-                                           data=self.data,
-                                           context={'request': self.request})
-        self.assertTrue(serializer.is_valid(), serializer.errors)
-
-        # more figures are not allowed
-        source2 = copy(source1)
-        source2['uuid'] = str(uuid4())
-
-        figures = figures.append({
-            "uuid": str(uuid4()),
-            "quantifier": Figure.QUANTIFIER.MORE_THAN.value,
-            "reported": 10,
-            "category": flow.value,
-            "country": str(self.country.id),
-            "unit": Figure.UNIT.PERSON.value,
-            "term": Figure.FIGURE_TERMS.EVACUATED.value,
-            "role": Figure.ROLE.RECOMMENDED.value,
-            "start_date": "2020-09-09",
-            "include_idu": False,
-            "geo_locations": [source1],
-            "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
-        })
-        self.data['figures'] = figures
-
-        serializer = EntryCreateSerializer(instance=None,
-                                           data=self.data,
-                                           context={'request': self.request})
-        self.assertFalse(serializer.is_valid())
-        self.assertIn('figures', serializer.errors)
 
     def test_idmc_analysis_should_be_non_required_field(self):
         self.data['idmc_analysis'] = None
@@ -588,26 +442,18 @@ class TestFigureSerializer(HelixTestCase):
         disaster_sub_type = DisasterSubTypeFactory.create(
             type=disaster_type,
         )
-
         violence = ViolenceFactory.create()
         violence_sub_type = ViolenceSubTypeFactory.create(violence=violence)
 
         self.data['disaster_sub_type'] = disaster_sub_type.id
         self.data['violence_sub_type'] = violence_sub_type.id
-        data = {
-            'url': 'https://yoko-onos-blog.com',
-            'article_title': 'entry',
-            'publish_date': '2020-09-09',
-            'reviewers': [],
-            'publishers': [],
-            'figures': [self.data],
-        }
-        serializer = EntryCreateSerializer(data=data,
-                                           context={'request': self.request})
+        serializer = FigureSerializer(
+            data=self.data,
+            context={'request': self.request}
+        )
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        entry = serializer.save()
+        figure = serializer.save()
 
-        figure = entry.figures.first()
         # Test sub fields
         self.assertEqual(figure.disaster_sub_category.id, disaster_sub_category.id)
         self.assertEqual(figure.disaster_sub_type.id, disaster_sub_type.id)
