@@ -2,6 +2,7 @@ from django.utils.translation import gettext
 import graphene
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from django.utils import timezone
+from graphene.types.generic import GenericScalar
 
 from apps.contrib.models import SourcePreview
 from apps.entry.models import Entry, FigureTag, Figure
@@ -15,7 +16,7 @@ from apps.entry.serializers import (
     EntryUpdateSerializer,
     FigureTagCreateSerializer,
     FigureTagUpdateSerializer,
-    NestedFigureUpdateSerializer,
+    FigureSerializer,
 )
 from apps.extraction.filters import FigureExtractionFilterSet, EntryExtractionFilterSet
 from apps.contrib.serializers import SourcePreviewSerializer, ExcelDownloadSerializer
@@ -24,6 +25,7 @@ from utils.permissions import permission_checker, is_authenticated
 from utils.mutation import generate_input_type_for_serializer
 from utils.common import convert_date_object_to_string_in_dict
 from apps.notification.models import Notification
+from .utils import bulk_create_update_delete_figures
 
 # entry
 
@@ -39,7 +41,7 @@ EntryUpdateInputType = generate_input_type_for_serializer(
 
 FigureUpdateInputType = generate_input_type_for_serializer(
     'FigureUpdateInputType',
-    serializer_class=NestedFigureUpdateSerializer,
+    serializer_class=FigureSerializer,
 )
 
 
@@ -522,6 +524,31 @@ class ReRequestReviewFigure(graphene.Mutation):
         return ReRequestReviewFigure(result=figure, errors=None, ok=True)
 
 
+class BulkUpdateFigures(graphene.Mutation):
+    class Arguments:
+        data = graphene.List(FigureUpdateInputType)
+        delete_ids = graphene.List(graphene.NonNull(graphene.ID))
+
+    errors = graphene.List(graphene.NonNull(GenericScalar))
+    ok = graphene.Boolean()
+    result = graphene.List(FigureType)
+
+    @staticmethod
+    @permission_checker(['entry.add_figure', 'entry.change_figure', 'entry.delete_figure'])
+    def mutate(root, info, data, delete_ids=[]):
+        serializer = FigureSerializer(
+            data=data, context={'request': info.context.request}, many=True
+        )
+        if not serializer.is_valid():
+            return BulkUpdateFigures(errors=serializer.errors, ok=False)
+        result = bulk_create_update_delete_figures(
+            serializer.validated_data,
+            delete_ids,
+            context={'request': info.context.request}
+        )
+        return BulkUpdateFigures(result=result, errors=None, ok=True)
+
+
 class Mutation(object):
     create_entry = CreateEntry.Field()
     update_entry = UpdateEntry.Field()
@@ -535,6 +562,7 @@ class Mutation(object):
     # exports
     export_entries = ExportEntries.Field()
     export_figures = ExportFigures.Field()
+    bulk_update_figures = BulkUpdateFigures.Field()
     # figure
     delete_figure = DeleteFigure.Field()
     approve_figure = ApproveFigure.Field()
