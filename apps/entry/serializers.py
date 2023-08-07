@@ -280,18 +280,6 @@ class CommonFigureValidationMixin:
             _attrs['displacement_occurred'] = None
         return _attrs
 
-    def _validate_event(self, instance, attrs):
-        errors = OrderedDict()
-        new_event = attrs.get('event', None)
-        current_event = getattr(instance, 'event', None)
-
-        # FIXME: do we use event.id or event_id here?
-        if new_event and current_event and current_event.id != new_event.id:
-            errors.update({
-                'event': 'Event change is not allowed'
-            })
-        return errors
-
     def _update_parent_fields(self, attrs):
         disaster_sub_type = attrs.get('disaster_sub_type', self.instance and self.instance.disaster_sub_type)
         violence_sub_type = attrs.get('violence_sub_type', self.instance and self.instance.violence_sub_type)
@@ -348,7 +336,6 @@ class CommonFigureValidationMixin:
             instance, attrs, 'disaggregation_age', 'age',
         ))
         errors.update(self._validate_figure_cause(instance, attrs))
-        errors.update(self._validate_event(instance, attrs))
 
         self._update_parent_fields(attrs)
         if errors:

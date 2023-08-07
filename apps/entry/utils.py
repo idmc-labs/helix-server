@@ -33,6 +33,7 @@ def bulk_create_update_delete_figures(validated_data, delete_ids, context):
             id__in=figures_to_delete.values('event__id')
         ).distinct('id')
         affected_event_ids = list(affected_events.values_list('id', flat=True))
+        event_moved = []
 
         # delete missing figures
         figures_to_delete.delete()
@@ -40,14 +41,17 @@ def bulk_create_update_delete_figures(validated_data, delete_ids, context):
         objects_created_or_updated = []
 
         for each in validated_data:
+            current_event = None
             is_new_figure = not each.get('id')
             # create new figures
             if not each.get('id'):
                 fig_ser = FigureSerializer(context=context)
             # update existing figures
             else:
+                figure = Figure.objects.get(id=each['id'])
+                current_event = figure.event
                 fig_ser = FigureSerializer(
-                    instance=Figure.objects.get(id=each['id']),
+                    instance=figure,
                     partial=True,
                     context=context,
                 )
@@ -55,6 +59,11 @@ def bulk_create_update_delete_figures(validated_data, delete_ids, context):
             fig_ser._validated_data = {**each}
             fig_ser._errors = {}
             figure = fig_ser.save()
+            new_event = figure.event
+            if new_event and current_event and current_event.id != new_event.id:
+                # Recalculate review status
+                affected_event_ids.extend([new_event.id, current_event.id])
+                event_moved.extend([current_event, new_event])
             objects_created_or_updated.append(figure)
             if is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
                 created_figures_for_signed_off_events.append(figure)
@@ -173,6 +182,18 @@ def bulk_create_update_delete_figures(validated_data, delete_ids, context):
                 entry=figure.entry,
                 figure=figure,
             )
+        for event in event_moved:
+            recipients = [user['id'] for user in Event.regional_coordinators(
+                event,
+                actor=context['request'].user,
+            )]
+            if recipients:
+                Notification.send_safe_multiple_notifications(
+                    recipients=recipients,
+                    actor=context['request'].user,
+                    type=Notification.Type.EVENT_MOVED,
+                    event=event,
+                )
         for event_id in affected_event_ids:
             Figure.update_event_status_and_send_notifications(event_id)
         return objects_created_or_updated
