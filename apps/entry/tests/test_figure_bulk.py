@@ -82,6 +82,10 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
                         id
                         articleTitle
                       }
+                      event {
+                        id
+                        name
+                      }
                     }
                 }
             }
@@ -416,54 +420,29 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         content_data = content['data']['bulkUpdateFigures']
         self.assertTrue(content_data['ok'], True)
 
-    def test_should_not_update_event_in_figure(self):
+    def test_should_update_event_in_figure(self):
         entry = EntryFactory.create()
-        event1 = EventFactory.create()
-        event2 = EventFactory.create()
-        event3 = EventFactory.create()
-        figure1 = FigureFactory.create(entry=entry, event=event1)
-        figure2 = FigureFactory.create(entry=entry, event=event2)
+        event1 = EventFactory.create(countries=[self.country_1])
+        event2 = EventFactory.create(countries=[self.country_1])
+        figure1 = FigureFactory.create(entry=entry, event=event1, country=self.country_1)
 
         # Make copies of input
         figure_input_1 = copy(self.figure_item_input)
-        figure_input_2 = copy(self.figure_item_input)
 
         # Test with correct event ids
         figure_input_1.update({
-            'id': figure1.id, 'event': event1.id,
-        })
-        figure_input_2.update({
-            'id': figure2.id, 'event': event2.id,
+            'id': figure1.id, 'event': event2.id,
         })
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "data": [figure_input_1, figure_input_2],
+                "data": [figure_input_1],
                 "delete_ids": [],
             }
         )
         self.assertResponseNoErrors(response)
         content = json.loads(response.content)
         content_data = content['data']['bulkUpdateFigures']
-        self.assertFalse(content_data['ok'], content)
-        self.assertNotIn('event', content_data['errors'][0])
-
-        # Test with incorrect event ids
-        figure_input_1.update({
-            'id': figure1.id, 'event': event1.id,
-        })
-        figure_input_2.update({
-            'id': figure2.id, 'event': event3.id,
-        })
-        response = self.query(
-            self.figure_bulk_mutation,
-            variables={
-                "data": [figure_input_1, figure_input_2],
-                "delete_ids": [],
-            }
-        )
-        self.assertResponseNoErrors(response)
-        content = json.loads(response.content)
-        content_data = content['data']['bulkUpdateFigures']
-        self.assertFalse(content_data['ok'], content)
-        self.assertNotIn('event', content_data['errors'][0])
+        self.assertTrue(content_data['ok'], content)
+        self.assertEqual(str(event2.id), content_data['result'][0]['event']['id'])
+        self.assertEqual(str(event2.name), content_data['result'][0]['event']['name'])

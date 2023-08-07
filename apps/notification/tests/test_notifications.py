@@ -40,6 +40,28 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             country=self.country.id,
             monitoring_sub_region=self.monitoring_sub_region.id,
         )
+
+        # Create second regional co-ordinator
+        self.region_1 = CountryRegionFactory.create()
+        self.sub_region_1 = CountrySubRegionFactory.create()
+        self.monitoring_sub_region_1 = MonitoringSubRegionFactory.create()
+
+        self.country_1 = CountryFactory.create(
+            monitoring_sub_region=self.monitoring_sub_region_1,
+            region=self.region_1,
+            sub_region=self.sub_region_1,
+        )
+        self.regional_coordinator_1 = create_user_with_role(
+            USER_ROLE.REGIONAL_COORDINATOR.name,
+            country=self.country_1.id,
+            monitoring_sub_region=self.monitoring_sub_region_1.id,
+        )
+        self.monitoring_expert_1 = create_user_with_role(
+            USER_ROLE.MONITORING_EXPERT.name,
+            country=self.country_1.id,
+            monitoring_sub_region=self.monitoring_sub_region_1.id,
+        )
+
         self.admin = create_user_with_role(
             USER_ROLE.ADMIN.name,
         )
@@ -268,6 +290,28 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             }
           }
 
+        '''
+        self.figure_bulk_mutation = '''
+            mutation BulkUpdateFigures($data: [FigureUpdateInputType!], $delete_ids: [ID!]) {
+                bulkUpdateFigures(data: $data, deleteIds: $delete_ids) {
+                    ok
+                    errors
+                    result {
+                      id
+                      figureCause
+                      includeIdu
+                      unit
+                      entry {
+                        id
+                        articleTitle
+                      }
+                      event {
+                        id
+                        name
+                      }
+                    }
+                }
+            }
         '''
         source = dict(
             uuid=str(uuid4()),
@@ -1142,3 +1186,51 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         )
         notification_data = json.loads(response.content)['data']['notifications']['results'][0]
         self.assertEqual(Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT.name, notification_data['type'])
+
+    def test_should_send_notification_if_event_is_moved_to_other_regions(self):
+        entry = EntryFactory.create()
+        event1 = EventFactory.create(countries=[self.country, self.country_1])
+        event2 = EventFactory.create(countries=[self.country_1, self.country_1])
+        figure1 = FigureFactory.create(entry=entry, event=event1, country=self.country_1)
+
+        figure = self.figures[0]
+        figure['id'] = figure1.id
+        figure['event'] = event2.id
+        figure['category'] = figure1.category.name
+        figure['entry'] = entry.id
+        figure['country'] = self.country_1.id
+
+        # Monitoring excerpt moved event
+        self.force_login(self.monitoring_expert_1)
+        response = self.query(
+            self.figure_bulk_mutation,
+            variables={
+                "data": [figure],
+                "delete_ids": [],
+            }
+        )
+        # Test should able to move event in figures
+        self.assertResponseNoErrors(response)
+        content = json.loads(response.content)
+        content_data = content['data']['bulkUpdateFigures']
+        self.assertTrue(content_data['ok'], content)
+        self.assertEqual(str(event2.id), content_data['result'][0]['event']['id'])
+        self.assertEqual(str(event2.name), content_data['result'][0]['event']['name'])
+
+        # Test regional co-ordinator should get notification where event is moved to
+        self.force_login(self.regional_coordinator)
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.regional_coordinator.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.EVENT_MOVED.name, notification_data['type'])
+
+        # Test regional co-ordinator should get notification where event is moved from
+        self.force_login(self.regional_coordinator_1)
+        response = self.query(
+            self.notification_query,
+            variables={'recipient': self.regional_coordinator_1.id}
+        )
+        notification_data = json.loads(response.content)['data']['notifications']['results'][0]
+        self.assertEqual(Notification.Type.EVENT_MOVED.name, notification_data['type'])
