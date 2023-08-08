@@ -858,8 +858,8 @@ class Figure(MetaInformationArchiveAbstractModel,
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
             **Figure.annotate_sources_reliability(),
-            centroid_lat=RawSQL('country_country.centroid[1]', params=()),
-            centroid_lon=RawSQL('country_country.centroid[2]', params=()),
+            centroid_lat=RawSQL('country_country.centroid[2]', params=()),
+            centroid_lon=RawSQL('country_country.centroid[1]', params=()),
             entry_url_or_document_url=models.Case(
                 models.When(
                     entry__document__isnull=False,
