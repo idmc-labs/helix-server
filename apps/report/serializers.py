@@ -124,9 +124,9 @@ class ReportSerializer(MetaInformationSerializerMixin,
             # Clear all query abstraction filter fields
             for field in QueryAbstractModel._meta.get_fields():
                 # Reset values
-                if type(field) == ArrayField:
+                if isinstance(field, ArrayField):
                     attrs[field.name] = []
-                elif type(field) == ManyToManyField:
+                elif isinstance(field, ManyToManyField):
                     attrs[field.name] = []
                 elif type(field) in [BooleanField, CharField, DateField, TextField]:
                     attrs[field.name] = None
