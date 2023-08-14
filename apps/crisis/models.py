@@ -1,6 +1,5 @@
 from collections import OrderedDict
 from django.contrib.postgres.aggregates.general import StringAgg
-from django.utils import timezone
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
@@ -52,6 +51,15 @@ class Crisis(MetaInformationAbstractModel, models.Model):
     def _total_figure_disaggregation_subquery(cls, figures=None):
         from apps.entry.models import Figure
         figures = figures or Figure.objects.all()
+
+        # Get max IDPS figure end date
+        max_stock_end_date = None
+        max_stock_end_date = figures.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS
+        ).order_by('-end_date').first()
+        if max_stock_end_date:
+            max_stock_end_date = max_stock_end_date.end_date
+
         return {
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
@@ -68,13 +76,13 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                 output_field=models.IntegerField()
             ),
             cls.IDP_FIGURES_ANNOTATE: models.Subquery(
-                Figure.filtered_idp_figures(
+                Figure.filtered_idp_figures_for_listing(
                     figures.filter(
                         event__crisis=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     start_date=None,
-                    end_date=timezone.now().date(),
+                    end_date=max_stock_end_date,
                 ).order_by().values('event__crisis').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
