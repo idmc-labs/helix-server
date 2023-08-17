@@ -332,6 +332,9 @@ def update_public_figure_analysis():
                 report=report
             ),
         )
+        report.gidd_published_date = timezone.now()
+        report.is_pfa_published_in_gidd = True
+        report.save()
 
     # Bulk create public analysis
     PublicFigureAnalysis.objects.bulk_create(data)
