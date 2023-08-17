@@ -2911,6 +2911,8 @@ type ReportType {
   isPfaVisibleInGidd: Boolean!
   isGiddReport: Boolean!
   giddReportYear: Int
+  giddPublishedDate: DateTime
+  isPfaPublishedInGidd: Boolean!
   comments(oldId: String, createdAt: DateTime, modifiedAt: DateTime, createdBy: ID, lastModifiedBy: ID, versionId: String, body: String, report: ID, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
   generations(report: ID, ordering: String): ReportGenerationListType
   filterFigureRolesDisplay: EnumDescription

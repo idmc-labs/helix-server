@@ -242,8 +242,8 @@ class Report(MetaInformationArchiveAbstractModel,
             challenges='Challenges',
             summary='Summary',
             remarks='Remarks',
-            gidd_published_date='Date of data publication into the GIDD',
-            is_pfa_published_in_gidd='Is PFA published in GIDD'
+            gidd_published_date='Date of data publication in GIDD',
+            is_pfa_published_in_gidd='Is public figure analysis published in GIDD'
         )
         data = ReportFilter(
             data=filters,

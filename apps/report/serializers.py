@@ -1,7 +1,6 @@
 from collections import OrderedDict
 import datetime
 
-from django.utils import timezone
 from django.utils.translation import gettext
 from django.conf import settings
 from rest_framework import serializers
@@ -140,7 +139,6 @@ class ReportSerializer(MetaInformationSerializerMixin,
             attrs['filter_figure_end_before'] = datetime.datetime(year=year, month=12, day=31)
             attrs['is_public'] = True
             attrs['is_pfa_visible_in_gidd'] = False
-            attrs['gidd_published_date'] = timezone.now()
             return attrs
         else:
             attrs['gidd_report_year'] = None
