@@ -20,7 +20,6 @@ class RestConflictFilterSet(ReleaseMetadataFilter):
         fields = {
             'id': ['iexact'],
             'iso3': ['iexact'],
-            'year': ['iexact'],
         }
 
     def filter_start_year(self, queryset, name, value):
