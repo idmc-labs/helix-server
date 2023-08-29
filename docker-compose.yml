@@ -37,11 +37,11 @@ x-server: &base_server_setup
 
 services:
   db:
-    image: postgres:11
+    image: postgres:13
     environment:
       POSTGRES_PASSWORD: postgres
     volumes:
-      - helix-db-data:/var/lib/postgresql/data
+      - helix-db-13-data:/var/lib/postgresql/data
     ports:
       - '127.0.0.1:6050:5432'
 
@@ -69,6 +69,6 @@ services:
     command: ./deploy/scripts/run_tasks.sh
 
 volumes:
-  helix-db-data:
+  helix-db-13-data:
   helix-redis-data:
   ipython_data_local:
