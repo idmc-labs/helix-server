@@ -33,7 +33,7 @@ def bulk_create_update_delete_figures(validated_data, delete_ids, context):
             id__in=figures_to_delete.values('event__id')
         ).distinct('id')
         affected_event_ids = list(affected_events.values_list('id', flat=True))
-        event_moved = []
+        events_affected_by_figure_move = []
 
         # delete missing figures
         figures_to_delete.delete()
@@ -63,7 +63,7 @@ def bulk_create_update_delete_figures(validated_data, delete_ids, context):
             if new_event and current_event and current_event.id != new_event.id:
                 # Recalculate review status
                 affected_event_ids.extend([new_event.id, current_event.id])
-                event_moved.extend([current_event, new_event])
+                events_affected_by_figure_move.extend([current_event, new_event])
             objects_created_or_updated.append(figure)
             if is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
                 created_figures_for_signed_off_events.append(figure)
@@ -182,18 +182,40 @@ def bulk_create_update_delete_figures(validated_data, delete_ids, context):
                 entry=figure.entry,
                 figure=figure,
             )
-        for event in event_moved:
+        for event in events_affected_by_figure_move:
             recipients = [user['id'] for user in Event.regional_coordinators(
                 event,
                 actor=context['request'].user,
             )]
+            event_review_status = event.review_status
             if recipients:
-                Notification.send_safe_multiple_notifications(
-                    recipients=recipients,
-                    actor=context['request'].user,
-                    type=Notification.Type.EVENT_MOVED,
-                    event=event,
-                )
+                if event_review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+                    Notification.send_safe_multiple_notifications(
+                        recipients=recipients,
+                        actor=context['request'].user,
+                        type=Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT,
+                        event=event,
+                    )
+                    Notification.send_safe_multiple_notifications(
+                        recipients=recipients,
+                        actor=context['request'].user,
+                        type=Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT,
+                        event=event,
+                    )
+                if event_review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+                    Notification.send_safe_multiple_notifications(
+                        recipients=recipients,
+                        actor=context['request'].user,
+                        type=Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT,
+                        event=event,
+                    )
+                    Notification.send_safe_multiple_notifications(
+                        recipients=recipients,
+                        actor=context['request'].user,
+                        type=Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT,
+                        event=event,
+                    )
+
         for event_id in affected_event_ids:
             Figure.update_event_status_and_send_notifications(event_id)
         return objects_created_or_updated

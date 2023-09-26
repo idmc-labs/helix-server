@@ -43,7 +43,6 @@ class Notification(models.Model):
             EVENT_SELF_ASSIGNED: _('Event self assigned'),
             EVENT_APPROVED: _('Event approved'),
             EVENT_INCLUDE_TRIANGULATION_CHANGED: _('Event include triangulation changed'),
-            EVENT_MOVED: _('Event moved'),
 
             REVIEW_COMMENT_CREATED: _('Comment created'),
         }
