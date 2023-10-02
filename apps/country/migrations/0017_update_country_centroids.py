@@ -259,11 +259,14 @@ def update_centroids(apps, schema_editor):
         "SRK": ["-2.366090853", "49.42980962"],
         "TKL": ["-171.1945809", "-9.346143166"],
     }
+    total_countries_update = 0
     for country in Country.objects.all():
         new_centroid = country_centroids.get(country.iso3)
         if new_centroid:
+            total_countries_update += 1
             country.centroid = new_centroid
             country.save(update_fields=["centroid"])
+    print(f'Updated centroid for {total_countries_update} countries')
 
 
 class Migration(migrations.Migration):
