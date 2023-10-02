@@ -44,20 +44,20 @@ def get_enum_name_from_django_field(
     model_name=None,
 ):
     if field_name is None and model_name is None:
-        if type(field) == serializers.ChoiceField:
-            if type(field.parent) == serializers.ListField:
+        if isinstance(field, serializers.ChoiceField):
+            if isinstance(field.parent, serializers.ListField):
                 model_name = field.parent.parent.Meta.model.__name__
                 field_name = field.parent.field_name
             else:
                 model_name = field.parent.Meta.model.__name__
                 field_name = field.field_name
-        elif type(field) == ArrayField:
+        elif isinstance(field, ArrayField):
             model_name = field.model.__name__
             field_name = field.base_field.name
         elif type(field) in [models.CharField, models.IntegerField]:
             model_name = field.model.__name__
             field_name = field.name
-        elif type(field) == models.query_utils.DeferredAttribute:
+        elif isinstance(field, models.query_utils.DeferredAttribute):
             model_name = field.field.model.__name__
             field_name = field.field.name
     if model_name is None or field_name is None:

@@ -65,6 +65,17 @@ def get_excel_sheet_content(headers, data, **kwargs):
         transformer = other['results'].get('transformer')
         append_to_worksheet(ws, headers, data, transformer)
 
+    for data in kwargs.get('readme_data', []):
+        ws = wb.create_sheet(data['title'])
+        headers = data['results']['headers']
+        data = data['results']['data']
+        ws.append(list(headers.values()))
+        row = []
+        for item in data:
+            for key in headers:
+                row.append(item[key])
+            ws.append(row)
+            row = []
     return wb
 
 
