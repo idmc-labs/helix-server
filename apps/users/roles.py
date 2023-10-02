@@ -92,9 +92,9 @@ PERMISSIONS = {
         PERMISSION_ACTION.update_release_meta_data: set(),
     },
     USER_ROLE.DIRECTORS_OFFICE: {
-        PERMISSION_ACTION.add: DIRECTORS_OFFICE_MODELS,
+        PERMISSION_ACTION.add: set(),
         PERMISSION_ACTION.change: DIRECTORS_OFFICE_MODELS,
-        PERMISSION_ACTION.delete: DIRECTORS_OFFICE_MODELS,
+        PERMISSION_ACTION.delete: set(),
         PERMISSION_ACTION.approve: set(),
         PERMISSION_ACTION.sign_off: set(),
         PERMISSION_ACTION.assign: set(),
