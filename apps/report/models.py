@@ -15,6 +15,7 @@ from django.db.models import (
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django_enumfield import enum
+from django.contrib.postgres.aggregates.general import StringAgg
 
 from utils.common import get_string_from_list
 from apps.contrib.models import MetaInformationArchiveAbstractModel
@@ -200,6 +201,14 @@ class Report(MetaInformationArchiveAbstractModel,
     gidd_report_year = models.PositiveIntegerField(
         verbose_name=_('GIDD report year'), null=True, unique=True
     )
+    gidd_published_date = models.DateTimeField(
+        verbose_name=_('Date of data publication into the GIDD'),
+        null=True
+    )
+    is_pfa_published_in_gidd = models.BooleanField(
+        verbose_name=_('Is PFA published in GIDD'),
+        default=False
+    )
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
@@ -213,8 +222,11 @@ class Report(MetaInformationArchiveAbstractModel,
             old_id='Old ID',
             id='ID',
             created_at='Created at',
+            modified_at='Modified at',
             created_by__full_name='Created by',
             name='Name',
+            iso3='Iso3',
+            public_figure_analysis='Public figure analysis',
             filter_figure_start_after='Start date',
             filter_figure_end_before='End date',
             filter_figure_categories="Figure category",
@@ -230,6 +242,8 @@ class Report(MetaInformationArchiveAbstractModel,
             challenges='Challenges',
             summary='Summary',
             remarks='Remarks',
+            gidd_published_date='Date of data publication in GIDD',
+            is_pfa_published_in_gidd='Is public figure analysis published in GIDD'
         )
         data = ReportFilter(
             data=filters,
@@ -241,6 +255,10 @@ class Report(MetaInformationArchiveAbstractModel,
             total_stock_conflict_sum=Value(0, output_field=models.IntegerField()),
             total_stock_disaster_sum=Value(0, output_field=models.IntegerField()),
             remarks=Value('', output_field=models.CharField()),
+            iso3=StringAgg(
+                'filter_figure_countries__iso3', '; ',
+                distinct=True, output_field=models.CharField()
+            ),
         ).order_by('created_at')
 
         def transform_filter_figure_category(figure_categories):
@@ -257,6 +275,8 @@ class Report(MetaInformationArchiveAbstractModel,
                 **total_disaggregation,
                 'remarks': Report.objects.get(id=datum['id']).generate_remarks_for_report,
                 'filter_figure_categories': transform_filter_figure_category(datum['filter_figure_categories']),
+
+                'is_pfa_published_in_gidd': 'Yes' if datum['is_pfa_published_in_gidd'] else 'No',
             }
 
         return {
