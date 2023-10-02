@@ -9,23 +9,6 @@ class Command(BaseCommand):
     help = 'Fix hazard sub types from csv'
 
     def handle(self, *args, **options):
-        '''
-        with open('new_hazard_sub_types.csv', 'r') as file:
-            csvreader = csv.DictReader(file)
-            for row in csvreader:
-                figure_id = row['Id']
-                hazard_sub_type_name = row['New Hazard Sub Type']
-
-                figure = Figure.objects.get(id=figure_id)
-                disaster_sub_type = DisasterSubType.objects.get(name=hazard_sub_type_name)
-
-                figure.event.disaster_sub_type = disaster_sub_type
-                figure.save()
-
-                figure.disaster_sub_type = disaster_sub_type
-                figure.save()
-        '''
-
         # Regenerate event and figure disaster type
         update = Event.objects.filter(
             Q(disaster_sub_type__isnull=False)

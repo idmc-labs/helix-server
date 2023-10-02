@@ -2149,6 +2149,7 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('entry', '0093_alter_externalapidump_api_type'),
+        ('gidd', '0028_auto_20230509_1501'),
     ]
 
     operations = [
