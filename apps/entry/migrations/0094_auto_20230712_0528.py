@@ -3221,14 +3221,18 @@ class Migration(migrations.Migration):
         for item in household_data:
             household_size = item['household_size']
             figure = Figure.objects.filter(old_id=item['id']).first()
-            if figure:
+            if figure and figure.household_size is None:
+                figure.household_size = household_size
+                figure.save()
+            elif figure and figure.household_size is not None:
                 print(
-                    f"Household size updated to {household_size} from {figure.household_size} of figure {figure.id}"
+                    f"Household size updated from {figure.household_size} to {household_size}"
+                    f" for figure {figure.id} (old_id={figure.old_id})"
                 )
                 figure.household_size = household_size
                 figure.save()
             else:
-                print(f"Figure old_id {item['id']} missing")
+                print(f"Figure with old_id {item['id']} does not exist.")
 
     dependencies = [
         ('entry', '0093_alter_externalapidump_api_type'),
