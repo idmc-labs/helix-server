@@ -37,7 +37,7 @@ from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
 from apps.common.enums import GENDER_TYPE
 from apps.notification.models import Notification
-from .documents import READ_ME_DATA
+from .documents import README_DATA
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -1042,15 +1042,15 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
             }
 
-        read_me_data = [
+        readme_data = [
             {
-                'title': 'ReadMe',
+                'title': 'Readme',
                 'results': {
                     'headers': OrderedDict(
                         column_name='Column Name',
                         description='Description',
                     ),
-                    'data': READ_ME_DATA,
+                    'data': README_DATA,
                 }
             }
         ]
@@ -1059,7 +1059,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             'data': values,
             'formulae': None,
             'transformer': transformer,
-            'read_me_data': read_me_data,
+            'readme_data': readme_data,
         }
 
     @classmethod
