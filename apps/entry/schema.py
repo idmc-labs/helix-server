@@ -217,6 +217,7 @@ class EntryType(DjangoObjectType):
     figures = graphene.List(graphene.NonNull(FigureType))
 
     def resolve_figures(root, info, **kwargs):
+        # FIXME: this might be wrong
         return Figure.objects.filter(entry=root.id).select_related(
             'event',
             'violence',
