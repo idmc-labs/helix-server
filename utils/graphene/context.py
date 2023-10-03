@@ -22,6 +22,7 @@ from apps.entry.dataloaders import (
 from apps.event.dataloaders import (
     TotalIDPFigureByEventLoader,
     TotalNDFigureByEventLoader,
+    MaxStockIDPFigureEndDateByEventLoader,
     EventEntryCountLoader,
     EventTypologyLoader,
     EventFigureTypologyLoader,
@@ -85,6 +86,10 @@ class GQLContext:
     @cached_property
     def event_event_total_flow_nd_figures(self):
         return TotalNDFigureByEventLoader()
+
+    @cached_property
+    def event_stock_idp_figures_max_end_date(self):
+        return MaxStockIDPFigureEndDateByEventLoader()
 
     @cached_property
     def country_country_this_year_idps_disaster_loader(self):

@@ -47,6 +47,22 @@ class TotalNDFigureByEventLoader(DataLoader):
         )
 
 
+class MaxStockIDPFigureEndDateByEventLoader(DataLoader):
+    def batch_load_fn(self, keys):
+        qs = Event.objects.filter(
+            id__in=keys
+        ).annotate(
+            **Event._total_figure_disaggregation_subquery()
+        )
+        batch_load = {
+            item['id']: item[Event.IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE]
+            for item in qs.values('id', Event.IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE)
+        }
+        return Promise.resolve([
+            batch_load.get(key) for key in keys
+        ])
+
+
 class EventEntryCountLoader(DataLoader):
     def batch_load_fn(self, keys):
         qs = Event.objects.filter(

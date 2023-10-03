@@ -152,6 +152,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
     IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
+    IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE = 'event_max_end_date'
+
     crisis = models.ForeignKey('crisis.Crisis', verbose_name=_('Crisis'),
                                blank=True, null=True,
                                related_name='events', on_delete=models.CASCADE)

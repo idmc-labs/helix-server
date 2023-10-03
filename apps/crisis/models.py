@@ -62,7 +62,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
         ).order_by('-end_date').values('end_date')[:1]
 
         return {
-            'event_max_end_date': models.Subquery(max_stock_end_date_figure_qs),
+            cls.IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE: models.Subquery(max_stock_end_date_figure_qs),
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
                     figures.filter(
@@ -84,7 +84,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     start_date=None,
-                    end_date=models.OuterRef('event_max_end_date'),
+                    end_date=models.OuterRef(cls.IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE),
                 ).order_by().values('event__crisis').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
