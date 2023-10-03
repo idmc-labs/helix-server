@@ -20,6 +20,7 @@ from apps.report.models import (
 from apps.entry.models import Figure
 from apps.crisis.models import Crisis
 from apps.extraction.models import QueryAbstractModel
+from apps.users.enums import USER_ROLE
 
 from django.contrib.postgres.fields.array import ArrayField
 from django.db.models.fields.related import ManyToManyField
@@ -144,7 +145,31 @@ class ReportSerializer(MetaInformationSerializerMixin,
             attrs['gidd_report_year'] = None
         return attrs
 
+    @staticmethod
+    def has_permission_for_report(user, report):
+        roles = list(user.portfolios.values_list('role', flat=True))
+        if USER_ROLE.ADMIN in roles:
+            return True
+        if USER_ROLE.REGIONAL_COORDINATOR in roles:
+            return True
+        if USER_ROLE.MONITORING_EXPERT in roles:
+            return True
+        if USER_ROLE.DIRECTORS_OFFICE in roles:
+            return True
+        if USER_ROLE.REPORTING_TEAM in roles:
+            return report.created_by == user
+        return False
+
     def validate(self, attrs) -> dict:
+        if (
+            self.instance is not None and
+            not self.has_permission_for_report(
+                self.context['request'].user,
+                self.instance,
+            )
+        ):
+            raise serializers.ValidationError('You do not have permission to edit report.')
+
         attrs = super().validate(attrs)
         errors = OrderedDict()
         errors.update(self.validate_dates(attrs))

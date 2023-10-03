@@ -73,6 +73,8 @@ class User(AbstractUser):
     def permissions(self) -> list[dict]:
         return [
             {'action': k, 'entities': list(v)} for k, v in
+            # FIXME: We should merge the permissions instead of getting the
+            # role from the highest one
             PERMISSIONS[self.highest_role].items()
         ]
 
@@ -133,6 +135,7 @@ class Portfolio(models.Model):
     def user_can_alter(self, user: User) -> bool:
         if user.highest_role == USER_ROLE.ADMIN:
             return True
+        # FIXME: We should not use highest_role for anything except ADMIN and GUEST
         if user.highest_role == USER_ROLE.REGIONAL_COORDINATOR:
             # regional coordinator cannot alter admins or regional coordinators
             return self.role not in [USER_ROLE.ADMIN, USER_ROLE.REGIONAL_COORDINATOR]
@@ -178,6 +181,10 @@ class Portfolio(models.Model):
             return USER_ROLE.REGIONAL_COORDINATOR
         if USER_ROLE.MONITORING_EXPERT in roles:
             return USER_ROLE.MONITORING_EXPERT
+        if USER_ROLE.DIRECTORS_OFFICE in roles:
+            return USER_ROLE.DIRECTORS_OFFICE
+        if USER_ROLE.REPORTING_TEAM in roles:
+            return USER_ROLE.REPORTING_TEAM
         return USER_ROLE.GUEST
 
     @classmethod
@@ -201,6 +208,12 @@ class Portfolio(models.Model):
             self.monitoring_sub_region = None
             self.country = None
         elif self.role == USER_ROLE.REGIONAL_COORDINATOR:
+            self.country = None
+        elif self.role == USER_ROLE.DIRECTORS_OFFICE:
+            self.monitoring_sub_region = None
+            self.country = None
+        elif self.role == USER_ROLE.REPORTING_TEAM:
+            self.monitoring_sub_region = None
             self.country = None
         return super().save(*args, **kwargs)
 

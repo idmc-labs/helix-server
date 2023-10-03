@@ -53,10 +53,10 @@ class OSMName(UUIDAbstractModel, models.Model):
         POINT = 4
 
         __labels__ = {
-            ADM0: _('ADM0'),
-            ADM1: _('ADM1'),
-            ADM2: _('ADM2'),
-            ADM3: _('ADM3'),
+            ADM0: _('Country/territory (AM0)'),
+            ADM1: _('State/Region/Province (ADM1)'),
+            ADM2: _('District/Zone/Department (ADM2)'),
+            ADM3: _('County/City/town/Village/Woreda (ADM3)'),
             POINT: _('Point'),
         }
 
@@ -326,6 +326,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         UNVERIFIED_FLOW = 19
         BIRTH = 20
         FAILED_RELOCATION_ELSEWHERE = 21
+        PEOPLE_DISPLACED_ACROSS_BORDERS_FLOW = 22
 
         __labels__ = {
             IDPS: _('IDPs'),
@@ -349,8 +350,8 @@ class Figure(MetaInformationArchiveAbstractModel,
             UNVERIFIED_STOCK: _('Unverified stock'),
             UNVERIFIED_FLOW: _('Unverified flow'),
             BIRTH: _('Birth'),
-            FAILED_RELOCATION_ELSEWHERE: _('Failed relocation elsewhere')
-
+            FAILED_RELOCATION_ELSEWHERE: _('Failed relocation elsewhere'),
+            PEOPLE_DISPLACED_ACROSS_BORDERS_FLOW: _('People displaced across borders'),
         }
 
     class FIGURE_TERMS(enum.Enum):
@@ -683,7 +684,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             Figure.FIGURE_CATEGORY_TYPES.IDPS_SETTLED_ELSEWHERE.value,
             Figure.FIGURE_CATEGORY_TYPES.PEOPLE_DISPLACED_ACROSS_BORDERS.value,
             Figure.FIGURE_CATEGORY_TYPES.PARTIAL_STOCK.value,
-            Figure.FIGURE_CATEGORY_TYPES.UNVERIFIED_STOCK.value
+            Figure.FIGURE_CATEGORY_TYPES.UNVERIFIED_STOCK.value,
         ]
 
     @classmethod
@@ -702,7 +703,9 @@ class Figure(MetaInformationArchiveAbstractModel,
             Figure.FIGURE_CATEGORY_TYPES.LOCAL_INTEGRATION.value,
             Figure.FIGURE_CATEGORY_TYPES.FAILED_RETURN_RETURNEE_DISPLACEMENT.value,
             Figure.FIGURE_CATEGORY_TYPES.FAILED_RELOCATION_ELSEWHERE.value,
+            Figure.FIGURE_CATEGORY_TYPES.BIRTH.value,
             Figure.FIGURE_CATEGORY_TYPES.UNVERIFIED_FLOW.value,
+            Figure.FIGURE_CATEGORY_TYPES.PEOPLE_DISPLACED_ACROSS_BORDERS_FLOW.value,
         ]
 
     @classmethod
@@ -828,6 +831,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             source_document='Source document',
             geolocations='Locations name',
             geolocation_list='Locations',
+            geo_locations_accuracy='Locations accuracy',
             geo_locations_identifier='Type of point',
             entry__id='Entry ID',
             entry__old_id='Entry old ID',
@@ -927,6 +931,10 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'sources__methodology', '; ',
                 distinct=True, output_field=models.CharField()
             ),
+            geo_locations_accuracy=ArrayAgg(
+                Cast('geo_locations__accuracy', models.IntegerField()),
+                distinct=True, filter=Q(geo_locations__accuracy__isnull=False)
+            ),
             geo_locations_identifier=ArrayAgg(
                 Cast('geo_locations__identifier', models.IntegerField()),
                 distinct=True, filter=Q(geo_locations__identifier__isnull=False)
@@ -1019,6 +1027,9 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'figure_cause': get_enum_label(
                     'figure_cause', Crisis.CRISIS_TYPE
                 ),
+                'geo_locations_accuracy': get_string_from_list([
+                    OSMName.OSM_ACCURACY(item).label for item in datum['geo_locations_accuracy']
+                ]),
                 'geo_locations_identifier': get_string_from_list([
                     OSMName.IDENTIFIER(item).label for item in datum['geo_locations_identifier']
                 ]),

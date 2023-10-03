@@ -185,6 +185,7 @@ class BulkMonitoringExpertPortfolioSerializer(serializers.Serializer):
     def _validate_can_add(self, attrs: dict) -> None:
         if self.context['request'].user.highest_role == USER_ROLE.ADMIN:
             return
+        # FIXME: We should not use highest_role for anything except ADMIN and GUEST
         if self.context['request'].user.highest_role not in [USER_ROLE.REGIONAL_COORDINATOR]:
             raise serializers.ValidationError(
                 gettext('You are not allowed to perform this action'),
@@ -291,6 +292,93 @@ class AdminPortfolioSerializer(serializers.Serializer):
 
         return self.validated_data['user']
 
+
+class DirectorsOfficePortfolioSerializer(serializers.Serializer):
+    register = serializers.BooleanField(required=True)
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+
+    def _validate_unique(self, attrs) -> None:
+        if attrs['register'] and Portfolio.objects.filter(
+            user=attrs.get('user'),
+            role=USER_ROLE.DIRECTORS_OFFICE,
+        ).exclude(
+            id=getattr(self.instance, 'id', None)
+        ).exists():
+            raise serializers.ValidationError(gettext(
+                'Portfolio already exists'
+            ), code='already-exists')
+
+    def _validate_is_admin(self) -> None:
+        if not self.context['request'].user.highest_role == USER_ROLE.ADMIN:
+            raise serializers.ValidationError(
+                gettext('You are not allowed to perform this action'),
+                code='not-allowed'
+            )
+
+    def validate(self, attrs: dict) -> dict:
+        self._validate_is_admin()
+        self._validate_unique(attrs)
+
+        return attrs
+
+    def save(self):
+        if self.validated_data['register']:
+            Portfolio.objects.create(
+                user=self.validated_data['user'],
+                role=USER_ROLE.DIRECTORS_OFFICE
+            )
+        else:
+            p = Portfolio.objects.get(
+                user=self.validated_data['user'],
+                role=USER_ROLE.DIRECTORS_OFFICE
+            )
+            p.delete()
+
+        return self.validated_data['user']
+
+
+class ReportingTeamPortfolioSerializer(serializers.Serializer):
+    register = serializers.BooleanField(required=True)
+    user = serializers.PrimaryKeyRelatedField(queryset=User.objects.all())
+
+    def _validate_unique(self, attrs) -> None:
+        if attrs['register'] and Portfolio.objects.filter(
+            user=attrs.get('user'),
+            role=USER_ROLE.REPORTING_TEAM,
+        ).exclude(
+            id=getattr(self.instance, 'id', None)
+        ).exists():
+            raise serializers.ValidationError(gettext(
+                'Portfolio already exists'
+            ), code='already-exists')
+
+    def _validate_is_admin(self) -> None:
+        if not self.context['request'].user.highest_role == USER_ROLE.ADMIN:
+            raise serializers.ValidationError(
+                gettext('You are not allowed to perform this action'),
+                code='not-allowed'
+            )
+
+    def validate(self, attrs: dict) -> dict:
+        self._validate_is_admin()
+        self._validate_unique(attrs)
+
+        return attrs
+
+    def save(self):
+        if self.validated_data['register']:
+            Portfolio.objects.create(
+                user=self.validated_data['user'],
+                role=USER_ROLE.REPORTING_TEAM
+            )
+        else:
+            p = Portfolio.objects.get(
+                user=self.validated_data['user'],
+                role=USER_ROLE.REPORTING_TEAM
+            )
+            p.delete()
+
+        return self.validated_data['user']
 
 # End Portfolios
 

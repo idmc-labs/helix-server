@@ -97,6 +97,7 @@ class USER_ROLE(enum.Enum):
     MONITORING_EXPERT = 2
     GUEST = 3
     DIRECTORS_OFFICE = 4
+    REPORTING_TEAM = 5
 
     __labels__ = {
         ADMIN: _('Admin'),
@@ -104,6 +105,7 @@ class USER_ROLE(enum.Enum):
         REGIONAL_COORDINATOR: _('Regional Coordinator'),
         GUEST: _('Guest'),
         DIRECTORS_OFFICE: _("Director's office"),
+        REPORTING_TEAM: _("Reporting Team"),
     }
 
 

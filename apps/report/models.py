@@ -48,6 +48,7 @@ from apps.report.utils import (
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+# FIXME: is this used anywhere? We have a duplicate in report/utils
 EXCEL_FORMULAE = {
     'per_100k': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")',
     'percent_variation': '=IF({key2}{{row}}, 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")',
