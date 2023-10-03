@@ -1,9 +1,11 @@
 from collections import OrderedDict
+
 from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 from django.utils import timezone
+from django.db.models.functions import Coalesce
 
 from apps.contrib.models import MetaInformationAbstractModel
 from apps.contrib.commons import DATE_ACCURACY
@@ -53,16 +55,14 @@ class Crisis(MetaInformationAbstractModel, models.Model):
         from apps.entry.models import Figure
         figures = figures or Figure.objects.all()
 
-        # Get max IDPS figure end date
-        max_stock_end_date = timezone.now()
-        max_stock_end_date_figure = figures.filter(
+        max_stock_end_date_figure_qs = figures.filter(
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             role=Figure.ROLE.RECOMMENDED,
-        ).order_by('-end_date').first()
-        if max_stock_end_date_figure:
-            max_stock_end_date = max_stock_end_date_figure.end_date
+            event__crisis=models.OuterRef('pk'),
+        ).order_by('-end_date').values('end_date')[:1]
 
         return {
+            'event_max_end_date': models.Subquery(max_stock_end_date_figure_qs),
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
                     figures.filter(
@@ -78,13 +78,13 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                 output_field=models.IntegerField()
             ),
             cls.IDP_FIGURES_ANNOTATE: models.Subquery(
-                Figure.filtered_idp_figures_for_listing(
+                Figure.filtered_idp_figures(
                     figures.filter(
                         event__crisis=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     start_date=None,
-                    end_date=max_stock_end_date,
+                    end_date=models.OuterRef('event_max_end_date'),
                 ).order_by().values('event__crisis').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],

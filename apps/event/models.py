@@ -5,7 +5,12 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 from django.utils import timezone
+from django.contrib.postgres.fields import ArrayField
+from django.forms import model_to_dict
+from django.db.models.functions import Coalesce
+
 from utils.common import get_string_from_list
+from utils.common import add_clone_prefix
 
 from apps.contrib.models import (
     MetaInformationAbstractModel,
@@ -15,9 +20,6 @@ from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
 from apps.users.models import User, USER_ROLE
-from django.contrib.postgres.fields import ArrayField
-from django.forms import model_to_dict
-from utils.common import add_clone_prefix
 
 
 class NameAttributedModels(models.Model):
@@ -238,18 +240,17 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
-        figures = figures or Figure.objects.all()
+        if figures is None:
+            figures = Figure.objects.all()
 
-        # Get max IDPS figure end date
-        max_stock_end_date = timezone.now()
-        max_stock_end_date_figure = figures.filter(
+        max_stock_end_date_figure_qs = figures.filter(
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             role=Figure.ROLE.RECOMMENDED,
-        ).order_by('-end_date').first()
-        if max_stock_end_date_figure:
-            max_stock_end_date = max_stock_end_date_figure.end_date
+            event=models.OuterRef('pk'),
+        ).order_by('-end_date').values('end_date')[:1]
 
         return {
+            'event_max_end_date': models.Subquery(max_stock_end_date_figure_qs),
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
                     figures.filter(
@@ -265,13 +266,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 output_field=models.IntegerField()
             ),
             cls.IDP_FIGURES_ANNOTATE: models.Subquery(
-                Figure.filtered_idp_figures_for_listing(
+                Figure.filtered_idp_figures(
                     figures.filter(
                         event=models.OuterRef('pk'),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     start_date=None,
-                    end_date=max_stock_end_date,
+                    end_date=models.OuterRef('event_max_end_date'),
                 ).order_by().values('event').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],

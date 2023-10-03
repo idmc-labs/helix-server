@@ -1153,9 +1153,6 @@ class Figure(MetaInformationArchiveAbstractModel,
         """
         return self.entry.can_be_updated_by(user)
 
-    def __str__(self):
-        return f'{self.quantifier.label}:{self.total_figures}'
-
 
 class FigureTag(MetaInformationAbstractModel):
     name = models.CharField(verbose_name=_('Name'), max_length=256)
