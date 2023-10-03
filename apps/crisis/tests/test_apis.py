@@ -270,6 +270,14 @@ class TestCrisisStockFlow(HelixGraphQLTestCase):
             event=self.event,
             role=Figure.ROLE.RECOMMENDED,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            total_figures=12,
+            start_date='2022-05-10',
+            end_date='2022-05-26',
+        )
+        FigureFactory.create(
+            event=self.event,
+            role=Figure.ROLE.RECOMMENDED,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             total_figures=4,
             start_date='2022-05-15',
             end_date='2022-05-26',
@@ -322,7 +330,7 @@ class TestCrisisStockFlow(HelixGraphQLTestCase):
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
         crisis_data = content['data']['crisis']
-        self.assertEqual(crisis_data['totalStockIdpFigures'], 104)
+        self.assertEqual(crisis_data['totalStockIdpFigures'], 16)
         self.assertEqual(crisis_data['totalFlowNdFigures'], 208)
 
     def test_should_use_figure_last_date_as_reference_point_in_event_stock_and_flow(self) -> None:
@@ -336,5 +344,5 @@ class TestCrisisStockFlow(HelixGraphQLTestCase):
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
         crisis_data = content['data']['event']
-        self.assertEqual(crisis_data['totalStockIdpFigures'], 104)
+        self.assertEqual(crisis_data['totalStockIdpFigures'], 16)
         self.assertEqual(crisis_data['totalFlowNdFigures'], 208)
