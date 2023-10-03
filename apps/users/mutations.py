@@ -18,6 +18,8 @@ from apps.users.serializers import (
     BulkMonitoringExpertPortfolioSerializer,
     RegionalCoordinatorPortfolioSerializer,
     AdminPortfolioSerializer,
+    DirectorsOfficePortfolioSerializer,
+    ReportingTeamPortfolioSerializer,
 )
 from utils.permissions import is_authenticated, permission_checker
 from utils.error_types import CustomErrorType, mutation_is_not_valid
@@ -242,6 +244,16 @@ AdminPortfolioInputType = generate_input_type_for_serializer(
     AdminPortfolioSerializer
 )
 
+DirectorsOfficePortfolioInputType = generate_input_type_for_serializer(
+    'DirectorsOfficePortfolioInputType',
+    DirectorsOfficePortfolioSerializer
+)
+
+ReportingTeamPortfolioInputType = generate_input_type_for_serializer(
+    'ReportingTeamPortfolioInputType',
+    ReportingTeamPortfolioSerializer
+)
+
 
 class CreateMonitoringExpertPortfolio(graphene.Mutation):
     class Arguments:
@@ -351,6 +363,48 @@ class UpdateAdminPortfolio(graphene.Mutation):
         return UpdateAdminPortfolio(result=user, errors=None, ok=True)
 
 
+class UpdateDirectorsOfficePortfolio(graphene.Mutation):
+    class Arguments:
+        data = DirectorsOfficePortfolioInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(UserType)
+
+    @staticmethod
+    @permission_checker(['users.change_portfolio'])
+    def mutate(root, info, data):
+        serializer = DirectorsOfficePortfolioSerializer(
+            data=data,
+            context={'request': info.context.request},
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return UpdateDirectorsOfficePortfolio(errors=errors, ok=False)
+        user = serializer.save()
+        return UpdateDirectorsOfficePortfolio(result=user, errors=None, ok=True)
+
+
+class UpdateReportingTeamPortfolio(graphene.Mutation):
+    class Arguments:
+        data = ReportingTeamPortfolioInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(UserType)
+
+    @staticmethod
+    @permission_checker(['users.change_portfolio'])
+    def mutate(root, info, data):
+        serializer = ReportingTeamPortfolioSerializer(
+            data=data,
+            context={'request': info.context.request},
+        )
+        if errors := mutation_is_not_valid(serializer):
+            return UpdateReportingTeamPortfolio(errors=errors, ok=False)
+        user = serializer.save()
+        return UpdateReportingTeamPortfolio(result=user, errors=None, ok=True)
+
+
 class Mutation(object):
     login = Login.Field()
     register = Register.Field()
@@ -365,4 +419,6 @@ class Mutation(object):
     update_regional_coordinator_portfolio = UpdateRegionalCoordinatorPortfolio.Field()
     delete_portfolio = DeletePortfolio.Field()
     update_admin_portfolio = UpdateAdminPortfolio.Field()
+    update_directors_office_portfolio = UpdateDirectorsOfficePortfolio.Field()
+    update_reporting_team_portfolio = UpdateReportingTeamPortfolio.Field()
     # end portfolio

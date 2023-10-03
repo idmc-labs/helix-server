@@ -31,6 +31,7 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='0', hour='*/3'),
         'args': [],
     },
+
     'generate-idus-dump-file': {
         'task': 'apps.contrib.tasks.generate_idus_dump_file',
         'schedule': crontab(minute='0', hour='*/2'),
@@ -46,9 +47,10 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='0', hour='*/2'),
         'args': [],
     },
+
     'save_and_delete_tracked_data_from_redis_to_db': {
         'task': 'apps.contrib.tasks.save_and_delete_tracked_data_from_redis_to_db',
-        'schedule': crontab(minute=1, hour='*/24'),
+        'schedule': crontab(minute='1', hour='*/24'),
         'args': [],
     },
 }

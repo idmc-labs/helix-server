@@ -5,8 +5,14 @@ Permission.objects.get(codename=<codename>)
 
 from .enums import PERMISSION_ACTION, PERMISSION_ENTITY, USER_ROLE
 
-USER_ROLES = [USER_ROLE.ADMIN, USER_ROLE.MONITORING_EXPERT,
-              USER_ROLE.REGIONAL_COORDINATOR, USER_ROLE.GUEST]
+USER_ROLES = [
+    USER_ROLE.ADMIN,
+    USER_ROLE.MONITORING_EXPERT,
+    USER_ROLE.REGIONAL_COORDINATOR,
+    USER_ROLE.DIRECTORS_OFFICE,
+    USER_ROLE.REPORTING_TEAM,
+    USER_ROLE.GUEST
+]
 
 MONITORING_EXPERT_MODELS = {
     PERMISSION_ENTITY.crisis,
@@ -74,11 +80,37 @@ PERMISSIONS = {
         PERMISSION_ACTION.delete: MONITORING_EXPERT_MODELS,
         PERMISSION_ACTION.approve: {PERMISSION_ENTITY.report, PERMISSION_ENTITY.figure},
         PERMISSION_ACTION.sign_off: set(),
-        PERMISSION_ACTION.assign: set(),
+        PERMISSION_ACTION.assign: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
-        PERMISSION_ACTION.clear_assignee: set(),
+        PERMISSION_ACTION.clear_assignee: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_self_assignee: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.update_pfa_visibility: set(),
+        PERMISSION_ACTION.update_gidd_data: set(),
+        PERMISSION_ACTION.update_release_meta_data: set(),
+    },
+    USER_ROLE.DIRECTORS_OFFICE: {
+        PERMISSION_ACTION.add: set(),
+        PERMISSION_ACTION.change: {PERMISSION_ENTITY.report},
+        PERMISSION_ACTION.delete: set(),
+        PERMISSION_ACTION.approve: set(),
+        PERMISSION_ACTION.sign_off: set(),
+        PERMISSION_ACTION.assign: set(),
+        PERMISSION_ACTION.self_assign: set(),
+        PERMISSION_ACTION.clear_assignee: set(),
+        PERMISSION_ACTION.clear_self_assignee: set(),
+        PERMISSION_ACTION.update_gidd_data: set(),
+        PERMISSION_ACTION.update_release_meta_data: set(),
+    },
+    USER_ROLE.REPORTING_TEAM: {
+        PERMISSION_ACTION.add: {PERMISSION_ENTITY.report},
+        PERMISSION_ACTION.change: {PERMISSION_ENTITY.report},
+        PERMISSION_ACTION.delete: {PERMISSION_ENTITY.report},
+        PERMISSION_ACTION.approve: set(),
+        PERMISSION_ACTION.sign_off: set(),
+        PERMISSION_ACTION.assign: set(),
+        PERMISSION_ACTION.self_assign: set(),
+        PERMISSION_ACTION.clear_assignee: set(),
+        PERMISSION_ACTION.clear_self_assignee: set(),
         PERMISSION_ACTION.update_gidd_data: set(),
         PERMISSION_ACTION.update_release_meta_data: set(),
     },

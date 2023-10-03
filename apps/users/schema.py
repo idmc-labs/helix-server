@@ -68,6 +68,8 @@ class UserType(DjangoObjectType):
     portfolio_role_display = graphene.String()
     permissions = graphene.List(graphene.NonNull(PermissionsType))
     is_admin = graphene.Boolean()
+    is_directors_office = graphene.Boolean()
+    is_reporting_team = graphene.Boolean()
 
     @staticmethod
     def resolve_permissions(root, info, **kwargs):
@@ -80,10 +82,22 @@ class UserType(DjangoObjectType):
             return root.email
 
     @staticmethod
-    def resolve_is_admin(root, info, **kwargs):
-        if root.highest_role == USER_ROLE.ADMIN.value:
-            return True
-        return False
+    def resolve_is_admin(user, info, **kwargs):
+        # FIXME: Send the roles list to client instead
+        roles = list(user.portfolios.values_list('role', flat=True))
+        return USER_ROLE.ADMIN.value in roles
+
+    @staticmethod
+    def resolve_is_directors_office(user, info, **kwargs):
+        # FIXME: Send the roles list to client instead
+        roles = list(user.portfolios.values_list('role', flat=True))
+        return USER_ROLE.DIRECTORS_OFFICE.value in roles
+
+    @staticmethod
+    def resolve_is_reporting_team(user, info, **kwargs):
+        # FIXME: Send the roles list to client instead
+        roles = list(user.portfolios.values_list('role', flat=True))
+        return USER_ROLE.REPORTING_TEAM.value in roles
 
     @staticmethod
     def resolve_portfolio_role(root, info, **kwargs):

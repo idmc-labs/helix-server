@@ -502,12 +502,12 @@ PASSWORD_RESET_CLIENT_URL = "{FRONTEND_BASE_URL}/reset-password/{{uid}}/{{token}
 
 # TASKS TIMEOUTS
 OLD_JOB_EXECUTION_TTL = 72 * 60 * 60  # seconds
+
+EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT = 10
 # staying in pending for too long will be moved to killed
 EXCEL_EXPORT_PENDING_STATE_TIMEOUT = 5 * 60 * 60  # seconds
 # staying in progress for too long will be moved to killed
 EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT = 10 * 60  # seconds
-
-EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT = 10
 
 OTP_TOTP_ISSUER = 'IDMC'
 OTP_HOTP_ISSUER = 'IDMC'
@@ -566,14 +566,6 @@ CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = [
 
     'https://preview-website-components.idmcdb.org',
     'https://release-website-components.idmcdb.org',
-
-    'https://release-website-components-idmc.dev.datafriendlyspace.org',
-    'https://preview-website-components-idmc.dev.datafriendlyspace.org',
-    # Obsolete
-    'https://idumap.idmcdb.org',
-    'https://dev-idmc.datafriendlyspace.org',
-    'https://idmc-website.dev.datafriendlyspace.org',
-    'https://idmc-website-components.idmcdb.org',
 ]
 
 CORS_URLS_REGEX = r'(^/api/.*$)|(^/graphql$)|(^/external-api/.*$)'

@@ -96,6 +96,17 @@ class DeleteReport(graphene.Mutation):
             return DeleteReport(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
             ])
+
+        if not ReportSerializer.has_permission_for_report(
+            info.context.request.user,
+            instance,
+        ):
+            return DeleteReport(errors=[
+                dict(
+                    field='nonFieldErrors',
+                    messages=gettext('You do not have permission to edit report.')
+                ),
+            ])
         instance.delete()
         instance.id = id
         return DeleteReport(result=instance, errors=None, ok=True)

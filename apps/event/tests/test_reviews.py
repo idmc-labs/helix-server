@@ -104,8 +104,11 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         '''
 
     def test_user_can_set_assignee_on_an_event(self) -> None:
-        # Test admin, regional_coordinator can be assign assignees
+        # Test admin, regional_coordinator, monitoring_expert can be assign assignees
         assignee_assigners = (
+            (self.monitoring_expert, self.regional_coordinator),
+            (self.monitoring_expert, self.monitoring_expert),
+            (self.monitoring_expert, self.admin),
             (self.regional_coordinator, self.regional_coordinator),
             (self.regional_coordinator, self.monitoring_expert),
             (self.regional_coordinator, self.admin),
@@ -127,6 +130,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
 
             self.assertEqual(content['data']['setAssigneeToEvent']['result']['assignee']['id'], str(assignee.id))
             self.assertEqual(content['data']['setAssigneeToEvent']['result']['assigner']['id'], str(assigner.id))
+
         # Test guest should not be assignee
         guest_assignee_assigners = (
             (self.regional_coordinator, self.guest),
@@ -142,22 +146,6 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             )
             content = json.loads(response.content)
             self.assertIsNotNone(content['data']['setAssigneeToEvent']['errors'])
-
-        # Test monitoring expert should not assign assignee
-        assignee_assigners = (
-            (self.monitoring_expert, self.admin),
-            (self.monitoring_expert, self.regional_coordinator),
-            (self.monitoring_expert, self.monitoring_expert),
-        )
-        for assigner, assignee in assignee_assigners:
-            self.force_login(assigner)
-            input = {'event_id': self.event.id, 'user_id': assignee.id}
-            response = self.query(
-                self.set_assignee_to_event_mutation,
-                variables=input,
-            )
-            content = json.loads(response.content)
-            self.assertIsNotNone(content['errors'])
 
         # Test guest should not assign assignee
         assignee_assigners = (
@@ -253,7 +241,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             variables=input,
         )
         content = json.loads(response.content)
-        self.assertIsNotNone(content['errors'])
+        self.assertIsNotNone(content['data']['clearAssigneeFromEvent']['errors'])
 
     def test_all_users_can_clear_self_assignee_from_event(self) -> None:
         users = [self.regional_coordinator, self.admin, self.monitoring_expert]

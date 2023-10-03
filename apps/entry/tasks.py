@@ -1,5 +1,4 @@
 import base64
-import math
 import logging
 
 from billiard.exceptions import TimeLimitExceeded
@@ -13,7 +12,7 @@ from helix.celery import app as celery_app
 
 logger = logging.getLogger(__name__)
 PDF_TASK_TIMEOUT = 60 * 3  # seconds
-SELENIUM_TIMEOUT = math.floor(PDF_TASK_TIMEOUT / 3)
+SELENIUM_TIMEOUT = 60  # seconds
 
 
 def __get_pdf_from_html(path, timeout=SELENIUM_TIMEOUT, print_options={}):
