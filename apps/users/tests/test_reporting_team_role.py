@@ -4,10 +4,10 @@ from utils.tests import HelixGraphQLTestCase, create_user_with_role
 from apps.users.enums import USER_ROLE
 
 
-class TestDirectorsOfficeRole(HelixGraphQLTestCase):
+class TestReportingTeamRole(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.directors_office_user = create_user_with_role(USER_ROLE.DIRECTORS_OFFICE.name)
+        self.reporting_team_user = create_user_with_role(USER_ROLE.REPORTING_TEAM.name)
         self.report = ReportFactory.create(
             name='GRID Report Test',
             is_public=True,
@@ -78,18 +78,16 @@ class TestDirectorsOfficeRole(HelixGraphQLTestCase):
             'isPublic': True
         }
 
-    def test_directors_office_user_can_create_update_delete_report(self):
-        self.force_login(self.directors_office_user)
-        # Test director's office can create report
-        response = self.query(
+    def test_reporting_team_user_can_create_update_delete_report(self):
+        self.force_login(self.admin)
+        response_admin = self.query(
             self.create_report_mutation,
             input_data=self.input,
         )
-        error_message = response.json()['errors'][0]['message']
-        self.assertEqual(error_message, PERMISSION_DENIED_MESSAGE)
+        content_admin = response_admin.json()['data']['createReport']
 
-        self.force_login(self.admin)
-        # Let's create a report using admin account
+        # Test can create report
+        self.force_login(self.reporting_team_user)
         response = self.query(
             self.create_report_mutation,
             input_data=self.input,
@@ -99,7 +97,6 @@ class TestDirectorsOfficeRole(HelixGraphQLTestCase):
         self.assertEqual(content['result']['name'], self.input['name'])
         self.assertEqual(content['result']['isPublic'], self.input['isPublic'])
 
-        self.force_login(self.directors_office_user)
         # Test can update report
         report_id = content['result']['id']
         update_data = {
@@ -119,11 +116,32 @@ class TestDirectorsOfficeRole(HelixGraphQLTestCase):
             self.report_delete_mutation,
             variables={'id': report_id}
         )
-        error_message = response.json()['errors'][0]['message']
-        self.assertEqual(error_message, PERMISSION_DENIED_MESSAGE)
+        content = response.json()['data']['deleteReport']
+        self.assertTrue(content['ok'])
 
-    def test_directors_office_user_should_not_call_other_mutations(self):
-        self.force_login(self.directors_office_user)
+        # Test cannot update other's report
+        report_id = content_admin['result']['id']
+        update_data = {
+            'id': report_id,
+            'name': 'Report updated',
+        }
+        response = self.query(
+            self.report_update_mutation,
+            input_data=update_data,
+        )
+        update_content = response.json()['data']['updateReport']
+        self.assertFalse(update_content['ok'])
+
+        # Test cannot delete other's report
+        response = self.query(
+            self.report_delete_mutation,
+            variables={'id': report_id}
+        )
+        delete_content = response.json()['data']['deleteReport']
+        self.assertFalse(delete_content['ok'])
+
+    def test_reporting_team_user_should_not_call_other_mutations(self):
+        self.force_login(self.reporting_team_user)
         # Test approve report
         response = self.query(
             self.approve_report_mutation,
