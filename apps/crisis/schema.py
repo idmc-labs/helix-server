@@ -37,6 +37,7 @@ class CrisisType(DjangoObjectType):
         reverse_related_name='crisis',
     )
     total_stock_idp_figures = graphene.Field(graphene.Int)
+    stock_idp_figures_max_end_date = graphene.Field(graphene.Date, required=False)
     total_flow_nd_figures = graphene.Field(graphene.Int)
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     start_date_accuracy_display = EnumDescription(source='get_start_date_accuracy_display')
@@ -55,6 +56,17 @@ class CrisisType(DjangoObjectType):
         if value != NULL:
             return value
         return info.context.crisis_crisis_total_stock_idp_figures.load(root.id)
+
+    def resolve_stock_idp_figures_max_end_date(root, info, **kwargs):
+        NULL = 'null'
+        value = getattr(
+            root,
+            Crisis.IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE,
+            NULL
+        )
+        if value != NULL:
+            return value
+        return info.context.crisis_stock_idp_figures_max_end_date.load(root.id)
 
     def resolve_total_flow_nd_figures(root, info, **kwargs):
         NULL = 'null'

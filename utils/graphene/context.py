@@ -10,6 +10,7 @@ from apps.crisis.dataloaders import (
     TotalNDFigureByCrisisLoader,
     EventCountLoader,
     CrisisReviewCountLoader,
+    MaxStockIDPFigureEndDateByCrisisLoader,
 )
 from apps.entry.dataloaders import (
     TotalIDPFigureByEntryLoader,
@@ -78,6 +79,10 @@ class GQLContext:
     @cached_property
     def crisis_crisis_total_flow_nd_figures(self):
         return TotalNDFigureByCrisisLoader()
+
+    @cached_property
+    def crisis_stock_idp_figures_max_end_date(self):
+        return MaxStockIDPFigureEndDateByCrisisLoader()
 
     @cached_property
     def event_event_total_stock_idp_figures(self):

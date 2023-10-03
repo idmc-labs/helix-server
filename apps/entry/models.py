@@ -3,7 +3,7 @@ import re
 from collections import OrderedDict
 from datetime import date
 import logging
-from typing import Optional
+from typing import Optional, Union
 from uuid import uuid4
 
 from django.conf import settings
@@ -729,7 +729,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         cls,
         qs: QuerySet,
         start_date: Optional[date],
-        end_date: Optional[date] = None,
+        end_date: Optional[Union[date, models.OuterRef]] = None,
     ):
         qs = qs.filter(
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,

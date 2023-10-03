@@ -4,8 +4,6 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
-from django.utils import timezone
-from django.db.models.functions import Coalesce
 
 from apps.contrib.models import MetaInformationAbstractModel
 from apps.contrib.commons import DATE_ACCURACY
@@ -16,6 +14,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
     IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
+    IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE = 'figures_max_end_date'
 
     class CRISIS_TYPE(enum.Enum):
         CONFLICT = 0
