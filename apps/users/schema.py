@@ -82,23 +82,20 @@ class UserType(DjangoObjectType):
             return root.email
 
     @staticmethod
-    def resolve_is_admin(root, info, **kwargs):
+    def resolve_is_admin(user, info, **kwargs):
         # FIXME: Send the roles list to client instead
-        user = info.context.request.user
         roles = list(user.portfolios.values_list('role', flat=True))
         return USER_ROLE.ADMIN.value in roles
 
     @staticmethod
-    def resolve_is_directors_office(root, info, **kwargs):
+    def resolve_is_directors_office(user, info, **kwargs):
         # FIXME: Send the roles list to client instead
-        user = info.context.request.user
         roles = list(user.portfolios.values_list('role', flat=True))
         return USER_ROLE.DIRECTORS_OFFICE.value in roles
 
     @staticmethod
-    def resolve_is_reporting_team(root, info, **kwargs):
+    def resolve_is_reporting_team(user, info, **kwargs):
         # FIXME: Send the roles list to client instead
-        user = info.context.request.user
         roles = list(user.portfolios.values_list('role', flat=True))
         return USER_ROLE.REPORTING_TEAM.value in roles
 
