@@ -3,9 +3,12 @@ from collections import OrderedDict
 from django.db import models
 from django.contrib.postgres.aggregates.general import StringAgg
 from django.utils.translation import gettext_lazy as _
-from django.utils import timezone
 from django_enumfield import enum
+from django.contrib.postgres.fields import ArrayField
+from django.forms import model_to_dict
+
 from utils.common import get_string_from_list
+from utils.common import add_clone_prefix
 
 from apps.contrib.models import (
     MetaInformationAbstractModel,
@@ -15,9 +18,6 @@ from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
 from apps.users.models import User, USER_ROLE
-from django.contrib.postgres.fields import ArrayField
-from django.forms import model_to_dict
-from utils.common import add_clone_prefix
 
 
 class NameAttributedModels(models.Model):
@@ -150,6 +150,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
     IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
+    IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE = 'figures_max_end_date'
+
     crisis = models.ForeignKey('crisis.Crisis', verbose_name=_('Crisis'),
                                blank=True, null=True,
                                related_name='events', on_delete=models.CASCADE)
@@ -238,9 +240,17 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
-        figures = figures or Figure.objects.all()
+        if figures is None:
+            figures = Figure.objects.all()
+
+        max_stock_end_date_figure_qs = figures.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            role=Figure.ROLE.RECOMMENDED,
+            event=models.OuterRef('pk'),
+        ).order_by('-end_date').values('end_date')[:1]
 
         return {
+            cls.IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE: models.Subquery(max_stock_end_date_figure_qs),
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
                     figures.filter(
@@ -262,7 +272,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     start_date=None,
-                    end_date=timezone.now().date(),
+                    end_date=models.OuterRef(cls.IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE),
                 ).order_by().values('event').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],

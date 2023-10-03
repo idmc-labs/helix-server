@@ -719,6 +719,7 @@ type CrisisType {
   events(createdAt_Lte: DateTime, createdAt_Lt: DateTime, createdAt_Gte: DateTime, createdAt_Gt: DateTime, startDate_Lte: Date, startDate_Lt: Date, startDate_Gte: Date, startDate_Gt: Date, endDate_Lte: Date, endDate_Lt: Date, endDate_Gte: Date, endDate_Gt: Date, ignoreQa: Boolean, name: String, crisisByIds: [ID!], eventTypes: [String!], countries: [ID!], glideNumbers: [String!], osvSubTypeByIds: [ID!], report: String, disasterSubTypes: [ID!], violenceTypes: [ID!], violenceSubTypes: [ID!], createdByIds: [ID!], qaRule: String, contextOfViolences: [ID!], reviewStatus: [String!], assignees: [ID!], assigners: [ID!], page: Int = 1, ordering: String, pageSize: Int): EventListType
   crisisTypeDisplay: EnumDescription
   totalStockIdpFigures: Int
+  stockIdpFiguresMaxEndDate: Date
   totalFlowNdFigures: Int
   startDateAccuracyDisplay: EnumDescription
   endDateAccuracyDisplay: EnumDescription
@@ -1205,6 +1206,7 @@ type EventType {
   reportSet: [ReportType!]!
   eventTypeDisplay: EnumDescription
   totalStockIdpFigures: Int
+  stockIdpFiguresMaxEndDate: Date
   totalFlowNdFigures: Int
   startDateAccuracyDisplay: EnumDescription
   endDateAccuracyDisplay: EnumDescription

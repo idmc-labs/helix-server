@@ -1,6 +1,6 @@
 from collections import OrderedDict
+
 from django.contrib.postgres.aggregates.general import StringAgg
-from django.utils import timezone
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
@@ -14,6 +14,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
     IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
+    IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE = 'figures_max_end_date'
 
     class CRISIS_TYPE(enum.Enum):
         CONFLICT = 0
@@ -52,7 +53,15 @@ class Crisis(MetaInformationAbstractModel, models.Model):
     def _total_figure_disaggregation_subquery(cls, figures=None):
         from apps.entry.models import Figure
         figures = figures or Figure.objects.all()
+
+        max_stock_end_date_figure_qs = figures.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            role=Figure.ROLE.RECOMMENDED,
+            event__crisis=models.OuterRef('pk'),
+        ).order_by('-end_date').values('end_date')[:1]
+
         return {
+            cls.IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE: models.Subquery(max_stock_end_date_figure_qs),
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
                     figures.filter(
@@ -74,7 +83,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     start_date=None,
-                    end_date=timezone.now().date(),
+                    end_date=models.OuterRef(cls.IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE),
                 ).order_by().values('event__crisis').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],

@@ -247,3 +247,102 @@ class TestEventRewviewCount(HelixGraphQLTestCase):
         self.assertEqual(crisis_data['reviewCount']['reviewInProgressCount'], 0)
         self.assertEqual(crisis_data['reviewCount']['reviewNotStartedCount'], 0)
         self.assertEqual(crisis_data['reviewCount']['reviewReRequestCount'], 0)
+
+
+class TestCrisisStockFlow(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.crisis = CrisisFactory.create(
+            start_date='2022-05-05',
+            end_date='2022-06-06',
+        )
+        self.event = EventFactory.create(crisis=self.crisis)
+
+        # Create two figures into crisis date range
+        FigureFactory.create(
+            event=self.event,
+            role=Figure.ROLE.RECOMMENDED,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            total_figures=100,
+            start_date='2022-05-09',
+            end_date='2022-05-14',
+        )
+        FigureFactory.create(
+            event=self.event,
+            role=Figure.ROLE.RECOMMENDED,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            total_figures=12,
+            start_date='2022-05-10',
+            end_date='2022-05-26',
+        )
+        FigureFactory.create(
+            event=self.event,
+            role=Figure.ROLE.RECOMMENDED,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            total_figures=4,
+            start_date='2022-05-15',
+            end_date='2022-05-26',
+        )
+        FigureFactory.create(
+            event=self.event,
+            role=Figure.ROLE.RECOMMENDED,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            total_figures=8,
+            start_date='2022-05-20',
+            end_date='2022-06-01',
+        )
+        FigureFactory.create(
+            event=self.event,
+            role=Figure.ROLE.RECOMMENDED,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            total_figures=200,
+            start_date='2022-05-9',
+            end_date='2022-05-19',
+        )
+
+        self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.crisis_query = '''
+            query MyQuery($id: ID!) {
+              crisis(id: $id) {
+                id
+                totalFlowNdFigures
+                totalStockIdpFigures
+              }
+            }
+        '''
+        self.event_query = '''
+            query MyQuery($id: ID!) {
+              event(id: $id) {
+                id
+                totalFlowNdFigures
+                totalStockIdpFigures
+              }
+            }
+        '''
+
+    def test_should_use_figure_last_date_as_reference_point_in_crisis_stock_and_flow(self) -> None:
+        self.force_login(self.admin)
+        response = self.query(
+            self.crisis_query,
+            variables=dict(
+                id=self.crisis.id,
+            )
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        crisis_data = content['data']['crisis']
+        self.assertEqual(crisis_data['totalStockIdpFigures'], 16)
+        self.assertEqual(crisis_data['totalFlowNdFigures'], 208)
+
+    def test_should_use_figure_last_date_as_reference_point_in_event_stock_and_flow(self) -> None:
+        self.force_login(self.admin)
+        response = self.query(
+            self.event_query,
+            variables=dict(
+                id=self.event.id,
+            )
+        )
+        content = json.loads(response.content)
+        self.assertResponseNoErrors(response)
+        crisis_data = content['data']['event']
+        self.assertEqual(crisis_data['totalStockIdpFigures'], 16)
+        self.assertEqual(crisis_data['totalFlowNdFigures'], 208)

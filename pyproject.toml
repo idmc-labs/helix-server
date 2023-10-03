@@ -46,7 +46,7 @@ drf-spectacular = "*"
 
 [tool.poetry.dev-dependencies]
 pytest-django = "3.9.0"
-pytest-sugar = "0.9.4"
+pytest-sugar = "0.9.7"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
