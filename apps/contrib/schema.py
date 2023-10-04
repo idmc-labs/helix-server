@@ -14,6 +14,7 @@ from apps.contrib.enums import (
     DownloadTypeGrapheneEnum,
     ExcelGenerationStatusGrapheneEnum,
 )
+from apps.entry.models import ExternalApiDump
 from apps.entry.enums import ExternalApiTypeEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
@@ -75,6 +76,31 @@ class ClientTrackInformationType(DjangoObjectType):
 
     api_type = graphene.Field(ExternalApiTypeEnum)
     api_type_display = EnumDescription(source='get_api_type_display')
+
+    # Metadata
+    response_type = graphene.String(required=True)
+    usage = graphene.String(required=True)
+    description = graphene.String(required=True)
+    example_request = graphene.String(required=True)
+
+    @staticmethod
+    def resolve_response_type(root, info, **_):
+        return ExternalApiDump.API_TYPE_METADATA[root.api_type].response_type
+
+    @staticmethod
+    def resolve_usage(root, info, **_):
+        return ExternalApiDump.API_TYPE_METADATA[root.api_type].usage
+
+    @staticmethod
+    def resolve_description(root, info, **_):
+        return ExternalApiDump.API_TYPE_METADATA[root.api_type].description
+
+    @staticmethod
+    def resolve_example_request(root, info, **_):
+        return ExternalApiDump.API_TYPE_METADATA[root.api_type].get_example_request(
+            info.context.request,
+            root.client.code,  # NOTE: Client is select_related using ClientTrackInfoFilter
+        )
 
 
 class ClientTrackInformationListType(CustomDjangoListObjectType):

@@ -294,8 +294,8 @@ class CommonFigureValidationMixin:
         return errors
 
     def _update_parent_fields(self, attrs):
-        disaster_sub_type = attrs.get('disaster_sub_type')
-        violence_sub_type = attrs.get('violence_sub_type')
+        disaster_sub_type = attrs.get('disaster_sub_type', self.instance and self.instance.disaster_sub_type)
+        violence_sub_type = attrs.get('violence_sub_type', self.instance and self.instance.violence_sub_type)
 
         attrs['disaster_category'] = None
         attrs['disaster_type'] = None

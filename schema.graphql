@@ -135,6 +135,10 @@ type ClientTrackInformationType {
   trackedDate: Date!
   apiName: String!
   apiTypeDisplay: EnumDescription
+  responseType: String!
+  usage: String!
+  description: String!
+  exampleRequest: String!
 }
 
 type ClientType {
