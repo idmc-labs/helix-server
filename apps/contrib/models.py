@@ -332,17 +332,24 @@ class ClientTrackInfo(models.Model):
             def __init__(self, user):
                 self.user = user
 
+            def build_absolute_uri(self, url):
+                # FIXME: implement this with concatenation
+                return url
+
         headers = OrderedDict(
             client_name='Client name',
             client_code='Client code',
+            api_name='API',
             api_type='API type',
-            api_name='API name',
             tracked_date='Date',
             requests_per_day='Requests',
         )
+
+        dummy_request = DummyRequest(user=User.objects.get(id=user_id))
+
         data = ClientTrackInfoFilter(
             data=filters,
-            request=DummyRequest(user=User.objects.get(id=user_id)),
+            request=dummy_request,
         ).qs.exclude(
             api_type='None',
         ).annotate(
@@ -352,12 +359,23 @@ class ClientTrackInfo(models.Model):
         ).order_by('-tracked_date')
 
         def transformer(datum):
+            metadata = ExternalApiDump.API_TYPE_METADATA[datum['api_type']]
             return {
                 **datum,
                 'api_name': getattr(ExternalApiDump.ExternalApiType(datum['api_type']), 'label', ''),
+                'api_example_request': metadata.get_example_request(dummy_request, datum['client_code']),
+                'api_response_type': metadata.response_type,
+                'api_usage': metadata.usage,
+                'api_description': metadata.description,
             }
         return {
-            'headers': headers,
+            'headers': OrderedDict(
+                **headers,
+                api_example_request='API Example Request',
+                api_response_type='API Response',
+                api_usage='API Usage',
+                api_description='API Description',
+            ),
             'data': data.values(*[header for header in headers.keys()]),
             'formulae': None,
             'transformer': transformer,

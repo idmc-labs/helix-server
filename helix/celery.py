@@ -32,6 +32,8 @@ app.conf.beat_schedule = {
         'args': [],
     },
 
+    # NOTE: when we change the schedule, we should also update the metadata
+    # for the external APIs
     'generate-idus-dump-file': {
         'task': 'apps.contrib.tasks.generate_idus_dump_file',
         'schedule': crontab(minute='0', hour='*/2'),

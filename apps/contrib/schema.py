@@ -99,7 +99,7 @@ class ClientTrackInformationType(DjangoObjectType):
     def resolve_example_request(root, info, **_):
         return ExternalApiDump.API_TYPE_METADATA[root.api_type].get_example_request(
             info.context.request,
-            root.client,  # NOTE: Client is select_related using ClientTrackInfoFilter
+            root.client.code,  # NOTE: Client is select_related using ClientTrackInfoFilter
         )
 
 
