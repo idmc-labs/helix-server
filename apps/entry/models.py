@@ -1356,6 +1356,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         def transformer(datum):
             return {
                 **datum,
+                'is_confidential': 'Yes' if datum['is_confidential'] else 'No',
                 'categories': get_string_from_list(
                     [category.label if category else "" for category in datum['categories']]
                 ),

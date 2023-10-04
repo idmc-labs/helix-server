@@ -100,7 +100,7 @@ class Organization(MetaInformationArchiveAbstractModel,
             return {
                 **datum,
                 **dict(
-                    category=getattr(Organization.ORGANIZATION_CATEGORY.get(datum['category']), 'name', ''),
+                    category=getattr(Organization.ORGANIZATION_CATEGORY.get(datum['category']), 'label', ''),
                 )
             }
 

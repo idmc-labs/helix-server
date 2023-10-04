@@ -106,8 +106,8 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
             return {
                 **datum,
                 **dict(
-                    designation=getattr(Contact.DESIGNATION.get(datum['designation']), 'name', ''),
-                    gender=getattr(GENDER_TYPE.get(datum['gender']), 'name', ''),
+                    designation=getattr(Contact.DESIGNATION.get(datum['designation']), 'label', ''),
+                    gender=getattr(GENDER_TYPE.get(datum['gender']), 'label', ''),
                 )
             }
 
