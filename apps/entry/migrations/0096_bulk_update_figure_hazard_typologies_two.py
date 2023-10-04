@@ -207,7 +207,7 @@ def update_figure_hazard_typologies(apps, _):
 def update_idus(apps, _):
     Figure = apps.get_model('entry', 'Figure')
 
-    figures_data = [
+    figures_id = [
         109292,
         109293,
         109294,
@@ -282,20 +282,15 @@ def update_idus(apps, _):
         119122,
     ]
 
-    figures = []
-    for figure in Figure.objects.filter(id__in=figures_data, role=0):
-        figure.include_idu = True
-        figures.append(figure)
-
-    # NOTE: Only delete triangulation figures
-    Figure.objects.bulk_update(figures, ['include_idu'], )
-    print(f'Updated idus for {len(figures)} figures')
+    figure_qs = Figure.objects.filter(id__in=figures_id, role=0)
+    figure_qs.update(include_idu=True)
+    print(f'Updated idus for {figure_qs.count()} figures')
 
 
 def delete_triangulation_figures(apps, _):
     Figure = apps.get_model('entry', 'Figure')
 
-    figures_data = [
+    figures_id = [
         109089,
         109090,
         109091,
@@ -377,7 +372,7 @@ def delete_triangulation_figures(apps, _):
     ]
 
     # NOTE: Only delete triangulation figures
-    deleted = Figure.objects.filter(id__in=figures_data, role=1).delete()
+    deleted = Figure.objects.filter(id__in=figures_id, role=1).delete()
     print(f'Deleted {deleted[1]["entry.Figure"]} figures')
 
 
