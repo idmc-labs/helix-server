@@ -1494,9 +1494,9 @@ class ExternalApiDump(models.Model):
         description: str
         example_request: Union[str, Callable]
 
-        def get_example_request(self, request):
+        def get_example_request(self, request, client):
             if callable(self.example_request):
-                return self.example_request(request)
+                return self.example_request(request, client)
             return self.example_request
 
     API_TYPE_METADATA: Dict[ExternalApiType, Metadata] = {
@@ -1506,8 +1506,8 @@ class ExternalApiDump(models.Model):
             api_name=ExternalApiType.IDUS.label,
             description='',
             example_request=(
-                lambda request: request.build_absolute_uri(
-                    ExternalApiDump.ExternalApiType.IDUS.label + '?client_id=XXXX'
+                lambda request, client: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDUS.label + f'?client_id={client.code}'
                 )
             ),
         ),
@@ -1517,8 +1517,8 @@ class ExternalApiDump(models.Model):
             api_name=ExternalApiType.IDUS_ALL.label,
             description='',
             example_request=(
-                lambda request: request.build_absolute_uri(
-                    ExternalApiDump.ExternalApiType.IDUS_ALL.label + '?client_id=XXXX'
+                lambda request, client: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDUS_ALL.label + f'?client_id={client.code}'
                 )
             ),
         ),
@@ -1528,8 +1528,8 @@ class ExternalApiDump(models.Model):
             api_name=ExternalApiType.IDUS_ALL.label,
             description='',
             example_request=(
-                lambda request: request.build_absolute_uri(
-                    ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER.label + '?client_id=XXXX'
+                lambda request, client: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER.label + f'?client_id={client.code}'
                 )
             ),
         ),
@@ -1540,8 +1540,8 @@ class ExternalApiDump(models.Model):
             api_name=ExternalApiType.GIDD_COUNTRY_REST.label,
             description='',
             example_request=(
-                lambda request: request.build_absolute_uri(
-                    ExternalApiDump.ExternalApiType.GIDD_COUNTRY_REST.label + '?client_id=XXXX'
+                lambda request, client: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_COUNTRY_REST.label + f'?client_id={client.code}'
                 )
             ),
         ),
@@ -1551,8 +1551,8 @@ class ExternalApiDump(models.Model):
             api_name=ExternalApiType.GIDD_CONFLICT_REST.label,
             description='',
             example_request=(
-                lambda request: request.build_absolute_uri(
-                    ExternalApiDump.ExternalApiType.GIDD_CONFLICT_REST.label + '?client_id=XXXX'
+                lambda request, client: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_CONFLICT_REST.label + f'?client_id={client.code}'
                 )
             ),
         ),
@@ -1562,8 +1562,8 @@ class ExternalApiDump(models.Model):
             api_name=ExternalApiType.GIDD_DISASTER_REST.label,
             description='',
             example_request=(
-                lambda request: request.build_absolute_uri(
-                    ExternalApiDump.ExternalApiType.GIDD_DISASTER_REST.label + '?client_id=XXXX'
+                lambda request, client: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_DISASTER_REST.label + f'?client_id={client.code}'
                 )
             ),
         ),
@@ -1573,8 +1573,8 @@ class ExternalApiDump(models.Model):
             api_name=ExternalApiType.GIDD_DISPLACEMENT_REST.label,
             description='',
             example_request=(
-                lambda request: request.build_absolute_uri(
-                    ExternalApiDump.ExternalApiType.GIDD_DISASTER_REST.label + '?client_id=XXXX'
+                lambda request, client: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_DISASTER_REST.label + f'?client_id={client.code}'
                 )
             ),
         ),
@@ -1584,8 +1584,8 @@ class ExternalApiDump(models.Model):
             api_name=ExternalApiType.GIDD_DISASTER_EXPORT_REST.label,
             description='',
             example_request=(
-                lambda request: request.build_absolute_uri(
-                    ExternalApiDump.ExternalApiType.GIDD_DISASTER_EXPORT_REST.label + '?client_id=XXXX'
+                lambda request, client: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_DISASTER_EXPORT_REST.label + f'?client_id={client.code}'
                 )
             ),
         ),
@@ -1595,8 +1595,8 @@ class ExternalApiDump(models.Model):
             api_name=ExternalApiType.GIDD_DISPLACEMENT_EXPORT_REST.label,
             description='',
             example_request=(
-                lambda request: request.build_absolute_uri(
-                    ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_EXPORT_REST.label + '?client_id=XXXX'
+                lambda request, client: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_EXPORT_REST.label + f'?client_id={client.code}'
                 )
             ),
         ),
@@ -1606,8 +1606,8 @@ class ExternalApiDump(models.Model):
             api_name=ExternalApiType.GIDD_PUBLIC_FIGURE_ANALYSIS_REST.label,
             description='',
             example_request=(
-                lambda request: request.build_absolute_uri(
-                    ExternalApiDump.ExternalApiType.GIDD_PUBLIC_FIGURE_ANALYSIS_REST.label + '?client_id=XXXX'
+                lambda request, client: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_PUBLIC_FIGURE_ANALYSIS_REST.label + f'?client_id={client.code}'
                 )
             ),
         ),

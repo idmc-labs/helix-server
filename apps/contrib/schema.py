@@ -60,18 +60,6 @@ class ClientListType(CustomDjangoListObjectType):
         filterset_class = ClientFilter
 
 
-class ClientTrackInformationTypeMetadataType(graphene.ObjectType):
-    response_type = graphene.String(required=True)
-    usage = graphene.String(required=True)
-    api_name = graphene.String(required=True)
-    description = graphene.String(required=True)
-    example_request = graphene.String(required=True)
-
-    @staticmethod
-    def resolve_example_request(root: ExternalApiDump.Metadata, info, **_):
-        return root.get_example_request(info.context.request)
-
-
 class ClientTrackInformationType(DjangoObjectType):
     api_name = graphene.NonNull(graphene.String)
 
@@ -90,11 +78,29 @@ class ClientTrackInformationType(DjangoObjectType):
     api_type_display = EnumDescription(source='get_api_type_display')
 
     # Metadata
-    api_metadata = graphene.Field(ClientTrackInformationTypeMetadataType)
+    response_type = graphene.String(required=True)
+    usage = graphene.String(required=True)
+    description = graphene.String(required=True)
+    example_request = graphene.String(required=True)
 
     @staticmethod
-    def resolve_api_metadata(root, info, **kwargs) -> ExternalApiDump.Metadata:
-        return ExternalApiDump.API_TYPE_METADATA[root.api_type]
+    def resolve_response_type(root, info, **_):
+        return ExternalApiDump.API_TYPE_METADATA[root.api_type].response_type
+
+    @staticmethod
+    def resolve_usage(root, info, **_):
+        return ExternalApiDump.API_TYPE_METADATA[root.api_type].usage
+
+    @staticmethod
+    def resolve_description(root, info, **_):
+        return ExternalApiDump.API_TYPE_METADATA[root.api_type].description
+
+    @staticmethod
+    def resolve_example_request(root, info, **_):
+        return ExternalApiDump.API_TYPE_METADATA[root.api_type].get_example_request(
+            info.context.request,
+            root.client,  # NOTE: Client is select_related using ClientTrackInfoFilter
+        )
 
 
 class ClientTrackInformationListType(CustomDjangoListObjectType):
