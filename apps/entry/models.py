@@ -3,8 +3,9 @@ import re
 from collections import OrderedDict
 from datetime import date
 import logging
-from typing import Optional, Union
+from typing import Optional, Union, Dict, Callable
 from uuid import uuid4
+from dataclasses import dataclass
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -1484,6 +1485,221 @@ class ExternalApiDump(models.Model):
         PENDING = 0, 'Pending'
         COMPLETED = 1, 'Completed'
         FAILED = 2, 'Failed'
+
+    @dataclass
+    class Metadata:
+        response_type: str  # Use Enum GraphQl/REST
+        usage: str  # Use Enum: External/Public, HELIX, IDMC website, Dataset download
+        api_name: str  # Same as enum label for now
+        description: str
+        example_request: Union[str, Callable]
+
+        def get_example_request(self, request):
+            if callable(self.example_request):
+                return self.example_request(request)
+            return self.example_request
+
+    API_TYPE_METADATA: Dict[ExternalApiType, Metadata] = {
+        ExternalApiType.IDUS: Metadata(
+            response_type='JSON',
+            usage='External',
+            api_name=ExternalApiType.IDUS.label,
+            description='',
+            example_request=(
+                lambda request: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDUS.label + '?client_id=XXXX'
+                )
+            ),
+        ),
+        ExternalApiType.IDUS_ALL: Metadata(
+            response_type='JSON',
+            usage='External',
+            api_name=ExternalApiType.IDUS_ALL.label,
+            description='',
+            example_request=(
+                lambda request: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDUS_ALL.label + '?client_id=XXXX'
+                )
+            ),
+        ),
+        ExternalApiType.IDUS_ALL_DISASTER: Metadata(
+            response_type='JSON',
+            usage='External',
+            api_name=ExternalApiType.IDUS_ALL.label,
+            description='',
+            example_request=(
+                lambda request: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER.label + '?client_id=XXXX'
+                )
+            ),
+        ),
+
+        ExternalApiType.GIDD_COUNTRY_REST: Metadata(
+            response_type='REST',
+            usage='External',
+            api_name=ExternalApiType.GIDD_COUNTRY_REST.label,
+            description='',
+            example_request=(
+                lambda request: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_COUNTRY_REST.label + '?client_id=XXXX'
+                )
+            ),
+        ),
+        ExternalApiType.GIDD_CONFLICT_REST: Metadata(
+            response_type='REST',
+            usage='External',
+            api_name=ExternalApiType.GIDD_CONFLICT_REST.label,
+            description='',
+            example_request=(
+                lambda request: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_CONFLICT_REST.label + '?client_id=XXXX'
+                )
+            ),
+        ),
+        ExternalApiType.GIDD_DISASTER_REST: Metadata(
+            response_type='REST',
+            usage='External',
+            api_name=ExternalApiType.GIDD_DISASTER_REST.label,
+            description='',
+            example_request=(
+                lambda request: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_DISASTER_REST.label + '?client_id=XXXX'
+                )
+            ),
+        ),
+        ExternalApiType.GIDD_DISPLACEMENT_REST: Metadata(
+            response_type='REST',
+            usage='External',
+            api_name=ExternalApiType.GIDD_DISPLACEMENT_REST.label,
+            description='',
+            example_request=(
+                lambda request: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_DISASTER_REST.label + '?client_id=XXXX'
+                )
+            ),
+        ),
+        ExternalApiType.GIDD_DISASTER_EXPORT_REST: Metadata(
+            response_type='XLSX',
+            usage='External',
+            api_name=ExternalApiType.GIDD_DISASTER_EXPORT_REST.label,
+            description='',
+            example_request=(
+                lambda request: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_DISASTER_EXPORT_REST.label + '?client_id=XXXX'
+                )
+            ),
+        ),
+        ExternalApiType.GIDD_DISPLACEMENT_EXPORT_REST: Metadata(
+            response_type='XLSX',
+            usage='External',
+            api_name=ExternalApiType.GIDD_DISPLACEMENT_EXPORT_REST.label,
+            description='',
+            example_request=(
+                lambda request: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_EXPORT_REST.label + '?client_id=XXXX'
+                )
+            ),
+        ),
+        ExternalApiType.GIDD_PUBLIC_FIGURE_ANALYSIS_REST: Metadata(
+            response_type='REST',
+            usage='External',
+            api_name=ExternalApiType.GIDD_PUBLIC_FIGURE_ANALYSIS_REST.label,
+            description='',
+            example_request=(
+                lambda request: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.GIDD_PUBLIC_FIGURE_ANALYSIS_REST.label + '?client_id=XXXX'
+                )
+            ),
+        ),
+
+        ExternalApiType.GIDD_CONFLICT_GRAPHQL: Metadata(
+            response_type='GraphQl',
+            usage='IDMC Website',
+            api_name=ExternalApiType.GIDD_CONFLICT_GRAPHQL.label,
+            description='',
+            example_request='',
+        ),
+        ExternalApiType.GIDD_DISASTER_GRAPHQL: Metadata(
+            response_type='GraphQl',
+            usage='IDMC Website',
+            api_name=ExternalApiType.GIDD_DISASTER_GRAPHQL.label,
+            description='',
+            example_request='',
+        ),
+        ExternalApiType.GIDD_DISPLACEMENT_DATA_GRAPHQL: Metadata(
+            response_type='GraphQl',
+            usage='IDMC Website',
+            api_name=ExternalApiType.GIDD_DISPLACEMENT_DATA_GRAPHQL.label,
+            description='',
+            example_request='',
+        ),
+        ExternalApiType.GIDD_PFA_GRAPHQL: Metadata(
+            response_type='GraphQl',
+            usage='IDMC Website',
+            api_name=ExternalApiType.GIDD_PFA_GRAPHQL.label,
+            description='',
+            example_request='',
+        ),
+        ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL: Metadata(
+            response_type='GraphQl',
+            usage='IDMC Website',
+            api_name=ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL.label,
+            description='',
+            example_request='',
+        ),
+        ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL: Metadata(
+            response_type='GraphQl',
+            usage='IDMC Website',
+            api_name=ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL.label,
+            description='',
+            example_request='',
+        ),
+        ExternalApiType.GIDD_HAZARD_TYPES_GRAPHQL: Metadata(
+            response_type='GraphQl',
+            usage='IDMC Website',
+            api_name=ExternalApiType.GIDD_HAZARD_TYPES_GRAPHQL.label,
+            description='',
+            example_request='',
+        ),
+        ExternalApiType.GIDD_YEAR_GRAPHQL: Metadata(
+            response_type='GraphQl',
+            usage='IDMC Website',
+            api_name=ExternalApiType.GIDD_YEAR_GRAPHQL.label,
+            description='',
+            example_request='',
+        ),
+        ExternalApiType.GIDD_EVENT_GRAPHQL: Metadata(
+            response_type='GraphQl',
+            usage='IDMC Website',
+            api_name=ExternalApiType.GIDD_EVENT_GRAPHQL.label,
+            description='',
+            example_request='',
+        ),
+        ExternalApiType.GIDD_COMBINED_STAT_GRAPHQL: Metadata(
+            response_type='GraphQl',
+            usage='IDMC Website',
+            api_name=ExternalApiType.GIDD_COMBINED_STAT_GRAPHQL.label,
+            description='',
+            example_request='',
+        ),
+        ExternalApiType.GIDD_RELEASE_META_DATA_GRAPHQL: Metadata(
+            response_type='GraphQl',
+            usage='IDMC Website',
+            api_name=ExternalApiType.GIDD_RELEASE_META_DATA_GRAPHQL.label,
+            description='',
+            example_request='',
+        ),
+        ExternalApiType.GIDD_PUBLIC_COUNTRIES_GRAPHQL: Metadata(
+            response_type='GraphQl',
+            usage='IDMC Website',
+            api_name=ExternalApiType.GIDD_PUBLIC_COUNTRIES_GRAPHQL.label,
+            description='',
+            example_request='',
+        ),
+    }
+
+    # Make sure metadata is provided for all types
+    assert set(API_TYPE_METADATA.keys()) == set([i for i, _ in ExternalApiType.choices])
 
     dump_file = CachedFileField(
         verbose_name=_('Dump file'),
