@@ -139,9 +139,9 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             return {
                 **datum,
                 **dict(
-                    start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'name', ''),
-                    end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'name', ''),
-                    crisis_type=getattr(Crisis.CRISIS_TYPE.get(datum['crisis_type']), 'name', ''),
+                    start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'label', ''),
+                    end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'label', ''),
+                    crisis_type=getattr(Crisis.CRISIS_TYPE.get(datum['crisis_type']), 'label', ''),
                 )
             }
 
