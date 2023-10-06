@@ -83,6 +83,7 @@ class EventFilter(NameFilterMixin,
         return qs
 
     def filter_review_status(self, qs, name, value):
+        # TODO: We need to treat APPROVED_BUT_CHANGED and SIGNED_OFF_BUT_CHANGED as REVIEW_IN_PROGRESS
         if value:
             if isinstance(value[0], int):
                 return qs.filter(review_status__in=value).distinct()

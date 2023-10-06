@@ -132,7 +132,6 @@ class TestDirectorsOfficeRole(HelixGraphQLTestCase):
                 'approve': True,
             },
         )
-        print(response.json())
         error_message = response.json()['errors'][0]['message']
         self.assertEqual(error_message, PERMISSION_DENIED_MESSAGE)
 

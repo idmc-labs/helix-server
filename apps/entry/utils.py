@@ -21,12 +21,18 @@ def bulk_create_update_delete_figures(validated_data, delete_ids, context):
         )
         deleted_figures_for_signed_off_events = list(
             figures_to_delete.filter(
-                event__review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF
+                event__review_status__in=[
+                    Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
+                    Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED,
+                ],
             )
         )
         deleted_figures_for_approved_events = list(
             figures_to_delete.filter(
-                event__review_status=Event.EVENT_REVIEW_STATUS.APPROVED
+                event__review_status__in=[
+                    Event.EVENT_REVIEW_STATUS.APPROVED,
+                    Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED,
+                ],
             )
         )
         affected_events = Event.objects.filter(
@@ -56,13 +62,25 @@ def bulk_create_update_delete_figures(validated_data, delete_ids, context):
             fig_ser._errors = {}
             figure = fig_ser.save()
             objects_created_or_updated.append(figure)
-            if is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+            if is_new_figure and (
+                figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF or
+                figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED
+            ):
                 created_figures_for_signed_off_events.append(figure)
-            elif is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+            elif is_new_figure and (
+                figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED or
+                figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED
+            ):
                 created_figures_for_approved_events.append(figure)
-            elif not is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+            elif not is_new_figure and (
+                figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF or
+                figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED
+            ):
                 updated_figures_for_signed_off_events.append(figure)
-            elif not is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+            elif not is_new_figure and (
+                figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED or
+                figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED
+            ):
                 updated_figures_for_approved_events.append(figure)
             elif not is_new_figure:
                 updated_figures_for_other_events.append(figure)
