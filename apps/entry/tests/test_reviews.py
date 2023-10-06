@@ -230,7 +230,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
 
         event.refresh_from_db()
-        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS)
+        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED)
 
     def test_event_status_should_be_calculated_if_include_triangulation_in_qa_is_changed(self):
         event = EventFactory.create(include_triangulation_in_qa=False, review_status=Event.EVENT_REVIEW_STATUS.APPROVED)
@@ -247,7 +247,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertTrue(content['data']['updateEvent']['ok'], content)
 
         event.refresh_from_db()
-        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED)
+        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED)
 
     def test_should_change_figure_status_in_progress_if_figure_is_saved(self):
         entry = EntryFactory.create()

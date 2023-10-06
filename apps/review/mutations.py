@@ -57,6 +57,7 @@ class CreateUnifiedReviewComment(graphene.Mutation):
                     ok=False
                 )
 
+            # NOTE: State machine with states defined in FIGURE_REVIEW_STATUS
             if figure and figure.review_status == Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED:
                 figure.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
                 figure.save()
@@ -162,6 +163,7 @@ class DeleteUnifiedReviewComment(graphene.Mutation):
         instance.is_deleted = True
         instance.comment = None
         instance.save()
+        # FIXME: Don't we need to update the status here?
         return DeleteUnifiedReviewComment(result=instance, errors=None, ok=True)
 
 

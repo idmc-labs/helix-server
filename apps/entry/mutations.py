@@ -133,7 +133,10 @@ class DeleteEntry(graphene.Mutation):
                     recipients.append(figure.event.assignee_id)
 
                 notification_type = Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT
-                if review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+                if (
+                    review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF or
+                    review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED
+                ):
                     notification_type = Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT
 
                 Notification.send_safe_multiple_notifications(
@@ -350,9 +353,15 @@ class DeleteFigure(graphene.Mutation):
         instance.delete()
 
         def _get_notification_type(event):
-            if event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+            if (
+                event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED or
+                event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED
+            ):
                 return Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT
-            if event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+            if (
+                event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF or
+                event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED
+            ):
                 return Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT
             return None
 
@@ -449,9 +458,15 @@ class UnapproveFigure(graphene.Mutation):
         figure.save()
 
         def _get_notification_type(event):
-            if event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+            if (
+                event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED or
+                event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED
+            ):
                 return Notification.Type.FIGURE_UNAPPROVED_IN_APPROVED_EVENT
-            if event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+            if (
+                event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF or
+                event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED
+            ):
                 return Notification.Type.FIGURE_UNAPPROVED_IN_SIGNED_EVENT
             return None
 
@@ -498,6 +513,7 @@ class ReRequestReviewFigure(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
             ])
 
+        # NOTE: State machine with states defined in FIGURE_REVIEW_STATUS
         if figure.review_status != Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS:
             return ReRequestReviewFigure(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Only in-progress figures can be re-requested review'))
