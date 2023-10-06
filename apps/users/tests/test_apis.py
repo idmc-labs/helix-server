@@ -571,6 +571,7 @@ class TestUserListSchema(HelixGraphQLTestCase):
                 results {
                   id
                   portfolioRole
+                  portfolioRoleDisplay
                   permissions {
                     action
                   }
@@ -580,9 +581,23 @@ class TestUserListSchema(HelixGraphQLTestCase):
             }
         '''
         ua = create_user_with_role(USER_ROLE.ADMIN.name)
-        ur = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
-        create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        urc = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
+        ud = create_user_with_role(USER_ROLE.DIRECTORS_OFFICE.name)
+        urt = create_user_with_role(USER_ROLE.REPORTING_TEAM.name)
+        um = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         guest = create_user_with_role(USER_ROLE.GUEST.name)
+
+        expected_user_roles = {
+            # Shown as GUEST with different PortfolioRole
+            str(ua.pk): (USER_ROLE.GUEST.name, USER_ROLE.GUEST.label),   # Has Admin Role
+            str(ud.pk): (USER_ROLE.GUEST.name, USER_ROLE.GUEST.label),   # Has DIRECTORS_OFFICE Role
+            str(urt.pk): (USER_ROLE.GUEST.name, USER_ROLE.GUEST.label),  # Has REPORTING_TEAM Role
+            str(urc.pk): (USER_ROLE.REGIONAL_COORDINATOR.name, USER_ROLE.REGIONAL_COORDINATOR.label),
+            str(um.pk): (USER_ROLE.MONITORING_EXPERT.name, USER_ROLE.MONITORING_EXPERT.label),
+            # Just GUEST
+            str(guest.pk): (USER_ROLE.GUEST.name, USER_ROLE.GUEST.label),
+        }
+        total_user_count = len(expected_user_roles)
 
         self.force_login(guest)
         response = self.query(
@@ -590,32 +605,40 @@ class TestUserListSchema(HelixGraphQLTestCase):
         )
         content = response.json()
         self.assertResponseNoErrors(response)
-        self.assertEqual(content['data']['users']['totalCount'], 4)
+        self.assertEqual(content['data']['users']['totalCount'], total_user_count)
         self.assertEqual(set([item['email'] for item in content['data']['users']['results']]),
                          set([guest.email, None]))
-        self.assertEqual(set([item['portfolioRole'] for item in content['data']['users']['results']]),
-                         set([USER_ROLE.REGIONAL_COORDINATOR.name, USER_ROLE.MONITORING_EXPERT.name, None]))
+        self.assertEqual(
+            {
+                item['id']: (
+                    item['portfolioRole'],
+                    item['portfolioRoleDisplay'],
+                )
+                for item in content['data']['users']['results']
+            },
+            expected_user_roles,
+        )
         self.assertIn(
             None,
             [item['permissions'] for item in content['data']['users']['results']]
         )
 
-        self.force_login(ur)
+        self.force_login(urc)
         response = self.query(
             users_q
         )
         content = response.json()
         self.assertResponseNoErrors(response)
-        self.assertEqual(content['data']['users']['totalCount'], 4)
+        self.assertEqual(content['data']['users']['totalCount'], total_user_count)
         self.assertEqual(set([item['email'] for item in content['data']['users']['results']]),
-                         set([ur.email, None]))
+                         set([urc.email, None]))
         self.force_login(ua)
         response = self.query(
             users_q
         )
         content = response.json()
         self.assertResponseNoErrors(response)
-        self.assertEqual(content['data']['users']['totalCount'], 4)
+        self.assertEqual(content['data']['users']['totalCount'], total_user_count)
         # we should not get all email
         self.assertIn(
             None,

@@ -108,6 +108,7 @@ LOCAL_APPS = [
 ]
 
 THIRD_PARTY_APPS = [
+    'admin_auto_filters',
     'graphene_django',
     'rest_framework.authtoken',  # required by djoser
     'djoser',

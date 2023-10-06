@@ -43,6 +43,7 @@ turfpy = "0.0.6"
 uWSGI = "*"
 django-environ = "^0.8.1"
 drf-spectacular = "*"
+django-admin-autocomplete-filter = "*"
 
 [tool.poetry.dev-dependencies]
 pytest-django = "3.9.0"

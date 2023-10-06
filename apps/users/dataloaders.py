@@ -1,30 +1,35 @@
-from promise.dataloader import DataLoader
-from apps.users.models import User, USER_ROLE
-from django.db.models import Case, When, IntegerField
 from promise import Promise
+from promise.dataloader import DataLoader
+
+from django.contrib.postgres.aggregates import ArrayAgg
+from django.db import models
+
+from apps.users.models import Portfolio, USER_ROLE
 
 
 class UserPortfolioRoleLoader(DataLoader):
     def batch_load_fn(self, keys):
-        qs = User.objects.filter(
-            id__in=keys
+        qs = Portfolio.objects.filter(
+            user__in=keys,
+        ).order_by().values('user').annotate(
+            portfolio_roles=ArrayAgg(models.F('role'), distinct=True),
         ).annotate(
-            portfolio_role=Case(
-                When(
-                    portfolios__role__in=[USER_ROLE.REGIONAL_COORDINATOR.value],
+            portfolio_role=models.Case(
+                models.When(
+                    portfolio_roles__overlap=[USER_ROLE.REGIONAL_COORDINATOR.value],
                     then=USER_ROLE.REGIONAL_COORDINATOR.value
                 ),
-                When(
-                    portfolios__role__in=[USER_ROLE.MONITORING_EXPERT.value],
+                models.When(
+                    portfolio_roles__overlap=[USER_ROLE.MONITORING_EXPERT.value],
                     then=USER_ROLE.MONITORING_EXPERT.value
                 ),
                 default=USER_ROLE.GUEST.value,
-                output_field=IntegerField(),
-            )
-        ).values('id', 'portfolio_role')
+                output_field=models.IntegerField(),
+            ),
+        ).values_list('user', 'portfolio_role')
         batch_load = {
-            item['id']: USER_ROLE(item['portfolio_role']).label
-            for item in qs
+            user: USER_ROLE(portfolio_role)
+            for user, portfolio_role in qs
         }
         return Promise.resolve([
             batch_load.get(key) for key in keys
