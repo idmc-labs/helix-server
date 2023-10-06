@@ -89,10 +89,6 @@ class User(AbstractUser):
     def highest_role(self) -> USER_ROLE:
         return Portfolio.get_highest_role(self)
 
-    @property
-    def portfolio_role(self) -> USER_ROLE:
-        return Portfolio.portfolio_role(self)
-
     def get_full_name(self):
         return ' '.join([
             name for name in [self.first_name, self.last_name] if name
@@ -186,15 +182,6 @@ class Portfolio(models.Model):
         if USER_ROLE.REPORTING_TEAM in roles:
             return USER_ROLE.REPORTING_TEAM
         return USER_ROLE.GUEST
-
-    @classmethod
-    def portfolio_role(cls, user: User) -> USER_ROLE:
-        roles = list(user.portfolios.values_list('role', flat=True))
-        if USER_ROLE.REGIONAL_COORDINATOR in roles:
-            return USER_ROLE.REGIONAL_COORDINATOR
-        if USER_ROLE.MONITORING_EXPERT in roles:
-            return USER_ROLE.MONITORING_EXPERT
-        return None
 
     @property
     def permissions(self) -> list[dict]:

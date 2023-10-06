@@ -72,43 +72,44 @@ class UserType(DjangoObjectType):
     is_reporting_team = graphene.Boolean()
 
     @staticmethod
-    def resolve_permissions(root, info, **kwargs):
+    def resolve_permissions(root, info, **_):
         if root == info.context.request.user:
             return root.permissions
 
     @staticmethod
-    def resolve_email(root, info, **kwargs):
+    def resolve_email(root, info, **_):
         if root == info.context.request.user:
             return root.email
 
     @staticmethod
-    def resolve_is_admin(user, info, **kwargs):
+    def resolve_is_admin(user, info, **_):
         # FIXME: Send the roles list to client instead
         roles = list(user.portfolios.values_list('role', flat=True))
         return USER_ROLE.ADMIN.value in roles
 
     @staticmethod
-    def resolve_is_directors_office(user, info, **kwargs):
+    def resolve_is_directors_office(user, info, **_):
         # FIXME: Send the roles list to client instead
         roles = list(user.portfolios.values_list('role', flat=True))
         return USER_ROLE.DIRECTORS_OFFICE.value in roles
 
     @staticmethod
-    def resolve_is_reporting_team(user, info, **kwargs):
+    def resolve_is_reporting_team(user, info, **_):
         # FIXME: Send the roles list to client instead
         roles = list(user.portfolios.values_list('role', flat=True))
         return USER_ROLE.REPORTING_TEAM.value in roles
 
     @staticmethod
-    def resolve_portfolio_role(root, info, **kwargs):
-        return root.portfolio_role
+    def resolve_portfolio_role(root, info, **_):
+        return info.context.user_portfolio_role_loader.load(root.id)
 
     @staticmethod
-    def resolve_portfolios(root, info, **kwargs):
-        return Portfolio.objects.filter(user=root.id).select_related('monitoring_sub_region')
-
-    def resolve_portfolio_role_display(root, info, **kwargs):
+    def resolve_portfolio_role_display(root, info, **_):
         return info.context.user_portfolio_role_loader.load(root.id)
+
+    @staticmethod
+    def resolve_portfolios(root, info, **_):
+        return Portfolio.objects.filter(user=root.id).select_related('monitoring_sub_region')
 
 
 class UserListType(CustomDjangoListObjectType):
