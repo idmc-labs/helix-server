@@ -31,6 +31,9 @@ variables:
   ENABLE_DEBUG_TOOLBAR: False
   USE_S3_BUCKET: True
 
+logging:
+  retention: 90
+
 secrets:
   # Same as api/manifest.yml::secrets
   DJANGO_SECRET_KEY: /copilot/${COPILOT_APPLICATION_NAME}/${COPILOT_ENVIRONMENT_NAME}/secrets/DJANGO_SECRET_KEY
