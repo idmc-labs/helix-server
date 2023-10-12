@@ -1481,6 +1481,10 @@ def dump_file_upload_to(instance, filename):
     return f'api-dump/{api_type}/{date_str}/{random_chars}/{filename}'
 
 
+# FIXME: move this somewhere else
+IDMC_WEBSITE_CLIENT_CODE = 'IDMCWSHSOLO009'
+
+
 class ExternalApiDump(models.Model):
 
     class ExternalApiType(models.TextChoices):
@@ -1520,7 +1524,7 @@ class ExternalApiDump(models.Model):
     @dataclass
     class Metadata:
         response_type: str  # Use Enum GraphQL - JSON/REST
-        usage: str  # Use Enum: External/Public, HELIX, IDMC website, Dataset download
+        usage: Union[str, Callable]  # Use Enum: External/Public, HELIX, IDMC website, Dataset download
         description: str
         example_request: Union[str, Callable]
 
@@ -1528,6 +1532,11 @@ class ExternalApiDump(models.Model):
             if callable(self.example_request):
                 return self.example_request(request, client_code)
             return self.example_request
+
+        def get_usage(self, request, client_code: str):
+            if callable(self.usage):
+                return self.usage(request, client_code)
+            return self.usage
 
     API_TYPE_METADATA: Dict[ExternalApiType, Metadata] = {
         ExternalApiType.IDUS: Metadata(
@@ -1634,73 +1643,97 @@ class ExternalApiDump(models.Model):
 
         ExternalApiType.GIDD_CONFLICT_GRAPHQL: Metadata(
             response_type='GraphQL - JSON',
-            usage='IDMC Website',
+            usage=(
+                lambda _, client_code: 'IDMC Website' if client_code == IDMC_WEBSITE_CLIENT_CODE else 'IDMC Widgets'
+            ),
             description='',
             example_request='',
         ),
         ExternalApiType.GIDD_DISASTER_GRAPHQL: Metadata(
             response_type='GraphQL - JSON',
-            usage='IDMC Website',
+            usage=(
+                lambda _, client_code: 'IDMC Website' if client_code == IDMC_WEBSITE_CLIENT_CODE else 'IDMC Widgets'
+            ),
             description='',
             example_request='',
         ),
         ExternalApiType.GIDD_DISPLACEMENT_DATA_GRAPHQL: Metadata(
             response_type='GraphQL - JSON',
-            usage='IDMC Website',
+            usage=(
+                lambda _, client_code: 'IDMC Website' if client_code == IDMC_WEBSITE_CLIENT_CODE else 'IDMC Widgets'
+            ),
             description='',
             example_request='',
         ),
         ExternalApiType.GIDD_PFA_GRAPHQL: Metadata(
             response_type='GraphQL - JSON',
-            usage='IDMC Website',
+            usage=(
+                lambda _, client_code: 'IDMC Website' if client_code == IDMC_WEBSITE_CLIENT_CODE else 'IDMC Widgets'
+            ),
             description='',
             example_request='',
         ),
         ExternalApiType.GIDD_CONFLICT_STAT_GRAPHQL: Metadata(
             response_type='GraphQL - JSON',
-            usage='IDMC Website',
+            usage=(
+                lambda _, client_code: 'IDMC Website' if client_code == IDMC_WEBSITE_CLIENT_CODE else 'IDMC Widgets'
+            ),
             description='',
             example_request='',
         ),
         ExternalApiType.GIDD_DISASTER_STAT_GRAPHQL: Metadata(
             response_type='GraphQL - JSON',
-            usage='IDMC Website',
+            usage=(
+                lambda _, client_code: 'IDMC Website' if client_code == IDMC_WEBSITE_CLIENT_CODE else 'IDMC Widgets'
+            ),
             description='',
             example_request='',
         ),
         ExternalApiType.GIDD_HAZARD_TYPES_GRAPHQL: Metadata(
             response_type='GraphQL - JSON',
-            usage='IDMC Website',
+            usage=(
+                lambda _, client_code: 'IDMC Website' if client_code == IDMC_WEBSITE_CLIENT_CODE else 'IDMC Widgets'
+            ),
             description='',
             example_request='',
         ),
         ExternalApiType.GIDD_YEAR_GRAPHQL: Metadata(
             response_type='GraphQL - JSON',
-            usage='IDMC Website',
+            usage=(
+                lambda _, client_code: 'IDMC Website' if client_code == IDMC_WEBSITE_CLIENT_CODE else 'IDMC Widgets'
+            ),
             description='',
             example_request='',
         ),
         ExternalApiType.GIDD_EVENT_GRAPHQL: Metadata(
             response_type='GraphQL - JSON',
-            usage='IDMC Website',
+            usage=(
+                lambda _, client_code: 'IDMC Website' if client_code == IDMC_WEBSITE_CLIENT_CODE else 'IDMC Widgets'
+            ),
             description='',
             example_request='',
         ),
         ExternalApiType.GIDD_COMBINED_STAT_GRAPHQL: Metadata(
             response_type='GraphQL - JSON',
-            usage='IDMC Website',
+            usage=(
+                lambda _, client_code: 'IDMC Website' if client_code == IDMC_WEBSITE_CLIENT_CODE else 'IDMC Widgets'
+            ),
             description='',
             example_request='',
         ),
         ExternalApiType.GIDD_RELEASE_META_DATA_GRAPHQL: Metadata(
             response_type='GraphQL - JSON',
-            usage='IDMC Website',
+            usage=(
+                lambda _, client_code: 'IDMC Website' if client_code == IDMC_WEBSITE_CLIENT_CODE else 'IDMC Widgets'
+            ),
             description='',
             example_request='',
         ),
         ExternalApiType.GIDD_PUBLIC_COUNTRIES_GRAPHQL: Metadata(
             response_type='GraphQL - JSON',
-            usage='IDMC Website',
+            usage=(
+                lambda _, client_code: 'IDMC Website' if client_code == IDMC_WEBSITE_CLIENT_CODE else 'IDMC Widgets'
+            ),
             description='',
             example_request='',
         ),

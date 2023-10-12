@@ -2457,6 +2457,7 @@ enum PERMISSION_ENTITY {
   contextofviolence
   gidd
   client
+  figuretag
 }
 
 enum PREVIEW_STATUS {

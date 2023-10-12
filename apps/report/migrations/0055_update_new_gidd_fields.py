@@ -4,19 +4,20 @@ from django.db import migrations
 
 def update_new_gidd_fields(apps, schema_editor):
     Report = apps.get_model('report', 'Report')
-    ReleaseMetadata = apps.get_model('gidd', 'ReleaseMetadata')
+    StatusLog = apps.get_model('gidd', 'StatusLog')
     PublicFigureAnalysis = apps.get_model('gidd', 'PublicFigureAnalysis')
 
-    # Update gidd_published_date 
-    last_release_meta_data= ReleaseMetadata.objects.last()
-    if last_release_meta_data:
-        last_release_meta_data_date = last_release_meta_data.modified_at
+    # Update gidd_published_date
+    last_status_log = StatusLog.objects.last()
+    if last_status_log:
+        last_release_meta_data_date = last_status_log.completed_at
         Report.objects.filter(is_gidd_report=True).update(gidd_published_date=last_release_meta_data_date)
 
         # Update is_pfa_visible_in_gidd
         for pfa in PublicFigureAnalysis.objects.all():
-            pfa.report.is_pfa_published_in_gidd=True
-            pfa.report.save(update_fields=['is_pfa_published_in_gidd'])
+            pfa.report.gidd_published_date = last_release_meta_data_date
+            pfa.report.is_pfa_published_in_gidd = True
+            pfa.report.save(update_fields=['is_pfa_published_in_gidd', 'gidd_published_date'])
 
 
 class Migration(migrations.Migration):

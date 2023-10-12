@@ -89,7 +89,10 @@ class ClientTrackInformationType(DjangoObjectType):
 
     @staticmethod
     def resolve_usage(root, info, **_):
-        return ExternalApiDump.API_TYPE_METADATA[root.api_type].usage
+        return ExternalApiDump.API_TYPE_METADATA[root.api_type].get_usage(
+            info.context.request,
+            root.client.code,  # NOTE: Client is select_related using ClientTrackInfoFilter
+        )
 
     @staticmethod
     def resolve_description(root, info, **_):
