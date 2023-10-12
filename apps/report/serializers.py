@@ -116,7 +116,7 @@ class ReportSerializer(MetaInformationSerializerMixin,
         return errors
 
     def validate_gidd_report(self, attrs, errors):
-        is_gidd_report = attrs.get('is_gidd_report')
+        is_gidd_report = attrs.get('is_gidd_report', getattr(self.instance, 'is_gidd_report', None))
         if is_gidd_report is True:
             year = attrs.get('gidd_report_year')
 

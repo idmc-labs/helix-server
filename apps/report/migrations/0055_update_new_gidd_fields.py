@@ -7,15 +7,16 @@ def update_new_gidd_fields(apps, schema_editor):
     ReleaseMetadata = apps.get_model('gidd', 'ReleaseMetadata')
     PublicFigureAnalysis = apps.get_model('gidd', 'PublicFigureAnalysis')
 
-    # Update gidd_published_date 
-    last_release_meta_data= ReleaseMetadata.objects.last()
+    # Update gidd_published_date
+    last_release_meta_data = ReleaseMetadata.objects.last()
     if last_release_meta_data:
         last_release_meta_data_date = last_release_meta_data.modified_at
         Report.objects.filter(is_gidd_report=True).update(gidd_published_date=last_release_meta_data_date)
 
         # Update is_pfa_visible_in_gidd
         for pfa in PublicFigureAnalysis.objects.all():
-            pfa.report.is_pfa_published_in_gidd=True
+            pfa.report.gidd_published_date = last_release_meta_data_date
+            pfa.report.is_pfa_published_in_gidd = True
             pfa.report.save(update_fields=['is_pfa_published_in_gidd'])
 
 
