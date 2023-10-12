@@ -606,6 +606,36 @@ class Figure(MetaInformationArchiveAbstractModel,
         return same_year_figures | mutiple_year_figures
 
     @classmethod
+    def filtered_nd_figures_for_listing(
+        cls,
+        qs: QuerySet,
+        start_date: Optional[date],
+        end_date: Optional[date] = None,
+    ):
+        year_difference = ExpressionWrapper(
+            ExtractYear('end_date') - ExtractYear('start_date'),
+            output_field=fields.IntegerField(),
+        )
+        qs = qs.annotate(year_difference=year_difference)
+
+        same_year_figures = qs.filter(
+            category__in=cls.flow_list(),
+            year_difference__lt=1,
+        )
+        mutiple_year_figures = qs.filter(
+            category__in=cls.flow_list(),
+            year_difference__gte=1,
+        )
+        if start_date:
+            same_year_figures = same_year_figures.filter(start_date__gte=start_date)
+            mutiple_year_figures = mutiple_year_figures.filter(end_date__gte=start_date)
+        if end_date:
+            same_year_figures = same_year_figures.filter(start_date__lte=end_date)
+            mutiple_year_figures = mutiple_year_figures.filter(end_date__lte=end_date)
+
+        return same_year_figures | mutiple_year_figures
+
+    @classmethod
     def annotate_stock_and_flow_dates(cls):
         return {
             'flow_start_date': Case(
@@ -752,7 +782,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         end_date: Optional[date] = None,
     ):
         qs = qs.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
+            category__in=cls.stock_list()
         )
         if start_date:
             qs = qs.filter(end_date__gte=start_date)
