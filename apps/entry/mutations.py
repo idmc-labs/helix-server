@@ -213,6 +213,7 @@ class CreateFigureTag(graphene.Mutation):
 
     @staticmethod
     @is_authenticated()
+    @permission_checker(['entry.add_figuretag'])
     def mutate(root, info, data):
         serializer = FigureTagCreateSerializer(data=data, context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):
@@ -231,6 +232,7 @@ class UpdateFigureTag(graphene.Mutation):
 
     @staticmethod
     @is_authenticated()
+    @permission_checker(['entry.change_figuretag'])
     def mutate(root, info, data):
         try:
             instance = FigureTag.objects.get(id=data['id'])
@@ -256,6 +258,7 @@ class DeleteFigureTag(graphene.Mutation):
 
     @staticmethod
     @is_authenticated()
+    @permission_checker(['entry.delete_figuretag'])
     def mutate(root, info, id):
         try:
             instance = FigureTag.objects.get(id=id)

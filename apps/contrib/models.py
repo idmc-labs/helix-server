@@ -365,7 +365,7 @@ class ClientTrackInfo(models.Model):
                 'api_name': getattr(ExternalApiDump.ExternalApiType(datum['api_type']), 'label', ''),
                 'api_example_request': metadata.get_example_request(dummy_request, datum['client_code']),
                 'api_response_type': metadata.response_type,
-                'api_usage': metadata.usage,
+                'api_usage': metadata.get_usage(dummy_request, datum['client_code']),
                 'api_description': metadata.description,
             }
         return {

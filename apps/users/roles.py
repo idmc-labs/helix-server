@@ -30,6 +30,7 @@ MONITORING_EXPERT_MODELS = {
     PERMISSION_ENTITY.resource,
     PERMISSION_ENTITY.report,
     PERMISSION_ENTITY.reportcomment,
+    PERMISSION_ENTITY.figuretag,
 }
 
 REGIONAL_COORDINATOR_MODELS = MONITORING_EXPERT_MODELS | {
@@ -102,8 +103,8 @@ PERMISSIONS = {
         PERMISSION_ACTION.update_release_meta_data: set(),
     },
     USER_ROLE.REPORTING_TEAM: {
-        PERMISSION_ACTION.add: {PERMISSION_ENTITY.report},
-        PERMISSION_ACTION.change: {PERMISSION_ENTITY.report},
+        PERMISSION_ACTION.add: {PERMISSION_ENTITY.report, PERMISSION_ENTITY.organization, PERMISSION_ENTITY.figuretag},
+        PERMISSION_ACTION.change: {PERMISSION_ENTITY.report, PERMISSION_ENTITY.organization, PERMISSION_ENTITY.figuretag},
         PERMISSION_ACTION.delete: {PERMISSION_ENTITY.report},
         PERMISSION_ACTION.approve: set(),
         PERMISSION_ACTION.sign_off: set(),

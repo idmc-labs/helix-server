@@ -203,7 +203,7 @@ def update_conflict_and_disaster_data():
             'event__disaster_category__name',
             'event__disaster_sub_category__name',
             'event__disaster_type__name',
-            'event__disaster_sub_category__name',
+            'event__disaster_sub_type__name',
             'event__start_date',
             'event__end_date',
             'event__start_date_accuracy',
@@ -303,10 +303,25 @@ def update_public_figure_analysis():
         ):
             return report_country_aggregation['total_flow_disaster']
 
-    for report in Report.objects.filter(
+    # FIXME: only update the gidd_published_date when the report is stale
+    Report.objects.filter(
+        is_gidd_report=True,
+    ).update(gidd_published_date=timezone.now())
+
+    visible_pfa_reports_qs = Report.objects.filter(
         is_pfa_visible_in_gidd=True,
         filter_figure_start_after__year__in=get_gidd_years(),
-    ):
+    )
+
+    # FIXME: only update the gidd_published_date when the report is stale
+    visible_pfa_reports_qs.update(
+        gidd_published_date=timezone.now(),
+        is_pfa_published_in_gidd=True,
+    )
+
+    # FIXME: add a cleanup function
+
+    for report in visible_pfa_reports_qs:
         report_country_aggregation = report.report_figures.aggregate(
             **report.TOTAL_FIGURE_DISAGGREGATIONS,
         )
@@ -335,9 +350,6 @@ def update_public_figure_analysis():
                 report=report
             ),
         )
-        report.gidd_published_date = timezone.now()
-        report.is_pfa_published_in_gidd = True
-        report.save()
 
     # Bulk create public analysis
     PublicFigureAnalysis.objects.bulk_create(data)

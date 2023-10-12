@@ -116,9 +116,9 @@ class ReportSerializer(MetaInformationSerializerMixin,
         return errors
 
     def validate_gidd_report(self, attrs, errors):
-        is_gidd_report = attrs.get('is_gidd_report', getattr(self.instance, 'is_gidd_report', None))
+        is_gidd_report = attrs.get('is_gidd_report', self.instance and self.instance.is_gidd_report)
         if is_gidd_report is True:
-            year = attrs.get('gidd_report_year')
+            year = attrs.get('gidd_report_year', self.instance and self.instance.gidd_report_year)
 
             if not year:
                 raise serializers.ValidationError('For GIDD report year is required.')
@@ -140,10 +140,8 @@ class ReportSerializer(MetaInformationSerializerMixin,
             attrs['filter_figure_end_before'] = datetime.datetime(year=year, month=12, day=31)
             attrs['is_public'] = True
             attrs['is_pfa_visible_in_gidd'] = False
-            return attrs
         else:
             attrs['gidd_report_year'] = None
-        return attrs
 
     @staticmethod
     def has_permission_for_report(user, report):

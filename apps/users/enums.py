@@ -61,6 +61,7 @@ class PERMISSION_ENTITY(enum.Enum):
     contextofviolence = 20
     gidd = 21
     client = 22
+    figuretag = 23
 
     __labels__ = {
         crisis: _('Crisis'),
@@ -86,6 +87,7 @@ class PERMISSION_ENTITY(enum.Enum):
         contextofviolence: _('Context of violence'),
         gidd: _('GIDD'),
         client: _('Client'),
+        figuretag: _('Figure Tag'),
     }
 
 
