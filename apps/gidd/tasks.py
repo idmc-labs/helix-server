@@ -149,6 +149,9 @@ def update_conflict_and_disaster_data():
         role=Figure.ROLE.RECOMMENDED
     )
     for year in get_gidd_years():
+        # FIXME: Check if this should be
+        # - Figure.filtered_nd_figures_for_listing
+        # - Figure.filtered_idp_figures_for_listing
         nd_figure_qs = Figure.filtered_nd_figures(
             qs=figure_queryset,
             start_date=datetime.datetime(year=year, month=1, day=1),

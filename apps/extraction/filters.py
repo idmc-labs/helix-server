@@ -647,7 +647,7 @@ class ReportFigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         start_date = self.data.get('filter_figure_start_after')
         end_date = self.data.get('filter_figure_end_before')
 
-        flow_qs = Figure.filtered_nd_figures(
+        flow_qs = Figure.filtered_nd_figures_for_listing(
             queryset, start_date, end_date
         )
         stock_qs = Figure.filtered_idp_figures_for_listing(
