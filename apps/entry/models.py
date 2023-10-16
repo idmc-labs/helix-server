@@ -64,10 +64,12 @@ class OSMName(UUIDAbstractModel, models.Model):
     class IDENTIFIER(enum.Enum):
         ORIGIN = 0
         DESTINATION = 1
+        ORIGIN_AND_DESTINATION = 2
 
         __labels__ = {
             ORIGIN: _('Origin'),
             DESTINATION: _('Destination'),
+            ORIGIN_AND_DESTINATION: _('Origin and destination'),
         }
 
     # default unique behaviour is removed

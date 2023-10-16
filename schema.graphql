@@ -1901,6 +1901,7 @@ type GiddYearType {
 enum IDENTIFIER {
   ORIGIN
   DESTINATION
+  ORIGIN_AND_DESTINATION
 }
 
 scalar JSONString
