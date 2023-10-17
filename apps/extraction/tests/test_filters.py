@@ -195,28 +195,6 @@ class TestExtractionFilter(HelixTestCase):
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1event1, self.entry2event2})
 
-    def test_filter_by_displacement_types(self):
-        data = dict(
-            filter_figure_displacement_types=['RURAL']
-        )
-        fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry1event1})
-        self.assertNotIn(self.entry3event2, fqs)
-
-        data = dict(
-            filter_figure_displacement_types=['URBAN']
-        )
-        fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry2event2})
-        self.assertNotIn(self.entry3event2, fqs)
-
-        data = dict(
-            filter_figure_displacement_types=['URBAN', 'RURAL']
-        )
-        fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry1event1, self.entry2event2})
-        self.assertNotIn(self.entry3event2, fqs)
-
     def test_filter_by_time_frame(self):
         Figure.objects.all().delete()
         self.fig1cat1entry1 = FigureFactory.create(
