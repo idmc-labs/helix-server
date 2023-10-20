@@ -6,7 +6,6 @@ from django_enumfield import enum
 from apps.contrib.models import MetaInformationAbstractModel
 from apps.entry.models import (
     Figure,
-    FigureDisaggregationAbstractModel,
 )
 from apps.crisis.models import Crisis
 from apps.entry.constants import STOCK, FLOW
@@ -100,11 +99,6 @@ class QueryAbstractModel(models.Model):
         verbose_name=_('Entry Created by'),
         blank=True,
     )
-    filter_figure_displacement_types = ArrayField(
-        base_field=enum.EnumField(enum=FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE),
-        blank=True,
-        null=True
-    )
     filter_figure_terms = ArrayField(
         base_field=enum.EnumField(enum=Figure.FIGURE_TERMS),
         blank=True,
@@ -185,7 +179,6 @@ class QueryAbstractModel(models.Model):
             filter_figure_end_before=self.filter_figure_end_before,
             filter_entry_article_title=self.filter_entry_article_title,
             filter_figure_crisis_types=self.filter_figure_crisis_types,
-            filter_figure_displacement_types=self.filter_figure_displacement_types,
             filter_figure_terms=self.filter_figure_terms,
             filter_figure_disaster_categories=self.filter_figure_disaster_categories.all(),
             filter_figure_disaster_sub_categories=self.filter_figure_disaster_sub_categories.all(),

@@ -7,7 +7,6 @@ from apps.extraction.models import ExtractionQuery
 from apps.entry.models import (
     Entry,
     Figure,
-    FigureDisaggregationAbstractModel,
 )
 from apps.report.models import Report
 from utils.filters import StringListFilter, IDListFilter
@@ -15,8 +14,6 @@ from apps.event.constants import OSV
 from apps.common.enums import GENDER_TYPE
 from apps.entry.constants import STOCK, FLOW
 
-RURAL = FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE.RURAL.name
-URBAN = FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE.URBAN.name
 MALE = GENDER_TYPE.MALE.name
 FEMALE = GENDER_TYPE.FEMALE.name
 
@@ -52,12 +49,12 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_violence_types = IDListFilter(method='filter_filter_figure_violence_types')
     filter_figure_osv_sub_types = IDListFilter(method='filter_filter_figure_osv_sub_types')
     filter_figure_review_status = StringListFilter(method='filter_filter_figure_review_status')
+    filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data')
     filter_figure_approved_by = IDListFilter(method='filter_filter_figure_approved_by')
     # used in report entry table
     report = df.CharFilter(method='filter_report')
     filter_context_of_violences = IDListFilter(method='filter_filter_context_of_violences')
     filter_is_figure_to_be_reviewed = df.BooleanFilter(method='filter_filter_is_figure_to_be_reviewed')
-    filter_figure_is_disaggregated = df.BooleanFilter(method='filter_is_figure_disaggregated')
 
     class Meta:
         model = Entry
@@ -265,7 +262,7 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs.filter(~Q(figures__event__violence__name=OSV) | Q(figures__osv_sub_type__in=value)).distinct()
         return qs
 
-    def filter_is_figure_disaggregated(self, qs, name, value):
+    def filter_has_disaggregated_data(self, qs, name, value):
         if value is True:
             return qs.filter(figures__is_disaggregated=True)
         if value is False:
@@ -332,6 +329,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_violence_sub_types = IDListFilter(method='filter_filter_figure_violence_sub_types')
     filter_figure_violence_types = IDListFilter(method='filter_filter_figure_violence_types')
     filter_figure_osv_sub_types = IDListFilter(method='filter_filter_figure_osv_sub_types')
+    filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data')
     # used in report entry table
     report = df.CharFilter(method='filter_report')
     filter_context_of_violences = IDListFilter(method='filter_context_of_violences')
@@ -341,7 +339,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
 
     class Meta:
         model = Figure
-        fields = ['entry', 'is_disaggregated', ]
+        fields = ['entry']
 
     def filter_time_frame_after(self, qs, name, value):
         if value:
@@ -530,6 +528,13 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     def filter_filter_figure_osv_sub_types(self, qs, name, value):
         if value:
             return qs.filter(~Q(event__violence__name=OSV) | Q(osv_sub_type__in=value)).distinct()
+        return qs
+
+    def filter_has_disaggregated_data(self, qs, name, value):
+        if value is True:
+            return qs.filter(is_disaggregated=True)
+        if value is False:
+            return qs.filter(is_disaggregated=False)
         return qs
 
     def filter_filter_context_of_violences(self, qs, name, value):

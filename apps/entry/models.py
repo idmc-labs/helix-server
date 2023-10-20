@@ -130,15 +130,6 @@ class OSMName(UUIDAbstractModel, models.Model):
 
 
 class FigureDisaggregationAbstractModel(models.Model):
-    class DISPLACEMENT_TYPE(enum.Enum):
-        RURAL = 0
-        URBAN = 1
-
-        __labels__ = {
-            RURAL: _("Rural"),
-            URBAN: _("Urban"),
-        }
-
     # disaggregation information
     disaggregation_displacement_urban = models.PositiveIntegerField(
         verbose_name=_('Displacement/Urban'),

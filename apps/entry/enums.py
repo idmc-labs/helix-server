@@ -6,17 +6,12 @@ import graphene
 from apps.entry.models import (
     Figure,
     OSMName,
-    FigureDisaggregationAbstractModel,
     ExternalApiDump,
 )
 
 from utils.enums import enum_description
 from apps.common.enums import GENDER_TYPE
 
-DisplacementTypeGrapheneEnum = graphene.Enum.from_enum(
-    FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE,
-    description=enum_description
-)
 GenderTypeGrapheneEnum = graphene.Enum.from_enum(
     GENDER_TYPE,
     description=enum_description
@@ -42,7 +37,6 @@ ExternalApiTypeEnum = graphene.Enum.from_enum(
 
 
 enum_map = dict(
-    DISPLACEMENT_TYPE=DisplacementTypeGrapheneEnum,
     GENDER_TYPE=GenderTypeGrapheneEnum,
     QUANTIFIER=QuantifierGrapheneEnum,
     UNIT=UnitGrapheneEnum,
