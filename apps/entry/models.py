@@ -877,11 +877,11 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__crisis_id='Crisis ID',
             event__crisis__name='Crisis name',
             tags_name='Tags',
+            is_disaggregated='Has disaggregated data',
             review_status='Revision progress',
             event__assignee__full_name='Assignee',
             created_by__full_name='Created by',
             last_modified_by__full_name='Updated by',
-            is_disaggregated='Is Disaggregated'
         )
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
@@ -978,11 +978,6 @@ class Figure(MetaInformationArchiveAbstractModel,
                 filter=models.Q(geo_locations__isnull=False),
                 output_field=models.CharField(),
                 distinct=True,
-            ),
-            has_age_disaggregated_data=Case(
-                When(disaggregation_age__isnull=False, then=Value("Yes")),
-                default=Value('No'),
-                output_field=models.CharField(),
             ),
             event_main_trigger=Case(
                 When(
@@ -1354,7 +1349,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             min_fig_end='Earliest figure end',
             max_fig_end='Latest figure end',
             context_of_violences='Context of violences',
-            figures__is_disaggregated='Is Disaggregated',
         )
         entries = EntryExtractionFilterSet(
             data=filters,
@@ -1391,7 +1385,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                 'figure_causes': get_string_from_list(
                     [cause.label if cause else "" for cause in datum['categories']]
                 ),
-                'figures__is_disaggregated': 'Yes' if datum['figures__is_disaggregated'] else 'No',
             }
 
         return {
