@@ -1,5 +1,5 @@
 from django.db import migrations
-
+from django.db.models import Count
 
 def delete_events_with_empty_figure(apps, _):
     Event = apps.get_model('event', 'Event')
@@ -33,14 +33,16 @@ def delete_events_with_empty_figure(apps, _):
         15941,
     ]
 
-    events = Event.objects.filter(id__in=event_ids)
-    figures = Figure.objects.filter(event__in=[event.id for event in events])
-    if figures:
-        events_to_skip = Event.objects.filter(figures__in=figures).values('id', flat=True)
-        print(f"Skip deleting the events ids {events_to_skip}")
-    else:
-        if events:
-            events.exclude(figures__in=figures).delete()
+    event_qs = Event.objects.filter(id__in=event_ids).annotate(
+        figures_count=Count('figures')
+    )
+
+    empty_events = event_qs.filter(figures_count__lte=0)
+    resp = empty_events.delete()
+    print(f'Deleted {resp} when deleting events')
+
+    non_empty_events = event_qs.filter(figures_count__gt=0)
+    print(f'Skipped deleting {non_empty_events.count()} non-empty events')
 
 
 class Migration(migrations.Migration):
