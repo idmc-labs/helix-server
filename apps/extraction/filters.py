@@ -7,7 +7,6 @@ from apps.extraction.models import ExtractionQuery
 from apps.entry.models import (
     Entry,
     Figure,
-    FigureDisaggregationAbstractModel,
 )
 from apps.report.models import Report
 from utils.filters import StringListFilter, IDListFilter
@@ -15,8 +14,6 @@ from apps.event.constants import OSV
 from apps.common.enums import GENDER_TYPE
 from apps.entry.constants import STOCK, FLOW
 
-RURAL = FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE.RURAL.name
-URBAN = FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE.URBAN.name
 MALE = GENDER_TYPE.MALE.name
 FEMALE = GENDER_TYPE.FEMALE.name
 
@@ -42,7 +39,6 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_end_before = df.DateFilter(method='filter_time_frame_before')
     filter_figure_roles = StringListFilter(method='filter_filter_figure_roles')
     filter_figure_tags = IDListFilter(method='filter_tags')
-    filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
     filter_figure_crisis_types = StringListFilter(method='filter_crisis_types')
     filter_figure_disaster_categories = IDListFilter(method='filter_filter_figure_disaster_categories')
@@ -52,8 +48,8 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_violence_sub_types = IDListFilter(method='filter_filter_figure_violence_sub_types')
     filter_figure_violence_types = IDListFilter(method='filter_filter_figure_violence_types')
     filter_figure_osv_sub_types = IDListFilter(method='filter_filter_figure_osv_sub_types')
-    filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data')
     filter_figure_review_status = StringListFilter(method='filter_filter_figure_review_status')
+    filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data')
     filter_figure_approved_by = IDListFilter(method='filter_filter_figure_approved_by')
     # used in report entry table
     report = df.CharFilter(method='filter_report')
@@ -202,17 +198,6 @@ class EntryExtractionFilterSet(df.FilterSet):
             ])
         return qs
 
-    def filter_by_figure_displacement_types(self, qs, name, value):
-        if not value:
-            return qs
-
-        query_expr = Q()
-        if RURAL in value:
-            query_expr = query_expr | Q(figures__disaggregation_displacement_rural__gt=0)
-        if URBAN in value:
-            query_expr = query_expr | Q(figures__disaggregation_displacement_urban__gt=0)
-        return qs.filter(query_expr).distinct()
-
     def filter_filter_figure_disaster_categories(self, qs, name, value):
         if value:
             return qs.filter(
@@ -279,9 +264,9 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     def filter_has_disaggregated_data(self, qs, name, value):
         if value is True:
-            return qs.filter(figures__disaggregation_age__isnull=False)
+            return qs.filter(figures__is_disaggregated=True)
         if value is False:
-            return qs.filter(figures__disaggregation_age__isnull=True)
+            return qs.filter(figures__is_disaggregated=False)
         return qs
 
     def filter_filter_context_of_violences(self, qs, name, value):
@@ -335,7 +320,6 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_crisis_types = StringListFilter(method='filter_crisis_types')
     filter_figure_glide_number = StringListFilter(method='filter_filter_figure_glide_number')
     filter_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
-    filter_figure_displacement_types = StringListFilter(method='filter_by_figure_displacement_types')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
     event = df.CharFilter(field_name='event', lookup_expr='exact')
     filter_figure_disaster_categories = IDListFilter(method='filter_filter_figure_disaster_categories')
@@ -472,17 +456,6 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
                 ])
         return qs
 
-    def filter_by_figure_displacement_types(self, qs, name, value):
-        if not value:
-            return qs
-
-        query_expr = Q()
-        if RURAL in value:
-            query_expr = query_expr | Q(disaggregation_displacement_rural__gt=0)
-        if URBAN in value:
-            query_expr = query_expr | Q(disaggregation_displacement_urban__gt=0)
-        return qs.filter(query_expr)
-
     def filter_by_figure_terms(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
@@ -559,9 +532,9 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
 
     def filter_has_disaggregated_data(self, qs, name, value):
         if value is True:
-            return qs.filter(disaggregation_age__isnull=False)
+            return qs.filter(is_disaggregated=True)
         if value is False:
-            return qs.filter(disaggregation_age__isnull=True)
+            return qs.filter(is_disaggregated=False)
         return qs
 
     def filter_filter_context_of_violences(self, qs, name, value):

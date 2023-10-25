@@ -28,7 +28,9 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='report',
             name='filter_figure_displacement_types',
-            field=django.contrib.postgres.fields.ArrayField(base_field=django_enumfield.db.fields.EnumField(enum=apps.entry.models.FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE), blank=True, null=True, size=None),
+            # NOTE: To remove this field and it's enum: Using EnumField basefield https://github.com/5monkeys/django-enumfield/blob/master/django_enumfield/db/fields.py#L32
+            # field=django.contrib.postgres.fields.ArrayField(base_field=django_enumfield.db.fields.EnumField(enum=apps.entry.models.FigureDisaggregationAbstractModel.DISPLACEMENT_TYPE), blank=True, null=True, size=None),
+            field=django.contrib.postgres.fields.ArrayField(base_field=models.IntegerField(), blank=True, null=True, size=None),
         ),
         migrations.AddField(
             model_name='report',

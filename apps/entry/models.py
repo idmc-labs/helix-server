@@ -130,15 +130,6 @@ class OSMName(UUIDAbstractModel, models.Model):
 
 
 class FigureDisaggregationAbstractModel(models.Model):
-    class DISPLACEMENT_TYPE(enum.Enum):
-        RURAL = 0
-        URBAN = 1
-
-        __labels__ = {
-            RURAL: _("Rural"),
-            URBAN: _("Urban"),
-        }
-
     # disaggregation information
     disaggregation_displacement_urban = models.PositiveIntegerField(
         verbose_name=_('Displacement/Urban'),
@@ -886,7 +877,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__crisis_id='Crisis ID',
             event__crisis__name='Crisis name',
             tags_name='Tags',
-            has_age_disaggregated_data='Has age disaggregated data',
+            is_disaggregated='Has disaggregated data',
             review_status='Revision progress',
             event__assignee__full_name='Assignee',
             created_by__full_name='Created by',
@@ -988,11 +979,6 @@ class Figure(MetaInformationArchiveAbstractModel,
                 output_field=models.CharField(),
                 distinct=True,
             ),
-            has_age_disaggregated_data=Case(
-                When(disaggregation_age__isnull=False, then=Value("Yes")),
-                default=Value('No'),
-                output_field=models.CharField(),
-            ),
             event_main_trigger=Case(
                 When(
                     event__event_type=Crisis.CRISIS_TYPE.CONFLICT,
@@ -1084,6 +1070,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'review_status': get_enum_label(
                     'review_status', Figure.FIGURE_REVIEW_STATUS
                 ),
+                'is_disaggregated': 'Yes' if datum['is_disaggregated'] else 'No',
             }
 
         readme_data = [
