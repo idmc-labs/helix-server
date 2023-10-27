@@ -10,7 +10,7 @@ from utils.factories import (
     OrganizationFactory,
     ContextOfViolenceFactory,
 )
-from apps.extraction.filters import EntryExtractionFilterSet as f
+from apps.extraction.filters import EntryExtractionFilterSet as f, BaseFigureExtractionFilterSet
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 
@@ -62,27 +62,38 @@ class TestExtractionFilter(HelixTestCase):
         cls.org3 = OrganizationFactory.create()
 
         cls.entry1event1 = EntryFactory.create(article_title="one")
-        FigureFactory.create(entry=cls.entry1event1,
-                             country=cls.country2reg2,
-                             category=cls.fig_cat1,
-                             figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
-                             disaggregation_displacement_rural=100,
-                             event=cls.event1crisis1,)
+        cls.figure1entry1event1 = FigureFactory.create(
+            entry=cls.entry1event1,
+            country=cls.country2reg2,
+            category=cls.fig_cat1,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            disaggregation_displacement_rural=100,
+            unit=Figure.UNIT.HOUSEHOLD,
+            is_disaggregated=True,
+            include_idu=True,
+            event=cls.event1crisis1,)
 
         cls.entry2event2 = EntryFactory.create(article_title="two")
-        FigureFactory.create(entry=cls.entry2event2,
-                             country=cls.country2reg2,
-                             category=cls.fig_cat2,
-                             figure_cause=Crisis.CRISIS_TYPE.DISASTER,
-                             disaggregation_displacement_urban=100,
-                             event=cls.event2crisis1,)
+        cls.figure2entry2event2 = FigureFactory.create(
+            entry=cls.entry2event2,
+            country=cls.country2reg2,
+            category=cls.fig_cat2,
+            unit=Figure.UNIT.HOUSEHOLD,
+            is_disaggregated=False,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            disaggregation_displacement_urban=100,
+            include_idu=True,
+            event=cls.event2crisis1,)
 
         cls.entry3event2 = EntryFactory.create(article_title="three")
-        FigureFactory.create(entry=cls.entry3event2,
-                             category=cls.fig_cat3,
-                             figure_cause=Crisis.CRISIS_TYPE.DISASTER,
-                             country=cls.country3reg3,
-                             event=cls.event2crisis1,)
+        cls.figure3entry3event2 = FigureFactory.create(
+            entry=cls.entry3event2,
+            category=cls.fig_cat3,
+            unit=Figure.UNIT.HOUSEHOLD,
+            is_disaggregated=True,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            country=cls.country3reg3,
+            event=cls.event2crisis1,)
         cls.mid_sep = '2020-09-15'
         cls.end_sep = '2020-09-29'
         cls.mid_oct = '2020-10-15'
@@ -94,13 +105,25 @@ class TestExtractionFilter(HelixTestCase):
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
         cls.fig1cat1entry1 = FigureFactory.create(
-            entry=cls.entry1event1, category=cls.fig_cat1,
-            start_date=cls.mid_oct, end_date=cls.end_oct, event=cls.random_event,
+            entry=cls.entry1event1,
+            category=cls.fig_cat1,
+            start_date=cls.mid_oct,
+            end_date=cls.end_oct,
+            event=cls.random_event,
+            unit=Figure.UNIT.HOUSEHOLD,
+            is_disaggregated=True,
+            include_idu=True,
             figure_cause=Crisis.CRISIS_TYPE.OTHER,
         )
         cls.fig2cat2entry1 = FigureFactory.create(
-            entry=cls.entry1event1, category=cls.fig_cat2,
-            start_date=cls.end_oct, end_date=cls.end_nov, event=cls.random_event,
+            entry=cls.entry1event1,
+            category=cls.fig_cat2,
+            start_date=cls.end_oct,
+            end_date=cls.end_nov,
+            event=cls.random_event,
+            unit=Figure.UNIT.HOUSEHOLD,
+            is_disaggregated=True,
+            include_idu=True,
             figure_cause=Crisis.CRISIS_TYPE.OTHER,
         )
         cls.fig3cat2entry2 = FigureFactory.create(
@@ -273,9 +296,73 @@ class TestExtractionFilter(HelixTestCase):
         fqs = f(data=data).qs
         self.assertEqual(set(fqs), {self.entry1event1, self.entry3event2})
 
-    def test_filter_by_context_of_violences(self):
+    def test_base_entry_filter(self):
+        # -- HAS_EXCERPT_IDU
+        # True
         data = dict(
-            filter_context_of_violences=[self.context_of_violence]
+            filter_figure_has_excerpt_idu=True,
         )
         fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry3event2})
+        self.assertEqual(
+            set(fqs),
+            {self.entry1event1, self.entry2event2},
+        )
+        # False
+        data = dict(
+            filter_figure_has_excerpt_idu=False,
+        )
+        fqs = f(data=data).qs
+        assert self.entry1event1 not in set(fqs)
+        # -- HAS_HOUSING_DESTRUCTION
+        # True
+        data = dict(
+            filter_figure_has_housing_destruction=True,
+        )
+        fqs = f(data=data).qs
+        self.assertEqual(
+            set(fqs),
+            {self.entry1event1, self.entry3event2, },
+        )
+        # False
+        data = dict(
+            filter_figure_has_housing_destruction=False,
+        )
+        fqs = f(data=data).qs
+        assert self.entry1event1 not in set(fqs)
+
+    def test_base_figure_filter(self):
+        # -- HAS_EXCERPT_IDU
+        # True
+        data = dict(
+            filter_has_excerpt_idu=True,
+        )
+        fqs = BaseFigureExtractionFilterSet(data=data).qs
+        self.assertEqual(
+            set(fqs),
+            {self.figure1entry1event1, self.figure2entry2event2, self.fig1cat1entry1, self.fig2cat2entry1},
+        )
+        # False
+        data = dict(
+            filter_has_excerpt_idu=False,
+        )
+        fqs = BaseFigureExtractionFilterSet(data=data).qs
+        assert all([
+            figure not in set(fqs)
+            for figure in [self.figure1entry1event1, self.figure2entry2event2, self.fig1cat1entry1, self.fig2cat2entry1]
+        ]) is True
+        # -- HAS_HOUSING_DESTRUCTION
+        # True
+        data = dict(
+            filter_has_housing_destruction=True,
+        )
+        fqs = BaseFigureExtractionFilterSet(data=data).qs
+        self.assertEqual(
+            set(fqs),
+            {self.figure1entry1event1, self.figure3entry3event2, self.fig1cat1entry1, self.fig2cat2entry1},
+        )
+        # False
+        data = dict(
+            filter_has_housing_destruction=False,
+        )
+        fqs = BaseFigureExtractionFilterSet(data=data).qs
+        assert self.figure3entry3event2 not in set(fqs)

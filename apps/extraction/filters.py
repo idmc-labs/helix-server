@@ -51,6 +51,8 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_review_status = StringListFilter(method='filter_filter_figure_review_status')
     filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data')
     filter_figure_approved_by = IDListFilter(method='filter_filter_figure_approved_by')
+    filter_figure_has_excerpt_idu = df.BooleanFilter(method='filter_filter_figure_has_excerpt_idu')
+    filter_figure_has_housing_destruction = df.BooleanFilter(method='filter_filter_figure_has_housing_destruction')
     # used in report entry table
     report = df.CharFilter(method='filter_report')
     filter_context_of_violences = IDListFilter(method='filter_filter_context_of_violences')
@@ -288,6 +290,19 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs
         return qs.filter(figures__approved_by__in=value)
 
+    def filter_filter_figure_has_excerpt_idu(self, qs, name, value):
+        if value is None:
+            return qs
+        return qs.filter(figures__include_idu=value)
+
+    def filter_filter_figure_has_housing_destruction(self, qs, name, value):
+        if value is None:
+            return qs
+        return qs.filter(
+            figures__unit=Figure.UNIT.HOUSEHOLD,
+            figures__is_disaggregated=value,
+        )
+
     def filter_filter_is_figure_to_be_reviewed(self, qs, name, value):
         if not value:
             return qs
@@ -336,6 +351,8 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_review_status = StringListFilter(method='filter_filter_figure_review_status')
     filter_figure_approved_by = IDListFilter(method='filter_filter_figure_approved_by')
     filter_is_figure_to_be_reviewed = df.BooleanFilter(method='filter_filter_is_figure_to_be_reviewed')
+    filter_has_excerpt_idu = df.BooleanFilter(method='filter_filter_figure_has_excerpt_idu')
+    filter_has_housing_destruction = df.BooleanFilter(method='filter_filter_figure_has_housing_destruction')
 
     class Meta:
         model = Figure
@@ -455,6 +472,19 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
                     Crisis.CRISIS_TYPE.get(item).value for item in value
                 ])
         return qs
+
+    def filter_filter_figure_has_excerpt_idu(self, qs, name, value):
+        if value is None:
+            return qs
+        return qs.filter(include_idu=value)
+
+    def filter_filter_figure_has_housing_destruction(self, qs, name, value):
+        if value is None:
+            return qs
+        return qs.filter(
+            unit=Figure.UNIT.HOUSEHOLD,
+            is_disaggregated=value,
+        )
 
     def filter_by_figure_terms(self, qs, name, value):
         if value:
