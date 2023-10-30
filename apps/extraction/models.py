@@ -163,6 +163,16 @@ class QueryAbstractModel(models.Model):
         null=True,
         default=None,
     )
+    filter_figure_has_excerpt_idu = models.BooleanField(
+        verbose_name=_('Has excerpt IDU'),
+        null=True,
+        default=None,
+    )
+    filter_figure_has_housing_destruction = models.BooleanField(
+        verbose_name=_('Has housing destruction'),
+        null=True,
+        default=None,
+    )
 
     @property
     def get_filter_kwargs(self):

@@ -579,6 +579,8 @@ input CreateExtractInputType {
   filterFigureCategoryTypes: [String!]
   filterFigureHasDisaggregatedData: Boolean
   filterIsFigureToBeReviewed: Boolean
+  filterFigureHasExcerptIdu: Boolean
+  filterFigureHasHousingDestruction: Boolean
   name: String!
   filterFigureGeographicalGroups: [ID!]
   filterFigureRegions: [ID!]
@@ -1404,6 +1406,8 @@ type ExtractionQueryObjectType {
   filterFigureHasDisaggregatedData: Boolean
   filterContextOfViolence: [ContextOfViolenceType!]!
   filterIsFigureToBeReviewed: Boolean
+  filterFigureHasExcerptIdu: Boolean
+  filterFigureHasHousingDestruction: Boolean
   name: String!
   entries(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureReviewStatus: [String!], filterFigureHasDisaggregatedData: Boolean, filterFigureApprovedBy: [ID!], filterFigureHasExcerptIdu: Boolean, filterFigureHasHousingDestruction: Boolean, report: String, filterContextOfViolences: [ID!], filterIsFigureToBeReviewed: Boolean, page: Int = 1, ordering: String, pageSize: Int): EntryListType
 }
@@ -2900,6 +2904,8 @@ type ReportType {
   filterFigureHasDisaggregatedData: Boolean
   filterContextOfViolence: [ContextOfViolenceType!]!
   filterIsFigureToBeReviewed: Boolean
+  filterFigureHasExcerptIdu: Boolean
+  filterFigureHasHousingDestruction: Boolean
   name: String!
   generatedFrom: REPORT_TYPE
   generated: Boolean!
@@ -3281,6 +3287,8 @@ input UpdateExtractInputType {
   filterFigureCategoryTypes: [String!]
   filterFigureHasDisaggregatedData: Boolean
   filterIsFigureToBeReviewed: Boolean
+  filterFigureHasExcerptIdu: Boolean
+  filterFigureHasHousingDestruction: Boolean
   name: String
   filterFigureGeographicalGroups: [ID!]
   filterFigureRegions: [ID!]

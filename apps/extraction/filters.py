@@ -298,10 +298,16 @@ class EntryExtractionFilterSet(df.FilterSet):
     def filter_filter_figure_has_housing_destruction(self, qs, name, value):
         if value is None:
             return qs
-        return qs.filter(
-            figures__unit=Figure.UNIT.HOUSEHOLD,
-            figures__is_disaggregated=value,
+        # TODO: Make sure this logic is valid
+        _filter = Q(
+            figures__term__in=[
+                Figure.FIGURE_TERMS.DESTROYED_HOUSING,
+                Figure.FIGURE_TERMS.PARTIALLY_DESTROYED_HOUSING,
+            ],
         )
+        if value:
+            return qs.filter(_filter)
+        return qs.exclude(_filter)
 
     def filter_filter_is_figure_to_be_reviewed(self, qs, name, value):
         if not value:
@@ -481,10 +487,16 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     def filter_filter_figure_has_housing_destruction(self, qs, name, value):
         if value is None:
             return qs
-        return qs.filter(
-            unit=Figure.UNIT.HOUSEHOLD,
-            is_disaggregated=value,
+        # TODO: Make sure this logic is valid
+        _filter = Q(
+            term__in=[
+                Figure.FIGURE_TERMS.DESTROYED_HOUSING,
+                Figure.FIGURE_TERMS.PARTIALLY_DESTROYED_HOUSING,
+            ],
         )
+        if value:
+            return qs.filter(_filter)
+        return qs.exclude(_filter)
 
     def filter_by_figure_terms(self, qs, name, value):
         if value:
