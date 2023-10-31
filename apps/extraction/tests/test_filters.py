@@ -68,7 +68,7 @@ class TestExtractionFilter(HelixTestCase):
             category=cls.fig_cat1,
             figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
             disaggregation_displacement_rural=100,
-            term=Figure.FIGURE_TERMS.DESTROYED_HOUSING,
+            is_housing_destruction=True,
             include_idu=True,
             event=cls.event1crisis1,)
 
@@ -78,7 +78,7 @@ class TestExtractionFilter(HelixTestCase):
             country=cls.country2reg2,
             category=cls.fig_cat2,
             figure_cause=Crisis.CRISIS_TYPE.DISASTER,
-            term=Figure.FIGURE_TERMS.AFFECTED,
+            is_housing_destruction=False,
             disaggregation_displacement_urban=100,
             include_idu=True,
             event=cls.event2crisis1,)
@@ -87,7 +87,7 @@ class TestExtractionFilter(HelixTestCase):
         cls.figure3entry3event2 = FigureFactory.create(
             entry=cls.entry3event2,
             category=cls.fig_cat3,
-            term=Figure.FIGURE_TERMS.AFFECTED,
+            is_housing_destruction=False,
             figure_cause=Crisis.CRISIS_TYPE.DISASTER,
             country=cls.country3reg3,
             event=cls.event2crisis1,)
@@ -107,7 +107,7 @@ class TestExtractionFilter(HelixTestCase):
             start_date=cls.mid_oct,
             end_date=cls.end_oct,
             event=cls.random_event,
-            term=Figure.FIGURE_TERMS.PARTIALLY_DESTROYED_HOUSING,
+            is_housing_destruction=True,
             include_idu=True,
             figure_cause=Crisis.CRISIS_TYPE.OTHER,
         )
@@ -117,7 +117,7 @@ class TestExtractionFilter(HelixTestCase):
             start_date=cls.end_oct,
             end_date=cls.end_nov,
             event=cls.random_event,
-            term=Figure.FIGURE_TERMS.PARTIALLY_DESTROYED_HOUSING,
+            is_housing_destruction=True,
             include_idu=True,
             figure_cause=Crisis.CRISIS_TYPE.OTHER,
         )
@@ -125,19 +125,22 @@ class TestExtractionFilter(HelixTestCase):
             entry=cls.entry2event2, category=cls.fig_cat2,
             start_date=cls.mid_sep, end_date=cls.end_oct, event=cls.random_event,
             figure_cause=Crisis.CRISIS_TYPE.OTHER,
-            term=Figure.FIGURE_TERMS.AFFECTED,
+            is_housing_destruction=False,
         )
         cls.fig4cat1entry3 = FigureFactory.create(
-            entry=cls.entry3event2, category=cls.fig_cat3,
-            start_date=cls.mid_nov, end_date=None, event=cls.random_event,
+            entry=cls.entry3event2,
+            category=cls.fig_cat3,
+            start_date=cls.mid_nov,
+            end_date=None,
+            event=cls.random_event,
             figure_cause=Crisis.CRISIS_TYPE.OTHER,
-            term=Figure.FIGURE_TERMS.AFFECTED,
+            is_housing_destruction=False,
         )
         cls.fig5cat3entry3 = FigureFactory.create(
             entry=cls.entry3event2, category=cls.fig_cat3,
             start_date=cls.mid_nov, end_date=cls.end_nov, event=cls.random_event,
             figure_cause=Crisis.CRISIS_TYPE.OTHER,
-            term=Figure.FIGURE_TERMS.AFFECTED,
+            is_housing_destruction=False,
         )
 
         cls.fig1cat1entry1.tags.set([cls.tag1])
@@ -150,7 +153,7 @@ class TestExtractionFilter(HelixTestCase):
             country=cls.country3reg3,
             event=cls.event2crisis1,
             figure_cause=Crisis.CRISIS_TYPE.OTHER,
-            term=Figure.FIGURE_TERMS.AFFECTED,
+            is_housing_destruction=False,
         )
         cls.event1crisis1.context_of_violence.set([cls.context_of_violence])
         cls.figure.context_of_violence.set([cls.context_of_violence])
@@ -161,7 +164,7 @@ class TestExtractionFilter(HelixTestCase):
             country=cls.country3reg3,
             event=cls.event2crisis1,
             figure_cause=Crisis.CRISIS_TYPE.OTHER,
-            term=Figure.FIGURE_TERMS.AFFECTED,
+            is_housing_destruction=False,
         )
         cls.event1crisis1.context_of_violence.set([cls.context_of_violence])
         cls.figure.context_of_violence.set([cls.context_of_violence])
@@ -321,7 +324,7 @@ class TestExtractionFilter(HelixTestCase):
         fqs = f(data=data).qs
         self.assertEqual(
             set(fqs),
-            {self.entry1event1, self.entry3event2, },
+            {self.entry1event1, },
         )
         # False
         data = dict(
