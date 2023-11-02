@@ -2022,7 +2022,7 @@ type Mutation {
   exportOrganizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], orderCountryFirst: [ID!]): ExportOrganizations
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
-  exportCountries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, year: Float): ExportCountries
+  exportCountries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, year: Float, events: [ID!], crises: [ID!]): ExportCountries
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
   createClient(data: clientCreateInputType!): CreateClient
   updateClient(data: ClientUpdateInputType!): UpdateClient
@@ -2622,7 +2622,7 @@ type Query {
   crisis(id: ID!): CrisisType
   crisisList(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], report: String, createdByIds: [ID!], page: Int = 1, ordering: String, pageSize: Int): CrisisListType
   country(id: ID!): CountryType
-  countryList(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, year: Float, page: Int = 1, ordering: String, pageSize: Int): CountryListType
+  countryList(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, year: Float, events: [ID!], crises: [ID!], page: Int = 1, ordering: String, pageSize: Int): CountryListType
   countryRegionList(id_Iexact: Float, name: String, ordering: String): CountryRegionListType
   geographicalGroupList(id_Iexact: Float, name: String, ordering: String): GeographicalGroupListType
   householdSize(country: ID!, year: Int!): CountryHouseholdSizeType
