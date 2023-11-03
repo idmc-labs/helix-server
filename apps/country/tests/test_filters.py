@@ -6,6 +6,8 @@ from utils.factories import (
     CountryFactory,
     CountryRegionFactory,
     GeographicalGroupFactory,
+    EventFactory,
+    CrisisFactory,
 )
 from utils.tests import HelixTestCase
 
@@ -24,6 +26,62 @@ class TestCountryFilter(HelixTestCase):
             country_name=QUERY
         ), queryset=Country.objects.all()).qs
         expected = [self.c2, self.c1, self.c3, self.c4]
+        self.assertEqual(
+            expected,
+            list(obtained)
+        )
+
+    def test_events_filters(self):
+        # filter by event
+        c1 = CountryFactory.create(idmc_short_name='test_event')
+        c2 = CountryFactory.create(idmc_short_name='test_event2')
+        event1 = EventFactory.create()
+        event1.countries.add(c1)
+        event2 = EventFactory.create()
+        event2.countries.add(c2)
+
+        QUERY = [event1.id]
+        obtained = self.filter_class(data=dict(
+            events=QUERY
+        ), queryset=Country.objects.all()).qs
+        expected = [c1]
+        self.assertEqual(
+            expected,
+            list(obtained)
+        )
+        QUERY = [event2.id]
+        obtained = self.filter_class(data=dict(
+            events=QUERY
+        ), queryset=Country.objects.all()).qs
+        expected = [c2]
+        self.assertEqual(
+            expected,
+            list(obtained)
+        )
+
+    def test_crises_filters(self):
+        # filter by crisis
+        c1 = CountryFactory.create(idmc_short_name='test_crisis')
+        c2 = CountryFactory.create(idmc_short_name='test_crisis2')
+        crisis1 = CrisisFactory.create()
+        crisis1.countries.add(c1)
+        crisis2 = CrisisFactory.create()
+        crisis2.countries.add(c2)
+
+        QUERY = [crisis1.id]
+        obtained = self.filter_class(data=dict(
+            crises=QUERY
+        ), queryset=Country.objects.all()).qs
+        expected = [c1]
+        self.assertEqual(
+            expected,
+            list(obtained)
+        )
+        QUERY = [crisis2.id]
+        obtained = self.filter_class(data=dict(
+            crises=QUERY
+        ), queryset=Country.objects.all()).qs
+        expected = [c2]
         self.assertEqual(
             expected,
             list(obtained)

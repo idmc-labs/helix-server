@@ -13,7 +13,7 @@ from apps.country.models import (
     MonitoringSubRegion,
 )
 from apps.report.models import Report
-from utils.filters import StringListFilter, NameFilterMixin
+from utils.filters import IDListFilter, StringListFilter, NameFilterMixin
 
 
 class GeographicalGroupFilter(NameFilterMixin,
@@ -48,6 +48,8 @@ class CountryFilter(django_filters.FilterSet):
     # used in report country table
     report = django_filters.CharFilter(method='filter_report')
     year = django_filters.NumberFilter(method='filter_year')
+    events = IDListFilter(method='filter_by_events')
+    crises = IDListFilter(method='filter_by_crisis')
 
     class Meta:
         model = Country
@@ -55,6 +57,20 @@ class CountryFilter(django_filters.FilterSet):
             'iso3': ['unaccent__icontains'],
             'id': ['iexact'],
         }
+
+    def filter_by_events(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(
+            id__in=Country.objects.filter(events__in=value).values('id')
+        )
+
+    def filter_by_crisis(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(
+            id__in=Country.objects.filter(crises__in=value).values('id')
+        )
 
     def filter_report(self, qs, name, value):
         if not value:
