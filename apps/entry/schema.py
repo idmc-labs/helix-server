@@ -269,6 +269,53 @@ class SourcePreviewType(DjangoObjectType):
         return None
 
 
+class NewDisplacementType(ObjectType):
+    figure_cause = graphene.Field(CrisisTypeGrapheneEnum)
+    figure_cause_display = EnumDescription()
+    start_date = graphene.Date()
+    total_figures = graphene.Int()
+
+
+class IDPsType(ObjectType):
+    figure_cause = graphene.Field(CrisisTypeGrapheneEnum)
+    figure_cause_display = EnumDescription()
+    end_date = graphene.Date()
+    total_figures = graphene.Int()
+
+
+class VisualizationFigureType(ObjectType):
+    new_displacements = graphene.List(NewDisplacementType, required=False)
+    idps = graphene.List(IDPsType, required=False)
+
+    def resolve_new_displacements(root, info, **kwargs):
+        figures = Figure.objects.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            role=Figure.ROLE.RECOMMENDED,
+        )
+        return [
+            NewDisplacementType(
+                figure_cause=f.figure_cause,
+                figure_cause_display=f.get_figure_cause_display,
+                start_date=f.end_date,
+                total_figures=f.total_figures
+            ) for f in figures
+        ]
+
+    def resolve_idps(root, info, **kwargs):
+        figures = Figure.objects.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            role=Figure.ROLE.RECOMMENDED,
+        )
+        return [
+            IDPsType(
+                figure_cause=f.figure_cause,
+                figure_cause_display=f.get_figure_cause_display,
+                end_date=f.end_date,
+                total_figures=f.total_figures
+            ) for f in figures
+        ]
+
+
 class FigureTagListType(CustomDjangoListObjectType):
     class Meta:
         model = FigureTag
@@ -294,4 +341,8 @@ class Query:
                                                     page_size_query_param='pageSize'
                                                 ))
     disaggregated_age = DjangoObjectField(DisaggregatedAgeType)
-    disaggregated_age_list = DjangoPaginatedListObjectField(DisaggregatedAgeListType)
+    visualization_figure_list = graphene.Field(VisualizationFigureType)
+
+    @staticmethod
+    def resolve_visualization_figure_list(root, info, **kwargs):
+        return VisualizationFigureType
