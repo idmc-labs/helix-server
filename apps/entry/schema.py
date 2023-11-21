@@ -1,6 +1,7 @@
 import graphene
-from django.db.models import JSONField
+from django.db.models import JSONField, Sum
 from graphene import ObjectType
+from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType
 from graphene_django_extras.converter import convert_django_field
@@ -43,6 +44,7 @@ from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 from apps.extraction.filters import FigureExtractionFilterSet, EntryExtractionFilterSet
 from apps.crisis.enums import CrisisTypeGrapheneEnum
+from apps.crisis.models import Crisis
 from apps.event.schema import OtherSubTypeObjectType
 from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
 
@@ -269,50 +271,67 @@ class SourcePreviewType(DjangoObjectType):
         return None
 
 
-class NewDisplacementType(ObjectType):
-    figure_cause = graphene.Field(CrisisTypeGrapheneEnum)
-    figure_cause_display = EnumDescription()
-    start_date = graphene.Date()
-    total_figures = graphene.Int()
-
-
-class IDPsType(ObjectType):
-    figure_cause = graphene.Field(CrisisTypeGrapheneEnum)
-    figure_cause_display = EnumDescription()
-    end_date = graphene.Date()
-    total_figures = graphene.Int()
+class VisualizationValueType(ObjectType):
+    date = graphene.Date()
+    value = graphene.Int()
 
 
 class VisualizationFigureType(ObjectType):
-    new_displacements = graphene.List(NewDisplacementType, required=False)
-    idps = graphene.List(IDPsType, required=False)
+    idps_conflict_figures = graphene.List(VisualizationValueType, required=False)
+    idps_disaster_figures = graphene.List(VisualizationValueType, required=False)
+    nds_conflicts_figures = graphene.List(VisualizationValueType, required=False)
+    nds_disasters_figures = graphene.List(VisualizationValueType, required=False)
 
-    def resolve_new_displacements(root, info, **kwargs):
-        figures = Figure.objects.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-            role=Figure.ROLE.RECOMMENDED,
-        )
-        return [
-            NewDisplacementType(
-                figure_cause=f.figure_cause,
-                figure_cause_display=f.get_figure_cause_display,
-                start_date=f.end_date,
-                total_figures=f.total_figures
-            ) for f in figures
-        ]
-
-    def resolve_idps(root, info, **kwargs):
+    def resolve_idps_conflict_figures(root, info, **kwargs):
         figures = Figure.objects.filter(
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             role=Figure.ROLE.RECOMMENDED,
-        )
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT
+        ).values('start_date').annotate(value=Sum('total_figures'))
         return [
-            IDPsType(
-                figure_cause=f.figure_cause,
-                figure_cause_display=f.get_figure_cause_display,
-                end_date=f.end_date,
-                total_figures=f.total_figures
-            ) for f in figures
+            VisualizationValueType(
+                date=k['start_date'],
+                value=k['value']
+            ) for k in figures
+        ]
+
+    def resolve_idps_disaster_figures(root, info, **kwargs):
+        figures = Figure.objects.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER
+        ).values('end_date').annotate(value=Sum('total_figures'))
+        return [
+            VisualizationValueType(
+                date=k['end_date'],
+                value=k['value']
+            ) for k in figures
+        ]
+
+    def resolve_nds_conflicts_figures(root, info, **kwargs):
+        figures = Figure.objects.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT
+        ).values('start_date').annotate(value=Sum('total_figures'))
+        return [
+            VisualizationValueType(
+                date=k['start_date'],
+                value=k['value']
+            ) for k in figures
+        ]
+
+    def resolve_nds_disasters_figures(root, info, **kwargs):
+        figures = Figure.objects.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER
+        ).values('end_date').annotate(value=Sum('total_figures'))
+        return [
+            VisualizationValueType(
+                date=k['end_date'],
+                value=k['value']
+            ) for k in figures
         ]
 
 
@@ -341,7 +360,12 @@ class Query:
                                                     page_size_query_param='pageSize'
                                                 ))
     disaggregated_age = DjangoObjectField(DisaggregatedAgeType)
-    visualization_figure_list = graphene.Field(VisualizationFigureType)
+    visualization_figure_list = graphene.Field(
+        VisualizationFigureType,
+        **get_filtering_args_from_filterset(
+            FigureExtractionFilterSet, VisualizationFigureType
+        )
+    )
 
     @staticmethod
     def resolve_visualization_figure_list(root, info, **kwargs):
