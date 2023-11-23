@@ -279,60 +279,8 @@ class VisualizationValueType(ObjectType):
 class VisualizationFigureType(ObjectType):
     idps_conflict_figures = graphene.List(VisualizationValueType, required=False)
     idps_disaster_figures = graphene.List(VisualizationValueType, required=False)
-    nds_conflicts_figures = graphene.List(VisualizationValueType, required=False)
-    nds_disasters_figures = graphene.List(VisualizationValueType, required=False)
-
-    def resolve_idps_conflict_figures(root, info, **kwargs):
-        figures = Figure.objects.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-            role=Figure.ROLE.RECOMMENDED,
-            figure_cause=Crisis.CRISIS_TYPE.CONFLICT
-        ).values('start_date').annotate(value=Sum('total_figures'))
-        return [
-            VisualizationValueType(
-                date=k['start_date'],
-                value=k['value']
-            ) for k in figures
-        ]
-
-    def resolve_idps_disaster_figures(root, info, **kwargs):
-        figures = Figure.objects.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-            role=Figure.ROLE.RECOMMENDED,
-            figure_cause=Crisis.CRISIS_TYPE.DISASTER
-        ).values('end_date').annotate(value=Sum('total_figures'))
-        return [
-            VisualizationValueType(
-                date=k['end_date'],
-                value=k['value']
-            ) for k in figures
-        ]
-
-    def resolve_nds_conflicts_figures(root, info, **kwargs):
-        figures = Figure.objects.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-            role=Figure.ROLE.RECOMMENDED,
-            figure_cause=Crisis.CRISIS_TYPE.CONFLICT
-        ).values('start_date').annotate(value=Sum('total_figures'))
-        return [
-            VisualizationValueType(
-                date=k['start_date'],
-                value=k['value']
-            ) for k in figures
-        ]
-
-    def resolve_nds_disasters_figures(root, info, **kwargs):
-        figures = Figure.objects.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-            role=Figure.ROLE.RECOMMENDED,
-            figure_cause=Crisis.CRISIS_TYPE.DISASTER
-        ).values('end_date').annotate(value=Sum('total_figures'))
-        return [
-            VisualizationValueType(
-                date=k['end_date'],
-                value=k['value']
-            ) for k in figures
-        ]
+    nds_conflict_figures = graphene.List(VisualizationValueType, required=False)
+    nds_disaster_figures = graphene.List(VisualizationValueType, required=False)
 
 
 class FigureTagListType(CustomDjangoListObjectType):
@@ -360,7 +308,7 @@ class Query:
                                                     page_size_query_param='pageSize'
                                                 ))
     disaggregated_age = DjangoObjectField(DisaggregatedAgeType)
-    visualization_figure_list = graphene.Field(
+    figure_aggregations = graphene.Field(
         VisualizationFigureType,
         **get_filtering_args_from_filterset(
             FigureExtractionFilterSet, VisualizationFigureType
@@ -368,5 +316,57 @@ class Query:
     )
 
     @staticmethod
-    def resolve_visualization_figure_list(root, info, **kwargs):
-        return VisualizationFigureType
+    def resolve_figure_aggregations(root, info, **kwargs):
+        figure_qs = FigureExtractionFilterSet(data=kwargs).qs
+
+        idps_conflict_figure_qs = figure_qs.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT
+        ).values('end_date').annotate(value=Sum('total_figures'))
+
+        idps_disaster_figure_qs = figure_qs.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER
+        ).values('end_date').annotate(value=Sum('total_figures'))
+
+        nds_conflict_figure_qs = figure_qs.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT
+        ).values('start_date').annotate(value=Sum('total_figures'))
+
+        nds_disaster_figure_qs = figure_qs.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER
+        ).values('start_date').annotate(value=Sum('total_figures'))
+
+        return VisualizationFigureType(
+            idps_conflict_figures=[
+                VisualizationValueType(
+                    date=k['end_date'],
+                    value=k['value']
+                ) for k in idps_conflict_figure_qs
+            ],
+            idps_disaster_figures=[
+                VisualizationValueType(
+                    date=k['end_date'],
+                    value=k['value']
+                ) for k in idps_disaster_figure_qs
+            ],
+            nds_conflict_figures=[
+                VisualizationValueType(
+                    date=k['start_date'],
+                    value=k['value']
+                ) for k in nds_conflict_figure_qs
+            ],
+            nds_disaster_figures=[
+                VisualizationValueType(
+                    date=k['start_date'],
+                    value=k['value']
+                ) for k in nds_disaster_figure_qs
+            ]
+
+        )
