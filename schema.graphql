@@ -3003,7 +3003,7 @@ type Query {
   entry(id: ID!): EntryType
   entryList(filters: EntryExtractionSetFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType
   disaggregatedAge(id: ID!): DisaggregatedAgeType
-  visualizationFigureList(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterFigureCrisisTypes: [String!], filterFigureGlideNumber: [String!], filterCreatedBy: [ID!], filterFigureTerms: [ID!], event: String, filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], filterIsFigureToBeReviewed: Boolean, filterHasExcerptIdu: Boolean, filterHasHousingDestruction: Boolean): VisualizationFigureType
+  figureAggregations(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterFigureCrisisTypes: [String!], filterFigureGlideNumber: [String!], filterCreatedBy: [ID!], filterFigureTerms: [ID!], event: String, filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], filterIsFigureToBeReviewed: Boolean, filterHasExcerptIdu: Boolean, filterHasHousingDestruction: Boolean): VisualizationFigureType
   violenceList(ordering: String): ViolenceListType
   actor(id: ID!): ActorType
   actorList(filters: ActorFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ActorListType
@@ -3908,8 +3908,8 @@ type ViolenceType {
 type VisualizationFigureType {
   idpsConflictFigures: [VisualizationValueType]
   idpsDisasterFigures: [VisualizationValueType]
-  ndsConflictsFigures: [VisualizationValueType]
-  ndsDisastersFigures: [VisualizationValueType]
+  ndsConflictFigures: [VisualizationValueType]
+  ndsDisasterFigures: [VisualizationValueType]
 }
 
 type VisualizationValueType {
