@@ -610,6 +610,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             ExtractYear('end_date') - ExtractYear('start_date'),
             output_field=fields.IntegerField(),
         )
+
         qs = qs.annotate(year_difference=year_difference)
 
         same_year_figures = qs.filter(
