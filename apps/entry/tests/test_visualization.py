@@ -10,10 +10,7 @@ from utils.factories import (
     EventFactory,
     EntryFactory,
     FigureFactory,
-    OrganizationFactory,
     CountryFactory,
-    TagFactory,
-    ContextOfViolenceFactory,
 )
 
 
@@ -124,9 +121,9 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
         self.entry2 = EntryFactory.create()
         self.event = EventFactory.create()
         self.event2 = EventFactory.create()
-        self.stock_fig_cat = Figure.FIGURE_CATEGORY_TYPES.IDPS
 
-        figure1 = FigureFactory.create(
+        # Test for idpsConflictFigures
+        FigureFactory.create(
             country=self.country_nep,
             role=Figure.ROLE.RECOMMENDED,
             total_figures=2,
@@ -138,7 +135,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             unit=Figure.UNIT.PERSON,
             end_date='2021-09-12'
         )
-        figure2 = FigureFactory.create(
+        FigureFactory.create(
             country=self.country_nep,
             role=Figure.ROLE.RECOMMENDED,
             total_figures=2,
@@ -150,7 +147,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             unit=Figure.UNIT.PERSON,
             end_date='2021-09-12'
         )
-        figure3 = FigureFactory.create(
+        FigureFactory.create(
             country=self.country_ind,
             role=Figure.ROLE.RECOMMENDED,
             total_figures=3,
@@ -162,7 +159,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             unit=Figure.UNIT.PERSON,
             end_date='2021-10-10'
         )
-        figure4 = FigureFactory.create(
+        FigureFactory.create(
             country=self.country_nep,
             role=Figure.ROLE.RECOMMENDED,
             figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
@@ -174,7 +171,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             unit=Figure.UNIT.PERSON,
             end_date='2022-08-17'
         )
-        figure5 = FigureFactory.create(
+        FigureFactory.create(
             country=self.country_ind,
             role=Figure.ROLE.RECOMMENDED,
             figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
@@ -186,19 +183,19 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             unit=Figure.UNIT.PERSON,
             end_date='2022-12-10'
         )
-        figure6 = FigureFactory.create(
+        FigureFactory.create(
             country=self.country_nep,
             role=Figure.ROLE.RECOMMENDED,
             figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
             total_figures=11,
-            entry=self.entry2,
-            event=self.event2,
+            entry=self.entry,
+            event=self.event,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
             end_date='2023-12-12'
         )
-        figure7 = FigureFactory.create(
+        FigureFactory.create(
             country=self.country_nep,
             role=Figure.ROLE.RECOMMENDED,
             figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
@@ -210,13 +207,13 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             unit=Figure.UNIT.PERSON,
             end_date='2023-01-01'
         )
-        figure8 = FigureFactory.create(
+        FigureFactory.create(
             country=self.country_ind,
             role=Figure.ROLE.RECOMMENDED,
             figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
             total_figures=17,
-            entry=self.entry2,
-            event=self.event2,
+            entry=self.entry,
+            event=self.event,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
@@ -247,9 +244,552 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                     }
                 ]
             ),
+            (
+                {'filterFigureCountries': self.country_ind.id, },
+                [
+                    {
+                        "date": "2021-10-10",
+                        "value": 3
+                    },
+                    {
+                        "date": "2022-12-10",
+                        "value": 7
+                    },
+                    {
+                        "date": "2023-01-01",
+                        "value": 17
+                    },
+                ]
+            ),
         ]:
             response = self.query(query, variables={**filter_data})
             content = json.loads(response.content)
             self.assertEqual(
                 content['data']['figureAggregations']['idpsConflictFigures'], expected_data,
             )
+
+        # Test for idpsDisasterFigures
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            total_figures=2,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            entry=self.entry,
+            event=self.event,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            reported=101,
+            unit=Figure.UNIT.PERSON,
+            start_date='2021-09-01',
+            end_date='2021-09-12'
+        )
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            total_figures=2,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2020-09-01',
+            end_date='2021-09-12'
+        )
+        FigureFactory.create(
+            country=self.country_ind,
+            role=Figure.ROLE.RECOMMENDED,
+            total_figures=3,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2021-10-01',
+            end_date='2021-10-10'
+        )
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            total_figures=5,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2022-08-01',
+            end_date='2022-08-17'
+        )
+        FigureFactory.create(
+            country=self.country_ind,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            total_figures=7,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2022-12-01',
+            end_date='2022-12-10'
+        )
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            total_figures=11,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2021-12-12',
+            end_date='2022-12-12'
+        )
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            total_figures=13,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2021-01-01',
+            end_date='2022-01-01'
+        )
+        FigureFactory.create(
+            country=self.country_ind,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            total_figures=17,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2022-01-01',
+            end_date='2023-01-01',
+        )
+
+        for filter_data, expected_data in [
+            (
+                {'filterFigureCountries': self.country_nep.id, },
+                [
+                    {
+                        "date": "2021-09-12",
+                        "value": 4
+                    },
+                    {
+                        "date": "2022-01-01",
+                        "value": 13
+                    },
+                    {
+                        "date": "2022-08-17",
+                        "value": 5
+                    },
+                    {
+                        "date": "2022-12-12",
+                        "value": 11
+                    },
+                ]
+            ),
+            (
+                {'filterFigureCountries': self.country_ind.id, },
+                [
+                    {
+                        "date": "2021-10-10",
+                        "value": 3
+                    },
+                    {
+                        "date": "2022-12-10",
+                        "value": 7
+                    },
+                    {
+                        "date": "2023-01-01",
+                        "value": 17
+                    },
+                ]
+            )
+        ]:
+            response = self.query(query, variables={**filter_data})
+            content = json.loads(response.content)
+            self.assertEqual(
+                content['data']['figureAggregations']['idpsDisasterFigures'], expected_data,
+            )
+
+        # Test for ndsConflictFigures
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            total_figures=2,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            entry=self.entry,
+            event=self.event,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=101,
+            unit=Figure.UNIT.PERSON,
+            start_date='2021-09-12',
+            end_date='2021-09-30'
+        )
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            total_figures=2,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2021-09-12',
+            end_date='2022-09-30'
+        )
+        FigureFactory.create(
+            country=self.country_ind,
+            role=Figure.ROLE.RECOMMENDED,
+            total_figures=3,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2021-10-10',
+            end_date='2023-09-30'
+        )
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            total_figures=5,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2022-08-17',
+            end_date='2022-08-30'
+        )
+        FigureFactory.create(
+            country=self.country_ind,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            total_figures=7,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2022-12-10',
+            end_date='2012-12-30'
+        )
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            total_figures=11,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2023-12-12',
+            end_date='2012-12-30'
+        )
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            total_figures=13,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2023-01-01',
+            end_date='2012-12-30'
+        )
+        FigureFactory.create(
+            country=self.country_ind,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            total_figures=17,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2023-01-01',
+            end_date='2012-12-30',
+        )
+
+        for filter_data, expected_data in [
+            (
+                {'filterFigureCountries': self.country_nep.id, },
+                [
+                    {
+                        "date": "2021-09-12",
+                        "value": 4
+                    },
+                    {
+                        "date": "2022-08-17",
+                        "value": 5
+                    },
+                    {
+                        "date": "2023-01-01",
+                        "value": 13
+                    },
+                    {
+                        "date": "2023-12-12",
+                        "value": 11
+                    }
+                ]
+            ),
+            (
+                {'filterFigureCountries': self.country_ind.id, },
+                [
+                    {
+                        "date": "2021-10-10",
+                        "value": 3
+                    },
+                    {
+                        "date": "2022-12-10",
+                        "value": 7
+                    },
+                    {
+                        "date": "2023-01-01",
+                        "value": 17
+                    },
+                ]
+            )
+        ]:
+            response = self.query(query, variables={**filter_data})
+            content = json.loads(response.content)
+            self.assertEqual(
+                content['data']['figureAggregations']['ndsConflictFigures'], expected_data,
+            )
+
+        # Test for ndsDisasterFigures
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            total_figures=2,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            entry=self.entry,
+            event=self.event,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=101,
+            unit=Figure.UNIT.PERSON,
+            start_date='2021-09-12',
+            end_date='2021-09-30'
+        )
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            total_figures=2,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2021-09-12',
+            end_date='2022-09-30'
+        )
+        FigureFactory.create(
+            country=self.country_ind,
+            role=Figure.ROLE.RECOMMENDED,
+            total_figures=3,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2021-10-10',
+            end_date='2023-09-30'
+        )
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            total_figures=5,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2022-08-17',
+            end_date='2022-08-30'
+        )
+        FigureFactory.create(
+            country=self.country_ind,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            total_figures=7,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2022-12-10',
+            end_date='2012-12-30'
+        )
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            total_figures=11,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2023-12-12',
+            end_date='2012-12-30'
+        )
+        FigureFactory.create(
+            country=self.country_nep,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            total_figures=13,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2023-01-01',
+            end_date='2012-12-30'
+        )
+        FigureFactory.create(
+            country=self.country_ind,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            total_figures=17,
+            entry=self.entry2,
+            event=self.event2,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+            reported=111,
+            unit=Figure.UNIT.PERSON,
+            start_date='2023-01-01',
+            end_date='2012-12-30',
+        )
+
+        for filter_data, expected_data in [
+            (
+                {'filterFigureCountries': self.country_nep.id, },
+                [
+                    {
+                        "date": "2021-09-12",
+                        "value": 4
+                    },
+                    {
+                        "date": "2022-08-17",
+                        "value": 5
+                    },
+                    {
+                        "date": "2023-01-01",
+                        "value": 13
+                    },
+                    {
+                        "date": "2023-12-12",
+                        "value": 11
+                    }
+                ]
+            ),
+            (
+                {'filterFigureCountries': self.country_ind.id, },
+                [
+                    {
+                        "date": "2021-10-10",
+                        "value": 3
+                    },
+                    {
+                        "date": "2022-12-10",
+                        "value": 7
+                    },
+                    {
+                        "date": "2023-01-01",
+                        "value": 17
+                    },
+                ]
+            )
+        ]:
+            response = self.query(query, variables={**filter_data})
+            content = json.loads(response.content)
+            self.assertEqual(
+                content['data']['figureAggregations']['ndsDisasterFigures'], expected_data,
+            )
+
+        # test filter by year
+        filter_data = {
+            "filterFigureEndBefore": '2022-12-31',
+            'filterFigureCountries': self.country_nep.id
+        }
+        response = self.query(query, variables={**filter_data})
+        content = json.loads(response.content)
+        print("Content", content)
+        self.assertEqual(
+            content['data']['figureAggregations']['idpsConflictFigures'],
+            [
+                {
+                    "date": "2021-09-12",
+                    "value": 4
+                },
+                {
+                    "date": "2022-08-17",
+                    "value": 5
+                },
+
+            ]
+        )
+        self.assertEqual(
+            content['data']['figureAggregations']['idpsDisasterFigures'],
+            [
+                {
+                    "date": "2021-09-12",
+                    "value": 4
+                },
+                {
+                    "date": "2022-01-01",
+                    "value": 13
+                },
+                {
+                    "date": "2022-08-17",
+                    "value": 5
+                },
+                {
+                    "date": "2022-12-12",
+                    "value": 11
+                },
+            ]
+        )
+        self.assertEqual(
+            content['data']['figureAggregations']['ndsConflictFigures'],
+            [
+                {
+                    "date": "2021-09-12",
+                    "value": 4
+                },
+                {
+                    "date": "2022-08-17",
+                    "value": 5
+                },
+            ]
+        )
+        self.assertEqual(
+            content['data']['figureAggregations']['ndsDisasterFigures'],
+            [
+                {
+                    "date": "2021-09-12",
+                    "value": 4
+                },
+                {
+                    "date": "2022-08-17",
+                    "value": 5
+                },
+            ]
+        )
