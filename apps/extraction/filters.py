@@ -371,7 +371,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         if not value:
             return qs
 
-        return qs.filter(
+        return Figure.objects.filter(
             id__in=Report.objects.get(id=value).report_figures.values('id')
         )
 
