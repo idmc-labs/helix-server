@@ -5,6 +5,8 @@ from django.db.models import (
     Value,
 )
 from django.db.models.functions import Lower, StrIndex
+from django.utils.translation import gettext
+from django.core.exceptions import ValidationError
 
 from apps.country.models import (
     Country,
@@ -128,6 +130,18 @@ class CountryFilter(django_filters.FilterSet):
 
     @property
     def qs(self):
+        if self.data.get('report'):
+            if self.data.get('year'):
+                raise ValidationError(gettext('Cannot pass both report and year in filter'))
+
+            report = Report.objects.filter(id=self.data.get('report')).first()
+            if report:
+                year = report.filter_figure_end_before.year
+        elif self.data.get('year'):
+            year = self.data.get('year')
+        else:
+            year = timezone.now()
+
         year = self.data.get('year', timezone.now().year)
         start_date, end_date = None, None
         if year:
