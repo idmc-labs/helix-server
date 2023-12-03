@@ -97,46 +97,7 @@ class ReportType(DjangoObjectType):
     filter_figure_roles_display = EnumDescription(source='get_filter_figure_roles_display')
     filter_figure_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
     filter_figure_crisis_types_display = EnumDescription(source='get_filter_figure_crisis_types_display')
-    countries_report = graphene.Dynamic(lambda: CustomPaginatedListObjectField(
-        get_type('apps.country.schema.CountryListType'),
-        accessor='countries_report',
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        filterset_class=DummyFilter
-    ))
-    events_report = graphene.Dynamic(lambda: CustomPaginatedListObjectField(
-        get_type('apps.event.schema.EventListType'),
-        accessor='events_report',
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        filterset_class=DummyFilter
-    ))
-    entries_report = graphene.Dynamic(lambda: CustomPaginatedListObjectField(
-        get_type('apps.entry.schema.EntryListType'),
-        accessor='entries_report',
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        filterset_class=DummyFilter
-    ))
-    figures_report = DjangoPaginatedListObjectField(
-        FigureListType,
-        accessor='report_figures',
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        filterset_class=FigureExtractionFilterSet
-    )
-    crises_report = graphene.Dynamic(lambda: CustomPaginatedListObjectField(
-        get_type('apps.crisis.schema.CrisisListType'),
-        accessor='crises_report',
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        filterset_class=DummyFilter
-    ))
+
     total_disaggregation = graphene.NonNull(ReportTotalsType)
     # FIXME: use dataloader for last_generation
     last_generation = graphene.Field(ReportGenerationType)
