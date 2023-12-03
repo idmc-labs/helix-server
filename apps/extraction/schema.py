@@ -50,15 +50,3 @@ class Query:
                                                            pagination=PageGraphqlPaginationWithoutCount(
                                                                page_size_query_param='pageSize'
                                                            ))
-    extraction_entry_list = DjangoPaginatedListObjectField(EntryListType,
-                                                           pagination=PageGraphqlPaginationWithoutCount(
-                                                               page_size_query_param='pageSize'
-                                                           ),
-                                                           filterset_class=EntryExtractionFilterSet)
-
-    # FIXME: this is not used in client, remove this
-    extraction_figure_list = DjangoPaginatedListObjectField(FigureListType,
-                                                            pagination=PageGraphqlPaginationWithoutCount(
-                                                                page_size_query_param='pageSize'
-                                                            ),
-                                                            filterset_class=FigureExtractionFilterSet)
