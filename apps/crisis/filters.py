@@ -13,7 +13,7 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
     events = IDListFilter(method='filter_events')
 
     # used in report crisis table
-    report = django_filters.CharFilter(method='filter_report')
+    report_id = django_filters.CharFilter(method='noop')
     created_by_ids = IDListFilter(method='filter_created_by')
 
     class Meta:
@@ -23,6 +23,9 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
             'start_date': ['lt', 'lte', 'gt', 'gte'],
             'end_date': ['lt', 'lte', 'gt', 'gte'],
         }
+
+    def noop(self, qs, name, value):
+        return qs
 
     def filter_events(self, qs, name, value):
         if not value:
@@ -45,13 +48,6 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
             Crisis.CRISIS_TYPE.get(item).value for item in value
         ]).distinct()
 
-    def filter_report(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(
-            id__in=Report.objects.get(id=value).report_figures.values('event__crisis')
-        )
-
     def filter_name(self, qs, name, value):
         if not value:
             return qs
@@ -64,8 +60,18 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
 
     @property
     def qs(self):
-        return super().qs.annotate(
-            **Crisis._total_figure_disaggregation_subquery(),
+        qs = super().qs
+        report_id = self.data.get('report_id')
+        figure_qs = None
+        reference_date = None
+        if report_id:
+            # TODO: Handle when report is None
+            report = Report.objects.filter(id=report_id).first()
+            figure_qs = report.report_figures
+            reference_date = report.filter_figure_end_before
+            qs = qs.filter(id__in=figure_qs.values('event__crisis'))
+        return qs.annotate(
+            **Crisis._total_figure_disaggregation_subquery(figures=figure_qs, reference_date=reference_date),
             **Crisis.annotate_review_figures_count(),
             event_count=Count('events'),
         ).prefetch_related('events').distinct()

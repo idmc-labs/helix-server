@@ -227,7 +227,7 @@ class EventType(DjangoObjectType):
         NULL = 'null'
         value = getattr(
             root,
-            Event.IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE,
+            Event.IDP_FIGURES_REFERENCE_DATE_ANNOTATE,
             NULL
         )
         if value != NULL:

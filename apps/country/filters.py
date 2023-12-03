@@ -50,7 +50,7 @@ class CountryFilter(django_filters.FilterSet):
     geo_group_by_ids = StringListFilter(method='filter_geo_groups')
 
     # used in report country table
-    report = django_filters.CharFilter(method='filter_report')
+    report_id = django_filters.CharFilter(method='noop')
     year = django_filters.NumberFilter(method='filter_year')
     events = IDListFilter(method='filter_by_events')
     crises = IDListFilter(method='filter_by_crisis')
@@ -61,6 +61,9 @@ class CountryFilter(django_filters.FilterSet):
             'iso3': ['unaccent__icontains'],
             'id': ['iexact'],
         }
+
+    def noop(self, qs, name, value):
+        return qs
 
     def filter_by_events(self, qs, name, value):
         if not value:
@@ -74,13 +77,6 @@ class CountryFilter(django_filters.FilterSet):
             return qs
         return qs.filter(
             id__in=Country.objects.filter(crises__in=value).values('id')
-        )
-
-    def filter_report(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(
-            id__in=Report.objects.get(id=value).report_figures.values('country')
         )
 
     def _filter_name(self, queryset, name, value):
@@ -130,28 +126,32 @@ class CountryFilter(django_filters.FilterSet):
 
     @property
     def qs(self):
-        if self.data.get('report'):
-            if self.data.get('year'):
-                raise ValidationError(gettext('Cannot pass both report and year in filter'))
+        report_id = self.data.get('report_id')
+        year = self.data.get('year')
+        # TODO: Handle if report doesn't exists
+        report = report_id and Report.objects.filter(id=report_id).first()
+        # Only 1 is allowed among report and year
+        if report and year:
+            raise ValidationError(gettext('Cannot pass both report and year in filter'))
 
-            report = Report.objects.filter(id=self.data.get('report')).first()
-            if report:
-                year = report.filter_figure_end_before.year
-        elif self.data.get('year'):
-            year = self.data.get('year')
+        qs = super().qs
+        figure_qs = None
+        start_date = None
+        end_date = None
+        if report:
+            figure_qs = report.report_figures
+            end_date = report.filter_figure_end_before
+            qs = qs.filter(id__in=figure_qs.values('country'))
         else:
-            year = timezone.now()
+            year = year or timezone.now().year
+            start_date = datetime(year=int(year), month=1, day=1)
+            end_date = datetime(year=int(year), month=12, day=31)
 
-        year = self.data.get('year', timezone.now().year)
-        start_date, end_date = None, None
-        if year:
-            year_int = int(year)
-            start_date = datetime(year=year_int, month=1, day=1)
-            end_date = datetime(year=year_int, month=12, day=31)
-
-        qs = super().qs.annotate(
+        qs = qs.annotate(
             **Country._total_figure_disaggregation_subquery(
-                start_date=start_date, end_date=end_date
+                figures=figure_qs,
+                start_date=start_date,
+                end_date=end_date,
             )
         )
         return qs
