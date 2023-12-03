@@ -216,7 +216,8 @@ class Country(models.Model):
         '''
         returns the subqueries for figures sum annotations
         '''
-        figures = figures or Figure.objects.all()
+        if figures is None:
+            figures = Figure.objects.all()
         if start_date is None and end_date is None:
             if year:
                 start_date = datetime(year=int(year), month=1, day=1)

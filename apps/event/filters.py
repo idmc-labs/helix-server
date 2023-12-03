@@ -31,7 +31,7 @@ class EventFilter(NameFilterMixin,
 
     osv_sub_type_by_ids = IDListFilter(method='filter_osv_sub_types')
     # used in report entry table
-    report = django_filters.CharFilter(method='filter_report')
+    report_id = django_filters.CharFilter(method='noop')
     disaster_sub_types = IDListFilter(method='filter_disaster_sub_types')
     violence_types = IDListFilter(method='filter_violence_types')
     violence_sub_types = IDListFilter(method='filter_violence_sub_types')
@@ -51,12 +51,8 @@ class EventFilter(NameFilterMixin,
             'ignore_qa': ['exact']
         }
 
-    def filter_report(self, qs, name, value):
-        if not value:
-            return qs
-        return Event.objects.filter(
-            id__in=Report.objects.get(id=value).report_figures.values('event')
-        )
+    def noop(self, qs, name, value):
+        return qs
 
     def filter_countries(self, qs, name, value):
         if not value:
@@ -203,8 +199,18 @@ class EventFilter(NameFilterMixin,
 
     @property
     def qs(self):
-        return super().qs.annotate(
-            **Event._total_figure_disaggregation_subquery(),
+        qs = super().qs
+        report_id = self.data.get('report_id')
+        figure_qs = None
+        reference_date = None
+        if report_id:
+            # TODO: Handle when report is None
+            report = Report.objects.filter(id=report_id).first()
+            figure_qs = report.report_figures
+            reference_date = report.filter_figure_end_before
+            qs = qs.filter(id__in=figure_qs.values('event'))
+        return qs.annotate(
+            **Event._total_figure_disaggregation_subquery(figures=figure_qs, reference_date=reference_date),
             **Event.annotate_review_figures_count(),
             entry_count=models.Subquery(
                 Figure.objects.filter(
