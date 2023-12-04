@@ -565,7 +565,7 @@ input CountryFilterDataInputType {
   geographicalGroupName: String
   regionByIds: [String!]
   geoGroupByIds: [String!]
-  report: String
+  reportId: String
   year: Float
   events: [ID!]
   crises: [ID!]
@@ -866,7 +866,7 @@ input CrisisFilterDataInputType {
   countries: [String!]
   crisisTypes: [String!]
   events: [ID!]
-  report: String
+  reportId: String
   createdByIds: [ID!]
 }
 
@@ -1429,7 +1429,7 @@ input EventFilterDataInputType {
   countries: [ID!]
   glideNumbers: [String!]
   osvSubTypeByIds: [ID!]
-  report: String
+  reportId: String
   disasterSubTypes: [ID!]
   violenceTypes: [ID!]
   violenceSubTypes: [ID!]
@@ -2457,7 +2457,7 @@ type Mutation {
   createContextOfViolence(data: ContextOfViolenceCreateInputType!): CreateContextOfViolence
   updateContextOfViolence(data: ContextOfViolenceUpdateInputType!): UpdateContextOfViolence
   deleteContextOfViolence(id: ID!): DeleteContextOfViolence
-  exportEvents(createdAt_Lte: DateTime, createdAt_Lt: DateTime, createdAt_Gte: DateTime, createdAt_Gt: DateTime, startDate_Lte: Date, startDate_Lt: Date, startDate_Gte: Date, startDate_Gt: Date, endDate_Lte: Date, endDate_Lt: Date, endDate_Gte: Date, endDate_Gt: Date, ignoreQa: Boolean, name: String, crisisByIds: [ID!], eventTypes: [String!], countries: [ID!], glideNumbers: [String!], osvSubTypeByIds: [ID!], report: String, disasterSubTypes: [ID!], violenceTypes: [ID!], violenceSubTypes: [ID!], createdByIds: [ID!], qaRule: String, contextOfViolences: [ID!], reviewStatus: [String!], assignees: [ID!], assigners: [ID!]): ExportEvents
+  exportEvents(createdAt_Lte: DateTime, createdAt_Lt: DateTime, createdAt_Gte: DateTime, createdAt_Gt: DateTime, startDate_Lte: Date, startDate_Lt: Date, startDate_Gte: Date, startDate_Gt: Date, endDate_Lte: Date, endDate_Lt: Date, endDate_Gte: Date, endDate_Gt: Date, ignoreQa: Boolean, name: String, crisisByIds: [ID!], eventTypes: [String!], countries: [ID!], glideNumbers: [String!], osvSubTypeByIds: [ID!], reportId: String, disasterSubTypes: [ID!], violenceTypes: [ID!], violenceSubTypes: [ID!], createdByIds: [ID!], qaRule: String, contextOfViolences: [ID!], reviewStatus: [String!], assignees: [ID!], assigners: [ID!]): ExportEvents
   exportActors(name_Unaccent_Icontains: String): ExportActors
   cloneEvent(data: CloneEventInputType!): CloneEvent
   setAssigneeToEvent(eventId: ID!, userId: ID!): SetAssigneeToEvent
@@ -2468,7 +2468,7 @@ type Mutation {
   createCrisis(data: CrisisCreateInputType!): CreateCrisis
   updateCrisis(data: CrisisUpdateInputType!): UpdateCrisis
   deleteCrisis(id: ID!): DeleteCrisis
-  exportCrises(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], report: String, createdByIds: [ID!]): ExportCrises
+  exportCrises(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], reportId: String, createdByIds: [ID!]): ExportCrises
   createOrganization(data: OrganizationCreateInputType!): CreateOrganization
   updateOrganization(data: OrganizationUpdateInputType!): UpdateOrganization
   deleteOrganization(id: ID!): DeleteOrganization
@@ -2478,7 +2478,7 @@ type Mutation {
   exportOrganizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], orderCountryFirst: [ID!]): ExportOrganizations
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
-  exportCountries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, year: Float, events: [ID!], crises: [ID!]): ExportCountries
+  exportCountries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], reportId: String, year: Float, events: [ID!], crises: [ID!]): ExportCountries
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
   createClient(data: clientCreateInputType!): CreateClient
   updateClient(data: ClientUpdateInputType!): UpdateClient
@@ -2993,8 +2993,6 @@ type Query {
   resourceGroupList: [ResourceGroupType!]
   extractionQuery(id: ID!): ExtractionQueryObjectType
   extractionQueryList(filters: ExtractionQueryFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ExtractionQueryListType
-  extractionEntryList(filters: EntryExtractionSetFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType
-  extractionFigureList(filters: FigureExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): FigureListType
   figureTag(id: ID!): FigureTagType
   figureTagList(filters: FigureTagFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): FigureTagListType
   figure(id: ID!): FigureType
@@ -3349,11 +3347,6 @@ type ReportType {
   generations(filters: ReportGenerationFilterDataInputType, ordering: String): ReportGenerationListType
   filterFigureRolesDisplay: EnumDescription
   filterFigureCrisisTypesDisplay: EnumDescription
-  countriesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): CountryListType
-  eventsReport(id: String, page: Int = 1, ordering: String, pageSize: Int): EventListType
-  entriesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
-  figuresReport(filters: FigureExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): FigureListType
-  crisesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): CrisisListType
   totalDisaggregation: ReportTotalsType!
   lastGeneration: ReportGenerationType
   generatedFromDisplay: EnumDescription
