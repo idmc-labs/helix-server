@@ -565,6 +565,7 @@ input CountryFilterDataInputType {
   geographicalGroupName: String
   regionByIds: [String!]
   geoGroupByIds: [String!]
+  filterFigures: FigureExtractionFilterDataInputType
   reportId: String
   year: Float
   events: [ID!]
@@ -2478,7 +2479,7 @@ type Mutation {
   exportOrganizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], orderCountryFirst: [ID!]): ExportOrganizations
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
-  exportCountries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], reportId: String, year: Float, events: [ID!], crises: [ID!]): ExportCountries
+  exportCountries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], filterFigures: FigureExtractionFilterDataInputType, reportId: String, year: Float, events: [ID!], crises: [ID!]): ExportCountries
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
   createClient(data: clientCreateInputType!): CreateClient
   updateClient(data: ClientUpdateInputType!): UpdateClient

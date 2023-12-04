@@ -1,3 +1,4 @@
+import graphene
 import django_filters
 from datetime import datetime
 from django.utils import timezone
@@ -17,7 +18,18 @@ from apps.country.models import (
     Summary,
 )
 from apps.report.models import Report
-from utils.filters import IDListFilter, StringListFilter, NameFilterMixin
+from apps.extraction.filters import (
+    FigureExtractionFilterSet,
+    FigureExtractionFilterDataInputType,
+    FigureExtractionFilterDataType,
+)
+from utils.filters import (
+    IDListFilter,
+    StringListFilter,
+    NameFilterMixin,
+    SimpleInputFilter,
+    generate_type_for_filter_set,
+)
 
 
 class GeographicalGroupFilter(NameFilterMixin,
@@ -48,6 +60,8 @@ class CountryFilter(django_filters.FilterSet):
     geographical_group_name = django_filters.CharFilter(method='filter_geo_group_name')
     region_by_ids = StringListFilter(method='filter_regions')
     geo_group_by_ids = StringListFilter(method='filter_geo_groups')
+
+    filter_figures = SimpleInputFilter(FigureExtractionFilterDataInputType, method='noop')
 
     # used in report country table
     report_id = django_filters.CharFilter(method='noop')
@@ -128,24 +142,35 @@ class CountryFilter(django_filters.FilterSet):
     def qs(self):
         report_id = self.data.get('report_id')
         year = self.data.get('year')
-        # TODO: Handle if report doesn't exists
         report = report_id and Report.objects.filter(id=report_id).first()
+        if report_id is not None and report is None:
+            raise ValidationError(gettext('Provided Report doesnot exists'))
         # Only 1 is allowed among report and year
         if report and year:
             raise ValidationError(gettext('Cannot pass both report and year in filter'))
 
-        qs = super().qs
         figure_qs = None
         start_date = None
         end_date = None
         if report:
             figure_qs = report.report_figures
             end_date = report.filter_figure_end_before
-            qs = qs.filter(id__in=figure_qs.values('country'))
         else:
             year = year or timezone.now().year
             start_date = datetime(year=int(year), month=1, day=1)
             end_date = datetime(year=int(year), month=12, day=31)
+
+        filter_figures_data = self.data.get('filter_figures')
+        if filter_figures_data:
+            figure_qs = FigureExtractionFilterSet(
+                data=filter_figures_data,
+                request=self.request,
+                queryset=figure_qs,
+            ).qs
+
+        qs = super().qs
+        if figure_qs is not None:
+            qs = qs.filter(id__in=figure_qs.values('country'))
 
         qs = qs.annotate(
             **Country._total_figure_disaggregation_subquery(
@@ -188,3 +213,14 @@ class ContextualAnalysisFilter(django_filters.FilterSet):
         fields = {
             'created_at': ['lte', 'gte']
         }
+
+
+CountryFilterDataType, CountryFilterDataInputType = generate_type_for_filter_set(
+    CountryFilter,
+    'entry.schema.figure_list',
+    'CountryFilterDataType',
+    'CountryFilterDataInputType',
+    custom_new_fields_map={
+        'filter_figures': graphene.Field(FigureExtractionFilterDataType),
+    },
+)
