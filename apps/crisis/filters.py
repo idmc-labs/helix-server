@@ -1,8 +1,22 @@
+import graphene
 import django_filters
+from django.utils.translation import gettext
+from django.core.exceptions import ValidationError
 
 from apps.crisis.models import Crisis
 from apps.report.models import Report
-from utils.filters import StringListFilter, NameFilterMixin, IDListFilter
+from apps.extraction.filters import (
+    FigureExtractionFilterSet,
+    FigureExtractionFilterDataInputType,
+    FigureExtractionFilterDataType,
+)
+from utils.filters import (
+    StringListFilter,
+    NameFilterMixin,
+    IDListFilter,
+    SimpleInputFilter,
+    generate_type_for_filter_set,
+)
 from django.db.models import Q, Count
 
 
@@ -11,6 +25,8 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
     countries = StringListFilter(method='filter_countries')
     crisis_types = StringListFilter(method='filter_crisis_types')
     events = IDListFilter(method='filter_events')
+
+    filter_figures = SimpleInputFilter(FigureExtractionFilterDataInputType, method='noop')
 
     # used in report crisis table
     report_id = django_filters.CharFilter(method='noop')
@@ -60,18 +76,45 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
 
     @property
     def qs(self):
-        qs = super().qs
         report_id = self.data.get('report_id')
+        report = report_id and Report.objects.filter(id=report_id).first()
+        if report_id is not None and report is None:
+            raise ValidationError(gettext('Provided Report doesnot exists'))
+
         figure_qs = None
         reference_date = None
-        if report_id:
-            # TODO: Handle when report is None
-            report = Report.objects.filter(id=report_id).first()
+        if report:
             figure_qs = report.report_figures
             reference_date = report.filter_figure_end_before
+
+        filter_figures_data = self.data.get('filter_figures')
+        if filter_figures_data:
+            figure_qs = FigureExtractionFilterSet(
+                data=filter_figures_data,
+                request=self.request,
+                queryset=figure_qs,
+            ).qs
+
+        qs = super().qs
+        if figure_qs is not None:
             qs = qs.filter(id__in=figure_qs.values('event__crisis'))
+
         return qs.annotate(
-            **Crisis._total_figure_disaggregation_subquery(figures=figure_qs, reference_date=reference_date),
+            **Crisis._total_figure_disaggregation_subquery(
+                figures=figure_qs,
+                reference_date=reference_date,
+            ),
             **Crisis.annotate_review_figures_count(),
             event_count=Count('events'),
         ).prefetch_related('events').distinct()
+
+
+CrisisFilterDataType, CrisisFilterDataInputType = generate_type_for_filter_set(
+    CrisisFilter,
+    'crisis.schema.crisis_list',
+    'CrisisFilterDataType',
+    'CrisisFilterDataInputType',
+    custom_new_fields_map={
+        'filter_figures': graphene.Field(FigureExtractionFilterDataType),
+    },
+)

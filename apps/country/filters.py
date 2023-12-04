@@ -217,7 +217,7 @@ class ContextualAnalysisFilter(django_filters.FilterSet):
 
 CountryFilterDataType, CountryFilterDataInputType = generate_type_for_filter_set(
     CountryFilter,
-    'entry.schema.figure_list',
+    'country.schema.country_list',
     'CountryFilterDataType',
     'CountryFilterDataInputType',
     custom_new_fields_map={

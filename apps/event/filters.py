@@ -1,6 +1,10 @@
+import graphene
 import django_filters
 from django.db.models import Q, Count
 from django.contrib.postgres.aggregates.general import ArrayAgg
+from django.utils.translation import gettext
+from django.core.exceptions import ValidationError
+
 from apps.event.models import (
     Actor,
     Event,
@@ -15,7 +19,18 @@ from apps.event.models import (
 )
 from apps.crisis.models import Crisis
 from apps.report.models import Report
-from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
+from apps.extraction.filters import (
+    FigureExtractionFilterSet,
+    FigureExtractionFilterDataInputType,
+    FigureExtractionFilterDataType,
+)
+from utils.filters import (
+    NameFilterMixin,
+    StringListFilter,
+    IDListFilter,
+    SimpleInputFilter,
+    generate_type_for_filter_set,
+)
 from apps.event.constants import OSV
 from django.db import models
 from apps.common.enums import QA_RULE_TYPE
@@ -41,6 +56,8 @@ class EventFilter(NameFilterMixin,
     review_status = StringListFilter(method='filter_review_status')
     assignees = IDListFilter(method='filter_assignees')
     assigners = IDListFilter(method='filter_assigners')
+
+    filter_figures = SimpleInputFilter(FigureExtractionFilterDataInputType, method='noop')
 
     class Meta:
         model = Event
@@ -199,18 +216,34 @@ class EventFilter(NameFilterMixin,
 
     @property
     def qs(self):
-        qs = super().qs
         report_id = self.data.get('report_id')
+        report = report_id and Report.objects.filter(id=report_id).first()
+        if report_id is not None and report is None:
+            raise ValidationError(gettext('Provided Report doesnot exists'))
+
         figure_qs = None
         reference_date = None
-        if report_id:
-            # TODO: Handle when report is None
-            report = Report.objects.filter(id=report_id).first()
+        if report:
             figure_qs = report.report_figures
             reference_date = report.filter_figure_end_before
+
+        filter_figures_data = self.data.get('filter_figures')
+        if filter_figures_data:
+            figure_qs = FigureExtractionFilterSet(
+                data=filter_figures_data,
+                request=self.request,
+                queryset=figure_qs,
+            ).qs
+
+        qs = super().qs
+        if figure_qs is not None:
             qs = qs.filter(id__in=figure_qs.values('event'))
+
         return qs.annotate(
-            **Event._total_figure_disaggregation_subquery(figures=figure_qs, reference_date=reference_date),
+            **Event._total_figure_disaggregation_subquery(
+                figures=figure_qs,
+                reference_date=reference_date,
+            ),
             **Event.annotate_review_figures_count(),
             entry_count=models.Subquery(
                 Figure.objects.filter(
@@ -290,3 +323,14 @@ class ContextOfViolenceFilter(django_filters.FilterSet):
         fields = {
             'name': ['icontains']
         }
+
+
+EventFilterDataType, EventFilterDataInputType = generate_type_for_filter_set(
+    EventFilter,
+    'event.schema.event_list',
+    'EventFilterDataType',
+    'EventFilterDataInputType',
+    custom_new_fields_map={
+        'filter_figures': graphene.Field(FigureExtractionFilterDataType),
+    },
+)
