@@ -1,12 +1,10 @@
 import graphene
-from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 from utils.graphene.enums import EnumDescription
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.entry.enums import RoleGrapheneEnum, FigureTermsEnum, FigureCategoryTypeEnum
-from apps.entry.schema import FigureListType
 from apps.report.models import (
     Report,
     ReportComment,
@@ -18,13 +16,11 @@ from apps.report.filters import (
     ReportFilter,
     ReportApprovalFilter,
     ReportGenerationFilter,
-    DummyFilter,
 )
 from apps.report.enums import ReportGenerationStatusEnum
 from utils.graphene.types import CustomDjangoListObjectType
-from utils.graphene.fields import CustomPaginatedListObjectField, DjangoPaginatedListObjectField
+from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
-from apps.extraction.filters import FigureExtractionFilterSet
 
 
 class ReportTotalsType(graphene.ObjectType):
