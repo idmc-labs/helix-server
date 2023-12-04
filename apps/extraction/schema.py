@@ -3,11 +3,11 @@ from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 import logging
 
-from apps.extraction.filters import EntryExtractionFilterSet, ExtractionQueryFilter, FigureExtractionFilterSet
+from apps.extraction.filters import ExtractionQueryFilter
 from apps.extraction.models import (
     ExtractionQuery,
 )
-from apps.entry.schema import EntryListType, FigureListType
+from apps.entry.schema import EntryListType
 
 from apps.entry.enums import (
     RoleGrapheneEnum,

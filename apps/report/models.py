@@ -19,9 +19,6 @@ from django.contrib.postgres.aggregates.general import StringAgg
 
 from utils.common import get_string_from_list
 from apps.contrib.models import MetaInformationArchiveAbstractModel
-from apps.country.models import (
-    Country,
-)
 from apps.crisis.models import Crisis
 from apps.entry.models import (
     FigureDisaggregationAbstractModel,
