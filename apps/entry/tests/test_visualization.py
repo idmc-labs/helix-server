@@ -23,10 +23,9 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
     def test_figure_aggregation(self):
         query = '''
             query MyQuery (
-                $entry: ID
-                $event: String
-                $filterContextOfViolences: [ID!]
-                $filterCreatedBy: [ID!]
+                $filterFigureEntry: String
+                $filterFigureContextOfViolences: [ID!]
+                $filterFigureCreatedBy: [ID!]
                 $filterEntryArticleTitle: String
                 $filterEntryPublishers: [ID!]
                 $filterFigureApprovedBy: [ID!]
@@ -54,16 +53,15 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                 $filterFigureTerms: [ID!]
                 $filterFigureViolenceSubTypes: [ID!]
                 $filterFigureViolenceTypes: [ID!]
-                $filterHasExcerptIdu: Boolean
-                $filterHasHousingDestruction: Boolean
-                $filterIsFigureToBeReviewed: Boolean
+                $filterFigureHasExcerptIdu: Boolean
+                $filterFigureHasHousingDestruction: Boolean
+                $filterFigureIsToBeReviewed: Boolean
                 $report: String
             ) {
             figureAggregations(
-                entry: $entry
-                event: $event
-                filterContextOfViolences: $filterContextOfViolences
-                filterCreatedBy: $filterCreatedBy
+                filterFigureEntry: $filterFigureEntry
+                filterFigureContextOfViolences: $filterFigureContextOfViolences
+                filterFigureCreatedBy: $filterFigureCreatedBy
                 filterEntryArticleTitle: $filterEntryArticleTitle
                 filterEntryPublishers: $filterEntryPublishers
                 filterFigureApprovedBy: $filterFigureApprovedBy
@@ -91,9 +89,9 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                 filterFigureTerms: $filterFigureTerms
                 filterFigureViolenceSubTypes: $filterFigureViolenceSubTypes
                 filterFigureViolenceTypes: $filterFigureViolenceTypes
-                filterHasExcerptIdu: $filterHasExcerptIdu
-                filterHasHousingDestruction: $filterHasHousingDestruction
-                filterIsFigureToBeReviewed: $filterIsFigureToBeReviewed
+                filterFigureHasExcerptIdu: $filterFigureHasExcerptIdu
+                filterFigureHasHousingDestruction: $filterFigureHasHousingDestruction
+                filterFigureIsToBeReviewed: $filterFigureIsToBeReviewed
                 report: $report
             )
                 {
@@ -264,6 +262,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
         ]:
             response = self.query(query, variables={**filter_data})
             content = json.loads(response.content)
+            print("************************************", content)
             self.assertEqual(
                 content['data']['figureAggregations']['idpsConflictFigures'], expected_data,
             )
