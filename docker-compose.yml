@@ -8,6 +8,7 @@ x-server: &base_server_setup
     ENABLE_DEBUG_TOOLBAR: ${ENABLE_DEBUG_TOOLBAR:-False}  # Used for DEBUG TOOLBAR, TODO: REMOVE
     DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-STATIC-INSECURE-KEY-PLEASE-DONT-USE-IN-PRODUCTION}
     DJANGO_ALLOWED_HOST: ${DJANGO_ALLOWED_HOST:-localhost,host.docker.internal}
+    BACKEND_BASE_URL: ${BACKEND_BASE_URL:-http://localhost:9000}
     FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3080}
     # Database (Default from db container)
     POSTGRES_HOST: ${POSTGRES_HOST:-db}
