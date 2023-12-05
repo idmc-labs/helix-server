@@ -1,5 +1,3 @@
-import re
-
 from collections import OrderedDict
 from datetime import date
 import logging
@@ -32,7 +30,7 @@ from apps.contrib.models import (
     MetaInformationArchiveAbstractModel,
 )
 from utils.common import get_string_from_list
-from utils.fields import CachedFileField
+from utils.fields import CachedFileField, generate_full_media_url
 from apps.contrib.commons import DATE_ACCURACY
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
@@ -852,6 +850,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             sources_methodology='Sources methodology',
             source_excerpt='Source excerpt',
             entry_url_or_document_url='Source url',
+            entry__preview__pdf='Source url snapshot',
             source_document='Source document',
             geolocations='Locations name',
             geolocation_list='Locations',
@@ -1000,14 +999,6 @@ class Figure(MetaInformationArchiveAbstractModel,
 
         def transformer(datum):
 
-            def get_document_name_from_url(url):
-                if not url:
-                    return ''
-                document_name = re.findall(r"([^/]+)$", url)
-                if len(document_name) == 0 or document_name[0] == url:
-                    return ''
-                return document_name[0]
-
             def format_glide_numbers(glide_numbers):
                 if not glide_numbers:
                     return ''
@@ -1021,6 +1012,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             return {
                 **datum,
                 'include_idu': 'Yes' if datum['include_idu'] else 'No',
+                'entry__preview__pdf': generate_full_media_url(datum['entry__preview__pdf'], absolute=True),
                 'is_housing_destruction': 'Yes' if datum['is_housing_destruction'] else 'No',
                 'stock_date_accuracy': get_enum_label(
                     'stock_date_accuracy', DATE_ACCURACY
@@ -1055,7 +1047,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'sources_reliability': get_enum_label(
                     'sources_reliability', Figure.SOURCES_RELIABILITY
                 ),
-                'source_document': get_document_name_from_url(datum['source_document']),
+                'source_document': generate_full_media_url(datum['source_document'], absolute=True),
                 'centroid': datum['centroid'],
                 'event__glide_numbers': format_glide_numbers(datum['event__glide_numbers']),
                 'event__event_type': get_enum_label(
@@ -1326,6 +1318,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             countries='Countries affected',
             article_title='Entry title',
             url='URL',
+            preview__pdf='URL snapshot',
             document__attachment='Document',
             document__mimetype='Filetype',
             document__filetype_detail='Filetype detail',
@@ -1375,6 +1368,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         def transformer(datum):
             return {
                 **datum,
+                'preview__pdf': generate_full_media_url(datum['preview__pdf'], absolute=True),
+                'document__attachment': generate_full_media_url(datum['document__attachment'], absolute=True),
                 'is_confidential': 'Yes' if datum['is_confidential'] else 'No',
                 'categories': get_string_from_list(
                     [category.label if category else "" for category in datum['categories']]

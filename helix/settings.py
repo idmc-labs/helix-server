@@ -54,6 +54,7 @@ env = environ.Env(
     CSRF_USE_SESSIONS=(bool, False),
     # MISC
     DEFAULT_FROM_EMAIL=(str, 'contact@idmcdb.org'),
+    BACKEND_BASE_URL=str,  # http://localhost:9000
     FRONTEND_BASE_URL=str,
     HCAPTCHA_SECRET=str,
     HELIXDBCLUSTER_SECRET=(str, None),
@@ -494,6 +495,7 @@ LOGIN_TIMEOUT = 10 * 60  # seconds
 
 # Frontend base url for email button link
 FRONTEND_BASE_URL = env('FRONTEND_BASE_URL')
+BACKEND_BASE_URL = env('BACKEND_BASE_URL').strip('/')
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#password-reset-timeout
 PASSWORD_RESET_TIMEOUT = 15 * 60  # seconds
