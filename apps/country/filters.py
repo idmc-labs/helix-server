@@ -17,6 +17,7 @@ from apps.country.models import (
     ContextualAnalysis,
     Summary,
 )
+from apps.entry.models import Figure
 from apps.report.models import Report
 from apps.extraction.filters import (
     FigureExtractionFilterSet,
@@ -144,7 +145,7 @@ class CountryFilter(django_filters.FilterSet):
         year = self.data.get('year')
         report = report_id and Report.objects.filter(id=report_id).first()
         if report_id is not None and report is None:
-            raise ValidationError(gettext('Provided Report doesnot exists'))
+            raise ValidationError(gettext('Provided Report does not exist'))
         # Only 1 is allowed among report and year
         if report and year:
             raise ValidationError(gettext('Cannot pass both report and year in filter'))
@@ -153,7 +154,7 @@ class CountryFilter(django_filters.FilterSet):
         start_date = None
         end_date = None
         if report:
-            figure_qs = report.report_figures
+            figure_qs = Figure.objects.filter(id__in=report.report_figures.values('id'))
             end_date = report.filter_figure_end_before
         else:
             year = year or timezone.now().year
@@ -162,11 +163,12 @@ class CountryFilter(django_filters.FilterSet):
 
         filter_figures_data = self.data.get('filter_figures')
         if filter_figures_data:
-            figure_qs = FigureExtractionFilterSet(
+            filter_figures_data_qs = FigureExtractionFilterSet(
                 data=filter_figures_data,
                 request=self.request,
                 queryset=figure_qs,
             ).qs
+            figure_qs = Figure.objects.filter(id__in=filter_figures_data_qs.values('id'))
 
         qs = super().qs
         if figure_qs is not None:
