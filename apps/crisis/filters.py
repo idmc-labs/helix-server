@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 
 from apps.crisis.models import Crisis
 from apps.report.models import Report
+from apps.entry.models import Figure
 from apps.extraction.filters import (
     FigureExtractionFilterSet,
     FigureExtractionFilterDataInputType,
@@ -79,21 +80,22 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
         report_id = self.data.get('report_id')
         report = report_id and Report.objects.filter(id=report_id).first()
         if report_id is not None and report is None:
-            raise ValidationError(gettext('Provided Report doesnot exists'))
+            raise ValidationError(gettext('Provided Report does not exist'))
 
         figure_qs = None
         reference_date = None
         if report:
-            figure_qs = report.report_figures
+            figure_qs = Figure.objects.filter(id__in=report.report_figures('id'))
             reference_date = report.filter_figure_end_before
 
         filter_figures_data = self.data.get('filter_figures')
         if filter_figures_data:
-            figure_qs = FigureExtractionFilterSet(
+            filter_figures_data_qs = FigureExtractionFilterSet(
                 data=filter_figures_data,
                 request=self.request,
                 queryset=figure_qs,
             ).qs
+            figure_qs = Figure.objects.filter(id__in=filter_figures_data_qs.values('id'))
 
         qs = super().qs
         if figure_qs is not None:
