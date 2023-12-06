@@ -56,7 +56,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_has_excerpt_idu = df.BooleanFilter(method='filter_filter_figure_has_excerpt_idu')
     filter_figure_has_housing_destruction = df.BooleanFilter(method='filter_filter_figure_has_housing_destruction')
     # used in report entry table
-    report = df.CharFilter(method='filter_report')
+    report_id = df.CharFilter(method='filter_report')
     filter_figure_context_of_violences = IDListFilter(method='filter_filter_figure_context_of_violences')
     filter_figure_is_to_be_reviewed = df.BooleanFilter(method='filter_filter_figure_is_to_be_reviewed')
 
@@ -344,7 +344,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_osv_sub_types = IDListFilter(method='filter_filter_figure_osv_sub_types')
     filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data')
     # used in report entry table
-    report = df.CharFilter(method='filter_report')
+    report_id = df.CharFilter(method='filter_report')
     filter_figure_context_of_violences = IDListFilter(method='filter_figure_context_of_violences')
     filter_figure_review_status = StringListFilter(method='filter_filter_figure_review_status')
     filter_figure_approved_by = IDListFilter(method='filter_filter_figure_approved_by')
