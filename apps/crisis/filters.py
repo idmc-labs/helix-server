@@ -85,7 +85,7 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
         figure_qs = None
         reference_date = None
         if report:
-            figure_qs = Figure.objects.filter(id__in=report.report_figures('id'))
+            figure_qs = Figure.objects.filter(id__in=report.report_figures.values('id'))
             reference_date = report.filter_figure_end_before
 
         filter_figures_data = self.data.get('filter_figures')
