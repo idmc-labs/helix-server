@@ -793,6 +793,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             def __init__(self, user):
                 self.user = user
 
+        # TODO: can we use ReportFigureExtractionFilterSet?
         qs = FigureExtractionFilterSet(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
@@ -1092,6 +1093,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     @classmethod
     def get_total_stock_idp_figure(cls, filters):
         from apps.extraction.filters import FigureExtractionFilterSet
+        # TODO: use ReportFigureExtractionFilterSet
         return FigureExtractionFilterSet(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
@@ -1100,6 +1102,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     @classmethod
     def get_total_flow_nd_figure(cls, filters):
         from apps.extraction.filters import FigureExtractionFilterSet
+        # TODO: use ReportFigureExtractionFilterSet
         return FigureExtractionFilterSet(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value

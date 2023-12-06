@@ -163,6 +163,7 @@ class CountryFilter(django_filters.FilterSet):
 
         filter_figures_data = self.data.get('filter_figures')
         if filter_figures_data:
+            # TODO: use ReportFigureExtractionFilterSet
             filter_figures_data_qs = FigureExtractionFilterSet(
                 data=filter_figures_data,
                 request=self.request,

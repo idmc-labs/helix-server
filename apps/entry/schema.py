@@ -311,12 +311,15 @@ class Query:
     figure_aggregations = graphene.Field(
         VisualizationFigureType,
         **get_filtering_args_from_filterset(
-            FigureExtractionFilterSet, VisualizationFigureType
+            # TODO: can we use ReportFigureExtractionFilterSet?
+            FigureExtractionFilterSet,
+            VisualizationFigureType,
         )
     )
 
     @staticmethod
     def resolve_figure_aggregations(root, info, **kwargs):
+        # TODO: can we use ReportFigureExtractionFilterSet?
         figure_qs = FigureExtractionFilterSet(data=kwargs).qs
 
         idps_conflict_figure_qs = figure_qs.filter(

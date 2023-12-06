@@ -308,6 +308,7 @@ class ExportEntries(graphene.Mutation):
 
 class ExportFigures(graphene.Mutation):
     class Meta:
+        # TODO: use Can we use ReportFigureExtractionFilterSet?
         arguments = get_filtering_args_from_filterset(
             FigureExtractionFilterSet,
             FigureType
