@@ -38,6 +38,7 @@ env = environ.Env(
     AWS_S3_ACCESS_KEY_ID=(str, None),
     AWS_S3_SECRET_ACCESS_KEY=(str, None),
     AWS_S3_REGION=str,
+    AWS_S3_AWS_ENDPOINT_URL=(str, None),
     S3_BUCKET_NAME=str,
     EXTERNAL_S3_BUCKET_NAME=str,
     # Redis URL
@@ -371,6 +372,7 @@ if env('USE_S3_BUCKET'):
     # Set bucket Names
     AWS_STORAGE_MEDIA_BUCKET_NAME = AWS_STORAGE_STATIC_BUCKET_NAME = env('S3_BUCKET_NAME')
     AWS_STORAGE_EXTERNAL_BUCKET_NAME = env('EXTERNAL_S3_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL = env('AWS_S3_AWS_ENDPOINT_URL') if DEBUG else None
 
     # Set Default storages
     DEFAULT_FILE_STORAGE = 'helix.storages.S3MediaStorage'

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def generate_excel_file(excel_sheet_data):
-    wb = Workbook()
+    wb = Workbook(write_only=True)
     active = wb.active.title
     del wb[active]
 
