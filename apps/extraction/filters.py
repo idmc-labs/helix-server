@@ -30,7 +30,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
     filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='unaccent__icontains')
-    filter_entry_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
+    filter_figure_created_by = IDListFilter(method='filter_created_by')
 
     filter_figure_regions = IDListFilter(method='filter_regions')
     filter_figure_geographical_groups = IDListFilter(method='filter_geographical_groups')
@@ -57,13 +57,18 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_has_housing_destruction = df.BooleanFilter(method='filter_filter_figure_has_housing_destruction')
     # used in report entry table
     report_id = df.CharFilter(method='filter_report')
-    filter_figure_context_of_violences = IDListFilter(method='filter_filter_figure_context_of_violences')
+    filter_figure_context_of_violence = IDListFilter(method='filter_filter_figure_context_of_violence')
     filter_figure_is_to_be_reviewed = df.BooleanFilter(method='filter_filter_figure_is_to_be_reviewed')
 
     class Meta:
         model = Entry
         fields = {
         }
+
+    def filter_created_by(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(figures__created_by__in=value)
 
     def filter_report(self, qs, name, value):
         if not value:
@@ -273,7 +278,7 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs.filter(figures__is_disaggregated=False)
         return qs
 
-    def filter_filter_figure_context_of_violences(self, qs, name, value):
+    def filter_filter_figure_context_of_violence(self, qs, name, value):
         if not value:
             return qs
         return qs.filter(figures__context_of_violence__in=value).distinct()
@@ -345,7 +350,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data')
     # used in report entry table
     report_id = df.CharFilter(method='filter_report')
-    filter_figure_context_of_violences = IDListFilter(method='filter_figure_context_of_violences')
+    filter_figure_context_of_violence = IDListFilter(method='filter_figure_context_of_violence')
     filter_figure_review_status = StringListFilter(method='filter_filter_figure_review_status')
     filter_figure_approved_by = IDListFilter(method='filter_filter_figure_approved_by')
     filter_figure_is_to_be_reviewed = df.BooleanFilter(method='filter_filter_figure_is_to_be_reviewed')
@@ -563,7 +568,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             return qs.filter(is_disaggregated=False)
         return qs
 
-    def filter_filter_figure_context_of_violences(self, qs, name, value):
+    def filter_filter_figure_context_of_violence(self, qs, name, value):
         if not value:
             return qs
         return qs.filter(context_of_violence__in=value).distinct()

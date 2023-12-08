@@ -94,9 +94,15 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_created_by = models.ManyToManyField(
+    filter_figure_created_by = models.ManyToManyField(
         'users.User',
-        verbose_name=_('Entry Created by'),
+        verbose_name=_('Figure Created by'),
+        blank=True,
+    )
+    filter_figure_approved_by = models.ManyToManyField(
+        'users.User',
+        verbose_name=_('Figure Approved by'),
+        related_name='+',
         blank=True,
     )
     filter_figure_terms = ArrayField(
@@ -139,8 +145,10 @@ class QueryAbstractModel(models.Model):
         verbose_name=_('Violence Sub Type'),
         blank=True,
     )
-    filter_figure_category_types = models.CharField(
-        verbose_name=_('Type'), max_length=8, null=True, blank=True
+    filter_figure_osv_sub_types = models.ManyToManyField(
+        'event.OsvSubType',
+        verbose_name=_('Osv Sub Type'),
+        blank=True,
     )
     filter_figure_category_types = ArrayField(
         base_field=models.CharField(verbose_name=_('Type'), max_length=8, choices=(
@@ -153,12 +161,12 @@ class QueryAbstractModel(models.Model):
         null=True,
         default=None,
     )
-    filter_context_of_violence = models.ManyToManyField(
+    filter_figure_context_of_violence = models.ManyToManyField(
         'event.ContextOfViolence',
         verbose_name=_('Context of violence'),
         blank=True,
     )
-    filter_is_figure_to_be_reviewed = models.BooleanField(
+    filter_figure_is_to_be_reviewed = models.BooleanField(
         verbose_name=_('Filter to be reviewed'),
         null=True,
         default=None,
@@ -196,10 +204,19 @@ class QueryAbstractModel(models.Model):
             filter_figure_disaster_sub_types=self.filter_figure_disaster_sub_types.all(),
             filter_figure_violence_types=self.filter_figure_violence_types.all(),
             filter_figure_violence_sub_types=self.filter_figure_violence_sub_types.all(),
+            filter_figure_osv_sub_types=self.filter_figure_osv_sub_types.all(),
             filter_figure_category_types=self.filter_figure_category_types,
             filter_figure_has_disaggregated_data=self.filter_figure_has_disaggregated_data,
-            filter_context_of_violence=self.filter_context_of_violence.all(),
-            filter_is_figure_to_be_reviewed=self.filter_is_figure_to_be_reviewed,
+            filter_figure_context_of_violence=self.filter_figure_context_of_violence.all(),
+            filter_figure_is_to_be_reviewed=self.filter_figure_is_to_be_reviewed,
+            filter_figure_approved_by=self.filter_figure_approved_by.all(),
+            filter_figure_glide_number=self.filter_figure_glide_number,
+            filter_figure_created_by=self.filter_figure_created_by.all(),
+            filter_figure_sources=self.filter_figure_sources.all(),
+            filter_entry_publishers=self.filter_entry_publishers.all(),
+            filter_figure_review_status=self.filter_figure_review_status,
+            filter_figure_has_excerpt_idu=self.filter_figure_has_excerpt_idu,
+            filter_figure_has_housing_destruction=self.filter_figure_has_housing_destruction,
         )
 
     @property
