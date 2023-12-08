@@ -38,6 +38,7 @@ env = environ.Env(
     AWS_S3_ACCESS_KEY_ID=(str, None),
     AWS_S3_SECRET_ACCESS_KEY=(str, None),
     AWS_S3_REGION=str,
+    AWS_S3_AWS_ENDPOINT_URL=(str, None),
     S3_BUCKET_NAME=str,
     EXTERNAL_S3_BUCKET_NAME=str,
     # Redis URL
@@ -371,6 +372,7 @@ if env('USE_S3_BUCKET'):
     # Set bucket Names
     AWS_STORAGE_MEDIA_BUCKET_NAME = AWS_STORAGE_STATIC_BUCKET_NAME = env('S3_BUCKET_NAME')
     AWS_STORAGE_EXTERNAL_BUCKET_NAME = env('EXTERNAL_S3_BUCKET_NAME')
+    AWS_S3_ENDPOINT_URL = env('AWS_S3_AWS_ENDPOINT_URL') if DEBUG else None
 
     # Set Default storages
     DEFAULT_FILE_STORAGE = 'helix.storages.S3MediaStorage'
@@ -555,7 +557,7 @@ CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
 
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = [
+HELIX_TRUSTED_ORIGINS = [
     # Localhost
     "http://localhost:3080",
     "http://127.0.0.1:3080",
@@ -570,6 +572,16 @@ CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = [
     'https://preview-website-components.idmcdb.org',
     'https://release-website-components.idmcdb.org',
 ]
+
+
+if HELIX_ENVIRONMENT.lower() == 'staging':
+    # https://idmc-dfs-dev.slack.com/archives/C05TDRZCQ9W/p1702014730368519
+    HELIX_TRUSTED_ORIGINS += [
+        # TEMP
+        'https://www.main-bvxea6i-cdvwbfnfklw7q.us-2.platformsh.site',
+    ]
+
+CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = HELIX_TRUSTED_ORIGINS
 
 CORS_URLS_REGEX = r'(^/api/.*$)|(^/graphql$)|(^/external-api/.*$)'
 

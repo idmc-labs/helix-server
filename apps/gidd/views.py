@@ -95,7 +95,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         Export disaster
         """
         qs = self.filter_queryset(self.get_queryset())
-        wb = Workbook()
+        wb = Workbook(write_only=True)
         ws = wb.active
         ws.title = "1_Disaster_Displacement_data"
         ws.append([
@@ -300,7 +300,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             'iso3',
         )
 
-        wb = Workbook()
+        wb = Workbook(write_only=True)
         ws = wb.active
         # Tab 1
         ws.title = "1_Displacement_data"

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from apps.contrib.models import Client, ClientTrackInfo
+from apps.contrib.models import Client, ClientTrackInfo, ExcelDownload
 
 
 class ClientAdmin(admin.ModelAdmin):
@@ -30,5 +30,25 @@ class ClientTrackInfoAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('client',)
 
 
+class ExcelDownloadAdmin(admin.ModelAdmin):
+    list_display = [
+        'id',
+        'download_type',
+        'status',
+        'created_by',
+        'file',
+        'file_size',
+        'started_at',
+        'completed_at',
+    ]
+    autocomplete_fields = ('created_by',)
+    list_filter = ['download_type']
+    list_display_links = ['id']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('created_by')
+
+
 admin.site.register(Client, ClientAdmin)
 admin.site.register(ClientTrackInfo, ClientTrackInfoAdmin)
+admin.site.register(ExcelDownload, ExcelDownloadAdmin)

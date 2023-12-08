@@ -27,6 +27,8 @@ x-server: &base_server_setup
     CORS_ORIGIN_REGEX_WHITELIST: ${CORS_ORIGIN_REGEX_WHITELIST:-^http://localhost:[\d\-]+$$|^http://localhost$$}
     # MISC
     HCAPTCHA_SECRET: ${HCAPTCHA_SECRET:-0x0000000000000000000000000000000000000000}
+  env_file:
+    - .env
   volumes:
     - ./:/code
     - ipython_data_local:/root/.ipython/profile_default   # persist ipython data, including ipython history
