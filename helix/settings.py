@@ -557,7 +557,7 @@ CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
 
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = [
+HELIX_TRUSTED_ORIGINS = [
     # Localhost
     "http://localhost:3080",
     "http://127.0.0.1:3080",
@@ -572,6 +572,16 @@ CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = [
     'https://preview-website-components.idmcdb.org',
     'https://release-website-components.idmcdb.org',
 ]
+
+
+if HELIX_ENVIRONMENT.lower() == 'staging':
+    # https://idmc-dfs-dev.slack.com/archives/C05TDRZCQ9W/p1702014730368519
+    HELIX_TRUSTED_ORIGINS += [
+        # TEMP
+        'https://www.main-bvxea6i-cdvwbfnfklw7q.us-2.platformsh.site',
+    ]
+
+CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = HELIX_TRUSTED_ORIGINS
 
 CORS_URLS_REGEX = r'(^/api/.*$)|(^/graphql$)|(^/external-api/.*$)'
 
