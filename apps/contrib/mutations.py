@@ -6,11 +6,12 @@ from graphene_django.filter.utils import get_filtering_args_from_filterset
 
 from apps.contrib.serializers import ExcelDownloadSerializer
 from utils.common import convert_date_object_to_string_in_dict
-from apps.contrib.schema import AttachmentType, ClientType
+from apps.contrib.schema import AttachmentType, ClientType, BulkApiOperationType
 from apps.contrib.serializers import (
     AttachmentSerializer,
     ClientSerializer,
     ClientUpdateSerializer,
+    BulkApiOperationSerializer,
 )
 from apps.contrib.models import (
     Client,
@@ -19,6 +20,12 @@ from .filters import ClientTrackInfoFilter
 from .schema import ClientTrackInformationType
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import is_authenticated, permission_checker
+
+
+BulkApiOperationInputType = generate_input_type_for_serializer(
+    'BulkApiOperationInputType',
+    serializer_class=BulkApiOperationSerializer,
+)
 
 
 class AttachmentCreateInputType(graphene.InputObjectType):
@@ -133,8 +140,27 @@ class ExportTrackingData(graphene.Mutation):
         return ExportTrackingData(errors=None, ok=True)
 
 
+class TriggerBulkOperation(graphene.Mutation):
+    class Arguments:
+        data = BulkApiOperationInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(BulkApiOperationType, required=True)
+
+    @staticmethod
+    # @permission_checker(['entry.add_entry'])
+    def mutate(_, info, data):
+        serializer = BulkApiOperationSerializer(data=data, context={'request': info.context.request})
+        if errors := mutation_is_not_valid(serializer):
+            return TriggerBulkOperation(errors=errors, ok=False)
+        instance = serializer.save()
+        return TriggerBulkOperation(result=instance, errors=None, ok=True)
+
+
 class Mutation:
     create_attachment = CreateAttachment.Field()
     create_client = CreateClient.Field()
     update_client = UpdateClient.Field()
     export_tracking_data = ExportTrackingData.Field()
+    trigger_bulk_operation = TriggerBulkOperation.Field()
