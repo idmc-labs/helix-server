@@ -1,5 +1,12 @@
 from django.contrib import admin
-from apps.contrib.models import Client, ClientTrackInfo, ExcelDownload
+from admin_auto_filters.filters import AutocompleteFilterFactory
+
+from apps.contrib.models import (
+    Client,
+    ClientTrackInfo,
+    ExcelDownload,
+    BulkApiOperation,
+)
 
 
 class ClientAdmin(admin.ModelAdmin):
@@ -42,7 +49,29 @@ class ExcelDownloadAdmin(admin.ModelAdmin):
         'completed_at',
     ]
     autocomplete_fields = ('created_by',)
-    list_filter = ['download_type']
+    list_filter = ('download_type',)
+    list_display_links = ['id']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('created_by')
+
+
+class BulkApiOperationAdmin(admin.ModelAdmin):
+    list_display = [
+        'id',
+        'created_at',
+        'created_by',
+        'action',
+        'status',
+        'success_count',
+        'failure_count',
+    ]
+    autocomplete_fields = ('created_by',)
+    list_filter = (
+        'action',
+        'status',
+        AutocompleteFilterFactory('User', 'created_by'),
+    )
     list_display_links = ['id']
 
     def get_queryset(self, request):
@@ -52,3 +81,4 @@ class ExcelDownloadAdmin(admin.ModelAdmin):
 admin.site.register(Client, ClientAdmin)
 admin.site.register(ClientTrackInfo, ClientTrackInfoAdmin)
 admin.site.register(ExcelDownload, ExcelDownloadAdmin)
+admin.site.register(BulkApiOperation, BulkApiOperationAdmin)

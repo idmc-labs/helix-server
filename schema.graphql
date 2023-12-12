@@ -84,6 +84,68 @@ type AttachmentType {
   attachmentForDisplay: EnumDescription
 }
 
+enum BULK_OPERATION_ACTION {
+  FIGURE_ROLE
+}
+
+enum BULK_OPERATION_STATUS {
+  PENDING
+  STARTED
+  FINISHED
+}
+
+input BulkApiOperationFigureRoleFilterInputType {
+  figure: FigureExtractionFilterDataInputType!
+}
+
+type BulkApiOperationFigureRoleFilterType {
+  figure: FigureExtractionFilterDataType!
+}
+
+input BulkApiOperationFigureRolePayloadInputType {
+  role: ROLE!
+}
+
+type BulkApiOperationFigureRolePayloadType {
+  role: ROLE!
+}
+
+input BulkApiOperationFilterInputType {
+  figureRole: BulkApiOperationFigureRoleFilterInputType
+}
+
+type BulkApiOperationFilterType {
+  figureRole: BulkApiOperationFigureRoleFilterType
+}
+
+input BulkApiOperationInputType {
+  action: BULK_OPERATION_ACTION!
+  filters: BulkApiOperationFilterInputType!
+  payload: BulkApiOperationPayloadInputType!
+}
+
+input BulkApiOperationPayloadInputType {
+  figureRole: BulkApiOperationFigureRolePayloadInputType
+}
+
+type BulkApiOperationPayloadType {
+  figureRole: BulkApiOperationFigureRolePayloadType
+}
+
+type BulkApiOperationType {
+  id: ID!
+  createdAt: DateTime!
+  createdBy: UserType!
+  action: BULK_OPERATION_ACTION
+  filters: BulkApiOperationFilterType!
+  payload: BulkApiOperationPayloadType!
+  status: BULK_OPERATION_STATUS!
+  successCount: Int
+  failureCount: Int
+  actionDisplay: EnumDescription
+  statusDisplay: EnumDescription!
+}
+
 input BulkMonitoringExpertPortfolioInputType {
   portfolios: [MonitoringExpertPortfolioInputType!]!
   region: ID!
@@ -1473,6 +1535,82 @@ enum FOR_CHOICES {
   CONTEXTUAL_UPDATE
 }
 
+input FigureExtractionFilterDataInputType {
+  entry: ID
+  filterFigureRegions: [ID!]
+  filterFigureGeographicalGroups: [ID!]
+  filterFigureCountries: [ID!]
+  filterFigureEvents: [ID!]
+  filterFigureCrises: [ID!]
+  filterFigureSources: [ID!]
+  filterEntryPublishers: [ID!]
+  filterFigureCategoryTypes: [String!]
+  filterFigureCategories: [String!]
+  filterFigureStartAfter: Date
+  filterFigureEndBefore: Date
+  filterFigureRoles: [String!]
+  filterEntryArticleTitle: String
+  filterFigureTags: [ID!]
+  filterFigureCrisisTypes: [String!]
+  filterFigureGlideNumber: [String!]
+  filterCreatedBy: [ID!]
+  filterFigureTerms: [ID!]
+  event: String
+  filterFigureDisasterCategories: [ID!]
+  filterFigureDisasterSubCategories: [ID!]
+  filterFigureDisasterSubTypes: [ID!]
+  filterFigureDisasterTypes: [ID!]
+  filterFigureViolenceSubTypes: [ID!]
+  filterFigureViolenceTypes: [ID!]
+  filterFigureOsvSubTypes: [ID!]
+  filterFigureHasDisaggregatedData: Boolean
+  report: String
+  filterContextOfViolences: [ID!]
+  filterFigureReviewStatus: [String!]
+  filterFigureApprovedBy: [ID!]
+  filterIsFigureToBeReviewed: Boolean
+  filterHasExcerptIdu: Boolean
+  filterHasHousingDestruction: Boolean
+}
+
+type FigureExtractionFilterDataType {
+  filterFigureRegions: [ID!]
+  filterFigureGeographicalGroups: [ID!]
+  filterFigureCountries: [ID!]
+  filterFigureEvents: [ID!]
+  filterFigureCrises: [ID!]
+  filterFigureSources: [ID!]
+  filterEntryPublishers: [ID!]
+  filterFigureCategoryTypes: [String!]
+  filterFigureCategories: [String!]
+  filterFigureRoles: [String!]
+  filterFigureTags: [ID!]
+  filterFigureCrisisTypes: [String!]
+  filterFigureGlideNumber: [String!]
+  filterCreatedBy: [ID!]
+  filterFigureTerms: [ID!]
+  filterFigureDisasterCategories: [ID!]
+  filterFigureDisasterSubCategories: [ID!]
+  filterFigureDisasterSubTypes: [ID!]
+  filterFigureDisasterTypes: [ID!]
+  filterFigureViolenceSubTypes: [ID!]
+  filterFigureViolenceTypes: [ID!]
+  filterFigureOsvSubTypes: [ID!]
+  filterContextOfViolences: [ID!]
+  filterFigureReviewStatus: [String!]
+  filterFigureApprovedBy: [ID!]
+  entry: ID
+  filterFigureStartAfter: Date
+  filterFigureEndBefore: Date
+  filterEntryArticleTitle: String
+  event: String
+  filterFigureHasDisaggregatedData: Boolean
+  report: String
+  filterIsFigureToBeReviewed: Boolean
+  filterHasExcerptIdu: Boolean
+  filterHasHousingDestruction: Boolean
+}
+
 type FigureLastReviewCommentStatusType {
   id: ID!
   field: REVIEW_FIELD_TYPE!
@@ -2090,6 +2228,7 @@ type Mutation {
   createClient(data: clientCreateInputType!): CreateClient
   updateClient(data: ClientUpdateInputType!): UpdateClient
   exportTrackingData(apiType: [String!], clientCodes: [String!], startTrackDate: Date, endTrackDate: Date): ExportTrackingData
+  triggerBulkOperation(data: BulkApiOperationInputType!): TriggerBulkOperation
   createContact(data: ContactCreateInputType!): CreateContact
   updateContact(data: ContactUpdateInputType!): UpdateContact
   deleteContact(id: ID!): DeleteContact
@@ -3094,6 +3233,12 @@ type ToggleNotificationRead {
   ok: Boolean
   errors: [GenericScalar!]
   result: GenericNotificationType
+}
+
+type TriggerBulkOperation {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: BulkApiOperationType!
 }
 
 enum UNIT {

@@ -9,7 +9,7 @@ from apps.entry.models import (
     Figure,
 )
 from apps.report.models import Report
-from utils.filters import StringListFilter, IDListFilter
+from utils.filters import StringListFilter, IDListFilter, generate_type_for_filter_set
 from apps.event.constants import OSV
 from apps.common.enums import GENDER_TYPE
 from apps.entry.constants import STOCK, FLOW
@@ -136,9 +136,9 @@ class EntryExtractionFilterSet(df.FilterSet):
         category_enums_to_filter = []
         for category_type in value:
             if category_type == STOCK:
-                category_enums_to_filter = category_enums_to_filter + Figure.stock_list()
+                category_enums_to_filter += Figure.stock_list()
             if category_type == FLOW:
-                category_enums_to_filter = category_enums_to_filter + Figure.flow_list()
+                category_enums_to_filter += Figure.flow_list()
         return qs.filter(figures__category__in=category_enums_to_filter).distinct()
 
     def filter_filter_figure_categories(self, qs, name, value):
@@ -666,3 +666,11 @@ class ExtractionQueryFilter(df.FilterSet):
         if self.request.user.is_authenticated:
             return super().qs.filter(created_by=self.request.user)
         return ExtractionQuery.objects.none()
+
+
+FigureExtractionFilterDataType, FigureExtractionFilterDataInputType = generate_type_for_filter_set(
+    FigureExtractionFilterSet,
+    'entry.schema.figure_list',
+    'FigureExtractionFilterDataType',
+    'FigureExtractionFilterDataInputType',
+)
