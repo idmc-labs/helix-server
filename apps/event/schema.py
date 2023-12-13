@@ -4,9 +4,14 @@ from graphene_django_extras import DjangoObjectField
 from utils.graphene.enums import EnumDescription
 from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.event.enums import QaRecommendedFigureEnum, EventReviewStatusEnum
+from apps.event.enums import (
+    QaRecommendedFigureEnum,
+    EventReviewStatusEnum,
+    EventCodeTypeGrapheneEnum,
+)
 from apps.event.models import (
     Event,
+    EventCode,
     Violence,
     ViolenceSubType,
     Actor,
@@ -175,6 +180,16 @@ class OtherSubTypeList(CustomDjangoListObjectType):
     class Meta:
         model = OtherSubType
         filterset_class = OtherSubTypeFilter
+
+
+class EventCodeType(DjangoObjectType):
+
+    class Meta:
+        model = EventCode
+        exclude_fields = ('event',)
+
+    # event_code_type = graphene.Field(CrisisTypeGrapheneEnum)
+    # event_code_type_display = EnumDescription(source='get_event_code_type_display')
 
 
 class EventType(DjangoObjectType):

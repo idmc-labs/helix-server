@@ -503,6 +503,40 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         return cloned_event
 
 
+class EventCode(models.Model):
+
+    class EVENT_CODE_TYPE(enum.Enum):
+        GLIDE_NUMBER = 1
+        GOV_ASSIGNED_IDENTIFIER = 2
+        IFRC_APPEAL_ID = 3
+        ACLED_ID = 4,
+
+        __labels__ = {
+            GLIDE_NUMBER: _("Glide Number"),
+            GOV_ASSIGNED_IDENTIFIER: _("Government Assigned Identifier"),
+            IFRC_APPEAL_ID: _("IFRC Appeal ID"),
+            ACLED_ID: _("ACLED ID")
+        }
+
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name='event_code',
+        verbose_name=_('Event')
+    )
+    country = models.ForeignKey(
+        'country.Country',
+        on_delete=models.CASCADE,
+        related_name='event_code_country',
+        verbose_name=_('Country')
+    )
+    event_code_type = enum.EnumField(EVENT_CODE_TYPE)
+    event_code = models.CharField(max_length=256, verbose_name=_('Event Code'))
+
+    class Meta:
+        ordering = ['event_code']
+
+
 class OsvSubType(NameAttributedModels):
     """
     Holds the possible OSV sub types
