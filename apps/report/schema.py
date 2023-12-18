@@ -14,7 +14,12 @@ from apps.report.models import (
     ReportGeneration,
 )
 from apps.report.enums import ReportTypeEnum
-from apps.report.filters import ReportFilter, DummyFilter
+from apps.report.filters import (
+    ReportFilter,
+    ReportApprovalFilter,
+    ReportGenerationFilter,
+    DummyFilter,
+)
 from apps.report.enums import ReportGenerationStatusEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import CustomPaginatedListObjectField, DjangoPaginatedListObjectField
@@ -37,7 +42,6 @@ class ReportCommentType(DjangoObjectType):
 class ReportCommentListType(CustomDjangoListObjectType):
     class Meta:
         model = ReportComment
-        filter_fields = ()
 
 
 class ReportApprovalType(DjangoObjectType):
@@ -48,7 +52,7 @@ class ReportApprovalType(DjangoObjectType):
 class ReportApprovalListType(CustomDjangoListObjectType):
     class Meta:
         model = ReportApproval
-        filter_fields = ('is_approved',)
+        filterset_class = ReportApprovalFilter
 
 
 class ReportGenerationType(DjangoObjectType):
@@ -77,7 +81,7 @@ class ReportGenerationType(DjangoObjectType):
 class ReportGenerationListType(CustomDjangoListObjectType):
     class Meta:
         model = ReportGeneration
-        filter_fields = ('report',)
+        filterset_class = ReportGenerationFilter
 
 
 class ReportType(DjangoObjectType):

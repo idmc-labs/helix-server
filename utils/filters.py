@@ -124,6 +124,9 @@ def generate_type_for_filter_set(
         - LeadGqlFilterSetInputType
         - LeadGqlFilterSetType
     """
+    if filter_set in generate_type_for_filter_set.cache:
+        return generate_type_for_filter_set.cache[filter_set]
+
     def generate_type_from_input_type(input_type):
         new_fields_map = generate_object_field_from_input_type(input_type)
         if custom_new_fields_map:
@@ -138,8 +141,11 @@ def generate_type_for_filter_set(
         get_filtering_args_from_filterset(filter_set, used_node)
     )
     _type = generate_type_from_input_type(input_type)
+    generate_type_for_filter_set.cache[filter_set] = (_type, input_type)
     return _type, input_type
 
+
+generate_type_for_filter_set.cache = {}
 
 SimpleInputFilter = _get_simple_input_filter
 MultipleInputFilter = _get_multiple_input_filter

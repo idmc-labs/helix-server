@@ -18,7 +18,17 @@ from apps.event.models import (
     ContextOfViolence,
     OtherSubType,
 )
-from apps.event.filters import ActorFilter, EventFilter
+from apps.event.filters import (
+    ActorFilter,
+    EventFilter,
+    DisasterSubTypeFilter,
+    DisasterTypeFilter,
+    DisasterCategoryFilter,
+    DisasterSubCategoryFilter,
+    OsvSubTypeFilter,
+    OtherSubTypeFilter,
+    ContextOfViolenceFilter,
+)
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
@@ -33,9 +43,6 @@ class ViolenceSubObjectType(DjangoObjectType):
 class ViolenceSubObjectListType(CustomDjangoListObjectType):
     class Meta:
         model = ViolenceSubType
-        filter_fields = {
-            'id': ['iexact'],
-        }
 
 
 class ViolenceType(DjangoObjectType):
@@ -53,9 +60,6 @@ class ViolenceType(DjangoObjectType):
 class ViolenceListType(CustomDjangoListObjectType):
     class Meta:
         model = Violence
-        filter_fields = {
-            'id': ['iexact'],
-        }
 
 
 class ActorType(DjangoObjectType):
@@ -79,9 +83,7 @@ class DisasterSubObjectType(DjangoObjectType):
 class DisasterSubObjectListType(CustomDjangoListObjectType):
     class Meta:
         model = DisasterSubType
-        filter_fields = {
-            'name': ['unaccent__icontains'],
-        }
+        filterset_class = DisasterSubTypeFilter
 
 
 class DisasterTypeObjectType(DjangoObjectType):
@@ -99,9 +101,7 @@ class DisasterTypeObjectType(DjangoObjectType):
 class DisasterTypeObjectListType(CustomDjangoListObjectType):
     class Meta:
         model = DisasterType
-        filter_fields = {
-            'name': ['unaccent__icontains'],
-        }
+        filterset_class = DisasterTypeFilter
 
 
 class DisasterSubCategoryType(DjangoObjectType):
@@ -119,9 +119,7 @@ class DisasterSubCategoryType(DjangoObjectType):
 class DisasterSubCategoryListType(CustomDjangoListObjectType):
     class Meta:
         model = DisasterSubCategory
-        filter_fields = {
-            'name': ['unaccent__icontains'],
-        }
+        filterset_class = DisasterSubCategoryFilter
 
 
 class DisasterCategoryType(DjangoObjectType):
@@ -139,9 +137,7 @@ class DisasterCategoryType(DjangoObjectType):
 class DisasterCategoryListType(CustomDjangoListObjectType):
     class Meta:
         model = DisasterCategory
-        filter_fields = {
-            'name': ['unaccent__icontains'],
-        }
+        filterset_class = DisasterCategoryFilter
 
 
 class EventReviewCountType(graphene.ObjectType):
@@ -156,33 +152,25 @@ class EventReviewCountType(graphene.ObjectType):
 class OsvSubObjectType(DjangoObjectType):
     class Meta:
         model = OsvSubType
-        filter_fields = {
-            'name': ['icontains']
-        }
+        filterset_class = OsvSubTypeFilter
 
 
 class OsvSubTypeList(CustomDjangoListObjectType):
     class Meta:
         model = OsvSubType
-        filter_fields = {
-            'name': ['icontains']
-        }
+        filterset_class = OsvSubTypeFilter
 
 
 class OtherSubTypeObjectType(DjangoObjectType):
     class Meta:
         model = OtherSubType
-        filter_fields = {
-            'name': ['icontains']
-        }
+        filterset_class = OtherSubTypeFilter
 
 
 class OtherSubTypeList(CustomDjangoListObjectType):
     class Meta:
         model = OtherSubType
-        filter_fields = {
-            'name': ['icontains']
-        }
+        filterset_class = OtherSubTypeFilter
 
 
 class EventType(DjangoObjectType):
@@ -270,17 +258,13 @@ class EventListType(CustomDjangoListObjectType):
 class ContextOfViolenceType(DjangoObjectType):
     class Meta:
         model = ContextOfViolence
-        filter_fields = {
-            'name': ['icontains']
-        }
+        filterset_class = ContextOfViolenceFilter
 
 
 class ContextOfViolenceListType(CustomDjangoListObjectType):
     class Meta:
         model = ContextOfViolence
-        filter_fields = {
-            'name': ['icontains']
-        }
+        filterset_class = ContextOfViolenceFilter
 
 
 class Query:

@@ -1,7 +1,18 @@
 import django_filters
 from django.db.models import Q, Count
 from django.contrib.postgres.aggregates.general import ArrayAgg
-from apps.event.models import Actor, Event, Figure
+from apps.event.models import (
+    Actor,
+    Event,
+    Figure,
+    DisasterSubType,
+    DisasterType,
+    DisasterCategory,
+    DisasterSubCategory,
+    ContextOfViolence,
+    OsvSubType,
+    OtherSubType,
+)
 from apps.crisis.models import Crisis
 from apps.report.models import Report
 from utils.filters import NameFilterMixin, StringListFilter, IDListFilter
@@ -216,4 +227,60 @@ class ActorFilter(django_filters.FilterSet):
         model = Actor
         fields = {
             'name': ['unaccent__icontains']
+        }
+
+
+class DisasterSubTypeFilter(django_filters.FilterSet):
+    class Meta:
+        model = DisasterSubType
+        fields = {
+            'name': ['unaccent__icontains']
+        }
+
+
+class DisasterTypeFilter(django_filters.FilterSet):
+    class Meta:
+        model = DisasterType
+        fields = {
+            'name': ['unaccent__icontains']
+        }
+
+
+class DisasterCategoryFilter(django_filters.FilterSet):
+    class Meta:
+        model = DisasterCategory
+        fields = {
+            'name': ['unaccent__icontains']
+        }
+
+
+class DisasterSubCategoryFilter(django_filters.FilterSet):
+    class Meta:
+        model = DisasterSubCategory
+        fields = {
+            'name': ['unaccent__icontains']
+        }
+
+
+class OsvSubTypeFilter(django_filters.FilterSet):
+    class Meta:
+        model = OsvSubType
+        fields = {
+            'name': ['icontains']
+        }
+
+
+class OtherSubTypeFilter(django_filters.FilterSet):
+    class Meta:
+        model = OtherSubType
+        fields = {
+            'name': ['icontains']
+        }
+
+
+class ContextOfViolenceFilter(django_filters.FilterSet):
+    class Meta:
+        model = ContextOfViolence
+        fields = {
+            'name': ['icontains']
         }

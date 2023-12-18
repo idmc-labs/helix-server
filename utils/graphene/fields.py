@@ -6,11 +6,9 @@ from collections import OrderedDict
 
 import graphene
 from django.db.models import QuerySet
-from graphql.type.definition import is_input_type
 from graphene import NonNull
 from graphene.types.structures import Structure
 from graphene.utils.str_converters import to_snake_case
-from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django.utils import maybe_queryset, is_valid_django_model
 from graphene_django_extras import DjangoFilterPaginateListField
 from graphene_django_extras.base_types import DjangoListObjectBase
@@ -24,6 +22,7 @@ from graphene_django.registry import get_global_registry
 from rest_framework import serializers
 
 from utils.graphene.pagination import OrderingOnlyArgumentPagination
+from utils.filters import generate_type_for_filter_set
 from utils.common import track_gidd
 from apps.gidd.filters import GIDD_API_TYPE_MAP
 
@@ -104,11 +103,14 @@ class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
 
         kwargs.setdefault("args", {})
 
+        # -- NOTE: This doesn't uses nested filters args
+        # Currently arguments aren't used for this
         filterset_class = filterset_class or _type._meta.filterset_class
         self.filterset_class = get_filterset_class(filterset_class)
         self.filtering_args = get_filtering_args_from_non_model_filterset(
             self.filterset_class
         )
+        # -- NOTE: This doesn't uses nested filters args
         kwargs["args"].update(self.filtering_args)
 
         pagination = pagination or OrderingOnlyArgumentPagination()
@@ -129,7 +131,7 @@ class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
         )
 
     def list_resolver(
-            self, filterset_class, filtering_args, root, info, **kwargs
+        self, filterset_class, filtering_args, root, info, **kwargs
     ):
 
         filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
@@ -184,19 +186,24 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             - Client will not be able to add pagination params
         '''
         _fields = _type._meta.filter_fields
-        _model = _type._meta.model
+        if _fields:
+            raise Exception(f'filter_fields are ignored: Provided: {_fields} <> {_type}')
 
-        self.fields = fields or _fields
-        meta = dict(model=_model, fields=self.fields)
-        if extra_filter_meta:
-            meta.update(extra_filter_meta)
-
-        filterset_class = filterset_class or _type._meta.filterset_class
-        self.filterset_class = get_filterset_class(filterset_class, **meta)
-        self.filtering_args = get_filtering_args_from_filterset(
-            self.filterset_class, _type
-        )
         kwargs.setdefault("args", {})
+
+        self.filterset_class = filterset_class or _type._meta.filterset_class
+        if self.filterset_class:
+            _, filterset_type = generate_type_for_filter_set(
+                self.filterset_class,
+                _type,
+                f"{self.filterset_class.__name__.replace('Filter', '')}FilterDataType",
+                f"{self.filterset_class.__name__.replace('Filter', '')}FilterDataInputType",
+            )
+            self.filtering_args = {
+                "filters": filterset_type(required=False),
+            }
+        else:
+            self.filtering_args = {}
         kwargs["args"].update(self.filtering_args)
 
         pagination = pagination or OrderingOnlyArgumentPagination()
@@ -226,9 +233,9 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
         )
 
     def list_resolver(
-            self, manager, filterset_class, filtering_args, root, info, **kwargs
+        self, manager, filterset_class, filtering_args, root, info, **kwargs
     ):
-        filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
+        filter_kwargs = kwargs.get('filters', {})
 
         client_id = kwargs.get('client_id')
         if client_id:

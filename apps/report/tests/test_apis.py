@@ -514,7 +514,7 @@ class TestPrivatePublicReports(HelixGraphQLTestCase):
 
         self.report_query = '''
         query reportList($isPublic: Boolean){
-          reportList(isPublic: $isPublic) {
+          reportList(filters: {isPublic: $isPublic}) {
             results {
               isPublic
               id

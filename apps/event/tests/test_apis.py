@@ -278,7 +278,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.q = '''
             query EventList($crisisByIds: [ID!], $name: String, $qaRule: String){
-              eventList(crisisByIds: $crisisByIds, name: $name, qaRule: $qaRule) {
+              eventList(filters: {crisisByIds: $crisisByIds, name: $name, qaRule: $qaRule}) {
                 results {
                   id
                 }
