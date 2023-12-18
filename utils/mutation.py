@@ -4,7 +4,7 @@ from collections import OrderedDict
 import inspect
 import graphene
 import graphene_django
-from graphene.types.generic import GenericScalar
+# from graphene.types.generic import GenericScalar
 from graphene_django.registry import get_global_registry
 from graphene_django.rest_framework.serializer_converter import (
     get_graphene_type_from_serializer_field,

@@ -21,7 +21,12 @@ from apps.entry.enums import (
     FigureSourcesReliabilityEnum,
     FigureReviewStatusEnum,
 )
-from apps.entry.filters import OSMNameFilter
+from apps.entry.filters import (
+    OSMNameFilter,
+    DisaggregatedAgeFilter,
+    FigureFilter,
+    FigureTagFilter,
+)
 from apps.entry.models import (
     Figure,
     FigureTag,
@@ -63,9 +68,7 @@ class DisaggregatedAgeType(DjangoObjectType):
 class DisaggregatedAgeListType(CustomDjangoListObjectType):
     class Meta:
         model = DisaggregatedAge
-        filter_fields = {
-            'sex': ('in',),
-        }
+        filterset_class = DisaggregatedAgeFilter
 
 
 class DisaggregatedStratumType(ObjectType):
@@ -185,10 +188,7 @@ class FigureType(DjangoObjectType):
 class FigureListType(CustomDjangoListObjectType):
     class Meta:
         model = Figure
-        filter_fields = {
-            'unit': ('exact',),
-            'start_date': ('lte', 'gte'),
-        }
+        filterset_class = FigureFilter
 
 
 class TotalFigureFilterInputType(graphene.InputObjectType):
@@ -205,7 +205,6 @@ class EntryType(DjangoObjectType):
             'reviews', 'figures', 'reviewers', 'review_status', 'review_comments',
             'reviewing',
         )
-        filter_fields = ('article_title',)
 
     created_by = graphene.Field('apps.users.schema.UserType')
     last_modified_by = graphene.Field('apps.users.schema.UserType')
@@ -273,9 +272,7 @@ class SourcePreviewType(DjangoObjectType):
 class FigureTagListType(CustomDjangoListObjectType):
     class Meta:
         model = FigureTag
-        filter_fields = {
-            'name': ('unaccent__icontains',),
-        }
+        filterset_class = FigureTagFilter
 
 
 class Query:

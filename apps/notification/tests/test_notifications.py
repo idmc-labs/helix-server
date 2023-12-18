@@ -214,7 +214,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             }'''
         self.notification_query = '''
         query MyQuery($recipient: ID!) {
-          notifications(recipient: $recipient, ordering: "-id") {
+          notifications(filters: {recipient: $recipient}, ordering: "-id") {
             results {
                   id
                   createdAt
