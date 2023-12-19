@@ -146,8 +146,12 @@ class UpdateEvent(graphene.Mutation):
             return UpdateEvent(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
             ])
-        serializer = EventSerializer(instance=instance, data=data,
-                                     context=dict(request=info.context.request), partial=True)
+        serializer = EventUpdateSerializer(
+            instance=instance,
+            data=data,
+            context=dict(request=info.context.request),
+            partial=True,
+        )
         if errors := mutation_is_not_valid(serializer):
             return UpdateEvent(errors=errors, ok=False)
         instance = serializer.save()

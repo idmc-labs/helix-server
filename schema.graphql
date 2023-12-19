@@ -1273,6 +1273,13 @@ type DjangoDebugSQL {
   encoding: String
 }
 
+enum EVENT_CODE_TYPE {
+  GLIDE_NUMBER
+  GOV_ASSIGNED_IDENTIFIER
+  IFRC_APPEAL_ID
+  ACLED_ID
+}
+
 enum EVENT_REVIEW_STATUS {
   REVIEW_NOT_STARTED
   REVIEW_IN_PROGRESS
@@ -1393,7 +1400,29 @@ type Enum {
 
 scalar EnumDescription
 
+input EventCodeInputType {
+  country: ID!
+  eventCode: String!
+  eventCodeType: EVENT_CODE_TYPE!
+}
+
+type EventCodeType {
+  id: ID!
+  country: CountryType!
+  eventCodeType: EVENT_CODE_TYPE
+  eventCode: String!
+  eventCodeDisplay: EnumDescription
+}
+
+input EventCodeUpdateInputType {
+  id: ID
+  eventCodeType: EVENT_CODE_TYPE!
+  eventCode: String!
+  country: ID!
+}
+
 input EventCreateInputType {
+  eventCodes: [EventCodeInputType!]
   oldId: String
   versionId: String
   name: String!
@@ -1521,10 +1550,12 @@ type EventType {
   figureTypology: [String]
   reviewStatusDisplay: EnumDescription
   reviewCount: EventReviewCountType
+  eventCodes: [EventCodeType!]
 }
 
 input EventUpdateInputType {
   id: ID!
+  eventCodes: [EventCodeUpdateInputType!]
   oldId: String
   versionId: String
   name: String
