@@ -69,7 +69,7 @@ services:
     build:
       context: ./
       dockerfile: worker.Dockerfile
-    command: ./deploy/scripts/run_tasks.sh
+    command: python manage.py run_celery_dev
 
 volumes:
   helix-db-13-data:
