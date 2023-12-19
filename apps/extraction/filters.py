@@ -350,7 +350,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data')
     # used in report entry table
     report_id = df.CharFilter(method='filter_report')
-    filter_figure_context_of_violence = IDListFilter(method='filter_figure_context_of_violence')
+    filter_figure_context_of_violence = IDListFilter(method='filter_filter_figure_context_of_violence')
     filter_figure_review_status = StringListFilter(method='filter_filter_figure_review_status')
     filter_figure_approved_by = IDListFilter(method='filter_filter_figure_approved_by')
     filter_figure_is_to_be_reviewed = df.BooleanFilter(method='filter_filter_figure_is_to_be_reviewed')

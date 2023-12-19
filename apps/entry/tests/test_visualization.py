@@ -24,7 +24,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
         query = '''
             query MyQuery (
                 $filterFigureEntry: String
-                $filterFigureContextOfViolences: [ID!]
+                $filterFigureContextOfViolence: [ID!]
                 $filterFigureCreatedBy: [ID!]
                 $filterEntryArticleTitle: String
                 $filterEntryPublishers: [ID!]
@@ -60,7 +60,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             ) {
             figureAggregations(
                 filterFigureEntry: $filterFigureEntry
-                filterFigureContextOfViolences: $filterFigureContextOfViolences
+                filterFigureContextOfViolence: $filterFigureContextOfViolence
                 filterFigureCreatedBy: $filterFigureCreatedBy
                 filterEntryArticleTitle: $filterEntryArticleTitle
                 filterEntryPublishers: $filterEntryPublishers
@@ -262,6 +262,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
         ]:
             response = self.query(query, variables={**filter_data})
             content = json.loads(response.content)
+            print('****************************')
+            print(content)
             self.assertEqual(
                 content['data']['figureAggregations']['idpsConflictFigures'], expected_data,
             )
