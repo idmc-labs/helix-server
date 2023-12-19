@@ -35,21 +35,15 @@ class EventCodeSerializer(MetaInformationSerializerMixin,
 
     class Meta:
         model = EventCode
-        fields = ['id', 'event', 'country', 'event_code', 'event_code_type']
-
-    def create(self, validated_data):
-        validated_data.pop('created_by')
-        print("Validated Data", validated_data)
-        return EventCode.objects.create(**validated_data)
+        fields = ['country', 'event_code', 'event_code_type']
 
 
-class EventCodeUpdateSerializer(MetaInformationSerializerMixin,
-                          serializers.ModelSerializer):
+class EventCodeUpdateSerializer(serializers.ModelSerializer):
     id = IntegerIDField(required=False)
 
     class Meta:
         model = EventCode
-        exclude = ['event',]
+        exclude = ['event']
 
 
 class EventSerializer(MetaInformationSerializerMixin,
@@ -225,20 +219,21 @@ class EventSerializer(MetaInformationSerializerMixin,
         validated_data["created_by"] = self.context['request'].user
         countries = validated_data.pop("countries", None)
         context_of_violence = validated_data.pop("context_of_violence", None)
-        event_codes = validated_data.pop("event_codes")
+        event_codes = validated_data.pop("event_codes", None)
         event = Event.objects.create(**validated_data)
         if countries:
             event.countries.set(countries)
         if context_of_violence:
             event.context_of_violence.set(context_of_violence)
 
-        for event_code in event_codes:
-            EventCode.objects.create(
-                event=event,
-                country=event_code.get("country"),
-                event_code=event_code.get("event_code"),
-                event_code_type=event_code.get("event_code_type"),
-            )
+        if event_codes:
+            for event_code in event_codes:
+                EventCode.objects.create(
+                    event=event,
+                    country=event_code.get("country"),
+                    event_code=event_code.get("event_code"),
+                    event_code_type=event_code.get("event_code_type"),
+                )
         context_of_violence = validated_data.pop("context_of_violence", None)
         return event
 
@@ -246,7 +241,6 @@ class EventSerializer(MetaInformationSerializerMixin,
         # Update event status if include_triangulation_in_qa is changed
         validated_data['last_modified_by'] = self.context['request'].user
 
-        print("Event codes", validated_data.pop('event_codes', None))
         event_codes = validated_data.pop("event_codes", None)
 
         is_include_triangulation_in_qa_changed = False
@@ -257,32 +251,26 @@ class EventSerializer(MetaInformationSerializerMixin,
         instance = super().update(instance, validated_data)
 
         # Update Event Codes
-        instance_event_codes = EventCode.objects.filter(event=instance)
-        print("Instance event code", instance_event_codes)
+        if event_codes:
+            instance_event_codes_qs = EventCode.objects.filter(event=instance)
 
-        event_code_to_delete = instance_event_codes.exclude(
-            id__in=[each['id'] for each in event_codes if each.get('id')]
-        )
-        event_code_to_delete.delete()
+            event_code_to_delete_qs = instance_event_codes_qs.exclude(
+                id__in=[each['id'] for each in event_codes if each.get('id')]
+            )
+            event_code_to_delete_qs.delete()
 
-        for code in event_codes:
-            # is_new_event_code = not code.get('id')
-            if not code.get('id'):
-                print("00000000000000000000000000000000")
-
-                event_code_ser = EventCodeSerializer(context=self.context)
-            else:
-                print("111111111111111111111111111111111")
-
-                event_code_ser = EventCodeUpdateSerializer(
-                    instance=instance.event_codes.get(id=code['id']),
-                    partial=True,
-                    context=self.context,
-                )
-            event_code_ser._validated_data = {**code, 'event': instance}
-            event_code_ser._errors = {}
-            event_code = event_code_ser.save()
-
+            for code in event_codes:
+                if not code.get('id'):
+                    event_code_ser = EventCodeSerializer(context=self.context)
+                else:
+                    event_code_ser = EventCodeUpdateSerializer(
+                        instance=instance_event_codes_qs.get(id=code['id']),
+                        partial=True,
+                        context=self.context,
+                    )
+                event_code_ser._validated_data = {**code, 'event': instance}
+                event_code_ser._errors = {}
+                event_code_ser.save()
 
         if is_include_triangulation_in_qa_changed:
             recipients = [user['id'] for user in Event.regional_coordinators(
@@ -307,7 +295,6 @@ class EventSerializer(MetaInformationSerializerMixin,
 
 
 class EventUpdateSerializer(UpdateSerializerMixin, EventSerializer):
-    print("ABSC***********************")
     id = IntegerIDField(required=True)
     event_codes = EventCodeUpdateSerializer(many=True, required=True)
 

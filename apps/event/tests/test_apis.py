@@ -4,7 +4,6 @@ import json
 from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
 from apps.entry.models import Figure
-from apps.event.models import EventCode
 
 from utils.factories import (
     CountryFactory,
@@ -60,7 +59,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
                     violenceSubType {
                         name
                     }
-                    eventCode {
+                    eventCodes {
                         eventCode
                         eventCodeType
                         id
@@ -86,12 +85,11 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
             "eventCodes": [
                 {
                     "country": country1.id,
-                    "eventCodeType": EventCode.EVENT_CODE_TYPE.GOV_ASSIGNED_IDENTIFIER.value,
+                    "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
                     "eventCode": "NEP-2021-XXX"
                 },
             ]
         }
-        print("INPUT*************************", self.input)
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor)
 
@@ -101,13 +99,14 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
             input_data=self.input
         )
         content = json.loads(response.content)
-        print("Content******************", content)
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createEvent']['ok'], content)
         self.assertIsNone(content['data']['createEvent']['errors'], content)
         self.assertEqual(content['data']['createEvent']['result']['name'],
                          self.input['name'])
+        self.assertIsNotNone(content['data']['createEvent']['result']['eventCodes'], content)
+        self.assertEqual(content['data']['createEvent']['result']['eventCodes'][0]['eventCode'], 'NEP-2021-XXX')
 
     def test_valid_event_creation_with_other_sub_type(self) -> None:
         self.input['eventType'] = "DISASTER"
@@ -117,7 +116,6 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
             input_data=self.input
         )
         content = json.loads(response.content)
-        print("Content####################", content)
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['createEvent']['ok'], content)

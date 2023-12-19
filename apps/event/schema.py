@@ -183,20 +183,19 @@ class OtherSubTypeList(CustomDjangoListObjectType):
 
 
 class EventCodeType(DjangoObjectType):
+    event_code_type = graphene.Field(EventCodeTypeGrapheneEnum)
+    event_code_display = EnumDescription(source='get_event_code_type_display')
 
     class Meta:
         model = EventCode
         exclude_fields = ('event',)
-
-    # event_code_type = graphene.Field(CrisisTypeGrapheneEnum)
-    # event_code_type_display = EnumDescription(source='get_event_code_type_display')
 
 
 class EventType(DjangoObjectType):
 
     class Meta:
         model = Event
-        exclude_fields = ('figures', 'gidd_events')
+        exclude_fields = ('figures', 'gidd_events', 'event_code')
 
     event_type = graphene.Field(CrisisTypeGrapheneEnum)
     event_type_display = EnumDescription(source='get_event_type_display')
@@ -221,6 +220,11 @@ class EventType(DjangoObjectType):
     review_status = graphene.Field(EventReviewStatusEnum)
     review_status_display = EnumDescription(source='get_review_status_display')
     review_count = graphene.Field(EventReviewCountType)
+    event_codes = graphene.List(graphene.NonNull(EventCodeType))
+
+    def resolve_event_codes(root, info, **kwargs):
+        # TODO Add dataloaders
+        return EventCode.objects.filter(event=root)
 
     def resolve_entry_count(root, info, **kwargs):
         return info.context.event_entry_count_dataloader.load(root.id)
