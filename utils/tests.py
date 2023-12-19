@@ -66,6 +66,7 @@ class CommonSetupClassMixin:
 
 
 @override_settings(
+    USE_S3_BUCKET=False,
     EMAIL_BACKEND=TEST_EMAIL_BACKEND,
     MEDIA_ROOT=TEST_MEDIA_ROOT,
     DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
@@ -173,6 +174,7 @@ class ImmediateOnCommitMixin(object):
 
 
 @override_settings(
+    USE_S3_BUCKET=False,
     EMAIL_BACKEND=TEST_EMAIL_BACKEND,
     DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
     MEDIA_ROOT=TEST_MEDIA_ROOT,
@@ -187,6 +189,7 @@ class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
 
 
 @override_settings(
+    USE_S3_BUCKET=False,
     EMAIL_BACKEND=TEST_EMAIL_BACKEND,
     DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
     MEDIA_ROOT=TEST_MEDIA_ROOT,
