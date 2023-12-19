@@ -338,7 +338,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_tags = IDListFilter(method='filter_tags')
     filter_figure_crisis_types = StringListFilter(method='filter_crisis_types')
     filter_figure_glide_number = StringListFilter(method='filter_filter_figure_glide_number')
-    filter_figure_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
+    filter_figure_created_by = IDListFilter(method='filter_filter_figure_created_by')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
     filter_figure_disaster_categories = IDListFilter(method='filter_filter_figure_disaster_categories')
     filter_figure_disaster_sub_categories = IDListFilter(method='filter_filter_figure_disaster_sub_categories')
@@ -361,6 +361,11 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     class Meta:
         model = Figure
         fields = []
+
+    def filter_filter_figure_created_by(self, qs, name, value):
+        if value:
+            return qs.filter(created_by__in=value)
+        return qs
 
     def filter_time_frame_after(self, qs, name, value):
         if value:
