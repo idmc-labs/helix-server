@@ -1402,6 +1402,7 @@ scalar EnumDescription
 
 input EventCodeInputType {
   country: ID!
+  uuid: String!
   eventCode: String!
   eventCodeType: EVENT_CODE_TYPE!
 }
@@ -1409,6 +1410,7 @@ input EventCodeInputType {
 type EventCodeType {
   id: ID!
   country: CountryType!
+  uuid: UUID!
   eventCodeType: EVENT_CODE_TYPE
   eventCode: String!
   eventCodeDisplay: EnumDescription
@@ -1416,6 +1418,7 @@ type EventCodeType {
 
 input EventCodeUpdateInputType {
   id: ID
+  uuid: String
   eventCodeType: EVENT_CODE_TYPE!
   eventCode: String!
   country: ID!

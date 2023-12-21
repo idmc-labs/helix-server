@@ -873,6 +873,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__old_id='Event old ID',
             event__name='Event name',
             event__glide_numbers='Event code',
+
             event__event_type='Event cause',
             event_main_trigger='Event main trigger',
             event__start_date='Event start date',

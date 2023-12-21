@@ -1,4 +1,5 @@
 from collections import OrderedDict
+from uuid import uuid4
 
 from django.db import models
 from django.contrib.postgres.aggregates.general import StringAgg
@@ -530,6 +531,8 @@ class EventCode(models.Model):
         related_name='event_code_country',
         verbose_name=_('Country')
     )
+    uuid = models.UUIDField(verbose_name='UUID',
+                            blank=True, default=uuid4)
     event_code_type = enum.EnumField(EVENT_CODE_TYPE)
     event_code = models.CharField(max_length=256, verbose_name=_('Event Code'))
 
