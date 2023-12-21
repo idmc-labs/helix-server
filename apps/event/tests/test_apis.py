@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import json
+from uuid import uuid4
 
 from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
@@ -83,6 +84,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
             "otherSubType": OtherSubtypeFactory().id,
             "eventCodes": [
                 {
+                    "uuid": str(uuid4()),
                     "country": country1.id,
                     "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
                     "eventCode": "NEP-2021-XXX"

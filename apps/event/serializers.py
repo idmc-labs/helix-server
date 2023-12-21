@@ -35,7 +35,13 @@ class EventCodeSerializer(MetaInformationSerializerMixin,
 
     class Meta:
         model = EventCode
-        fields = ['country', 'event_code', 'event_code_type']
+        fields = ['country', 'uuid', 'event_code', 'event_code_type']
+        extra_kwargs = {
+            'uuid': {
+                'validators': [],
+                'required': True
+            },
+        }
 
 
 class EventCodeUpdateSerializer(serializers.ModelSerializer):
