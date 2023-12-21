@@ -195,7 +195,8 @@ class EventType(DjangoObjectType):
 
     class Meta:
         model = Event
-        exclude_fields = ('figures', 'gidd_events', 'event_code')
+
+        exclude_fields = ('figures', 'gidd_events', 'event_code', 'glide_numbers')
 
     event_type = graphene.Field(CrisisTypeGrapheneEnum)
     event_type_display = EnumDescription(source='get_event_type_display')
@@ -211,7 +212,6 @@ class EventType(DjangoObjectType):
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy_display = EnumDescription(source='get_end_date_accuracy_display')
     entry_count = graphene.Field(graphene.Int)
-    glide_numbers = graphene.List(graphene.NonNull(graphene.String))
     osv_sub_type = graphene.Field(OsvSubObjectType)
     qa_rule_type = graphene.Field(QaRecommendedFigureEnum)
     qs_rule_type_display = EnumDescription(source='get_qs_rule_type_display')
