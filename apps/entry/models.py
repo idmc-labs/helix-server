@@ -529,6 +529,9 @@ class Figure(MetaInformationArchiveAbstractModel,
         default=FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
     )
 
+    # Types
+    event_id: int
+
     class Meta:
         indexes = [
             models.Index(fields=['start_date']),

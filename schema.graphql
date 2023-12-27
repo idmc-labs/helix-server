@@ -90,9 +90,9 @@ input BulkMonitoringExpertPortfolioInputType {
 }
 
 type BulkUpdateFigures {
-  errors: [GenericScalar!]
-  ok: Boolean
+  errors: [GenericScalar]
   result: [FigureType]
+  deletedResult: [FigureType!]
 }
 
 enum CRISIS_TYPE {
@@ -2050,7 +2050,7 @@ type Mutation {
   deleteFigureTag(id: ID!): DeleteFigureTag
   exportEntries(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureReviewStatus: [String!], filterFigureHasDisaggregatedData: Boolean, filterFigureApprovedBy: [ID!], filterFigureHasExcerptIdu: Boolean, filterFigureHasHousingDestruction: Boolean, report: String, filterContextOfViolences: [ID!], filterIsFigureToBeReviewed: Boolean): ExportEntries
   exportFigures(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterFigureCrisisTypes: [String!], filterFigureGlideNumber: [String!], filterCreatedBy: [ID!], filterFigureTerms: [ID!], event: String, filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], filterIsFigureToBeReviewed: Boolean, filterHasExcerptIdu: Boolean, filterHasHousingDestruction: Boolean): ExportFigures
-  bulkUpdateFigures(data: [FigureUpdateInputType], deleteIds: [ID!]): BulkUpdateFigures
+  bulkUpdateFigures(deleteIds: [ID!], items: [FigureUpdateInputType!]): BulkUpdateFigures
   deleteFigure(id: ID!): DeleteFigure
   approveFigure(id: ID!): ApproveFigure
   unapproveFigure(id: ID!): UnapproveFigure
