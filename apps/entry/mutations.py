@@ -2,7 +2,7 @@ from django.utils.translation import gettext
 import graphene
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from django.utils import timezone
-from graphene.types.generic import GenericScalar
+from django.db import transaction
 
 from apps.contrib.models import SourcePreview
 from apps.entry.models import Entry, FigureTag, Figure
@@ -22,10 +22,10 @@ from apps.extraction.filters import FigureExtractionFilterSet, EntryExtractionFi
 from apps.contrib.serializers import SourcePreviewSerializer, ExcelDownloadSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker, is_authenticated
-from utils.mutation import generate_input_type_for_serializer
+from utils.mutation import generate_input_type_for_serializer, BulkUpdateMutation
 from utils.common import convert_date_object_to_string_in_dict
 from apps.notification.models import Notification
-from .utils import bulk_create_update_delete_figures
+from .utils import BulkUpdateFigureManager, send_figure_notifications, get_figure_notification_type
 
 # entry
 
@@ -540,29 +540,40 @@ class ReRequestReviewFigure(graphene.Mutation):
         return ReRequestReviewFigure(result=figure, errors=None, ok=True)
 
 
-class BulkUpdateFigures(graphene.Mutation):
-    class Arguments:
-        data = graphene.List(FigureUpdateInputType)
-        delete_ids = graphene.List(graphene.NonNull(graphene.ID))
+class BulkUpdateFigures(BulkUpdateMutation):
+    class Arguments(BulkUpdateMutation.Arguments):
+        items = graphene.List(graphene.NonNull(FigureUpdateInputType))
 
-    errors = graphene.List(graphene.NonNull(GenericScalar))
-    ok = graphene.Boolean()
+    model = Figure
+    serializer_class = FigureSerializer
     result = graphene.List(FigureType)
+    deleted_result = graphene.List(graphene.NonNull(FigureType))
+    permissions = ['entry.add_figure', 'entry.change_figure', 'entry.delete_figure']
 
     @staticmethod
-    @permission_checker(['entry.add_figure', 'entry.change_figure', 'entry.delete_figure'])
-    def mutate(root, info, data, delete_ids=[]):
-        serializer = FigureSerializer(
-            data=data, context={'request': info.context.request}, many=True
-        )
-        if not serializer.is_valid():
-            return BulkUpdateFigures(errors=serializer.errors, ok=False)
-        result = bulk_create_update_delete_figures(
-            serializer.validated_data,
-            delete_ids,
-            context={'request': info.context.request}
-        )
-        return BulkUpdateFigures(result=result, errors=None, ok=True)
+    def get_queryset():
+        return Figure.objects.all()
+
+    @classmethod
+    @transaction.atomic
+    def delete_item(cls, figure, context):
+        bulk_manager: BulkUpdateFigureManager = context['bulk_manager']
+        figure = super().delete_item(figure, context)
+
+        if notification_type := get_figure_notification_type(figure.event, is_deleted=True):
+            send_figure_notifications(
+                figure,
+                context['request'].user,
+                notification_type,
+                is_deleted=True,
+            )
+        bulk_manager.add_event(figure.event_id)
+        return figure
+
+    @classmethod
+    def mutate(cls, *args, **kwargs):
+        with BulkUpdateFigureManager() as bulk_manager:
+            return super().mutate(*args, **kwargs, context={'bulk_manager': bulk_manager})
 
 
 class Mutation(object):

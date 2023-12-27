@@ -15,6 +15,15 @@ from apps.users.enums import USER_ROLE
 from apps.entry.models import Figure, OSMName
 
 
+def get_first_error_fields(errors):
+    return [
+        error['field']
+        for obj_errors in errors
+        if obj_errors is not None
+        for error in obj_errors
+    ]
+
+
 class TestBulkFigureUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.country_1 = CountryFactory.create(iso2='JP', iso3='JPN')
@@ -69,10 +78,12 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         }
 
         self.figure_bulk_mutation = """
-            mutation BulkUpdateFigures($data: [FigureUpdateInputType!], $delete_ids: [ID!]) {
-                bulkUpdateFigures(data: $data, deleteIds: $delete_ids) {
-                    ok
+            mutation BulkUpdateFigures($items: [FigureUpdateInputType!], $delete_ids: [ID!]) {
+                bulkUpdateFigures(items: $items, deleteIds: $delete_ids) {
                     errors
+                    deletedResult {
+                      id
+                    }
                     result {
                       id
                       figureCause
@@ -153,20 +164,20 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "data": figures,
-                "delete_ids": figure_ids
+                "items": figures,
+                "delete_ids": figure_ids,
             },
         )
-        # Test bulk deleted
-        self.assertEqual(Figure.objects.filter(id__in=figure_ids).count(), 0)
 
         # Test created
-        content = json.loads(response.content)
-        content_data = content['data']['bulkUpdateFigures']
+        content_data = response.json()['data']['bulkUpdateFigures']
         self.assertResponseNoErrors(response)
-        self.assertTrue(content_data['ok'], True)
-        self.assertIsNone(content_data['errors'], None)
+        self.assertEqual(content_data['errors'], [None] * 3)
         self.assertEqual(len(content_data['result']), 3)
+        self.assertEqual(len(content_data['deletedResult']), len(figure_ids), content_data)
+
+        # Test bulk deleted
+        self.assertEqual(Figure.objects.filter(id__in=figure_ids).count(), 0)
 
         # Check each item
         for created_figure in content_data['result']:
@@ -205,7 +216,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "data": figures,
+                "items": figures,
                 "delete_ids": figure_ids,
             },
         )
@@ -217,9 +228,9 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         content = json.loads(response.content)
         content_data = content['data']['bulkUpdateFigures']
         self.assertResponseNoErrors(response)
-        self.assertTrue(content_data['ok'], True)
-        self.assertIsNone(content_data['errors'], None)
+        self.assertEqual(content_data['errors'], [None] * 2)
         self.assertEqual(len(content_data['result']), 2)
+        assert None not in content_data['result']
 
         # Check each item
         for updated_figure in content_data['result']:
@@ -239,13 +250,12 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "data": [self.figure_item_input],
+                "items": [self.figure_item_input],
                 "delete_ids": [],
             }
         )
         content = json.loads(response.content)
         content_data = content['data']['bulkUpdateFigures']
-        self.assertFalse(content_data['ok'], False)
         self.assertNotIn('disaggregationLocationCamp', content_data['errors'])
         self.assertNotIn('disaggregationLocationNonCamp', content_data['errors'])
 
@@ -257,13 +267,12 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "data": [self.figure_item_input],
+                "items": [self.figure_item_input],
                 "delete_ids": [],
             }
         )
         content = json.loads(response.content)
         content_data = content['data']['bulkUpdateFigures']
-        self.assertTrue(content_data['ok'], True)
 
     def test_invalid_figures_household_size(self):
         """
@@ -278,14 +287,13 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "data": [self.figure_item_input],
+                "items": [self.figure_item_input],
                 "delete_ids": [],
             }
         )
         content = json.loads(response.content)
         content_data = content['data']['bulkUpdateFigures']
-        self.assertFalse(content_data['ok'], False)
-        self.assertIn('household_size', content_data['errors'][0])
+        assert 'householdSize' in get_first_error_fields(content_data['errors'])
 
     def test_invalid_figures_age_data(self):
         self.figure_item_input.update({
@@ -310,14 +318,13 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "data": [self.figure_item_input],
+                "items": [self.figure_item_input],
                 "delete_ids": [],
             }
         )
-        content = json.loads(response.content)
-        content_data = content['data']['bulkUpdateFigures']
-        self.assertFalse(content_data['ok'], False)
-        self.assertIn('disaggregation_age', content_data['errors'][0])
+        content_data = response.json()['data']['bulkUpdateFigures']
+        assert content_data['result'] == [None]
+        assert 'disaggregationAge' in get_first_error_fields(content_data['errors'])
 
     def test_figure_cause_should_be_same_as_event_type(self):
         event_1 = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT)
@@ -345,15 +352,14 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "data": [figure_input_1, figure_input_2, figure_input_3],
+                "items": [figure_input_1, figure_input_2, figure_input_3],
                 "delete_ids": [],
             }
         )
         content = json.loads(response.content)
         content_data = content['data']['bulkUpdateFigures']
         self.assertResponseNoErrors(response)
-        self.assertFalse(content_data['ok'], True)
-        self.assertIn('figure_cause', content_data['errors'][0])
+        assert 'figureCause' in get_first_error_fields(content_data['errors'])
 
         # Pass correct figure cause and test
         figure_input_1.update({
@@ -371,15 +377,14 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "data": [figure_input_1, figure_input_2, figure_input_3],
+                "items": [figure_input_1, figure_input_2, figure_input_3],
                 "delete_ids": [],
             }
         )
         content = json.loads(response.content)
         content_data = content['data']['bulkUpdateFigures']
         self.assertResponseNoErrors(response)
-        self.assertFalse(content_data['ok'], True)
-        self.assertNotIn('figureCause', content_data['errors'])
+        assert 'figureCause' not in get_first_error_fields(content_data['errors'])
 
     def test_figure_include_idu_validation(self):
         """
@@ -392,14 +397,13 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "data": [self.figure_item_input],
+                "items": [self.figure_item_input],
                 "delete_ids": [],
             }
         )
         content = json.loads(response.content)
         content_data = content['data']['bulkUpdateFigures']
-        self.assertFalse(content_data['ok'])
-        self.assertIn('excerpt_idu', content_data['errors'][0])
+        assert 'excerptIdu' in get_first_error_fields(content_data['errors'])
 
         # Pass correct value and test
         self.figure_item_input.update({
@@ -408,13 +412,13 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "data": [self.figure_item_input],
+                "items": [self.figure_item_input],
                 "delete_ids": [],
             }
         )
         content = json.loads(response.content)
         content_data = content['data']['bulkUpdateFigures']
-        self.assertTrue(content_data['ok'], True)
+        assert 'excerptIdu' not in get_first_error_fields(content_data['errors'])
 
     def test_should_not_update_event_in_figure(self):
         entry = EntryFactory.create()
@@ -438,14 +442,13 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "data": [figure_input_1, figure_input_2],
+                "items": [figure_input_1, figure_input_2],
                 "delete_ids": [],
             }
         )
         self.assertResponseNoErrors(response)
         content = json.loads(response.content)
         content_data = content['data']['bulkUpdateFigures']
-        self.assertFalse(content_data['ok'], content)
         self.assertNotIn('event', content_data['errors'][0])
 
         # Test with incorrect event ids
@@ -458,12 +461,11 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "data": [figure_input_1, figure_input_2],
+                "items": [figure_input_1, figure_input_2],
                 "delete_ids": [],
             }
         )
         self.assertResponseNoErrors(response)
         content = json.loads(response.content)
         content_data = content['data']['bulkUpdateFigures']
-        self.assertFalse(content_data['ok'], content)
         self.assertNotIn('event', content_data['errors'][0])

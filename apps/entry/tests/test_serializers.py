@@ -32,6 +32,12 @@ from utils.tests import HelixTestCase, create_user_with_role
 from apps.crisis.models import Crisis
 
 
+class DummyFigureBulkManager():
+    @staticmethod
+    def add_event(_):
+        return
+
+
 class TestEntrySerializer(HelixTestCase):
     def setUp(self) -> None:
         r1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
@@ -157,7 +163,10 @@ class TestEntrySerializer(HelixTestCase):
         figure_serializer = FigureSerializer(
             instance=None,
             data=figures,
-            context={'request': self.request},
+            context={
+                'request': self.request,
+                'bulk_manager': DummyFigureBulkManager(),
+            },
             many=True,
         )
         self.assertTrue(figure_serializer.is_valid(), True)
@@ -337,16 +346,26 @@ class TestFigureSerializer(HelixTestCase):
         term = Figure.FIGURE_TERMS.DISPLACED.value
         self.data['term'] = term
         self.data['displacement_occurred'] = 0
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
+        serializer = FigureSerializer(
+            data=self.data,
+            context={
+                'request': self.request,
+                'bulk_manager': DummyFigureBulkManager(),
+            },
+        )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertEqual(
             serializer.data['displacement_occurred'],
             self.data['displacement_occurred']
         )
         self.data['displacement_occurred'] = None
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
+        serializer = FigureSerializer(
+            data=self.data,
+            context={
+                'request': self.request,
+                'bulk_manager': DummyFigureBulkManager(),
+            },
+        )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         self.assertIsNone(serializer.data['displacement_occurred'])
 
@@ -381,8 +400,13 @@ class TestFigureSerializer(HelixTestCase):
                 "bounding_box": [1.2],
             },
         ]
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
+        serializer = FigureSerializer(
+            data=self.data,
+            context={
+                'request': self.request,
+                'bulk_manager': DummyFigureBulkManager(),
+            },
+        )
         self.assertFalse(serializer.is_valid())
         self.assertIn('geo_locations', serializer.errors)
 
@@ -390,15 +414,25 @@ class TestFigureSerializer(HelixTestCase):
         self.country.iso2 = None
         self.country.save()
 
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
+        serializer = FigureSerializer(
+            data=self.data,
+            context={
+                'request': self.request,
+                'bulk_manager': DummyFigureBulkManager(),
+            },
+        )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_invalid_displacement(self):
         self.data['disaggregation_displacement_urban'] = 10
         self.data['disaggregation_displacement_rural'] = 120
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
+        serializer = FigureSerializer(
+            data=self.data,
+            context={
+                'request': self.request,
+                'bulk_manager': DummyFigureBulkManager(),
+            },
+        )
         self.assertFalse(serializer.is_valid())
         self.assertIn('disaggregation_displacement_rural', serializer.errors)
 
@@ -418,8 +452,13 @@ class TestFigureSerializer(HelixTestCase):
             }
         ]
         self.data['reported'] = sum([item['value'] for item in self.data['disaggregation_age']]) - 1
-        serializer = FigureSerializer(data=self.data,
-                                      context={'request': self.request})
+        serializer = FigureSerializer(
+            data=self.data,
+            context={
+                'request': self.request,
+                'bulk_manager': DummyFigureBulkManager(),
+            },
+        )
         self.assertFalse(serializer.is_valid())
         self.assertIn('disaggregation_age', serializer.errors)
 
@@ -427,7 +466,10 @@ class TestFigureSerializer(HelixTestCase):
         self.data['disaggregation_age'] = []
         serializer = FigureSerializer(
             data=self.data,
-            context={'request': self.request}
+            context={
+                'request': self.request,
+                'bulk_manager': DummyFigureBulkManager(),
+            },
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
@@ -449,7 +491,10 @@ class TestFigureSerializer(HelixTestCase):
         self.data['violence_sub_type'] = violence_sub_type.id
         serializer = FigureSerializer(
             data=self.data,
-            context={'request': self.request}
+            context={
+                'request': self.request,
+                'bulk_manager': DummyFigureBulkManager(),
+            },
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
         figure = serializer.save()

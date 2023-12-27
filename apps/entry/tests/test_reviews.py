@@ -70,9 +70,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             }
         }'''
         self.update_figure = """
-        mutation BulkUpdateFigures($data: [FigureUpdateInputType!], $delete_ids: [ID!]) {
-            bulkUpdateFigures(data: $data, deleteIds: $delete_ids) {
-                ok
+        mutation BulkUpdateFigures($items: [FigureUpdateInputType!], $delete_ids: [ID!]) {
+            bulkUpdateFigures(items: $items, deleteIds: $delete_ids) {
                 errors
                 result {
                   id
@@ -307,7 +306,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         response = self.query(
             self.update_figure,
             variables={
-                "data": figures,
+                "items": figures,
                 "delete_ids": []
             },
         )
@@ -323,7 +322,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         response = self.query(
             self.update_figure,
             variables={
-                "data": figures,
+                "items": figures,
                 "delete_ids": []
             },
         )

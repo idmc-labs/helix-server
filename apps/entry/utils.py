@@ -1,196 +1,73 @@
-from django.db import transaction
 from apps.entry.models import Figure
 from apps.event.models import Event
 from apps.notification.models import Notification
-from apps.entry.serializers import FigureSerializer
+from apps.users.models import User
 
 
-def bulk_create_update_delete_figures(validated_data, delete_ids, context):
-    with transaction.atomic():
+def get_figure_notification_type(event, is_deleted=False, is_new=False):
+    if event.review_status in [
+        Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
+        Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED,
+    ]:
+        if is_deleted:
+            return Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT
+        if is_new:
+            return Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT
+        # For update
+        return Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT
 
-        created_figures_for_signed_off_events = []
-        created_figures_for_approved_events = []
+    elif event.review_status in [
+        Event.EVENT_REVIEW_STATUS.APPROVED,
+        Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED,
+    ]:
+        if is_deleted:
+            return Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT
+        if is_new:
+            return Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT
+        # For update
+        return Notification.Type.FIGURE_UPDATED_IN_APPROVED_EVENT
 
-        updated_figures_for_signed_off_events = []
-        updated_figures_for_approved_events = []
-        updated_figures_for_other_events = []
 
-        # delete missing figures
-        figures_to_delete = Figure.objects.filter(
-            id__in=delete_ids
+def send_figure_notifications(
+    figure: Figure,
+    actor: User,
+    notification_type: Notification.Type,
+    is_deleted: bool = False,
+):
+    recipients = [
+        user['id']
+        for user in Event.regional_coordinators(
+            figure.event,
+            actor=actor,
         )
-        deleted_figures_for_signed_off_events = list(
-            figures_to_delete.filter(
-                event__review_status__in=[
-                    Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
-                    Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED,
-                ],
-            )
-        )
-        deleted_figures_for_approved_events = list(
-            figures_to_delete.filter(
-                event__review_status__in=[
-                    Event.EVENT_REVIEW_STATUS.APPROVED,
-                    Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED,
-                ],
-            )
-        )
-        affected_events = Event.objects.filter(
-            id__in=figures_to_delete.values('event__id')
-        ).distinct('id')
-        affected_event_ids = list(affected_events.values_list('id', flat=True))
+    ]
+    if figure.event.created_by_id:
+        recipients.append(figure.event.created_by_id)
+    if figure.event.assignee_id:
+        recipients.append(figure.event.assignee_id)
 
-        # delete missing figures
-        figures_to_delete.delete()
+    Notification.send_safe_multiple_notifications(
+        recipients=recipients,
+        actor=actor,
+        event=figure.event,
+        entry=figure.entry,
+        type=notification_type,
+        **(
+            dict(figure=figure)
+            if not is_deleted else dict()
+        ),
+    )
 
-        objects_created_or_updated = []
 
-        for each in validated_data:
-            is_new_figure = not each.get('id')
-            # create new figures
-            if not each.get('id'):
-                fig_ser = FigureSerializer(context=context)
-            # update existing figures
-            else:
-                fig_ser = FigureSerializer(
-                    instance=Figure.objects.get(id=each['id']),
-                    partial=True,
-                    context=context,
-                )
+class BulkUpdateFigureManager():
+    def __enter__(self):
+        self.event_ids = set()
+        return self
 
-            fig_ser._validated_data = {**each}
-            fig_ser._errors = {}
-            figure = fig_ser.save()
-            objects_created_or_updated.append(figure)
-            if is_new_figure and (
-                figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF or
-                figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED
-            ):
-                created_figures_for_signed_off_events.append(figure)
-            elif is_new_figure and (
-                figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED or
-                figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED
-            ):
-                created_figures_for_approved_events.append(figure)
-            elif not is_new_figure and (
-                figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF or
-                figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED
-            ):
-                updated_figures_for_signed_off_events.append(figure)
-            elif not is_new_figure and (
-                figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED or
-                figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED
-            ):
-                updated_figures_for_approved_events.append(figure)
-            elif not is_new_figure:
-                updated_figures_for_other_events.append(figure)
+    def add_event(self, event_id: int):
+        self.event_ids.add(event_id)
 
-            affected_event_ids.append(figure.event_id)
-
-        for figure in deleted_figures_for_signed_off_events:
-            recipients = [user['id'] for user in Event.regional_coordinators(
-                figure.event,
-                actor=context['request'].user,
-            )]
-            if figure.event.created_by_id:
-                recipients.append(figure.event.created_by_id)
-            if figure.event.assignee_id:
-                recipients.append(figure.event.assignee_id)
-            Notification.send_safe_multiple_notifications(
-                recipients=recipients,
-                actor=context['request'].user,
-                type=Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT,
-                event=figure.event,
-                entry=figure.entry,
-            )
-        for figure in deleted_figures_for_approved_events:
-            recipients = [user['id'] for user in Event.regional_coordinators(
-                figure.event,
-                actor=context['request'].user,
-            )]
-            if figure.event.created_by_id:
-                recipients.append(figure.event.created_by_id)
-            if figure.event.assignee_id:
-                recipients.append(figure.event.assignee_id)
-            Notification.send_safe_multiple_notifications(
-                recipients=recipients,
-                actor=context['request'].user,
-                type=Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT,
-                event=figure.event,
-                entry=figure.entry,
-            )
-        for figure in updated_figures_for_signed_off_events:
-            recipients = [user['id'] for user in Event.regional_coordinators(
-                figure.event,
-                actor=context['request'].user,
-            )]
-            if figure.event.created_by_id:
-                recipients.append(figure.event.created_by_id)
-            if figure.event.assignee_id:
-                recipients.append(figure.event.assignee_id)
-            Notification.send_safe_multiple_notifications(
-                recipients=recipients,
-                actor=context['request'].user,
-                type=Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT,
-                event=figure.event,
-                entry=figure.entry,
-                figure=figure,
-            )
-            Figure.update_figure_status(figure)
-        for figure in updated_figures_for_approved_events:
-            recipients = [user['id'] for user in Event.regional_coordinators(
-                figure.event,
-                actor=context['request'].user,
-            )]
-            if figure.event.created_by_id:
-                recipients.append(figure.event.created_by_id)
-            if figure.event.assignee_id:
-                recipients.append(figure.event.assignee_id)
-            Notification.send_safe_multiple_notifications(
-                recipients=recipients,
-                actor=context['request'].user,
-                type=Notification.Type.FIGURE_UPDATED_IN_APPROVED_EVENT,
-                event=figure.event,
-                entry=figure.entry,
-                figure=figure,
-            )
-            Figure.update_figure_status(figure)
-        for figure in updated_figures_for_other_events:
-            Figure.update_figure_status(figure)
-        for figure in created_figures_for_signed_off_events:
-            recipients = [user['id'] for user in Event.regional_coordinators(
-                figure.event,
-                actor=context['request'].user,
-            )]
-            if figure.event.created_by_id:
-                recipients.append(figure.event.created_by_id)
-            if figure.event.assignee_id:
-                recipients.append(figure.event.assignee_id)
-            Notification.send_safe_multiple_notifications(
-                recipients=recipients,
-                actor=context['request'].user,
-                type=Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT,
-                event=figure.event,
-                entry=figure.entry,
-                figure=figure,
-            )
-        for figure in created_figures_for_approved_events:
-            recipients = [user['id'] for user in Event.regional_coordinators(
-                figure.event,
-                actor=context['request'].user,
-            )]
-            if figure.event.created_by_id:
-                recipients.append(figure.event.created_by_id)
-            if figure.event.assignee_id:
-                recipients.append(figure.event.assignee_id)
-            Notification.send_safe_multiple_notifications(
-                recipients=recipients,
-                actor=context['request'].user,
-                type=Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT,
-                event=figure.event,
-                entry=figure.entry,
-                figure=figure,
-            )
-        for event_id in affected_event_ids:
+    # Note: Using *_ will make typing make this as non context manager
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        for event_id in self.event_ids:
             Figure.update_event_status_and_send_notifications(event_id)
-        return objects_created_or_updated

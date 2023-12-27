@@ -24,6 +24,7 @@ from apps.entry.models import (
 from apps.country.models import Country
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
 from utils.common import round_half_up
+from .utils import send_figure_notifications, BulkUpdateFigureManager, get_figure_notification_type
 
 
 class DisaggregatedAgeSerializer(serializers.ModelSerializer):
@@ -470,6 +471,11 @@ class FigureSerializer(
         instance.disaggregation_age.set(disaggregation_ages)
         instance.sources.set(sources)
 
+        # Notification create
+        if notification_type := get_figure_notification_type(instance.event, is_new=True):
+            send_figure_notifications(instance, self.context['request'].user, notification_type)
+        bulk_manager: BulkUpdateFigureManager = self.context['bulk_manager']
+        bulk_manager.add_event(instance.event_id)
         return instance
 
     def _update_locations(self, instance, attr: str, data: list):
@@ -513,7 +519,7 @@ class FigureSerializer(
                 disaggregation_age.append(age_serializer.save())
         getattr(instance, attr).set(disaggregation_age)
 
-    def update(self, instance, validated_data):
+    def update(self, instance: Figure, validated_data):
         validated_data['last_modified_by'] = self.context['request'].user
         geo_locations = validated_data.pop('geo_locations', [])
         tags = validated_data.pop('tags', [])
@@ -537,6 +543,14 @@ class FigureSerializer(
                 instance.context_of_violence.set(context_of_violence)
             if sources:
                 instance.sources.set(sources)
+
+        # Notification create
+        if notification_type := get_figure_notification_type(instance.event):
+            send_figure_notifications(instance, self.context['request'].user, notification_type)
+        Figure.update_figure_status(instance)
+
+        bulk_manager: BulkUpdateFigureManager = self.context['bulk_manager']
+        bulk_manager.add_event(instance.event_id)
         return instance
 
 
