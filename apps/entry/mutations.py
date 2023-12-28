@@ -111,7 +111,10 @@ class DeleteEntry(graphene.Mutation):
         affected_event_ids = []
 
         # Send notification to regional co-ordinators
+        # TODO: Can we re-use the function defined on DeleteFigure._get_notification_type?
         for review_status in [
+            Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED,
+            Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED,
             Event.EVENT_REVIEW_STATUS.APPROVED,
             Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
         ]:
@@ -353,15 +356,15 @@ class DeleteFigure(graphene.Mutation):
         instance.delete()
 
         def _get_notification_type(event):
-            if (
-                event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED or
-                event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED
-            ):
+            if event.review_status in [
+                Event.EVENT_REVIEW_STATUS.APPROVED,
+                Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED,
+            ]:
                 return Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT
-            if (
-                event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF or
-                event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED
-            ):
+            if event.review_status in [
+                Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
+                Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED,
+            ]:
                 return Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT
             return None
 
@@ -458,15 +461,15 @@ class UnapproveFigure(graphene.Mutation):
         figure.save()
 
         def _get_notification_type(event):
-            if (
-                event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED or
-                event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED
-            ):
+            if event.review_status in [
+                Event.EVENT_REVIEW_STATUS.APPROVED,
+                Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED,
+            ]:
                 return Notification.Type.FIGURE_UNAPPROVED_IN_APPROVED_EVENT
-            if (
-                event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF or
-                event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED
-            ):
+            if event.review_status in [
+                Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
+                Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED,
+            ]:
                 return Notification.Type.FIGURE_UNAPPROVED_IN_SIGNED_EVENT
             return None
 

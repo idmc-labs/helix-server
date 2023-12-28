@@ -139,6 +139,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         REVIEW_IN_PROGRESS = 1
         APPROVED = 2
         SIGNED_OFF = 3
+        # NOTE: these two statuses should be hidden to the client
         APPROVED_BUT_CHANGED = 4
         SIGNED_OFF_BUT_CHANGED = 5
 
