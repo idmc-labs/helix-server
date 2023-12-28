@@ -316,6 +316,8 @@ GRAPHENE_DJANGO_EXTRAS = {
 if not DEBUG:
     GRAPHENE['MIDDLEWARE'].append('utils.middleware.DisableIntrospectionSchemaMiddleware')
 
+GRAPHENE_BATCH_DEFAULT_MAX_LIMIT = 50
+
 AUTHENTICATION_BACKEND = [
     'django.contrib.auth.backends.ModelBackend',
 ]
