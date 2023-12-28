@@ -654,6 +654,7 @@ type CountryType {
   communications: [CommunicationType!]!
   actors: [ActorType!]!
   events(filters: EventFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EventListType
+  eventCodeCountry: [EventCodeType!]!
   contextualupdateSet: [ContextualUpdateType!]!
   lastSummary: SummaryType
   lastContextualAnalysis: ContextualAnalysisType
@@ -1409,8 +1410,8 @@ input EventCodeInputType {
 
 type EventCodeType {
   id: ID!
-  country: CountryType!
   uuid: UUID!
+  country: CountryType!
   eventCodeType: EVENT_CODE_TYPE
   eventCode: String!
   eventCodeDisplay: EnumDescription
