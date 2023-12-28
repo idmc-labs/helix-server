@@ -2,6 +2,9 @@ from copy import deepcopy as copy
 from uuid import uuid4
 from unittest.mock import patch, call
 
+from django.test import override_settings
+from django.core.exceptions import PermissionDenied
+
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 from utils.factories import (
     EntryFactory,
@@ -13,6 +16,7 @@ from utils.factories import (
 from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
 from apps.entry.models import Figure, OSMName
+from apps.entry.mutations import BulkUpdateFigures
 
 
 def get_first_error_fields(errors):
@@ -534,3 +538,31 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         content_data = response.json()['data']['bulkUpdateFigures']
         self.assertIn('event', get_first_error_fields(content_data['errors']))
+
+    def test_bulk_update_batch_size(self, *_):
+        figure_item_input = copy(self.figure_item_input)
+        payload = {
+            "items": [figure_item_input] * 3,
+            "delete_ids": [1, 2],
+        }
+        # XXX: On error, current test client doesn't respond with 'errors' as 'data'.
+        with override_settings(GRAPHENE_BATCH_DEFAULT_MAX_LIMIT=4):
+            self.client.logout()
+            response = self.query(self.figure_bulk_mutation, variables=payload)
+            content_data = response.json()['data']['bulkUpdateFigures']
+            assert content_data is None
+            # Unit test
+            with self.assertRaises(PermissionDenied) as exc:
+                BulkUpdateFigures.validate_batch_size([1] * 3, [1, 2])
+            assert (
+                str(exc.exception) == (
+                    'Max limit for batch is 4. But 5 where provided.'
+                    ' Where CREATE/UPDATE = 3 and DELETE = 2'
+                )
+            )
+        with override_settings(GRAPHENE_BATCH_DEFAULT_MAX_LIMIT=6):
+            response = self.query(self.figure_bulk_mutation, variables=payload)
+            content_data = response.json()['data']['bulkUpdateFigures']
+            assert content_data is not None
+            # Unit test
+            BulkUpdateFigures.validate_batch_size([1] * 3, [1, 2])

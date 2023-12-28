@@ -9,6 +9,7 @@ from graphene_django.rest_framework.serializer_converter import (
     get_graphene_type_from_serializer_field,
 )
 from rest_framework import serializers
+from django.conf import settings
 from django.db import models, transaction
 from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext
@@ -244,7 +245,37 @@ class BulkUpdateMutation(graphene.Mutation):
         return item
 
     @classmethod
-    def mutate(cls, _, info, items, delete_ids, context=None):
+    def get_batch_max_size_limit(cls):
+        if hasattr(cls, 'BATCH_MAX_SIZE_LIMIT'):
+            return cls.BATCH_MAX_SIZE_LIMIT
+        return settings.GRAPHENE_BATCH_DEFAULT_MAX_LIMIT
+
+    @classmethod
+    def validate_batch_size(cls, items, delete_ids):
+        delete_items_len = 0
+        items_len = 0
+        if items:
+            items_len = len(items)
+        if delete_ids:
+            delete_items_len = len(delete_ids)
+        all_len = items_len + delete_items_len
+        if all_len > cls.get_batch_max_size_limit():
+            raise PermissionDenied(
+                gettext(
+                    'Max limit for batch is %(limit)s. But %(all_len)s where provided.'
+                    ' Where CREATE/UPDATE = %(items_len)s and DELETE = %(delete_items_len)s'
+                ) % {
+                    'limit': cls.get_batch_max_size_limit(),
+                    'all_len': all_len,
+                    'items_len': items_len,
+                    'delete_items_len': delete_items_len,
+                }
+            )
+
+    @classmethod
+    def mutate(cls, _, info, items=None, delete_ids=None, context=None):
+        cls.validate_batch_size(items, delete_ids)
+
         if not info.context.user.has_perms(cls.permissions):
             raise PermissionDenied(gettext(PERMISSION_DENIED_MESSAGE))
 
@@ -257,7 +288,7 @@ class BulkUpdateMutation(graphene.Mutation):
             for item in delete_items_qs:
                 all_deleted_instances.append(cls.delete_item(item, context))
         # Bulk Create/Update
-        for item in items:
+        for item in items or []:
             id = item.get('id')
             instance, errors = cls.save_item(info, item, id, context)
             all_errors.append(errors)
