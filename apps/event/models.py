@@ -1,18 +1,19 @@
 from collections import OrderedDict
-from uuid import uuid4
 
 from django.db import models
-from django.contrib.postgres.aggregates.general import StringAgg
+from django.db.models import F, Value
+from django.contrib.postgres.aggregates.general import StringAgg, ArrayAgg
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 from django.contrib.postgres.fields import ArrayField
 from django.forms import model_to_dict
+from django.db.models.functions import Concat
 
-from utils.common import get_string_from_list
 from utils.common import add_clone_prefix
 
 from apps.contrib.models import (
     MetaInformationAbstractModel,
+    UUIDAbstractModel,
     MetaInformationArchiveAbstractModel,
 )
 from apps.crisis.models import Crisis
@@ -419,9 +420,11 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             osv_sub_type__name="OSV sub type",
             actor_id='Actor ID',
             actor__name='Actor',
-            glide_numbers='Event codes',
             context_of_violences='Context of violences',
+            event_codes='Event code',
+            event_code_type='Event Code Type',
         )
+
         data = EventFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
@@ -433,12 +436,35 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             entries_count=models.Count('figures__entry', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
             context_of_violences=StringAgg('context_of_violence__name', ';', distinct=True),
+            event_codes=ArrayAgg(
+                Concat(
+                    F('event_code__event_code'),
+                    Value(':'),
+                    F('event_code__event_code_type'),
+                    Value(':'),
+                    F('event_code__country__iso3'),
+                    output_field=models.CharField(),
+                ),
+                distinct=True,
+            ),
         ).order_by('created_at')
 
-        def format_glide_numbers(glide_numbers):
-            if not glide_numbers:
-                return ''
-            return get_string_from_list(str(glide_number) for glide_number in glide_numbers)
+        def get_event_code(event_codes, type=None):
+            def _get_event_code_label(key):
+                obj = EventCode.EVENT_CODE_TYPE.get(key)
+                return getattr(obj, "label", key)
+            if not event_codes or event_codes == '':
+                return
+
+            # FIXME: We also get aggregation when there is not data
+            splitted_event_codes = [event_code.split(':') for event_code in event_codes if event_code != '::']
+
+            # TODO: get country as well
+
+            return ', '.join([
+                event_code[0] if type == 'code' else _get_event_code_label(int(event_code[1]))
+                for event_code in splitted_event_codes
+            ])
 
         def transformer(datum):
             return {
@@ -446,14 +472,14 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 **dict(
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'label', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'label', ''),
-                    event_type=getattr(Crisis.CRISIS_TYPE.get(datum['event_type']), 'label', ''),
-                    glide_numbers=format_glide_numbers(datum['glide_numbers']),
+                    event_codes=get_event_code(datum['event_codes'], type='code'),
+                    event_code_type=get_event_code(datum['event_codes'], type='code_type')
                 )
             }
 
         return {
             'headers': headers,
-            'data': data.values(*[header for header in headers.keys()]),
+            'data': data.values(*[header for header in headers.keys() if header != 'event_code_type']),
             'formulae': None,
             'transformer': transformer,
         }
@@ -504,19 +530,18 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         return cloned_event
 
 
-class EventCode(models.Model):
+class EventCode(UUIDAbstractModel, models.Model):
 
     class EVENT_CODE_TYPE(enum.Enum):
         GLIDE_NUMBER = 1
         GOV_ASSIGNED_IDENTIFIER = 2
         IFRC_APPEAL_ID = 3
-        ACLED_ID = 4,
-
+        ACLED_ID = 4
         __labels__ = {
             GLIDE_NUMBER: _("Glide Number"),
             GOV_ASSIGNED_IDENTIFIER: _("Government Assigned Identifier"),
             IFRC_APPEAL_ID: _("IFRC Appeal ID"),
-            ACLED_ID: _("ACLED ID")
+            ACLED_ID: _("ACLED ID"),
         }
 
     event = models.ForeignKey(
@@ -531,8 +556,6 @@ class EventCode(models.Model):
         related_name='event_code_country',
         verbose_name=_('Country')
     )
-    uuid = models.UUIDField(verbose_name='UUID',
-                            blank=True, default=uuid4)
     event_code_type = enum.EnumField(EVENT_CODE_TYPE)
     event_code = models.CharField(max_length=256, verbose_name=_('Event Code'))
 

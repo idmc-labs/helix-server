@@ -2,9 +2,12 @@ import datetime
 import logging
 from helix.celery import app as celery_app
 from django.utils import timezone
+from django.db import models
+from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.db.models import (
     Sum, Case, When, IntegerField, Value, F, Subquery, OuterRef, Q
 )
+from django.db.models.functions import Concat
 from utils.common import round_and_remove_zero
 from apps.entry.models import Figure
 from apps.event.models import Crisis
@@ -20,6 +23,7 @@ from .models import (
 )
 from apps.country.models import Country
 from apps.report.models import Report
+from apps.event.models import EventCode
 
 
 logging.basicConfig(level=logging.INFO)
@@ -145,6 +149,22 @@ def update_gidd_legacy_data():
 
 
 def update_conflict_and_disaster_data():
+    def get_event_code(event_codes, type=None):
+        def _get_event_code_label(key):
+            obj = EventCode.EVENT_CODE_TYPE.get(key)
+            return getattr(obj, "label", key)
+
+        if not event_codes:
+            return
+
+        # FIXME: We also get aggregation when there is not data
+        splitted_event_codes = [event_code.split(':') for event_code in event_codes if event_code != ':']
+
+        return ', '.join([
+            event_code[0] if type == 'code' else _get_event_code_label(int(event_code[1]))
+            for event_code in splitted_event_codes
+        ]).split(',')
+
     figure_queryset = Figure.objects.filter(
         role=Figure.ROLE.RECOMMENDED
     )
@@ -232,6 +252,18 @@ def update_conflict_and_disaster_data():
                 )
             ),
             year=Value(year, output_field=IntegerField()),
+            event_code=ArrayAgg(
+                Concat(
+                    F('event__event_code__event_code'),
+                    Value(':'),
+                    F('event__event_code__event_code_type'),
+                    Value(':'),
+                    F('event__event_code__country__iso3'),
+                    output_field=models.CharField(),
+                ),
+                distinct=True,
+                filter=models.Q(event__event_code__country__id=F('country__id')),
+            ),
         ).filter(
             year__gte=2016,
         )
@@ -269,6 +301,8 @@ def update_conflict_and_disaster_data():
                     iso3=item['country__iso3'],
                     country_id=item['country'],
                     country_name=item['country__idmc_short_name'],
+                    event_code=get_event_code(item['event_code'], type='code') or [],
+                    event_code_type=get_event_code(item['event_code'], type='code_type') or [],
                 ) for item in disasters
             ]
         )

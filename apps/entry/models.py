@@ -789,14 +789,13 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
-        from apps.extraction.filters import FigureExtractionFilterSet
+        from apps.extraction.filters import ReportFigureExtractionFilterSet
 
         class DummyRequest:
             def __init__(self, user):
                 self.user = user
 
-        # TODO: can we use ReportFigureExtractionFilterSet?
-        qs = FigureExtractionFilterSet(
+        qs = ReportFigureExtractionFilterSet(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs
@@ -806,6 +805,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     def get_figure_excel_sheets_data(cls, figures):
 
         from apps.crisis.models import Crisis
+
         headers = OrderedDict(
             id='ID',
             old_id='Old ID',
@@ -872,8 +872,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__id='Event ID',
             event__old_id='Event old ID',
             event__name='Event name',
-            event__glide_numbers='Event code',
-
             event__event_type='Event cause',
             event_main_trigger='Event main trigger',
             event__start_date='Event start date',
@@ -889,6 +887,8 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__assignee__full_name='Assignee',
             created_by__full_name='Created by',
             last_modified_by__full_name='Updated by',
+            event_code='Event code',
+            event_code_type='Event Code Type',
         )
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
@@ -1000,22 +1000,46 @@ class Figure(MetaInformationArchiveAbstractModel,
                     then=F('event__other_sub_type__name')
                 ),
                 output_field=models.CharField()
-            )
+            ),
+            event_code=ArrayAgg(
+                Concat(
+                    F('event__event_code__event_code'),
+                    Value(':'),
+                    F('event__event_code__event_code_type'),
+                    Value(':'),
+                    F('event__event_code__country__iso3'),
+                    output_field=models.CharField(),
+                ),
+                distinct=True,
+                filter=models.Q(event__event_code__country__id=F('country__id')),
+            ),
         ).order_by(
             'created_at',
-        ).values(*[header for header in headers.keys()])
+        ).values(*[header for header in headers.keys() if header != 'event_code_type'])
 
         def transformer(datum):
-
-            def format_glide_numbers(glide_numbers):
-                if not glide_numbers:
-                    return ''
-                return get_string_from_list(str(glide_number) for glide_number in glide_numbers)
+            from apps.event.models import EventCode
 
             def get_enum_label(key, Enum):
                 val = datum[key]
                 obj = Enum.get(val)
                 return getattr(obj, "label", val)
+
+            def get_event_code(event_codes, type=None):
+                def _get_event_code_label(key):
+                    obj = EventCode.EVENT_CODE_TYPE.get(key)
+                    return getattr(obj, "label", key)
+
+                if not event_codes:
+                    return
+
+                # FIXME: We also get aggregation when there is not data
+                splitted_event_codes = [event_code.split(':') for event_code in event_codes if event_code != ':']
+
+                return ', '.join([
+                    event_code[0] if type == 'code' else _get_event_code_label(int(event_code[1]))
+                    for event_code in splitted_event_codes
+                ])
 
             return {
                 **datum,
@@ -1057,7 +1081,6 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 'source_document': generate_full_media_url(datum['source_document'], absolute=True),
                 'centroid': datum['centroid'],
-                'event__glide_numbers': format_glide_numbers(datum['event__glide_numbers']),
                 'event__event_type': get_enum_label(
                     'event__event_type', Crisis.CRISIS_TYPE
                 ),
@@ -1071,6 +1094,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                     'review_status', Figure.FIGURE_REVIEW_STATUS
                 ),
                 'is_disaggregated': 'Yes' if datum['is_disaggregated'] else 'No',
+                'event_code': get_event_code(datum['event_code'], type='code'),
+                'event_code_type': get_event_code(datum['event_code'], type='code_type'),
             }
 
         readme_data = [

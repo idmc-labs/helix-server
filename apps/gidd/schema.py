@@ -730,7 +730,7 @@ class Query(graphene.ObjectType):
             'end_date',
         ).order_by().annotate(
             total_new_displacement=models.Sum('new_displacement'),
-        )[0]
+        )
 
         affected_countries_qs = disaster_qs.values(
             'country_name',

@@ -108,8 +108,11 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             'Disaster Internal Displacements (Raw)',
             'Hazard Category',
             'Hazard Type',
-            'Hazard Sub Type'
+            'Hazard Sub Type',
+            'Event Code',
+            'Event Code Type',
         ])
+
         for disaster in qs:
             ws.append(
                 [
@@ -123,8 +126,11 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                     disaster.hazard_category_name,
                     disaster.hazard_type_name,
                     disaster.hazard_sub_type_name,
+                    ','.join([code for code in disaster.event_code]) or None,
+                    ','.join([code_type for code_type in disaster.event_code_type]) or None,
                 ]
             )
+
         ws2 = wb.create_sheet('README')
         readme_text = [
             ['Title', 'Global Internal Displacement Database (GIDD)'],
