@@ -57,10 +57,11 @@ class CommonSetupClassMixin:
         content = response.json()
         self.assertIsNone(content.get('errors'), content)
 
-    def assertQuerySetEqual(self, l1, l2):
+    def assertQuerySetEqual(self, l1, l2, message=None):
         return self.assertEqual(
             sorted([each.id for each in l1]),
             sorted([each.id for each in l2]),
+            message,
         )
 
 
