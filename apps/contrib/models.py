@@ -438,3 +438,4 @@ class BulkApiOperation(models.Model):
     status = enum.EnumField(enum=BULK_OPERATION_STATUS, default=BULK_OPERATION_STATUS.PENDING)
     success_count = models.PositiveIntegerField(blank=True, null=True)
     failure_count = models.PositiveIntegerField(blank=True, null=True)
+    errors = models.JSONField(default=dict)

@@ -4,7 +4,7 @@ from collections import OrderedDict
 import inspect
 import graphene
 import graphene_django
-# from graphene.types.generic import GenericScalar
+from graphene.types.generic import GenericScalar
 from graphene_django.registry import get_global_registry
 from graphene_django.rest_framework.serializer_converter import (
     get_graphene_type_from_serializer_field,
@@ -17,7 +17,6 @@ from django.utils.translation import gettext
 
 from utils.serializers import IntegerIDField
 from apps.contrib.enums import ENUM_TO_GRAPHENE_ENUM_MAP
-from apps.contrib.serializers import IntegerIDField
 from utils.error_types import mutation_is_not_valid
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 

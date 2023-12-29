@@ -13,7 +13,12 @@ from apps.contrib.models import (
     ClientTrackInfo,
     BulkApiOperation,
 )
-from apps.contrib.filters import ClientTrackInfoFilter, ClientFilter, ExcelExportFilter
+from apps.contrib.filters import (
+    ClientTrackInfoFilter,
+    ClientFilter,
+    ExcelExportFilter,
+    BulkApiOperationFilter,
+)
 from apps.contrib.enums import (
     AttachmentForGrapheneEnum,
     DownloadTypeGrapheneEnum,
@@ -21,7 +26,7 @@ from apps.contrib.enums import (
     BulkApiOperationActionEnum,
     BulkApiOperationStatusEnum,
 )
-from apps.contrib.serializers import BulkApiOperationPayloadSerializer
+from apps.contrib.bulk_operations.serializers import BulkApiOperationPayloadSerializer
 from apps.extraction.filters import FigureExtractionFilterDataType
 from apps.entry.models import ExternalApiDump
 from apps.entry.enums import ExternalApiTypeEnum
@@ -29,10 +34,6 @@ from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField, generate_type_for_serializer
 
 
-# BulkApiOperationFilterType = generate_type_for_serializer(
-#     'BulkApiOperationFilterType',
-#     serializer_class=BulkApiOperationFilterSerializer,
-# )
 BulkApiOperationPayloadType = generate_type_for_serializer(
     'BulkApiOperationPayloadType',
     serializer_class=BulkApiOperationPayloadSerializer,
@@ -158,6 +159,13 @@ class BulkApiOperationFilterType(graphene.ObjectType):
 class BulkApiOperationType(DjangoObjectType):
     class Meta:
         model = BulkApiOperation
+        fields = (
+            'id',
+            'created_at',
+            'created_by',
+            'success_count',
+            'failure_count',
+        )
 
     action = graphene.Field(BulkApiOperationActionEnum)
     action_display = EnumDescription(source='get_action_display')
@@ -165,6 +173,12 @@ class BulkApiOperationType(DjangoObjectType):
     status_display = EnumDescription(source='get_status_display', required=True)
     filters = graphene.Field(BulkApiOperationFilterType, required=True)
     payload = graphene.Field(BulkApiOperationPayloadType, required=True)
+
+
+class BulkApiOperationListType(CustomDjangoListObjectType):
+    class Meta:
+        model = BulkApiOperation
+        filterset_class = BulkApiOperationFilter
 
 
 class Query:
@@ -184,5 +198,12 @@ class Query:
         ClientTrackInformationListType,
         pagination=PageGraphqlPagination(
             page_size_query_param='pageSize'
+        )
+    )
+
+    bulk_api_operations = DjangoPaginatedListObjectField(
+        BulkApiOperationListType,
+        pagination=PageGraphqlPagination(
+            page_size_query_param='pageSize',
         )
     )
