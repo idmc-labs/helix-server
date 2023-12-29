@@ -1,26 +1,20 @@
+import magic
 from datetime import timedelta
 from django.utils import timezone
-import magic
 
 from django.conf import settings
 from django.template.defaultfilters import filesizeformat
 from django.utils.translation import gettext
 from rest_framework import serializers
 
+from utils.serializers import IntegerIDField
 from apps.entry.tasks import PDF_TASK_TIMEOUT
 from apps.contrib.models import (
     Attachment,
-    SourcePreview,
-    ExcelDownload,
     Client,
+    ExcelDownload,
+    SourcePreview,
 )
-
-
-class IntegerIDField(serializers.IntegerField):
-    """
-    This field is created to override the graphene conversion of the integerfield
-    """
-    pass
 
 
 class MetaInformationSerializerMixin(serializers.Serializer):

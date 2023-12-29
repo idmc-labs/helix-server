@@ -394,3 +394,48 @@ class ClientTrackInfo(models.Model):
                 ]
             )
         }
+
+
+class BulkApiOperation(models.Model):
+    class BULK_OPERATION_ACTION(enum.Enum):
+        FIGURE_ROLE = 0
+
+        __labels__ = {
+            FIGURE_ROLE: _("Figure Role"),
+        }
+
+    class BULK_OPERATION_STATUS(enum.Enum):
+        PENDING = 0
+        STARTED = 1
+        FINISHED = 2
+
+        __labels__ = {
+            PENDING: _("Pending"),
+            STARTED: _("Started"),
+            FINISHED: _("Finished"),
+        }
+
+    created_at = models.DateTimeField(verbose_name=_('Created At'), default=timezone.now)
+    created_by = models.ForeignKey(
+        'users.User', verbose_name=_('Created By'),
+        related_name='created_%(class)s', on_delete=models.PROTECT,
+    )
+
+    # User provided fields
+    action = enum.EnumField(enum=BULK_OPERATION_ACTION)
+    filters = JSONField(
+        verbose_name=_('Filters'),
+        blank=True,
+        null=True,
+    )
+    payload = JSONField(
+        verbose_name=_('Operation Payload'),
+        blank=True,
+        null=True,
+    )
+
+    # System generated fields
+    status = enum.EnumField(enum=BULK_OPERATION_STATUS, default=BULK_OPERATION_STATUS.PENDING)
+    success_count = models.PositiveIntegerField(blank=True, null=True)
+    failure_count = models.PositiveIntegerField(blank=True, null=True)
+    errors = models.JSONField(default=dict)

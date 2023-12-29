@@ -1,6 +1,7 @@
 import typing
 from collections import OrderedDict
 
+import inspect
 import graphene
 import graphene_django
 from graphene.types.generic import GenericScalar
@@ -14,8 +15,8 @@ from django.db import models, transaction
 from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext
 
+from utils.serializers import IntegerIDField
 from apps.contrib.enums import ENUM_TO_GRAPHENE_ENUM_MAP
-from apps.contrib.serializers import IntegerIDField
 from utils.error_types import mutation_is_not_valid
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 
@@ -32,6 +33,11 @@ def convert_list_field_to_field(field):
     return (graphene.List, graphene.NonNull(child_type))
 
 
+@get_graphene_type_from_serializer_field.register(serializers.Serializer)
+def convert_serializer_to_field(field):
+    return graphene.Field
+
+
 @get_graphene_type_from_serializer_field.register(serializers.ManyRelatedField)
 def convert_serializer_field_to_many_related_id(field):
     return (graphene.List, graphene.NonNull(graphene.ID))
@@ -43,13 +49,20 @@ def convert_serializer_field_to_id(field):
     return graphene.ID
 
 
+# TODO: This need to be done object type level as well
+# @get_graphene_type_from_serializer_field.register(serializers.JSONField)
+# @get_graphene_type_from_serializer_field.register(serializers.DictField)
+# def convert_serializer_field_to_generic_scalar(field):
+#     return GenericScalar
+
+
 @get_graphene_type_from_serializer_field.register(serializers.ChoiceField)
 def convert_serializer_field_to_enum(field):
     enum_type = type(list(field.choices.values())[-1])
     return ENUM_TO_GRAPHENE_ENUM_MAP.get(enum_type.__name__, graphene.String)
 
 
-def convert_serializer_field(field, is_input=True, convert_choices_to_enum=True):
+def convert_serializer_field(field, is_input=True, convert_choices_to_enum=True, force_optional=False):
     """
     Converts a django rest frameworks field to a graphql field
     and marks the field as required if we are creating an input type
@@ -62,7 +75,10 @@ def convert_serializer_field(field, is_input=True, convert_choices_to_enum=True)
         graphql_type = get_graphene_type_from_serializer_field(field)
 
     args = []
-    kwargs = {"description": field.help_text, "required": is_input and field.required}
+    kwargs = {
+        "description": field.help_text,
+        "required": is_input and field.required and not force_optional
+    }
 
     # if it is a tuple or a list it means that we are returning
     # the graphql type and the child type
@@ -77,6 +93,9 @@ def convert_serializer_field(field, is_input=True, convert_choices_to_enum=True)
             global_registry = get_global_registry()
             field_model = field.Meta.model
             args = [global_registry.get_type_for_model(field_model)]
+    elif isinstance(field, serializers.Serializer):
+        if is_input:
+            graphql_type = convert_serializer_to_input_type(field.__class__)
     elif isinstance(field, serializers.ListSerializer):
         field = field.child
         if is_input:
@@ -170,6 +189,31 @@ def generate_input_type_for_serializer(
         is_input=True
     )
     return type(name, (graphene.InputObjectType,), data_members)
+
+
+# Only use this for single object type with direct scalar access.
+def generate_object_field_from_input_type(input_type, skip_fields=[]):
+    new_fields_map = {}
+    for field_key, field in input_type._meta.fields.items():
+        if field_key in skip_fields:
+            continue
+        _type = field.type
+        if inspect.isclass(_type) and (
+            issubclass(_type, graphene.Scalar) or
+            issubclass(_type, graphene.Enum)
+        ):
+            new_fields_map[field_key] = graphene.Field(_type)
+        else:
+            new_fields_map[field_key] = _type
+    return new_fields_map
+
+
+def compare_input_output_type_fields(input_type, output_type):
+    if len(output_type._meta.fields) != len(input_type._meta.fields):
+        for field in input_type._meta.fields.keys():
+            if field not in output_type._meta.fields.keys():
+                print('---> [Entry] Missing: ', field)
+        raise Exception('Conversion failed')
 
 
 # override the default implementation

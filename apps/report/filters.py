@@ -125,3 +125,15 @@ class DummyFilter(df.FilterSet):
     NOTE: Created to override the default filters of list types
     """
     id = df.CharFilter(field_name='id', lookup_expr='exact')
+
+
+class ReportApprovalFilter(df.FilterSet):
+    class Meta:
+        model = ReportApproval
+        fields = ('is_approved',)
+
+
+class ReportGenerationFilter(df.FilterSet):
+    class Meta:
+        model = ReportGeneration
+        fields = ('report',)

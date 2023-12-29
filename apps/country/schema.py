@@ -22,6 +22,8 @@ from apps.country.filters import (
     CountryRegionFilter,
     GeographicalGroupFilter,
     MonitoringSubRegionFilter,
+    ContextualAnalysisFilter,
+    CountrySummaryFilter,
 )
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.graphene.types import CustomDjangoListObjectType
@@ -100,9 +102,7 @@ class ContextualAnalysisType(DjangoObjectType):
 class ContextualAnalysisListType(CustomDjangoListObjectType):
     class Meta:
         model = ContextualAnalysis
-        filter_fields = {
-            'created_at': ['lte', 'gte']
-        }
+        filterset_class = ContextualAnalysisFilter
 
 
 class SummaryType(DjangoObjectType):
@@ -117,15 +117,12 @@ class SummaryType(DjangoObjectType):
 class SummaryListType(CustomDjangoListObjectType):
     class Meta:
         model = Summary
-        filter_fields = {
-            'created_at': ['lte', 'gte']
-        }
+        filterset_class = CountrySummaryFilter
 
 
 class CountryType(DjangoObjectType):
     class Meta:
         model = Country
-        filter_fields = {}
         exclude_fields = ('country_conflict', 'country_disaster', 'displacements')
 
     last_summary = graphene.Field(SummaryType)

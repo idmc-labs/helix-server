@@ -11,6 +11,8 @@ from apps.country.models import (
     CountryRegion,
     GeographicalGroup,
     MonitoringSubRegion,
+    ContextualAnalysis,
+    Summary,
 )
 from apps.report.models import Report
 from utils.filters import IDListFilter, StringListFilter, NameFilterMixin
@@ -156,3 +158,19 @@ class MonitoringSubRegionFilter(django_filters.FilterSet):
         ).annotate(
             idx=StrIndex('lname', Value(value.lower()))
         ).filter(idx__gt=0).order_by('idx', 'name')
+
+
+class CountrySummaryFilter(django_filters.FilterSet):
+    class Meta:
+        model = Summary
+        fields = {
+            'created_at': ['lte', 'gte']
+        }
+
+
+class ContextualAnalysisFilter(django_filters.FilterSet):
+    class Meta:
+        model = ContextualAnalysis
+        fields = {
+            'created_at': ['lte', 'gte']
+        }
