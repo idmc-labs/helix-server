@@ -404,7 +404,7 @@ class TestReportFilter(HelixGraphQLTestCase):
         }'''
         self.entries_report_query = '''
           query MyQuery($id: String) {
-            entryList(reportId: $id) {
+            entryList(filters: {reportId: $id}) {
               results {
                 id
                 articleTitle
@@ -471,8 +471,7 @@ class TestReportFilter(HelixGraphQLTestCase):
             self.create_report,
             input_data=self.input,
         )
-        report = response.json()
-        report_id = report["data"]["createReport"]["result"]["id"]
+        report_id = response.json()["data"]["createReport"]["result"]["id"]
 
         # Test for entries
         response = self.query(
@@ -481,8 +480,7 @@ class TestReportFilter(HelixGraphQLTestCase):
                 id=str(report_id),
             )
         )
-        entries = response.json()
-        entries_count = entries["data"]["entryList"]["totalCount"]
+        entries_count = response.json()["data"]["entryList"]["totalCount"]
         self.assertEqual(entries_count, 3)
 
 
