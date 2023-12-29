@@ -261,11 +261,9 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             ),
         ]:
             response = self.query(query, variables={**filter_data})
-            content = json.loads(response.content)
-            print('****************************')
-            print(content)
             self.assertEqual(
-                content['data']['figureAggregations']['idpsConflictFigures'], expected_data,
+                response.json()['data']['figureAggregations']['idpsConflictFigures'],
+                expected_data,
             )
 
         # Test for idpsDisasterFigures

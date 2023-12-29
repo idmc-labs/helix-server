@@ -1,8 +1,6 @@
-import graphene
 from django_filters import rest_framework as df
 from django.db.models import Q
 from django.contrib.postgres.aggregates.general import StringAgg
-from graphene_django.filter.utils import get_filtering_args_from_filterset
 from apps.crisis.models import Crisis
 from apps.country.models import Country
 from apps.extraction.models import ExtractionQuery
