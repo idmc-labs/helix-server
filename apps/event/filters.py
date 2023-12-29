@@ -83,11 +83,34 @@ class EventFilter(NameFilterMixin,
         return qs
 
     def filter_review_status(self, qs, name, value):
+        # Filter out *_BUT_CHANGED values from user input
+        value = [
+            v
+            for v in value or []
+            if v not in [
+                Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED.value,
+                Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED.name,
+                Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED.value,
+                Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED.name,
+            ]
+        ]
         if value:
+            if (
+                Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value in value or
+                Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.name in value
+            ):
+                # Add *_BUT_CHANGED values if REVIEW_IN_PROGRESS is provided by user
+                value = [
+                    *value,
+                    Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED.value,
+                    Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED.value,
+                ]
             if isinstance(value[0], int):
                 return qs.filter(review_status__in=value).distinct()
             return qs.filter(review_status__in=[
-                Event.EVENT_REVIEW_STATUS.get(item).value for item in value
+                # NOTE: item is string. eg: 'REVIEW_IN_PROGRESS'
+                Event.EVENT_REVIEW_STATUS.get(item).value
+                for item in value
             ]).distinct()
         return qs
 

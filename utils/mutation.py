@@ -1,15 +1,23 @@
+import typing
 from collections import OrderedDict
 
 import graphene
 import graphene_django
+from graphene.types.generic import GenericScalar
 from graphene_django.registry import get_global_registry
 from graphene_django.rest_framework.serializer_converter import (
     get_graphene_type_from_serializer_field,
 )
 from rest_framework import serializers
+from django.conf import settings
+from django.db import models, transaction
+from django.core.exceptions import PermissionDenied
+from django.utils.translation import gettext
 
 from apps.contrib.enums import ENUM_TO_GRAPHENE_ENUM_MAP
 from apps.contrib.serializers import IntegerIDField
+from utils.error_types import mutation_is_not_valid
+from utils.permissions import PERMISSION_DENIED_MESSAGE
 
 
 @get_graphene_type_from_serializer_field.register(serializers.ListSerializer)
@@ -167,3 +175,126 @@ def generate_input_type_for_serializer(
 # override the default implementation
 graphene_django.rest_framework.serializer_converter.convert_serializer_field = convert_serializer_field
 graphene_django.rest_framework.serializer_converter.convert_serializer_to_input_type = convert_serializer_to_input_type
+
+
+# Custom mutations
+class BulkUpdateMutation(graphene.Mutation):
+    # TODO: Use proper class inheritance using template
+    class Arguments:
+        items = graphene.List(graphene.NonNull(graphene.InputObjectType))
+        delete_ids = graphene.List(graphene.NonNull(graphene.ID))
+
+    serializer_class: typing.Type[serializers.ModelSerializer]
+    model: typing.Type[models.Model]
+    errors = graphene.List(GenericScalar)
+    permissions: typing.List[str]
+    result = graphene.List(graphene.ObjectType)
+    deleted_result = graphene.List(graphene.ObjectType)
+
+    @staticmethod
+    def get_queryset() -> models.QuerySet:
+        raise Exception('Implementation required')
+
+    @classmethod
+    def get_valid_delete_items(cls, delete_ids) -> models.QuerySet:
+        return cls.get_queryset().filter(pk__in=delete_ids)
+
+    @classmethod
+    def get_object(cls, id) -> typing.Tuple[typing.Optional[models.Model], typing.Optional[typing.List[typing.Any]]]:
+        try:
+            return cls.get_queryset().get(id=id), None
+        except cls.model.DoesNotExist:
+            return None, [
+                dict(field='nonFieldErrors', messages=f'{cls.model.__name__} does not exist.')
+            ]
+
+    @classmethod
+    @transaction.atomic
+    def save_item(cls, info, item, id, context):
+        base_context = {
+            'request': info.context,
+            **(context or {})
+        }
+        if id:
+            instance, errors = cls.get_object(id)
+            if errors:
+                return None, errors
+            serializer = cls.serializer_class(
+                instance=instance,
+                data=item,
+                context=base_context,
+                partial=True,
+            )
+        else:
+            serializer = cls.serializer_class(
+                data=item,
+                context=base_context,
+            )
+        if errors := mutation_is_not_valid(serializer):
+            return None, errors
+        instance = serializer.save()
+        return instance, None
+
+    @classmethod
+    @transaction.atomic
+    def delete_item(cls, item, context):
+        old_id = item.pk
+        item.delete()
+        # add old id so that client can use it if required
+        item.pk = old_id
+        return item
+
+    @classmethod
+    def get_batch_max_size_limit(cls):
+        if hasattr(cls, 'BATCH_MAX_SIZE_LIMIT'):
+            return cls.BATCH_MAX_SIZE_LIMIT
+        return settings.GRAPHENE_BATCH_DEFAULT_MAX_LIMIT
+
+    @classmethod
+    def validate_batch_size(cls, items, delete_ids):
+        delete_items_len = 0
+        items_len = 0
+        if items:
+            items_len = len(items)
+        if delete_ids:
+            delete_items_len = len(delete_ids)
+        all_len = items_len + delete_items_len
+        if all_len > cls.get_batch_max_size_limit():
+            raise PermissionDenied(
+                gettext(
+                    'Max limit for batch is %(limit)s. But %(all_len)s where provided.'
+                    ' Where CREATE/UPDATE = %(items_len)s and DELETE = %(delete_items_len)s'
+                ) % {
+                    'limit': cls.get_batch_max_size_limit(),
+                    'all_len': all_len,
+                    'items_len': items_len,
+                    'delete_items_len': delete_items_len,
+                }
+            )
+
+    @classmethod
+    def mutate(cls, _, info, items=None, delete_ids=None, context=None):
+        cls.validate_batch_size(items, delete_ids)
+
+        if not info.context.user.has_perms(cls.permissions):
+            raise PermissionDenied(gettext(PERMISSION_DENIED_MESSAGE))
+
+        all_errors = []
+        all_instances = []
+        all_deleted_instances = []
+        # Bulk Delete
+        if delete_ids:
+            delete_items_qs = cls.get_valid_delete_items(delete_ids)
+            for item in delete_items_qs:
+                all_deleted_instances.append(cls.delete_item(item, context))
+        # Bulk Create/Update
+        for item in items or []:
+            id = item.get('id')
+            instance, errors = cls.save_item(info, item, id, context)
+            all_errors.append(errors)
+            all_instances.append(instance)
+        return cls(
+            result=all_instances,
+            errors=all_errors,
+            deleted_result=all_deleted_instances,
+        )

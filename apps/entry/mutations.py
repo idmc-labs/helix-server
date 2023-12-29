@@ -2,6 +2,7 @@ from django.utils.translation import gettext
 import graphene
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from django.utils import timezone
+from django.db import transaction
 
 from apps.contrib.models import SourcePreview
 from apps.entry.models import Entry, FigureTag, Figure
@@ -15,15 +16,16 @@ from apps.entry.serializers import (
     EntryUpdateSerializer,
     FigureTagCreateSerializer,
     FigureTagUpdateSerializer,
-    NestedFigureUpdateSerializer,
+    FigureSerializer,
 )
 from apps.extraction.filters import FigureExtractionFilterSet, EntryExtractionFilterSet
 from apps.contrib.serializers import SourcePreviewSerializer, ExcelDownloadSerializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker, is_authenticated
-from utils.mutation import generate_input_type_for_serializer
+from utils.mutation import generate_input_type_for_serializer, BulkUpdateMutation
 from utils.common import convert_date_object_to_string_in_dict
 from apps.notification.models import Notification
+from .utils import BulkUpdateFigureManager, send_figure_notifications, get_figure_notification_type
 
 # entry
 
@@ -39,7 +41,7 @@ EntryUpdateInputType = generate_input_type_for_serializer(
 
 FigureUpdateInputType = generate_input_type_for_serializer(
     'FigureUpdateInputType',
-    serializer_class=NestedFigureUpdateSerializer,
+    serializer_class=FigureSerializer,
 )
 
 
@@ -109,7 +111,10 @@ class DeleteEntry(graphene.Mutation):
         affected_event_ids = []
 
         # Send notification to regional co-ordinators
+        # TODO: Can we re-use the function defined on DeleteFigure._get_notification_type?
         for review_status in [
+            Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED,
+            Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED,
             Event.EVENT_REVIEW_STATUS.APPROVED,
             Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
         ]:
@@ -131,7 +136,10 @@ class DeleteEntry(graphene.Mutation):
                     recipients.append(figure.event.assignee_id)
 
                 notification_type = Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT
-                if review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+                if (
+                    review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF or
+                    review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED
+                ):
                     notification_type = Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT
 
                 Notification.send_safe_multiple_notifications(
@@ -348,9 +356,15 @@ class DeleteFigure(graphene.Mutation):
         instance.delete()
 
         def _get_notification_type(event):
-            if event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+            if event.review_status in [
+                Event.EVENT_REVIEW_STATUS.APPROVED,
+                Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED,
+            ]:
                 return Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT
-            if event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+            if event.review_status in [
+                Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
+                Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED,
+            ]:
                 return Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT
             return None
 
@@ -447,9 +461,15 @@ class UnapproveFigure(graphene.Mutation):
         figure.save()
 
         def _get_notification_type(event):
-            if event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+            if event.review_status in [
+                Event.EVENT_REVIEW_STATUS.APPROVED,
+                Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED,
+            ]:
                 return Notification.Type.FIGURE_UNAPPROVED_IN_APPROVED_EVENT
-            if event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+            if event.review_status in [
+                Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
+                Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED,
+            ]:
                 return Notification.Type.FIGURE_UNAPPROVED_IN_SIGNED_EVENT
             return None
 
@@ -496,6 +516,7 @@ class ReRequestReviewFigure(graphene.Mutation):
                 dict(field='nonFieldErrors', messages=gettext('Figure does not exist.'))
             ])
 
+        # NOTE: State machine with states defined in FIGURE_REVIEW_STATUS
         if figure.review_status != Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS:
             return ReRequestReviewFigure(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Only in-progress figures can be re-requested review'))
@@ -522,6 +543,42 @@ class ReRequestReviewFigure(graphene.Mutation):
         return ReRequestReviewFigure(result=figure, errors=None, ok=True)
 
 
+class BulkUpdateFigures(BulkUpdateMutation):
+    class Arguments(BulkUpdateMutation.Arguments):
+        items = graphene.List(graphene.NonNull(FigureUpdateInputType))
+
+    model = Figure
+    serializer_class = FigureSerializer
+    result = graphene.List(FigureType)
+    deleted_result = graphene.List(graphene.NonNull(FigureType))
+    permissions = ['entry.add_figure', 'entry.change_figure', 'entry.delete_figure']
+
+    @staticmethod
+    def get_queryset():
+        return Figure.objects.all()
+
+    @classmethod
+    @transaction.atomic
+    def delete_item(cls, figure, context):
+        bulk_manager: BulkUpdateFigureManager = context['bulk_manager']
+        figure = super().delete_item(figure, context)
+
+        if notification_type := get_figure_notification_type(figure.event, is_deleted=True):
+            send_figure_notifications(
+                figure,
+                context['request'].user,
+                notification_type,
+                is_deleted=True,
+            )
+        bulk_manager.add_event(figure.event_id)
+        return figure
+
+    @classmethod
+    def mutate(cls, *args, **kwargs):
+        with BulkUpdateFigureManager() as bulk_manager:
+            return super().mutate(*args, **kwargs, context={'bulk_manager': bulk_manager})
+
+
 class Mutation(object):
     create_entry = CreateEntry.Field()
     update_entry = UpdateEntry.Field()
@@ -535,6 +592,7 @@ class Mutation(object):
     # exports
     export_entries = ExportEntries.Field()
     export_figures = ExportFigures.Field()
+    bulk_update_figures = BulkUpdateFigures.Field()
     # figure
     delete_figure = DeleteFigure.Field()
     approve_figure = ApproveFigure.Field()

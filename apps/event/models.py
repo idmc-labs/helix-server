@@ -139,12 +139,17 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         REVIEW_IN_PROGRESS = 1
         APPROVED = 2
         SIGNED_OFF = 3
+        # NOTE: these two statuses should be hidden to the client
+        APPROVED_BUT_CHANGED = 4
+        SIGNED_OFF_BUT_CHANGED = 5
 
         __labels__ = {
             REVIEW_NOT_STARTED: _("Review not started"),
             REVIEW_IN_PROGRESS: _("Review in progress"),
             APPROVED: _("Approved"),
             SIGNED_OFF: _("Signed-off"),
+            APPROVED_BUT_CHANGED: _("Approved but changed"),
+            SIGNED_OFF_BUT_CHANGED: _("Signed-off but changed"),
         }
 
     # NOTE figure disaggregation variable definitions

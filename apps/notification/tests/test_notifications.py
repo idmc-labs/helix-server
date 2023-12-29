@@ -67,17 +67,13 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             }
         '''
         self.create_update_figure = """
-        mutation MyMutation($input: EntryUpdateInputType!) {
-          updateEntry(data: $input) {
-            ok
-            errors
-            result {
-              id
-              figures {
-                id
-              }
+        mutation BulkUpdateFigures($items: [FigureUpdateInputType!], $delete_ids: [ID!]) {
+            bulkUpdateFigures(items: $items, deleteIds: $delete_ids) {
+                errors
+                result {
+                  id
+                }
             }
-          }
         }
         """
         self.set_assignee_to_event_mutation = '''
@@ -717,15 +713,16 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.force_login(self.admin_bro)
         figures = self.figures
         figures[0]['event'] = event.id
+        figures[0]['entry'] = entry.id
         response = self.query(
             self.create_update_figure,
-            input_data={
-                'id': entry.id,
-                'figures': figures
-            }
+            variables={
+                "items": figures,
+                "delete_ids": []
+            },
         )
         content = json.loads(response.content)
-        figure_id = content['data']['updateEntry']['result']['figures'][0]['id']
+        figure_id = content['data']['bulkUpdateFigures']['result'][0]['id']
 
         # Creator case
         self.force_login(self.admin)
@@ -763,12 +760,11 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         figures[0]['id'] = figure_id
         response = self.query(
             self.create_update_figure,
-            input_data={
-                'id': entry.id,
-                'figures': figures
-            }
+            variables={
+                "items": figures,
+                "delete_ids": []
+            },
         )
-
         # Creator case
         self.force_login(self.admin)
         response = self.query(
@@ -849,18 +845,19 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         entry = EntryFactory.create()
         figures = self.figures
         figures[0]['event'] = event.id
+        figures[0]['entry'] = entry.id
 
         # CREATE FIGURE
         self.force_login(self.admin_bro)
         response = self.query(
             self.create_update_figure,
-            input_data={
-                'id': entry.id,
-                'figures': figures
-            }
+            variables={
+                "items": figures,
+                "delete_ids": []
+            },
         )
         content = json.loads(response.content)
-        figure_id = content['data']['updateEntry']['result']['figures'][0]['id']
+        figure_id = content['data']['bulkUpdateFigures']['result'][0]['id']
 
         # Creator case
         self.force_login(self.admin)
@@ -895,14 +892,15 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         event.save()
 
         figures[0]['id'] = figure_id
+        figures[0]['entry'] = entry.id
+
         self.query(
             self.create_update_figure,
-            input_data={
-                'id': entry.id,
-                'figures': figures,
-            }
+            variables={
+                "items": figures,
+                "delete_ids": []
+            },
         )
-
         # Creator case
         self.force_login(self.admin)
         response = self.query(

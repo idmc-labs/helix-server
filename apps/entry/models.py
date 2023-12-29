@@ -529,6 +529,9 @@ class Figure(MetaInformationArchiveAbstractModel,
         default=FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
     )
 
+    # Types
+    event_id: int
+
     class Meta:
         indexes = [
             models.Index(fields=['start_date']),
@@ -1109,6 +1112,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     def update_figure_status(cls, figure):
         review_comments_count = figure.figure_review_comments.count()
 
+        # NOTE: State machine with states defined in FIGURE_REVIEW_STATUS
         if (
             review_comments_count > 0 and
             (figure.review_status == Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED or
@@ -1137,22 +1141,35 @@ class Figure(MetaInformationArchiveAbstractModel,
         ).first()
 
         review_approved_count = event_with_stats.review_approved_count
-        review_not_started_count = event_with_stats.review_not_started_count
+        review_re_request_count = event_with_stats.review_re_request_count
+        review_in_progress_count = event_with_stats.review_in_progress_count
         total_count = event_with_stats.total_count
 
         prev_status = event_with_stats.review_status
 
-        if not total_count or review_not_started_count == total_count:
-            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED.value
-        elif review_approved_count == total_count and prev_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
-            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF.value
-        elif review_approved_count == total_count:
-            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
-        else:
-            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value
+        if prev_status == Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED:
+            if review_approved_count == total_count and review_approved_count > 0:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
+            elif review_in_progress_count > 0 or review_approved_count > 0 or review_re_request_count > 0:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value
+        elif prev_status == Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS:
+            if review_approved_count == total_count and review_approved_count > 0:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
+        elif prev_status == Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED:
+            if review_approved_count == total_count and review_approved_count > 0:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
+        elif prev_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED:
+            if review_approved_count == total_count and review_approved_count > 0:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
+        elif prev_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+            if review_approved_count != total_count:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED
+        elif prev_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+            if review_approved_count != total_count:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED
         event_with_stats.save()
 
-        # TODO: add notification for un-approved and un-signed off
+        # TODO: add notification for transition to APPROVED_BUT_CHANGED, SIGNED_OFF_BUT_CHANGED, REVIEW_IN_PROGRESS?
         if (
             prev_status != event_with_stats.review_status and
             event_with_stats.review_status == Event.EVENT_REVIEW_STATUS.APPROVED
