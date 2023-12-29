@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import typing
 import re
 import time
 import json
@@ -26,9 +25,7 @@ from apps.contrib.redis_client_track import (
     pull_track_data_from_redis,
     delete_external_redis_record_by_key,
 )
-
-if typing.TYPE_CHECKING:
-    from apps.contrib.models import BulkApiOperation
+from apps.contrib.bulk_operations.tasks import run_bulk_api_operation as _run_bulk_api_operation
 
 
 logging.basicConfig(level=logging.INFO)
@@ -237,10 +234,6 @@ def _generate_idus_dump_file(api_type):
         lambda: get_idu_data().filter(displacement_date__gte=idu_date_from),
         'idus.json',
     )
-
-
-def _run_bulk_api_operation(operation: BulkApiOperation):
-    print(operation)
 
 
 @celery_app.task

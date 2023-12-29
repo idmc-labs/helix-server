@@ -7,11 +7,11 @@ from graphene_django.filter.utils import get_filtering_args_from_filterset
 from apps.contrib.serializers import ExcelDownloadSerializer
 from utils.common import convert_date_object_to_string_in_dict
 from apps.contrib.schema import AttachmentType, ClientType, BulkApiOperationType
+from apps.contrib.bulk_operations.serializers import BulkApiOperationSerializer
 from apps.contrib.serializers import (
     AttachmentSerializer,
     ClientSerializer,
     ClientUpdateSerializer,
-    BulkApiOperationSerializer,
 )
 from apps.contrib.models import (
     Client,

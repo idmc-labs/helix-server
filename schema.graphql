@@ -114,6 +114,10 @@ type BulkApiOperationFigureRolePayloadType {
   role: ROLE!
 }
 
+input BulkApiOperationFilterDataInputType {
+  action: BULK_OPERATION_ACTION
+}
+
 input BulkApiOperationFilterInputType {
   figureRole: BulkApiOperationFigureRoleFilterInputType
 }
@@ -128,6 +132,13 @@ input BulkApiOperationInputType {
   payload: BulkApiOperationPayloadInputType!
 }
 
+type BulkApiOperationListType {
+  results: [BulkApiOperationType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
 input BulkApiOperationPayloadInputType {
   figureRole: BulkApiOperationFigureRolePayloadInputType
 }
@@ -140,14 +151,14 @@ type BulkApiOperationType {
   id: ID!
   createdAt: DateTime!
   createdBy: UserType!
-  action: BULK_OPERATION_ACTION
-  filters: BulkApiOperationFilterType!
-  payload: BulkApiOperationPayloadType!
-  status: BULK_OPERATION_STATUS!
   successCount: Int
   failureCount: Int
+  action: BULK_OPERATION_ACTION
   actionDisplay: EnumDescription
+  status: BULK_OPERATION_STATUS!
   statusDisplay: EnumDescription!
+  filters: BulkApiOperationFilterType!
+  payload: BulkApiOperationPayloadType!
 }
 
 input BulkMonitoringExpertPortfolioInputType {
@@ -3024,6 +3035,7 @@ type Query {
   client(id: ID!): ClientType
   clientList(filters: ClientFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ClientListType
   clientTrackInformationList(filters: ClientTrackInfoFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ClientTrackInformationListType
+  bulkApiOperations(filters: BulkApiOperationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): BulkApiOperationListType
   contact(id: ID!): ContactType
   communication(id: ID!): CommunicationType
   contactList(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
