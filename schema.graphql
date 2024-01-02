@@ -1623,11 +1623,6 @@ type ExportReport {
   result: ReportType
 }
 
-type ExportReportFigures {
-  errors: [GenericScalar!]
-  ok: Boolean
-}
-
 type ExportReports {
   errors: [GenericScalar!]
   ok: Boolean
@@ -2432,7 +2427,6 @@ type Mutation {
   approveReport(approve: Boolean!, id: ID!): ApproveReport
   startReportGeneration(id: ID!): GenerateReport
   signOffReport(id: ID!, includeHistory: Boolean): SignOffReport
-  exportReportFigures(report: ID!): ExportReportFigures
   exportReports(filters: ReportFilterDataInputType!): ExportReports
   exportReport(id: ID!): ExportReport
   setPfaVisibleInGidd(isPfaVisibleInGidd: Boolean!, reportId: ID!): SetPfaVisibleInGidd
