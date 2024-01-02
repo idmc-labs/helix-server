@@ -279,30 +279,6 @@ class ApproveReport(graphene.Mutation):
         return ApproveReport(result=instance, errors=None, ok=True)
 
 
-class ExportReportFigures(graphene.Mutation):
-    class Arguments:
-        report = graphene.ID(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-
-    @staticmethod
-    def mutate(_, info, filters):
-        from apps.contrib.models import ExcelDownload
-
-        serializer = ExcelDownloadSerializer(
-            data=dict(
-                download_type=int(ExcelDownload.DOWNLOAD_TYPES.FIGURE),
-                filters=convert_date_object_to_string_in_dict(filters),
-            ),
-            context=dict(request=info.context.request)
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return ExportReportFigures(errors=errors, ok=False)
-        serializer.save()
-        return ExportReportFigures(errors=None, ok=True)
-
-
 class ExportReports(graphene.Mutation):
     class Arguments:
         filters = ReportFilterDataInputType(required=True)
@@ -403,7 +379,6 @@ class Mutation(object):
     start_report_generation = GenerateReport.Field()
     sign_off_report = SignOffReport.Field()
     # export
-    export_report_figures = ExportReportFigures.Field()
     export_reports = ExportReports.Field()
     export_report = ExportReport.Field()
     set_pfa_visible_in_gidd = SetPfaVisibleInGidd.Field()
