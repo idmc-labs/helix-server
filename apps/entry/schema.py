@@ -1,7 +1,6 @@
 import graphene
 from django.db.models import JSONField, Sum
 from graphene import ObjectType
-from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType
 from graphene_django_extras.converter import convert_django_field
@@ -42,7 +41,11 @@ from apps.organization.schema import OrganizationListType
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
-from apps.extraction.filters import FigureExtractionFilterSet, EntryExtractionFilterSet
+from apps.extraction.filters import (
+    FigureExtractionFilterSet,
+    FigureExtractionFilterDataInputType,
+    EntryExtractionFilterSet,
+)
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.models import Crisis
 from apps.event.schema import OtherSubTypeObjectType
@@ -310,17 +313,13 @@ class Query:
     disaggregated_age = DjangoObjectField(DisaggregatedAgeType)
     figure_aggregations = graphene.Field(
         VisualizationFigureType,
-        **get_filtering_args_from_filterset(
-            # TODO: can we use ReportFigureExtractionFilterSet?
-            FigureExtractionFilterSet,
-            VisualizationFigureType,
-        )
+        filters=FigureExtractionFilterDataInputType(required=True),
     )
 
     @staticmethod
-    def resolve_figure_aggregations(root, info, **kwargs):
+    def resolve_figure_aggregations(_, info, filters):
         # TODO: can we use ReportFigureExtractionFilterSet?
-        figure_qs = FigureExtractionFilterSet(data=kwargs).qs
+        figure_qs = FigureExtractionFilterSet(data=filters).qs
 
         idps_conflict_figure_qs = figure_qs.filter(
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,

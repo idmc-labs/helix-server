@@ -1,6 +1,6 @@
 import django_filters
 
-from utils.filters import StringListFilter, SimpleInputFilter
+from utils.filters import StringListFilter, SimpleInputFilter, generate_type_for_filter_set
 from apps.contrib.models import ExcelDownload, ClientTrackInfo, Client, BulkApiOperation
 from apps.entry.models import ExternalApiDump
 from apps.users.roles import USER_ROLE
@@ -112,3 +112,11 @@ class BulkApiOperationFilter(django_filters.FilterSet):
         return super().qs.filter(
             created_by=self.request.user,
         ).defer('errors')
+
+
+ClientTrackInfoFilterDataType, ClientTrackInfoFilterDataInputType = generate_type_for_filter_set(
+    ClientTrackInfoFilter,
+    'contrib.schema.client_track_information_list',
+    'ClientTrackInfoFilterDataType',
+    'ClientTrackInfoFilterDataInputType',
+)

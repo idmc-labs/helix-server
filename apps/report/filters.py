@@ -12,7 +12,7 @@ from django.db.models import (
 from django_filters import rest_framework as df
 
 from apps.report.models import Report, ReportGeneration, ReportApproval
-from utils.filters import IDListFilter, StringListFilter
+from utils.filters import IDListFilter, StringListFilter, generate_type_for_filter_set
 
 
 class ReportFilter(df.FilterSet):
@@ -137,3 +137,11 @@ class ReportGenerationFilter(df.FilterSet):
     class Meta:
         model = ReportGeneration
         fields = ('report',)
+
+
+ReportFilterDataType, ReportFilterDataInputType = generate_type_for_filter_set(
+    ReportFilter,
+    'report.schema.report_list',
+    'ReportFilterDataType',
+    'ReportFilterDataInputType',
+)

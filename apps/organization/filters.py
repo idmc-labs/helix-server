@@ -1,7 +1,12 @@
 import django_filters
 from django.db.models import Case, When
 from apps.organization.models import Organization
-from utils.filters import NameFilterMixin, IDListFilter, StringListFilter
+from utils.filters import (
+    NameFilterMixin,
+    IDListFilter,
+    StringListFilter,
+    generate_type_for_filter_set,
+)
 
 
 class OrganizationFilter(NameFilterMixin,
@@ -47,3 +52,11 @@ class OrganizationFilter(NameFilterMixin,
     @property
     def qs(self):
         return super().qs.select_related('organization_kind').prefetch_related("countries")
+
+
+OrganizationFilterDataType, OrganizationFilterDataInputType = generate_type_for_filter_set(
+    OrganizationFilter,
+    'organization.schema.organization_list',
+    'OrganizationFilterDataType',
+    'OrganizationFilterDataInputType',
+)

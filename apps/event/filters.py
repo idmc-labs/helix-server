@@ -336,3 +336,10 @@ EventFilterDataType, EventFilterDataInputType = generate_type_for_filter_set(
         'filter_figures': graphene.Field(FigureExtractionFilterDataType),
     },
 )
+
+ActorFilterDataType, ActorFilterDataInputType = generate_type_for_filter_set(
+    ActorFilter,
+    'event.schema.actor_list',
+    'ActorFilterDataType',
+    'ActorFilterDataInputType',
+)
