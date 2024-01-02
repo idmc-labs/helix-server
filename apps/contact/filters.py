@@ -3,7 +3,7 @@ import django_filters
 
 from apps.users.roles import USER_ROLE
 from apps.contact.models import Contact, Communication
-from utils.filters import StringListFilter
+from utils.filters import StringListFilter, generate_type_for_filter_set
 
 
 class ContactFilter(django_filters.FilterSet):
@@ -45,3 +45,11 @@ class CommunicationFilter(django_filters.FilterSet):
         if self.request.user.highest_role == USER_ROLE.GUEST.value:
             return super().qs.none()
         return super().qs.distinct()
+
+
+ContactFilterDataType, ContactFilterDataInputType = generate_type_for_filter_set(
+    ContactFilter,
+    'contact.schema.contact_list',
+    'ContactFilterDataType',
+    'ContactFilterDataInputType',
+)

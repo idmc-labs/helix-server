@@ -59,40 +59,42 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                 $report: String
             ) {
             figureAggregations(
-                filterFigureEntry: $filterFigureEntry
-                filterFigureContextOfViolence: $filterFigureContextOfViolence
-                filterFigureCreatedBy: $filterFigureCreatedBy
-                filterEntryArticleTitle: $filterEntryArticleTitle
-                filterEntryPublishers: $filterEntryPublishers
-                filterFigureApprovedBy: $filterFigureApprovedBy
-                filterFigureCategories: $filterFigureCategories
-                filterFigureCategoryTypes: $filterFigureCategoryTypes
-                filterFigureCountries: $filterFigureCountries
-                filterFigureCrises: $filterFigureCrises
-                filterFigureCrisisTypes: $filterFigureCrisisTypes
-                filterFigureDisasterCategories: $filterFigureDisasterCategories
-                filterFigureDisasterSubCategories: $filterFigureDisasterSubCategories
-                filterFigureDisasterSubTypes: $filterFigureDisasterSubTypes
-                filterFigureDisasterTypes: $filterFigureDisasterTypes
-                filterFigureEndBefore: $filterFigureEndBefore
-                filterFigureEvents: $filterFigureEvents
-                filterFigureGeographicalGroups: $filterFigureGeographicalGroups
-                filterFigureGlideNumber: $filterFigureGlideNumber
-                filterFigureHasDisaggregatedData: $filterFigureHasDisaggregatedData
-                filterFigureOsvSubTypes: $filterFigureOsvSubTypes
-                filterFigureRegions: $filterFigureRegions
-                filterFigureReviewStatus: $filterFigureReviewStatus
-                filterFigureRoles: $filterFigureRoles
-                filterFigureSources: $filterFigureSources
-                filterFigureStartAfter: $filterFigureStartAfter
-                filterFigureTags: $filterFigureTags
-                filterFigureTerms: $filterFigureTerms
-                filterFigureViolenceSubTypes: $filterFigureViolenceSubTypes
-                filterFigureViolenceTypes: $filterFigureViolenceTypes
-                filterFigureHasExcerptIdu: $filterFigureHasExcerptIdu
-                filterFigureHasHousingDestruction: $filterFigureHasHousingDestruction
-                filterFigureIsToBeReviewed: $filterFigureIsToBeReviewed
-                reportId: $report
+                filters: {
+                    filterFigureEntry: $filterFigureEntry
+                    filterFigureContextOfViolence: $filterFigureContextOfViolence
+                    filterFigureCreatedBy: $filterFigureCreatedBy
+                    filterEntryArticleTitle: $filterEntryArticleTitle
+                    filterEntryPublishers: $filterEntryPublishers
+                    filterFigureApprovedBy: $filterFigureApprovedBy
+                    filterFigureCategories: $filterFigureCategories
+                    filterFigureCategoryTypes: $filterFigureCategoryTypes
+                    filterFigureCountries: $filterFigureCountries
+                    filterFigureCrises: $filterFigureCrises
+                    filterFigureCrisisTypes: $filterFigureCrisisTypes
+                    filterFigureDisasterCategories: $filterFigureDisasterCategories
+                    filterFigureDisasterSubCategories: $filterFigureDisasterSubCategories
+                    filterFigureDisasterSubTypes: $filterFigureDisasterSubTypes
+                    filterFigureDisasterTypes: $filterFigureDisasterTypes
+                    filterFigureEndBefore: $filterFigureEndBefore
+                    filterFigureEvents: $filterFigureEvents
+                    filterFigureGeographicalGroups: $filterFigureGeographicalGroups
+                    filterFigureGlideNumber: $filterFigureGlideNumber
+                    filterFigureHasDisaggregatedData: $filterFigureHasDisaggregatedData
+                    filterFigureOsvSubTypes: $filterFigureOsvSubTypes
+                    filterFigureRegions: $filterFigureRegions
+                    filterFigureReviewStatus: $filterFigureReviewStatus
+                    filterFigureRoles: $filterFigureRoles
+                    filterFigureSources: $filterFigureSources
+                    filterFigureStartAfter: $filterFigureStartAfter
+                    filterFigureTags: $filterFigureTags
+                    filterFigureTerms: $filterFigureTerms
+                    filterFigureViolenceSubTypes: $filterFigureViolenceSubTypes
+                    filterFigureViolenceTypes: $filterFigureViolenceTypes
+                    filterFigureHasExcerptIdu: $filterFigureHasExcerptIdu
+                    filterFigureHasHousingDestruction: $filterFigureHasHousingDestruction
+                    filterFigureIsToBeReviewed: $filterFigureIsToBeReviewed
+                    reportId: $report
+                }
             )
                 {
                     idpsConflictFigures {

@@ -2,7 +2,6 @@ import graphene
 from graphene_file_upload.scalars import Upload
 from django.utils.translation import gettext
 from utils.mutation import generate_input_type_for_serializer
-from graphene_django.filter.utils import get_filtering_args_from_filterset
 
 from apps.contrib.serializers import ExcelDownloadSerializer
 from utils.common import convert_date_object_to_string_in_dict
@@ -16,8 +15,7 @@ from apps.contrib.serializers import (
 from apps.contrib.models import (
     Client,
 )
-from .filters import ClientTrackInfoFilter
-from .schema import ClientTrackInformationType
+from .filters import ClientTrackInfoFilterDataInputType
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import is_authenticated, permission_checker
 
@@ -114,23 +112,20 @@ class UpdateClient(graphene.Mutation):
 
 
 class ExportTrackingData(graphene.Mutation):
-    class Meta:
-        arguments = get_filtering_args_from_filterset(
-            ClientTrackInfoFilter,
-            ClientTrackInformationType,
-        )
+    class Arguments:
+        filters = ClientTrackInfoFilterDataInputType(required=True)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, info, **kwargs):
+    def mutate(_, info, filters):
         from apps.contrib.models import ExcelDownload
 
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.TRACKING_DATA),
-                filters=convert_date_object_to_string_in_dict(kwargs),
+                filters=convert_date_object_to_string_in_dict(filters),
             ),
             context=dict(request=info.context.request)
         )

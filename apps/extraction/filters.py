@@ -684,3 +684,11 @@ FigureExtractionFilterDataType, FigureExtractionFilterDataInputType = generate_t
     'FigureExtractionFilterDataType',
     'FigureExtractionFilterDataInputType',
 )
+
+
+EntryExtractionFilterDataType, EntryExtractionFilterDataInputType = generate_type_for_filter_set(
+    EntryExtractionFilterSet,
+    'entry.schema.entry_list',
+    'EntryExtractionFilterDataType',
+    'EntryExtractionFilterDataInputType',
+)

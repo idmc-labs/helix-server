@@ -278,8 +278,10 @@ class TestExportEntry(HelixGraphQLTestCase):
         self.mutation = """
         mutation ExportEntries($filterFigureStartAfter: Date, $filterFigureEndBefore: Date){
             exportEntries(
-                filterFigureStartAfter: $filterFigureStartAfter
-                filterFigureEndBefore: $filterFigureEndBefore
+                filters: {
+                    filterFigureStartAfter: $filterFigureStartAfter
+                    filterFigureEndBefore: $filterFigureEndBefore
+                }
           ){
             errors
             ok
