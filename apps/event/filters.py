@@ -1,9 +1,8 @@
 import graphene
 import django_filters
 from django.db.models import Q, Count
+from django.http import HttpRequest
 from django.contrib.postgres.aggregates.general import ArrayAgg
-from django.utils.translation import gettext
-from django.core.exceptions import ValidationError
 
 from apps.event.models import (
     Actor,
@@ -18,9 +17,7 @@ from apps.event.models import (
 )
 from apps.entry.models import Figure
 from apps.crisis.models import Crisis
-from apps.report.models import Report
 from apps.extraction.filters import (
-    FigureExtractionFilterSet,
     FigureExtractionFilterDataInputType,
     FigureExtractionFilterDataType,
 )
@@ -30,6 +27,11 @@ from utils.filters import (
     IDListFilter,
     SimpleInputFilter,
     generate_type_for_filter_set,
+)
+from utils.figure_filter import (
+    FigureFilterHelper,
+    FigureAggregateFilterDataType,
+    FigureAggregateFilterDataInputType,
 )
 from apps.event.constants import OSV
 from django.db import models
@@ -46,7 +48,6 @@ class EventFilter(NameFilterMixin,
 
     osv_sub_type_by_ids = IDListFilter(method='filter_osv_sub_types')
     # used in report entry table
-    report_id = django_filters.CharFilter(method='noop')
     disaster_sub_types = IDListFilter(method='filter_disaster_sub_types')
     violence_types = IDListFilter(method='filter_violence_types')
     violence_sub_types = IDListFilter(method='filter_violence_sub_types')
@@ -57,7 +58,10 @@ class EventFilter(NameFilterMixin,
     assignees = IDListFilter(method='filter_assignees')
     assigners = IDListFilter(method='filter_assigners')
 
-    filter_figures = SimpleInputFilter(FigureExtractionFilterDataInputType, method='noop')
+    filter_figures = SimpleInputFilter(FigureExtractionFilterDataInputType, method='filter_by_figures')
+    aggregate_figures = SimpleInputFilter(FigureAggregateFilterDataInputType, method='noop')
+
+    request: HttpRequest
 
     class Meta:
         model = Event
@@ -70,6 +74,9 @@ class EventFilter(NameFilterMixin,
 
     def noop(self, qs, name, value):
         return qs
+
+    def filter_by_figures(self, qs, _, value):
+        return FigureFilterHelper.filter_using_figure_filters(qs, value, self.request)
 
     def filter_countries(self, qs, name, value):
         if not value:
@@ -214,34 +221,18 @@ class EventFilter(NameFilterMixin,
             return qs
         return qs.filter(assignee__in=value)
 
+    def filter_created_by(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(created_by__in=value)
+
     @property
     def qs(self):
-        report_id = self.data.get('report_id')
-        report = report_id and Report.objects.filter(id=report_id).first()
-        if report_id is not None and report is None:
-            raise ValidationError(gettext('Provided Report does not exist'))
-
-        figure_qs = None
-        reference_date = None
-        if report:
-            figure_qs = Figure.objects.filter(id__in=report.report_figures.values('id'))
-            reference_date = report.filter_figure_end_before
-
-        filter_figures_data = self.data.get('filter_figures')
-        if filter_figures_data:
-            # TODO: use ReportFigureExtractionFilterSet
-            filter_figures_data_qs = FigureExtractionFilterSet(
-                data=filter_figures_data,
-                request=self.request,
-                queryset=figure_qs,
-            ).qs
-            figure_qs = Figure.objects.filter(id__in=filter_figures_data_qs.values('id'))
-
-        qs = super().qs
-        if figure_qs is not None:
-            qs = qs.filter(id__in=figure_qs.values('event'))
-
-        return qs.annotate(
+        figure_qs, reference_date = FigureFilterHelper.aggregate_data_generate(
+            self.data.get('aggregate_figures'),
+            self.request,
+        )
+        return super().qs.annotate(
             **Event._total_figure_disaggregation_subquery(
                 figures=figure_qs,
                 reference_date=reference_date,
@@ -256,11 +247,6 @@ class EventFilter(NameFilterMixin,
                 output_field=models.IntegerField()
             )
         ).prefetch_related("figures", 'context_of_violence')
-
-    def filter_created_by(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(created_by__in=value)
 
 
 class ActorFilter(django_filters.FilterSet):
@@ -334,6 +320,7 @@ EventFilterDataType, EventFilterDataInputType = generate_type_for_filter_set(
     'EventFilterDataInputType',
     custom_new_fields_map={
         'filter_figures': graphene.Field(FigureExtractionFilterDataType),
+        'aggregate_figures': graphene.Field(FigureAggregateFilterDataType),
     },
 )
 
