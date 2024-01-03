@@ -571,15 +571,12 @@ HELIX_TRUSTED_ORIGINS = [
 
     'https://preview-website-components.idmcdb.org',
     'https://release-website-components.idmcdb.org',
+
+    # Axelerant deployment instances https://idmc-dfs-dev.slack.com/archives/C05TDRZCQ9W/p1704090909962969
+    'https://newdev.internal-displacement.org',
+    'https://www.newdev.internal-displacement.org',
 ]
 
-
-if HELIX_ENVIRONMENT.lower() == 'staging':
-    # https://idmc-dfs-dev.slack.com/archives/C05TDRZCQ9W/p1702014730368519
-    HELIX_TRUSTED_ORIGINS += [
-        # TEMP
-        'https://www.main-bvxea6i-cdvwbfnfklw7q.us-2.platformsh.site',
-    ]
 
 CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = HELIX_TRUSTED_ORIGINS
 
