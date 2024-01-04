@@ -586,18 +586,18 @@ class Figure(MetaInformationArchiveAbstractModel,
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
             year_difference__lt=1,
         )
-        mutiple_year_figures = qs.filter(
+        multiple_year_figures = qs.filter(
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
             year_difference__gte=1,
         )
         if start_date:
             same_year_figures = same_year_figures.filter(start_date__gte=start_date)
-            mutiple_year_figures = mutiple_year_figures.filter(end_date__gte=start_date)
+            multiple_year_figures = multiple_year_figures.filter(end_date__gte=start_date)
         if end_date:
             same_year_figures = same_year_figures.filter(start_date__lte=end_date)
-            mutiple_year_figures = mutiple_year_figures.filter(end_date__lte=end_date)
+            multiple_year_figures = multiple_year_figures.filter(end_date__lte=end_date)
 
-        return same_year_figures | mutiple_year_figures
+        return same_year_figures | multiple_year_figures
 
     @classmethod
     def filtered_nd_figures_for_listing(
