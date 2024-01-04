@@ -71,13 +71,13 @@ class FigureFilterHelper:
     ]:
         report_id = cls.get_report_id_from_filter_data(aggregate_figures_filter)
         report = report_id and cls.get_report(report_id)
-        if report:
-            figure_qs = Figure.objects.filter(id__in=report.report_figures.values('id'))
-            reference_date = report.filter_figure_end_before
 
         figure_filters = (aggregate_figures_filter or {}).get('filter_figures') or {}
         figure_qs = None
         reference_date = None
+        if report:
+            figure_qs = Figure.objects.filter(id__in=report.report_figures.values('id'))
+            reference_date = report.filter_figure_end_before
 
         if figure_filters:
             figure_qs = Figure.objects.filter(

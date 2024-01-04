@@ -1,5 +1,6 @@
 import graphene
-from django.db.models import JSONField, Sum
+from django.db.models import fields, JSONField, Sum, ExpressionWrapper
+from django.db.models.functions import ExtractYear
 from graphene import ObjectType
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType
@@ -318,6 +319,47 @@ class Query:
 
     @staticmethod
     def resolve_figure_aggregations(_, info, filters):
+        def _filter_nd_same_or_multiple_year_figures(qs, figure_cause):
+            year_difference = ExpressionWrapper(
+                ExtractYear('end_date') - ExtractYear('start_date'),
+                output_field=fields.IntegerField(),
+            )
+            qs = qs.annotate(year_difference=year_difference)
+
+            same_year_figures = qs.filter(
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+                year_difference__lt=1,
+            )
+            same_year_nd_figures = same_year_figures.filter(
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                role=Figure.ROLE.RECOMMENDED,
+                figure_cause=figure_cause,
+            ).values('start_date').annotate(value=Sum('total_figures'))
+            same_year_figures = [
+                {
+                    'date': fig['start_date'],
+                    'value': fig['value']
+                } for fig in list(same_year_nd_figures)
+            ]
+
+            multiple_year_figures = qs.filter(
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+                year_difference__gte=1,
+            )
+            multiple_year_nd_figures = multiple_year_figures.filter(
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                role=Figure.ROLE.RECOMMENDED,
+                figure_cause=figure_cause,
+            ).values('end_date').annotate(value=Sum('total_figures'))
+            multiple_year_figures = [
+                {
+                    'date': fig['start_date'],
+                    'value': fig['value']
+                } for fig in multiple_year_nd_figures
+            ]
+            all_figures = same_year_figures + multiple_year_figures
+            return all_figures
+
         # TODO: can we use ReportFigureExtractionFilterSet?
         figure_qs = FigureExtractionFilterSet(data=filters).qs
 
@@ -333,17 +375,15 @@ class Query:
             figure_cause=Crisis.CRISIS_TYPE.DISASTER
         ).values('end_date').annotate(value=Sum('total_figures'))
 
-        nds_conflict_figure_qs = figure_qs.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-            role=Figure.ROLE.RECOMMENDED,
+        nds_conflict_figure_qs = _filter_nd_same_or_multiple_year_figures(
+            figure_qs,
             figure_cause=Crisis.CRISIS_TYPE.CONFLICT
-        ).values('start_date').annotate(value=Sum('total_figures'))
+        )
 
-        nds_disaster_figure_qs = figure_qs.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-            role=Figure.ROLE.RECOMMENDED,
+        nds_disaster_figure_qs = _filter_nd_same_or_multiple_year_figures(
+            figure_qs,
             figure_cause=Crisis.CRISIS_TYPE.DISASTER
-        ).values('start_date').annotate(value=Sum('total_figures'))
+        )
 
         return VisualizationFigureType(
             idps_conflict_figures=[
@@ -360,13 +400,13 @@ class Query:
             ],
             nds_conflict_figures=[
                 VisualizationValueType(
-                    date=k['start_date'],
+                    date=k['date'],
                     value=k['value']
                 ) for k in nds_conflict_figure_qs
             ],
             nds_disaster_figures=[
                 VisualizationValueType(
-                    date=k['start_date'],
+                    date=k['date'],
                     value=k['value']
                 ) for k in nds_disaster_figure_qs
             ]
