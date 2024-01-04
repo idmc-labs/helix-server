@@ -2025,10 +2025,10 @@ type FigureType {
 
 input FigureUpdateInputType {
   id: ID
-  entry: ID!
+  entry: ID
   wasSubfact: Boolean
-  quantifier: QUANTIFIER!
-  reported: Int!
+  quantifier: QUANTIFIER
+  reported: Int
   unit: UNIT
   householdSize: Float
   category: FIGURE_CATEGORY_TYPES
@@ -2039,18 +2039,17 @@ input FigureUpdateInputType {
   startDateAccuracy: DATE_ACCURACY
   endDate: Date
   endDateAccuracy: DATE_ACCURACY
-  includeIdu: Boolean!
+  includeIdu: Boolean
   excerptIdu: String
   country: ID
   isDisaggregated: Boolean
   isHousingDestruction: Boolean
-  geoLocations: [OSMNameInputType!]
   calculationLogic: String
   tags: [ID!]
   sourceExcerpt: String
-  event: ID!
+  event: ID
   contextOfViolence: [ID!]
-  figureCause: CRISIS_TYPE!
+  figureCause: CRISIS_TYPE
   violence: ID
   violenceSubType: ID
   disasterCategory: ID
@@ -2060,7 +2059,7 @@ input FigureUpdateInputType {
   otherSubType: ID
   osvSubType: ID
   sources: [ID!]
-  uuid: String!
+  uuid: String
   disaggregationDisplacementUrban: Int
   disaggregationDisplacementRural: Int
   disaggregationLocationCamp: Int
@@ -2077,6 +2076,7 @@ input FigureUpdateInputType {
   disaggregationConflictCriminal: Int
   disaggregationConflictCommunal: Int
   disaggregationConflictOther: Int
+  geoLocations: [OSMNameInputType!]
 }
 
 enum GENDER_TYPE {

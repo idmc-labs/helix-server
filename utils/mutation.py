@@ -150,7 +150,8 @@ def fields_for_serializer(
     exclude_fields,
     is_input=False,
     convert_choices_to_enum=True,
-    lookup_field=None
+    lookup_field=None,
+    partial=False,
 ):
     """
     NOTE: Same as the original definition. Needs overriding to
@@ -173,7 +174,10 @@ def fields_for_serializer(
             continue
 
         fields[name] = convert_serializer_field(
-            field, is_input=is_input, convert_choices_to_enum=convert_choices_to_enum
+            field,
+            is_input=is_input,
+            convert_choices_to_enum=convert_choices_to_enum,
+            force_optional=partial,
         )
     return fields
 
@@ -181,14 +185,20 @@ def fields_for_serializer(
 def generate_input_type_for_serializer(
     name: str,
     serializer_class,
+    partial=False,
 ) -> graphene.InputObjectType:
     data_members = fields_for_serializer(
         serializer_class(),
         only_fields=[],
         exclude_fields=[],
-        is_input=True
+        is_input=True,
+        partial=partial,
     )
-    return type(name, (graphene.InputObjectType,), data_members)
+    return type(
+        name,
+        (graphene.InputObjectType,),
+        data_members
+    )
 
 
 # Only use this for single object type with direct scalar access.

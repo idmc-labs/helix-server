@@ -41,6 +41,7 @@ EntryUpdateInputType = generate_input_type_for_serializer(
 FigureUpdateInputType = generate_input_type_for_serializer(
     'FigureUpdateInputType',
     serializer_class=FigureSerializer,
+    partial=True,
 )
 
 

@@ -627,3 +627,62 @@ SPECTACULAR_SETTINGS = {
     },
     'ENABLE_LIST_MECHANICS_ON_NON_2XX': True,
 }
+
+if DEBUG:
+    def log_render_extra_context(record):
+        '''
+        Append extra->context to logs
+        NOTE: This will appear in logs when used with logger.xxx(..., extra={'context': {..content}})
+        '''
+        if hasattr(record, 'context'):
+            record.context = f' - {str(record.context)}'
+        else:
+            record.context = ''
+        return True
+
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'filters': {
+            'render_extra_context': {
+                '()': 'django.utils.log.CallbackFilter',
+                'callback': log_render_extra_context,
+            }
+        },
+        'formatters': {
+            'colored_verbose': {
+                '()': 'colorlog.ColoredFormatter',
+                'format': (
+                    "%(log_color)s%(levelname)-8s%(red)s%(module)-8s%(reset)s %(asctime)s %(blue)s%(message)s %(context)s"
+                )
+            },
+        },
+        'handlers': {
+            'console': {
+                'level': 'INFO',
+                'class': 'logging.StreamHandler',
+                'filters': ['render_extra_context'],
+            },
+            'colored_console': {
+                'level': 'INFO',
+                'class': 'logging.StreamHandler',
+                'formatter': 'colored_verbose',
+                'filters': ['render_extra_context'],
+            },
+        },
+        'loggers': {
+            **{
+                app: {
+                    'handlers': ['colored_console'],
+                    'level': 'INFO',
+                    'propagate': True,
+                }
+                for app in LOCAL_APPS + ['deep', 'utils', 'celery', 'django']
+            },
+            'profiling': {
+                'handlers': ['colored_console'],
+                'level': 'DEBUG',
+                'propagate': True,
+            },
+        },
+    }

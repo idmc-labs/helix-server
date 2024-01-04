@@ -1,4 +1,5 @@
 import logging
+import typing
 import uuid
 from uuid import uuid4
 from collections import OrderedDict
@@ -439,3 +440,6 @@ class BulkApiOperation(models.Model):
     success_count = models.PositiveIntegerField(blank=True, null=True)
     failure_count = models.PositiveIntegerField(blank=True, null=True)
     errors = models.JSONField(default=dict)
+
+    get_action_display: typing.Callable
+    get_status_display: typing.Callable

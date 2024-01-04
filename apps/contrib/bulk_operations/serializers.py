@@ -7,8 +7,7 @@ from utils.serializers import GraphqlSupportDrfSerializerJSONField
 from apps.entry.models import Figure
 from apps.extraction.filters import FigureExtractionFilterDataInputType
 from apps.contrib.models import BulkApiOperation
-
-from .tasks import run_bulk_api_operation
+from apps.contrib.tasks import run_bulk_api_operation
 
 
 # ---- Bulk Operation Serializers ----
@@ -68,9 +67,10 @@ class BulkApiOperationSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
+        validated_data['created_by'] = self.context['request'].user
         instance = super().create(validated_data)
         transaction.on_commit(
-            lambda: run_bulk_api_operation(instance.pk)
+            lambda: run_bulk_api_operation.delay(instance.pk)
         )
         return instance
 
