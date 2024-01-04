@@ -635,6 +635,19 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         return flow_qs | stock_qs
 
 
+class FigureExtractionNonAnnotateFilterSet(FigureExtractionFilterSet):
+    @property
+    def qs(self):
+        # Skip annotate
+        start_date = self.data.get('filter_figure_start_after')
+        end_date = self.data.get('filter_figure_end_before')
+
+        queryset = super(FigureExtractionFilterSet, self).qs
+        flow_qs = Figure.filtered_nd_figures_for_listing(queryset, start_date, end_date)
+        stock_qs = Figure.filtered_idp_figures_for_listing(queryset, start_date, end_date)
+        return flow_qs | stock_qs
+
+
 class ReportFigureExtractionFilterSet(BaseFigureExtractionFilterSet):
     """
     NOTE: Return queryset as it is, don't apply filter here,
