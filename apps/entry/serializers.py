@@ -527,27 +527,27 @@ class FigureSerializer(
 
     def update(self, instance: Figure, validated_data):
         validated_data['last_modified_by'] = self.context['request'].user
-        tags = validated_data.pop('tags', [])
-        context_of_violence = validated_data.pop('context_of_violence', [])
-        disaggregation_age = validated_data.pop('disaggregation_age', [])
-        sources = validated_data.pop('sources', [])
         with transaction.atomic():
-            instance = super().update(instance, validated_data)
             if 'geo_locations' in validated_data:
                 geo_locations = validated_data.pop('geo_locations')
                 self._update_locations(instance=instance, attr='geo_locations', data=geo_locations)
-            if disaggregation_age:
+            if 'disaggregation_age' in validated_data:
+                disaggregation_age = validated_data.pop('disaggregation_age')
                 self._update_disaggregation_age(
                     instance=instance,
                     attr="disaggregation_age",
                     data=disaggregation_age
                 )
-            if tags:
+            if 'tags' in validated_data:
+                tags = validated_data.pop('tags')
                 instance.tags.set(tags)
-            if context_of_violence:
+            if 'context_of_violence' in validated_data:
+                context_of_violence = validated_data.pop('context_of_violence')
                 instance.context_of_violence.set(context_of_violence)
-            if sources:
+            if 'sources' in validated_data:
+                sources = validated_data.pop('sources')
                 instance.sources.set(sources)
+            instance = super().update(instance, validated_data)
 
         # Notification create
         if notification_type := get_figure_notification_type(instance.event):
