@@ -3011,7 +3011,7 @@ type Query {
   entryList(filters: EntryExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType
   disaggregatedAge(id: ID!): DisaggregatedAgeType
   figureAggregations(filters: FigureExtractionFilterDataInputType!): VisualizationFigureType
-  violenceList(ordering: String): ViolenceListType
+  violenceList(filters: ViolenceFilterDataInputType, ordering: String): ViolenceListType
   actor(id: ID!): ActorType
   actorList(filters: ActorFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ActorListType
   disasterCategoryList(filters: DisasterCategoryFilterDataInputType, ordering: String): DisasterCategoryListType
@@ -3880,6 +3880,10 @@ input UserUpdateInputType {
   isActive: Boolean
 }
 
+input ViolenceFilterDataInputType {
+  id_Iexact: Float
+}
+
 type ViolenceListType {
   results: [ViolenceType!]
   totalCount: Int
@@ -3902,11 +3906,15 @@ type ViolenceSubObjectType {
   reportSet: [ReportType!]!
 }
 
+input ViolenceSubTypeFilterDataInputType {
+  id_Iexact: Float
+}
+
 type ViolenceType {
   id: ID!
   name: String!
   figures: [FigureType!]!
-  subTypes(ordering: String): ViolenceSubObjectListType
+  subTypes(filters: ViolenceSubTypeFilterDataInputType, ordering: String): ViolenceSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
 }

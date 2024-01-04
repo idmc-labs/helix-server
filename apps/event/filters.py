@@ -12,6 +12,8 @@ from apps.event.models import (
     DisasterCategory,
     DisasterSubCategory,
     ContextOfViolence,
+    Violence,
+    ViolenceSubType,
     OsvSubType,
     OtherSubType,
 )
@@ -310,6 +312,22 @@ class ContextOfViolenceFilter(django_filters.FilterSet):
         model = ContextOfViolence
         fields = {
             'name': ['icontains']
+        }
+
+
+class ViolenceFilter(django_filters.FilterSet):
+    class Meta:
+        model = Violence
+        fields = {
+            'id': ['iexact'],
+        }
+
+
+class ViolenceSubTypeFilter(django_filters.FilterSet):
+    class Meta:
+        model = ViolenceSubType
+        fields = {
+            'id': ['iexact'],
         }
 
 
