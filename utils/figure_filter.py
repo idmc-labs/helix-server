@@ -46,15 +46,15 @@ class FigureFilterHelper:
             id__in=figure_qs.values('id')
         )
         outer_ref_field = None
-        if isinstance(qs.model, Country):
+        if qs.model is Country:
             outer_ref_field = 'country'
-        elif isinstance(qs.model, Event):
+        elif qs.model is Event:
             outer_ref_field = 'event'
-        elif isinstance(qs.model, Crisis):
+        elif qs.model is Crisis:
             outer_ref_field = 'event__crisis'
 
         if outer_ref_field is None:
-            raise Exception(f'Unknown model used for `by figure filter`. {type(qs.model)}')
+            raise Exception(f'Unknown model used for `by figure filter`. {qs.model}')
 
         return qs.filter(
             id__in=figure_qs.values(outer_ref_field)

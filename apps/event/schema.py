@@ -28,6 +28,8 @@ from apps.event.filters import (
     OsvSubTypeFilter,
     OtherSubTypeFilter,
     ContextOfViolenceFilter,
+    ViolenceFilter,
+    ViolenceSubTypeFilter,
 )
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
@@ -43,6 +45,7 @@ class ViolenceSubObjectType(DjangoObjectType):
 class ViolenceSubObjectListType(CustomDjangoListObjectType):
     class Meta:
         model = ViolenceSubType
+        filterset_class = ViolenceSubTypeFilter
 
 
 class ViolenceType(DjangoObjectType):
@@ -60,6 +63,7 @@ class ViolenceType(DjangoObjectType):
 class ViolenceListType(CustomDjangoListObjectType):
     class Meta:
         model = Violence
+        filterset_class = ViolenceFilter
 
 
 class ActorType(DjangoObjectType):
