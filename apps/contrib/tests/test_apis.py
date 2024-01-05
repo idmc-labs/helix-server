@@ -1,5 +1,7 @@
 import json
+import datetime
 import magic
+from unittest.mock import patch
 
 from django.core.files.temp import NamedTemporaryFile
 
@@ -9,6 +11,7 @@ from apps.contrib.models import Attachment
 from apps.event.models import Figure
 from apps.users.enums import USER_ROLE
 from apps.contrib.models import BulkApiOperation
+from apps.contrib.bulk_operations.tasks import run_bulk_api_operation
 
 
 class TestAttachment(HelixGraphQLTestCase):
@@ -156,6 +159,22 @@ class TestBulkOperation(HelixGraphQLTestCase):
             self.assertEqual(operation.success_count, success_count)
             self.assertEqual(operation.failure_count, failure_count)
             self.assertEqual(operation.errors, errors)
+            self.assertEqual(operation.status, BulkApiOperation.BULK_OPERATION_STATUS.FINISHED)
+
+        # Try 0 - Invalid request
+        variables = {
+            'data': {
+                'action': BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_ROLE.name,
+                'filters': {},
+                'payload': {},
+            }
+        }
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.query(self.Mutation, variables=variables)
+        self.assertResponseNoErrors(response)
+        content = response.json()['data']['triggerBulkOperation']
+        assert content['ok'] is False
+        assert len(content['errors']) == 2
 
         # Try 1
         assert Figure.objects.filter(role=Figure.ROLE.TRIANGULATION).count() == 3
@@ -216,5 +235,50 @@ class TestBulkOperation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         content = response.json()['data']['triggerBulkOperation']
         _basic_check(variables, content, 2, 0, [None] * 2)
+        assert Figure.objects.filter(role=Figure.ROLE.TRIANGULATION).count() == 2
+        assert Figure.objects.filter(role=Figure.ROLE.RECOMMENDED).count() == 2
+
+        # Try 3 - background task will not run
+        variables = _generate_payload(
+            Figure.ROLE.TRIANGULATION,
+            # Filters
+            filterFigureIds=None,
+            filterFigureRoles=None,
+        )
+        response = self.query(self.Mutation, variables=variables)
+        self.assertResponseNoErrors(response)
+        content = response.json()['data']['triggerBulkOperation']
+        assert content['result']['id'] is not None
+        operation = BulkApiOperation.objects.get(pk=content['result']['id'])
+        operation.created_at = (
+            operation.created_at - datetime.timedelta(minutes=BulkApiOperation.WAIT_TIME_THRESHOLD_IN_MINUTES)
+        )
+        # Run the task manually which should cancel the operation
+        run_bulk_api_operation(operation)
+        operation.refresh_from_db()
+        assert operation.status == BulkApiOperation.BULK_OPERATION_STATUS.CANCELED
+        del operation
+
+        # Try 4 - threshold count check
+        with patch(
+            'apps.contrib.bulk_operations.serializers.BulkApiOperation.QUERYSET_COUNT_THRESHOLD',
+            1,
+        ):
+            variables = _generate_payload(
+                Figure.ROLE.RECOMMENDED,
+                # Filters
+                filterFigureIds=[str(fig1.pk), str(fig4.pk)],
+            )
+            with self.captureOnCommitCallbacks(execute=True):
+                response = self.query(self.Mutation, variables=variables)
+            self.assertResponseNoErrors(response)
+            content = response.json()['data']['triggerBulkOperation']
+            assert content['ok'] is False, content
+            assert (
+                content['errors'][0]['messages'] ==
+                'Bulk update should include less them 1. Current count is 2'
+            ), content
+
+        # This shouldn't change at all
         assert Figure.objects.filter(role=Figure.ROLE.TRIANGULATION).count() == 2
         assert Figure.objects.filter(role=Figure.ROLE.RECOMMENDED).count() == 2

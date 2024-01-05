@@ -1,10 +1,13 @@
 from __future__ import annotations
 import abc
+import datetime
 import typing
 import logging
 
 import django_filters
+from rest_framework import serializers
 from django.contrib.auth import login, logout
+from django.utils import timezone
 from django.http import HttpRequest
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.contrib.auth.middleware import AuthenticationMiddleware
@@ -90,13 +93,12 @@ class BulkApiOperationBaseTask:
     ) -> typing.Tuple[int, int, typing.List[dict]]:
         filters = cls.get_filters(operation.filters)
 
-        # TODO: Use limit
         queryset = cls.get_filterset()(data=filters).qs.order_by('id')
 
         variables = cls.get_mutation_variables(operation.payload, queryset)
         gql_data, gql_errors = run_mutation(request, cls.MUTATION, variables)
 
-        # TODO: Handle this properly
+        # XXX: Handle this properly
         # This should't happen in theory - Should be validated using unit test cases
         if gql_data is None or gql_errors:
             logger.error(
@@ -115,6 +117,9 @@ class BulkApiOperationBaseTask:
 
     @classmethod
     def run(cls, operation: BulkApiOperation):
+        # Circular dependency issue
+        from apps.contrib.models import BulkApiOperation
+
         # From: https://github.com/django/django/blob/main/django/contrib/sessions/middleware.py#L13-L20
         api_request = HttpRequest()
         process_request(api_request)
@@ -125,7 +130,9 @@ class BulkApiOperationBaseTask:
             operation.errors,
         ) = cls.update_database(operation, api_request)
         logout(api_request)
+        operation.status = BulkApiOperation.BULK_OPERATION_STATUS.FINISHED
         operation.save()
+        return operation
 
 
 class BulkFigureBulkUpdateTask(BulkApiOperationBaseTask):
@@ -184,13 +191,27 @@ class BulkFigureRoleUpdateTask(BulkFigureBulkUpdateTask):
         return {'role': Figure.ROLE(payload['figure_role']['role']).name}
 
 
-def run_bulk_api_operation(operation: BulkApiOperation):
+def get_operation_handler(operation_action):
     # Circular dependency issue
     from apps.contrib.models import BulkApiOperation
 
     _handler: typing.Optional[typing.Type[BulkApiOperationBaseTask]] = None
-    if operation.action == BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_ROLE:
+    if operation_action == BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_ROLE:
         _handler = BulkFigureRoleUpdateTask
     if _handler is None:
-        raise Exception(f'Action not implemented yet: {operation.action}')
-    _handler.run(operation)
+        raise serializers.ValidationError(f'Action not implemented yet: {operation_action}')
+    return _handler
+
+
+def run_bulk_api_operation(operation: BulkApiOperation):
+    # Circular dependency issue
+    from apps.contrib.models import BulkApiOperation
+
+    now = timezone.now()
+    print(now - operation.created_at)
+    print(datetime.timedelta(minutes=BulkApiOperation.WAIT_TIME_THRESHOLD_IN_MINUTES))
+    if now - operation.created_at > datetime.timedelta(minutes=BulkApiOperation.WAIT_TIME_THRESHOLD_IN_MINUTES):
+        operation.update_status(BulkApiOperation.BULK_OPERATION_STATUS.CANCELED)
+        return operation
+    operation.update_status(BulkApiOperation.BULK_OPERATION_STATUS.STARTED)
+    return get_operation_handler(operation.action).run(operation)

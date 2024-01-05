@@ -409,12 +409,17 @@ class BulkApiOperation(models.Model):
         PENDING = 0
         STARTED = 1
         FINISHED = 2
+        CANCELED = 3
 
         __labels__ = {
             PENDING: _("Pending"),
             STARTED: _("Started"),
             FINISHED: _("Finished"),
+            CANCELED: _("Canceled"),
         }
+
+    QUERYSET_COUNT_THRESHOLD = 100
+    WAIT_TIME_THRESHOLD_IN_MINUTES = 5
 
     created_at = models.DateTimeField(verbose_name=_('Created At'), default=timezone.now)
     created_by = models.ForeignKey(
@@ -443,3 +448,11 @@ class BulkApiOperation(models.Model):
 
     get_action_display: typing.Callable
     get_status_display: typing.Callable
+
+    def __str__(self):
+        return f'{self.get_action_display()}-{self.pk}'
+
+    def update_status(self, status: BULK_OPERATION_STATUS, commit=True):
+        self.status = status
+        if commit:
+            self.save(update_fields=('status',))

@@ -141,10 +141,10 @@ class TriggerBulkOperation(graphene.Mutation):
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.Field(BulkApiOperationType, required=True)
+    result = graphene.Field(BulkApiOperationType)
 
     @staticmethod
-    # @permission_checker(['entry.add_entry'])
+    # TODO: @permission_checker(['entry.add_entry'])
     def mutate(_, info, data):
         serializer = BulkApiOperationSerializer(data=data, context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):

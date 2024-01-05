@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from django.db import transaction
 from django.utils.translation import gettext
 from rest_framework import serializers
@@ -8,6 +9,7 @@ from apps.entry.models import Figure
 from apps.extraction.filters import FigureExtractionBulkOperationFilterDataInputType
 from apps.contrib.models import BulkApiOperation
 from apps.contrib.tasks import run_bulk_api_operation
+from apps.contrib.bulk_operations.tasks import get_operation_handler
 
 
 # ---- Bulk Operation Serializers ----
@@ -50,6 +52,21 @@ class BulkApiOperationSerializer(serializers.ModelSerializer):
             'payload',
         )
 
+    def _validate_queryset_count(self, action, filters):
+        op_handler = get_operation_handler(action)
+        filterset = op_handler.get_filterset()
+        _filters = op_handler.get_filters(filters)
+        count = filterset(data=_filters).qs.count()
+        if count > BulkApiOperation.QUERYSET_COUNT_THRESHOLD:
+            raise serializers.ValidationError(
+                gettext(
+                    'Bulk update should include less them %(threshold)s. Current count is %(count)s'
+                ) % dict(
+                    threshold=BulkApiOperation.QUERYSET_COUNT_THRESHOLD,
+                    count=count,
+                )
+            )
+
     def validate(self, attrs: dict) -> dict:
         op_action = attrs['action']
         op_filters = attrs['filters']
@@ -58,12 +75,16 @@ class BulkApiOperationSerializer(serializers.ModelSerializer):
         required_field = self.ACTION_FIELD_MAP[op_action]
 
         # Basic check for fields. Nested Serializer will handle structure
+        errors = OrderedDict()
         if required_field not in op_filters:
-            raise serializers.ValidationError(gettext('Filter not provided'))
+            errors['filters'] = gettext('Filter not provided')
         if required_field not in op_payload:
-            raise serializers.ValidationError(gettext('Payload not provided'))
+            errors['payload'] = gettext('Payload not provided')
+        if errors:
+            raise serializers.ValidationError(errors)
 
-        # TODO: Add queryset with filter count to not be greater then specified threshold
+        self._validate_queryset_count(op_action, op_filters)
+
         return attrs
 
     def create(self, validated_data):
