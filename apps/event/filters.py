@@ -46,7 +46,6 @@ class EventFilter(NameFilterMixin,
     crisis_by_ids = IDListFilter(method='filter_crises')
     event_types = StringListFilter(method='filter_event_types')
     countries = IDListFilter(method='filter_countries')
-    glide_numbers = StringListFilter(method='filter_glide_numbers')
 
     osv_sub_type_by_ids = IDListFilter(method='filter_osv_sub_types')
     # used in report entry table
@@ -147,15 +146,9 @@ class EventFilter(NameFilterMixin,
             ]).distinct()
         return qs
 
-    def filter_glide_numbers(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(glide_numbers__overlap=value).distinct()
-
     def filter_name(self, qs, name, value):
         if not value:
             return qs
-        # NOTE: glide_numbers is arrayfield we have to pass List of string to filter
         return qs.filter(Q(name__unaccent__icontains=value) | Q(event_code__event_code__iexact=value)).distinct()
 
     def filter_osv_sub_types(self, qs, name, value):

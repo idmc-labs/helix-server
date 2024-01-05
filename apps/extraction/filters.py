@@ -23,7 +23,6 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_events = IDListFilter(method='filter_figure_events_')
 
     filter_figure_crises = IDListFilter(method='filter_crises')
-    filter_figure_glide_number = StringListFilter(method='filter_filter_figure_glide_number')
 
     filter_figure_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
@@ -259,11 +258,6 @@ class EntryExtractionFilterSet(df.FilterSet):
             ).distinct()
         return qs
 
-    def filter_filter_figure_glide_number(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(figures__event__glide_numbers__overlap=value).distinct()
-
     def filter_filter_figure_osv_sub_types(self, qs, name, value):
         if value:
             return qs.filter(~Q(figures__event__violence__name=OSV) | Q(figures__osv_sub_type__in=value)).distinct()
@@ -335,8 +329,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_entry_article_title = df.CharFilter(field_name='entry__article_title', lookup_expr='unaccent__icontains')
     filter_figure_tags = IDListFilter(method='filter_tags')
     filter_figure_crisis_types = StringListFilter(method='filter_crisis_types')
-    filter_figure_glide_number = StringListFilter(method='filter_filter_figure_glide_number')
-    filter_figure_created_by = IDListFilter(method='filter_filter_figure_created_by')
+    filter_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
     filter_figure_disaster_categories = IDListFilter(method='filter_filter_figure_disaster_categories')
     filter_figure_disaster_sub_categories = IDListFilter(method='filter_filter_figure_disaster_sub_categories')
@@ -553,11 +546,6 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
                 ) | Q(violence_type__in=value)
             ).distinct()
         return qs
-
-    def filter_filter_figure_glide_number(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(event__glide_numbers__overlap=value).distinct()
 
     def filter_filter_figure_osv_sub_types(self, qs, name, value):
         if value:
