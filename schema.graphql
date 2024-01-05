@@ -99,11 +99,11 @@ enum BULK_OPERATION_STATUS {
 }
 
 input BulkApiOperationFigureRoleFilterInputType {
-  figure: FigureExtractionFilterDataInputType!
+  figure: FigureExtractionBulkOperationFilterDataInputType!
 }
 
 type BulkApiOperationFigureRoleFilterType {
-  figure: FigureExtractionFilterDataType!
+  figure: FigureExtractionBulkOperationFilterDataType!
 }
 
 input BulkApiOperationFigureRolePayloadInputType {
@@ -1811,7 +1811,7 @@ input FigureAggregateFilterDataInputType {
   filterFigures: FigureExtractionFilterDataInputType
 }
 
-input FigureExtractionFilterDataInputType {
+input FigureExtractionBulkOperationFilterDataInputType {
   filterFigureRegions: [ID!]
   filterFigureGeographicalGroups: [ID!]
   filterFigureCountries: [ID!]
@@ -1845,9 +1845,11 @@ input FigureExtractionFilterDataInputType {
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
   filterFigureEntry: String
+  filterFigureIds: [ID!]
+  filterFigureExcludeIds: [ID!]
 }
 
-type FigureExtractionFilterDataType {
+type FigureExtractionBulkOperationFilterDataType {
   filterFigureRegions: [ID!]
   filterFigureGeographicalGroups: [ID!]
   filterFigureCountries: [ID!]
@@ -1872,11 +1874,50 @@ type FigureExtractionFilterDataType {
   filterFigureContextOfViolence: [ID!]
   filterFigureReviewStatus: [String!]
   filterFigureApprovedBy: [ID!]
+  filterFigureIds: [ID!]
+  filterFigureExcludeIds: [ID!]
   filterFigureStartAfter: Date
   filterFigureEndBefore: Date
   filterEntryArticleTitle: String
   filterFigureHasDisaggregatedData: Boolean
   reportId: String
+  filterFigureIsToBeReviewed: Boolean
+  filterFigureHasExcerptIdu: Boolean
+  filterFigureHasHousingDestruction: Boolean
+  filterFigureEntry: String
+}
+
+input FigureExtractionFilterDataInputType {
+  filterFigureRegions: [ID!]
+  filterFigureGeographicalGroups: [ID!]
+  filterFigureCountries: [ID!]
+  filterFigureEvents: [ID!]
+  filterFigureCrises: [ID!]
+  filterFigureSources: [ID!]
+  filterEntryPublishers: [ID!]
+  filterFigureCategoryTypes: [String!]
+  filterFigureCategories: [String!]
+  filterFigureStartAfter: Date
+  filterFigureEndBefore: Date
+  filterFigureRoles: [String!]
+  filterEntryArticleTitle: String
+  filterFigureTags: [ID!]
+  filterFigureCrisisTypes: [String!]
+  filterFigureGlideNumber: [String!]
+  filterFigureCreatedBy: [ID!]
+  filterFigureTerms: [ID!]
+  filterFigureDisasterCategories: [ID!]
+  filterFigureDisasterSubCategories: [ID!]
+  filterFigureDisasterSubTypes: [ID!]
+  filterFigureDisasterTypes: [ID!]
+  filterFigureViolenceSubTypes: [ID!]
+  filterFigureViolenceTypes: [ID!]
+  filterFigureOsvSubTypes: [ID!]
+  filterFigureHasDisaggregatedData: Boolean
+  reportId: String
+  filterFigureContextOfViolence: [ID!]
+  filterFigureReviewStatus: [String!]
+  filterFigureApprovedBy: [ID!]
   filterFigureIsToBeReviewed: Boolean
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean

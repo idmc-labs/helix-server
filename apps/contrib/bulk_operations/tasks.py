@@ -171,8 +171,8 @@ class BulkFigureRoleUpdateTask(BulkFigureBulkUpdateTask):
 
     @classmethod
     def get_filterset(cls) -> typing.Type[django_filters.FilterSet]:
-        from apps.extraction.filters import FigureExtractionFilterSet
-        return FigureExtractionFilterSet
+        from apps.extraction.filters import FigureExtractionBulkOperationFilterSet
+        return FigureExtractionBulkOperationFilterSet
 
     @staticmethod
     def get_filters(filters: dict):

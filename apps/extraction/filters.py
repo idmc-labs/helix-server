@@ -624,19 +624,6 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         return flow_qs | stock_qs
 
 
-class FigureExtractionNonAnnotateFilterSet(FigureExtractionFilterSet):
-    @property
-    def qs(self):
-        # Skip annotate
-        start_date = self.data.get('filter_figure_start_after')
-        end_date = self.data.get('filter_figure_end_before')
-
-        queryset = super(FigureExtractionFilterSet, self).qs
-        flow_qs = Figure.filtered_nd_figures_for_listing(queryset, start_date, end_date)
-        stock_qs = Figure.filtered_idp_figures_for_listing(queryset, start_date, end_date)
-        return flow_qs | stock_qs
-
-
 class ReportFigureExtractionFilterSet(BaseFigureExtractionFilterSet):
     """
     NOTE: Return queryset as it is, don't apply filter here,
@@ -665,6 +652,21 @@ class ReportFigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         return flow_qs | stock_qs
 
 
+class FigureExtractionBulkOperationFilterSet(ReportFigureExtractionFilterSet):
+    filter_figure_ids = IDListFilter(method='filter_ids')
+    filter_figure_exclude_ids = IDListFilter(method='filter_exclude_ids')
+
+    def filter_ids(self, qs, _, value):
+        if value:
+            return qs.filter(id__in=value)
+        return qs
+
+    def filter_exclude_ids(self, qs, _, value):
+        if value:
+            return qs.exclude(id__in=value)
+        return qs
+
+
 class ExtractionQueryFilter(df.FilterSet):
     class Meta:
         model = ExtractionQuery
@@ -687,10 +689,17 @@ FigureExtractionFilterDataType, FigureExtractionFilterDataInputType = generate_t
     'FigureExtractionFilterDataInputType',
 )
 
-
 EntryExtractionFilterDataType, EntryExtractionFilterDataInputType = generate_type_for_filter_set(
     EntryExtractionFilterSet,
     'entry.schema.entry_list',
     'EntryExtractionFilterDataType',
     'EntryExtractionFilterDataInputType',
+)
+
+
+FigureExtractionBulkOperationFilterDataType, FigureExtractionBulkOperationFilterDataInputType = generate_type_for_filter_set(
+    FigureExtractionBulkOperationFilterSet,
+    'entry.schema.figure_list',
+    'FigureExtractionBulkOperationFilterDataType',
+    'FigureExtractionBulkOperationFilterDataInputType',
 )

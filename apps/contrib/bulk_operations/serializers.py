@@ -5,7 +5,7 @@ from rest_framework import serializers
 from utils.graphene.fields import generate_serializer_field_class
 from utils.serializers import GraphqlSupportDrfSerializerJSONField
 from apps.entry.models import Figure
-from apps.extraction.filters import FigureExtractionFilterDataInputType
+from apps.extraction.filters import FigureExtractionBulkOperationFilterDataInputType
 from apps.contrib.models import BulkApiOperation
 from apps.contrib.tasks import run_bulk_api_operation
 
@@ -17,7 +17,7 @@ class BulkApiOperationFilterSerializer(serializers.Serializer):
         (serializers.Serializer,),
         dict(
             figure=generate_serializer_field_class(
-                FigureExtractionFilterDataInputType,
+                FigureExtractionBulkOperationFilterDataInputType,
                 GraphqlSupportDrfSerializerJSONField,
             )(required=True),
         ),

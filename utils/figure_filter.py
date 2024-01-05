@@ -14,7 +14,7 @@ from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.event.models import Event
 from apps.extraction.filters import (
-    FigureExtractionNonAnnotateFilterSet,
+    ReportFigureExtractionFilterSet,
     FigureExtractionFilterDataInputType,
     FigureExtractionFilterDataType,
 )
@@ -40,8 +40,7 @@ class FigureFilterHelper:
     def filter_using_figure_filters(qs: models.QuerySet, filters: dict, request: HttpRequest) -> models.QuerySet:
         if not filters:
             return qs
-        # XXX: Use this instead ReportFigureExtractionFilterSet?
-        figure_qs = FigureExtractionNonAnnotateFilterSet(data=filters, request=request).qs
+        figure_qs = ReportFigureExtractionFilterSet(data=filters, request=request).qs
         figure_qs = Figure.objects.filter(
             id__in=figure_qs.values('id')
         )
@@ -81,8 +80,7 @@ class FigureFilterHelper:
 
         if figure_filters:
             figure_qs = Figure.objects.filter(
-                # XXX: Use this instead ReportFigureExtractionFilterSet?
-                id__in=FigureExtractionNonAnnotateFilterSet(
+                id__in=ReportFigureExtractionFilterSet(
                     data=figure_filters,
                     request=request,
                 ).qs.values('id')

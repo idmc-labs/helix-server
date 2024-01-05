@@ -27,7 +27,7 @@ from apps.contrib.enums import (
     BulkApiOperationStatusEnum,
 )
 from apps.contrib.bulk_operations.serializers import BulkApiOperationPayloadSerializer
-from apps.extraction.filters import FigureExtractionFilterDataType
+from apps.extraction.filters import FigureExtractionBulkOperationFilterDataType
 from apps.entry.models import ExternalApiDump
 from apps.entry.enums import ExternalApiTypeEnum
 from utils.graphene.types import CustomDjangoListObjectType
@@ -150,7 +150,7 @@ class BulkApiOperationFilterType(graphene.ObjectType):
             'BulkApiOperationFigureRoleFilterType',
             (graphene.ObjectType,),
             dict(
-                figure=graphene.Field(FigureExtractionFilterDataType, required=True),
+                figure=graphene.Field(FigureExtractionBulkOperationFilterDataType, required=True),
             ),
         )
     )

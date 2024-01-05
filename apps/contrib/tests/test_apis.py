@@ -92,6 +92,7 @@ class TestBulkOperation(HelixGraphQLTestCase):
                     figure {
                         filterCreatedBy
                         filterFigureRoles
+                        filterFigureIds
                     }
                 }
               }
@@ -121,10 +122,10 @@ class TestBulkOperation(HelixGraphQLTestCase):
         self.force_login(self.editor)
 
     def test_bulk_figure_role(self):
-        FigureFactory.create_batch(3, **self.figure_kwargs, role=Figure.ROLE.TRIANGULATION)
-        FigureFactory.create(**self.figure_kwargs, role=Figure.ROLE.RECOMMENDED)
+        fig1, fig2, fig3 = FigureFactory.create_batch(3, **self.figure_kwargs, role=Figure.ROLE.TRIANGULATION)
+        fig4 = FigureFactory.create(**self.figure_kwargs, role=Figure.ROLE.RECOMMENDED)
 
-        def _generate_payload(filter_role, update_role):
+        def _generate_payload(update_role, **filters):
             return {
                 'data': {
                     'action': BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_ROLE.name,
@@ -132,7 +133,7 @@ class TestBulkOperation(HelixGraphQLTestCase):
                         'figureRole': {
                             'figure': {
                                 'filterCreatedBy': [str(self.editor.pk)],
-                                'filterFigureRoles': [filter_role.name],
+                                **filters,
                             }
                         },
                     },
@@ -159,7 +160,12 @@ class TestBulkOperation(HelixGraphQLTestCase):
         # Try 1
         assert Figure.objects.filter(role=Figure.ROLE.TRIANGULATION).count() == 3
         assert Figure.objects.filter(role=Figure.ROLE.RECOMMENDED).count() == 1
-        variables = _generate_payload(Figure.ROLE.TRIANGULATION, Figure.ROLE.RECOMMENDED)
+        variables = _generate_payload(
+            Figure.ROLE.RECOMMENDED,
+            # Filters
+            filterFigureIds=None,
+            filterFigureRoles=[Figure.ROLE.TRIANGULATION.name],
+        )
         with self.captureOnCommitCallbacks(execute=True):
             response = self.query(self.Mutation, variables=variables)
         self.assertResponseNoErrors(response)
@@ -169,7 +175,12 @@ class TestBulkOperation(HelixGraphQLTestCase):
         assert Figure.objects.filter(role=Figure.ROLE.RECOMMENDED).count() == 4
 
         # Try 2
-        variables = _generate_payload(Figure.ROLE.TRIANGULATION, Figure.ROLE.RECOMMENDED)
+        variables = _generate_payload(
+            Figure.ROLE.RECOMMENDED,
+            # Filters
+            filterFigureIds=None,
+            filterFigureRoles=[Figure.ROLE.TRIANGULATION.name],
+        )
         with self.captureOnCommitCallbacks(execute=True):
             response = self.query(self.Mutation, variables=variables)
         self.assertResponseNoErrors(response)
@@ -179,7 +190,12 @@ class TestBulkOperation(HelixGraphQLTestCase):
         assert Figure.objects.filter(role=Figure.ROLE.RECOMMENDED).count() == 4
 
         # Try 3
-        variables = _generate_payload(Figure.ROLE.RECOMMENDED, Figure.ROLE.TRIANGULATION)
+        variables = _generate_payload(
+            Figure.ROLE.TRIANGULATION,
+            # Filters
+            filterFigureIds=None,
+            filterFigureRoles=[Figure.ROLE.RECOMMENDED.name],
+        )
         with self.captureOnCommitCallbacks(execute=True):
             response = self.query(self.Mutation, variables=variables)
         self.assertResponseNoErrors(response)
@@ -187,3 +203,18 @@ class TestBulkOperation(HelixGraphQLTestCase):
         _basic_check(variables, content, 4, 0, [None] * 4)
         assert Figure.objects.filter(role=Figure.ROLE.TRIANGULATION).count() == 4
         assert Figure.objects.filter(role=Figure.ROLE.RECOMMENDED).count() == 0
+
+        # Try 3 - With explicit ids
+        variables = _generate_payload(
+            Figure.ROLE.RECOMMENDED,
+            # Filters
+            filterFigureIds=[str(fig1.pk), str(fig4.pk)],
+            filterFigureRoles=None,
+        )
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.query(self.Mutation, variables=variables)
+        self.assertResponseNoErrors(response)
+        content = response.json()['data']['triggerBulkOperation']
+        _basic_check(variables, content, 2, 0, [None] * 2)
+        assert Figure.objects.filter(role=Figure.ROLE.TRIANGULATION).count() == 2
+        assert Figure.objects.filter(role=Figure.ROLE.RECOMMENDED).count() == 2
