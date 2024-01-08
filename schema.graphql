@@ -96,6 +96,8 @@ enum BULK_OPERATION_STATUS {
   PENDING
   STARTED
   FINISHED
+  CANCELED
+  FAILED
 }
 
 input BulkApiOperationFigureRoleFilterInputType {
@@ -3653,7 +3655,7 @@ type ToggleNotificationRead {
 type TriggerBulkOperation {
   errors: [GenericScalar!]
   ok: Boolean
-  result: BulkApiOperationType!
+  result: BulkApiOperationType
 }
 
 enum UNIT {

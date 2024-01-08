@@ -276,7 +276,7 @@ class TestBulkOperation(HelixGraphQLTestCase):
             assert content['ok'] is False, content
             assert (
                 content['errors'][0]['messages'] ==
-                'Bulk update should include less them 1. Current count is 2'
+                'Bulk update should include less then 1. Current count is 2'
             ), content
 
         # This shouldn't change at all

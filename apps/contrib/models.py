@@ -410,12 +410,14 @@ class BulkApiOperation(models.Model):
         STARTED = 1
         FINISHED = 2
         CANCELED = 3
+        FAILED = 4
 
         __labels__ = {
             PENDING: _("Pending"),
             STARTED: _("Started"),
             FINISHED: _("Finished"),
             CANCELED: _("Canceled"),
+            FAILED: _("Failed"),
         }
 
     QUERYSET_COUNT_THRESHOLD = 100

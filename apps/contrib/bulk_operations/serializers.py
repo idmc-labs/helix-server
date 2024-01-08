@@ -60,7 +60,7 @@ class BulkApiOperationSerializer(serializers.ModelSerializer):
         if count > BulkApiOperation.QUERYSET_COUNT_THRESHOLD:
             raise serializers.ValidationError(
                 gettext(
-                    'Bulk update should include less them %(threshold)s. Current count is %(count)s'
+                    'Bulk update should include less then %(threshold)s. Current count is %(count)s'
                 ) % dict(
                     threshold=BulkApiOperation.QUERYSET_COUNT_THRESHOLD,
                     count=count,

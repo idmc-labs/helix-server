@@ -27,6 +27,7 @@ PERMISSION_DENIED_ERRORS = [
 
 
 def process_request(request: HttpRequest) -> None:
+    # Reference from https://github.com/django/django/blob/main/django/contrib/sessions/middleware.py#L13-L20
     session_middlware = SessionMiddleware(None)  # pyright: ignore[reportGeneralTypeIssues]
     auth_middlware = AuthenticationMiddleware(None)  # pyright: ignore[reportGeneralTypeIssues]
     session_middlware.process_request(request)
@@ -47,9 +48,7 @@ def run_mutation(
         context=GQLContext(request),
         variables=variables,
     )
-    if result.errors:
-        return None, result.errors
-    return result.data, None
+    return result.data, result.errors
 
 
 def get_gql_response_count(data: typing.Optional[typing.List[typing.Optional[dict]]]) -> int:
@@ -91,6 +90,9 @@ class BulkApiOperationBaseTask:
         operation: BulkApiOperation,
         request: HttpRequest,
     ) -> typing.Tuple[int, int, typing.List[dict]]:
+        """
+        NOTE: Response should be (success_count, failure_count, errors)
+        """
         filters = cls.get_filters(operation.filters)
 
         queryset = cls.get_filterset()(data=filters).qs.order_by('id')
@@ -98,7 +100,6 @@ class BulkApiOperationBaseTask:
         variables = cls.get_mutation_variables(operation.payload, queryset)
         gql_data, gql_errors = run_mutation(request, cls.MUTATION, variables)
 
-        # XXX: Handle this properly
         # This should't happen in theory - Should be validated using unit test cases
         if gql_data is None or gql_errors:
             logger.error(
@@ -120,7 +121,6 @@ class BulkApiOperationBaseTask:
         # Circular dependency issue
         from apps.contrib.models import BulkApiOperation
 
-        # From: https://github.com/django/django/blob/main/django/contrib/sessions/middleware.py#L13-L20
         api_request = HttpRequest()
         process_request(api_request)
         login(api_request, operation.created_by)
@@ -207,11 +207,15 @@ def run_bulk_api_operation(operation: BulkApiOperation):
     # Circular dependency issue
     from apps.contrib.models import BulkApiOperation
 
-    now = timezone.now()
-    print(now - operation.created_at)
-    print(datetime.timedelta(minutes=BulkApiOperation.WAIT_TIME_THRESHOLD_IN_MINUTES))
-    if now - operation.created_at > datetime.timedelta(minutes=BulkApiOperation.WAIT_TIME_THRESHOLD_IN_MINUTES):
-        operation.update_status(BulkApiOperation.BULK_OPERATION_STATUS.CANCELED)
-        return operation
-    operation.update_status(BulkApiOperation.BULK_OPERATION_STATUS.STARTED)
-    return get_operation_handler(operation.action).run(operation)
+    try:
+        now = timezone.now()
+        if now - operation.created_at > datetime.timedelta(minutes=BulkApiOperation.WAIT_TIME_THRESHOLD_IN_MINUTES):
+            logger.warning(f'Skipping bulk operation: {operation}')
+            operation.update_status(BulkApiOperation.BULK_OPERATION_STATUS.CANCELED)
+            return operation
+        logger.info(f'Processing bulk operation: {operation}')
+        operation.update_status(BulkApiOperation.BULK_OPERATION_STATUS.STARTED)
+        return get_operation_handler(operation.action).run(operation)
+    except Exception:
+        logger.error(f'Failed to process bulk operation: {operation}', exc_info=True)
+        operation.update_status(BulkApiOperation.BULK_OPERATION_STATUS.FAILED)

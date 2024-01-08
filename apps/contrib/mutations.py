@@ -144,7 +144,9 @@ class TriggerBulkOperation(graphene.Mutation):
     result = graphene.Field(BulkApiOperationType)
 
     @staticmethod
-    # TODO: @permission_checker(['entry.add_entry'])
+    # TODO: Define a proper permission
+    # For now, this is handle at client level.
+    # We do handle the permission internally as well.
     def mutate(_, info, data):
         serializer = BulkApiOperationSerializer(data=data, context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):

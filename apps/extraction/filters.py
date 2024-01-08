@@ -629,7 +629,7 @@ class ReportFigureExtractionFilterSet(BaseFigureExtractionFilterSet):
     NOTE: Return queryset as it is, don't apply filter here,
     filter is handled in qs method
 
-    NOTE: In report figures we have to pass end date as reference pont
+    NOTE: In report figures we have to pass end date as reference point
     """
     filter_figure_start_after = df.DateFilter(method='noop')
     filter_figure_end_before = df.DateFilter(method='noop')
