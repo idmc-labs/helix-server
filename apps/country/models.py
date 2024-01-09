@@ -436,5 +436,10 @@ class HouseholdSize(ArchiveAbstractModel):
                              validators=[
                                  MinValueValidator(0, message="Should be positive")])
 
+    country_id: int
+
     class Meta:
         unique_together = (('country', 'year'),)
+
+    def __str__(self):
+        return f'PK:{self.pk}-Country-ID:{self.country_id}-Year:{self.year}'
