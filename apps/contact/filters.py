@@ -2,8 +2,8 @@ from django.db.models import Q
 import django_filters
 
 from apps.users.roles import USER_ROLE
-from apps.contact.models import Contact, Communication
-from utils.filters import StringListFilter, generate_type_for_filter_set
+from apps.contact.models import Contact, Communication, CommunicationMedium
+from utils.filters import StringListFilter, generate_type_for_filter_set, IDListFilter
 
 
 class ContactFilter(django_filters.FilterSet):
@@ -45,6 +45,14 @@ class CommunicationFilter(django_filters.FilterSet):
         if self.request.user.highest_role == USER_ROLE.GUEST.value:
             return super().qs.none()
         return super().qs.distinct()
+
+
+class CommunicationMediumFilter(django_filters.FilterSet):
+    ids = IDListFilter(field_name='id')
+
+    class Meta:
+        model = CommunicationMedium
+        fields = []
 
 
 ContactFilterDataType, ContactFilterDataInputType = generate_type_for_filter_set(

@@ -157,7 +157,6 @@ class GiddConflictType(DjangoObjectType):
 
 
 class GiddConflictListType(CustomDjangoListObjectType):
-
     class Meta:
         model = Conflict
         filterset_class = ConflictFilter

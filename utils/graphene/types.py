@@ -115,6 +115,7 @@ class CustomDjangoListObjectType(DjangoListObjectType):
         **options,
     ):
 
+        assert filterset_class is not None, f'filterset_class is not defined for {cls}. This is required right now'
         assert is_valid_django_model(model), (
             'You need to pass a valid Django Model in {}.Meta, received "{}".'
         ).format(cls.__name__, model)

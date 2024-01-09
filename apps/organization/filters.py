@@ -1,6 +1,6 @@
 import django_filters
 from django.db.models import Case, When
-from apps.organization.models import Organization
+from apps.organization.models import Organization, OrganizationKind
 from utils.filters import (
     NameFilterMixin,
     IDListFilter,
@@ -52,6 +52,14 @@ class OrganizationFilter(NameFilterMixin,
     @property
     def qs(self):
         return super().qs.select_related('organization_kind').prefetch_related("countries")
+
+
+class OrganizationKindFilter(django_filters.FilterSet):
+    ids = IDListFilter(field_name='id')
+
+    class Meta:
+        model = OrganizationKind
+        fields = []
 
 
 OrganizationFilterDataType, OrganizationFilterDataInputType = generate_type_for_filter_set(
