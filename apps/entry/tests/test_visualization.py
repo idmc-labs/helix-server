@@ -484,7 +484,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             reported=111,
             unit=Figure.UNIT.PERSON,
             start_date='2022-12-10',
-            end_date='2012-12-30'
+            end_date='2022-12-30'
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -497,7 +497,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             reported=111,
             unit=Figure.UNIT.PERSON,
             start_date='2023-12-12',
-            end_date='2012-12-30'
+            end_date='2023-12-30'
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -510,7 +510,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             reported=111,
             unit=Figure.UNIT.PERSON,
             start_date='2023-01-01',
-            end_date='2012-12-30'
+            end_date='2023-12-30'
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -523,7 +523,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             reported=111,
             unit=Figure.UNIT.PERSON,
             start_date='2023-01-01',
-            end_date='2012-12-30',
+            end_date='2023-12-30',
         )
 
         for filter_data, expected_data in [
@@ -532,11 +532,15 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                 [
                     {
                         "date": "2021-09-12",
-                        "value": 4
+                        "value": 2
                     },
                     {
                         "date": "2022-08-17",
                         "value": 5
+                    },
+                    {
+                        "date": "2022-09-30",
+                        "value": 2
                     },
                     {
                         "date": "2023-01-01",
@@ -552,16 +556,16 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                 {'filterFigureCountries': self.country_ind.id, },
                 [
                     {
-                        "date": "2021-10-10",
-                        "value": 3
-                    },
-                    {
                         "date": "2022-12-10",
                         "value": 7
                     },
                     {
                         "date": "2023-01-01",
                         "value": 17
+                    },
+                    {
+                        "date": "2023-09-30",
+                        "value": 3
                     },
                 ]
             )
@@ -636,7 +640,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             reported=111,
             unit=Figure.UNIT.PERSON,
             start_date='2022-12-10',
-            end_date='2012-12-30'
+            end_date='2022-12-30'
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -649,7 +653,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             reported=111,
             unit=Figure.UNIT.PERSON,
             start_date='2023-12-12',
-            end_date='2012-12-30'
+            end_date='2023-12-30'
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -662,7 +666,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             reported=111,
             unit=Figure.UNIT.PERSON,
             start_date='2023-01-01',
-            end_date='2012-12-30'
+            end_date='2023-12-30'
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -675,7 +679,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             reported=111,
             unit=Figure.UNIT.PERSON,
             start_date='2023-01-01',
-            end_date='2012-12-30',
+            end_date='2023-12-30',
         )
 
         for filter_data, expected_data in [
@@ -684,11 +688,15 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                 [
                     {
                         "date": "2021-09-12",
-                        "value": 4
+                        "value": 2
                     },
                     {
                         "date": "2022-08-17",
                         "value": 5
+                    },
+                    {
+                        "date": "2022-09-30",
+                        "value": 2
                     },
                     {
                         "date": "2023-01-01",
@@ -704,16 +712,16 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                 {'filterFigureCountries': self.country_ind.id, },
                 [
                     {
-                        "date": "2021-10-10",
-                        "value": 3
-                    },
-                    {
                         "date": "2022-12-10",
                         "value": 7
                     },
                     {
                         "date": "2023-01-01",
                         "value": 17
+                    },
+                    {
+                        "date": "2023-09-30",
+                        "value": 3
                     },
                 ]
             )
@@ -771,11 +779,15 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             [
                 {
                     "date": "2021-09-12",
-                    "value": 4
+                    "value": 2
                 },
                 {
                     "date": "2022-08-17",
                     "value": 5
+                },
+                {
+                    "date": "2022-09-30",
+                    "value": 2
                 },
             ]
         )
@@ -784,11 +796,15 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             [
                 {
                     "date": "2021-09-12",
-                    "value": 4
+                    "value": 2
                 },
                 {
                     "date": "2022-08-17",
                     "value": 5
+                },
+                {
+                    "date": "2022-09-30",
+                    "value": 2
                 },
             ]
         )

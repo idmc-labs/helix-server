@@ -1,6 +1,5 @@
 import graphene
-from django.db.models import fields, JSONField, Sum, F, DateField, Case, When, ExpressionWrapper, BooleanField, Q
-from django.db.models.lookups import GreaterThan
+from django.db.models import fields, JSONField, Sum, Case, When, ExpressionWrapper, Q
 from django.db.models.functions import ExtractYear
 from graphene import ObjectType
 from graphene.types.generic import GenericScalar
@@ -330,11 +329,10 @@ class Query:
                 ),
                 canonical_date=Case(
                     When(
-                        Q(year_difference__gt=1),
+                        Q(year_difference__gt=0),
                         then='end_date',
                     ),
                     default='start_date',
-                    # output_field=DateField(),
                 ),
             )
 
