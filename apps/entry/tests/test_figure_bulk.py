@@ -15,8 +15,10 @@ from utils.factories import (
 
 from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
+from apps.event.models import Event
 from apps.entry.models import Figure, OSMName
 from apps.entry.mutations import BulkUpdateFigures
+from apps.notification.models import Notification
 
 
 def get_first_error_fields(errors):
@@ -547,7 +549,6 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         }
         # XXX: On error, current test client doesn't respond with 'errors' as 'data'.
         with override_settings(GRAPHENE_BATCH_DEFAULT_MAX_LIMIT=4):
-            self.client.logout()
             response = self.query(self.figure_bulk_mutation, variables=payload)
             content_data = response.json()['data']['bulkUpdateFigures']
             assert content_data is None
@@ -566,3 +567,46 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             assert content_data is not None
             # Unit test
             BulkUpdateFigures.validate_batch_size([1] * 3, [1, 2])
+
+    @patch('apps.entry.mutations.send_figure_notifications')
+    @patch('apps.entry.serializers.send_figure_notifications')
+    def test_bulk_update_notification_test(self, serializer_send, mutation_send, *_):
+        figure_item_input = copy(self.figure_item_input)
+        payload = {
+            "items": [figure_item_input] * 3,   # Change fig3 only
+            "delete_ids": [self.f1.pk, self.f2.pk],
+        }
+        self.event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
+        self.event.save()
+        response = self.query(self.figure_bulk_mutation, variables=payload)
+        self.assertResponseNoErrors(response)
+
+        def _get_call_arg(mock):
+            return [
+                (
+                    call.args[0].id,  # Figure
+                    call.args[1].id,  # User
+                    call.args[2],  # Type
+                )
+                for call in mock.mock_calls
+            ]
+
+        # Check
+        # -- Call within serializer (Update)
+        assert _get_call_arg(serializer_send) == [
+            (
+                item['id'],
+                self.editor.id,
+                Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT,
+            )
+            for item in payload['items']
+        ]
+        # -- Call within mutation class (Delete)
+        assert _get_call_arg(mutation_send) == [
+            (
+                id,
+                self.editor.id,
+                Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT,
+            )
+            for id in payload['delete_ids']
+        ]
