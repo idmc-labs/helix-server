@@ -28,7 +28,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
     filter_entry_article_title = df.CharFilter(field_name='article_title', lookup_expr='unaccent__icontains')
-    filter_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
+    filter_figure_created_by = IDListFilter(method='filter_created_by')
 
     filter_figure_regions = IDListFilter(method='filter_regions')
     filter_figure_geographical_groups = IDListFilter(method='filter_geographical_groups')
@@ -54,14 +54,19 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_has_excerpt_idu = df.BooleanFilter(method='filter_filter_figure_has_excerpt_idu')
     filter_figure_has_housing_destruction = df.BooleanFilter(method='filter_filter_figure_has_housing_destruction')
     # used in report entry table
-    report = df.CharFilter(method='filter_report')
-    filter_context_of_violences = IDListFilter(method='filter_filter_context_of_violences')
-    filter_is_figure_to_be_reviewed = df.BooleanFilter(method='filter_filter_is_figure_to_be_reviewed')
+    report_id = df.CharFilter(method='filter_report')
+    filter_figure_context_of_violence = IDListFilter(method='filter_filter_figure_context_of_violence')
+    filter_figure_is_to_be_reviewed = df.BooleanFilter(method='filter_filter_figure_is_to_be_reviewed')
 
     class Meta:
         model = Entry
         fields = {
         }
+
+    def filter_created_by(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(figures__created_by__in=value)
 
     def filter_report(self, qs, name, value):
         if not value:
@@ -271,7 +276,7 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs.filter(figures__is_disaggregated=False)
         return qs
 
-    def filter_filter_context_of_violences(self, qs, name, value):
+    def filter_filter_figure_context_of_violence(self, qs, name, value):
         if not value:
             return qs
         return qs.filter(figures__context_of_violence__in=value).distinct()
@@ -300,7 +305,7 @@ class EntryExtractionFilterSet(df.FilterSet):
             return qs
         return qs.filter(figures__is_housing_destruction=value)
 
-    def filter_filter_is_figure_to_be_reviewed(self, qs, name, value):
+    def filter_filter_figure_is_to_be_reviewed(self, qs, name, value):
         if not value:
             return qs
         return qs.filter(
@@ -331,9 +336,8 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_tags = IDListFilter(method='filter_tags')
     filter_figure_crisis_types = StringListFilter(method='filter_crisis_types')
     filter_figure_glide_number = StringListFilter(method='filter_filter_figure_glide_number')
-    filter_created_by = IDListFilter(field_name='created_by', lookup_expr='in')
+    filter_figure_created_by = IDListFilter(method='filter_filter_figure_created_by')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
-    event = df.CharFilter(field_name='event', lookup_expr='exact')
     filter_figure_disaster_categories = IDListFilter(method='filter_filter_figure_disaster_categories')
     filter_figure_disaster_sub_categories = IDListFilter(method='filter_filter_figure_disaster_sub_categories')
     filter_figure_disaster_sub_types = IDListFilter(method='filter_filter_figure_disaster_sub_types')
@@ -343,17 +347,23 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_osv_sub_types = IDListFilter(method='filter_filter_figure_osv_sub_types')
     filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data')
     # used in report entry table
-    report = df.CharFilter(method='filter_report')
-    filter_context_of_violences = IDListFilter(method='filter_context_of_violences')
+    report_id = df.CharFilter(method='filter_report')
+    filter_figure_context_of_violence = IDListFilter(method='filter_filter_figure_context_of_violence')
     filter_figure_review_status = StringListFilter(method='filter_filter_figure_review_status')
     filter_figure_approved_by = IDListFilter(method='filter_filter_figure_approved_by')
-    filter_is_figure_to_be_reviewed = df.BooleanFilter(method='filter_filter_is_figure_to_be_reviewed')
-    filter_has_excerpt_idu = df.BooleanFilter(method='filter_filter_figure_has_excerpt_idu')
-    filter_has_housing_destruction = df.BooleanFilter(method='filter_filter_figure_has_housing_destruction')
+    filter_figure_is_to_be_reviewed = df.BooleanFilter(method='filter_filter_figure_is_to_be_reviewed')
+    filter_figure_has_excerpt_idu = df.BooleanFilter(method='filter_filter_figure_has_excerpt_idu')
+    filter_figure_has_housing_destruction = df.BooleanFilter(method='filter_filter_figure_has_housing_destruction')
+    filter_figure_entry = df.CharFilter(field_name='entry', lookup_expr='exact')
 
     class Meta:
         model = Figure
-        fields = ['entry']
+        fields = []
+
+    def filter_filter_figure_created_by(self, qs, name, value):
+        if value:
+            return qs.filter(created_by__in=value)
+        return qs
 
     def filter_time_frame_after(self, qs, name, value):
         if value:
@@ -561,7 +571,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             return qs.filter(is_disaggregated=False)
         return qs
 
-    def filter_filter_context_of_violences(self, qs, name, value):
+    def filter_filter_figure_context_of_violence(self, qs, name, value):
         if not value:
             return qs
         return qs.filter(context_of_violence__in=value).distinct()
@@ -580,7 +590,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             return qs
         return qs.filter(approved_by__in=value)
 
-    def filter_filter_is_figure_to_be_reviewed(self, qs, name, value):
+    def filter_filter_figure_is_to_be_reviewed(self, qs, name, value):
         if not value:
             return qs
         return qs.filter(
@@ -622,6 +632,19 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         stock_qs = Figure.filtered_idp_figures_for_listing(
             queryset, start_date, end_date
         )
+        return flow_qs | stock_qs
+
+
+class FigureExtractionNonAnnotateFilterSet(FigureExtractionFilterSet):
+    @property
+    def qs(self):
+        # Skip annotate
+        start_date = self.data.get('filter_figure_start_after')
+        end_date = self.data.get('filter_figure_end_before')
+
+        queryset = super(FigureExtractionFilterSet, self).qs
+        flow_qs = Figure.filtered_nd_figures_for_listing(queryset, start_date, end_date)
+        stock_qs = Figure.filtered_idp_figures_for_listing(queryset, start_date, end_date)
         return flow_qs | stock_qs
 
 
@@ -673,4 +696,12 @@ FigureExtractionFilterDataType, FigureExtractionFilterDataInputType = generate_t
     'entry.schema.figure_list',
     'FigureExtractionFilterDataType',
     'FigureExtractionFilterDataInputType',
+)
+
+
+EntryExtractionFilterDataType, EntryExtractionFilterDataInputType = generate_type_for_filter_set(
+    EntryExtractionFilterSet,
+    'entry.schema.entry_list',
+    'EntryExtractionFilterDataType',
+    'EntryExtractionFilterDataInputType',
 )

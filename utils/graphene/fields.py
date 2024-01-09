@@ -6,6 +6,7 @@ from collections import OrderedDict
 
 import graphene
 from django.db.models import QuerySet
+from django.core.exceptions import FieldError as DjFieldError
 from graphene import NonNull
 from graphene.types.structures import Structure
 from graphene.utils.str_converters import to_snake_case
@@ -303,7 +304,13 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                     # NOTE: multiple field filters are returned when
                     # root and child are related in multiple ways
                     qs = qs.filter(**extra_filters)
-            count = qs.count()
+            try:
+                # XXX: Experimental: Try to use 'id' to minimize joins in SQL Query
+                count = qs.values('id').count()
+            except DjFieldError:
+                # Fallback to normal count
+                count = qs.count()
+
             qs = self.pagination.paginate_queryset(
                 qs,
                 **kwargs

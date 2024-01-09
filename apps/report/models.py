@@ -19,9 +19,6 @@ from django.contrib.postgres.aggregates.general import StringAgg
 
 from utils.common import get_string_from_list
 from apps.contrib.models import MetaInformationArchiveAbstractModel
-from apps.country.models import (
-    Country,
-)
 from apps.crisis.models import Crisis
 from apps.entry.models import (
     FigureDisaggregationAbstractModel,
@@ -290,50 +287,6 @@ class Report(MetaInformationArchiveAbstractModel,
     @property
     def report_figures(self):
         return self.extract_report_figures
-
-    @property
-    def countries_report(self) -> list:
-        result = Country.objects.filter(
-            id__in=self.report_figures.values(
-                'country'
-            )
-        ).annotate(
-            **Country._total_figure_disaggregation_subquery(
-                self.report_figures,
-                ignore_dates=True,
-            )
-        )
-        return result
-
-    @property
-    def events_report(self) -> list:
-        return Event.objects.filter(
-            id__in=self.report_figures.values(
-                'event'
-            )
-        ).annotate(
-            **Event._total_figure_disaggregation_subquery(self.report_figures),
-        )
-
-    @property
-    def entries_report(self) -> list:
-        return Entry.objects.filter(
-            id__in=self.report_figures.values(
-                'entry'
-            )
-        ).annotate(
-            **Entry._total_figure_disaggregation_subquery(self.report_figures),
-        )
-
-    @property
-    def crises_report(self) -> list:
-        return Crisis.objects.filter(
-            id__in=self.report_figures.values(
-                'event__crisis'
-            )
-        ).annotate(
-            **Crisis._total_figure_disaggregation_subquery(self.report_figures),
-        )
 
     @property
     def total_disaggregation(self) -> dict:

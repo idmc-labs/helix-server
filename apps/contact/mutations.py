@@ -1,9 +1,8 @@
 from django.utils.translation import gettext
 import graphene
-from graphene_django.filter.utils import get_filtering_args_from_filterset
 
 from apps.contact.models import Contact, Communication
-from apps.contact.filters import ContactFilter
+from apps.contact.filters import ContactFilterDataInputType
 from apps.contact.schema import ContactType, CommunicationType
 from apps.contact.serializers import (
     ContactSerializer,
@@ -178,23 +177,20 @@ class DeleteCommunication(graphene.Mutation):
 
 
 class ExportContacts(graphene.Mutation):
-    class Meta:
-        arguments = get_filtering_args_from_filterset(
-            ContactFilter,
-            ContactType
-        )
+    class Arguments:
+        filters = ContactFilterDataInputType(required=True)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, info, **kwargs):
+    def mutate(_, info, filters):
         from apps.contrib.models import ExcelDownload
 
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.CONTACT),
-                filters=convert_date_object_to_string_in_dict(kwargs),
+                filters=convert_date_object_to_string_in_dict(filters),
             ),
             context=dict(request=info.context.request)
         )

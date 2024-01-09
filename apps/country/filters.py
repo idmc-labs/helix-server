@@ -1,10 +1,12 @@
+import graphene
+import datetime
 import django_filters
-from datetime import datetime
+from django.db.models import Value
 from django.utils import timezone
-from django.db.models import (
-    Value,
-)
 from django.db.models.functions import Lower, StrIndex
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext
+from django.http import HttpRequest
 
 from apps.country.models import (
     Country,
@@ -14,8 +16,22 @@ from apps.country.models import (
     ContextualAnalysis,
     Summary,
 )
-from apps.report.models import Report
-from utils.filters import IDListFilter, StringListFilter, NameFilterMixin
+from apps.extraction.filters import (
+    FigureExtractionFilterDataInputType,
+    FigureExtractionFilterDataType,
+)
+from utils.filters import (
+    IDListFilter,
+    StringListFilter,
+    NameFilterMixin,
+    SimpleInputFilter,
+    generate_type_for_filter_set,
+)
+from utils.figure_filter import (
+    FigureFilterHelper,
+    CountryFigureAggregateFilterDataType,
+    CountryFigureAggregateFilterDataInputType,
+)
 
 
 class GeographicalGroupFilter(NameFilterMixin,
@@ -47,11 +63,14 @@ class CountryFilter(django_filters.FilterSet):
     region_by_ids = StringListFilter(method='filter_regions')
     geo_group_by_ids = StringListFilter(method='filter_geo_groups')
 
+    filter_figures = SimpleInputFilter(FigureExtractionFilterDataInputType, method='filter_by_figures')
+    aggregate_figures = SimpleInputFilter(CountryFigureAggregateFilterDataInputType, method='noop')
+
     # used in report country table
-    report = django_filters.CharFilter(method='filter_report')
-    year = django_filters.NumberFilter(method='filter_year')
     events = IDListFilter(method='filter_by_events')
     crises = IDListFilter(method='filter_by_crisis')
+
+    request: HttpRequest
 
     class Meta:
         model = Country
@@ -59,6 +78,12 @@ class CountryFilter(django_filters.FilterSet):
             'iso3': ['unaccent__icontains'],
             'id': ['iexact'],
         }
+
+    def noop(self, qs, name, value):
+        return qs
+
+    def filter_by_figures(self, qs, _, value):
+        return FigureFilterHelper.filter_using_figure_filters(qs, value, self.request)
 
     def filter_by_events(self, qs, name, value):
         if not value:
@@ -72,13 +97,6 @@ class CountryFilter(django_filters.FilterSet):
             return qs
         return qs.filter(
             id__in=Country.objects.filter(crises__in=value).values('id')
-        )
-
-    def filter_report(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(
-            id__in=Report.objects.get(id=value).report_figures.values('country')
         )
 
     def _filter_name(self, queryset, name, value):
@@ -128,19 +146,29 @@ class CountryFilter(django_filters.FilterSet):
 
     @property
     def qs(self):
-        year = self.data.get('year', timezone.now().year)
-        start_date, end_date = None, None
-        if year:
-            year_int = int(year)
-            start_date = datetime(year=year_int, month=1, day=1)
-            end_date = datetime(year=year_int, month=12, day=31)
+        # Aggregate filter logic
+        aggregate_figures = self.data.get('aggregate_figures') or {}
+        year = aggregate_figures.get('year')
+        report_id = FigureFilterHelper.get_report_id_from_filter_data(aggregate_figures)
+        report = report_id and FigureFilterHelper.get_report(report_id)
+        # Only 1 is allowed among report and year
+        if report and year:
+            raise ValidationError(gettext('Cannot pass both report and year in filter'))
 
-        qs = super().qs.annotate(
+        start_date = None
+        figure_qs, end_date = FigureFilterHelper.aggregate_data_generate(aggregate_figures, self.request)
+        if end_date is None:
+            year = year or timezone.now().year
+            start_date = datetime.datetime(year=int(year), month=1, day=1)
+            end_date = datetime.datetime(year=int(year), month=12, day=31)
+
+        return super().qs.annotate(
             **Country._total_figure_disaggregation_subquery(
-                start_date=start_date, end_date=end_date
+                figures=figure_qs,
+                start_date=start_date,
+                end_date=end_date,
             )
         )
-        return qs
 
 
 class MonitoringSubRegionFilter(django_filters.FilterSet):
@@ -174,3 +202,15 @@ class ContextualAnalysisFilter(django_filters.FilterSet):
         fields = {
             'created_at': ['lte', 'gte']
         }
+
+
+CountryFilterDataType, CountryFilterDataInputType = generate_type_for_filter_set(
+    CountryFilter,
+    'country.schema.country_list',
+    'CountryFilterDataType',
+    'CountryFilterDataInputType',
+    custom_new_fields_map={
+        'filter_figures': graphene.Field(FigureExtractionFilterDataType),
+        'aggregate_figures': graphene.Field(CountryFigureAggregateFilterDataType),
+    },
+)

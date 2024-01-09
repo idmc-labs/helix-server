@@ -288,6 +288,10 @@ type CommunicationListType {
   pageSize: Int
 }
 
+input CommunicationMediumFilterDataInputType {
+  ids: [ID!]
+}
+
 type CommunicationMediumListType {
   results: [CommunicationMediumType!]
   totalCount: Int
@@ -557,6 +561,11 @@ input ContextualUpdateUpdateInputType {
   id: ID!
 }
 
+input CountryFigureAggregateFilterDataInputType {
+  filterFigures: FigureExtractionFilterDataInputType
+  year: Float
+}
+
 input CountryFilterDataInputType {
   iso3_Unaccent_Icontains: String
   id_Iexact: Float
@@ -565,8 +574,8 @@ input CountryFilterDataInputType {
   geographicalGroupName: String
   regionByIds: [String!]
   geoGroupByIds: [String!]
-  report: String
-  year: Float
+  filterFigures: FigureExtractionFilterDataInputType
+  aggregateFigures: CountryFigureAggregateFilterDataInputType
   events: [ID!]
   crises: [ID!]
 }
@@ -648,7 +657,7 @@ type CountryType {
   contextualupdateSet: [ContextualUpdateType!]!
   lastSummary: SummaryType
   lastContextualAnalysis: ContextualAnalysisType
-  entries(filters: EntryExtractionSetFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  entries(filters: EntryExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType
   totalFlowConflict: Int
   totalFlowDisaster: Int
   totalStockConflict: Int
@@ -737,7 +746,7 @@ input CreateExtractInputType {
   filterFigureReviewStatus: [FIGURE_REVIEW_STATUS!]
   filterFigureCategoryTypes: [String!]
   filterFigureHasDisaggregatedData: Boolean
-  filterIsFigureToBeReviewed: Boolean
+  filterFigureIsToBeReviewed: Boolean
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
   name: String!
@@ -749,14 +758,16 @@ input CreateExtractInputType {
   filterFigureSources: [ID!]
   filterEntryPublishers: [ID!]
   filterFigureTags: [ID!]
-  filterCreatedBy: [ID!]
+  filterFigureCreatedBy: [ID!]
+  filterFigureApprovedBy: [ID!]
   filterFigureDisasterCategories: [ID!]
   filterFigureDisasterSubCategories: [ID!]
   filterFigureDisasterTypes: [ID!]
   filterFigureDisasterSubTypes: [ID!]
   filterFigureViolenceTypes: [ID!]
   filterFigureViolenceSubTypes: [ID!]
-  filterContextOfViolence: [ID!]
+  filterFigureOsvSubTypes: [ID!]
+  filterFigureContextOfViolence: [ID!]
 }
 
 type CreateExtraction {
@@ -866,7 +877,8 @@ input CrisisFilterDataInputType {
   countries: [String!]
   crisisTypes: [String!]
   events: [ID!]
-  report: String
+  filterFigures: FigureExtractionFilterDataInputType
+  aggregateFigures: FigureAggregateFilterDataInputType
   createdByIds: [ID!]
 }
 
@@ -1293,14 +1305,14 @@ input EntryCreateInputType {
   publishers: [ID!]
 }
 
-input EntryExtractionSetFilterDataInputType {
+input EntryExtractionFilterDataInputType {
   filterFigureEvents: [ID!]
   filterFigureCrises: [ID!]
   filterFigureGlideNumber: [String!]
   filterFigureSources: [ID!]
   filterEntryPublishers: [ID!]
   filterEntryArticleTitle: String
-  filterCreatedBy: [ID!]
+  filterFigureCreatedBy: [ID!]
   filterFigureRegions: [ID!]
   filterFigureGeographicalGroups: [ID!]
   filterFigureCountries: [ID!]
@@ -1324,9 +1336,9 @@ input EntryExtractionSetFilterDataInputType {
   filterFigureApprovedBy: [ID!]
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
-  report: String
-  filterContextOfViolences: [ID!]
-  filterIsFigureToBeReviewed: Boolean
+  reportId: String
+  filterFigureContextOfViolence: [ID!]
+  filterFigureIsToBeReviewed: Boolean
 }
 
 type EntryListType {
@@ -1429,7 +1441,6 @@ input EventFilterDataInputType {
   countries: [ID!]
   glideNumbers: [String!]
   osvSubTypeByIds: [ID!]
-  report: String
   disasterSubTypes: [ID!]
   violenceTypes: [ID!]
   violenceSubTypes: [ID!]
@@ -1439,6 +1450,8 @@ input EventFilterDataInputType {
   reviewStatus: [String!]
   assignees: [ID!]
   assigners: [ID!]
+  filterFigures: FigureExtractionFilterDataInputType
+  aggregateFigures: FigureAggregateFilterDataInputType
 }
 
 type EventListType {
@@ -1618,11 +1631,6 @@ type ExportReport {
   result: ReportType
 }
 
-type ExportReportFigures {
-  errors: [GenericScalar!]
-  ok: Boolean
-}
-
 type ExportReports {
   errors: [GenericScalar!]
   ok: Boolean
@@ -1692,7 +1700,8 @@ type ExtractionQueryObjectType {
   filterEntryArticleTitle: String
   filterFigureCrisisTypes: [CRISIS_TYPE!]
   filterFigureGlideNumber: [String]
-  filterCreatedBy: [UserType!]!
+  filterFigureCreatedBy: [UserType!]!
+  filterFigureApprovedBy: [UserType!]!
   filterFigureTerms: [FIGURE_TERMS!]
   filterFigureReviewStatus: [FIGURE_REVIEW_STATUS!]
   filterFigureDisasterCategories: [DisasterCategoryType!]!
@@ -1701,14 +1710,15 @@ type ExtractionQueryObjectType {
   filterFigureDisasterSubTypes: [DisasterSubObjectType!]!
   filterFigureViolenceTypes: [ViolenceType!]!
   filterFigureViolenceSubTypes: [ViolenceSubObjectType!]!
+  filterFigureOsvSubTypes: [OsvSubObjectType!]!
   filterFigureCategoryTypes: [String]
   filterFigureHasDisaggregatedData: Boolean
-  filterContextOfViolence: [ContextOfViolenceType!]!
-  filterIsFigureToBeReviewed: Boolean
+  filterFigureContextOfViolence: [ContextOfViolenceType!]!
+  filterFigureIsToBeReviewed: Boolean
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
   name: String!
-  entries(filters: EntryExtractionSetFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  entries(filters: EntryExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType
 }
 
 enum FIGURE_CATEGORY_TYPES {
@@ -1766,8 +1776,11 @@ enum FOR_CHOICES {
   CONTEXTUAL_UPDATE
 }
 
+input FigureAggregateFilterDataInputType {
+  filterFigures: FigureExtractionFilterDataInputType
+}
+
 input FigureExtractionFilterDataInputType {
-  entry: ID
   filterFigureRegions: [ID!]
   filterFigureGeographicalGroups: [ID!]
   filterFigureCountries: [ID!]
@@ -1784,9 +1797,8 @@ input FigureExtractionFilterDataInputType {
   filterFigureTags: [ID!]
   filterFigureCrisisTypes: [String!]
   filterFigureGlideNumber: [String!]
-  filterCreatedBy: [ID!]
+  filterFigureCreatedBy: [ID!]
   filterFigureTerms: [ID!]
-  event: String
   filterFigureDisasterCategories: [ID!]
   filterFigureDisasterSubCategories: [ID!]
   filterFigureDisasterSubTypes: [ID!]
@@ -1795,13 +1807,14 @@ input FigureExtractionFilterDataInputType {
   filterFigureViolenceTypes: [ID!]
   filterFigureOsvSubTypes: [ID!]
   filterFigureHasDisaggregatedData: Boolean
-  report: String
-  filterContextOfViolences: [ID!]
+  reportId: String
+  filterFigureContextOfViolence: [ID!]
   filterFigureReviewStatus: [String!]
   filterFigureApprovedBy: [ID!]
-  filterIsFigureToBeReviewed: Boolean
-  filterHasExcerptIdu: Boolean
-  filterHasHousingDestruction: Boolean
+  filterFigureIsToBeReviewed: Boolean
+  filterFigureHasExcerptIdu: Boolean
+  filterFigureHasHousingDestruction: Boolean
+  filterFigureEntry: String
 }
 
 type FigureExtractionFilterDataType {
@@ -1818,7 +1831,7 @@ type FigureExtractionFilterDataType {
   filterFigureTags: [ID!]
   filterFigureCrisisTypes: [String!]
   filterFigureGlideNumber: [String!]
-  filterCreatedBy: [ID!]
+  filterFigureCreatedBy: [ID!]
   filterFigureTerms: [ID!]
   filterFigureDisasterCategories: [ID!]
   filterFigureDisasterSubCategories: [ID!]
@@ -1827,19 +1840,18 @@ type FigureExtractionFilterDataType {
   filterFigureViolenceSubTypes: [ID!]
   filterFigureViolenceTypes: [ID!]
   filterFigureOsvSubTypes: [ID!]
-  filterContextOfViolences: [ID!]
+  filterFigureContextOfViolence: [ID!]
   filterFigureReviewStatus: [String!]
   filterFigureApprovedBy: [ID!]
-  entry: ID
   filterFigureStartAfter: Date
   filterFigureEndBefore: Date
   filterEntryArticleTitle: String
-  event: String
   filterFigureHasDisaggregatedData: Boolean
-  report: String
-  filterIsFigureToBeReviewed: Boolean
-  filterHasExcerptIdu: Boolean
-  filterHasHousingDestruction: Boolean
+  reportId: String
+  filterFigureIsToBeReviewed: Boolean
+  filterFigureHasExcerptIdu: Boolean
+  filterFigureHasHousingDestruction: Boolean
+  filterFigureEntry: String
 }
 
 input FigureFilterDataInputType {
@@ -2427,8 +2439,7 @@ type Mutation {
   approveReport(approve: Boolean!, id: ID!): ApproveReport
   startReportGeneration(id: ID!): GenerateReport
   signOffReport(id: ID!, includeHistory: Boolean): SignOffReport
-  exportReportFigures(report: ID!): ExportReportFigures
-  exportReports(name_Unaccent_Icontains: String, filterFigureCountries: [ID!], reviewStatus: [String!], startDateAfter: Date, endDateBefore: Date, isPublic: Boolean, isGiddReport: Boolean, isPfaVisibleInGidd: Boolean): ExportReports
+  exportReports(filters: ReportFilterDataInputType!): ExportReports
   exportReport(id: ID!): ExportReport
   setPfaVisibleInGidd(isPfaVisibleInGidd: Boolean!, reportId: ID!): SetPfaVisibleInGidd
   createExtraction(data: CreateExtractInputType!): CreateExtraction
@@ -2441,8 +2452,8 @@ type Mutation {
   createFigureTag(data: FigureTagCreateInputType!): CreateFigureTag
   updateFigureTag(data: FigureTagUpdateInputType!): UpdateFigureTag
   deleteFigureTag(id: ID!): DeleteFigureTag
-  exportEntries(filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureGlideNumber: [String!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterEntryArticleTitle: String, filterCreatedBy: [ID!], filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterFigureTags: [ID!], filterFigureTerms: [ID!], filterFigureCrisisTypes: [String!], filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureReviewStatus: [String!], filterFigureHasDisaggregatedData: Boolean, filterFigureApprovedBy: [ID!], filterFigureHasExcerptIdu: Boolean, filterFigureHasHousingDestruction: Boolean, report: String, filterContextOfViolences: [ID!], filterIsFigureToBeReviewed: Boolean): ExportEntries
-  exportFigures(entry: ID, filterFigureRegions: [ID!], filterFigureGeographicalGroups: [ID!], filterFigureCountries: [ID!], filterFigureEvents: [ID!], filterFigureCrises: [ID!], filterFigureSources: [ID!], filterEntryPublishers: [ID!], filterFigureCategoryTypes: [String!], filterFigureCategories: [String!], filterFigureStartAfter: Date, filterFigureEndBefore: Date, filterFigureRoles: [String!], filterEntryArticleTitle: String, filterFigureTags: [ID!], filterFigureCrisisTypes: [String!], filterFigureGlideNumber: [String!], filterCreatedBy: [ID!], filterFigureTerms: [ID!], event: String, filterFigureDisasterCategories: [ID!], filterFigureDisasterSubCategories: [ID!], filterFigureDisasterSubTypes: [ID!], filterFigureDisasterTypes: [ID!], filterFigureViolenceSubTypes: [ID!], filterFigureViolenceTypes: [ID!], filterFigureOsvSubTypes: [ID!], filterFigureHasDisaggregatedData: Boolean, report: String, filterContextOfViolences: [ID!], filterFigureReviewStatus: [String!], filterFigureApprovedBy: [ID!], filterIsFigureToBeReviewed: Boolean, filterHasExcerptIdu: Boolean, filterHasHousingDestruction: Boolean): ExportFigures
+  exportEntries(filters: EntryExtractionFilterDataInputType!): ExportEntries
+  exportFigures(filters: FigureExtractionFilterDataInputType!): ExportFigures
   bulkUpdateFigures(deleteIds: [ID!], items: [FigureUpdateInputType!]): BulkUpdateFigures
   deleteFigure(id: ID!): DeleteFigure
   approveFigure(id: ID!): ApproveFigure
@@ -2457,8 +2468,8 @@ type Mutation {
   createContextOfViolence(data: ContextOfViolenceCreateInputType!): CreateContextOfViolence
   updateContextOfViolence(data: ContextOfViolenceUpdateInputType!): UpdateContextOfViolence
   deleteContextOfViolence(id: ID!): DeleteContextOfViolence
-  exportEvents(createdAt_Lte: DateTime, createdAt_Lt: DateTime, createdAt_Gte: DateTime, createdAt_Gt: DateTime, startDate_Lte: Date, startDate_Lt: Date, startDate_Gte: Date, startDate_Gt: Date, endDate_Lte: Date, endDate_Lt: Date, endDate_Gte: Date, endDate_Gt: Date, ignoreQa: Boolean, name: String, crisisByIds: [ID!], eventTypes: [String!], countries: [ID!], glideNumbers: [String!], osvSubTypeByIds: [ID!], report: String, disasterSubTypes: [ID!], violenceTypes: [ID!], violenceSubTypes: [ID!], createdByIds: [ID!], qaRule: String, contextOfViolences: [ID!], reviewStatus: [String!], assignees: [ID!], assigners: [ID!]): ExportEvents
-  exportActors(name_Unaccent_Icontains: String): ExportActors
+  exportEvents(filters: EventFilterDataInputType!): ExportEvents
+  exportActors(filters: ActorFilterDataInputType!): ExportActors
   cloneEvent(data: CloneEventInputType!): CloneEvent
   setAssigneeToEvent(eventId: ID!, userId: ID!): SetAssigneeToEvent
   setSelfAssigneeToEvent(eventId: ID!): SetSelfAssigneeToEvent
@@ -2468,21 +2479,21 @@ type Mutation {
   createCrisis(data: CrisisCreateInputType!): CreateCrisis
   updateCrisis(data: CrisisUpdateInputType!): UpdateCrisis
   deleteCrisis(id: ID!): DeleteCrisis
-  exportCrises(createdAt_Lt: DateTime, createdAt_Lte: DateTime, createdAt_Gt: DateTime, createdAt_Gte: DateTime, startDate_Lt: Date, startDate_Lte: Date, startDate_Gt: Date, startDate_Gte: Date, endDate_Lt: Date, endDate_Lte: Date, endDate_Gt: Date, endDate_Gte: Date, name: String, countries: [String!], crisisTypes: [String!], events: [ID!], report: String, createdByIds: [ID!]): ExportCrises
+  exportCrises(filters: CrisisFilterDataInputType!): ExportCrises
   createOrganization(data: OrganizationCreateInputType!): CreateOrganization
   updateOrganization(data: OrganizationUpdateInputType!): UpdateOrganization
   deleteOrganization(id: ID!): DeleteOrganization
   createOrganizationKind(data: OrganizationKindCreateInputType!): CreateOrganizationKind
   updateOrganizationKind(data: OrganizationKindUpdateInputType!): UpdateOrganizationKind
   deleteOrganizationKind(id: ID!): DeleteOrganizationKind
-  exportOrganizations(name_Unaccent_Icontains: String, shortName_Unaccent_Icontains: String, countries: [ID!], categories: [String!], organizationKinds: [ID!], orderCountryFirst: [ID!]): ExportOrganizations
+  exportOrganizations(filters: OrganizationFilterDataInputType!): ExportOrganizations
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
-  exportCountries(iso3_Unaccent_Icontains: String, id_Iexact: Float, countryName: String, regionName: String, geographicalGroupName: String, regionByIds: [String!], geoGroupByIds: [String!], report: String, year: Float, events: [ID!], crises: [ID!]): ExportCountries
+  exportCountries(filters: CountryFilterDataInputType!): ExportCountries
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
   createClient(data: clientCreateInputType!): CreateClient
   updateClient(data: ClientUpdateInputType!): UpdateClient
-  exportTrackingData(apiType: [String!], clientCodes: [String!], startTrackDate: Date, endTrackDate: Date): ExportTrackingData
+  exportTrackingData(filters: ClientTrackInfoFilterDataInputType!): ExportTrackingData
   triggerBulkOperation(data: BulkApiOperationInputType!): TriggerBulkOperation
   createContact(data: ContactCreateInputType!): CreateContact
   updateContact(data: ContactUpdateInputType!): UpdateContact
@@ -2490,7 +2501,7 @@ type Mutation {
   createCommunication(data: CommunicationCreateInputType!): CreateCommunication
   updateCommunication(data: CommunicationUpdateInputType!): UpdateCommunication
   deleteCommunication(id: ID!): DeleteCommunication
-  exportContacts(country: ID, id: String, firstNameContains: String, lastNameContains: String, nameContains: String, countriesOfOperation: [String!]): ExportContacts
+  exportContacts(filters: ContactFilterDataInputType!): ExportContacts
   login(data: LoginInputType!): Login
   register(data: RegisterInputType!): Register
   activate(data: ActivateInputType!): Activate
@@ -2663,6 +2674,10 @@ input OrganizationKindCreateInputType {
   reliability: ORGANIZATION_RELIABILITY
 }
 
+input OrganizationKindFilterDataInputType {
+  ids: [ID!]
+}
+
 type OrganizationKindListType {
   results: [OrganizationKindObjectType!]
   totalCount: Int
@@ -2747,6 +2762,8 @@ type OsvSubObjectType {
   name: String!
   figures: [FigureType!]!
   events: [EventType!]!
+  extractionquerySet: [ExtractionQueryObjectType!]!
+  reportSet: [ReportType!]!
 }
 
 input OsvSubTypeFilterDataInputType {
@@ -2978,7 +2995,7 @@ type Query {
   report(id: ID!): ReportType
   reportList(filters: ReportFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ReportListType
   reportComment(id: ID!): ReportCommentType
-  reportCommentList(page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
+  reportCommentList(filters: ReportCommentFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
   reportGeneration(id: ID!): ReportGenerationType
   reportGenerationList(filters: ReportGenerationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ReportGenerationListType
   contextualUpdate(id: ID!): ContextualUpdateType
@@ -2993,18 +3010,16 @@ type Query {
   resourceGroupList: [ResourceGroupType!]
   extractionQuery(id: ID!): ExtractionQueryObjectType
   extractionQueryList(filters: ExtractionQueryFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ExtractionQueryListType
-  extractionEntryList(filters: EntryExtractionSetFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType
-  extractionFigureList(filters: FigureExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): FigureListType
   figureTag(id: ID!): FigureTagType
   figureTagList(filters: FigureTagFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): FigureTagListType
   figure(id: ID!): FigureType
   figureList(filters: FigureExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): FigureListType
   sourcePreview(id: ID!): SourcePreviewType
   entry(id: ID!): EntryType
-  entryList(filters: EntryExtractionSetFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  entryList(filters: EntryExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType
   disaggregatedAge(id: ID!): DisaggregatedAgeType
-  disaggregatedAgeList(filters: DisaggregatedAgeFilterDataInputType, ordering: String): DisaggregatedAgeListType
-  violenceList(ordering: String): ViolenceListType
+  figureAggregations(filters: FigureExtractionFilterDataInputType!): VisualizationFigureType
+  violenceList(filters: ViolenceFilterDataInputType, ordering: String): ViolenceListType
   actor(id: ID!): ActorType
   actorList(filters: ActorFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ActorListType
   disasterCategoryList(filters: DisasterCategoryFilterDataInputType, ordering: String): DisasterCategoryListType
@@ -3029,7 +3044,7 @@ type Query {
   organization(id: ID!): OrganizationType
   organizationList(filters: OrganizationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
   organizationKind(id: ID!): OrganizationKindObjectType
-  organizationKindList(page: Int = 1, ordering: String, pageSize: Int): OrganizationKindListType
+  organizationKindList(filters: OrganizationKindFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): OrganizationKindListType
   attachment(id: ID!): AttachmentType
   excelExports(filters: ExcelExportFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ExcelExportsListType
   client(id: ID!): ClientType
@@ -3039,7 +3054,7 @@ type Query {
   contact(id: ID!): ContactType
   communication(id: ID!): CommunicationType
   contactList(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
-  communicationMediumList(ordering: String): CommunicationMediumListType
+  communicationMediumList(filters: CommunicationMediumFilterDataInputType, ordering: String): CommunicationMediumListType
   communicationList(filters: CommunicationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): CommunicationListType
   me: UserType
   user(id: ID!): UserType
@@ -3157,6 +3172,10 @@ type ReportApprovalType {
 input ReportCommentCreateInputType {
   body: String!
   report: ID!
+}
+
+input ReportCommentFilterDataInputType {
+  ids: [ID!]
 }
 
 type ReportCommentListType {
@@ -3309,7 +3328,8 @@ type ReportType {
   filterEntryArticleTitle: String
   filterFigureCrisisTypes: [CRISIS_TYPE!]
   filterFigureGlideNumber: [String]
-  filterCreatedBy: [UserType!]!
+  filterFigureCreatedBy: [UserType!]!
+  filterFigureApprovedBy: [UserType!]!
   filterFigureTerms: [FIGURE_TERMS!]
   filterFigureReviewStatus: [Int!]
   filterFigureDisasterCategories: [DisasterCategoryType!]!
@@ -3318,10 +3338,11 @@ type ReportType {
   filterFigureDisasterSubTypes: [DisasterSubObjectType!]!
   filterFigureViolenceTypes: [ViolenceType!]!
   filterFigureViolenceSubTypes: [ViolenceSubObjectType!]!
+  filterFigureOsvSubTypes: [OsvSubObjectType!]!
   filterFigureCategoryTypes: [String]
   filterFigureHasDisaggregatedData: Boolean
-  filterContextOfViolence: [ContextOfViolenceType!]!
-  filterIsFigureToBeReviewed: Boolean
+  filterFigureContextOfViolence: [ContextOfViolenceType!]!
+  filterFigureIsToBeReviewed: Boolean
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
   name: String!
@@ -3345,15 +3366,10 @@ type ReportType {
   giddReportYear: Int
   giddPublishedDate: DateTime
   isPfaPublishedInGidd: Boolean!
-  comments(page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
+  comments(filters: ReportCommentFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
   generations(filters: ReportGenerationFilterDataInputType, ordering: String): ReportGenerationListType
   filterFigureRolesDisplay: EnumDescription
   filterFigureCrisisTypesDisplay: EnumDescription
-  countriesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): CountryListType
-  eventsReport(id: String, page: Int = 1, ordering: String, pageSize: Int): EventListType
-  entriesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): EntryListType
-  figuresReport(filters: FigureExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): FigureListType
-  crisesReport(id: String, page: Int = 1, ordering: String, pageSize: Int): CrisisListType
   totalDisaggregation: ReportTotalsType!
   lastGeneration: ReportGenerationType
   generatedFromDisplay: EnumDescription
@@ -3718,7 +3734,7 @@ input UpdateExtractInputType {
   filterFigureReviewStatus: [FIGURE_REVIEW_STATUS!]
   filterFigureCategoryTypes: [String!]
   filterFigureHasDisaggregatedData: Boolean
-  filterIsFigureToBeReviewed: Boolean
+  filterFigureIsToBeReviewed: Boolean
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
   name: String
@@ -3730,14 +3746,16 @@ input UpdateExtractInputType {
   filterFigureSources: [ID!]
   filterEntryPublishers: [ID!]
   filterFigureTags: [ID!]
-  filterCreatedBy: [ID!]
+  filterFigureCreatedBy: [ID!]
+  filterFigureApprovedBy: [ID!]
   filterFigureDisasterCategories: [ID!]
   filterFigureDisasterSubCategories: [ID!]
   filterFigureDisasterTypes: [ID!]
   filterFigureDisasterSubTypes: [ID!]
   filterFigureViolenceTypes: [ID!]
   filterFigureViolenceSubTypes: [ID!]
-  filterContextOfViolence: [ID!]
+  filterFigureOsvSubTypes: [ID!]
+  filterFigureContextOfViolence: [ID!]
 }
 
 type UpdateExtraction {
@@ -3855,7 +3873,7 @@ type UserType {
   email: String
   username: String!
   fullName: String!
-  createdEntry(filters: EntryExtractionSetFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType
+  createdEntry(filters: EntryExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType
   portfolios: [PortfolioType!]
   portfolioRole: USER_ROLE
   portfolioRoleDisplay: String
@@ -3872,6 +3890,10 @@ input UserUpdateInputType {
   lastName: String
   username: String
   isActive: Boolean
+}
+
+input ViolenceFilterDataInputType {
+  id_Iexact: Float
 }
 
 type ViolenceListType {
@@ -3896,13 +3918,29 @@ type ViolenceSubObjectType {
   reportSet: [ReportType!]!
 }
 
+input ViolenceSubTypeFilterDataInputType {
+  id_Iexact: Float
+}
+
 type ViolenceType {
   id: ID!
   name: String!
   figures: [FigureType!]!
-  subTypes(ordering: String): ViolenceSubObjectListType
+  subTypes(filters: ViolenceSubTypeFilterDataInputType, ordering: String): ViolenceSubObjectListType
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
+}
+
+type VisualizationFigureType {
+  idpsConflictFigures: [VisualizationValueType!]
+  idpsDisasterFigures: [VisualizationValueType!]
+  ndsConflictFigures: [VisualizationValueType!]
+  ndsDisasterFigures: [VisualizationValueType!]
+}
+
+type VisualizationValueType {
+  date: Date!
+  value: Int!
 }
 
 input clientCreateInputType {

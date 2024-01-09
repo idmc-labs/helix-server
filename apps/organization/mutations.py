@@ -1,11 +1,10 @@
 from django.utils.translation import gettext
 import graphene
-from graphene_django.filter.utils import get_filtering_args_from_filterset
 
 from apps.contrib.serializers import ExcelDownloadSerializer
 from apps.organization.models import Organization, OrganizationKind
 from apps.organization.schema import OrganizationType, OrganizationKindObjectType
-from apps.organization.filters import OrganizationFilter
+from apps.organization.filters import OrganizationFilterDataInputType
 from apps.organization.serializers import (
     OrganizationSerializer,
     OrganizationUpdateSerializer,
@@ -177,23 +176,20 @@ class DeleteOrganization(graphene.Mutation):
 
 
 class ExportOrganizations(graphene.Mutation):
-    class Meta:
-        arguments = get_filtering_args_from_filterset(
-            OrganizationFilter,
-            OrganizationType
-        )
+    class Arguments:
+        filters = OrganizationFilterDataInputType(required=True)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, info, **kwargs):
+    def mutate(_, info, filters):
         from apps.contrib.models import ExcelDownload
 
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.ORGANIZATION),
-                filters=convert_date_object_to_string_in_dict(kwargs),
+                filters=convert_date_object_to_string_in_dict(filters),
             ),
             context=dict(request=info.context.request)
         )

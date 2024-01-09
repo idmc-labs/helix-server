@@ -576,6 +576,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
+        # NOTE: We should write this query without using union
         year_difference = ExpressionWrapper(
             ExtractYear('end_date') - ExtractYear('start_date'),
             output_field=fields.IntegerField(),
@@ -586,18 +587,18 @@ class Figure(MetaInformationArchiveAbstractModel,
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
             year_difference__lt=1,
         )
-        mutiple_year_figures = qs.filter(
+        multiple_year_figures = qs.filter(
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
             year_difference__gte=1,
         )
         if start_date:
             same_year_figures = same_year_figures.filter(start_date__gte=start_date)
-            mutiple_year_figures = mutiple_year_figures.filter(end_date__gte=start_date)
+            multiple_year_figures = multiple_year_figures.filter(end_date__gte=start_date)
         if end_date:
             same_year_figures = same_year_figures.filter(start_date__lte=end_date)
-            mutiple_year_figures = mutiple_year_figures.filter(end_date__lte=end_date)
+            multiple_year_figures = multiple_year_figures.filter(end_date__lte=end_date)
 
-        return same_year_figures | mutiple_year_figures
+        return same_year_figures | multiple_year_figures
 
     @classmethod
     def filtered_nd_figures_for_listing(
@@ -606,10 +607,12 @@ class Figure(MetaInformationArchiveAbstractModel,
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
+        # NOTE: We should write this query without using union
         year_difference = ExpressionWrapper(
             ExtractYear('end_date') - ExtractYear('start_date'),
             output_field=fields.IntegerField(),
         )
+
         qs = qs.annotate(year_difference=year_difference)
 
         same_year_figures = qs.filter(
@@ -792,6 +795,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             def __init__(self, user):
                 self.user = user
 
+        # TODO: can we use ReportFigureExtractionFilterSet?
         qs = FigureExtractionFilterSet(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
@@ -1091,6 +1095,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     @classmethod
     def get_total_stock_idp_figure(cls, filters):
         from apps.extraction.filters import FigureExtractionFilterSet
+        # TODO: use ReportFigureExtractionFilterSet
         return FigureExtractionFilterSet(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
@@ -1099,6 +1104,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     @classmethod
     def get_total_flow_nd_figure(cls, filters):
         from apps.extraction.filters import FigureExtractionFilterSet
+        # TODO: use ReportFigureExtractionFilterSet
         return FigureExtractionFilterSet(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
