@@ -288,6 +288,10 @@ type CommunicationListType {
   pageSize: Int
 }
 
+input CommunicationMediumFilterDataInputType {
+  ids: [ID!]
+}
+
 type CommunicationMediumListType {
   results: [CommunicationMediumType!]
   totalCount: Int
@@ -2670,6 +2674,10 @@ input OrganizationKindCreateInputType {
   reliability: ORGANIZATION_RELIABILITY
 }
 
+input OrganizationKindFilterDataInputType {
+  ids: [ID!]
+}
+
 type OrganizationKindListType {
   results: [OrganizationKindObjectType!]
   totalCount: Int
@@ -2987,7 +2995,7 @@ type Query {
   report(id: ID!): ReportType
   reportList(filters: ReportFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ReportListType
   reportComment(id: ID!): ReportCommentType
-  reportCommentList(page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
+  reportCommentList(filters: ReportCommentFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
   reportGeneration(id: ID!): ReportGenerationType
   reportGenerationList(filters: ReportGenerationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ReportGenerationListType
   contextualUpdate(id: ID!): ContextualUpdateType
@@ -3036,7 +3044,7 @@ type Query {
   organization(id: ID!): OrganizationType
   organizationList(filters: OrganizationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
   organizationKind(id: ID!): OrganizationKindObjectType
-  organizationKindList(page: Int = 1, ordering: String, pageSize: Int): OrganizationKindListType
+  organizationKindList(filters: OrganizationKindFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): OrganizationKindListType
   attachment(id: ID!): AttachmentType
   excelExports(filters: ExcelExportFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ExcelExportsListType
   client(id: ID!): ClientType
@@ -3046,7 +3054,7 @@ type Query {
   contact(id: ID!): ContactType
   communication(id: ID!): CommunicationType
   contactList(filters: ContactFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ContactListType
-  communicationMediumList(ordering: String): CommunicationMediumListType
+  communicationMediumList(filters: CommunicationMediumFilterDataInputType, ordering: String): CommunicationMediumListType
   communicationList(filters: CommunicationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): CommunicationListType
   me: UserType
   user(id: ID!): UserType
@@ -3164,6 +3172,10 @@ type ReportApprovalType {
 input ReportCommentCreateInputType {
   body: String!
   report: ID!
+}
+
+input ReportCommentFilterDataInputType {
+  ids: [ID!]
 }
 
 type ReportCommentListType {
@@ -3354,7 +3366,7 @@ type ReportType {
   giddReportYear: Int
   giddPublishedDate: DateTime
   isPfaPublishedInGidd: Boolean!
-  comments(page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
+  comments(filters: ReportCommentFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
   generations(filters: ReportGenerationFilterDataInputType, ordering: String): ReportGenerationListType
   filterFigureRolesDisplay: EnumDescription
   filterFigureCrisisTypesDisplay: EnumDescription

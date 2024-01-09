@@ -11,7 +11,7 @@ from apps.organization.enums import (
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
-from apps.organization.filters import OrganizationFilter
+from apps.organization.filters import OrganizationFilter, OrganizationKindFilter
 
 
 class OrganizationType(DjangoObjectType):
@@ -47,6 +47,7 @@ class OrganizationKindObjectType(DjangoObjectType):
 class OrganizationKindListType(CustomDjangoListObjectType):
     class Meta:
         model = OrganizationKind
+        filterset_class = OrganizationKindFilter
 
 
 class Query:

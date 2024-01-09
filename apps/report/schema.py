@@ -16,6 +16,7 @@ from apps.report.filters import (
     ReportFilter,
     ReportApprovalFilter,
     ReportGenerationFilter,
+    ReportCommentFilter,
 )
 from apps.report.enums import ReportGenerationStatusEnum
 from utils.graphene.types import CustomDjangoListObjectType
@@ -38,6 +39,7 @@ class ReportCommentType(DjangoObjectType):
 class ReportCommentListType(CustomDjangoListObjectType):
     class Meta:
         model = ReportComment
+        filterset_class = ReportCommentFilter
 
 
 class ReportApprovalType(DjangoObjectType):

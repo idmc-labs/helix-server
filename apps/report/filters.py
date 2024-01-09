@@ -11,7 +11,7 @@ from django.db.models import (
 )
 from django_filters import rest_framework as df
 
-from apps.report.models import Report, ReportGeneration, ReportApproval
+from apps.report.models import Report, ReportGeneration, ReportApproval, ReportComment
 from utils.filters import IDListFilter, StringListFilter, generate_type_for_filter_set
 
 
@@ -137,6 +137,14 @@ class ReportGenerationFilter(df.FilterSet):
     class Meta:
         model = ReportGeneration
         fields = ('report',)
+
+
+class ReportCommentFilter(df.FilterSet):
+    ids = IDListFilter(field_name='id')
+
+    class Meta:
+        model = ReportComment
+        fields = []
 
 
 ReportFilterDataType, ReportFilterDataInputType = generate_type_for_filter_set(
