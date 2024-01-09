@@ -576,6 +576,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
+        # NOTE: We should write this query without using union
         year_difference = ExpressionWrapper(
             ExtractYear('end_date') - ExtractYear('start_date'),
             output_field=fields.IntegerField(),
@@ -606,6 +607,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
+        # NOTE: We should write this query without using union
         year_difference = ExpressionWrapper(
             ExtractYear('end_date') - ExtractYear('start_date'),
             output_field=fields.IntegerField(),
