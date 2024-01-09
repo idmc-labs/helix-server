@@ -304,3 +304,8 @@ class OSMNameFactory(DjangoModelFactory):
 
     class Meta:
         model = 'entry.OSMName'
+
+
+class HouseholdSizeFactory(DjangoModelFactory):
+    class Meta:
+        model = 'country.HouseholdSize'
