@@ -255,10 +255,6 @@ class BulkUpdateMutation(graphene.Mutation):
     @classmethod
     @transaction.atomic
     def save_item(cls, info, item, id, context):
-        base_context = {
-            'request': info.context,
-            **(context or {})
-        }
         if id:
             instance, errors = cls.get_object(id)
             if errors:
@@ -266,13 +262,13 @@ class BulkUpdateMutation(graphene.Mutation):
             serializer = cls.serializer_class(
                 instance=instance,
                 data=item,
-                context=base_context,
+                context=context,
                 partial=True,
             )
         else:
             serializer = cls.serializer_class(
                 data=item,
-                context=base_context,
+                context=context,
             )
         if errors := mutation_is_not_valid(serializer):
             return None, errors
@@ -323,6 +319,10 @@ class BulkUpdateMutation(graphene.Mutation):
         if not info.context.user.has_perms(cls.permissions):
             raise PermissionDenied(gettext(PERMISSION_DENIED_MESSAGE))
 
+        internal_context = {
+            'request': info.context,
+            **(context or {})
+        }
         all_errors = []
         all_instances = []
         all_deleted_instances = []
@@ -330,11 +330,11 @@ class BulkUpdateMutation(graphene.Mutation):
         if delete_ids:
             delete_items_qs = cls.get_valid_delete_items(delete_ids)
             for item in delete_items_qs:
-                all_deleted_instances.append(cls.delete_item(item, context))
+                all_deleted_instances.append(cls.delete_item(item, internal_context))
         # Bulk Create/Update
         for item in items or []:
             id = item.get('id')
-            instance, errors = cls.save_item(info, item, id, context)
+            instance, errors = cls.save_item(info, item, id, internal_context)
             all_errors.append(errors)
             all_instances.append(instance)
         return cls(
