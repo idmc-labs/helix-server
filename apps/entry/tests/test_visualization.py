@@ -25,7 +25,6 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             query MyQuery (
                 $filterFigureEntry: String
                 $filterFigureContextOfViolence: [ID!]
-                $filterFigureCreatedBy: [ID!]
                 $filterEntryArticleTitle: String
                 $filterEntryPublishers: [ID!]
                 $filterFigureApprovedBy: [ID!]
@@ -41,7 +40,6 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                 $filterFigureEndBefore: Date
                 $filterFigureEvents: [ID!]
                 $filterFigureGeographicalGroups: [ID!]
-                $filterFigureGlideNumber: [String!]
                 $filterFigureHasDisaggregatedData: Boolean
                 $filterFigureOsvSubTypes: [ID!]
                 $filterFigureRegions: [ID!]
@@ -62,7 +60,6 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                 filters: {
                     filterFigureEntry: $filterFigureEntry
                     filterFigureContextOfViolence: $filterFigureContextOfViolence
-                    filterFigureCreatedBy: $filterFigureCreatedBy
                     filterEntryArticleTitle: $filterEntryArticleTitle
                     filterEntryPublishers: $filterEntryPublishers
                     filterFigureApprovedBy: $filterFigureApprovedBy
@@ -78,7 +75,6 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                     filterFigureEndBefore: $filterFigureEndBefore
                     filterFigureEvents: $filterFigureEvents
                     filterFigureGeographicalGroups: $filterFigureGeographicalGroups
-                    filterFigureGlideNumber: $filterFigureGlideNumber
                     filterFigureHasDisaggregatedData: $filterFigureHasDisaggregatedData
                     filterFigureOsvSubTypes: $filterFigureOsvSubTypes
                     filterFigureRegions: $filterFigureRegions

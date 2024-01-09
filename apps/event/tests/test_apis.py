@@ -5,6 +5,7 @@ from uuid import uuid4
 from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
 from apps.entry.models import Figure
+from apps.event.models import EventCode
 
 from utils.factories import (
     CountryFactory,
@@ -16,6 +17,7 @@ from utils.factories import (
     FigureFactory,
     OtherSubtypeFactory,
     OSMNameFactory,
+    EventCodeFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -87,7 +89,19 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
                     "uuid": str(uuid4()),
                     "country": country1.id,
                     "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
+                    "eventCode": "NEP-2021-YYY"
+                },
+                {
+                    "uuid": str(uuid4()),
+                    "country": country1.id,
+                    "eventCodeType": "GLIDE_NUMBER",
                     "eventCode": "NEP-2021-XXX"
+                },
+                {
+                    "uuid": str(uuid4()),
+                    "country": country1.id,
+                    "eventCodeType": "IFRC_APPEAL_ID",
+                    "eventCode": "NEP-2021-ZZZ"
                 },
             ]
         }
@@ -158,6 +172,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
 
 class TestUpdateEvent(HelixGraphQLTestCase):
     def setUp(self) -> None:
+        country1 = CountryFactory.create()
         self.mutation = '''mutation UpdateEvent($input: EventUpdateInputType!) {
             updateEvent(data: $input) {
                 errors
@@ -172,6 +187,14 @@ class TestUpdateEvent(HelixGraphQLTestCase):
                     violenceSubType {
                         name
                     }
+                    eventCodes {
+                        eventCode
+                        eventCodeType
+                        id
+                        country {
+                          id
+                        }
+                    }
                 }
                 ok
                 }
@@ -179,6 +202,24 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.event = EventFactory.create(
             crisis=None,
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
+        self.event_code1 = EventCodeFactory.create(
+            event=self.event,
+            country=country1,
+            event_code_type=EventCode.EVENT_CODE_TYPE.GLIDE_NUMBER,
+            event_code='Code-1'
+        )
+        EventCodeFactory.create(
+            event=self.event,
+            country=country1,
+            event_code_type=EventCode.EVENT_CODE_TYPE.GOV_ASSIGNED_IDENTIFIER,
+            event_code='Code-1'
+        )
+        EventCodeFactory.create(
+            event=self.event,
+            country=country1,
+            event_code_type=EventCode.EVENT_CODE_TYPE.ACLED_ID,
+            event_code='Code-1'
         )
         v_sub_type = ViolenceSubTypeFactory.create()
         self.input = {
@@ -190,6 +231,19 @@ class TestUpdateEvent(HelixGraphQLTestCase):
             "startDate": "2020-10-20",
             "violence": v_sub_type.violence.id,
             "violenceSubType": v_sub_type.id,
+            "eventCodes": [
+                {
+                    "id": self.event_code1.id,
+                    "country": country1.id,
+                    "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
+                    "eventCode": "NEP-2021-AAA"
+                },
+                {
+                    "country": country1.id,
+                    "eventCodeType": "IFRC_APPEAL_ID",
+                    "eventCode": "NEP-2021-CCC"
+                },
+            ]
         }
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor)
@@ -225,6 +279,11 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.assertIsNone(content['data']['updateEvent']['errors'], content)
         self.assertEqual(content['data']['updateEvent']['result']['name'],
                          self.input['name'])
+        self.assertEqual(len(content['data']['updateEvent']['result']['eventCodes']), 2)
+        self.assertEqual(
+            EventCode.objects.get(id=self.event_code1.id).event_code_type,
+            EventCode.EVENT_CODE_TYPE.GOV_ASSIGNED_IDENTIFIER.value
+        )
 
     def test_invalid_update_event_by_guest(self):
         guest = create_user_with_role(USER_ROLE.GUEST.name)

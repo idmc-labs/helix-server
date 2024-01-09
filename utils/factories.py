@@ -6,6 +6,7 @@ from factory.django import DjangoModelFactory
 from apps.contact.models import Contact
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure, OSMName
+from apps.event.models import EventCode
 from apps.common.enums import GENDER_TYPE
 
 
@@ -195,6 +196,16 @@ class EventFactory(DjangoModelFactory):
         if extracted:
             for country in extracted:
                 self.countries.add(country)
+
+
+class EventCodeFactory(DjangoModelFactory):
+    class Meta:
+        model = 'event.EventCode'
+
+    event = factory.SubFactory(EventFactory)
+    country = factory.SubFactory(CountryFactory)
+    event_code_type = factory.Iterator(EventCode.EVENT_CODE_TYPE)
+    event_code = factory.Sequence(lambda n: f'Code-{n}')
 
 
 class EntryFactory(DjangoModelFactory):

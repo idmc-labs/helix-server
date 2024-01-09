@@ -336,6 +336,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_disaster_sub_types = IDListFilter(method='filter_filter_figure_disaster_sub_types')
     filter_figure_disaster_types = IDListFilter(method='filter_filter_figure_disaster_types')
     filter_figure_violence_sub_types = IDListFilter(method='filter_filter_figure_violence_sub_types')
+    filter_figure_created_by = IDListFilter(method='filter_filter_figure_created_by')
     filter_figure_violence_types = IDListFilter(method='filter_filter_figure_violence_types')
     filter_figure_osv_sub_types = IDListFilter(method='filter_filter_figure_osv_sub_types')
     filter_figure_has_disaggregated_data = df.BooleanFilter(method='filter_has_disaggregated_data')
