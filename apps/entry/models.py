@@ -36,7 +36,7 @@ from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
 from apps.common.enums import GENDER_TYPE
 from apps.notification.models import Notification
-from apps.common.utils import get_event_code
+from apps.common.utils import get_event_code, FIELD_SEPARATOR
 from .documents import README_DATA
 
 logger = logging.getLogger(__name__)
@@ -1005,9 +1005,9 @@ class Figure(MetaInformationArchiveAbstractModel,
             event_code=ArrayAgg(
                 Concat(
                     F('event__event_code__event_code'),
-                    Value(f'{settings.EXPORT_DATA_SEPARATOR}'),
+                    Value(FIELD_SEPARATOR),
                     F('event__event_code__event_code_type'),
-                    Value(f'{settings.EXPORT_DATA_SEPARATOR}'),
+                    Value(FIELD_SEPARATOR),
                     F('event__event_code__country__iso3'),
                     output_field=models.CharField(),
                 ),

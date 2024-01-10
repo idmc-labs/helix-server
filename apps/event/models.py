@@ -8,7 +8,6 @@ from django_enumfield import enum
 from django.contrib.postgres.fields import ArrayField
 from django.forms import model_to_dict
 from django.db.models.functions import Concat
-from django.conf import settings
 
 from utils.common import add_clone_prefix
 
@@ -21,7 +20,7 @@ from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
 from apps.users.models import User, USER_ROLE
-from apps.common.utils import get_event_code
+from apps.common.utils import get_event_code, FIELD_SEPARATOR
 
 
 class NameAttributedModels(models.Model):
@@ -442,9 +441,9 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             event_codes=ArrayAgg(
                 Concat(
                     F('event_code__event_code'),
-                    Value(f'{settings.EXPORT_DATA_SEPARATOR}'),
+                    Value(FIELD_SEPARATOR),
                     F('event_code__event_code_type'),
-                    Value(f'{settings.EXPORT_DATA_SEPARATOR}'),
+                    Value(FIELD_SEPARATOR),
                     F('event_code__country__iso3'),
                     output_field=models.CharField(),
                 ),

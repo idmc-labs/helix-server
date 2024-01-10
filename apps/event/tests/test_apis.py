@@ -234,12 +234,14 @@ class TestUpdateEvent(HelixGraphQLTestCase):
             "eventCodes": [
                 {
                     "id": self.event_code1.id,
+                    "uuid": str(uuid4()),
                     "country": country1.id,
                     "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
                     "eventCode": "NEP-2021-AAA"
                 },
                 {
                     "country": country1.id,
+                    "uuid": str(uuid4()),
                     "eventCodeType": "IFRC_APPEAL_ID",
                     "eventCode": "NEP-2021-CCC"
                 },

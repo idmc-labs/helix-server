@@ -1,3 +1,8 @@
+ARRAY_SEPARATOR = '; '
+FIELD_SEPARATOR = ':'
+TUPLE_SEPARATOR = ', '
+
+
 def get_event_code(event_codes, type=None):
     from apps.event.models import EventCode
 
@@ -8,11 +13,12 @@ def get_event_code(event_codes, type=None):
         return
 
     # FIXME: We also get aggregation when there is not data
-    splitted_event_codes = [event_code.split(':') for event_code in event_codes if event_code != '::']
+    splitted_event_codes = [event_code.split(FIELD_SEPARATOR) for event_code in event_codes
+                            if event_code != f'{FIELD_SEPARATOR}{FIELD_SEPARATOR}']
 
     # TODO: get country as well
 
-    return '; '.join([
+    return ARRAY_SEPARATOR.join([
         event_code[0] if type == 'code'
         else _get_event_code_label(int(event_code[1])
                                    if type == 'code_type' else event_code[2])
