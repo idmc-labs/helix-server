@@ -93,7 +93,7 @@ class TestBulkOperation(HelixGraphQLTestCase):
               filters {
                 figureRole {
                     figure {
-                        filterCreatedBy
+                        filterFigureCreatedBy
                         filterFigureRoles
                         filterFigureIds
                     }
@@ -113,6 +113,7 @@ class TestBulkOperation(HelixGraphQLTestCase):
 
     def setUp(self) -> None:
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.another_editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.country = CountryFactory.create()
         self.event = EventFactory.create(created_by=self.editor)
         self.event.countries.set([self.country])
@@ -125,8 +126,15 @@ class TestBulkOperation(HelixGraphQLTestCase):
         self.force_login(self.editor)
 
     def test_bulk_figure_role(self):
-        fig1, fig2, fig3 = FigureFactory.create_batch(3, **self.figure_kwargs, role=Figure.ROLE.TRIANGULATION)
+        fig1, *_ = FigureFactory.create_batch(3, **self.figure_kwargs, role=Figure.ROLE.TRIANGULATION)
         fig4 = FigureFactory.create(**self.figure_kwargs, role=Figure.ROLE.RECOMMENDED)
+        FigureFactory.create(
+            **{
+                **self.figure_kwargs,
+                'created_by': self.another_editor,
+            },
+            role=Figure.ROLE.RECOMMENDED,
+        )
 
         def _generate_payload(update_role, **filters):
             return {
@@ -135,7 +143,7 @@ class TestBulkOperation(HelixGraphQLTestCase):
                     'filters': {
                         'figureRole': {
                             'figure': {
-                                'filterCreatedBy': [str(self.editor.pk)],
+                                'filterFigureCreatedBy': [str(self.editor.pk)],
                                 **filters,
                             }
                         },
@@ -161,6 +169,7 @@ class TestBulkOperation(HelixGraphQLTestCase):
             self.assertEqual(operation.errors, errors)
             self.assertEqual(operation.status, BulkApiOperation.BULK_OPERATION_STATUS.FINISHED)
 
+        figure_qs = Figure.objects.filter(created_by=self.editor)
         # Try 0 - Invalid request
         variables = {
             'data': {
@@ -177,8 +186,8 @@ class TestBulkOperation(HelixGraphQLTestCase):
         assert len(content['errors']) == 2
 
         # Try 1
-        assert Figure.objects.filter(role=Figure.ROLE.TRIANGULATION).count() == 3
-        assert Figure.objects.filter(role=Figure.ROLE.RECOMMENDED).count() == 1
+        assert figure_qs.filter(role=Figure.ROLE.TRIANGULATION).count() == 3
+        assert figure_qs.filter(role=Figure.ROLE.RECOMMENDED).count() == 1
         variables = _generate_payload(
             Figure.ROLE.RECOMMENDED,
             # Filters
@@ -190,8 +199,8 @@ class TestBulkOperation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         content = response.json()['data']['triggerBulkOperation']
         _basic_check(variables, content, 3, 0, [None] * 3)
-        assert Figure.objects.filter(role=Figure.ROLE.TRIANGULATION).count() == 0
-        assert Figure.objects.filter(role=Figure.ROLE.RECOMMENDED).count() == 4
+        assert figure_qs.filter(role=Figure.ROLE.TRIANGULATION).count() == 0
+        assert figure_qs.filter(role=Figure.ROLE.RECOMMENDED).count() == 4
 
         # Try 2
         variables = _generate_payload(
@@ -205,8 +214,8 @@ class TestBulkOperation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         content = response.json()['data']['triggerBulkOperation']
         _basic_check(variables, content, 0, 0, [])
-        assert Figure.objects.filter(role=Figure.ROLE.TRIANGULATION).count() == 0
-        assert Figure.objects.filter(role=Figure.ROLE.RECOMMENDED).count() == 4
+        assert figure_qs.filter(role=Figure.ROLE.TRIANGULATION).count() == 0
+        assert figure_qs.filter(role=Figure.ROLE.RECOMMENDED).count() == 4
 
         # Try 3
         variables = _generate_payload(
@@ -220,8 +229,8 @@ class TestBulkOperation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         content = response.json()['data']['triggerBulkOperation']
         _basic_check(variables, content, 4, 0, [None] * 4)
-        assert Figure.objects.filter(role=Figure.ROLE.TRIANGULATION).count() == 4
-        assert Figure.objects.filter(role=Figure.ROLE.RECOMMENDED).count() == 0
+        assert figure_qs.filter(role=Figure.ROLE.TRIANGULATION).count() == 4
+        assert figure_qs.filter(role=Figure.ROLE.RECOMMENDED).count() == 0
 
         # Try 3 - With explicit ids
         variables = _generate_payload(
@@ -235,8 +244,8 @@ class TestBulkOperation(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         content = response.json()['data']['triggerBulkOperation']
         _basic_check(variables, content, 2, 0, [None] * 2)
-        assert Figure.objects.filter(role=Figure.ROLE.TRIANGULATION).count() == 2
-        assert Figure.objects.filter(role=Figure.ROLE.RECOMMENDED).count() == 2
+        assert figure_qs.filter(role=Figure.ROLE.TRIANGULATION).count() == 2
+        assert figure_qs.filter(role=Figure.ROLE.RECOMMENDED).count() == 2
 
         # Try 3 - background task will not run
         variables = _generate_payload(
@@ -280,5 +289,5 @@ class TestBulkOperation(HelixGraphQLTestCase):
             ), content
 
         # This shouldn't change at all
-        assert Figure.objects.filter(role=Figure.ROLE.TRIANGULATION).count() == 2
-        assert Figure.objects.filter(role=Figure.ROLE.RECOMMENDED).count() == 2
+        assert figure_qs.filter(role=Figure.ROLE.TRIANGULATION).count() == 2
+        assert figure_qs.filter(role=Figure.ROLE.RECOMMENDED).count() == 2
