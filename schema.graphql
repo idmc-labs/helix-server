@@ -1535,6 +1535,7 @@ type EventType {
   includeTriangulationInQa: Boolean!
   eventReviews: [UnifiedReviewCommentType!]!
   notifications: [GenericNotificationType!]!
+  eventCode: [EventCodeType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
   eventTypeDisplay: EnumDescription

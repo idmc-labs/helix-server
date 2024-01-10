@@ -8,6 +8,7 @@ from django_enumfield import enum
 from django.contrib.postgres.fields import ArrayField
 from django.forms import model_to_dict
 from django.db.models.functions import Concat
+from django.conf import settings
 
 from utils.common import add_clone_prefix
 
@@ -20,6 +21,7 @@ from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
 from apps.users.models import User, USER_ROLE
+from apps.common.utils import get_event_code
 
 
 class NameAttributedModels(models.Model):
@@ -422,7 +424,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             actor__name='Actor',
             context_of_violences='Context of violences',
             event_codes='Event code',
-            event_code_type='Event code type',
+            event_code_type='Event Code Type',
+            event_code_iso3='Event Code ISO3',
         )
 
         data = EventFilter(
@@ -439,32 +442,15 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             event_codes=ArrayAgg(
                 Concat(
                     F('event_code__event_code'),
-                    Value(':'),
+                    Value(f'{settings.EXPORT_DATA_SEPARATOR}'),
                     F('event_code__event_code_type'),
-                    Value(':'),
+                    Value(f'{settings.EXPORT_DATA_SEPARATOR}'),
                     F('event_code__country__iso3'),
                     output_field=models.CharField(),
                 ),
                 distinct=True,
             ),
         ).order_by('created_at')
-
-        def get_event_code(event_codes, type=None):
-            def _get_event_code_label(key):
-                obj = EventCode.EVENT_CODE_TYPE.get(key)
-                return getattr(obj, "label", key)
-            if not event_codes or event_codes == '':
-                return
-
-            # FIXME: We also get aggregation when there is not data
-            splitted_event_codes = [event_code.split(':') for event_code in event_codes if event_code != '::']
-
-            # TODO: get country as well
-
-            return ';'.join([
-                event_code[0] if type == 'code' else _get_event_code_label(int(event_code[1]))
-                for event_code in splitted_event_codes
-            ])
 
         def transformer(datum):
             return {
@@ -473,15 +459,16 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'label', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'label', ''),
                     event_codes=get_event_code(datum['event_codes'], type='code'),
-                    event_code_type=get_event_code(datum['event_codes'], type='code_type')
-                    # FIXME:
-                    # Add event_codes_iso column as well
+                    event_code_type=get_event_code(datum['event_codes'], type='code_type'),
+                    event_code_iso3=get_event_code(datum['event_codes'], type='iso3'),
                 )
             }
 
         return {
             'headers': headers,
-            'data': data.values(*[header for header in headers.keys() if header != 'event_code_type']),
+            'data': data.values(
+                *[header for header in headers.keys() if header not in ['event_code_type', 'event_code_iso3']]
+            ),
             'formulae': None,
             'transformer': transformer,
         }
