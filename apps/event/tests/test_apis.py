@@ -285,6 +285,19 @@ class TestUpdateEvent(HelixGraphQLTestCase):
             EventCode.EVENT_CODE_TYPE.GOV_ASSIGNED_IDENTIFIER.value
         )
 
+        self.input["eventCodes"] = []
+
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['updateEvent']['ok'], content)
+        self.assertIsNone(content['data']['updateEvent']['errors'], content)
+        self.assertEqual(len(content['data']['updateEvent']['result']['eventCodes']), 0)
+
     def test_invalid_update_event_by_guest(self):
         guest = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(guest)

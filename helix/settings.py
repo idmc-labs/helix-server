@@ -28,6 +28,8 @@ APPS_DIR = os.path.join(BASE_DIR, APPS_DIRNAME)
 
 DEVELOPMENT_ENV = 'development'
 
+EXPORT_DATA_SEPARATOR = ':'
+
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
     ENABLE_DEBUG_TOOLBAR=(bool, False),

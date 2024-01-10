@@ -36,6 +36,7 @@ from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
 from apps.common.enums import GENDER_TYPE
 from apps.notification.models import Notification
+from apps.common.utils import get_event_code
 from .documents import README_DATA
 
 logger = logging.getLogger(__name__)
@@ -1004,11 +1005,9 @@ class Figure(MetaInformationArchiveAbstractModel,
             event_code=ArrayAgg(
                 Concat(
                     F('event__event_code__event_code'),
-                    Value(':'),
+                    Value(f'{settings.EXPORT_DATA_SEPARATOR}'),
                     F('event__event_code__event_code_type'),
-                    # NOTE: we do not need the value for iso3 as
-                    # we have already filtered by the figure's country
-                    Value(':'),
+                    Value(f'{settings.EXPORT_DATA_SEPARATOR}'),
                     F('event__event_code__country__iso3'),
                     output_field=models.CharField(),
                 ),
@@ -1020,28 +1019,11 @@ class Figure(MetaInformationArchiveAbstractModel,
         ).values(*[header for header in headers.keys() if header != 'event_code_type'])
 
         def transformer(datum):
-            from apps.event.models import EventCode
 
             def get_enum_label(key, Enum):
                 val = datum[key]
                 obj = Enum.get(val)
                 return getattr(obj, "label", val)
-
-            def get_event_code(event_codes, type=None):
-                def _get_event_code_label(key):
-                    obj = EventCode.EVENT_CODE_TYPE.get(key)
-                    return getattr(obj, "label", key)
-
-                if not event_codes:
-                    return
-
-                # FIXME: We also get aggregation when there is not data
-                splitted_event_codes = [event_code.split(':') for event_code in event_codes if event_code != ':']
-
-                return ';'.join([
-                    event_code[0] if type == 'code' else _get_event_code_label(int(event_code[1]))
-                    for event_code in splitted_event_codes
-                ])
 
             return {
                 **datum,

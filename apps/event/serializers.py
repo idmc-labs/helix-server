@@ -50,6 +50,12 @@ class EventCodeUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = EventCode
         exclude = ['event']
+        extra_kwargs = {
+            'uuid': {
+                'validators': [],
+                'required': True
+            },
+        }
 
 
 class EventSerializer(MetaInformationSerializerMixin,
@@ -257,9 +263,11 @@ class EventSerializer(MetaInformationSerializerMixin,
         instance = super().update(instance, validated_data)
 
         # Update Event Codes
-        if event_codes:
-            instance_event_codes_qs = EventCode.objects.filter(event=instance)
+        instance_event_codes_qs = EventCode.objects.filter(event=instance)
+        if event_codes == []:
+            instance_event_codes_qs.delete()
 
+        if event_codes:
             event_code_to_delete_qs = instance_event_codes_qs.exclude(
                 id__in=[each['id'] for each in event_codes if each.get('id')]
             )

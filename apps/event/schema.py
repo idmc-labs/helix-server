@@ -188,15 +188,14 @@ class EventCodeType(DjangoObjectType):
 
     class Meta:
         model = EventCode
-        exclude_fields = ('event',)
+        fields = ('id', 'uuid', 'event_code', 'event_code_type', 'country')
 
 
 class EventType(DjangoObjectType):
 
     class Meta:
         model = Event
-
-        exclude_fields = ('figures', 'gidd_events', 'event_code', 'glide_numbers')
+        exclude_fields = ('figures', 'gidd_events', 'glide_numbers')
 
     event_type = graphene.Field(CrisisTypeGrapheneEnum)
     event_type_display = EnumDescription(source='get_event_type_display')
