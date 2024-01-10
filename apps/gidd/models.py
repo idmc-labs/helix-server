@@ -90,7 +90,7 @@ class Disaster(models.Model):
     hazard_sub_type_name = models.CharField(max_length=256, blank=True)
     hazard_type_name = models.CharField(max_length=256, blank=True)
 
-    # Depricated
+    # Deprecated
     glide_numbers = ArrayField(
         models.CharField(
             verbose_name=_('Event Codes'), max_length=256

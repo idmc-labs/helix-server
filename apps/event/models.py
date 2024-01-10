@@ -422,7 +422,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             actor__name='Actor',
             context_of_violences='Context of violences',
             event_codes='Event code',
-            event_code_type='Event Code Type',
+            event_code_type='Event code type',
         )
 
         data = EventFilter(
@@ -461,7 +461,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
 
             # TODO: get country as well
 
-            return ', '.join([
+            return ';'.join([
                 event_code[0] if type == 'code' else _get_event_code_label(int(event_code[1]))
                 for event_code in splitted_event_codes
             ])
@@ -474,6 +474,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'label', ''),
                     event_codes=get_event_code(datum['event_codes'], type='code'),
                     event_code_type=get_event_code(datum['event_codes'], type='code_type')
+                    # FIXME:
+                    # Add event_codes_iso column as well
                 )
             }
 

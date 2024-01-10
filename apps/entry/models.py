@@ -1006,6 +1006,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                     F('event__event_code__event_code'),
                     Value(':'),
                     F('event__event_code__event_code_type'),
+                    # NOTE: we do not need the value for iso3 as
+                    # we have already filtered by the figure's country
                     Value(':'),
                     F('event__event_code__country__iso3'),
                     output_field=models.CharField(),
@@ -1036,7 +1038,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 # FIXME: We also get aggregation when there is not data
                 splitted_event_codes = [event_code.split(':') for event_code in event_codes if event_code != ':']
 
-                return ', '.join([
+                return ';'.join([
                     event_code[0] if type == 'code' else _get_event_code_label(int(event_code[1]))
                     for event_code in splitted_event_codes
                 ])
