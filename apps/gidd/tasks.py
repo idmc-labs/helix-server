@@ -23,7 +23,7 @@ from .models import (
 )
 from apps.country.models import Country
 from apps.report.models import Report
-from apps.event.models import EventCode
+from apps.common.utils import get_event_code
 
 
 logging.basicConfig(level=logging.INFO)
@@ -149,22 +149,6 @@ def update_gidd_legacy_data():
 
 
 def update_conflict_and_disaster_data():
-    def get_event_code(event_codes, type=None):
-        def _get_event_code_label(key):
-            obj = EventCode.EVENT_CODE_TYPE.get(key)
-            return getattr(obj, "label", key)
-
-        if not event_codes:
-            return
-
-        # FIXME: We also get aggregation when there is not data
-        splitted_event_codes = [event_code.split(':') for event_code in event_codes if event_code != ':']
-
-        return ', '.join([
-            event_code[0] if type == 'code' else _get_event_code_label(int(event_code[1]))
-            for event_code in splitted_event_codes
-        ]).split(',')
-
     figure_queryset = Figure.objects.filter(
         role=Figure.ROLE.RECOMMENDED
     )

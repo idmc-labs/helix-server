@@ -1418,7 +1418,7 @@ type EventCodeType {
 
 input EventCodeUpdateInputType {
   id: ID
-  uuid: String
+  uuid: String!
   eventCodeType: EVENT_CODE_TYPE!
   eventCode: String!
   country: ID!
