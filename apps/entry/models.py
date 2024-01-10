@@ -977,7 +977,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             geolocation_list=StringAgg(
                 Concat(
                     F('geo_locations__lat'),
-                    Value(','),
+                    Value(', '),
                     F('geo_locations__lon'),
                     output_field=models.CharField(),
                     distinct=True

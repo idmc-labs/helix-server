@@ -12,7 +12,7 @@ def get_event_code(event_codes, type=None):
 
     # TODO: get country as well
 
-    return ', '.join([
+    return '; '.join([
         event_code[0] if type == 'code'
         else _get_event_code_label(int(event_code[1])
                                    if type == 'code_type' else event_code[2])
