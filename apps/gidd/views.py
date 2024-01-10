@@ -126,8 +126,8 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                     disaster.hazard_category_name,
                     disaster.hazard_type_name,
                     disaster.hazard_sub_type_name,
-                    ';'.join([code for code in disaster.event_code]) or None,
-                    ';'.join([code_type for code_type in disaster.event_code_type]) or None,
+                    '; '.join([code for code in disaster.event_code]) or None,
+                    '; '.join([code_type for code_type in disaster.event_code_type]) or None,
                 ]
             )
 

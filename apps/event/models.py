@@ -438,7 +438,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             figures_count=models.Count('figures', distinct=True),
             entries_count=models.Count('figures__entry', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
-            context_of_violences=StringAgg('context_of_violence__name', ';', distinct=True),
+            context_of_violences=StringAgg('context_of_violence__name', '; ', distinct=True),
             event_codes=ArrayAgg(
                 Concat(
                     F('event_code__event_code'),
