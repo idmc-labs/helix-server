@@ -23,7 +23,7 @@ from .models import (
 )
 from apps.country.models import Country
 from apps.report.models import Report
-from apps.common.utils import get_event_code
+from apps.common.utils import get_event_code_gidd
 
 
 logging.basicConfig(level=logging.INFO)
@@ -283,8 +283,8 @@ def update_conflict_and_disaster_data():
                     iso3=item['country__iso3'],
                     country_id=item['country'],
                     country_name=item['country__idmc_short_name'],
-                    event_code=get_event_code(item['event_code'], type='code') or [],
-                    event_code_type=get_event_code(item['event_code'], type='code_type') or [],
+                    event_code=get_event_code_gidd(item['event_code'], type='code') or [],
+                    event_code_type=get_event_code_gidd(item['event_code'], type='code_type') or [],
                 ) for item in disasters
             ]
         )
