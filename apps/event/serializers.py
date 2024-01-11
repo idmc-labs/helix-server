@@ -1,3 +1,4 @@
+import typing
 from collections import OrderedDict
 
 from django.core.exceptions import ValidationError
@@ -165,6 +166,40 @@ class EventSerializer(MetaInformationSerializerMixin,
             ))
         return errors
 
+    def _update_event_codes(self, event: Event, event_codes: typing.List[typing.Dict]):
+        instance_event_codes_qs = EventCode.objects.filter(event=event)
+
+        # For empty - Delete all
+        if not event_codes:
+            instance_event_codes_qs.delete()
+            return
+
+        # Delete missing event_codes
+        event_code_to_delete_qs = instance_event_codes_qs.exclude(
+            id__in=[
+                each['id']
+                for each in event_codes
+                if each.get('id')
+            ]
+        )
+        event_code_to_delete_qs.delete()
+
+        # Update provided event_codes
+        for code in event_codes:
+            if not code.get('id'):
+                # Create new
+                event_code_ser = EventCodeSerializer(context=self.context)
+            else:
+                # Update existing
+                event_code_ser = EventCodeUpdateSerializer(
+                    instance=instance_event_codes_qs.get(id=code['id']),
+                    partial=True,
+                    context=self.context,
+                )
+            event_code_ser._validated_data = {**code, 'event': event}
+            event_code_ser._errors = {}
+            event_code_ser.save()
+
     def _update_parent_fields(self, attrs):
         disaster_sub_type = attrs.get('disaster_sub_type', self.instance and self.instance.disaster_sub_type)
         violence_sub_type = attrs.get('violence_sub_type', self.instance and self.instance.violence_sub_type)
@@ -253,38 +288,19 @@ class EventSerializer(MetaInformationSerializerMixin,
         # Update event status if include_triangulation_in_qa is changed
         validated_data['last_modified_by'] = self.context['request'].user
 
-        event_codes = validated_data.pop("event_codes", None)
-
         is_include_triangulation_in_qa_changed = False
         if 'include_triangulation_in_qa' in validated_data:
             new_include_triangulation_in_qa = validated_data.get('include_triangulation_in_qa')
             is_include_triangulation_in_qa_changed = new_include_triangulation_in_qa != instance.include_triangulation_in_qa
 
-        instance = super().update(instance, validated_data)
-
         # Update Event Codes
-        instance_event_codes_qs = EventCode.objects.filter(event=instance)
-        if event_codes == []:
-            instance_event_codes_qs.delete()
-
-        if event_codes:
-            event_code_to_delete_qs = instance_event_codes_qs.exclude(
-                id__in=[each['id'] for each in event_codes if each.get('id')]
+        if "event_codes" in validated_data:
+            self._update_event_codes(
+                instance,
+                validated_data.pop('event_codes'),
             )
-            event_code_to_delete_qs.delete()
 
-            for code in event_codes:
-                if not code.get('id'):
-                    event_code_ser = EventCodeSerializer(context=self.context)
-                else:
-                    event_code_ser = EventCodeUpdateSerializer(
-                        instance=instance_event_codes_qs.get(id=code['id']),
-                        partial=True,
-                        context=self.context,
-                    )
-                event_code_ser._validated_data = {**code, 'event': instance}
-                event_code_ser._errors = {}
-                event_code_ser.save()
+        instance = super().update(instance, validated_data)
 
         if is_include_triangulation_in_qa_changed:
             recipients = [user['id'] for user in Event.regional_coordinators(
