@@ -423,8 +423,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             actor__name='Actor',
             context_of_violences='Context of violences',
             event_codes='Event code',
-            event_code_type='Event Code Type',
-            event_code_iso3='Event Code ISO3',
+            event_code_type='Event code type',
+            event_code_iso3='Event code ISO3',
         )
 
         data = EventFilter(

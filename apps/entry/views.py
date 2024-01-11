@@ -12,6 +12,7 @@ from django.shortcuts import redirect
 
 from apps.gidd.views import client_id
 from utils.common import track_gidd
+from apps.common.utils import TUPLE_SEPARATOR
 
 
 def get_idu_data():
@@ -41,7 +42,7 @@ def get_idu_data():
                 then=Concat(
                     Value('['),
                     F('centroid_lat'),
-                    Value(', '),
+                    Value(TUPLE_SEPARATOR),
                     F('centroid_lon'),
                     Value(']'),
                     output_field=CharField()

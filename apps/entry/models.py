@@ -31,7 +31,7 @@ from apps.contrib.models import (
 )
 from utils.common import get_string_from_list
 from utils.fields import CachedFileField, generate_full_media_url
-from apps.common.utils import ARRAY_SEPARATOR
+from apps.common.utils import ARRAY_SEPARATOR, TUPLE_SEPARATOR
 from apps.contrib.commons import DATE_ACCURACY
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
@@ -890,7 +890,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             created_by__full_name='Created by',
             last_modified_by__full_name='Updated by',
             event_code='Event code',
-            event_code_type='Event Code Type',
+            event_code_type='Event code type',
         )
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
@@ -973,12 +973,15 @@ class Figure(MetaInformationArchiveAbstractModel,
                 distinct=True, filter=Q(geo_locations__identifier__isnull=False)
             ),
             centroid=Concat(
-                F('centroid_lat'), Value(','), F('centroid_lon'), output_field=models.CharField()
+                F('centroid_lat'),
+                Value(TUPLE_SEPARATOR),
+                F('centroid_lon'),
+                output_field=models.CharField()
             ),
             geolocation_list=StringAgg(
                 Concat(
                     F('geo_locations__lat'),
-                    Value(', '),
+                    Value(TUPLE_SEPARATOR),
                     F('geo_locations__lon'),
                     output_field=models.CharField(),
                     distinct=True
