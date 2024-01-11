@@ -36,7 +36,7 @@ from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
 from apps.common.enums import GENDER_TYPE
 from apps.notification.models import Notification
-from apps.common.utils import get_event_code, FIELD_SEPARATOR
+from apps.common.utils import get_attr_str_from_event_codes, INTERNAL_SEPARATOR
 from .documents import README_DATA
 
 logger = logging.getLogger(__name__)
@@ -1005,9 +1005,9 @@ class Figure(MetaInformationArchiveAbstractModel,
             event_code=ArrayAgg(
                 Concat(
                     F('event__event_code__event_code'),
-                    Value(FIELD_SEPARATOR),
+                    Value(INTERNAL_SEPARATOR),
                     F('event__event_code__event_code_type'),
-                    Value(FIELD_SEPARATOR),
+                    Value(INTERNAL_SEPARATOR),
                     F('event__event_code__country__iso3'),
                     output_field=models.CharField(),
                 ),
@@ -1078,8 +1078,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                     'review_status', Figure.FIGURE_REVIEW_STATUS
                 ),
                 'is_disaggregated': 'Yes' if datum['is_disaggregated'] else 'No',
-                'event_code': get_event_code(datum['event_code'], type='code'),
-                'event_code_type': get_event_code(datum['event_code'], type='code_type'),
+                'event_code': get_attr_str_from_event_codes(datum['event_code'], type='code'),
+                'event_code_type': get_attr_str_from_event_codes(datum['event_code'], type='code_type'),
             }
 
         readme_data = [

@@ -28,6 +28,7 @@ from apps.event.dataloaders import (
     EventTypologyLoader,
     EventFigureTypologyLoader,
     EventReviewCountLoader,
+    EventCodeLoader,
 )
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 from apps.entry.models import Figure
@@ -179,3 +180,7 @@ class GQLContext:
     @cached_property
     def user_portfolio_role_loader(self):
         return UserPortfolioRoleLoader()
+
+    @cached_property
+    def event_code_loader(self):
+        return EventCodeLoader()

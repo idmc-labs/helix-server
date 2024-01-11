@@ -23,7 +23,7 @@ from .models import (
 )
 from apps.country.models import Country
 from apps.report.models import Report
-from apps.common.utils import get_event_code_gidd
+from apps.common.utils import get_attr_list_from_event_codes
 
 
 logging.basicConfig(level=logging.INFO)
@@ -212,6 +212,7 @@ def update_conflict_and_disaster_data():
             'event__end_date',
             'event__start_date_accuracy',
             'event__end_date_accuracy',
+            'event__glide_numbers',
             'country',
             'country__iso3',
             'country__idmc_short_name',
@@ -271,6 +272,7 @@ def update_conflict_and_disaster_data():
                     hazard_sub_category_name=item['event__disaster_sub_category__name'],
                     hazard_type_name=item['event__disaster_type__name'],
                     hazard_sub_type_name=item['event__disaster_sub_type__name'],
+                    glide_numbers=item['event__glide_numbers'] or list(),
 
                     new_displacement=item['new_displacement'],
                     total_displacement=item['total_displacement'],
@@ -283,8 +285,8 @@ def update_conflict_and_disaster_data():
                     iso3=item['country__iso3'],
                     country_id=item['country'],
                     country_name=item['country__idmc_short_name'],
-                    event_code=get_event_code_gidd(item['event_code'], type='code') or [],
-                    event_code_type=get_event_code_gidd(item['event_code'], type='code_type') or [],
+                    event_code=get_attr_list_from_event_codes(item['event_code'], type='code') or [],
+                    event_code_type=get_attr_list_from_event_codes(item['event_code'], type='code_type') or [],
                 ) for item in disasters
             ]
         )

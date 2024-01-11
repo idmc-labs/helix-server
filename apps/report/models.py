@@ -4,6 +4,8 @@ import logging
 from uuid import uuid4
 
 from django.contrib.auth import get_user_model
+from django.contrib.postgres.aggregates.general import ArrayAgg
+from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
 from django.db.models import (
     Sum,
@@ -11,7 +13,9 @@ from django.db.models import (
     Exists,
     OuterRef,
     Value,
+    F,
 )
+from django.db.models.functions import Concat
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django_enumfield import enum
@@ -40,6 +44,7 @@ from apps.report.utils import (
     report_disaster_country,
     report_disaster_region,
 )
+from apps.common.utils import FIELD_SEPARATOR
 
 
 logger = logging.getLogger(__name__)
@@ -648,7 +653,6 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'name',
                 'event_type',
                 'other_sub_type',
-                'glide_numbers',
                 'violence',
                 'violence_sub_type',
                 'actor',
@@ -672,6 +676,27 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'last_modified_by',
                 'version_id',
                 'old_id',
+            ).annotate(
+                event_code=models.Func(
+                    ArrayAgg(
+                        models.Case(
+                            models.When(
+                                event_code__isnull=False,
+                                then=Concat(
+                                    F('event_code__event_code'),
+                                    Value(FIELD_SEPARATOR),
+                                    F('event_code__event_code_type'),
+                                    Value(FIELD_SEPARATOR),
+                                    F('event_code__country__iso3'),
+                                ),
+                            ),
+                            output_field=models.CharField(),
+                        ),
+                    ),
+                    None,
+                    function='array_remove',
+                    output_field=ArrayField(models.CharField()),
+                ),
             ),
         )
 
