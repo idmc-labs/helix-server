@@ -15,6 +15,7 @@ from rest_framework import viewsets
 from helix import redis
 from helix.caches import external_api_cache
 from apps.contrib.redis_client_track import track_client
+from apps.common.utils import ARRAY_SEPARATOR
 
 
 logger = logging.getLogger(__name__)
@@ -86,7 +87,7 @@ def generate_storage_url_from_path(file_path):
 
 
 def get_string_from_list(list_of_string):
-    return '; '.join(filter(None, list_of_string))
+    return ARRAY_SEPARATOR.join(filter(None, list_of_string))
 
 
 def get_temp_file(dir=settings.TEMP_FILE_DIRECTORY, **kwargs):

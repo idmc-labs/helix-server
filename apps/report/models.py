@@ -44,7 +44,7 @@ from apps.report.utils import (
     report_disaster_country,
     report_disaster_region,
 )
-from apps.common.utils import FIELD_SEPARATOR
+from apps.common.utils import FIELD_SEPARATOR, ARRAY_SEPARATOR
 
 
 logger = logging.getLogger(__name__)
@@ -259,7 +259,7 @@ class Report(MetaInformationArchiveAbstractModel,
             total_stock_disaster_sum=Value(0, output_field=models.IntegerField()),
             remarks=Value('', output_field=models.CharField()),
             iso3=StringAgg(
-                'filter_figure_countries__iso3', '; ',
+                'filter_figure_countries__iso3', ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
         ).order_by('created_at')

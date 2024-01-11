@@ -11,6 +11,8 @@ from rest_framework import mixins
 from drf_spectacular.utils import extend_schema
 
 from apps.country.models import Country
+from apps.common.utils import ARRAY_SEPARATOR
+
 from .models import (
     Conflict, Disaster, DisplacementData, IdpsSaddEstimate,
     StatusLog, PublicFigureAnalysis
@@ -126,8 +128,8 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                     disaster.hazard_category_name,
                     disaster.hazard_type_name,
                     disaster.hazard_sub_type_name,
-                    '; '.join([code for code in disaster.event_code]) or None,
-                    '; '.join([code_type for code_type in disaster.event_code_type]) or None,
+                    ARRAY_SEPARATOR.join([code for code in disaster.event_code]) or None,
+                    ARRAY_SEPARATOR.join([code_type for code_type in disaster.event_code_type]) or None,
                 ]
             )
 

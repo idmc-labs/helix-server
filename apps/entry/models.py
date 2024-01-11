@@ -31,6 +31,7 @@ from apps.contrib.models import (
 )
 from utils.common import get_string_from_list
 from utils.fields import CachedFileField, generate_full_media_url
+from apps.common.utils import ARRAY_SEPARATOR
 from apps.contrib.commons import DATE_ACCURACY
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
@@ -931,36 +932,36 @@ class Figure(MetaInformationArchiveAbstractModel,
             ),
             geolocations=StringAgg(
                 'geo_locations__display_name',
-                '; ',
+                ARRAY_SEPARATOR,
                 filter=~Q(
                     Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name='')
                 ), distinct=True, output_field=models.CharField()
             ),
             publishers_name=StringAgg(
                 'entry__publishers__name',
-                '; ',
+                ARRAY_SEPARATOR,
                 filter=~Q(entry__publishers__name=''),
                 distinct=True, output_field=models.CharField()
             ),
             year=ExtractYear("end_date"),
             context_of_violences=StringAgg(
-                'context_of_violence__name', '; ',
+                'context_of_violence__name', ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             tags_name=StringAgg(
-                'tags__name', '; ',
+                'tags__name', ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             sources_name=StringAgg(
-                'sources__name', '; ',
+                'sources__name', ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             sources_type=StringAgg(
-                'sources__organization_kind__name', '; ',
+                'sources__organization_kind__name', ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             sources_methodology=StringAgg(
-                'sources__methodology', '; ',
+                'sources__methodology', ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             geo_locations_accuracy=ArrayAgg(
@@ -982,7 +983,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                     output_field=models.CharField(),
                     distinct=True
                 ),
-                '; ',
+                ARRAY_SEPARATOR,
                 filter=models.Q(geo_locations__isnull=False),
                 output_field=models.CharField(),
                 distinct=True,
@@ -1380,8 +1381,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            countries=StringAgg('figures__country__idmc_short_name', '; ', distinct=True),
-            countries_iso3=StringAgg('figures__country__iso3', '; ', distinct=True),
+            countries=StringAgg('figures__country__idmc_short_name', ARRAY_SEPARATOR, distinct=True),
+            countries_iso3=StringAgg('figures__country__iso3', ARRAY_SEPARATOR, distinct=True),
             figure_causes=ArrayAgg('figures__figure_cause', distinct=True),
             categories=ArrayAgg('figures__category', distinct=True),
             terms=ArrayAgg('figures__term', distinct=True),
@@ -1389,12 +1390,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             min_fig_end=Min('figures__end_date'),
             max_fig_start=Max('figures__start_date'),
             max_fig_end=Max('figures__end_date'),
-            sources_name=StringAgg('figures__sources__name', '; ', distinct=True),
-            source_types=StringAgg('figures__sources__organization_kind__name', '; ', distinct=True),
-            publishers_name=StringAgg('publishers__name', '; ', distinct=True),
-            publisher_types=StringAgg('publishers__organization_kind__name', '; ', distinct=True),
+            sources_name=StringAgg('figures__sources__name', ARRAY_SEPARATOR, distinct=True),
+            source_types=StringAgg('figures__sources__organization_kind__name', ARRAY_SEPARATOR, distinct=True),
+            publishers_name=StringAgg('publishers__name', ARRAY_SEPARATOR, distinct=True),
+            publisher_types=StringAgg('publishers__organization_kind__name', ARRAY_SEPARATOR, distinct=True),
             figures_count=models.Count('figures', distinct=True),
-            context_of_violences=StringAgg('figures__context_of_violence__name', '; ', distinct=True),
+            context_of_violences=StringAgg('figures__context_of_violence__name', ARRAY_SEPARATOR, distinct=True),
             # **cls._total_figure_disaggregation_subquery(),
         ).order_by('created_at')
 

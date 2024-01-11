@@ -20,7 +20,7 @@ from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
 from apps.users.models import User, USER_ROLE
-from apps.common.utils import get_attr_str_from_event_codes, FIELD_SEPARATOR
+from apps.common.utils import get_attr_str_from_event_codes, FIELD_SEPARATOR, ARRAY_SEPARATOR
 
 
 class NameAttributedModels(models.Model):
@@ -431,13 +431,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
-            countries_name=StringAgg('countries__idmc_short_name', '; ', distinct=True),
-            regions_name=StringAgg('countries__region__name', '; ', distinct=True),
+            countries_iso3=StringAgg('countries__iso3', ARRAY_SEPARATOR, distinct=True),
+            countries_name=StringAgg('countries__idmc_short_name', ARRAY_SEPARATOR, distinct=True),
+            regions_name=StringAgg('countries__region__name', ARRAY_SEPARATOR, distinct=True),
             figures_count=models.Count('figures', distinct=True),
             entries_count=models.Count('figures__entry', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
-            context_of_violences=StringAgg('context_of_violence__name', '; ', distinct=True),
+            context_of_violences=StringAgg('context_of_violence__name', ARRAY_SEPARATOR, distinct=True),
             event_codes=ArrayAgg(
                 Concat(
                     F('event_code__event_code'),

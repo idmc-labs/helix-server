@@ -12,6 +12,7 @@ from apps.report.models import Report
 from utils.filters import StringListFilter, IDListFilter, generate_type_for_filter_set
 from apps.event.constants import OSV
 from apps.common.enums import GENDER_TYPE
+from apps.common.utils import ARRAY_SEPARATOR
 from apps.entry.constants import STOCK, FLOW
 
 MALE = GENDER_TYPE.MALE.name
@@ -609,7 +610,7 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
     def qs(self):
         queryset = super().qs.annotate(
             **Figure.annotate_stock_and_flow_dates(),
-            geolocations=StringAgg('geo_locations__display_name', '; '),
+            geolocations=StringAgg('geo_locations__display_name', ARRAY_SEPARATOR),
             **Figure.annotate_sources_reliability(),
         )
         start_date = self.data.get('filter_figure_start_after')
