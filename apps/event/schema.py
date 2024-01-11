@@ -4,9 +4,14 @@ from graphene_django_extras import DjangoObjectField
 from utils.graphene.enums import EnumDescription
 from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.event.enums import QaRecommendedFigureEnum, EventReviewStatusEnum
+from apps.event.enums import (
+    QaRecommendedFigureEnum,
+    EventReviewStatusEnum,
+    EventCodeTypeGrapheneEnum,
+)
 from apps.event.models import (
     Event,
+    EventCode,
     Violence,
     ViolenceSubType,
     Actor,
@@ -177,11 +182,20 @@ class OtherSubTypeList(CustomDjangoListObjectType):
         filterset_class = OtherSubTypeFilter
 
 
+class EventCodeType(DjangoObjectType):
+    event_code_type = graphene.Field(EventCodeTypeGrapheneEnum)
+    event_code_display = EnumDescription(source='get_event_code_type_display')
+
+    class Meta:
+        model = EventCode
+        fields = ('id', 'uuid', 'event_code', 'event_code_type', 'country')
+
+
 class EventType(DjangoObjectType):
 
     class Meta:
         model = Event
-        exclude_fields = ('figures', 'gidd_events')
+        exclude_fields = ('figures', 'gidd_events', 'glide_numbers')
 
     event_type = graphene.Field(CrisisTypeGrapheneEnum)
     event_type_display = EnumDescription(source='get_event_type_display')
@@ -197,7 +211,6 @@ class EventType(DjangoObjectType):
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
     end_date_accuracy_display = EnumDescription(source='get_end_date_accuracy_display')
     entry_count = graphene.Field(graphene.Int)
-    glide_numbers = graphene.List(graphene.NonNull(graphene.String))
     osv_sub_type = graphene.Field(OsvSubObjectType)
     qa_rule_type = graphene.Field(QaRecommendedFigureEnum)
     qs_rule_type_display = EnumDescription(source='get_qs_rule_type_display')
@@ -206,6 +219,10 @@ class EventType(DjangoObjectType):
     review_status = graphene.Field(EventReviewStatusEnum)
     review_status_display = EnumDescription(source='get_review_status_display')
     review_count = graphene.Field(EventReviewCountType)
+    event_codes = graphene.List(graphene.NonNull(EventCodeType))
+
+    def resolve_event_codes(root, info, **kwargs):
+        return info.context.event_code_loader.load(root.id)
 
     def resolve_entry_count(root, info, **kwargs):
         return info.context.event_entry_count_dataloader.load(root.id)

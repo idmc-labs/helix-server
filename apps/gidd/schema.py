@@ -191,6 +191,8 @@ class GiddDisasterType(DjangoObjectType):
             'hazard_type_name',
             'hazard_sub_type_name',
             'glide_numbers',
+            'event_code',
+            'event_code_type',
         )
 
     @staticmethod
@@ -331,6 +333,14 @@ class GiddEventType(graphene.ObjectType):
     start_date = graphene.Date(required=True)
     end_date = graphene.Date(required=True)
     glide_numbers = graphene.List(
+        graphene.NonNull(graphene.String),
+        required=True,
+    )
+    event_code = graphene.List(
+        graphene.NonNull(graphene.String),
+        required=True,
+    )
+    event_code_type = graphene.List(
         graphene.NonNull(graphene.String),
         required=True,
     )
@@ -728,6 +738,8 @@ class Query(graphene.ObjectType):
             'glide_numbers',
             'start_date',
             'end_date',
+            'event_code',
+            'event_code_type',
         ).order_by().annotate(
             total_new_displacement=models.Sum('new_displacement'),
         )[0]
@@ -751,6 +763,8 @@ class Query(graphene.ObjectType):
             start_date=event_data.get('start_date'),
             end_date=event_data.get('end_date'),
             glide_numbers=event_data.get('glide_numbers'),
+            event_code=event_data.get('event_code'),
+            event_code_type=event_data.get('event_code_type'),
             affected_countries=[
                 GiddEventAffectedCountryType(
                     iso3=country_data['iso3'],

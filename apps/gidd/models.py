@@ -89,9 +89,23 @@ class Disaster(models.Model):
     hazard_sub_category_name = models.CharField(max_length=256, blank=True)
     hazard_sub_type_name = models.CharField(max_length=256, blank=True)
     hazard_type_name = models.CharField(max_length=256, blank=True)
+
+    # Deprecated
     glide_numbers = ArrayField(
         models.CharField(
             verbose_name=_('Event Codes'), max_length=256
+        ),
+        default=list,
+    )
+    event_code = ArrayField(
+        models.CharField(
+            verbose_name=_('Event Codes'), max_length=256
+        ),
+        default=list,
+    )
+    event_code_type = ArrayField(
+        models.CharField(
+            verbose_name=_('Event Code Types'), max_length=256
         ),
         default=list,
     )

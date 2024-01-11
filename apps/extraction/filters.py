@@ -12,6 +12,7 @@ from apps.report.models import Report
 from utils.filters import StringListFilter, IDListFilter, generate_type_for_filter_set
 from apps.event.constants import OSV
 from apps.common.enums import GENDER_TYPE
+from apps.common.utils import ARRAY_SEPARATOR
 from apps.entry.constants import STOCK, FLOW
 
 MALE = GENDER_TYPE.MALE.name
@@ -23,7 +24,6 @@ class EntryExtractionFilterSet(df.FilterSet):
     filter_figure_events = IDListFilter(method='filter_figure_events_')
 
     filter_figure_crises = IDListFilter(method='filter_crises')
-    filter_figure_glide_number = StringListFilter(method='filter_filter_figure_glide_number')
 
     filter_figure_sources = IDListFilter(method='filter_sources')
     filter_entry_publishers = IDListFilter(method='filter_publishers')
@@ -259,11 +259,6 @@ class EntryExtractionFilterSet(df.FilterSet):
             ).distinct()
         return qs
 
-    def filter_filter_figure_glide_number(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(figures__event__glide_numbers__overlap=value).distinct()
-
     def filter_filter_figure_osv_sub_types(self, qs, name, value):
         if value:
             return qs.filter(~Q(figures__event__violence__name=OSV) | Q(figures__osv_sub_type__in=value)).distinct()
@@ -335,7 +330,6 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_entry_article_title = df.CharFilter(field_name='entry__article_title', lookup_expr='unaccent__icontains')
     filter_figure_tags = IDListFilter(method='filter_tags')
     filter_figure_crisis_types = StringListFilter(method='filter_crisis_types')
-    filter_figure_glide_number = StringListFilter(method='filter_filter_figure_glide_number')
     filter_figure_created_by = IDListFilter(method='filter_filter_figure_created_by')
     filter_figure_terms = IDListFilter(method='filter_by_figure_terms')
     filter_figure_disaster_categories = IDListFilter(method='filter_filter_figure_disaster_categories')
@@ -554,11 +548,6 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
             ).distinct()
         return qs
 
-    def filter_filter_figure_glide_number(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(event__glide_numbers__overlap=value).distinct()
-
     def filter_filter_figure_osv_sub_types(self, qs, name, value):
         if value:
             return qs.filter(~Q(event__violence__name=OSV) | Q(osv_sub_type__in=value)).distinct()
@@ -620,7 +609,7 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
     def qs(self):
         queryset = super().qs.annotate(
             **Figure.annotate_stock_and_flow_dates(),
-            geolocations=StringAgg('geo_locations__display_name', '; '),
+            geolocations=StringAgg('geo_locations__display_name', ARRAY_SEPARATOR),
             **Figure.annotate_sources_reliability(),
         )
         start_date = self.data.get('filter_figure_start_after')

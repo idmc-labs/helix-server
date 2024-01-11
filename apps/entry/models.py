@@ -31,11 +31,13 @@ from apps.contrib.models import (
 )
 from utils.common import get_string_from_list
 from utils.fields import CachedFileField, generate_full_media_url
+from apps.common.utils import ARRAY_SEPARATOR
 from apps.contrib.commons import DATE_ACCURACY
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
 from apps.common.enums import GENDER_TYPE
 from apps.notification.models import Notification
+from apps.common.utils import get_attr_str_from_event_codes, FIELD_SEPARATOR
 from .documents import README_DATA
 
 logger = logging.getLogger(__name__)
@@ -789,14 +791,13 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
-        from apps.extraction.filters import FigureExtractionFilterSet
+        from apps.extraction.filters import ReportFigureExtractionFilterSet
 
         class DummyRequest:
             def __init__(self, user):
                 self.user = user
 
-        # TODO: can we use ReportFigureExtractionFilterSet?
-        qs = FigureExtractionFilterSet(
+        qs = ReportFigureExtractionFilterSet(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs
@@ -806,6 +807,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     def get_figure_excel_sheets_data(cls, figures):
 
         from apps.crisis.models import Crisis
+
         headers = OrderedDict(
             id='ID',
             old_id='Old ID',
@@ -872,7 +874,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__id='Event ID',
             event__old_id='Event old ID',
             event__name='Event name',
-            event__glide_numbers='Event code',
             event__event_type='Event cause',
             event_main_trigger='Event main trigger',
             event__start_date='Event start date',
@@ -888,6 +889,8 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__assignee__full_name='Assignee',
             created_by__full_name='Created by',
             last_modified_by__full_name='Updated by',
+            event_code='Event code',
+            event_code_type='Event Code Type',
         )
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
@@ -929,36 +932,36 @@ class Figure(MetaInformationArchiveAbstractModel,
             ),
             geolocations=StringAgg(
                 'geo_locations__display_name',
-                '; ',
+                ARRAY_SEPARATOR,
                 filter=~Q(
                     Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name='')
                 ), distinct=True, output_field=models.CharField()
             ),
             publishers_name=StringAgg(
                 'entry__publishers__name',
-                '; ',
+                ARRAY_SEPARATOR,
                 filter=~Q(entry__publishers__name=''),
                 distinct=True, output_field=models.CharField()
             ),
             year=ExtractYear("end_date"),
             context_of_violences=StringAgg(
-                'context_of_violence__name', '; ',
+                'context_of_violence__name', ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             tags_name=StringAgg(
-                'tags__name', '; ',
+                'tags__name', ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             sources_name=StringAgg(
-                'sources__name', '; ',
+                'sources__name', ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             sources_type=StringAgg(
-                'sources__organization_kind__name', '; ',
+                'sources__organization_kind__name', ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             sources_methodology=StringAgg(
-                'sources__methodology', '; ',
+                'sources__methodology', ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             geo_locations_accuracy=ArrayAgg(
@@ -975,12 +978,12 @@ class Figure(MetaInformationArchiveAbstractModel,
             geolocation_list=StringAgg(
                 Concat(
                     F('geo_locations__lat'),
-                    Value(','),
+                    Value(', '),
                     F('geo_locations__lon'),
                     output_field=models.CharField(),
                     distinct=True
                 ),
-                '; ',
+                ARRAY_SEPARATOR,
                 filter=models.Q(geo_locations__isnull=False),
                 output_field=models.CharField(),
                 distinct=True,
@@ -999,17 +1002,24 @@ class Figure(MetaInformationArchiveAbstractModel,
                     then=F('event__other_sub_type__name')
                 ),
                 output_field=models.CharField()
-            )
+            ),
+            event_code=ArrayAgg(
+                Concat(
+                    F('event__event_code__event_code'),
+                    Value(FIELD_SEPARATOR),
+                    F('event__event_code__event_code_type'),
+                    Value(FIELD_SEPARATOR),
+                    F('event__event_code__country__iso3'),
+                    output_field=models.CharField(),
+                ),
+                distinct=True,
+                filter=models.Q(event__event_code__country__id=F('country__id')),
+            ),
         ).order_by(
             'created_at',
-        ).values(*[header for header in headers.keys()])
+        ).values(*[header for header in headers.keys() if header != 'event_code_type'])
 
         def transformer(datum):
-
-            def format_glide_numbers(glide_numbers):
-                if not glide_numbers:
-                    return ''
-                return get_string_from_list(str(glide_number) for glide_number in glide_numbers)
 
             def get_enum_label(key, Enum):
                 val = datum[key]
@@ -1056,7 +1066,6 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 'source_document': generate_full_media_url(datum['source_document'], absolute=True),
                 'centroid': datum['centroid'],
-                'event__glide_numbers': format_glide_numbers(datum['event__glide_numbers']),
                 'event__event_type': get_enum_label(
                     'event__event_type', Crisis.CRISIS_TYPE
                 ),
@@ -1070,6 +1079,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                     'review_status', Figure.FIGURE_REVIEW_STATUS
                 ),
                 'is_disaggregated': 'Yes' if datum['is_disaggregated'] else 'No',
+                'event_code': get_attr_str_from_event_codes(datum['event_code'], type='code'),
+                'event_code_type': get_attr_str_from_event_codes(datum['event_code'], type='code_type'),
             }
 
         readme_data = [
@@ -1370,8 +1381,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            countries=StringAgg('figures__country__idmc_short_name', '; ', distinct=True),
-            countries_iso3=StringAgg('figures__country__iso3', '; ', distinct=True),
+            countries=StringAgg('figures__country__idmc_short_name', ARRAY_SEPARATOR, distinct=True),
+            countries_iso3=StringAgg('figures__country__iso3', ARRAY_SEPARATOR, distinct=True),
             figure_causes=ArrayAgg('figures__figure_cause', distinct=True),
             categories=ArrayAgg('figures__category', distinct=True),
             terms=ArrayAgg('figures__term', distinct=True),
@@ -1379,12 +1390,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             min_fig_end=Min('figures__end_date'),
             max_fig_start=Max('figures__start_date'),
             max_fig_end=Max('figures__end_date'),
-            sources_name=StringAgg('figures__sources__name', '; ', distinct=True),
-            source_types=StringAgg('figures__sources__organization_kind__name', '; ', distinct=True),
-            publishers_name=StringAgg('publishers__name', '; ', distinct=True),
-            publisher_types=StringAgg('publishers__organization_kind__name', '; ', distinct=True),
+            sources_name=StringAgg('figures__sources__name', ARRAY_SEPARATOR, distinct=True),
+            source_types=StringAgg('figures__sources__organization_kind__name', ARRAY_SEPARATOR, distinct=True),
+            publishers_name=StringAgg('publishers__name', ARRAY_SEPARATOR, distinct=True),
+            publisher_types=StringAgg('publishers__organization_kind__name', ARRAY_SEPARATOR, distinct=True),
             figures_count=models.Count('figures', distinct=True),
-            context_of_violences=StringAgg('figures__context_of_violence__name', '; ', distinct=True),
+            context_of_violences=StringAgg('figures__context_of_violence__name', ARRAY_SEPARATOR, distinct=True),
             # **cls._total_figure_disaggregation_subquery(),
         ).order_by('created_at')
 

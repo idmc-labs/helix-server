@@ -654,6 +654,7 @@ type CountryType {
   communications: [CommunicationType!]!
   actors: [ActorType!]!
   events(filters: EventFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EventListType
+  eventCodeCountry: [EventCodeType!]!
   contextualupdateSet: [ContextualUpdateType!]!
   lastSummary: SummaryType
   lastContextualAnalysis: ContextualAnalysisType
@@ -1273,6 +1274,13 @@ type DjangoDebugSQL {
   encoding: String
 }
 
+enum EVENT_CODE_TYPE {
+  GLIDE_NUMBER
+  GOV_ASSIGNED_IDENTIFIER
+  IFRC_APPEAL_ID
+  ACLED_ID
+}
+
 enum EVENT_REVIEW_STATUS {
   REVIEW_NOT_STARTED
   REVIEW_IN_PROGRESS
@@ -1308,7 +1316,6 @@ input EntryCreateInputType {
 input EntryExtractionFilterDataInputType {
   filterFigureEvents: [ID!]
   filterFigureCrises: [ID!]
-  filterFigureGlideNumber: [String!]
   filterFigureSources: [ID!]
   filterEntryPublishers: [ID!]
   filterEntryArticleTitle: String
@@ -1393,12 +1400,36 @@ type Enum {
 
 scalar EnumDescription
 
+input EventCodeInputType {
+  country: ID!
+  uuid: String!
+  eventCode: String!
+  eventCodeType: EVENT_CODE_TYPE!
+}
+
+type EventCodeType {
+  id: ID!
+  uuid: UUID!
+  country: CountryType!
+  eventCodeType: EVENT_CODE_TYPE
+  eventCode: String!
+  eventCodeDisplay: EnumDescription
+}
+
+input EventCodeUpdateInputType {
+  id: ID
+  uuid: String!
+  eventCodeType: EVENT_CODE_TYPE!
+  eventCode: String!
+  country: ID!
+}
+
 input EventCreateInputType {
+  eventCodes: [EventCodeInputType!]
   oldId: String
   versionId: String
   name: String!
   eventType: CRISIS_TYPE!
-  glideNumbers: [String!]
   startDate: Date!
   startDateAccuracy: DATE_ACCURACY
   endDate: Date!
@@ -1439,7 +1470,6 @@ input EventFilterDataInputType {
   crisisByIds: [ID!]
   eventTypes: [String!]
   countries: [ID!]
-  glideNumbers: [String!]
   osvSubTypeByIds: [ID!]
   disasterSubTypes: [ID!]
   violenceTypes: [ID!]
@@ -1482,7 +1512,6 @@ type EventType {
   name: String!
   eventType: CRISIS_TYPE
   otherSubType: OtherSubTypeObjectType
-  glideNumbers: [String!]
   violence: ViolenceType
   violenceSubType: ViolenceSubObjectType
   actor: ActorType
@@ -1506,6 +1535,7 @@ type EventType {
   includeTriangulationInQa: Boolean!
   eventReviews: [UnifiedReviewCommentType!]!
   notifications: [GenericNotificationType!]!
+  eventCode: [EventCodeType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
   eventTypeDisplay: EnumDescription
@@ -1521,15 +1551,16 @@ type EventType {
   figureTypology: [String]
   reviewStatusDisplay: EnumDescription
   reviewCount: EventReviewCountType
+  eventCodes: [EventCodeType!]
 }
 
 input EventUpdateInputType {
   id: ID!
+  eventCodes: [EventCodeUpdateInputType!]
   oldId: String
   versionId: String
   name: String
   eventType: CRISIS_TYPE
-  glideNumbers: [String!]
   startDate: Date
   startDateAccuracy: DATE_ACCURACY
   endDate: Date
@@ -1796,7 +1827,6 @@ input FigureExtractionFilterDataInputType {
   filterEntryArticleTitle: String
   filterFigureTags: [ID!]
   filterFigureCrisisTypes: [String!]
-  filterFigureGlideNumber: [String!]
   filterFigureCreatedBy: [ID!]
   filterFigureTerms: [ID!]
   filterFigureDisasterCategories: [ID!]
@@ -1830,7 +1860,6 @@ type FigureExtractionFilterDataType {
   filterFigureRoles: [String!]
   filterFigureTags: [ID!]
   filterFigureCrisisTypes: [String!]
-  filterFigureGlideNumber: [String!]
   filterFigureCreatedBy: [ID!]
   filterFigureTerms: [ID!]
   filterFigureDisasterCategories: [ID!]
@@ -2204,6 +2233,8 @@ type GiddDisasterType {
   hazardSubTypeName: String!
   hazardTypeName: String!
   glideNumbers: [String!]!
+  eventCode: [String!]!
+  eventCodeType: [String!]!
   countryId: ID!
   eventId: ID
   hazardCategoryId: ID
@@ -2248,6 +2279,8 @@ type GiddEventType {
   startDate: Date!
   endDate: Date!
   glideNumbers: [String!]!
+  eventCode: [String!]!
+  eventCodeType: [String!]!
   affectedCountries: [GiddEventAffectedCountryType]
   hazardTypes: [GiddHazardType]
 }

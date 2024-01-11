@@ -16,6 +16,7 @@ from apps.entry.models import Entry, Figure
 from apps.crisis.models import Crisis
 from apps.users.models import User, Portfolio
 from apps.users.enums import USER_ROLE
+from apps.common.utils import ARRAY_SEPARATOR
 from utils.common import generate_storage_url_from_path
 
 
@@ -141,7 +142,7 @@ class MonitoringSubRegion(models.Model):
         q = self.countries.filter(
             ~models.Q(id__in=country_portfolios)
         )
-        return '; '.join(q.values_list('idmc_short_name', flat=True))
+        return ARRAY_SEPARATOR.join(q.values_list('idmc_short_name', flat=True))
 
     @property
     def regional_coordinator(self) -> Union[Portfolio, None]:

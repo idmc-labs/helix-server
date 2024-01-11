@@ -1,9 +1,11 @@
 from datetime import datetime, timedelta
 import json
+from uuid import uuid4
 
 from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
 from apps.entry.models import Figure
+from apps.event.models import EventCode
 
 from utils.factories import (
     CountryFactory,
@@ -15,6 +17,7 @@ from utils.factories import (
     FigureFactory,
     OtherSubtypeFactory,
     OSMNameFactory,
+    EventCodeFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -24,6 +27,7 @@ from apps.common.enums import QA_RULE_TYPE
 class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
     def setUp(self) -> None:
         countries = CountryFactory.create_batch(2)
+        country1 = CountryFactory.create()
         self.crisis = crisis = CrisisFactory.create()
         crisis.crisis_type = Crisis.CRISIS_TYPE.DISASTER
         crisis.save()
@@ -58,6 +62,15 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
                     violenceSubType {
                         name
                     }
+                    eventCodes {
+                        uuid
+                        eventCode
+                        eventCodeType
+                        id
+                        country {
+                          id
+                        }
+                    }
                 }
                 ok
                 }
@@ -66,13 +79,32 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
             "crisis": str(crisis.id),
             "name": "Event1",
             "eventType": "DISASTER",
-            "glideNumbers": ["glide-number"],
             "disasterSubType": DisasterSubTypeFactory().id,
             "countries": [each.id for each in countries],
             "startDate": "2014-01-01",
             "endDate": "2016-01-01",
             "eventNarrative": "event narrative",
-            "otherSubType": OtherSubtypeFactory().id
+            "otherSubType": OtherSubtypeFactory().id,
+            "eventCodes": [
+                {
+                    "uuid": str(uuid4()),
+                    "country": country1.id,
+                    "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
+                    "eventCode": "NEP-2021-YYY"
+                },
+                {
+                    "uuid": str(uuid4()),
+                    "country": country1.id,
+                    "eventCodeType": "GLIDE_NUMBER",
+                    "eventCode": "NEP-2021-XXX"
+                },
+                {
+                    "uuid": str(uuid4()),
+                    "country": country1.id,
+                    "eventCodeType": "IFRC_APPEAL_ID",
+                    "eventCode": "NEP-2021-ZZZ"
+                },
+            ]
         }
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor)
@@ -89,6 +121,8 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         self.assertIsNone(content['data']['createEvent']['errors'], content)
         self.assertEqual(content['data']['createEvent']['result']['name'],
                          self.input['name'])
+        self.assertIsNotNone(content['data']['createEvent']['result']['eventCodes'], content)
+        self.assertEqual(content['data']['createEvent']['result']['eventCodes'][0]['eventCode'], 'NEP-2021-XXX')
 
     def test_valid_event_creation_with_other_sub_type(self) -> None:
         self.input['eventType'] = "DISASTER"
@@ -139,6 +173,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
 
 class TestUpdateEvent(HelixGraphQLTestCase):
     def setUp(self) -> None:
+        country1 = CountryFactory.create()
         self.mutation = '''mutation UpdateEvent($input: EventUpdateInputType!) {
             updateEvent(data: $input) {
                 errors
@@ -153,6 +188,15 @@ class TestUpdateEvent(HelixGraphQLTestCase):
                     violenceSubType {
                         name
                     }
+                    eventCodes {
+                        eventCode
+                        eventCodeType
+                        uuid
+                        id
+                        country {
+                          id
+                        }
+                    }
                 }
                 ok
                 }
@@ -160,6 +204,24 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.event = EventFactory.create(
             crisis=None,
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
+        )
+        self.event_code1 = EventCodeFactory.create(
+            event=self.event,
+            country=country1,
+            event_code_type=EventCode.EVENT_CODE_TYPE.GLIDE_NUMBER,
+            event_code='Code-1'
+        )
+        EventCodeFactory.create(
+            event=self.event,
+            country=country1,
+            event_code_type=EventCode.EVENT_CODE_TYPE.GOV_ASSIGNED_IDENTIFIER,
+            event_code='Code-1'
+        )
+        EventCodeFactory.create(
+            event=self.event,
+            country=country1,
+            event_code_type=EventCode.EVENT_CODE_TYPE.ACLED_ID,
+            event_code='Code-1'
         )
         v_sub_type = ViolenceSubTypeFactory.create()
         self.input = {
@@ -171,6 +233,21 @@ class TestUpdateEvent(HelixGraphQLTestCase):
             "startDate": "2020-10-20",
             "violence": v_sub_type.violence.id,
             "violenceSubType": v_sub_type.id,
+            "eventCodes": [
+                {
+                    "id": self.event_code1.id,
+                    "uuid": str(uuid4()),
+                    "country": country1.id,
+                    "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
+                    "eventCode": "NEP-2021-AAA"
+                },
+                {
+                    "country": country1.id,
+                    "uuid": str(uuid4()),
+                    "eventCodeType": "IFRC_APPEAL_ID",
+                    "eventCode": "NEP-2021-CCC"
+                },
+            ]
         }
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor)
@@ -195,6 +272,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.assertIn('startDate', [item['field'] for item in content['data']['updateEvent']['errors']], content)
 
     def test_valid_event_update(self) -> None:
+        country1 = CountryFactory.create()
         response = self.query(
             self.mutation,
             input_data=self.input
@@ -206,6 +284,51 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.assertIsNone(content['data']['updateEvent']['errors'], content)
         self.assertEqual(content['data']['updateEvent']['result']['name'],
                          self.input['name'])
+        self.assertEqual(len(content['data']['updateEvent']['result']['eventCodes']), 2)
+        self.assertEqual(
+            EventCode.objects.get(id=self.event_code1.id).event_code_type,
+            EventCode.EVENT_CODE_TYPE.GOV_ASSIGNED_IDENTIFIER.value
+        )
+
+        self.input["eventCodes"] = [
+            {
+                "id": content['data']['updateEvent']['result']['eventCodes'][0]['id'],
+                "uuid": content['data']['updateEvent']['result']['eventCodes'][0]['uuid'],
+                "country": country1.id,
+                "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
+                "eventCode": "NEP-2021-AAA"
+            },
+            {
+                "id": content['data']['updateEvent']['result']['eventCodes'][1]['id'],
+                "uuid": content['data']['updateEvent']['result']['eventCodes'][1]['uuid'],
+                "country": country1.id,
+                "eventCodeType": "IFRC_APPEAL_ID",
+                "eventCode": "NEP-2021-CCC"
+            },
+        ]
+
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content['data']['updateEvent']['ok'], content)
+        self.assertIsNone(content['data']['updateEvent']['errors'], content)
+
+        self.input["eventCodes"] = []
+
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content1 = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content1['data']['updateEvent']['ok'], content1)
+        self.assertIsNone(content1['data']['updateEvent']['errors'], content1)
+        self.assertIsNone(content1['data']['updateEvent']['result']['eventCodes'], content1)
 
     def test_invalid_update_event_by_guest(self):
         guest = create_user_with_role(USER_ROLE.GUEST.name)
