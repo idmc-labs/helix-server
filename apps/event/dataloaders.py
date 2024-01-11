@@ -166,5 +166,5 @@ class EventCodeLoader(DataLoader):
         qs = EventCode.objects.filter(event__id__in=keys)
         _map = defaultdict(list)
         for event_code in qs.all():
-            _map[event_code.event.id].append(event_code)
+            _map[event_code.event_id].append(event_code)
         return Promise.resolve([_map.get(key) for key in keys])

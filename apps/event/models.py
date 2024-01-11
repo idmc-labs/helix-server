@@ -547,6 +547,8 @@ class EventCode(UUIDAbstractModel, models.Model):
     event_code_type = enum.EnumField(EVENT_CODE_TYPE)
     event_code = models.CharField(max_length=256, verbose_name=_('Event Code'))
 
+    event_id: int
+
     class Meta:
         ordering = ['event_code']
 
