@@ -7,7 +7,7 @@ from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
 from apps.contrib.commons import DATE_ACCURACY
-from apps.common.utils import ARRAY_SEPARATOR
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 from apps.users.models import User
 
 
@@ -131,9 +131,9 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            countries_iso3=StringAgg('countries__iso3', ARRAY_SEPARATOR, distinct=True),
-            countries_name=StringAgg('countries__idmc_short_name', ARRAY_SEPARATOR, distinct=True),
-            regions_name=StringAgg('countries__region__name', ARRAY_SEPARATOR, distinct=True),
+            countries_iso3=StringAgg('countries__iso3', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            countries_name=StringAgg('countries__idmc_short_name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            regions_name=StringAgg('countries__region__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
             events_count=models.Count('events', distinct=True),
             min_event_start=models.Min('events__start_date'),
             max_event_end=models.Max('events__end_date'),

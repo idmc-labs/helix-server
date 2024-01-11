@@ -1,9 +1,11 @@
 from typing import Literal
 
-# NOTE: Changing this might need data migration. Please confirm before changing
-TUPLE_SEPARATOR = ', '
-ARRAY_SEPARATOR = '; '
-FIELD_SEPARATOR = ':'
+REDIS_SEPARATOR = ':'
+INTERNAL_SEPARATOR = ':'
+
+EXTERNAL_TUPLE_SEPARATOR = ', '
+EXTERNAL_ARRAY_SEPARATOR = '; '
+EXTERNAL_FIELD_SEPARATOR = ':'
 
 
 def get_attr_list_from_event_codes(
@@ -23,9 +25,9 @@ def get_attr_list_from_event_codes(
     # NOTE: We also get aggregation when there is not data
     # so we also check for '::'
     splitted_event_codes = [
-        event_code.split(FIELD_SEPARATOR)
+        event_code.split(EXTERNAL_FIELD_SEPARATOR)
         for event_code in event_codes
-        if event_code != f'{FIELD_SEPARATOR}{FIELD_SEPARATOR}'
+        if event_code != f'{EXTERNAL_FIELD_SEPARATOR}{EXTERNAL_FIELD_SEPARATOR}'
     ]
 
     return [
@@ -40,4 +42,4 @@ def get_attr_str_from_event_codes(
     event_codes: str,
     type: Literal['code', 'code_type', 'iso3'],
 ):
-    return ARRAY_SEPARATOR.join(get_attr_list_from_event_codes(event_codes, type))
+    return EXTERNAL_ARRAY_SEPARATOR.join(get_attr_list_from_event_codes(event_codes, type))

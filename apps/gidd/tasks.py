@@ -23,7 +23,7 @@ from .models import (
 )
 from apps.country.models import Country
 from apps.report.models import Report
-from apps.common.utils import get_attr_list_from_event_codes, FIELD_SEPARATOR
+from apps.common.utils import get_attr_list_from_event_codes, INTERNAL_SEPARATOR
 
 
 logging.basicConfig(level=logging.INFO)
@@ -239,9 +239,9 @@ def update_conflict_and_disaster_data():
             event_code=ArrayAgg(
                 Concat(
                     F('event__event_code__event_code'),
-                    Value(FIELD_SEPARATOR),
+                    Value(INTERNAL_SEPARATOR),
                     F('event__event_code__event_code_type'),
-                    Value(FIELD_SEPARATOR),
+                    Value(INTERNAL_SEPARATOR),
                     F('event__event_code__country__iso3'),
                     output_field=models.CharField(),
                 ),
