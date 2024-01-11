@@ -36,7 +36,7 @@ from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
 from apps.common.enums import GENDER_TYPE
 from apps.notification.models import Notification
-from apps.common.utils import get_event_code, FIELD_SEPARATOR
+from apps.common.utils import get_attr_str_from_event_codes, FIELD_SEPARATOR
 from .documents import README_DATA
 
 logger = logging.getLogger(__name__)
@@ -1078,8 +1078,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                     'review_status', Figure.FIGURE_REVIEW_STATUS
                 ),
                 'is_disaggregated': 'Yes' if datum['is_disaggregated'] else 'No',
-                'event_code': get_event_code(datum['event_code'], type='code'),
-                'event_code_type': get_event_code(datum['event_code'], type='code_type'),
+                'event_code': get_attr_str_from_event_codes(datum['event_code'], type='code'),
+                'event_code_type': get_attr_str_from_event_codes(datum['event_code'], type='code_type'),
             }
 
         readme_data = [

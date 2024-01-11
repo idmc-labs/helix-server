@@ -20,7 +20,7 @@ from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
 from apps.users.models import User, USER_ROLE
-from apps.common.utils import get_event_code, FIELD_SEPARATOR
+from apps.common.utils import get_attr_str_from_event_codes, FIELD_SEPARATOR
 
 
 class NameAttributedModels(models.Model):
@@ -457,9 +457,9 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 **dict(
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'label', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'label', ''),
-                    event_codes=get_event_code(datum['event_codes'], type='code'),
-                    event_code_type=get_event_code(datum['event_codes'], type='code_type'),
-                    event_code_iso3=get_event_code(datum['event_codes'], type='iso3'),
+                    event_codes=get_attr_str_from_event_codes(datum['event_codes'], type='code'),
+                    event_code_type=get_attr_str_from_event_codes(datum['event_codes'], type='code_type'),
+                    event_code_iso3=get_attr_str_from_event_codes(datum['event_codes'], type='iso3'),
                 )
             }
 

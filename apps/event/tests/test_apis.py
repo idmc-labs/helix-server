@@ -63,6 +63,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
                         name
                     }
                     eventCodes {
+                        uuid
                         eventCode
                         eventCodeType
                         id
@@ -190,6 +191,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
                     eventCodes {
                         eventCode
                         eventCodeType
+                        uuid
                         id
                         country {
                           id
@@ -270,6 +272,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.assertIn('startDate', [item['field'] for item in content['data']['updateEvent']['errors']], content)
 
     def test_valid_event_update(self) -> None:
+        country1 = CountryFactory.create()
         response = self.query(
             self.mutation,
             input_data=self.input
@@ -287,7 +290,22 @@ class TestUpdateEvent(HelixGraphQLTestCase):
             EventCode.EVENT_CODE_TYPE.GOV_ASSIGNED_IDENTIFIER.value
         )
 
-        self.input["eventCodes"] = []
+        self.input["eventCodes"] = [
+            {
+                "id": content['data']['updateEvent']['result']['eventCodes'][0]['id'],
+                "uuid": content['data']['updateEvent']['result']['eventCodes'][0]['uuid'],
+                "country": country1.id,
+                "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
+                "eventCode": "NEP-2021-AAA"
+            },
+            {
+                "id": content['data']['updateEvent']['result']['eventCodes'][1]['id'],
+                "uuid": content['data']['updateEvent']['result']['eventCodes'][1]['uuid'],
+                "country": country1.id,
+                "eventCodeType": "IFRC_APPEAL_ID",
+                "eventCode": "NEP-2021-CCC"
+            },
+        ]
 
         response = self.query(
             self.mutation,
@@ -298,7 +316,19 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content['data']['updateEvent']['ok'], content)
         self.assertIsNone(content['data']['updateEvent']['errors'], content)
-        self.assertEqual(len(content['data']['updateEvent']['result']['eventCodes']), 0)
+
+        self.input["eventCodes"] = []
+
+        response = self.query(
+            self.mutation,
+            input_data=self.input
+        )
+        content1 = json.loads(response.content)
+
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content1['data']['updateEvent']['ok'], content1)
+        self.assertIsNone(content1['data']['updateEvent']['errors'], content1)
+        self.assertIsNone(content1['data']['updateEvent']['result']['eventCodes'], content1)
 
     def test_invalid_update_event_by_guest(self):
         guest = create_user_with_role(USER_ROLE.GUEST.name)

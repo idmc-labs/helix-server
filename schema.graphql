@@ -2234,6 +2234,9 @@ type GiddDisasterType {
   hazardSubCategoryName: String!
   hazardSubTypeName: String!
   hazardTypeName: String!
+  glideNumbers: [String!]!
+  eventCode: [String!]!
+  eventCodeType: [String!]!
   countryId: ID!
   eventId: ID
   hazardCategoryId: ID
@@ -2277,6 +2280,9 @@ type GiddEventType {
   newDisplacementRounded: Int
   startDate: Date!
   endDate: Date!
+  glideNumbers: [String!]!
+  eventCode: [String!]!
+  eventCodeType: [String!]!
   affectedCountries: [GiddEventAffectedCountryType]
   hazardTypes: [GiddHazardType]
 }

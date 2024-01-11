@@ -222,8 +222,7 @@ class EventType(DjangoObjectType):
     event_codes = graphene.List(graphene.NonNull(EventCodeType))
 
     def resolve_event_codes(root, info, **kwargs):
-        # TODO Add dataloaders
-        return EventCode.objects.filter(event=root)
+        return info.context.event_code_loader.load(root.id)
 
     def resolve_entry_count(root, info, **kwargs):
         return info.context.event_entry_count_dataloader.load(root.id)

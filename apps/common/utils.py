@@ -5,8 +5,7 @@ ARRAY_SEPARATOR = '; '
 FIELD_SEPARATOR = ':'
 
 
-# FIXME: rename this to get_attr_list_from_event_codes
-def get_event_code_gidd(
+def get_attr_list_from_event_codes(
     event_codes: str,
     type: Literal['code', 'code_type', 'iso3'],
 ):
@@ -36,9 +35,8 @@ def get_event_code_gidd(
     ]
 
 
-# FIXME: rename this to get_attr_str_from_event_codes
-def get_event_code(
+def get_attr_str_from_event_codes(
     event_codes: str,
     type: Literal['code', 'code_type', 'iso3'],
 ):
-    return ARRAY_SEPARATOR.join(get_event_code_gidd(event_codes, type))
+    return ARRAY_SEPARATOR.join(get_attr_list_from_event_codes(event_codes, type))
