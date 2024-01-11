@@ -1,5 +1,6 @@
 from typing import Literal
 
+# NOTE: Changing this might need data migration. Please confirm before changing
 TUPLE_SEPARATOR = ', '
 ARRAY_SEPARATOR = '; '
 FIELD_SEPARATOR = ':'

@@ -26,6 +26,7 @@ from apps.contrib.redis_client_track import (
     delete_external_redis_record_by_key,
 )
 from apps.contrib.bulk_operations.tasks import run_bulk_api_operation as _run_bulk_api_operation
+from apps.common.utils import FIELD_SEPARATOR
 
 
 logging.basicConfig(level=logging.INFO)
@@ -267,9 +268,9 @@ def save_and_delete_tracked_data_from_redis_to_db():
         redis_tracking_key=Concat(
             Value('trackinfo:'),
             F('tracked_date'),
-            Value(':'),
+            Value(FIELD_SEPARATOR),
             F('api_type'),
-            Value(':'),
+            Value(FIELD_SEPARATOR),
             F('client__code'),
             output_field=CharField()
         )

@@ -5,6 +5,7 @@ from datetime import datetime
 from django.utils import timezone
 
 from helix.caches import external_api_cache
+from apps.common.utils import FIELD_SEPARATOR
 
 
 logging.basicConfig(level=logging.INFO)
@@ -54,7 +55,7 @@ def pull_track_data_from_redis(tracking_keys):
     tracked_data_from_redis = {}
 
     for key in tracking_keys:
-        tracked_date, api_type, code = itemgetter(1, 2, 3)(key.split(':'))
+        tracked_date, api_type, code = itemgetter(1, 2, 3)(key.split(FIELD_SEPARATOR))
         tracked_date = datetime.strptime(tracked_date, "%Y-%m-%d").date()
         requests_per_day = get_external_redis_data(key)
 
