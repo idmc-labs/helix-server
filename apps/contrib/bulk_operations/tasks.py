@@ -215,7 +215,9 @@ def run_bulk_api_operation(operation: BulkApiOperation):
             return operation
         logger.info(f'Processing bulk operation: {operation}')
         operation.update_status(BulkApiOperation.BULK_OPERATION_STATUS.STARTED)
-        return get_operation_handler(operation.action).run(operation)
+        get_operation_handler(operation.action).run(operation)
     except Exception:
         logger.error(f'Failed to process bulk operation: {operation}', exc_info=True)
         operation.update_status(BulkApiOperation.BULK_OPERATION_STATUS.FAILED)
+        return False
+    return True

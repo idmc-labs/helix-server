@@ -317,7 +317,7 @@ def save_and_delete_tracked_data_from_redis_to_db():
 
 
 @celery_app.task
-def run_bulk_api_operation(operation_id):
+def run_bulk_api_operation(operation_id: int):
     from apps.contrib.models import BulkApiOperation
     operation = BulkApiOperation.objects.get(pk=operation_id)
     return _run_bulk_api_operation(operation)

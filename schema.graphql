@@ -1905,7 +1905,6 @@ input FigureExtractionFilterDataInputType {
   filterEntryArticleTitle: String
   filterFigureTags: [ID!]
   filterFigureCrisisTypes: [String!]
-  filterFigureGlideNumber: [String!]
   filterFigureCreatedBy: [ID!]
   filterFigureTerms: [ID!]
   filterFigureDisasterCategories: [ID!]
