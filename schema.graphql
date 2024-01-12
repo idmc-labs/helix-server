@@ -3364,7 +3364,7 @@ type ReportType {
   filterFigureCreatedBy: [UserType!]!
   filterFigureApprovedBy: [UserType!]!
   filterFigureTerms: [FIGURE_TERMS!]
-  filterFigureReviewStatus: [Int!]
+  filterFigureReviewStatus: [FIGURE_REVIEW_STATUS!]
   filterFigureDisasterCategories: [DisasterCategoryType!]!
   filterFigureDisasterSubCategories: [DisasterSubCategoryType!]!
   filterFigureDisasterTypes: [DisasterTypeObjectType!]!
@@ -3403,10 +3403,10 @@ type ReportType {
   generations(filters: ReportGenerationFilterDataInputType, ordering: String): ReportGenerationListType
   filterFigureRolesDisplay: EnumDescription
   filterFigureCrisisTypesDisplay: EnumDescription
+  filterFigureTermsDisplay: EnumDescription
   totalDisaggregation: ReportTotalsType!
   lastGeneration: ReportGenerationType
   generatedFromDisplay: EnumDescription
-  filterFigureTermsDisplay: EnumDescription
 }
 
 input ReportUpdateInputType {

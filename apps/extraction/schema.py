@@ -31,6 +31,7 @@ class ExtractionQueryObjectType(DjangoObjectType):
                                              pagination=PageGraphqlPaginationWithoutCount(
                                                  page_size_query_param='pageSize'
                                              ), accessor='entries')
+    # NOTE: We need to define this at ReportType as well
     filter_figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
     filter_figure_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
     filter_figure_categories = graphene.List(graphene.NonNull(FigureCategoryTypeEnum))

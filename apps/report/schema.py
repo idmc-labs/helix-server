@@ -4,7 +4,12 @@ from graphene_django_extras import DjangoObjectField
 from utils.graphene.enums import EnumDescription
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.entry.enums import RoleGrapheneEnum, FigureTermsEnum, FigureCategoryTypeEnum
+from apps.entry.enums import (
+    RoleGrapheneEnum,
+    FigureTermsEnum,
+    FigureCategoryTypeEnum,
+    FigureReviewStatusEnum,
+)
 from apps.report.models import (
     Report,
     ReportComment,
@@ -91,10 +96,16 @@ class ReportType(DjangoObjectType):
                                               pagination=PageGraphqlPaginationWithoutCount(
                                                   page_size_query_param='pageSize'
                                               ))
+
+    # NOTE: We need to define this at ExtractionQueryObjectType as well
     filter_figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
     filter_figure_roles_display = EnumDescription(source='get_filter_figure_roles_display')
     filter_figure_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
     filter_figure_crisis_types_display = EnumDescription(source='get_filter_figure_crisis_types_display')
+    filter_figure_categories = graphene.List(graphene.NonNull(FigureCategoryTypeEnum))
+    filter_figure_terms = graphene.List(graphene.NonNull(FigureTermsEnum))
+    filter_figure_terms_display = EnumDescription(source='get_filter_figure_terms_display')
+    filter_figure_review_status = graphene.List(graphene.NonNull(FigureReviewStatusEnum))
 
     total_disaggregation = graphene.NonNull(ReportTotalsType)
     # FIXME: use dataloader for last_generation
@@ -104,9 +115,6 @@ class ReportType(DjangoObjectType):
     )
     generated_from = graphene.Field(ReportTypeEnum)
     generated_from_display = EnumDescription(source='get_generated_from_display_display')
-    filter_figure_categories = graphene.List(graphene.NonNull(FigureCategoryTypeEnum))
-    filter_figure_terms = graphene.List(graphene.NonNull(FigureTermsEnum))
-    filter_figure_terms_display = EnumDescription(source='get_filter_figure_terms_display')
 
 
 class ReportListType(CustomDjangoListObjectType):
