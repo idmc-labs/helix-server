@@ -279,7 +279,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertIsNone(content['data']['signOffEvent']['errors'], content)
 
 
-class TestEventRewviewCount(HelixGraphQLTestCase):
+class TestEventReviewCount(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.event = EventFactory.create()
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
