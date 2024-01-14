@@ -150,6 +150,7 @@ class TestExtractionFilter(HelixTestCase):
         cls.context_of_violence = ContextOfViolenceFactory.create()
         cls.figure = FigureFactory.create(
             entry=cls.entry3event2,
+            category=cls.fig_cat3,
             country=cls.country3reg3,
             event=cls.event2crisis1,
             figure_cause=Crisis.CRISIS_TYPE.OTHER,
@@ -161,6 +162,7 @@ class TestExtractionFilter(HelixTestCase):
         cls.context_of_violence = ContextOfViolenceFactory.create()
         cls.figure = FigureFactory.create(
             entry=cls.entry3event2,
+            category=cls.fig_cat3,
             country=cls.country3reg3,
             event=cls.event2crisis1,
             figure_cause=Crisis.CRISIS_TYPE.OTHER,
@@ -292,7 +294,7 @@ class TestExtractionFilter(HelixTestCase):
             filter_figure_category_types=['FLOW']
         )
         fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry1event1, self.entry2event2, self.entry3event2})
+        self.assertEqual(set(fqs), {self.entry1event1, self.entry2event2})
         data = dict(
             filter_figure_category_types=['STOCK']
         )

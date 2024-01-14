@@ -436,7 +436,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             regions_name=StringAgg('countries__region__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
             figures_count=models.Count('figures', distinct=True),
             entries_count=models.Count('figures__entry', distinct=True),
-            **cls._total_figure_disaggregation_subquery(),
             context_of_violences=StringAgg('context_of_violence__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
             event_codes=ArrayAgg(
                 Array(

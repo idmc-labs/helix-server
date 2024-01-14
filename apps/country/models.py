@@ -299,7 +299,6 @@ class Country(models.Model):
             def __init__(self, user):
                 self.user = user
 
-        year = filters.get('year', None)
         str_year = filters.get('year', '')
         headers = OrderedDict(
             id='ID',
@@ -349,7 +348,6 @@ class Country(models.Model):
             ),
             # contacts_count=Count('contacts', distinct=True),
             # operating_contacts_count=Count('operating_contacts', distinct=True),
-            **cls._total_figure_disaggregation_subquery(year=year),
         ).order_by('idmc_short_name')
 
         return {
