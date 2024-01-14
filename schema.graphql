@@ -94,10 +94,17 @@ enum BULK_OPERATION_ACTION {
 
 enum BULK_OPERATION_STATUS {
   PENDING
-  STARTED
-  FINISHED
-  CANCELED
+  IN_PROGRESS
+  COMPLETED
   FAILED
+  KILLED
+}
+
+type BulkApiOperationFailureType {
+  id: ID!
+  frontendUrl: String!
+  frontendPermalinkUrl: String!
+  errors: [GenericScalar!]!
 }
 
 input BulkApiOperationFigureRoleFilterInputType {
@@ -117,7 +124,8 @@ type BulkApiOperationFigureRolePayloadType {
 }
 
 input BulkApiOperationFilterDataInputType {
-  action: BULK_OPERATION_ACTION
+  actionList: [BULK_OPERATION_ACTION!]
+  statusList: [BULK_OPERATION_STATUS!]
 }
 
 input BulkApiOperationFilterInputType {
@@ -135,10 +143,28 @@ input BulkApiOperationInputType {
 }
 
 type BulkApiOperationListType {
-  results: [BulkApiOperationType!]
+  results: [BulkApiOperationObjectType!]
   totalCount: Int
   page: Int
   pageSize: Int
+}
+
+type BulkApiOperationObjectType {
+  id: ID!
+  createdAt: DateTime!
+  createdBy: UserType!
+  startedAt: DateTime
+  completedAt: DateTime
+  successCount: Int
+  failureCount: Int
+  action: BULK_OPERATION_ACTION
+  actionDisplay: EnumDescription
+  status: BULK_OPERATION_STATUS!
+  statusDisplay: EnumDescription!
+  filters: BulkApiOperationFilterType!
+  payload: BulkApiOperationPayloadType!
+  successList: [BulkApiOperationSuccessType!]!
+  failureList: [BulkApiOperationFailureType!]!
 }
 
 input BulkApiOperationPayloadInputType {
@@ -149,18 +175,10 @@ type BulkApiOperationPayloadType {
   figureRole: BulkApiOperationFigureRolePayloadType
 }
 
-type BulkApiOperationType {
+type BulkApiOperationSuccessType {
   id: ID!
-  createdAt: DateTime!
-  createdBy: UserType!
-  successCount: Int
-  failureCount: Int
-  action: BULK_OPERATION_ACTION
-  actionDisplay: EnumDescription
-  status: BULK_OPERATION_STATUS!
-  statusDisplay: EnumDescription!
-  filters: BulkApiOperationFilterType!
-  payload: BulkApiOperationPayloadType!
+  frontendUrl: String!
+  frontendPermalinkUrl: String!
 }
 
 input BulkMonitoringExpertPortfolioInputType {
@@ -3125,6 +3143,7 @@ type Query {
   client(id: ID!): ClientType
   clientList(filters: ClientFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ClientListType
   clientTrackInformationList(filters: ClientTrackInfoFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ClientTrackInformationListType
+  bulkApiOperation(id: ID!): BulkApiOperationObjectType
   bulkApiOperations(filters: BulkApiOperationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): BulkApiOperationListType
   contact(id: ID!): ContactType
   communication(id: ID!): CommunicationType
@@ -3654,7 +3673,7 @@ type ToggleNotificationRead {
 type TriggerBulkOperation {
   errors: [GenericScalar!]
   ok: Boolean
-  result: BulkApiOperationType
+  result: BulkApiOperationObjectType
 }
 
 enum UNIT {

@@ -804,7 +804,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         return cls.get_figure_excel_sheets_data(qs)
 
     @classmethod
-    def get_figure_excel_sheets_data(cls, figures):
+    def get_figure_excel_sheets_data(cls, figures: models.QuerySet):
 
         from apps.crisis.models import Crisis
 

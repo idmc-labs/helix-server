@@ -56,7 +56,7 @@ env = environ.Env(
     # MISC
     DEFAULT_FROM_EMAIL=(str, 'contact@idmcdb.org'),
     BACKEND_BASE_URL=str,  # http://localhost:9000
-    FRONTEND_BASE_URL=str,
+    FRONTEND_BASE_URL=str,  # http://localhost:3000
     HCAPTCHA_SECRET=str,
     HELIXDBCLUSTER_SECRET=(str, None),
     HELIXDBCLUSTER_SECRET_ARN=(str, None),
@@ -498,7 +498,7 @@ MAX_CAPTCHA_LOGIN_ATTEMPTS = 10
 LOGIN_TIMEOUT = 10 * 60  # seconds
 
 # Frontend base url for email button link
-FRONTEND_BASE_URL = env('FRONTEND_BASE_URL')
+FRONTEND_BASE_URL = env('FRONTEND_BASE_URL').strip('/')
 BACKEND_BASE_URL = env('BACKEND_BASE_URL').strip('/')
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#password-reset-timeout
@@ -677,7 +677,7 @@ if DEBUG:
                     'level': 'INFO',
                     'propagate': True,
                 }
-                for app in LOCAL_APPS + ['deep', 'utils', 'celery', 'django']
+                for app in ['apps', 'helix', 'utils', 'celery', 'django']
             },
             'profiling': {
                 'handlers': ['colored_console'],

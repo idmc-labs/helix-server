@@ -9,6 +9,17 @@ from apps.contrib.models import (
 )
 
 
+class ReadOnlyMixin():
+    def has_add_permission(self, *args, **kwargs):
+        return False
+
+    def has_change_permission(self, *args, **kwargs):
+        return False
+
+    def has_delete_permission(self, *args, **kwargs):
+        return False
+
+
 class ClientAdmin(admin.ModelAdmin):
     list_display = [
         'id', 'name', 'code', 'created_at', 'modified_at',
@@ -56,7 +67,8 @@ class ExcelDownloadAdmin(admin.ModelAdmin):
         return super().get_queryset(request).select_related('created_by')
 
 
-class BulkApiOperationAdmin(admin.ModelAdmin):
+@admin.register(BulkApiOperation)
+class BulkApiOperationAdmin(ReadOnlyMixin, admin.ModelAdmin):
     list_display = [
         'id',
         'created_at',
@@ -81,4 +93,3 @@ class BulkApiOperationAdmin(admin.ModelAdmin):
 admin.site.register(Client, ClientAdmin)
 admin.site.register(ClientTrackInfo, ClientTrackInfoAdmin)
 admin.site.register(ExcelDownload, ExcelDownloadAdmin)
-admin.site.register(BulkApiOperation, BulkApiOperationAdmin)

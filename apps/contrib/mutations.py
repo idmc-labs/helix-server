@@ -5,7 +5,7 @@ from utils.mutation import generate_input_type_for_serializer
 
 from apps.contrib.serializers import ExcelDownloadSerializer
 from utils.common import convert_date_object_to_string_in_dict
-from apps.contrib.schema import AttachmentType, ClientType, BulkApiOperationType
+from apps.contrib.schema import AttachmentType, ClientType, BulkApiOperationObjectType
 from apps.contrib.bulk_operations.serializers import BulkApiOperationSerializer
 from apps.contrib.serializers import (
     AttachmentSerializer,
@@ -141,7 +141,7 @@ class TriggerBulkOperation(graphene.Mutation):
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.Field(BulkApiOperationType)
+    result = graphene.Field(BulkApiOperationObjectType)
 
     @staticmethod
     # TODO: Define a proper permission
