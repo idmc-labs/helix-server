@@ -223,8 +223,8 @@ class BulkFigureBulkUpdateTask(BulkApiOperationBaseTask[Figure]):
     ) -> typing.Tuple[typing.List[SuccessDataType], typing.List[FailureDataType]]:
         def _get_urls(figure) -> FrontendUrlDataType:
             return {
-                'frontend_url': Permalink.current_figure(figure.event_id, figure.pk, absolute=False),
-                'frontend_permalink_url': Permalink.figure(figure.event_id, figure.pk, absolute=False),
+                'frontend_url': Permalink.current_figure(figure.entry_id, figure.pk, absolute=False),
+                'frontend_permalink_url': Permalink.figure(figure.entry_id, figure.pk, absolute=False),
             }
 
         success_list: typing.List[SuccessDataType] = []

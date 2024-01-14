@@ -223,8 +223,8 @@ class TestBulkOperation(HelixGraphQLTestCase):
 
             def _generate_frontend_url(figure):
                 return {
-                    'frontendPermalinkUrl': f'/figures/{figure.event_id}/{figure.pk}',
-                    'frontendUrl': f'/entries/{figure.event_id}/?id={figure.pk}#/figures-and-analysis',
+                    'frontendPermalinkUrl': f'/figures/{figure.entry_id}/{figure.pk}',
+                    'frontendUrl': f'/entries/{figure.entry_id}/?id={figure.pk}#/figures-and-analysis',
                 }
 
             # Check for success/failure response

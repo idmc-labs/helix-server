@@ -16,9 +16,9 @@ class Permalink:
         return f'{cls.BASE_URL}/{_url}'
 
     @classmethod
-    def figure(cls, event_id, figure_id, absolute=True):
-        return cls.generate_url(f'/figures/{event_id}/{figure_id}', absolute=absolute)
+    def figure(cls, entry_id: int, figure_id: int, absolute=True):
+        return cls.generate_url(f'/figures/{entry_id}/{figure_id}', absolute=absolute)
 
     @classmethod
-    def current_figure(cls, event_id, figure_id, absolute=True):
-        return cls.generate_url(f'/entries/{event_id}/?id={figure_id}#/figures-and-analysis', absolute=absolute)
+    def current_figure(cls, entry_id: int, figure_id: int, absolute=True):
+        return cls.generate_url(f'/entries/{entry_id}/?id={figure_id}#/figures-and-analysis', absolute=absolute)
