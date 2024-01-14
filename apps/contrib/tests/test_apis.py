@@ -203,6 +203,8 @@ class TestBulkOperation(HelixGraphQLTestCase):
             self.assertEqual(_variables['data']['payload'], _content['result']['payload'])
 
             operation = BulkApiOperation.objects.get(pk=_content['result']['id'])
+            self.assertIsNotNone(operation.started_at)
+            self.assertIsNotNone(operation.completed_at)
             self.assertEqual(BulkApiOperation.BULK_OPERATION_STATUS.COMPLETED, operation.status)
             self.assertEqual(
                 {'success_count': len(expected_success), 'failure_count': len(expected_failure)},

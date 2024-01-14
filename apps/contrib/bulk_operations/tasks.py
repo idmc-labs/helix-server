@@ -182,7 +182,7 @@ class BulkApiOperationBaseTask(typing.Generic[ModelType]):
         ) = cls.mutate(operation, items)
         operation.success_count = len(operation.success_list)
         operation.failure_count = len(operation.failure_list)
-        operation.status = BulkApiOperation.BULK_OPERATION_STATUS.COMPLETED
+        operation.update_status(BulkApiOperation.BULK_OPERATION_STATUS.COMPLETED, commit=False)
         operation.save()
         return operation
 
