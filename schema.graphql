@@ -2339,8 +2339,8 @@ type GiddEventType {
   startDate: Date!
   endDate: Date!
   glideNumbers: [String!]!
-  eventCode: [String!]!
-  eventCodeType: [String!]!
+  eventCodes: [String!]!
+  eventCodesType: [String!]!
   affectedCountries: [GiddEventAffectedCountryType]
   hazardTypes: [GiddHazardType]
 }

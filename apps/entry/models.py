@@ -1014,7 +1014,6 @@ class Figure(MetaInformationArchiveAbstractModel,
                 Array(
                     F('event__event_code__event_code'),
                     Cast(F('event__event_code__event_code_type'), models.CharField()),
-                    F('event__event_code__country__iso3'),
                     output_field=ArrayField(models.CharField()),
                 ),
                 distinct=True,
