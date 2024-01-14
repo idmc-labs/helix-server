@@ -2293,8 +2293,8 @@ type GiddDisasterType {
   hazardSubTypeName: String!
   hazardTypeName: String!
   glideNumbers: [String!]!
-  eventCode: [String!]!
-  eventCodeType: [String!]!
+  eventCodes: [String!]!
+  eventCodesType: [String!]!
   countryId: ID!
   eventId: ID
   hazardCategoryId: ID

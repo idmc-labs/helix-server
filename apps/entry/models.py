@@ -30,6 +30,7 @@ from apps.contrib.models import (
     MetaInformationArchiveAbstractModel,
 )
 from utils.common import get_string_from_list
+from utils.db import Array
 from utils.fields import CachedFileField, generate_full_media_url
 from apps.contrib.commons import DATE_ACCURACY
 from apps.review.models import Review
@@ -38,7 +39,6 @@ from apps.common.enums import GENDER_TYPE
 from apps.notification.models import Notification
 from apps.common.utils import (
     get_attr_str_from_event_codes,
-    INTERNAL_SEPARATOR,
     EXTERNAL_ARRAY_SEPARATOR,
     EXTERNAL_TUPLE_SEPARATOR,
 )
@@ -893,8 +893,8 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__assignee__full_name='Assignee',
             created_by__full_name='Created by',
             last_modified_by__full_name='Updated by',
-            event_code='Event code',
-            event_code_type='Event code type',
+            event_codes='Event codes',
+            event_codes_type='Event codes type',
         )
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
@@ -1010,21 +1010,19 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 output_field=models.CharField()
             ),
-            event_code=ArrayAgg(
-                Concat(
+            event_codes=ArrayAgg(
+                Array(
                     F('event__event_code__event_code'),
-                    Value(INTERNAL_SEPARATOR),
-                    F('event__event_code__event_code_type'),
-                    Value(INTERNAL_SEPARATOR),
+                    Cast(F('event__event_code__event_code_type'), models.CharField()),
                     F('event__event_code__country__iso3'),
-                    output_field=models.CharField(),
+                    output_field=ArrayField(models.CharField()),
                 ),
                 distinct=True,
                 filter=models.Q(event__event_code__country__id=F('country__id')),
             ),
         ).order_by(
             'created_at',
-        ).values(*[header for header in headers.keys() if header != 'event_code_type'])
+        ).values(*[header for header in headers.keys() if header != 'event_codes_type'])
 
         def transformer(datum):
 
@@ -1086,8 +1084,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                     'review_status', Figure.FIGURE_REVIEW_STATUS
                 ),
                 'is_disaggregated': 'Yes' if datum['is_disaggregated'] else 'No',
-                'event_code': get_attr_str_from_event_codes(datum['event_code'], type='code'),
-                'event_code_type': get_attr_str_from_event_codes(datum['event_code'], type='code_type'),
+                'event_codes': get_attr_str_from_event_codes(datum['event_codes'], 'code'),
+                'event_codes_type': get_attr_str_from_event_codes(datum['event_codes'], 'code_type'),
             }
 
         readme_data = [

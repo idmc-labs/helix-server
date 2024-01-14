@@ -191,8 +191,8 @@ class GiddDisasterType(DjangoObjectType):
             'hazard_type_name',
             'hazard_sub_type_name',
             'glide_numbers',
-            'event_code',
-            'event_code_type',
+            'event_codes',
+            'event_codes_type',
         )
 
     @staticmethod

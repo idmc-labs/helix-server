@@ -15,13 +15,14 @@ from django.db.models import (
     Value,
     F,
 )
-from django.db.models.functions import Concat
+from django.db.models.functions import Cast
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django_enumfield import enum
 from django.contrib.postgres.aggregates.general import StringAgg
 
 from utils.common import get_string_from_list
+from utils.db import Array
 from apps.contrib.models import MetaInformationArchiveAbstractModel
 from apps.crisis.models import Crisis
 from apps.entry.models import (
@@ -44,7 +45,7 @@ from apps.report.utils import (
     report_disaster_country,
     report_disaster_region,
 )
-from apps.common.utils import INTERNAL_SEPARATOR, EXTERNAL_ARRAY_SEPARATOR
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 
 
 logger = logging.getLogger(__name__)
@@ -677,20 +678,18 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'version_id',
                 'old_id',
             ).annotate(
-                event_code=models.Func(
+                event_codes=models.Func(
                     ArrayAgg(
                         models.Case(
                             models.When(
                                 event_code__isnull=False,
-                                then=Concat(
+                                then=Array(
                                     F('event_code__event_code'),
-                                    Value(INTERNAL_SEPARATOR),
-                                    F('event_code__event_code_type'),
-                                    Value(INTERNAL_SEPARATOR),
+                                    Cast(F('event_code__event_code_type'), models.CharField()),
                                     F('event_code__country__iso3'),
                                 ),
                             ),
-                            output_field=models.CharField(),
+                            output_field=ArrayField(models.CharField()),
                         ),
                     ),
                     None,
