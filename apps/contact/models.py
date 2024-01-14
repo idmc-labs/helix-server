@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 from apps.common.enums import GENDER_TYPE
 from apps.contrib.models import MetaInformationArchiveAbstractModel
-from apps.common.utils import ARRAY_SEPARATOR
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 
 User = get_user_model()
 
@@ -93,10 +93,10 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
             operating_countries=StringAgg(
-                'countries_of_operation__idmc_short_name', ARRAY_SEPARATOR, distinct=True
+                'countries_of_operation__idmc_short_name', EXTERNAL_ARRAY_SEPARATOR, distinct=True
             ),
             operating_countries_regions=StringAgg(
-                'countries_of_operation__region__name', ARRAY_SEPARATOR, distinct=True
+                'countries_of_operation__region__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True
             ),
             communications_count=models.Count('communications', distinct=True),
         ).order_by(

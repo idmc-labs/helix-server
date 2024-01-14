@@ -1,15 +1,15 @@
 from collections import OrderedDict
 
 from django.db import models
-from django.db.models import F, Value
+from django.db.models.functions import Cast
 from django.contrib.postgres.aggregates.general import StringAgg, ArrayAgg
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 from django.contrib.postgres.fields import ArrayField
 from django.forms import model_to_dict
-from django.db.models.functions import Concat
 
 from utils.common import add_clone_prefix
+from utils.db import Array
 
 from apps.contrib.models import (
     MetaInformationAbstractModel,
@@ -20,7 +20,7 @@ from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
 from apps.users.models import User, USER_ROLE
-from apps.common.utils import get_attr_str_from_event_codes, FIELD_SEPARATOR, ARRAY_SEPARATOR
+from apps.common.utils import get_attr_str_from_event_codes, EXTERNAL_ARRAY_SEPARATOR
 
 
 class NameAttributedModels(models.Model):
@@ -422,30 +422,28 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             actor_id='Actor ID',
             actor__name='Actor',
             context_of_violences='Context of violences',
-            event_codes='Event code',
-            event_code_type='Event code type',
-            event_code_iso3='Event code ISO3',
+            event_codes='Event codes',
+            event_codes_type='Event codes type',
+            event_codes_iso3='Event codes ISO3',
         )
 
         data = EventFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            countries_iso3=StringAgg('countries__iso3', ARRAY_SEPARATOR, distinct=True),
-            countries_name=StringAgg('countries__idmc_short_name', ARRAY_SEPARATOR, distinct=True),
-            regions_name=StringAgg('countries__region__name', ARRAY_SEPARATOR, distinct=True),
+            countries_iso3=StringAgg('countries__iso3', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            countries_name=StringAgg('countries__idmc_short_name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            regions_name=StringAgg('countries__region__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
             figures_count=models.Count('figures', distinct=True),
             entries_count=models.Count('figures__entry', distinct=True),
             **cls._total_figure_disaggregation_subquery(),
-            context_of_violences=StringAgg('context_of_violence__name', ARRAY_SEPARATOR, distinct=True),
+            context_of_violences=StringAgg('context_of_violence__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
             event_codes=ArrayAgg(
-                Concat(
-                    F('event_code__event_code'),
-                    Value(FIELD_SEPARATOR),
-                    F('event_code__event_code_type'),
-                    Value(FIELD_SEPARATOR),
-                    F('event_code__country__iso3'),
-                    output_field=models.CharField(),
+                Array(
+                    models.F('event_code__event_code'),
+                    Cast(models.F('event_code__event_code_type'), models.CharField()),
+                    models.F('event_code__country__iso3'),
+                    output_field=ArrayField(models.CharField()),
                 ),
                 distinct=True,
             ),
@@ -457,16 +455,16 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 **dict(
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'label', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'label', ''),
-                    event_codes=get_attr_str_from_event_codes(datum['event_codes'], type='code'),
-                    event_code_type=get_attr_str_from_event_codes(datum['event_codes'], type='code_type'),
-                    event_code_iso3=get_attr_str_from_event_codes(datum['event_codes'], type='iso3'),
+                    event_codes=get_attr_str_from_event_codes(datum['event_codes'], 'code'),
+                    event_codes_type=get_attr_str_from_event_codes(datum['event_codes'], 'code_type'),
+                    event_codes_iso3=get_attr_str_from_event_codes(datum['event_codes'], 'iso3'),
                 )
             }
 
         return {
             'headers': headers,
             'data': data.values(
-                *[header for header in headers.keys() if header not in ['event_code_type', 'event_code_iso3']]
+                *[header for header in headers.keys() if header not in ['event_codes_type', 'event_codes_iso3']]
             ),
             'formulae': None,
             'transformer': transformer,

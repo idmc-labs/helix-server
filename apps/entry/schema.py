@@ -44,7 +44,7 @@ from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 from apps.extraction.filters import (
     FigureExtractionFilterSet,
-    FigureExtractionNonAnnotateFilterSet,
+    ReportFigureExtractionFilterSet,
     FigureExtractionFilterDataInputType,
     EntryExtractionFilterSet,
 )
@@ -342,7 +342,7 @@ class Query:
                 figure_cause=figure_cause,
             ).values('canonical_date').annotate(value=Sum('total_figures'))
 
-        figure_qs = FigureExtractionNonAnnotateFilterSet(data=filters).qs
+        figure_qs = ReportFigureExtractionFilterSet(data=filters).qs
 
         idps_conflict_figure_qs = figure_qs.filter(
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,

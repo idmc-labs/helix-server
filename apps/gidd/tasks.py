@@ -3,11 +3,13 @@ import logging
 from helix.celery import app as celery_app
 from django.utils import timezone
 from django.db import models
+from django.db.models.functions import Cast
 from django.contrib.postgres.aggregates.general import ArrayAgg
 from django.db.models import (
     Sum, Case, When, IntegerField, Value, F, Subquery, OuterRef, Q
 )
-from django.db.models.functions import Concat
+from django.contrib.postgres.fields import ArrayField
+
 from utils.common import round_and_remove_zero
 from apps.entry.models import Figure
 from apps.event.models import Crisis
@@ -23,7 +25,8 @@ from .models import (
 )
 from apps.country.models import Country
 from apps.report.models import Report
-from apps.common.utils import get_attr_list_from_event_codes, FIELD_SEPARATOR
+from apps.common.utils import get_attr_list_from_event_codes
+from utils.db import Array
 
 
 logging.basicConfig(level=logging.INFO)
@@ -236,14 +239,12 @@ def update_conflict_and_disaster_data():
                 )
             ),
             year=Value(year, output_field=IntegerField()),
-            event_code=ArrayAgg(
-                Concat(
+            event_codes=ArrayAgg(
+                Array(
                     F('event__event_code__event_code'),
-                    Value(FIELD_SEPARATOR),
-                    F('event__event_code__event_code_type'),
-                    Value(FIELD_SEPARATOR),
+                    Cast(F('event__event_code__event_code_type'), models.CharField()),
                     F('event__event_code__country__iso3'),
-                    output_field=models.CharField(),
+                    output_field=ArrayField(models.CharField()),
                 ),
                 distinct=True,
                 filter=models.Q(event__event_code__country__id=F('country__id')),
@@ -285,8 +286,8 @@ def update_conflict_and_disaster_data():
                     iso3=item['country__iso3'],
                     country_id=item['country'],
                     country_name=item['country__idmc_short_name'],
-                    event_code=get_attr_list_from_event_codes(item['event_code'], type='code') or [],
-                    event_code_type=get_attr_list_from_event_codes(item['event_code'], type='code_type') or [],
+                    event_codes=get_attr_list_from_event_codes(item['event_codes'], 'code') or [],
+                    event_codes_type=get_attr_list_from_event_codes(item['event_codes'], 'code_type') or [],
                 ) for item in disasters
             ]
         )

@@ -30,16 +30,20 @@ class RestConflictFilterSet(ReleaseMetadataFilter):
 
 
 class RestDisasterFilterSet(ReleaseMetadataFilter):
+    event_name = django_filters.CharFilter(method='filter_event_name')
     start_year = django_filters.NumberFilter(field_name='start_year', method='filter_start_year')
     end_year = django_filters.NumberFilter(field_name='end_year', method='filter_end_year')
 
     class Meta:
         model = Disaster
         fields = {
-            'id': ['iexact'],
+            'event_name': ['icontains'],
             'iso3': ['in'],
             'hazard_type': ['in'],
         }
+
+    def filter_event_name(self, queryset, name, value):
+        return queryset.filter(event_name__icontains=value)
 
     def filter_start_year(self, queryset, name, value):
         return queryset.filter(year__gte=value)

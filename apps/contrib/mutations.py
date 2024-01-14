@@ -5,7 +5,7 @@ from utils.mutation import generate_input_type_for_serializer
 
 from apps.contrib.serializers import ExcelDownloadSerializer
 from utils.common import convert_date_object_to_string_in_dict
-from apps.contrib.schema import AttachmentType, ClientType, BulkApiOperationType
+from apps.contrib.schema import AttachmentType, ClientType, BulkApiOperationObjectType
 from apps.contrib.bulk_operations.serializers import BulkApiOperationSerializer
 from apps.contrib.serializers import (
     AttachmentSerializer,
@@ -141,10 +141,12 @@ class TriggerBulkOperation(graphene.Mutation):
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.Field(BulkApiOperationType, required=True)
+    result = graphene.Field(BulkApiOperationObjectType)
 
     @staticmethod
-    # @permission_checker(['entry.add_entry'])
+    # TODO: Define a proper permission
+    # For now, this is handle at client level.
+    # We do handle the permission internally as well.
     def mutate(_, info, data):
         serializer = BulkApiOperationSerializer(data=data, context={'request': info.context.request})
         if errors := mutation_is_not_valid(serializer):

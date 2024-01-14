@@ -22,7 +22,7 @@ TEST_MEDIA_ROOT = 'media-temp'
 TEST_EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 TEST_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 BROKER_BACKEND = 'memory'
-CELERY_ALWAYS_EAGER = True
+CELERY_TASK_ALWAYS_EAGER = True
 CELERY_EAGER_PROPAGATES = True
 
 TEST_CACHES = {
@@ -57,6 +57,10 @@ class CommonSetupClassMixin:
         content = response.json()
         self.assertIsNone(content.get('errors'), content)
 
+    def assertResponseErrors(self, response):
+        content = response.json()
+        self.assertIsNotNone(content.get('errors'), content)
+
     def assertQuerySetEqual(self, l1, l2, message=None):
         return self.assertEqual(
             sorted([each.id for each in l1]),
@@ -73,7 +77,7 @@ class CommonSetupClassMixin:
     CACHES=TEST_CACHES,
     AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
     BROKER_BACKEND=BROKER_BACKEND,
-    CELERY_ALWAYS_EAGER=CELERY_ALWAYS_EAGER,
+    CELERY_TASK_ALWAYS_EAGER=CELERY_TASK_ALWAYS_EAGER,
     CELERY_EAGER_PROPAGATES=CELERY_EAGER_PROPAGATES,
 )
 class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
@@ -181,7 +185,7 @@ class ImmediateOnCommitMixin(object):
     CACHES=TEST_CACHES,
     AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
     BROKER_BACKEND=BROKER_BACKEND,
-    CELERY_ALWAYS_EAGER=CELERY_ALWAYS_EAGER,
+    CELERY_TASK_ALWAYS_EAGER=CELERY_TASK_ALWAYS_EAGER,
     CELERY_EAGER_PROPAGATES=CELERY_EAGER_PROPAGATES,
 )
 class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
@@ -196,7 +200,7 @@ class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     CACHES=TEST_CACHES,
     AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
     BROKER_BACKEND=BROKER_BACKEND,
-    CELERY_ALWAYS_EAGER=CELERY_ALWAYS_EAGER,
+    CELERY_TASK_ALWAYS_EAGER=CELERY_TASK_ALWAYS_EAGER,
     CELERY_EAGER_PROPAGATES=CELERY_EAGER_PROPAGATES,
 )
 class HelixAPITestCase(APITestCase):

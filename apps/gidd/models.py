@@ -97,13 +97,13 @@ class Disaster(models.Model):
         ),
         default=list,
     )
-    event_code = ArrayField(
+    event_codes = ArrayField(
         models.CharField(
             verbose_name=_('Event Codes'), max_length=256
         ),
         default=list,
     )
-    event_code_type = ArrayField(
+    event_codes_type = ArrayField(
         models.CharField(
             verbose_name=_('Event Code Types'), max_length=256
         ),

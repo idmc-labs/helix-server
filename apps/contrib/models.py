@@ -1,4 +1,5 @@
 import logging
+import typing
 import uuid
 from uuid import uuid4
 from collections import OrderedDict
@@ -10,9 +11,7 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
-from apps.contrib.tasks import generate_excel_file
 from apps.users.models import User
-from apps.entry.tasks import generate_pdf
 from utils.fields import CachedFileField
 from apps.contrib.redis_client_track import set_client_ids_in_redis
 
@@ -167,6 +166,8 @@ class SourcePreview(MetaInformationAbstractModel):
         """
         Based on the url, generate a pdf and store it.
         """
+        from apps.entry.tasks import generate_pdf
+
         url = data['url']
         created_by = data.get('created_by')
         last_modified_by = data.get('last_modified_by')
@@ -186,6 +187,10 @@ class SourcePreview(MetaInformationAbstractModel):
 
 def excel_upload_to(instance, filename: str) -> str:
     return f'contrib/excel/{uuid4()}/{instance.download_type}/{filename}'
+
+
+def bulk_operation_snapshot(instance, filename: str) -> str:
+    return f'contrib/bulk-operation/{uuid4()}/{instance.action.name}/{filename}'
 
 
 class ExcelDownload(MetaInformationAbstractModel):
@@ -274,6 +279,8 @@ class ExcelDownload(MetaInformationAbstractModel):
 
         Is called by serializer.create method
         '''
+        from apps.contrib.tasks import generate_excel_file
+
         transaction.on_commit(lambda: generate_excel_file.delay(
             self.pk, request.user.id, model_instance_id=model_instance_id
         ))
@@ -406,20 +413,22 @@ class BulkApiOperation(models.Model):
 
     class BULK_OPERATION_STATUS(enum.Enum):
         PENDING = 0
-        STARTED = 1
-        FINISHED = 2
+        IN_PROGRESS = 1
+        COMPLETED = 2
+        FAILED = 3
+        KILLED = 4
 
-        __labels__ = {
-            PENDING: _("Pending"),
-            STARTED: _("Started"),
-            FINISHED: _("Finished"),
-        }
+    QUERYSET_COUNT_THRESHOLD = 100
+    WAIT_TIME_THRESHOLD_IN_MINUTES = 5
 
-    created_at = models.DateTimeField(verbose_name=_('Created At'), default=timezone.now)
+    created_at = models.DateTimeField(verbose_name=_('Created At'), auto_now_add=True)
     created_by = models.ForeignKey(
         'users.User', verbose_name=_('Created By'),
         related_name='created_%(class)s', on_delete=models.PROTECT,
     )
+    # Runtime information
+    started_at = models.DateTimeField(verbose_name=_('Started At'), null=True, blank=True)
+    completed_at = models.DateTimeField(verbose_name=_('Completed At'), null=True, blank=True)
 
     # User provided fields
     action = enum.EnumField(enum=BULK_OPERATION_ACTION)
@@ -436,6 +445,36 @@ class BulkApiOperation(models.Model):
 
     # System generated fields
     status = enum.EnumField(enum=BULK_OPERATION_STATUS, default=BULK_OPERATION_STATUS.PENDING)
+    # Output from operation
     success_count = models.PositiveIntegerField(blank=True, null=True)
+    success_list = models.JSONField(default=list)
     failure_count = models.PositiveIntegerField(blank=True, null=True)
-    errors = models.JSONField(default=dict)
+    failure_list = models.JSONField(default=list)
+    snapshot = CachedFileField(
+        verbose_name=_('Existing data snapshot'),
+        blank=True,
+        null=True,
+        upload_to=bulk_operation_snapshot,
+        max_length=2000,
+    )
+
+    get_action_display: typing.Callable
+    get_status_display: typing.Callable
+
+    def __str__(self):
+        return f'{self.get_action_display()}-{self.pk}'
+
+    def update_status(self, status: BULK_OPERATION_STATUS, commit=True):
+        # If status has changed
+        if status != self.status:
+            if status == self.BULK_OPERATION_STATUS.IN_PROGRESS:
+                self.started_at = timezone.now()
+            elif status in [
+                self.BULK_OPERATION_STATUS.COMPLETED,
+                self.BULK_OPERATION_STATUS.FAILED,
+                self.BULK_OPERATION_STATUS.KILLED,
+            ]:
+                self.completed_at = timezone.now()
+        self.status = status
+        if commit:
+            self.save(update_fields=('status',))

@@ -31,7 +31,11 @@ def get_first_error_fields(errors):
 
 
 @patch('apps.entry.mutations.BulkUpdateFigureManager.add_event')
-@patch('apps.entry.mutations.BulkUpdateFigureManager.__exit__')
+@patch(
+    'apps.entry.mutations.BulkUpdateFigureManager.__exit__',
+    # Using side_effect to avoid suppressing exceptions
+    side_effect=lambda *_: False,
+)
 class TestBulkFigureUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.country_1 = CountryFactory.create(iso2='JP', iso3='JPN')
@@ -547,10 +551,10 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             "items": [figure_item_input] * 3,
             "delete_ids": [1, 2],
         }
-        # XXX: On error, current test client doesn't respond with 'errors' as 'data'.
         with override_settings(GRAPHENE_BATCH_DEFAULT_MAX_LIMIT=4):
             response = self.query(self.figure_bulk_mutation, variables=payload)
             content_data = response.json()['data']['bulkUpdateFigures']
+            self.assertResponseErrors(response)
             assert content_data is None
             # Unit test
             with self.assertRaises(PermissionDenied) as exc:
@@ -564,6 +568,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         with override_settings(GRAPHENE_BATCH_DEFAULT_MAX_LIMIT=6):
             response = self.query(self.figure_bulk_mutation, variables=payload)
             content_data = response.json()['data']['bulkUpdateFigures']
+            self.assertResponseNoErrors(response)
             assert content_data is not None
             # Unit test
             BulkUpdateFigures.validate_batch_size([1] * 3, [1, 2])

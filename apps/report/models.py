@@ -44,7 +44,7 @@ from apps.report.utils import (
     report_disaster_country,
     report_disaster_region,
 )
-from apps.common.utils import FIELD_SEPARATOR, ARRAY_SEPARATOR
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR, EXTERNAL_FIELD_SEPARATOR
 
 
 logger = logging.getLogger(__name__)
@@ -259,7 +259,7 @@ class Report(MetaInformationArchiveAbstractModel,
             total_stock_disaster_sum=Value(0, output_field=models.IntegerField()),
             remarks=Value('', output_field=models.CharField()),
             iso3=StringAgg(
-                'filter_figure_countries__iso3', ARRAY_SEPARATOR,
+                'filter_figure_countries__iso3', EXTERNAL_ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
         ).order_by('created_at')
@@ -677,16 +677,16 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'version_id',
                 'old_id',
             ).annotate(
-                event_code=models.Func(
+                event_codes=models.Func(
                     ArrayAgg(
                         models.Case(
                             models.When(
                                 event_code__isnull=False,
                                 then=Concat(
                                     F('event_code__event_code'),
-                                    Value(FIELD_SEPARATOR),
+                                    Value(EXTERNAL_FIELD_SEPARATOR),
                                     F('event_code__event_code_type'),
-                                    Value(FIELD_SEPARATOR),
+                                    Value(EXTERNAL_FIELD_SEPARATOR),
                                     F('event_code__country__iso3'),
                                 ),
                             ),

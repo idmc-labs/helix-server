@@ -27,11 +27,12 @@ from apps.contrib.enums import (
     BulkApiOperationStatusEnum,
 )
 from apps.contrib.bulk_operations.serializers import BulkApiOperationPayloadSerializer
-from apps.extraction.filters import FigureExtractionFilterDataType
+from apps.extraction.filters import FigureExtractionBulkOperationFilterDataType
 from apps.entry.models import ExternalApiDump
 from apps.entry.enums import ExternalApiTypeEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField, generate_type_for_serializer
+from utils.error_types import CustomErrorType
 
 
 BulkApiOperationPayloadType = generate_type_for_serializer(
@@ -150,19 +151,31 @@ class BulkApiOperationFilterType(graphene.ObjectType):
             'BulkApiOperationFigureRoleFilterType',
             (graphene.ObjectType,),
             dict(
-                figure=graphene.Field(FigureExtractionFilterDataType, required=True),
+                figure=graphene.Field(FigureExtractionBulkOperationFilterDataType, required=True),
             ),
         )
     )
 
 
-class BulkApiOperationType(DjangoObjectType):
+class BulkApiOperationSuccessType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    frontend_url = graphene.String(required=True)
+    frontend_permalink_url = graphene.String(required=True)
+
+
+class BulkApiOperationFailureType(BulkApiOperationSuccessType):
+    errors = graphene.List(graphene.NonNull(CustomErrorType), required=True)
+
+
+class BulkApiOperationObjectType(DjangoObjectType):
     class Meta:
         model = BulkApiOperation
         fields = (
             'id',
             'created_at',
             'created_by',
+            'started_at',
+            'completed_at',
             'success_count',
             'failure_count',
         )
@@ -173,6 +186,17 @@ class BulkApiOperationType(DjangoObjectType):
     status_display = EnumDescription(source='get_status_display', required=True)
     filters = graphene.Field(BulkApiOperationFilterType, required=True)
     payload = graphene.Field(BulkApiOperationPayloadType, required=True)
+
+    success_list = graphene.List(graphene.NonNull(BulkApiOperationSuccessType), required=True)
+    failure_list = graphene.List(graphene.NonNull(BulkApiOperationFailureType), required=True)
+
+    @staticmethod
+    def resolve_success_list(root: BulkApiOperation, info, *_) -> int:
+        return info.context.bulk_api_operation_success_list_loader.load(root.pk)
+
+    @staticmethod
+    def resolve_failure_list(root: BulkApiOperation, info, *_) -> int:
+        return info.context.bulk_api_operation_failure_list_loader.load(root.pk)
 
 
 class BulkApiOperationListType(CustomDjangoListObjectType):
@@ -201,6 +225,7 @@ class Query:
         )
     )
 
+    bulk_api_operation = DjangoObjectField(BulkApiOperationObjectType)
     bulk_api_operations = DjangoPaginatedListObjectField(
         BulkApiOperationListType,
         pagination=PageGraphqlPagination(

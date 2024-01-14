@@ -94,16 +94,25 @@ enum BULK_OPERATION_ACTION {
 
 enum BULK_OPERATION_STATUS {
   PENDING
-  STARTED
-  FINISHED
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  KILLED
+}
+
+type BulkApiOperationFailureType {
+  id: ID!
+  frontendUrl: String!
+  frontendPermalinkUrl: String!
+  errors: [GenericScalar!]!
 }
 
 input BulkApiOperationFigureRoleFilterInputType {
-  figure: FigureExtractionFilterDataInputType!
+  figure: FigureExtractionBulkOperationFilterDataInputType!
 }
 
 type BulkApiOperationFigureRoleFilterType {
-  figure: FigureExtractionFilterDataType!
+  figure: FigureExtractionBulkOperationFilterDataType!
 }
 
 input BulkApiOperationFigureRolePayloadInputType {
@@ -115,7 +124,8 @@ type BulkApiOperationFigureRolePayloadType {
 }
 
 input BulkApiOperationFilterDataInputType {
-  action: BULK_OPERATION_ACTION
+  actionList: [BULK_OPERATION_ACTION!]
+  statusList: [BULK_OPERATION_STATUS!]
 }
 
 input BulkApiOperationFilterInputType {
@@ -133,10 +143,28 @@ input BulkApiOperationInputType {
 }
 
 type BulkApiOperationListType {
-  results: [BulkApiOperationType!]
+  results: [BulkApiOperationObjectType!]
   totalCount: Int
   page: Int
   pageSize: Int
+}
+
+type BulkApiOperationObjectType {
+  id: ID!
+  createdAt: DateTime!
+  createdBy: UserType!
+  startedAt: DateTime
+  completedAt: DateTime
+  successCount: Int
+  failureCount: Int
+  action: BULK_OPERATION_ACTION
+  actionDisplay: EnumDescription
+  status: BULK_OPERATION_STATUS!
+  statusDisplay: EnumDescription!
+  filters: BulkApiOperationFilterType!
+  payload: BulkApiOperationPayloadType!
+  successList: [BulkApiOperationSuccessType!]!
+  failureList: [BulkApiOperationFailureType!]!
 }
 
 input BulkApiOperationPayloadInputType {
@@ -147,18 +175,10 @@ type BulkApiOperationPayloadType {
   figureRole: BulkApiOperationFigureRolePayloadType
 }
 
-type BulkApiOperationType {
+type BulkApiOperationSuccessType {
   id: ID!
-  createdAt: DateTime!
-  createdBy: UserType!
-  successCount: Int
-  failureCount: Int
-  action: BULK_OPERATION_ACTION
-  actionDisplay: EnumDescription
-  status: BULK_OPERATION_STATUS!
-  statusDisplay: EnumDescription!
-  filters: BulkApiOperationFilterType!
-  payload: BulkApiOperationPayloadType!
+  frontendUrl: String!
+  frontendPermalinkUrl: String!
 }
 
 input BulkMonitoringExpertPortfolioInputType {
@@ -1811,7 +1831,7 @@ input FigureAggregateFilterDataInputType {
   filterFigures: FigureExtractionFilterDataInputType
 }
 
-input FigureExtractionFilterDataInputType {
+input FigureExtractionBulkOperationFilterDataInputType {
   filterFigureRegions: [ID!]
   filterFigureGeographicalGroups: [ID!]
   filterFigureCountries: [ID!]
@@ -1845,9 +1865,11 @@ input FigureExtractionFilterDataInputType {
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
   filterFigureEntry: String
+  filterFigureIds: [ID!]
+  filterFigureExcludeIds: [ID!]
 }
 
-type FigureExtractionFilterDataType {
+type FigureExtractionBulkOperationFilterDataType {
   filterFigureRegions: [ID!]
   filterFigureGeographicalGroups: [ID!]
   filterFigureCountries: [ID!]
@@ -1872,11 +1894,49 @@ type FigureExtractionFilterDataType {
   filterFigureContextOfViolence: [ID!]
   filterFigureReviewStatus: [String!]
   filterFigureApprovedBy: [ID!]
+  filterFigureIds: [ID!]
+  filterFigureExcludeIds: [ID!]
   filterFigureStartAfter: Date
   filterFigureEndBefore: Date
   filterEntryArticleTitle: String
   filterFigureHasDisaggregatedData: Boolean
   reportId: String
+  filterFigureIsToBeReviewed: Boolean
+  filterFigureHasExcerptIdu: Boolean
+  filterFigureHasHousingDestruction: Boolean
+  filterFigureEntry: String
+}
+
+input FigureExtractionFilterDataInputType {
+  filterFigureRegions: [ID!]
+  filterFigureGeographicalGroups: [ID!]
+  filterFigureCountries: [ID!]
+  filterFigureEvents: [ID!]
+  filterFigureCrises: [ID!]
+  filterFigureSources: [ID!]
+  filterEntryPublishers: [ID!]
+  filterFigureCategoryTypes: [String!]
+  filterFigureCategories: [String!]
+  filterFigureStartAfter: Date
+  filterFigureEndBefore: Date
+  filterFigureRoles: [String!]
+  filterEntryArticleTitle: String
+  filterFigureTags: [ID!]
+  filterFigureCrisisTypes: [String!]
+  filterFigureCreatedBy: [ID!]
+  filterFigureTerms: [ID!]
+  filterFigureDisasterCategories: [ID!]
+  filterFigureDisasterSubCategories: [ID!]
+  filterFigureDisasterSubTypes: [ID!]
+  filterFigureDisasterTypes: [ID!]
+  filterFigureViolenceSubTypes: [ID!]
+  filterFigureViolenceTypes: [ID!]
+  filterFigureOsvSubTypes: [ID!]
+  filterFigureHasDisaggregatedData: Boolean
+  reportId: String
+  filterFigureContextOfViolence: [ID!]
+  filterFigureReviewStatus: [String!]
+  filterFigureApprovedBy: [ID!]
   filterFigureIsToBeReviewed: Boolean
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
@@ -2025,10 +2085,10 @@ type FigureType {
 
 input FigureUpdateInputType {
   id: ID
-  entry: ID!
+  entry: ID
   wasSubfact: Boolean
-  quantifier: QUANTIFIER!
-  reported: Int!
+  quantifier: QUANTIFIER
+  reported: Int
   unit: UNIT
   householdSize: Float
   category: FIGURE_CATEGORY_TYPES
@@ -2039,18 +2099,17 @@ input FigureUpdateInputType {
   startDateAccuracy: DATE_ACCURACY
   endDate: Date
   endDateAccuracy: DATE_ACCURACY
-  includeIdu: Boolean!
+  includeIdu: Boolean
   excerptIdu: String
   country: ID
   isDisaggregated: Boolean
   isHousingDestruction: Boolean
-  geoLocations: [OSMNameInputType!]
   calculationLogic: String
   tags: [ID!]
   sourceExcerpt: String
-  event: ID!
+  event: ID
   contextOfViolence: [ID!]
-  figureCause: CRISIS_TYPE!
+  figureCause: CRISIS_TYPE
   violence: ID
   violenceSubType: ID
   disasterCategory: ID
@@ -2060,7 +2119,7 @@ input FigureUpdateInputType {
   otherSubType: ID
   osvSubType: ID
   sources: [ID!]
-  uuid: String!
+  uuid: String
   disaggregationDisplacementUrban: Int
   disaggregationDisplacementRural: Int
   disaggregationLocationCamp: Int
@@ -2077,6 +2136,7 @@ input FigureUpdateInputType {
   disaggregationConflictCriminal: Int
   disaggregationConflictCommunal: Int
   disaggregationConflictOther: Int
+  geoLocations: [OSMNameInputType!]
 }
 
 enum GENDER_TYPE {
@@ -2233,8 +2293,8 @@ type GiddDisasterType {
   hazardSubTypeName: String!
   hazardTypeName: String!
   glideNumbers: [String!]!
-  eventCode: [String!]!
-  eventCodeType: [String!]!
+  eventCodes: [String!]!
+  eventCodesType: [String!]!
   countryId: ID!
   eventId: ID
   hazardCategoryId: ID
@@ -2279,8 +2339,8 @@ type GiddEventType {
   startDate: Date!
   endDate: Date!
   glideNumbers: [String!]!
-  eventCode: [String!]!
-  eventCodeType: [String!]!
+  eventCodes: [String!]!
+  eventCodesType: [String!]!
   affectedCountries: [GiddEventAffectedCountryType]
   hazardTypes: [GiddHazardType]
 }
@@ -3083,6 +3143,7 @@ type Query {
   client(id: ID!): ClientType
   clientList(filters: ClientFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ClientListType
   clientTrackInformationList(filters: ClientTrackInfoFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ClientTrackInformationListType
+  bulkApiOperation(id: ID!): BulkApiOperationObjectType
   bulkApiOperations(filters: BulkApiOperationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): BulkApiOperationListType
   contact(id: ID!): ContactType
   communication(id: ID!): CommunicationType
@@ -3612,7 +3673,7 @@ type ToggleNotificationRead {
 type TriggerBulkOperation {
   errors: [GenericScalar!]
   ok: Boolean
-  result: BulkApiOperationType!
+  result: BulkApiOperationObjectType
 }
 
 enum UNIT {

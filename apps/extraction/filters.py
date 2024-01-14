@@ -12,7 +12,7 @@ from apps.report.models import Report
 from utils.filters import StringListFilter, IDListFilter, generate_type_for_filter_set
 from apps.event.constants import OSV
 from apps.common.enums import GENDER_TYPE
-from apps.common.utils import ARRAY_SEPARATOR
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 from apps.entry.constants import STOCK, FLOW
 
 MALE = GENDER_TYPE.MALE.name
@@ -609,7 +609,7 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
     def qs(self):
         queryset = super().qs.annotate(
             **Figure.annotate_stock_and_flow_dates(),
-            geolocations=StringAgg('geo_locations__display_name', ARRAY_SEPARATOR),
+            geolocations=StringAgg('geo_locations__display_name', EXTERNAL_ARRAY_SEPARATOR),
             **Figure.annotate_sources_reliability(),
         )
         start_date = self.data.get('filter_figure_start_after')
@@ -624,25 +624,12 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         return flow_qs | stock_qs
 
 
-class FigureExtractionNonAnnotateFilterSet(FigureExtractionFilterSet):
-    @property
-    def qs(self):
-        # Skip annotate
-        start_date = self.data.get('filter_figure_start_after')
-        end_date = self.data.get('filter_figure_end_before')
-
-        queryset = super(FigureExtractionFilterSet, self).qs
-        flow_qs = Figure.filtered_nd_figures_for_listing(queryset, start_date, end_date)
-        stock_qs = Figure.filtered_idp_figures_for_listing(queryset, start_date, end_date)
-        return flow_qs | stock_qs
-
-
 class ReportFigureExtractionFilterSet(BaseFigureExtractionFilterSet):
     """
     NOTE: Return queryset as it is, don't apply filter here,
     filter is handled in qs method
 
-    NOTE: In report figures we have to pass end date as reference pont
+    NOTE: In report figures we have to pass end date as reference point
     """
     filter_figure_start_after = df.DateFilter(method='noop')
     filter_figure_end_before = df.DateFilter(method='noop')
@@ -663,6 +650,21 @@ class ReportFigureExtractionFilterSet(BaseFigureExtractionFilterSet):
             queryset, start_date, end_date
         )
         return flow_qs | stock_qs
+
+
+class FigureExtractionBulkOperationFilterSet(ReportFigureExtractionFilterSet):
+    filter_figure_ids = IDListFilter(method='filter_ids')
+    filter_figure_exclude_ids = IDListFilter(method='filter_exclude_ids')
+
+    def filter_ids(self, qs, _, value):
+        if value:
+            return qs.filter(id__in=value)
+        return qs
+
+    def filter_exclude_ids(self, qs, _, value):
+        if value:
+            return qs.exclude(id__in=value)
+        return qs
 
 
 class ExtractionQueryFilter(df.FilterSet):
@@ -687,10 +689,17 @@ FigureExtractionFilterDataType, FigureExtractionFilterDataInputType = generate_t
     'FigureExtractionFilterDataInputType',
 )
 
-
 EntryExtractionFilterDataType, EntryExtractionFilterDataInputType = generate_type_for_filter_set(
     EntryExtractionFilterSet,
     'entry.schema.entry_list',
     'EntryExtractionFilterDataType',
     'EntryExtractionFilterDataInputType',
+)
+
+
+FigureExtractionBulkOperationFilterDataType, FigureExtractionBulkOperationFilterDataInputType = generate_type_for_filter_set(
+    FigureExtractionBulkOperationFilterSet,
+    'entry.schema.figure_list',
+    'FigureExtractionBulkOperationFilterDataType',
+    'FigureExtractionBulkOperationFilterDataInputType',
 )
