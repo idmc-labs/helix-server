@@ -32,16 +32,16 @@ from apps.contrib.models import (
 from utils.common import get_string_from_list
 from utils.db import Array
 from utils.fields import CachedFileField, generate_full_media_url
-from apps.contrib.commons import DATE_ACCURACY
-from apps.review.models import Review
-from apps.parking_lot.models import ParkedItem
-from apps.common.enums import GENDER_TYPE
-from apps.notification.models import Notification
 from apps.common.utils import (
     get_attr_str_from_event_codes,
     EXTERNAL_ARRAY_SEPARATOR,
     EXTERNAL_TUPLE_SEPARATOR,
 )
+from apps.contrib.commons import DATE_ACCURACY
+from apps.review.models import Review
+from apps.parking_lot.models import ParkedItem
+from apps.common.enums import GENDER_TYPE
+from apps.notification.models import Notification
 from .documents import README_DATA
 
 logger = logging.getLogger(__name__)

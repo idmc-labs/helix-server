@@ -86,6 +86,7 @@ def generate_storage_url_from_path(file_path):
     return media_storage.url(file_path)
 
 
+# FIXME: need to identify if this is internally used or externally used
 def get_string_from_list(list_of_string):
     return EXTERNAL_ARRAY_SEPARATOR.join(filter(None, list_of_string))
 
