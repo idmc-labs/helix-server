@@ -24,7 +24,12 @@ from apps.entry.models import (
 from apps.country.models import Country
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
 from utils.common import round_half_up
-from .utils import send_figure_notifications, BulkUpdateFigureManager, get_figure_notification_type
+from .utils import (
+    send_figure_notifications,
+    BulkUpdateFigureManager,
+    get_figure_notification_type,
+    get_event_notification_type,
+)
 
 
 class DisaggregatedAgeSerializer(serializers.ModelSerializer):
@@ -288,18 +293,6 @@ class CommonFigureValidationMixin:
             _attrs['displacement_occurred'] = None
         return _attrs
 
-    def _validate_event(self, instance, attrs):
-        errors = OrderedDict()
-        new_event = attrs.get('event', None)
-        current_event = getattr(instance, 'event', None)
-
-        # FIXME: do we use event.id or event_id here?
-        if new_event and current_event and current_event.id != new_event.id:
-            errors.update({
-                'event': 'Event change is not allowed'
-            })
-        return errors
-
     def _update_parent_fields(self, attrs):
         disaster_sub_type = attrs.get('disaster_sub_type', self.instance and self.instance.disaster_sub_type)
         violence_sub_type = attrs.get('violence_sub_type', self.instance and self.instance.violence_sub_type)
@@ -356,7 +349,6 @@ class CommonFigureValidationMixin:
             instance, attrs, 'disaggregation_age', 'age',
         ))
         errors.update(self._validate_figure_cause(instance, attrs))
-        errors.update(self._validate_event(instance, attrs))
 
         self._update_parent_fields(attrs)
         if errors:
@@ -525,8 +517,30 @@ class FigureSerializer(
                 disaggregation_age.append(age_serializer.save())
         getattr(instance, attr).set(disaggregation_age)
 
+    def _send_event_change_notification(self, figure, existing_event, new_event):
+        # Send notifications
+        # -- Delete notification
+        if notification_type := get_event_notification_type(existing_event, is_figure_deleted=True):
+            send_figure_notifications(
+                figure,
+                self.context['request'].user,
+                notification_type,
+                event=existing_event,
+            )
+        # -- Create notification
+        if notification_type := get_event_notification_type(new_event, is_figure_new=True):
+            send_figure_notifications(
+                figure,
+                self.context['request'].user,
+                notification_type,
+                event=new_event,
+            )
+
     def update(self, instance: Figure, validated_data):
         validated_data['last_modified_by'] = self.context['request'].user
+        # Event change tracking
+        existing_event = instance.event
+
         with transaction.atomic():
             if 'geo_locations' in validated_data:
                 geo_locations = validated_data.pop('geo_locations')
@@ -549,12 +563,17 @@ class FigureSerializer(
                 instance.sources.set(sources)
             instance = super().update(instance, validated_data)
 
-        # Notification create
-        if notification_type := get_figure_notification_type(instance.event):
-            send_figure_notifications(instance, self.context['request'].user, notification_type)
         Figure.update_figure_status(instance)
 
         bulk_manager: BulkUpdateFigureManager = self.context['bulk_manager']
+        if existing_event != instance.event:
+            bulk_manager.add_event(existing_event.pk)
+            self._send_event_change_notification(instance, existing_event, instance.event)
+        else:
+            # NOTE: We do not send notification when figure is updated if
+            # the figure's event has been updated
+            if notification_type := get_figure_notification_type(instance.event):
+                send_figure_notifications(instance, self.context['request'].user, notification_type)
         bulk_manager.add_event(instance.event_id)
         return instance
 

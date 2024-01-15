@@ -138,7 +138,6 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             min_event_start=models.Min('events__start_date'),
             max_event_end=models.Max('events__end_date'),
             figures_count=models.Count('events__figures', distinct=True),
-            **cls._total_figure_disaggregation_subquery(),
         ).order_by('created_at')
 
         def transformer(datum):

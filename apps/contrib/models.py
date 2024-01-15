@@ -50,6 +50,9 @@ class MetaInformationAbstractModel(models.Model):
     version_id = models.CharField(verbose_name=_('Version'), max_length=16,
                                   blank=True, null=True)
 
+    created_by_id: typing.Optional[int]
+    last_modified_by_id: typing.Optional[int]
+
     class Meta:
         abstract = True
 
