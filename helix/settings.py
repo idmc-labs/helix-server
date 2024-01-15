@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+import sys
 import json
 import socket
 import logging
@@ -73,6 +74,8 @@ env = environ.Env(
     # Copilot
     COPILOT_ENVIRONMENT_NAME=(str, None),
     COPILOT_SERVICE_NAME=(str, None),
+    # Pytest
+    PYTEST_XDIST_WORKER=(str, None),
 )
 
 
@@ -88,6 +91,21 @@ logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 ALLOWED_HOSTS = env('DJANGO_ALLOWED_HOST')
 
 IN_AWS_COPILOT_ECS = not not env('COPILOT_SERVICE_NAME')
+
+# See if we are inside a test environment (pytest)
+PYTEST_XDIST_WORKER = env('PYTEST_XDIST_WORKER')
+TESTING = any([
+    arg in sys.argv for arg in [
+        'test',
+        'pytest', '/usr/local/bin/pytest',
+        'py.test', '/usr/local/bin/py.test',
+        '/usr/local/lib/python3.6/dist-packages/py/test.py',
+    ]
+    # Provided by pytest-xdist
+]) or PYTEST_XDIST_WORKER is not None
+
+if not DEBUG:
+    assert TESTING is False
 
 # Application definition
 
