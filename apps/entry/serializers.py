@@ -26,7 +26,6 @@ from utils.validations import is_child_parent_inclusion_valid, is_child_parent_d
 from utils.common import round_half_up
 from .utils import (
     send_figure_notifications,
-    send_event_notifications,
     BulkUpdateFigureManager,
     get_figure_notification_type,
     get_event_notification_type,
@@ -518,14 +517,24 @@ class FigureSerializer(
                 disaggregation_age.append(age_serializer.save())
         getattr(instance, attr).set(disaggregation_age)
 
-    def _send_event_change_notification(self, existing_event, new_event):
+    def _send_event_change_notification(self, figure, existing_event, new_event):
         # Send notifications
         # -- Delete notification
         if notification_type := get_event_notification_type(existing_event, is_figure_deleted=True):
-            send_event_notifications(existing_event, self.context['request'].user, notification_type)
+            send_figure_notifications(
+                figure,
+                self.context['request'].user,
+                notification_type,
+                event=existing_event,
+            )
         # -- Create notification
         if notification_type := get_event_notification_type(new_event, is_figure_new=True):
-            send_event_notifications(new_event, self.context['request'].user, notification_type)
+            send_figure_notifications(
+                figure,
+                self.context['request'].user,
+                notification_type,
+                event=new_event,
+            )
 
     def update(self, instance: Figure, validated_data):
         validated_data['last_modified_by'] = self.context['request'].user
@@ -554,15 +563,17 @@ class FigureSerializer(
                 instance.sources.set(sources)
             instance = super().update(instance, validated_data)
 
-        # Notification create
-        if notification_type := get_figure_notification_type(instance.event):
-            send_figure_notifications(instance, self.context['request'].user, notification_type)
         Figure.update_figure_status(instance)
 
         bulk_manager: BulkUpdateFigureManager = self.context['bulk_manager']
         if existing_event != instance.event:
             bulk_manager.add_event(existing_event.pk)
-            self._send_event_change_notification(existing_event, instance.event)
+            self._send_event_change_notification(instance, existing_event, instance.event)
+        else:
+            # NOTE: We do not send notification when figure is updated if
+            # the figure's event has been updated
+            if notification_type := get_figure_notification_type(instance.event):
+                send_figure_notifications(instance, self.context['request'].user, notification_type)
         bulk_manager.add_event(instance.event_id)
         return instance
 

@@ -39,54 +39,32 @@ def send_figure_notifications(
     actor: User,
     notification_type: Notification.Type,
     is_deleted: bool = False,
+    event: typing.Optional[Event] = None,
 ):
+    _event = event or figure.event
+
     recipients = [
         user['id']
         for user in Event.regional_coordinators(
-            figure.event,
+            _event,
             actor=actor,
         )
     ]
-    if figure.event.created_by_id:
-        recipients.append(figure.event.created_by_id)
-    if figure.event.assignee_id:
-        recipients.append(figure.event.assignee_id)
+    if _event.created_by_id:
+        recipients.append(_event.created_by_id)
+    if _event.assignee_id:
+        recipients.append(_event.assignee_id)
 
     Notification.send_safe_multiple_notifications(
         recipients=recipients,
         actor=actor,
-        event=figure.event,
+        event=_event,
         entry=figure.entry,
         type=notification_type,
         **(
             dict(figure=figure)
             if not is_deleted else dict()
         ),
-    )
-
-
-def send_event_notifications(
-    event: Event,
-    actor: User,
-    notification_type: Notification.Type,
-):
-    recipients = [
-        user['id']
-        for user in Event.regional_coordinators(
-            event,
-            actor=actor,
-        )
-    ]
-    if event.created_by_id:
-        recipients.append(event.created_by_id)
-    if event.assignee_id:
-        recipients.append(event.assignee_id)
-
-    Notification.send_safe_multiple_notifications(
-        recipients=recipients,
-        actor=actor,
-        event=event,
-        type=notification_type,
     )
 
 

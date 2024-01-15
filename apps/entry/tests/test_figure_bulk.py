@@ -479,7 +479,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         content_data = response.json()['data']['bulkUpdateFigures']
         assert 'excerptIdu' not in get_first_error_fields(content_data['errors'])
 
-    @patch('apps.entry.serializers.send_event_notifications')
+    @patch('apps.entry.serializers.send_figure_notifications')
     def test_should_update_event_in_figure(
         self,
         serializer_notification_send,
@@ -544,7 +544,11 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         self.assertNotIn('event', get_first_error_fields(content_data['errors']))
         self.assertNotEqual(content_data['result'], [None, None])
         # Notification check - Should be empty
-        assert _get_mock_call_arg(serializer_notification_send) == []
+        assert serializer_notification_send.call_count == 2
+        assert _get_mock_call_arg(serializer_notification_send) == [
+            (figure1.pk, self.editor.id, Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT),
+            (figure2.pk, self.editor.id, Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT),
+        ]
         _reset_mock()
 
         for event_review_status, have_figure_move_notification in [
@@ -553,6 +557,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             [Event.EVENT_REVIEW_STATUS.APPROVED, True],
             [Event.EVENT_REVIEW_STATUS.APPROVED, True],
             [Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED, True],
+
             [Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED, False],
             [Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS, False],
         ]:
@@ -591,19 +596,28 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             # Notification check
             if have_figure_move_notification:
                 notification_types = (
-                    (Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT, Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT)
+                    (
+                        Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT,
+                        Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT,
+                        Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT,
+                    )
                     if event_review_status in [
                         Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
                         Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED,
                     ]
                     else
-                    (Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT, Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT)
+                    (
+                        Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT,
+                        Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT,
+                        Notification.Type.FIGURE_UPDATED_IN_APPROVED_EVENT,
+                    )
                 )
                 assert _get_mock_call_arg(serializer_notification_send) == [
+                    (figure1.pk, self.editor.id, notification_types[2]),
                     # Deleted in event2
-                    (event2.pk, self.editor.id, notification_types[0]),
+                    (figure2.pk, self.editor.id, notification_types[0]),
                     # Created in event2
-                    (event3.pk, self.editor.id, notification_types[1]),
+                    (figure2.pk, self.editor.id, notification_types[1]),
                 ]
             else:
                 assert _get_mock_call_arg(serializer_notification_send) == []
