@@ -105,6 +105,10 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
                         id
                         articleTitle
                       }
+                      event {
+                        id
+                        name
+                      }
                     }
                 }
             }
@@ -475,15 +479,36 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         content_data = response.json()['data']['bulkUpdateFigures']
         assert 'excerptIdu' not in get_first_error_fields(content_data['errors'])
 
-    def test_should_not_update_event_in_figure(
+    @patch('apps.entry.serializers.send_event_notifications')
+    def test_should_update_event_in_figure(
         self,
+        serializer_notification_send,
         mock_bulk_update_figure_manager_exit,
         mock_bulk_update_figure_manager_add_event,
     ):
         entry = EntryFactory.create()
-        event1, event2, event3 = EventFactory.create_batch(3)
+        event1, event2, event3 = EventFactory.create_batch(
+            3,
+            countries=[self.country_1],
+            review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
+        )
         figure1 = FigureFactory.create(entry=entry, event=event1)
         figure2 = FigureFactory.create(entry=entry, event=event2)
+
+        def _get_mock_call_arg(mock):
+            return [
+                (
+                    call.args[0].id,  # Figure
+                    call.args[1].id,  # User
+                    call.args[2],  # Type
+                )
+                for call in mock.mock_calls
+            ]
+
+        def _reset_mock():
+            mock_bulk_update_figure_manager_add_event.reset_mock()
+            mock_bulk_update_figure_manager_exit.reset_mock()
+            serializer_notification_send.reset_mock()
 
         for _event in [event1, event2, event3]:
             _event.countries.add(self.country_1, self.country_2)
@@ -518,32 +543,79 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         content_data = response.json()['data']['bulkUpdateFigures']
         self.assertNotIn('event', get_first_error_fields(content_data['errors']))
         self.assertNotEqual(content_data['result'], [None, None])
+        # Notification check - Should be empty
+        assert _get_mock_call_arg(serializer_notification_send) == []
+        _reset_mock()
 
-        # Test with incorrect event ids
-        figure_input_1.update({
-            'id': figure1.id,
-            'event': event1.id,
-        })
-        figure_input_2.update({
-            'id': figure2.id,
-            'event': event3.id,
-        })
-        response = self.query(
-            self.figure_bulk_mutation,
-            variables={
-                "items": [figure_input_1, figure_input_2],
-                "delete_ids": [],
-            }
-        )
-        assert mock_bulk_update_figure_manager_add_event.call_count == 3
-        mock_bulk_update_figure_manager_add_event.assert_has_calls([
-            call(event1.id),
-            call(event2.id),
-        ])
-        assert mock_bulk_update_figure_manager_exit.call_count == 2
-        self.assertResponseNoErrors(response)
+        for event_review_status, have_figure_move_notification in [
+            [Event.EVENT_REVIEW_STATUS.SIGNED_OFF, True],
+            [Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED, True],
+            [Event.EVENT_REVIEW_STATUS.APPROVED, True],
+            [Event.EVENT_REVIEW_STATUS.APPROVED, True],
+            [Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED, True],
+            [Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED, False],
+            [Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS, False],
+        ]:
+            # Change event status
+            for event in [event1, event2, event3]:
+                event.review_status = event_review_status
+                event.save()
+            # Rest figure2 event to event2
+            figure2.event = event2
+            figure2.save()
+            # Test with changed event ids
+            figure_input_1.update({
+                'id': figure1.id,
+                'event': event1.id,
+            })
+            figure_input_2.update({
+                'id': figure2.id,
+                'event': event3.id,
+            })
+            response = self.query(
+                self.figure_bulk_mutation,
+                variables={
+                    "items": [figure_input_1, figure_input_2],
+                    "delete_ids": [],
+                }
+            )
+            self.assertResponseNoErrors(response)
+            assert mock_bulk_update_figure_manager_add_event.call_count == 3
+            mock_bulk_update_figure_manager_add_event.assert_has_calls([
+                # Figure 1 - Figure changed
+                call(event1.id),
+                # Figure 2 - Figure moved
+                call(event2.id),  # Existing event
+                call(event3.id),  # New event
+            ])
+            # Notification check
+            if have_figure_move_notification:
+                notification_types = (
+                    (Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT, Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT)
+                    if event_review_status in [
+                        Event.EVENT_REVIEW_STATUS.SIGNED_OFF,
+                        Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED,
+                    ]
+                    else
+                    (Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT, Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT)
+                )
+                assert _get_mock_call_arg(serializer_notification_send) == [
+                    # Deleted in event2
+                    (event2.pk, self.editor.id, notification_types[0]),
+                    # Created in event2
+                    (event3.pk, self.editor.id, notification_types[1]),
+                ]
+            else:
+                assert _get_mock_call_arg(serializer_notification_send) == []
+            mock_bulk_update_figure_manager_exit.assert_called_once()
+            _reset_mock()
+
         content_data = response.json()['data']['bulkUpdateFigures']
-        self.assertIn('event', get_first_error_fields(content_data['errors']))
+        self.assertNotIn('event', get_first_error_fields(content_data['errors']))
+        self.assertEqual(str(event1.id), content_data['result'][0]['event']['id'])
+        self.assertEqual(event1.name, content_data['result'][0]['event']['name'])
+        self.assertEqual(str(event3.id), content_data['result'][1]['event']['id'])
+        self.assertEqual(event3.name, content_data['result'][1]['event']['name'])
 
     def test_bulk_update_batch_size(self, *_):
         figure_item_input = copy(self.figure_item_input)
@@ -586,7 +658,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         response = self.query(self.figure_bulk_mutation, variables=payload)
         self.assertResponseNoErrors(response)
 
-        def _get_call_arg(mock):
+        def _get_mock_call_arg(mock):
             return [
                 (
                     call.args[0].id,  # Figure
@@ -598,7 +670,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
 
         # Check
         # -- Call within serializer (Update)
-        assert _get_call_arg(serializer_send) == [
+        assert _get_mock_call_arg(serializer_send) == [
             (
                 item['id'],
                 self.editor.id,
@@ -607,7 +679,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             for item in payload['items']
         ]
         # -- Call within mutation class (Delete)
-        assert _get_call_arg(mutation_send) == [
+        assert _get_mock_call_arg(mutation_send) == [
             (
                 id,
                 self.editor.id,

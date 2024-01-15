@@ -1,3 +1,4 @@
+import typing
 from collections import OrderedDict
 
 from django.db import models
@@ -245,6 +246,8 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     include_triangulation_in_qa = models.BooleanField(
         verbose_name='Include triangulation in qa?', default=False,
     )
+
+    assignee_id: typing.Optional[int]
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None, reference_date=None):
