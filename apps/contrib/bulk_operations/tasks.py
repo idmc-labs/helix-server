@@ -14,6 +14,7 @@ from django.db import models
 from django.http import HttpRequest
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.contrib.auth.middleware import AuthenticationMiddleware
+from django.test import override_settings
 
 from apps.contrib.models import BulkApiOperation
 from apps.extraction.filters import FigureExtractionBulkOperationFilterSet
@@ -135,6 +136,15 @@ class BulkApiOperationBaseTask(typing.Generic[ModelType]):
         return list(queryset)
 
     @classmethod
+    def run_mutation(
+        cls,
+        request: HttpRequest,
+        query: str,
+        variables: dict,
+    ) -> typing.Tuple[typing.Optional[dict], typing.Optional[dict]]:
+        return run_mutation(request, query, variables)
+
+    @classmethod
     def mutate(
         cls,
         operation: BulkApiOperation,
@@ -149,7 +159,7 @@ class BulkApiOperationBaseTask(typing.Generic[ModelType]):
         login(api_request, operation.created_by)
 
         variables = cls.get_mutation_variables(operation.payload, items)
-        gql_data, gql_errors = run_mutation(api_request, cls.MUTATION, variables)
+        gql_data, gql_errors = cls.run_mutation(api_request, cls.MUTATION, variables)
 
         logout(api_request)
 
@@ -202,6 +212,16 @@ class BulkFigureBulkUpdateTask(BulkApiOperationBaseTask[Figure]):
     @abc.abstractmethod
     def get_update_payload(payload: dict) -> dict:
         raise NotImplementedError
+
+    @classmethod
+    def run_mutation(
+        cls,
+        request: HttpRequest,
+        query: str,
+        variables: dict,
+    ) -> typing.Tuple[typing.Optional[dict], typing.Optional[dict]]:
+        with override_settings(GRAPHENE_BATCH_DEFAULT_MAX_LIMIT=len(variables['items'])):
+            return super().run_mutation(request, query, variables)
 
     @classmethod
     def get_mutation_variables(cls, payload: dict, items: typing.List[Figure]) -> dict:
