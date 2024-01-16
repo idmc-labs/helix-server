@@ -68,7 +68,8 @@ env = environ.Env(
     POSTGRES_USER=str,
     SEND_ACTIVATION_EMAIL=(bool, True),
     SENTRY_DSN=(str, None),
-    SENTRY_SAMPLE_RATE=(float, 0.2),
+    SENTRY_SAMPLE_RATE=(float, 0.2),  # TODO: Change this to SENTRY_TRACES_SAMPLE_RATE
+    SENTRY_PROFILES_SAMPLE_RATE=(float, None),
     # Copilot
     COPILOT_ENVIRONMENT_NAME=(str, None),
     COPILOT_SERVICE_NAME=(str, None),
@@ -417,6 +418,7 @@ if SENTRY_DSN:
         # 'release': sentry.fetch_git_sha(os.path.dirname(BASE_DIR)),
         'environment': HELIX_ENVIRONMENT,
         'traces_sample_rate': env('SENTRY_SAMPLE_RATE'),
+        'profiles_sample_rate': env('SENTRY_PROFILES_SAMPLE_RATE'),
         'debug': DEBUG,
         'tags': {
             'site': ALLOWED_HOSTS[0],
