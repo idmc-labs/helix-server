@@ -60,9 +60,8 @@ class TestReportModel(HelixTestCase):
                    filter_figure_end_before=f1.end_date)
         r.save()
         assert r.report_figures.count() == 1
-        self.assertEqual(r.countries_report[0].total_stock_conflict,
-                         f1.total_figures,
-                         r.countries_report)
+        # TODO: Use CountryFilter to test this values
+        # Discuss with safar about the edge cases
 
     def test_001_appropriate_typology_checks(self):
         FigureFactory.create(

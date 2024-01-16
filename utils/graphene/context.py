@@ -20,6 +20,10 @@ from apps.entry.dataloaders import (
     FigureSourcesReliability,
     FigureLastReviewCommentStatusLoader,
 )
+from apps.contrib.dataloaders import (
+    BulkApiOperationFailureListLoader,
+    BulkApiOperationSuccessListLoader,
+)
 from apps.event.dataloaders import (
     TotalIDPFigureByEventLoader,
     TotalNDFigureByEventLoader,
@@ -28,6 +32,7 @@ from apps.event.dataloaders import (
     EventTypologyLoader,
     EventFigureTypologyLoader,
     EventReviewCountLoader,
+    EventCodeLoader,
 )
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 from apps.entry.models import Figure
@@ -179,3 +184,15 @@ class GQLContext:
     @cached_property
     def user_portfolio_role_loader(self):
         return UserPortfolioRoleLoader()
+
+    @cached_property
+    def event_code_loader(self):
+        return EventCodeLoader()
+
+    @cached_property
+    def bulk_api_operation_success_list_loader(self):
+        return BulkApiOperationSuccessListLoader()
+
+    @cached_property
+    def bulk_api_operation_failure_list_loader(self):
+        return BulkApiOperationFailureListLoader()

@@ -61,7 +61,7 @@ class CrisisType(DjangoObjectType):
         NULL = 'null'
         value = getattr(
             root,
-            Crisis.IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE,
+            Crisis.IDP_FIGURES_REFERENCE_DATE_ANNOTATE,
             NULL
         )
         if value != NULL:

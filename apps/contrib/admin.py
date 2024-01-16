@@ -1,5 +1,23 @@
 from django.contrib import admin
-from apps.contrib.models import Client, ClientTrackInfo, ExcelDownload
+from admin_auto_filters.filters import AutocompleteFilterFactory
+
+from apps.contrib.models import (
+    Client,
+    ClientTrackInfo,
+    ExcelDownload,
+    BulkApiOperation,
+)
+
+
+class ReadOnlyMixin():
+    def has_add_permission(self, *args, **kwargs):
+        return False
+
+    def has_change_permission(self, *args, **kwargs):
+        return False
+
+    def has_delete_permission(self, *args, **kwargs):
+        return False
 
 
 class ClientAdmin(admin.ModelAdmin):
@@ -42,7 +60,30 @@ class ExcelDownloadAdmin(admin.ModelAdmin):
         'completed_at',
     ]
     autocomplete_fields = ('created_by',)
-    list_filter = ['download_type']
+    list_filter = ('download_type',)
+    list_display_links = ['id']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('created_by')
+
+
+@admin.register(BulkApiOperation)
+class BulkApiOperationAdmin(ReadOnlyMixin, admin.ModelAdmin):
+    list_display = [
+        'id',
+        'created_at',
+        'created_by',
+        'action',
+        'status',
+        'success_count',
+        'failure_count',
+    ]
+    autocomplete_fields = ('created_by',)
+    list_filter = (
+        'action',
+        'status',
+        AutocompleteFilterFactory('User', 'created_by'),
+    )
     list_display_links = ['id']
 
     def get_queryset(self, request):

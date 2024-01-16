@@ -5,7 +5,7 @@ from utils.graphene.enums import EnumDescription
 
 from apps.contact.enums import DesignationGrapheneEnum
 from apps.entry.enums import GenderTypeGrapheneEnum
-from apps.contact.filters import ContactFilter, CommunicationFilter
+from apps.contact.filters import ContactFilter, CommunicationFilter, CommunicationMediumFilter
 from apps.contact.models import Contact, Communication, CommunicationMedium
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
@@ -21,7 +21,7 @@ class CommunicationMediumType(DjangoObjectType):
 class CommunicationMediumListType(CustomDjangoListObjectType):
     class Meta:
         model = CommunicationMedium
-        filter_fields = []
+        filterset_class = CommunicationMediumFilter
 
 
 class CommunicationType(DjangoObjectType):

@@ -1,4 +1,3 @@
-
 from django.core.management.base import BaseCommand
 
 from apps.event.constants import OSV_SUB_TYPE

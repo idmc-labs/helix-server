@@ -22,7 +22,9 @@ from apps.country.models import (
     Country,
     CountryRegion,
 )
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 from utils.common import is_grid_or_myu_report
+
 EXCEL_FORMULAE = {
     'per_100k': '=IF({key2}{{row}} <> "", (100000 * {key1}{{row}})/{key2}{{row}}, "")',
     'percent_variation': '=IF({key2}{{row}}, 100 * ({key1}{{row}} - {key2}{{row}})/{key2}{{row}}, "")',
@@ -671,8 +673,8 @@ def report_disaster_event(report):
         dsub_type=F('event__disaster_sub_type__name'),
         flow_total=Sum('total_figures', filter=Q(category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT)),
         affected_countries=Count('country', distinct=True),
-        affected_iso3=StringAgg('country__iso3', '; ', distinct=True),
-        affected_names=StringAgg('country__idmc_short_name', ';  ', distinct=True),
+        affected_iso3=StringAgg('country__iso3', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+        affected_names=StringAgg('country__idmc_short_name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
     )
     return {
         'headers': headers,

@@ -1,12 +1,10 @@
 import graphene
-from graphene_django.filter.utils import get_filtering_args_from_filterset
 
 from apps.country.schema import (
-    CountryType,
     SummaryType,
     ContextualAnalysisType,
 )
-from apps.country.filters import CountryFilter
+from apps.country.filters import CountryFilterDataInputType
 from apps.country.serializers import SummarySerializer, ContextualAnalysisSerializer
 from apps.contrib.serializers import ExcelDownloadSerializer
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -72,23 +70,20 @@ class CreateContextualAnalysis(graphene.Mutation):
 
 
 class ExportCountries(graphene.Mutation):
-    class Meta:
-        arguments = get_filtering_args_from_filterset(
-            CountryFilter,
-            CountryType
-        )
+    class Arguments:
+        filters = CountryFilterDataInputType(required=True)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, info, **kwargs):
+    def mutate(_, info, filters):
         from apps.contrib.models import ExcelDownload
 
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.COUNTRY),
-                filters=convert_date_object_to_string_in_dict(kwargs),
+                filters=convert_date_object_to_string_in_dict(filters),
             ),
             context=dict(request=info.context.request)
         )

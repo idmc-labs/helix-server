@@ -5,6 +5,7 @@ from datetime import datetime
 from django.utils import timezone
 
 from helix.caches import external_api_cache
+from apps.common.utils import REDIS_SEPARATOR
 
 
 logging.basicConfig(level=logging.INFO)
@@ -17,11 +18,11 @@ def get_external_redis_data(key):
 
 def create_client_track_cache_key(api_type, client_id):
     date_today = timezone.now().strftime('%Y-%m-%d')
-    return f'trackinfo:{date_today}:{api_type}:{client_id}'
+    return REDIS_SEPARATOR.join(['trackinfo', date_today, api_type, client_id])
 
 
 def get_client_tracked_cache_keys():
-    return external_api_cache.keys('trackinfo:*')
+    return external_api_cache.keys(f'trackinfo{REDIS_SEPARATOR}*')
 
 
 def delete_external_redis_record_by_key(*keys):
@@ -54,7 +55,7 @@ def pull_track_data_from_redis(tracking_keys):
     tracked_data_from_redis = {}
 
     for key in tracking_keys:
-        tracked_date, api_type, code = itemgetter(1, 2, 3)(key.split(':'))
+        tracked_date, api_type, code = itemgetter(1, 2, 3)(key.split(REDIS_SEPARATOR))
         tracked_date = datetime.strptime(tracked_date, "%Y-%m-%d").date()
         requests_per_day = get_external_redis_data(key)
 

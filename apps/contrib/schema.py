@@ -6,18 +6,39 @@ from graphene_django_extras import (
 )
 from utils.graphene.enums import EnumDescription
 
-from apps.contrib.models import Attachment, ExcelDownload, Client, ClientTrackInfo
-from apps.contrib.filters import ClientTrackInfoFilter, ClientFilter
-from apps.contrib.filters import ExcelExportFilter
+from apps.contrib.models import (
+    Attachment,
+    ExcelDownload,
+    Client,
+    ClientTrackInfo,
+    BulkApiOperation,
+)
+from apps.contrib.filters import (
+    ClientTrackInfoFilter,
+    ClientFilter,
+    ExcelExportFilter,
+    BulkApiOperationFilter,
+)
 from apps.contrib.enums import (
     AttachmentForGrapheneEnum,
     DownloadTypeGrapheneEnum,
     ExcelGenerationStatusGrapheneEnum,
+    BulkApiOperationActionEnum,
+    BulkApiOperationStatusEnum,
 )
+from apps.contrib.bulk_operations.serializers import BulkApiOperationPayloadSerializer
+from apps.extraction.filters import FigureExtractionBulkOperationFilterDataType
 from apps.entry.models import ExternalApiDump
 from apps.entry.enums import ExternalApiTypeEnum
 from utils.graphene.types import CustomDjangoListObjectType
-from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.graphene.fields import DjangoPaginatedListObjectField, generate_type_for_serializer
+from utils.error_types import CustomErrorType
+
+
+BulkApiOperationPayloadType = generate_type_for_serializer(
+    'BulkApiOperationPayloadType',
+    serializer_class=BulkApiOperationPayloadSerializer,
+)
 
 
 class ExcelExportType(DjangoObjectType):
@@ -123,6 +144,67 @@ class AttachmentType(DjangoObjectType):
         return info.context.request.build_absolute_uri(root.attachment.url)
 
 
+class BulkApiOperationFilterType(graphene.ObjectType):
+    # NOTE: This should be same as apps/contribs/serializer::BulkApiOperationFilterSerializer
+    figure_role = graphene.Field(
+        type(
+            'BulkApiOperationFigureRoleFilterType',
+            (graphene.ObjectType,),
+            dict(
+                figure=graphene.Field(FigureExtractionBulkOperationFilterDataType, required=True),
+            ),
+        )
+    )
+
+
+class BulkApiOperationSuccessType(graphene.ObjectType):
+    id = graphene.ID(required=True)
+    frontend_url = graphene.String(required=True)
+    frontend_permalink_url = graphene.String(required=True)
+
+
+class BulkApiOperationFailureType(BulkApiOperationSuccessType):
+    errors = graphene.List(graphene.NonNull(CustomErrorType), required=True)
+
+
+class BulkApiOperationObjectType(DjangoObjectType):
+    class Meta:
+        model = BulkApiOperation
+        fields = (
+            'id',
+            'created_at',
+            'created_by',
+            'started_at',
+            'completed_at',
+            'success_count',
+            'failure_count',
+        )
+
+    action = graphene.Field(BulkApiOperationActionEnum)
+    action_display = EnumDescription(source='get_action_display')
+    status = graphene.Field(BulkApiOperationStatusEnum, required=True)
+    status_display = EnumDescription(source='get_status_display', required=True)
+    filters = graphene.Field(BulkApiOperationFilterType, required=True)
+    payload = graphene.Field(BulkApiOperationPayloadType, required=True)
+
+    success_list = graphene.List(graphene.NonNull(BulkApiOperationSuccessType), required=True)
+    failure_list = graphene.List(graphene.NonNull(BulkApiOperationFailureType), required=True)
+
+    @staticmethod
+    def resolve_success_list(root: BulkApiOperation, info, *_) -> int:
+        return info.context.bulk_api_operation_success_list_loader.load(root.pk)
+
+    @staticmethod
+    def resolve_failure_list(root: BulkApiOperation, info, *_) -> int:
+        return info.context.bulk_api_operation_failure_list_loader.load(root.pk)
+
+
+class BulkApiOperationListType(CustomDjangoListObjectType):
+    class Meta:
+        model = BulkApiOperation
+        filterset_class = BulkApiOperationFilter
+
+
 class Query:
     attachment = DjangoObjectField(AttachmentType)
     excel_exports = DjangoPaginatedListObjectField(ExcelExportsListType,
@@ -140,5 +222,13 @@ class Query:
         ClientTrackInformationListType,
         pagination=PageGraphqlPagination(
             page_size_query_param='pageSize'
+        )
+    )
+
+    bulk_api_operation = DjangoObjectField(BulkApiOperationObjectType)
+    bulk_api_operations = DjangoPaginatedListObjectField(
+        BulkApiOperationListType,
+        pagination=PageGraphqlPagination(
+            page_size_query_param='pageSize',
         )
     )

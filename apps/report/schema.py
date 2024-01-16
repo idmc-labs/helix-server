@@ -1,12 +1,15 @@
 import graphene
-from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 from utils.graphene.enums import EnumDescription
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.entry.enums import RoleGrapheneEnum, FigureTermsEnum, FigureCategoryTypeEnum
-from apps.entry.schema import FigureListType
+from apps.entry.enums import (
+    RoleGrapheneEnum,
+    FigureTermsEnum,
+    FigureCategoryTypeEnum,
+    FigureReviewStatusEnum,
+)
 from apps.report.models import (
     Report,
     ReportComment,
@@ -14,12 +17,16 @@ from apps.report.models import (
     ReportGeneration,
 )
 from apps.report.enums import ReportTypeEnum
-from apps.report.filters import ReportFilter, DummyFilter
+from apps.report.filters import (
+    ReportFilter,
+    ReportApprovalFilter,
+    ReportGenerationFilter,
+    ReportCommentFilter,
+)
 from apps.report.enums import ReportGenerationStatusEnum
 from utils.graphene.types import CustomDjangoListObjectType
-from utils.graphene.fields import CustomPaginatedListObjectField, DjangoPaginatedListObjectField
+from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
-from apps.extraction.filters import FigureExtractionFilterSet
 
 
 class ReportTotalsType(graphene.ObjectType):
@@ -37,7 +44,7 @@ class ReportCommentType(DjangoObjectType):
 class ReportCommentListType(CustomDjangoListObjectType):
     class Meta:
         model = ReportComment
-        filter_fields = ()
+        filterset_class = ReportCommentFilter
 
 
 class ReportApprovalType(DjangoObjectType):
@@ -48,7 +55,7 @@ class ReportApprovalType(DjangoObjectType):
 class ReportApprovalListType(CustomDjangoListObjectType):
     class Meta:
         model = ReportApproval
-        filter_fields = ('is_approved',)
+        filterset_class = ReportApprovalFilter
 
 
 class ReportGenerationType(DjangoObjectType):
@@ -77,7 +84,7 @@ class ReportGenerationType(DjangoObjectType):
 class ReportGenerationListType(CustomDjangoListObjectType):
     class Meta:
         model = ReportGeneration
-        filter_fields = ('report',)
+        filterset_class = ReportGenerationFilter
 
 
 class ReportType(DjangoObjectType):
@@ -89,50 +96,17 @@ class ReportType(DjangoObjectType):
                                               pagination=PageGraphqlPaginationWithoutCount(
                                                   page_size_query_param='pageSize'
                                               ))
+
+    # NOTE: We need to define this at ExtractionQueryObjectType as well
     filter_figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
     filter_figure_roles_display = EnumDescription(source='get_filter_figure_roles_display')
     filter_figure_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
     filter_figure_crisis_types_display = EnumDescription(source='get_filter_figure_crisis_types_display')
-    countries_report = graphene.Dynamic(lambda: CustomPaginatedListObjectField(
-        get_type('apps.country.schema.CountryListType'),
-        accessor='countries_report',
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        filterset_class=DummyFilter
-    ))
-    events_report = graphene.Dynamic(lambda: CustomPaginatedListObjectField(
-        get_type('apps.event.schema.EventListType'),
-        accessor='events_report',
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        filterset_class=DummyFilter
-    ))
-    entries_report = graphene.Dynamic(lambda: CustomPaginatedListObjectField(
-        get_type('apps.entry.schema.EntryListType'),
-        accessor='entries_report',
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        filterset_class=DummyFilter
-    ))
-    figures_report = DjangoPaginatedListObjectField(
-        FigureListType,
-        accessor='report_figures',
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        filterset_class=FigureExtractionFilterSet
-    )
-    crises_report = graphene.Dynamic(lambda: CustomPaginatedListObjectField(
-        get_type('apps.crisis.schema.CrisisListType'),
-        accessor='crises_report',
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        filterset_class=DummyFilter
-    ))
+    filter_figure_categories = graphene.List(graphene.NonNull(FigureCategoryTypeEnum))
+    filter_figure_terms = graphene.List(graphene.NonNull(FigureTermsEnum))
+    filter_figure_terms_display = EnumDescription(source='get_filter_figure_terms_display')
+    filter_figure_review_status = graphene.List(graphene.NonNull(FigureReviewStatusEnum))
+
     total_disaggregation = graphene.NonNull(ReportTotalsType)
     # FIXME: use dataloader for last_generation
     last_generation = graphene.Field(ReportGenerationType)
@@ -141,9 +115,6 @@ class ReportType(DjangoObjectType):
     )
     generated_from = graphene.Field(ReportTypeEnum)
     generated_from_display = EnumDescription(source='get_generated_from_display_display')
-    filter_figure_categories = graphene.List(graphene.NonNull(FigureCategoryTypeEnum))
-    filter_figure_terms = graphene.List(graphene.NonNull(FigureTermsEnum))
-    filter_figure_terms_display = EnumDescription(source='get_filter_figure_terms_display')
 
 
 class ReportListType(CustomDjangoListObjectType):

@@ -1,5 +1,6 @@
 import graphene
-from django.db.models import JSONField
+from django.db.models import fields, JSONField, Sum, Case, When, ExpressionWrapper, Q
+from django.db.models.functions import ExtractYear
 from graphene import ObjectType
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType
@@ -21,7 +22,12 @@ from apps.entry.enums import (
     FigureSourcesReliabilityEnum,
     FigureReviewStatusEnum,
 )
-from apps.entry.filters import OSMNameFilter
+from apps.entry.filters import (
+    OSMNameFilter,
+    DisaggregatedAgeFilter,
+    FigureFilter,
+    FigureTagFilter,
+)
 from apps.entry.models import (
     Figure,
     FigureTag,
@@ -36,8 +42,14 @@ from apps.organization.schema import OrganizationListType
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
-from apps.extraction.filters import FigureExtractionFilterSet, EntryExtractionFilterSet
+from apps.extraction.filters import (
+    FigureExtractionFilterSet,
+    ReportFigureExtractionFilterSet,
+    FigureExtractionFilterDataInputType,
+    EntryExtractionFilterSet,
+)
 from apps.crisis.enums import CrisisTypeGrapheneEnum
+from apps.crisis.models import Crisis
 from apps.event.schema import OtherSubTypeObjectType
 from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
 
@@ -63,9 +75,7 @@ class DisaggregatedAgeType(DjangoObjectType):
 class DisaggregatedAgeListType(CustomDjangoListObjectType):
     class Meta:
         model = DisaggregatedAge
-        filter_fields = {
-            'sex': ('in',),
-        }
+        filterset_class = DisaggregatedAgeFilter
 
 
 class DisaggregatedStratumType(ObjectType):
@@ -185,10 +195,7 @@ class FigureType(DjangoObjectType):
 class FigureListType(CustomDjangoListObjectType):
     class Meta:
         model = Figure
-        filter_fields = {
-            'unit': ('exact',),
-            'start_date': ('lte', 'gte'),
-        }
+        filterset_class = FigureFilter
 
 
 class TotalFigureFilterInputType(graphene.InputObjectType):
@@ -205,7 +212,6 @@ class EntryType(DjangoObjectType):
             'reviews', 'figures', 'reviewers', 'review_status', 'review_comments',
             'reviewing',
         )
-        filter_fields = ('article_title',)
 
     created_by = graphene.Field('apps.users.schema.UserType')
     last_modified_by = graphene.Field('apps.users.schema.UserType')
@@ -270,12 +276,22 @@ class SourcePreviewType(DjangoObjectType):
         return None
 
 
+class VisualizationValueType(ObjectType):
+    date = graphene.Date(required=True)
+    value = graphene.Int(required=True)
+
+
+class VisualizationFigureType(ObjectType):
+    idps_conflict_figures = graphene.List(graphene.NonNull(VisualizationValueType))
+    idps_disaster_figures = graphene.List(graphene.NonNull(VisualizationValueType))
+    nds_conflict_figures = graphene.List(graphene.NonNull(VisualizationValueType))
+    nds_disaster_figures = graphene.List(graphene.NonNull(VisualizationValueType))
+
+
 class FigureTagListType(CustomDjangoListObjectType):
     class Meta:
         model = FigureTag
-        filter_fields = {
-            'name': ('unaccent__icontains',),
-        }
+        filterset_class = FigureTagFilter
 
 
 class Query:
@@ -297,4 +313,83 @@ class Query:
                                                     page_size_query_param='pageSize'
                                                 ))
     disaggregated_age = DjangoObjectField(DisaggregatedAgeType)
-    disaggregated_age_list = DjangoPaginatedListObjectField(DisaggregatedAgeListType)
+    figure_aggregations = graphene.Field(
+        VisualizationFigureType,
+        filters=FigureExtractionFilterDataInputType(required=True),
+    )
+
+    @staticmethod
+    def resolve_figure_aggregations(_, info, filters):
+        def _filter_nd_same_or_multiple_year_figures(qs, figure_cause):
+            qs = qs.annotate(
+                # NOTE: Once we upgrade django, let's rewrite this without two different annotations
+                year_difference=ExpressionWrapper(
+                    ExtractYear('end_date') - ExtractYear('start_date'),
+                    output_field=fields.IntegerField()
+                ),
+                canonical_date=Case(
+                    When(
+                        Q(year_difference__gt=0),
+                        then='end_date',
+                    ),
+                    default='start_date',
+                ),
+            )
+
+            return qs.filter(
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                role=Figure.ROLE.RECOMMENDED,
+                figure_cause=figure_cause,
+            ).values('canonical_date').annotate(value=Sum('total_figures'))
+
+        figure_qs = ReportFigureExtractionFilterSet(data=filters).qs
+
+        idps_conflict_figure_qs = figure_qs.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT
+        ).values('end_date').annotate(value=Sum('total_figures'))
+
+        idps_disaster_figure_qs = figure_qs.filter(
+            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+            role=Figure.ROLE.RECOMMENDED,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER
+        ).values('end_date').annotate(value=Sum('total_figures'))
+
+        nds_conflict_figure_qs = _filter_nd_same_or_multiple_year_figures(
+            figure_qs,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT
+        )
+
+        nds_disaster_figure_qs = _filter_nd_same_or_multiple_year_figures(
+            figure_qs,
+            figure_cause=Crisis.CRISIS_TYPE.DISASTER
+        )
+
+        return VisualizationFigureType(
+            idps_conflict_figures=[
+                VisualizationValueType(
+                    date=k['end_date'],
+                    value=k['value']
+                ) for k in idps_conflict_figure_qs
+            ],
+            idps_disaster_figures=[
+                VisualizationValueType(
+                    date=k['end_date'],
+                    value=k['value']
+                ) for k in idps_disaster_figure_qs
+            ],
+            nds_conflict_figures=[
+                VisualizationValueType(
+                    date=k['canonical_date'],
+                    value=k['value']
+                ) for k in nds_conflict_figure_qs
+            ],
+            nds_disaster_figures=[
+                VisualizationValueType(
+                    date=k['canonical_date'],
+                    value=k['value']
+                ) for k in nds_disaster_figure_qs
+            ]
+
+        )

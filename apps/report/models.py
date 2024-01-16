@@ -4,6 +4,8 @@ import logging
 from uuid import uuid4
 
 from django.contrib.auth import get_user_model
+from django.contrib.postgres.aggregates.general import ArrayAgg
+from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
 from django.db.models import (
     Sum,
@@ -11,7 +13,9 @@ from django.db.models import (
     Exists,
     OuterRef,
     Value,
+    F,
 )
+from django.db.models.functions import Concat
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django_enumfield import enum
@@ -19,9 +23,6 @@ from django.contrib.postgres.aggregates.general import StringAgg
 
 from utils.common import get_string_from_list
 from apps.contrib.models import MetaInformationArchiveAbstractModel
-from apps.country.models import (
-    Country,
-)
 from apps.crisis.models import Crisis
 from apps.entry.models import (
     FigureDisaggregationAbstractModel,
@@ -43,6 +44,7 @@ from apps.report.utils import (
     report_disaster_country,
     report_disaster_region,
 )
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR, EXTERNAL_FIELD_SEPARATOR
 
 
 logger = logging.getLogger(__name__)
@@ -257,7 +259,7 @@ class Report(MetaInformationArchiveAbstractModel,
             total_stock_disaster_sum=Value(0, output_field=models.IntegerField()),
             remarks=Value('', output_field=models.CharField()),
             iso3=StringAgg(
-                'filter_figure_countries__iso3', '; ',
+                'filter_figure_countries__iso3', EXTERNAL_ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
         ).order_by('created_at')
@@ -290,50 +292,6 @@ class Report(MetaInformationArchiveAbstractModel,
     @property
     def report_figures(self):
         return self.extract_report_figures
-
-    @property
-    def countries_report(self) -> list:
-        result = Country.objects.filter(
-            id__in=self.report_figures.values(
-                'country'
-            )
-        ).annotate(
-            **Country._total_figure_disaggregation_subquery(
-                self.report_figures,
-                ignore_dates=True,
-            )
-        )
-        return result
-
-    @property
-    def events_report(self) -> list:
-        return Event.objects.filter(
-            id__in=self.report_figures.values(
-                'event'
-            )
-        ).annotate(
-            **Event._total_figure_disaggregation_subquery(self.report_figures),
-        )
-
-    @property
-    def entries_report(self) -> list:
-        return Entry.objects.filter(
-            id__in=self.report_figures.values(
-                'entry'
-            )
-        ).annotate(
-            **Entry._total_figure_disaggregation_subquery(self.report_figures),
-        )
-
-    @property
-    def crises_report(self) -> list:
-        return Crisis.objects.filter(
-            id__in=self.report_figures.values(
-                'event__crisis'
-            )
-        ).annotate(
-            **Crisis._total_figure_disaggregation_subquery(self.report_figures),
-        )
 
     @property
     def total_disaggregation(self) -> dict:
@@ -695,7 +653,6 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'name',
                 'event_type',
                 'other_sub_type',
-                'glide_numbers',
                 'violence',
                 'violence_sub_type',
                 'actor',
@@ -719,6 +676,27 @@ class ReportGeneration(MetaInformationArchiveAbstractModel, models.Model):
                 'last_modified_by',
                 'version_id',
                 'old_id',
+            ).annotate(
+                event_codes=models.Func(
+                    ArrayAgg(
+                        models.Case(
+                            models.When(
+                                event_code__isnull=False,
+                                then=Concat(
+                                    F('event_code__event_code'),
+                                    Value(EXTERNAL_FIELD_SEPARATOR),
+                                    F('event_code__event_code_type'),
+                                    Value(EXTERNAL_FIELD_SEPARATOR),
+                                    F('event_code__country__iso3'),
+                                ),
+                            ),
+                            output_field=models.CharField(),
+                        ),
+                    ),
+                    None,
+                    function='array_remove',
+                    output_field=ArrayField(models.CharField()),
+                ),
             ),
         )
 

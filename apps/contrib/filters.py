@@ -1,9 +1,11 @@
 import django_filters
 
-from utils.filters import StringListFilter
-from apps.contrib.models import ExcelDownload, ClientTrackInfo, Client
+from utils.filters import StringListFilter, MultipleInputFilter, generate_type_for_filter_set
+from apps.contrib.models import ExcelDownload, ClientTrackInfo, Client, BulkApiOperation
 from apps.entry.models import ExternalApiDump
 from apps.users.roles import USER_ROLE
+
+from .enums import BulkApiOperationActionEnum, BulkApiOperationStatusEnum
 
 
 class ExcelExportFilter(django_filters.FilterSet):
@@ -95,3 +97,27 @@ class ClientTrackInfoFilter(django_filters.FilterSet):
                 **ClientTrackInfo.annotate_api_name()
             ).select_related('client')
         return super().qs.none()
+
+
+class BulkApiOperationFilter(django_filters.FilterSet):
+    action_list = MultipleInputFilter(BulkApiOperationActionEnum, field_name='action')
+    status_list = MultipleInputFilter(BulkApiOperationStatusEnum, field_name='status')
+
+    class Meta:
+        model = BulkApiOperation
+        fields = []
+
+    @property
+    def qs(self):
+        # TODO: SuperUser may also need to look at other's bulk operations
+        return super().qs.filter(
+            created_by=self.request.user,
+        ).defer('success_list', 'failure_list')
+
+
+ClientTrackInfoFilterDataType, ClientTrackInfoFilterDataInputType = generate_type_for_filter_set(
+    ClientTrackInfoFilter,
+    'contrib.schema.client_track_information_list',
+    'ClientTrackInfoFilterDataType',
+    'ClientTrackInfoFilterDataInputType',
+)

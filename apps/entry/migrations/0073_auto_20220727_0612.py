@@ -16,6 +16,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='externalapidump',
             name='dump_file',
-            field=utils.fields.CachedFileField(blank=True, null=True, storage=helix.storages.FileSystemExternalMediaStorage(), upload_to=apps.entry.models.dump_file_upload_to, verbose_name='Dump file'),
+            field=utils.fields.CachedFileField(blank=True, null=True, storage=helix.storages.get_external_storage, upload_to=apps.entry.models.dump_file_upload_to, verbose_name='Dump file'),
         ),
     ]

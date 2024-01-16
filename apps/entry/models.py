@@ -23,19 +23,25 @@ from django.db.models.expressions import RawSQL
 from django.utils import timezone
 from django_enumfield import enum
 from helix.settings import FIGURE_NUMBER
-from helix.storages import external_storage
+from helix.storages import get_external_storage
 from apps.contrib.models import (
     MetaInformationAbstractModel,
     UUIDAbstractModel,
     MetaInformationArchiveAbstractModel,
 )
 from utils.common import get_string_from_list
+from utils.db import Array
 from utils.fields import CachedFileField, generate_full_media_url
 from apps.contrib.commons import DATE_ACCURACY
 from apps.review.models import Review
 from apps.parking_lot.models import ParkedItem
 from apps.common.enums import GENDER_TYPE
 from apps.notification.models import Notification
+from apps.common.utils import (
+    get_attr_str_from_event_codes,
+    EXTERNAL_ARRAY_SEPARATOR,
+    EXTERNAL_TUPLE_SEPARATOR,
+)
 from .documents import README_DATA
 
 logger = logging.getLogger(__name__)
@@ -529,6 +535,9 @@ class Figure(MetaInformationArchiveAbstractModel,
         default=FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED
     )
 
+    # Types
+    event_id: int
+
     class Meta:
         indexes = [
             models.Index(fields=['start_date']),
@@ -573,6 +582,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
+        # NOTE: We should write this query without using union
         year_difference = ExpressionWrapper(
             ExtractYear('end_date') - ExtractYear('start_date'),
             output_field=fields.IntegerField(),
@@ -583,18 +593,18 @@ class Figure(MetaInformationArchiveAbstractModel,
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
             year_difference__lt=1,
         )
-        mutiple_year_figures = qs.filter(
+        multiple_year_figures = qs.filter(
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
             year_difference__gte=1,
         )
         if start_date:
             same_year_figures = same_year_figures.filter(start_date__gte=start_date)
-            mutiple_year_figures = mutiple_year_figures.filter(end_date__gte=start_date)
+            multiple_year_figures = multiple_year_figures.filter(end_date__gte=start_date)
         if end_date:
             same_year_figures = same_year_figures.filter(start_date__lte=end_date)
-            mutiple_year_figures = mutiple_year_figures.filter(end_date__lte=end_date)
+            multiple_year_figures = multiple_year_figures.filter(end_date__lte=end_date)
 
-        return same_year_figures | mutiple_year_figures
+        return same_year_figures | multiple_year_figures
 
     @classmethod
     def filtered_nd_figures_for_listing(
@@ -603,10 +613,12 @@ class Figure(MetaInformationArchiveAbstractModel,
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
+        # NOTE: We should write this query without using union
         year_difference = ExpressionWrapper(
             ExtractYear('end_date') - ExtractYear('start_date'),
             output_field=fields.IntegerField(),
         )
+
         qs = qs.annotate(year_difference=year_difference)
 
         same_year_figures = qs.filter(
@@ -783,22 +795,23 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
-        from apps.extraction.filters import FigureExtractionFilterSet
+        from apps.extraction.filters import ReportFigureExtractionFilterSet
 
         class DummyRequest:
             def __init__(self, user):
                 self.user = user
 
-        qs = FigureExtractionFilterSet(
+        qs = ReportFigureExtractionFilterSet(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs
         return cls.get_figure_excel_sheets_data(qs)
 
     @classmethod
-    def get_figure_excel_sheets_data(cls, figures):
+    def get_figure_excel_sheets_data(cls, figures: models.QuerySet):
 
         from apps.crisis.models import Crisis
+
         headers = OrderedDict(
             id='ID',
             old_id='Old ID',
@@ -865,7 +878,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__id='Event ID',
             event__old_id='Event old ID',
             event__name='Event name',
-            event__glide_numbers='Event code',
             event__event_type='Event cause',
             event_main_trigger='Event main trigger',
             event__start_date='Event start date',
@@ -881,6 +893,8 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__assignee__full_name='Assignee',
             created_by__full_name='Created by',
             last_modified_by__full_name='Updated by',
+            event_codes='Event codes',
+            event_codes_type='Event codes type',
         )
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
@@ -922,36 +936,36 @@ class Figure(MetaInformationArchiveAbstractModel,
             ),
             geolocations=StringAgg(
                 'geo_locations__display_name',
-                '; ',
+                EXTERNAL_ARRAY_SEPARATOR,
                 filter=~Q(
                     Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name='')
                 ), distinct=True, output_field=models.CharField()
             ),
             publishers_name=StringAgg(
                 'entry__publishers__name',
-                '; ',
+                EXTERNAL_ARRAY_SEPARATOR,
                 filter=~Q(entry__publishers__name=''),
                 distinct=True, output_field=models.CharField()
             ),
             year=ExtractYear("end_date"),
             context_of_violences=StringAgg(
-                'context_of_violence__name', '; ',
+                'context_of_violence__name', EXTERNAL_ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             tags_name=StringAgg(
-                'tags__name', '; ',
+                'tags__name', EXTERNAL_ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             sources_name=StringAgg(
-                'sources__name', '; ',
+                'sources__name', EXTERNAL_ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             sources_type=StringAgg(
-                'sources__organization_kind__name', '; ',
+                'sources__organization_kind__name', EXTERNAL_ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             sources_methodology=StringAgg(
-                'sources__methodology', '; ',
+                'sources__methodology', EXTERNAL_ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
             geo_locations_accuracy=ArrayAgg(
@@ -963,17 +977,20 @@ class Figure(MetaInformationArchiveAbstractModel,
                 distinct=True, filter=Q(geo_locations__identifier__isnull=False)
             ),
             centroid=Concat(
-                F('centroid_lat'), Value(','), F('centroid_lon'), output_field=models.CharField()
+                F('centroid_lat'),
+                Value(EXTERNAL_TUPLE_SEPARATOR),
+                F('centroid_lon'),
+                output_field=models.CharField()
             ),
             geolocation_list=StringAgg(
                 Concat(
                     F('geo_locations__lat'),
-                    Value(','),
+                    Value(EXTERNAL_TUPLE_SEPARATOR),
                     F('geo_locations__lon'),
                     output_field=models.CharField(),
                     distinct=True
                 ),
-                '; ',
+                EXTERNAL_ARRAY_SEPARATOR,
                 filter=models.Q(geo_locations__isnull=False),
                 output_field=models.CharField(),
                 distinct=True,
@@ -992,17 +1009,21 @@ class Figure(MetaInformationArchiveAbstractModel,
                     then=F('event__other_sub_type__name')
                 ),
                 output_field=models.CharField()
-            )
+            ),
+            event_codes=ArrayAgg(
+                Array(
+                    F('event__event_code__event_code'),
+                    Cast(F('event__event_code__event_code_type'), models.CharField()),
+                    output_field=ArrayField(models.CharField()),
+                ),
+                distinct=True,
+                filter=models.Q(event__event_code__country__id=F('country__id')),
+            ),
         ).order_by(
             'created_at',
-        ).values(*[header for header in headers.keys()])
+        ).values(*[header for header in headers.keys() if header != 'event_codes_type'])
 
         def transformer(datum):
-
-            def format_glide_numbers(glide_numbers):
-                if not glide_numbers:
-                    return ''
-                return get_string_from_list(str(glide_number) for glide_number in glide_numbers)
 
             def get_enum_label(key, Enum):
                 val = datum[key]
@@ -1049,7 +1070,6 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 'source_document': generate_full_media_url(datum['source_document'], absolute=True),
                 'centroid': datum['centroid'],
-                'event__glide_numbers': format_glide_numbers(datum['event__glide_numbers']),
                 'event__event_type': get_enum_label(
                     'event__event_type', Crisis.CRISIS_TYPE
                 ),
@@ -1063,6 +1083,8 @@ class Figure(MetaInformationArchiveAbstractModel,
                     'review_status', Figure.FIGURE_REVIEW_STATUS
                 ),
                 'is_disaggregated': 'Yes' if datum['is_disaggregated'] else 'No',
+                'event_codes': get_attr_str_from_event_codes(datum['event_codes'], 'code'),
+                'event_codes_type': get_attr_str_from_event_codes(datum['event_codes'], 'code_type'),
             }
 
         readme_data = [
@@ -1088,6 +1110,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     @classmethod
     def get_total_stock_idp_figure(cls, filters):
         from apps.extraction.filters import FigureExtractionFilterSet
+        # TODO: use ReportFigureExtractionFilterSet
         return FigureExtractionFilterSet(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
@@ -1096,6 +1119,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     @classmethod
     def get_total_flow_nd_figure(cls, filters):
         from apps.extraction.filters import FigureExtractionFilterSet
+        # TODO: use ReportFigureExtractionFilterSet
         return FigureExtractionFilterSet(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
             role=Figure.ROLE.RECOMMENDED,
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
@@ -1109,6 +1133,7 @@ class Figure(MetaInformationArchiveAbstractModel,
     def update_figure_status(cls, figure):
         review_comments_count = figure.figure_review_comments.count()
 
+        # NOTE: State machine with states defined in FIGURE_REVIEW_STATUS
         if (
             review_comments_count > 0 and
             (figure.review_status == Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED or
@@ -1137,22 +1162,35 @@ class Figure(MetaInformationArchiveAbstractModel,
         ).first()
 
         review_approved_count = event_with_stats.review_approved_count
-        review_not_started_count = event_with_stats.review_not_started_count
+        review_re_request_count = event_with_stats.review_re_request_count
+        review_in_progress_count = event_with_stats.review_in_progress_count
         total_count = event_with_stats.total_count
 
         prev_status = event_with_stats.review_status
 
-        if not total_count or review_not_started_count == total_count:
-            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED.value
-        elif review_approved_count == total_count and prev_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
-            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF.value
-        elif review_approved_count == total_count:
-            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
-        else:
-            event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value
+        if prev_status == Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED:
+            if review_approved_count == total_count and review_approved_count > 0:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
+            elif review_in_progress_count > 0 or review_approved_count > 0 or review_re_request_count > 0:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value
+        elif prev_status == Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS:
+            if review_approved_count == total_count and review_approved_count > 0:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
+        elif prev_status == Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED:
+            if review_approved_count == total_count and review_approved_count > 0:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
+        elif prev_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED:
+            if review_approved_count == total_count and review_approved_count > 0:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED.value
+        elif prev_status == Event.EVENT_REVIEW_STATUS.APPROVED:
+            if review_approved_count != total_count:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED
+        elif prev_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
+            if review_approved_count != total_count:
+                event_with_stats.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED
         event_with_stats.save()
 
-        # TODO: add notification for un-approved and un-signed off
+        # TODO: add notification for transition to APPROVED_BUT_CHANGED, SIGNED_OFF_BUT_CHANGED, REVIEW_IN_PROGRESS?
         if (
             prev_status != event_with_stats.review_status and
             event_with_stats.review_status == Event.EVENT_REVIEW_STATUS.APPROVED
@@ -1347,8 +1385,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            countries=StringAgg('figures__country__idmc_short_name', '; ', distinct=True),
-            countries_iso3=StringAgg('figures__country__iso3', '; ', distinct=True),
+            countries=StringAgg('figures__country__idmc_short_name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            countries_iso3=StringAgg('figures__country__iso3', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
             figure_causes=ArrayAgg('figures__figure_cause', distinct=True),
             categories=ArrayAgg('figures__category', distinct=True),
             terms=ArrayAgg('figures__term', distinct=True),
@@ -1356,12 +1394,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             min_fig_end=Min('figures__end_date'),
             max_fig_start=Max('figures__start_date'),
             max_fig_end=Max('figures__end_date'),
-            sources_name=StringAgg('figures__sources__name', '; ', distinct=True),
-            source_types=StringAgg('figures__sources__organization_kind__name', '; ', distinct=True),
-            publishers_name=StringAgg('publishers__name', '; ', distinct=True),
-            publisher_types=StringAgg('publishers__organization_kind__name', '; ', distinct=True),
+            sources_name=StringAgg('figures__sources__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            source_types=StringAgg('figures__sources__organization_kind__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            publishers_name=StringAgg('publishers__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            publisher_types=StringAgg('publishers__organization_kind__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
             figures_count=models.Count('figures', distinct=True),
-            context_of_violences=StringAgg('figures__context_of_violence__name', '; ', distinct=True),
+            context_of_violences=StringAgg('figures__context_of_violence__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
             # **cls._total_figure_disaggregation_subquery(),
         ).order_by('created_at')
 
@@ -1730,7 +1768,7 @@ class ExternalApiDump(models.Model):
         verbose_name=_('Dump file'),
         blank=True, null=True,
         upload_to=dump_file_upload_to,
-        storage=external_storage,
+        storage=get_external_storage,
     )
     api_type = models.CharField(
         max_length=40,

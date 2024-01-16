@@ -1,11 +1,10 @@
 import graphene
-from graphene_django.filter.utils import get_filtering_args_from_filterset
 from django.utils import timezone
 from django.utils.translation import gettext
 
 from apps.contrib.serializers import ExcelDownloadSerializer
 from apps.event.models import Event, Actor, ContextOfViolence
-from apps.event.filters import ActorFilter, EventFilter
+from apps.event.filters import ActorFilterDataInputType, EventFilterDataInputType
 from apps.event.schema import EventType, ActorType, ContextOfViolenceType
 from apps.event.serializers import (
     EventSerializer,
@@ -147,8 +146,12 @@ class UpdateEvent(graphene.Mutation):
             return UpdateEvent(errors=[
                 dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
             ])
-        serializer = EventSerializer(instance=instance, data=data,
-                                     context=dict(request=info.context.request), partial=True)
+        serializer = EventUpdateSerializer(
+            instance=instance,
+            data=data,
+            context=dict(request=info.context.request),
+            partial=True,
+        )
         if errors := mutation_is_not_valid(serializer):
             return UpdateEvent(errors=errors, ok=False)
         instance = serializer.save()
@@ -178,23 +181,20 @@ class DeleteEvent(graphene.Mutation):
 
 
 class ExportEvents(graphene.Mutation):
-    class Meta:
-        arguments = get_filtering_args_from_filterset(
-            EventFilter,
-            EventType
-        )
+    class Arguments:
+        filters = EventFilterDataInputType(required=True)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, info, **kwargs):
+    def mutate(_, info, filters):
         from apps.contrib.models import ExcelDownload
 
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.EVENT),
-                filters=convert_date_object_to_string_in_dict(kwargs),
+                filters=convert_date_object_to_string_in_dict(filters),
             ),
             context=dict(request=info.context.request)
         )
@@ -205,23 +205,20 @@ class ExportEvents(graphene.Mutation):
 
 
 class ExportActors(graphene.Mutation):
-    class Meta:
-        arguments = get_filtering_args_from_filterset(
-            ActorFilter,
-            ActorType
-        )
+    class Arguments:
+        filters = ActorFilterDataInputType(required=True)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, info, **kwargs):
+    def mutate(_, info, filters):
         from apps.contrib.models import ExcelDownload
 
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.ACTOR),
-                filters=convert_date_object_to_string_in_dict(kwargs),
+                filters=convert_date_object_to_string_in_dict(filters),
             ),
             context=dict(request=info.context.request)
         )

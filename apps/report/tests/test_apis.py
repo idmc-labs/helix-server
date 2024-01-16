@@ -403,15 +403,13 @@ class TestReportFilter(HelixGraphQLTestCase):
             }
         }'''
         self.entries_report_query = '''
-          query MyQuery($id: ID!) {
-            report(id: $id) {
-              entriesReport {
-                results {
-                  id
-                  articleTitle
-                }
-                totalCount
+          query MyQuery($id: String) {
+            entryList(filters: {reportId: $id}) {
+              results {
+                id
+                articleTitle
               }
+              totalCount
             }
           }
         '''
@@ -473,8 +471,7 @@ class TestReportFilter(HelixGraphQLTestCase):
             self.create_report,
             input_data=self.input,
         )
-        report = response.json()
-        report_id = report["data"]["createReport"]["result"]["id"]
+        report_id = response.json()["data"]["createReport"]["result"]["id"]
 
         # Test for entries
         response = self.query(
@@ -483,20 +480,8 @@ class TestReportFilter(HelixGraphQLTestCase):
                 id=str(report_id),
             )
         )
-        entries = response.json()
-        entries_count = entries["data"]["report"]["entriesReport"]["totalCount"]
+        entries_count = response.json()["data"]["entryList"]["totalCount"]
         self.assertEqual(entries_count, 3)
-
-        # Test for figures
-        response = self.query(
-            self.figures_report_query,
-            variables=dict(
-                id=str(report_id),
-            )
-        )
-        figures = response.json()
-        figures_count = figures["data"]["report"]["figuresReport"]["totalCount"]
-        self.assertEqual(figures_count, 3)
 
 
 class TestPrivatePublicReports(HelixGraphQLTestCase):
@@ -514,7 +499,7 @@ class TestPrivatePublicReports(HelixGraphQLTestCase):
 
         self.report_query = '''
         query reportList($isPublic: Boolean){
-          reportList(isPublic: $isPublic) {
+          reportList(filters: {isPublic: $isPublic}) {
             results {
               isPublic
               id

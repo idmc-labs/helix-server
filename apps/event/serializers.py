@@ -1,3 +1,4 @@
+import typing
 from collections import OrderedDict
 
 from django.core.exceptions import ValidationError
@@ -12,7 +13,7 @@ from apps.contrib.serializers import (
 from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
-from apps.event.models import Event, Actor, ContextOfViolence
+from apps.event.models import Event, Actor, ContextOfViolence, EventCode
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
 from apps.notification.models import Notification
 
@@ -30,11 +31,42 @@ class ActorUpdateSerializer(UpdateSerializerMixin,
     id = IntegerIDField(required=True)
 
 
+class EventCodeSerializer(MetaInformationSerializerMixin,
+                          serializers.ModelSerializer):
+
+    class Meta:
+        model = EventCode
+        fields = ['country', 'uuid', 'event_code', 'event_code_type']
+        extra_kwargs = {
+            'uuid': {
+                'validators': [],
+                'required': True
+            },
+        }
+
+
+class EventCodeUpdateSerializer(serializers.ModelSerializer):
+    id = IntegerIDField(required=False)
+
+    class Meta:
+        model = EventCode
+        exclude = ['event']
+        extra_kwargs = {
+            'uuid': {
+                'validators': [],
+                'required': True
+            },
+        }
+
+
 class EventSerializer(MetaInformationSerializerMixin,
                       serializers.ModelSerializer):
+
+    event_codes = EventCodeSerializer(many=True, required=False)
+
     class Meta:
         model = Event
-        exclude = ('assigner', 'assigned_at', 'review_status')
+        exclude = ('assigner', 'assigned_at', 'review_status', 'glide_numbers')
 
     def validate_violence_sub_type_and_type(self, attrs):
         errors = OrderedDict()
@@ -134,6 +166,40 @@ class EventSerializer(MetaInformationSerializerMixin,
             ))
         return errors
 
+    def _update_event_codes(self, event: Event, event_codes: typing.List[typing.Dict]):
+        instance_event_codes_qs = EventCode.objects.filter(event=event)
+
+        # For empty - Delete all
+        if not event_codes:
+            instance_event_codes_qs.delete()
+            return
+
+        # Delete missing event_codes
+        event_code_to_delete_qs = instance_event_codes_qs.exclude(
+            id__in=[
+                each['id']
+                for each in event_codes
+                if each.get('id')
+            ]
+        )
+        event_code_to_delete_qs.delete()
+
+        # Update provided event_codes
+        for code in event_codes:
+            if not code.get('id'):
+                # Create new
+                event_code_ser = EventCodeSerializer(context=self.context)
+            else:
+                # Update existing
+                event_code_ser = EventCodeUpdateSerializer(
+                    instance=instance_event_codes_qs.get(id=code['id']),
+                    partial=True,
+                    context=self.context,
+                )
+            event_code_ser._validated_data = {**code, 'event': event}
+            event_code_ser._errors = {}
+            event_code_ser.save()
+
     def _update_parent_fields(self, attrs):
         disaster_sub_type = attrs.get('disaster_sub_type', self.instance and self.instance.disaster_sub_type)
         violence_sub_type = attrs.get('violence_sub_type', self.instance and self.instance.violence_sub_type)
@@ -200,11 +266,21 @@ class EventSerializer(MetaInformationSerializerMixin,
         validated_data["created_by"] = self.context['request'].user
         countries = validated_data.pop("countries", None)
         context_of_violence = validated_data.pop("context_of_violence", None)
+        event_codes = validated_data.pop("event_codes", None)
         event = Event.objects.create(**validated_data)
         if countries:
             event.countries.set(countries)
         if context_of_violence:
             event.context_of_violence.set(context_of_violence)
+
+        if event_codes:
+            for event_code in event_codes:
+                EventCode.objects.create(
+                    event=event,
+                    country=event_code.get("country"),
+                    event_code=event_code.get("event_code"),
+                    event_code_type=event_code.get("event_code_type"),
+                )
         context_of_violence = validated_data.pop("context_of_violence", None)
         return event
 
@@ -216,6 +292,13 @@ class EventSerializer(MetaInformationSerializerMixin,
         if 'include_triangulation_in_qa' in validated_data:
             new_include_triangulation_in_qa = validated_data.get('include_triangulation_in_qa')
             is_include_triangulation_in_qa_changed = new_include_triangulation_in_qa != instance.include_triangulation_in_qa
+
+        # Update Event Codes
+        if "event_codes" in validated_data:
+            self._update_event_codes(
+                instance,
+                validated_data.pop('event_codes'),
+            )
 
         instance = super().update(instance, validated_data)
 
@@ -243,6 +326,7 @@ class EventSerializer(MetaInformationSerializerMixin,
 
 class EventUpdateSerializer(UpdateSerializerMixin, EventSerializer):
     id = IntegerIDField(required=True)
+    event_codes = EventCodeUpdateSerializer(many=True, required=True)
 
 
 class CloneEventSerializer(serializers.Serializer):

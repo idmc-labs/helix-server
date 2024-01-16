@@ -22,7 +22,7 @@ TEST_MEDIA_ROOT = 'media-temp'
 TEST_EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 TEST_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 BROKER_BACKEND = 'memory'
-CELERY_ALWAYS_EAGER = True
+CELERY_TASK_ALWAYS_EAGER = True
 CELERY_EAGER_PROPAGATES = True
 
 TEST_CACHES = {
@@ -57,23 +57,33 @@ class CommonSetupClassMixin:
         content = response.json()
         self.assertIsNone(content.get('errors'), content)
 
-    def assertQuerySetEqual(self, l1, l2):
+    def assertResponseErrors(self, response):
+        content = response.json()
+        self.assertIsNotNone(content.get('errors'), content)
+
+    def assertQuerySetEqual(self, l1, l2, message=None):
         return self.assertEqual(
             sorted([each.id for each in l1]),
             sorted([each.id for each in l2]),
+            message,
         )
 
 
-@override_settings(
+COMMON_OVERRIDE_SETTINGS = dict(
+    SENTRY_DSN=None,
+    USE_S3_BUCKET=False,
     EMAIL_BACKEND=TEST_EMAIL_BACKEND,
     MEDIA_ROOT=TEST_MEDIA_ROOT,
     DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
     CACHES=TEST_CACHES,
     AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
     BROKER_BACKEND=BROKER_BACKEND,
-    CELERY_ALWAYS_EAGER=CELERY_ALWAYS_EAGER,
+    CELERY_TASK_ALWAYS_EAGER=CELERY_TASK_ALWAYS_EAGER,
     CELERY_EAGER_PROPAGATES=CELERY_EAGER_PROPAGATES,
 )
+
+
+@override_settings(**COMMON_OVERRIDE_SETTINGS)
 class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
     GRAPHQL_URL = '/graphql'
     GRAPHQL_SCHEMA = 'helix.schema.schema'
@@ -171,30 +181,12 @@ class ImmediateOnCommitMixin(object):
         )
 
 
-@override_settings(
-    EMAIL_BACKEND=TEST_EMAIL_BACKEND,
-    DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
-    MEDIA_ROOT=TEST_MEDIA_ROOT,
-    CACHES=TEST_CACHES,
-    AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
-    BROKER_BACKEND=BROKER_BACKEND,
-    CELERY_ALWAYS_EAGER=CELERY_ALWAYS_EAGER,
-    CELERY_EAGER_PROPAGATES=CELERY_EAGER_PROPAGATES,
-)
+@override_settings(**COMMON_OVERRIDE_SETTINGS)
 class HelixTestCase(CommonSetupClassMixin, ImmediateOnCommitMixin, TestCase):
     pass
 
 
-@override_settings(
-    EMAIL_BACKEND=TEST_EMAIL_BACKEND,
-    DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
-    MEDIA_ROOT=TEST_MEDIA_ROOT,
-    CACHES=TEST_CACHES,
-    AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
-    BROKER_BACKEND=BROKER_BACKEND,
-    CELERY_ALWAYS_EAGER=CELERY_ALWAYS_EAGER,
-    CELERY_EAGER_PROPAGATES=CELERY_EAGER_PROPAGATES,
-)
+@override_settings(**COMMON_OVERRIDE_SETTINGS)
 class HelixAPITestCase(APITestCase):
     ENABLE_NOW_PATCHER = True
 

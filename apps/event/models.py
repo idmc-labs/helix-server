@@ -1,23 +1,27 @@
+import typing
 from collections import OrderedDict
 
 from django.db import models
-from django.contrib.postgres.aggregates.general import StringAgg
+from django.db.models.functions import Cast
+from django.contrib.postgres.aggregates.general import StringAgg, ArrayAgg
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 from django.contrib.postgres.fields import ArrayField
 from django.forms import model_to_dict
 
-from utils.common import get_string_from_list
 from utils.common import add_clone_prefix
+from utils.db import Array
 
 from apps.contrib.models import (
     MetaInformationAbstractModel,
+    UUIDAbstractModel,
     MetaInformationArchiveAbstractModel,
 )
 from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
 from apps.users.models import User, USER_ROLE
+from apps.common.utils import get_attr_str_from_event_codes, EXTERNAL_ARRAY_SEPARATOR
 
 
 class NameAttributedModels(models.Model):
@@ -139,18 +143,23 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         REVIEW_IN_PROGRESS = 1
         APPROVED = 2
         SIGNED_OFF = 3
+        # NOTE: these two statuses should be hidden to the client
+        APPROVED_BUT_CHANGED = 4
+        SIGNED_OFF_BUT_CHANGED = 5
 
         __labels__ = {
             REVIEW_NOT_STARTED: _("Review not started"),
             REVIEW_IN_PROGRESS: _("Review in progress"),
             APPROVED: _("Approved"),
             SIGNED_OFF: _("Signed-off"),
+            APPROVED_BUT_CHANGED: _("Approved but changed"),
+            SIGNED_OFF_BUT_CHANGED: _("Signed-off but changed"),
         }
 
     # NOTE figure disaggregation variable definitions
     ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
     IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
-    IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE = 'figures_max_end_date'
+    IDP_FIGURES_REFERENCE_DATE_ANNOTATE = 'idp_figures_reference_date'
 
     crisis = models.ForeignKey('crisis.Crisis', verbose_name=_('Crisis'),
                                blank=True, null=True,
@@ -238,19 +247,26 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         verbose_name='Include triangulation in qa?', default=False,
     )
 
+    assignee_id: typing.Optional[int]
+
     @classmethod
-    def _total_figure_disaggregation_subquery(cls, figures=None):
+    def _total_figure_disaggregation_subquery(cls, figures=None, reference_date=None):
         if figures is None:
             figures = Figure.objects.all()
 
-        max_stock_end_date_figure_qs = figures.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-            role=Figure.ROLE.RECOMMENDED,
-            event=models.OuterRef('pk'),
-        ).order_by('-end_date').values('end_date')[:1]
+        if reference_date is None:
+            reference_date_qs = models.Subquery(
+                figures.filter(
+                    category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                    role=Figure.ROLE.RECOMMENDED,
+                    event=models.OuterRef('pk'),
+                ).order_by('-end_date').values('end_date')[:1]
+            )
+        else:
+            reference_date_qs = models.Value(reference_date)
 
         return {
-            cls.IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE: models.Subquery(max_stock_end_date_figure_qs),
+            cls.IDP_FIGURES_REFERENCE_DATE_ANNOTATE: reference_date_qs,
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
                     figures.filter(
@@ -272,7 +288,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     start_date=None,
-                    end_date=models.OuterRef(cls.IDP_FIGURES_STOCK_MAX_DATE_ANNOTATE),
+                    end_date=models.OuterRef(cls.IDP_FIGURES_REFERENCE_DATE_ANNOTATE),
                 ).order_by().values('event').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
@@ -408,26 +424,32 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             osv_sub_type__name="OSV sub type",
             actor_id='Actor ID',
             actor__name='Actor',
-            glide_numbers='Event codes',
             context_of_violences='Context of violences',
+            event_codes='Event codes',
+            event_codes_type='Event codes type',
+            event_codes_iso3='Event codes ISO3',
         )
+
         data = EventFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
-            countries_name=StringAgg('countries__idmc_short_name', '; ', distinct=True),
-            regions_name=StringAgg('countries__region__name', '; ', distinct=True),
+            countries_iso3=StringAgg('countries__iso3', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            countries_name=StringAgg('countries__idmc_short_name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            regions_name=StringAgg('countries__region__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
             figures_count=models.Count('figures', distinct=True),
             entries_count=models.Count('figures__entry', distinct=True),
-            **cls._total_figure_disaggregation_subquery(),
-            context_of_violences=StringAgg('context_of_violence__name', ';', distinct=True),
+            context_of_violences=StringAgg('context_of_violence__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            event_codes=ArrayAgg(
+                Array(
+                    models.F('event_code__event_code'),
+                    Cast(models.F('event_code__event_code_type'), models.CharField()),
+                    models.F('event_code__country__iso3'),
+                    output_field=ArrayField(models.CharField()),
+                ),
+                distinct=True,
+            ),
         ).order_by('created_at')
-
-        def format_glide_numbers(glide_numbers):
-            if not glide_numbers:
-                return ''
-            return get_string_from_list(str(glide_number) for glide_number in glide_numbers)
 
         def transformer(datum):
             return {
@@ -435,14 +457,17 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 **dict(
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'label', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'label', ''),
-                    event_type=getattr(Crisis.CRISIS_TYPE.get(datum['event_type']), 'label', ''),
-                    glide_numbers=format_glide_numbers(datum['glide_numbers']),
+                    event_codes=get_attr_str_from_event_codes(datum['event_codes'], 'code'),
+                    event_codes_type=get_attr_str_from_event_codes(datum['event_codes'], 'code_type'),
+                    event_codes_iso3=get_attr_str_from_event_codes(datum['event_codes'], 'iso3'),
                 )
             }
 
         return {
             'headers': headers,
-            'data': data.values(*[header for header in headers.keys()]),
+            'data': data.values(
+                *[header for header in headers.keys() if header not in ['event_codes_type', 'event_codes_iso3']]
+            ),
             'formulae': None,
             'transformer': transformer,
         }
@@ -491,6 +516,41 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         cloned_event.countries.set(countries)
         cloned_event.context_of_violence.set(context_of_violence)
         return cloned_event
+
+
+class EventCode(UUIDAbstractModel, models.Model):
+
+    class EVENT_CODE_TYPE(enum.Enum):
+        GLIDE_NUMBER = 1
+        GOV_ASSIGNED_IDENTIFIER = 2
+        IFRC_APPEAL_ID = 3
+        ACLED_ID = 4
+        __labels__ = {
+            GLIDE_NUMBER: _("Glide Number"),
+            GOV_ASSIGNED_IDENTIFIER: _("Government Assigned Identifier"),
+            IFRC_APPEAL_ID: _("IFRC Appeal ID"),
+            ACLED_ID: _("ACLED ID"),
+        }
+
+    event = models.ForeignKey(
+        Event,
+        on_delete=models.CASCADE,
+        related_name='event_code',
+        verbose_name=_('Event')
+    )
+    country = models.ForeignKey(
+        'country.Country',
+        on_delete=models.CASCADE,
+        related_name='event_code_country',
+        verbose_name=_('Country')
+    )
+    event_code_type = enum.EnumField(EVENT_CODE_TYPE)
+    event_code = models.CharField(max_length=256, verbose_name=_('Event Code'))
+
+    event_id: int
+
+    class Meta:
+        ordering = ['event_code']
 
 
 class OsvSubType(NameAttributedModels):

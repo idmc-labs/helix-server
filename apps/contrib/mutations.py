@@ -2,11 +2,11 @@ import graphene
 from graphene_file_upload.scalars import Upload
 from django.utils.translation import gettext
 from utils.mutation import generate_input_type_for_serializer
-from graphene_django.filter.utils import get_filtering_args_from_filterset
 
 from apps.contrib.serializers import ExcelDownloadSerializer
 from utils.common import convert_date_object_to_string_in_dict
-from apps.contrib.schema import AttachmentType, ClientType
+from apps.contrib.schema import AttachmentType, ClientType, BulkApiOperationObjectType
+from apps.contrib.bulk_operations.serializers import BulkApiOperationSerializer
 from apps.contrib.serializers import (
     AttachmentSerializer,
     ClientSerializer,
@@ -15,10 +15,15 @@ from apps.contrib.serializers import (
 from apps.contrib.models import (
     Client,
 )
-from .filters import ClientTrackInfoFilter
-from .schema import ClientTrackInformationType
+from .filters import ClientTrackInfoFilterDataInputType
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import is_authenticated, permission_checker
+
+
+BulkApiOperationInputType = generate_input_type_for_serializer(
+    'BulkApiOperationInputType',
+    serializer_class=BulkApiOperationSerializer,
+)
 
 
 class AttachmentCreateInputType(graphene.InputObjectType):
@@ -107,23 +112,20 @@ class UpdateClient(graphene.Mutation):
 
 
 class ExportTrackingData(graphene.Mutation):
-    class Meta:
-        arguments = get_filtering_args_from_filterset(
-            ClientTrackInfoFilter,
-            ClientTrackInformationType,
-        )
+    class Arguments:
+        filters = ClientTrackInfoFilterDataInputType(required=True)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
 
     @staticmethod
-    def mutate(root, info, **kwargs):
+    def mutate(_, info, filters):
         from apps.contrib.models import ExcelDownload
 
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.TRACKING_DATA),
-                filters=convert_date_object_to_string_in_dict(kwargs),
+                filters=convert_date_object_to_string_in_dict(filters),
             ),
             context=dict(request=info.context.request)
         )
@@ -133,8 +135,29 @@ class ExportTrackingData(graphene.Mutation):
         return ExportTrackingData(errors=None, ok=True)
 
 
+class TriggerBulkOperation(graphene.Mutation):
+    class Arguments:
+        data = BulkApiOperationInputType(required=True)
+
+    errors = graphene.List(graphene.NonNull(CustomErrorType))
+    ok = graphene.Boolean()
+    result = graphene.Field(BulkApiOperationObjectType)
+
+    @staticmethod
+    # TODO: Define a proper permission
+    # For now, this is handle at client level.
+    # We do handle the permission internally as well.
+    def mutate(_, info, data):
+        serializer = BulkApiOperationSerializer(data=data, context={'request': info.context.request})
+        if errors := mutation_is_not_valid(serializer):
+            return TriggerBulkOperation(errors=errors, ok=False)
+        instance = serializer.save()
+        return TriggerBulkOperation(result=instance, errors=None, ok=True)
+
+
 class Mutation:
     create_attachment = CreateAttachment.Field()
     create_client = CreateClient.Field()
     update_client = UpdateClient.Field()
     export_tracking_data = ExportTrackingData.Field()
+    trigger_bulk_operation = TriggerBulkOperation.Field()

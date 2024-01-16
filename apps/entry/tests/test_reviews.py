@@ -70,19 +70,16 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             }
         }'''
         self.update_figure = """
-        mutation MyMutation($input: EntryUpdateInputType!) {
-            updateEntry(data: $input) {
-                ok
+        mutation BulkUpdateFigures($items: [FigureUpdateInputType!], $delete_ids: [ID!]) {
+            bulkUpdateFigures(items: $items, deleteIds: $delete_ids) {
                 errors
                 result {
-                    id
-                    figures {
-                        id
-                        reviewStatus
-                    }
+                  id
+                  reviewStatus
                 }
             }
-        }"""
+        }
+        """
         self.event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
         self.country = CountryFactory.create()
 
@@ -232,7 +229,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
 
         event.refresh_from_db()
-        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS)
+        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED)
 
     def test_event_status_should_be_calculated_if_include_triangulation_in_qa_is_changed(self):
         event = EventFactory.create(include_triangulation_in_qa=False, review_status=Event.EVENT_REVIEW_STATUS.APPROVED)
@@ -249,7 +246,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.assertTrue(content['data']['updateEvent']['ok'], content)
 
         event.refresh_from_db()
-        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED)
+        self.assertEqual(event.review_status, event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED)
 
     def test_should_change_figure_status_in_progress_if_figure_is_saved(self):
         entry = EntryFactory.create()
@@ -300,6 +297,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 "tags": [],
                 "contextOfViolence": [],
                 "sources": [],
+                "entry": entry.id,
             },
         ]
 
@@ -307,14 +305,15 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.force_login(self.regional_coordinator)
         response = self.query(
             self.update_figure,
-            input_data={
-                'id': entry.id,
-                'figures': figures
-            }
+            variables={
+                "items": figures,
+                "delete_ids": []
+            },
         )
         figure.refresh_from_db()
         content = json.loads(response.content)
-        first_figure = content['data']['updateEntry']['result']['figures'][0]
+        content_data = content['data']['bulkUpdateFigures']
+        first_figure = content_data['result'][0]
         self.assertEqual(first_figure['id'], str(figure.id))
         self.assertEqual(first_figure['reviewStatus'], Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED.name)
 
@@ -322,13 +321,14 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.force_login(self.monitoring_expert)
         response = self.query(
             self.update_figure,
-            input_data={
-                'id': entry.id,
-                'figures': figures
-            }
+            variables={
+                "items": figures,
+                "delete_ids": []
+            },
         )
         figure.refresh_from_db()
         content = json.loads(response.content)
-        first_figure = content['data']['updateEntry']['result']['figures'][0]
+        content_data = content['data']['bulkUpdateFigures']
+        first_figure = content_data['result'][0]
         self.assertEqual(first_figure['id'], str(figure.id))
         self.assertEqual(first_figure['reviewStatus'], Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED.name)

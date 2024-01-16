@@ -22,9 +22,14 @@ from apps.entry.models import (
     DisaggregatedAge,
 )
 from apps.country.models import Country
-from apps.notification.models import Notification
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
 from utils.common import round_half_up
+from .utils import (
+    send_figure_notifications,
+    BulkUpdateFigureManager,
+    get_figure_notification_type,
+    get_event_notification_type,
+)
 
 
 class DisaggregatedAgeSerializer(serializers.ModelSerializer):
@@ -126,6 +131,9 @@ class CommonFigureValidationMixin:
 
     def _validate_figure_geo_locations(self, instance, attrs):
         errors = OrderedDict()
+        # Skip on update
+        if instance and 'geo_locations' not in attrs:
+            return errors
         country = attrs.get('country')
         geo_locations = attrs.get('geo_locations', None)
         if not country and instance:
@@ -188,7 +196,7 @@ class CommonFigureValidationMixin:
             })
         return errors
 
-    def _validate_geo_locations(self, instance, attrs):
+    def _validate_geo_locations(self, instance, attrs) -> dict:
         _attrs = copy(attrs)
         errors = OrderedDict()
 
@@ -244,6 +252,10 @@ class CommonFigureValidationMixin:
     def _validate_figure_cause(self, instance, attrs):
         errors = OrderedDict()
 
+        # Skip on update if not provided
+        if instance and 'figure_cause' not in attrs:
+            return errors
+
         event = attrs.get('event', getattr(instance, 'event', None))
         figure_cause = attrs.get('figure_cause', getattr(instance, 'figure_cause', None))
 
@@ -280,18 +292,6 @@ class CommonFigureValidationMixin:
         if term is None or term not in Figure.displacement_occur_list():
             _attrs['displacement_occurred'] = None
         return _attrs
-
-    def _validate_event(self, instance, attrs):
-        errors = OrderedDict()
-        new_event = attrs.get('event', None)
-        current_event = getattr(instance, 'event', None)
-
-        # FIXME: do we use event.id or event_id here?
-        if new_event and current_event and current_event.id != new_event.id:
-            errors.update({
-                'event': 'Event change is not allowed'
-            })
-        return errors
 
     def _update_parent_fields(self, attrs):
         disaster_sub_type = attrs.get('disaster_sub_type', self.instance and self.instance.disaster_sub_type)
@@ -349,7 +349,6 @@ class CommonFigureValidationMixin:
             instance, attrs, 'disaggregation_age', 'age',
         ))
         errors.update(self._validate_figure_cause(instance, attrs))
-        errors.update(self._validate_event(instance, attrs))
 
         self._update_parent_fields(attrs)
         if errors:
@@ -364,9 +363,13 @@ class FigureTagSerializer(MetaInformationSerializerMixin, serializers.ModelSeria
         fields = '__all__'
 
 
-class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
-                                   CommonFigureValidationMixin,
-                                   serializers.ModelSerializer):
+class FigureSerializer(
+    MetaInformationSerializerMixin,
+    CommonFigureValidationMixin,
+    serializers.ModelSerializer,
+):
+
+    id = IntegerIDField(required=False)
     disaggregation_age = DisaggregatedAgeSerializer(many=True, required=False, allow_null=False)
     disaggregation_strata_json = DisaggregatedStratumSerializer(many=True, required=False)
     geo_locations = OSMNameSerializer(many=True, required=False, allow_null=False)
@@ -374,6 +377,8 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
     class Meta:
         model = Figure
         fields = [
+            'id',
+            'entry',
             'was_subfact',
             'quantifier',
             'reported',
@@ -392,7 +397,6 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
             'country',
             'is_disaggregated',
             'is_housing_destruction',
-            'geo_locations',
             'calculation_logic',
             'tags',
             'source_excerpt',
@@ -436,6 +440,10 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
                 'validators': [],
                 'required': True
             },
+            'entry': {
+                'validators': [],
+                'required': True
+            },
         }
 
     def create(self, validated_data: dict) -> Figure:
@@ -461,6 +469,11 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
         instance.disaggregation_age.set(disaggregation_ages)
         instance.sources.set(sources)
 
+        # Notification create
+        if notification_type := get_figure_notification_type(instance.event, is_new=True):
+            send_figure_notifications(instance, self.context['request'].user, notification_type)
+        bulk_manager: BulkUpdateFigureManager = self.context['bulk_manager']
+        bulk_manager.add_event(instance.event_id)
         return instance
 
     def _update_locations(self, instance, attr: str, data: list):
@@ -504,115 +517,71 @@ class NestedFigureCreateSerializer(MetaInformationSerializerMixin,
                 disaggregation_age.append(age_serializer.save())
         getattr(instance, attr).set(disaggregation_age)
 
-    def update(self, instance, validated_data):
+    def _send_event_change_notification(self, figure, existing_event, new_event):
+        # Send notifications
+        # -- Delete notification
+        if notification_type := get_event_notification_type(existing_event, is_figure_deleted=True):
+            send_figure_notifications(
+                figure,
+                self.context['request'].user,
+                notification_type,
+                event=existing_event,
+            )
+        # -- Create notification
+        if notification_type := get_event_notification_type(new_event, is_figure_new=True):
+            send_figure_notifications(
+                figure,
+                self.context['request'].user,
+                notification_type,
+                event=new_event,
+            )
+
+    def update(self, instance: Figure, validated_data):
         validated_data['last_modified_by'] = self.context['request'].user
-        geo_locations = validated_data.pop('geo_locations', [])
-        tags = validated_data.pop('tags', [])
-        context_of_violence = validated_data.pop('context_of_violence', [])
-        disaggregation_age = validated_data.pop('disaggregation_age', [])
-        sources = validated_data.pop('sources', [])
+        # Event change tracking
+        existing_event = instance.event
+
         with transaction.atomic():
-            instance = super().update(instance, validated_data)
-            self._update_locations(instance=instance,
-                                   attr='geo_locations',
-                                   data=geo_locations)
-            if disaggregation_age:
+            if 'geo_locations' in validated_data:
+                geo_locations = validated_data.pop('geo_locations')
+                self._update_locations(instance=instance, attr='geo_locations', data=geo_locations)
+            if 'disaggregation_age' in validated_data:
+                disaggregation_age = validated_data.pop('disaggregation_age')
                 self._update_disaggregation_age(
                     instance=instance,
                     attr="disaggregation_age",
                     data=disaggregation_age
                 )
-            if tags:
+            if 'tags' in validated_data:
+                tags = validated_data.pop('tags')
                 instance.tags.set(tags)
-            if context_of_violence:
+            if 'context_of_violence' in validated_data:
+                context_of_violence = validated_data.pop('context_of_violence')
                 instance.context_of_violence.set(context_of_violence)
-            if sources:
+            if 'sources' in validated_data:
+                sources = validated_data.pop('sources')
                 instance.sources.set(sources)
+            instance = super().update(instance, validated_data)
+
+        Figure.update_figure_status(instance)
+
+        bulk_manager: BulkUpdateFigureManager = self.context['bulk_manager']
+        if existing_event != instance.event:
+            bulk_manager.add_event(existing_event.pk)
+            self._send_event_change_notification(instance, existing_event, instance.event)
+        else:
+            # NOTE: We do not send notification when figure is updated if
+            # the figure's event has been updated
+            if notification_type := get_figure_notification_type(instance.event):
+                send_figure_notifications(instance, self.context['request'].user, notification_type)
+        bulk_manager.add_event(instance.event_id)
         return instance
 
 
-class NestedFigureUpdateSerializer(NestedFigureCreateSerializer):
-    id = IntegerIDField(required=False)
-
-    class Meta:
-        model = Figure
-        fields = [
-            'id',
-            'was_subfact',
-            'quantifier',
-            'reported',
-            'unit',
-            'household_size',
-            'category',
-            'term',
-            'displacement_occurred',
-            'role',
-            'start_date',
-            'start_date_accuracy',
-            'end_date',
-            'end_date_accuracy',
-            'include_idu',
-            'excerpt_idu',
-            'country',
-            'is_disaggregated',
-            'is_housing_destruction',
-            'geo_locations',
-            'calculation_logic',
-            'tags',
-            'source_excerpt',
-            'event',
-            'context_of_violence',
-            'figure_cause',
-            'violence',
-            'violence_sub_type',
-            'disaster_category',
-            'disaster_sub_category',
-            'disaster_type',
-            'disaster_sub_type',
-            'other_sub_type',
-            'osv_sub_type',
-            'sources',
-            # UUID abstract fields
-            'uuid',
-            # Figure disaggregation abstract fields
-            'disaggregation_displacement_urban',
-            'disaggregation_displacement_rural',
-            'disaggregation_location_camp',
-            'disaggregation_location_non_camp',
-            'disaggregation_lgbtiq',
-            'disaggregation_disability',
-            'disaggregation_indigenous_people',
-            'disaggregation_sex_male',
-            'disaggregation_sex_female',
-            'disaggregation_age',
-            'disaggregation_strata_json',
-            'disaggregation_conflict',
-            'disaggregation_conflict_political',
-            'disaggregation_conflict_criminal',
-            'disaggregation_conflict_communal',
-            'disaggregation_conflict_other',
-            'disaggregation_age',
-            'disaggregation_strata_json',
-            'geo_locations'
-        ]
-        extra_kwargs = {
-            'uuid': {
-                'validators': [],
-                'required': True
-            },
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # all updates will be a patch update
-        for name in self.fields:
-            self.fields[name].required = False
-
-
-class EntryCreateSerializer(MetaInformationSerializerMixin,
-                            serializers.ModelSerializer):
-    figures = NestedFigureCreateSerializer(many=True, required=False)
-
+class EntryCreateSerializer(
+    MetaInformationSerializerMixin,
+    serializers.ModelSerializer,
+):
     class Meta:
         model = Entry
         exclude = ('review_status',)
@@ -649,204 +618,11 @@ class EntryCreateSerializer(MetaInformationSerializerMixin,
             raise ValidationError(errors)
         return attrs
 
-    def create(self, validated_data: dict) -> Entry:
-        figures = validated_data.pop('figures', [])
-        if figures:
-            with transaction.atomic():
-                entry = super().create(validated_data)
-                for each in figures:
-                    # each figure contains further nested objects
-                    fig_ser = NestedFigureCreateSerializer(context=self.context)
-                    fig_ser._validated_data = {**each, 'entry': entry}
-                    fig_ser._errors = {}
-                    fig_ser.save()
-        else:
-            entry = super().create(validated_data)
-        return entry
-
-    def update(self, instance, validated_data: dict) -> Entry:
-        from apps.event.models import Event
-
-        figures = validated_data.pop('figures', None)
-
-        with transaction.atomic():
-            entry = super().update(instance, validated_data)
-
-            if isinstance(figures, list):
-                created_figures_for_signed_off_events = []
-                created_figures_for_approved_events = []
-
-                updated_figures_for_signed_off_events = []
-                updated_figures_for_approved_events = []
-                updated_figures_for_other_events = []
-
-                # delete missing figures
-                figures_to_delete = entry.figures.exclude(
-                    id__in=[each['id'] for each in figures if each.get('id')]
-                )
-                deleted_figures_for_signed_off_events = list(
-                    figures_to_delete.filter(
-                        event__review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF
-                    )
-                )
-                deleted_figures_for_approved_events = list(
-                    figures_to_delete.filter(
-                        event__review_status=Event.EVENT_REVIEW_STATUS.APPROVED
-                    )
-                )
-                affected_events = Event.objects.filter(
-                    id__in=figures_to_delete.values('event__id')
-                ).distinct('id')
-                affected_event_ids = list(affected_events.values_list('id', flat=True))
-
-                # delete missing figures
-                figures_to_delete.delete()
-
-                for each in figures:
-                    is_new_figure = not each.get('id')
-                    # create new figures
-                    if not each.get('id'):
-                        fig_ser = NestedFigureCreateSerializer(context=self.context)
-                    # update existing figures
-                    else:
-                        fig_ser = NestedFigureUpdateSerializer(
-                            instance=entry.figures.get(id=each['id']),
-                            partial=True,
-                            context=self.context,
-                        )
-
-                    fig_ser._validated_data = {**each, 'entry': entry}
-                    fig_ser._errors = {}
-                    figure = fig_ser.save()
-
-                    if is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
-                        created_figures_for_signed_off_events.append(figure)
-                    elif is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-                        created_figures_for_approved_events.append(figure)
-                    elif not is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.SIGNED_OFF:
-                        updated_figures_for_signed_off_events.append(figure)
-                    elif not is_new_figure and figure.event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-                        updated_figures_for_approved_events.append(figure)
-                    elif not is_new_figure:
-                        updated_figures_for_other_events.append(figure)
-
-                    affected_event_ids.append(figure.event_id)
-
-                for figure in deleted_figures_for_signed_off_events:
-                    recipients = [user['id'] for user in Event.regional_coordinators(
-                        figure.event,
-                        actor=self.context['request'].user,
-                    )]
-                    if figure.event.created_by_id:
-                        recipients.append(figure.event.created_by_id)
-                    if figure.event.assignee_id:
-                        recipients.append(figure.event.assignee_id)
-                    Notification.send_safe_multiple_notifications(
-                        recipients=recipients,
-                        actor=self.context['request'].user,
-                        type=Notification.Type.FIGURE_DELETED_IN_SIGNED_EVENT,
-                        event=figure.event,
-                        entry=figure.entry,
-                    )
-                for figure in deleted_figures_for_approved_events:
-                    recipients = [user['id'] for user in Event.regional_coordinators(
-                        figure.event,
-                        actor=self.context['request'].user,
-                    )]
-                    if figure.event.created_by_id:
-                        recipients.append(figure.event.created_by_id)
-                    if figure.event.assignee_id:
-                        recipients.append(figure.event.assignee_id)
-                    Notification.send_safe_multiple_notifications(
-                        recipients=recipients,
-                        actor=self.context['request'].user,
-                        type=Notification.Type.FIGURE_DELETED_IN_APPROVED_EVENT,
-                        event=figure.event,
-                        entry=figure.entry,
-                    )
-                for figure in updated_figures_for_signed_off_events:
-                    recipients = [user['id'] for user in Event.regional_coordinators(
-                        figure.event,
-                        actor=self.context['request'].user,
-                    )]
-                    if figure.event.created_by_id:
-                        recipients.append(figure.event.created_by_id)
-                    if figure.event.assignee_id:
-                        recipients.append(figure.event.assignee_id)
-                    Notification.send_safe_multiple_notifications(
-                        recipients=recipients,
-                        actor=self.context['request'].user,
-                        type=Notification.Type.FIGURE_UPDATED_IN_SIGNED_EVENT,
-                        event=figure.event,
-                        entry=figure.entry,
-                        figure=figure,
-                    )
-                    Figure.update_figure_status(figure)
-                for figure in updated_figures_for_approved_events:
-                    recipients = [user['id'] for user in Event.regional_coordinators(
-                        figure.event,
-                        actor=self.context['request'].user,
-                    )]
-                    if figure.event.created_by_id:
-                        recipients.append(figure.event.created_by_id)
-                    if figure.event.assignee_id:
-                        recipients.append(figure.event.assignee_id)
-                    Notification.send_safe_multiple_notifications(
-                        recipients=recipients,
-                        actor=self.context['request'].user,
-                        type=Notification.Type.FIGURE_UPDATED_IN_APPROVED_EVENT,
-                        event=figure.event,
-                        entry=figure.entry,
-                        figure=figure,
-                    )
-                    Figure.update_figure_status(figure)
-                for figure in updated_figures_for_other_events:
-                    Figure.update_figure_status(figure)
-                for figure in created_figures_for_signed_off_events:
-                    recipients = [user['id'] for user in Event.regional_coordinators(
-                        figure.event,
-                        actor=self.context['request'].user,
-                    )]
-                    if figure.event.created_by_id:
-                        recipients.append(figure.event.created_by_id)
-                    if figure.event.assignee_id:
-                        recipients.append(figure.event.assignee_id)
-                    Notification.send_safe_multiple_notifications(
-                        recipients=recipients,
-                        actor=self.context['request'].user,
-                        type=Notification.Type.FIGURE_CREATED_IN_SIGNED_EVENT,
-                        event=figure.event,
-                        entry=figure.entry,
-                        figure=figure,
-                    )
-                for figure in created_figures_for_approved_events:
-                    recipients = [user['id'] for user in Event.regional_coordinators(
-                        figure.event,
-                        actor=self.context['request'].user,
-                    )]
-                    if figure.event.created_by_id:
-                        recipients.append(figure.event.created_by_id)
-                    if figure.event.assignee_id:
-                        recipients.append(figure.event.assignee_id)
-                    Notification.send_safe_multiple_notifications(
-                        recipients=recipients,
-                        actor=self.context['request'].user,
-                        type=Notification.Type.FIGURE_CREATED_IN_APPROVED_EVENT,
-                        event=figure.event,
-                        entry=figure.entry,
-                        figure=figure,
-                    )
-                for event_id in affected_event_ids:
-                    Figure.update_event_status_and_send_notifications(event_id)
-        instance.refresh_from_db()
-        return instance
-
 
 class EntryUpdateSerializer(UpdateSerializerMixin,
                             EntryCreateSerializer):
     """Created for update mutation input type"""
     id = IntegerIDField(required=True)
-    figures = NestedFigureUpdateSerializer(many=True, required=True)
 
 
 class FigureTagCreateSerializer(MetaInformationSerializerMixin,

@@ -524,7 +524,7 @@ class TestUserListSchema(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.users_q = '''
             query MyQuery($roles: [String!]) {
-              users(roleIn: $roles) {
+              users(filters: {roleIn: $roles}) {
                 results {
                   id
                   email

@@ -150,6 +150,7 @@ class TestExtractionFilter(HelixTestCase):
         cls.context_of_violence = ContextOfViolenceFactory.create()
         cls.figure = FigureFactory.create(
             entry=cls.entry3event2,
+            category=cls.fig_cat3,
             country=cls.country3reg3,
             event=cls.event2crisis1,
             figure_cause=Crisis.CRISIS_TYPE.OTHER,
@@ -161,6 +162,7 @@ class TestExtractionFilter(HelixTestCase):
         cls.context_of_violence = ContextOfViolenceFactory.create()
         cls.figure = FigureFactory.create(
             entry=cls.entry3event2,
+            category=cls.fig_cat3,
             country=cls.country3reg3,
             event=cls.event2crisis1,
             figure_cause=Crisis.CRISIS_TYPE.OTHER,
@@ -292,7 +294,7 @@ class TestExtractionFilter(HelixTestCase):
             filter_figure_category_types=['FLOW']
         )
         fqs = f(data=data).qs
-        self.assertEqual(set(fqs), {self.entry1event1, self.entry2event2, self.entry3event2})
+        self.assertEqual(set(fqs), {self.entry1event1, self.entry2event2})
         data = dict(
             filter_figure_category_types=['STOCK']
         )
@@ -337,7 +339,7 @@ class TestExtractionFilter(HelixTestCase):
         # -- HAS_EXCERPT_IDU
         # True
         data = dict(
-            filter_has_excerpt_idu=True,
+            filter_figure_has_excerpt_idu=True,
         )
         fqs = BaseFigureExtractionFilterSet(data=data).qs
         self.assertEqual(
@@ -346,7 +348,7 @@ class TestExtractionFilter(HelixTestCase):
         )
         # False
         data = dict(
-            filter_has_excerpt_idu=False,
+            filter_figure_has_excerpt_idu=False,
         )
         fqs = BaseFigureExtractionFilterSet(data=data).qs
         assert all([
@@ -356,7 +358,7 @@ class TestExtractionFilter(HelixTestCase):
         # -- HAS_HOUSING_DESTRUCTION
         # True
         data = dict(
-            filter_has_housing_destruction=True,
+            filter_figure_has_housing_destruction=True,
         )
         fqs = BaseFigureExtractionFilterSet(data=data).qs
         self.assertEqual(
@@ -365,7 +367,7 @@ class TestExtractionFilter(HelixTestCase):
         )
         # False
         data = dict(
-            filter_has_housing_destruction=False,
+            filter_figure_has_housing_destruction=False,
         )
         fqs = BaseFigureExtractionFilterSet(data=data).qs
         assert all([

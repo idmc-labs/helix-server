@@ -16,6 +16,7 @@ from apps.entry.models import Entry, Figure
 from apps.crisis.models import Crisis
 from apps.users.models import User, Portfolio
 from apps.users.enums import USER_ROLE
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 from utils.common import generate_storage_url_from_path
 
 
@@ -141,7 +142,7 @@ class MonitoringSubRegion(models.Model):
         q = self.countries.filter(
             ~models.Q(id__in=country_portfolios)
         )
-        return '; '.join(q.values_list('idmc_short_name', flat=True))
+        return EXTERNAL_ARRAY_SEPARATOR.join(q.values_list('idmc_short_name', flat=True))
 
     @property
     def regional_coordinator(self) -> Union[Portfolio, None]:
@@ -216,7 +217,8 @@ class Country(models.Model):
         '''
         returns the subqueries for figures sum annotations
         '''
-        figures = figures or Figure.objects.all()
+        if figures is None:
+            figures = Figure.objects.all()
         if start_date is None and end_date is None:
             if year:
                 start_date = datetime(year=int(year), month=1, day=1)
@@ -297,7 +299,6 @@ class Country(models.Model):
             def __init__(self, user):
                 self.user = user
 
-        year = filters.get('year', None)
         str_year = filters.get('year', '')
         headers = OrderedDict(
             id='ID',
@@ -347,7 +348,6 @@ class Country(models.Model):
             ),
             # contacts_count=Count('contacts', distinct=True),
             # operating_contacts_count=Count('operating_contacts', distinct=True),
-            **cls._total_figure_disaggregation_subquery(year=year),
         ).order_by('idmc_short_name')
 
         return {

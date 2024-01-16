@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import re
 import time
@@ -7,12 +9,15 @@ from datetime import timedelta
 from django.core.files import File
 from django.conf import settings
 from django.utils import timezone
+from django.db.models import F, Value, CharField
+from django.db.models.functions import Concat
 from openpyxl import Workbook
 from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 
-from utils.common import get_temp_file
+from utils.common import get_temp_file, redis_lock
 # from helix.settings import QueuePriority
 from helix.celery import app as celery_app
+
 from apps.entry.tasks import PDF_TASK_TIMEOUT
 from apps.report.tasks import REPORT_TIMEOUT
 from apps.contrib.redis_client_track import (
@@ -20,9 +25,9 @@ from apps.contrib.redis_client_track import (
     pull_track_data_from_redis,
     delete_external_redis_record_by_key,
 )
-from django.db.models import F, Value, CharField
-from django.db.models.functions import Concat
-from utils.common import redis_lock
+from apps.contrib.bulk_operations.tasks import run_bulk_api_operation as _run_bulk_api_operation
+from apps.common.utils import REDIS_SEPARATOR
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -261,11 +266,12 @@ def save_and_delete_tracked_data_from_redis_to_db():
     # Update track records count with max value if they already exist in database
     existing_track_info_qs = ClientTrackInfo.objects.annotate(
         redis_tracking_key=Concat(
-            Value('trackinfo:'),
+            Value('trackinfo'),
+            Value(REDIS_SEPARATOR),
             F('tracked_date'),
-            Value(':'),
+            Value(REDIS_SEPARATOR),
             F('api_type'),
-            Value(':'),
+            Value(REDIS_SEPARATOR),
             F('client__code'),
             output_field=CharField()
         )
@@ -309,3 +315,10 @@ def save_and_delete_tracked_data_from_redis_to_db():
 
     # Finally delete redis keys after save
     delete_external_redis_record_by_key(tracking_keys)
+
+
+@celery_app.task
+def run_bulk_api_operation(operation_id: int):
+    from apps.contrib.models import BulkApiOperation
+    operation = BulkApiOperation.objects.get(pk=operation_id)
+    return _run_bulk_api_operation(operation)

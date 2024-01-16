@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationArchiveAbstractModel, SoftDeleteModel
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 
 User = get_user_model()
 
@@ -90,10 +91,10 @@ class Organization(MetaInformationArchiveAbstractModel,
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            countries_iso3=StringAgg('countries__iso3', '; ', distinct=True),
+            countries_iso3=StringAgg('countries__iso3', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
             # sourced_entries_count=models.Count('sourced_entries', distinct=True),
             # published_entries_count=models.Count('published_entries', distinct=True),
-            countries_name=StringAgg('countries__idmc_short_name', '; ', distinct=True),
+            countries_name=StringAgg('countries__idmc_short_name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
         ).order_by('created_at')
 
         def transformer(datum):

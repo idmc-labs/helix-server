@@ -218,7 +218,7 @@ class TestEventFilter(HelixTestCase):
             geo_locations=[geo_location_1, geo_location_1, geo_location_1],
         )
 
-        # Test event with multiple recommended figures in same locaiton
+        # Test event with multiple recommended figures in same location
         filtered_data = self.filter_class(data=dict(
             qa_rule=QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name
         )).qs
@@ -229,3 +229,80 @@ class TestEventFilter(HelixTestCase):
             qa_rule=QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name
         )).qs
         self.assertEqual(set(filtered_data), {event_0, })
+
+    def test_event_review_status(self):
+        e_REVIEW_NOT_STARTED = EventFactory.create(review_status=Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED)
+        e_REVIEW_IN_PROGRESS = EventFactory.create(review_status=Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS)
+        e_APPROVED = EventFactory.create(review_status=Event.EVENT_REVIEW_STATUS.APPROVED)
+        e_SIGNED_OFF = EventFactory.create(review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF)
+        e_APPROVED_BUT_CHANGED = EventFactory.create(review_status=Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED)
+        e_SIGNED_OFF_BUT_CHANGED = EventFactory.create(review_status=Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED)
+        e_all = [
+            e_REVIEW_NOT_STARTED,
+            e_REVIEW_IN_PROGRESS,
+            e_APPROVED,
+            e_SIGNED_OFF,
+            e_APPROVED_BUT_CHANGED,
+            e_SIGNED_OFF_BUT_CHANGED,
+        ]
+
+        for filters, expected in [
+            # Normal filters
+            [
+                [Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED],
+                [e_REVIEW_NOT_STARTED],
+            ],
+            [
+                [Event.EVENT_REVIEW_STATUS.APPROVED],
+                [e_APPROVED],
+            ],
+            [
+                [Event.EVENT_REVIEW_STATUS.SIGNED_OFF],
+                [e_SIGNED_OFF],
+            ],
+            # For this, additional filters are also provided
+            [
+                [Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS],
+                [e_REVIEW_IN_PROGRESS, e_APPROVED_BUT_CHANGED, e_SIGNED_OFF_BUT_CHANGED],
+            ],
+            # Above is same as this one
+            [
+                [
+                    Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS,
+                    Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED,
+                    Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED,
+                ],
+                [e_REVIEW_IN_PROGRESS, e_APPROVED_BUT_CHANGED, e_SIGNED_OFF_BUT_CHANGED],
+            ],
+            # For this, filters are ignore.
+            [
+                [Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED],
+                e_all,
+            ],
+            [
+                [Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED],
+                e_all,
+            ],
+            [
+                [Event.EVENT_REVIEW_STATUS.SIGNED_OFF, Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED],
+                [e_SIGNED_OFF],
+            ],
+            [
+                [Event.EVENT_REVIEW_STATUS.SIGNED_OFF, Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED],
+                [e_SIGNED_OFF],
+            ],
+        ]:
+            # With value - Internal interface
+            obtained = self.filter_class(
+                data=dict(
+                    review_status=[v.value for v in filters]
+                )
+            ).qs
+            self.assertQuerySetEqual(expected, obtained, filters)
+            # With name - GraphQl interface
+            obtained = self.filter_class(
+                data=dict(
+                    review_status=[v.name for v in filters]
+                )
+            ).qs
+            self.assertQuerySetEqual(expected, obtained, filters)

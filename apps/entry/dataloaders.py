@@ -5,6 +5,7 @@ from promise.dataloader import DataLoader
 from django.db.models import Case, F, When, CharField, Q
 from collections import defaultdict
 
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 from apps.entry.models import Entry, Figure
 from apps.review.models import UnifiedReviewComment
 
@@ -71,7 +72,7 @@ class FigureGeoLocationLoader(DataLoader):
         qs = Figure.objects.filter(
             id__in=keys
         ).annotate(
-            geolocations=StringAgg('geo_locations__display_name', '; ')
+            geolocations=StringAgg('geo_locations__display_name', EXTERNAL_ARRAY_SEPARATOR)
         ).values('id', 'geolocations')
         batch_load = {
             item['id']: item['geolocations']
