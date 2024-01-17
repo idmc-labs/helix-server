@@ -6,7 +6,7 @@ from factory.django import DjangoModelFactory
 from apps.contact.models import Contact
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure, OSMName
-from apps.event.models import EventCode
+from apps.event.models import Event, EventCode
 from apps.common.enums import GENDER_TYPE
 
 
@@ -175,7 +175,7 @@ class ContextOfViolenceFactory(DjangoModelFactory):
 
 class EventFactory(DjangoModelFactory):
     class Meta:
-        model = 'event.Event'
+        model = Event
 
     crisis = factory.SubFactory(CrisisFactory)
     event_type = factory.Iterator(Crisis.CRISIS_TYPE)

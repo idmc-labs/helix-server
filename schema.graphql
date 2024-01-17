@@ -895,7 +895,7 @@ input CrisisFilterDataInputType {
   endDate_Gt: Date
   endDate_Gte: Date
   name: String
-  countries: [String!]
+  countries: [ID!]
   crisisTypes: [String!]
   events: [ID!]
   filterFigures: FigureExtractionFilterDataInputType

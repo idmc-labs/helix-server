@@ -24,7 +24,7 @@ from django.db.models import Q, Count
 
 class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
     name = django_filters.CharFilter(method='filter_name')
-    countries = StringListFilter(method='filter_countries')
+    countries = IDListFilter(method='filter_countries')
     crisis_types = StringListFilter(method='filter_crisis_types')
     events = IDListFilter(method='filter_events')
 
