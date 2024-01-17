@@ -54,7 +54,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                 $filterFigureHasExcerptIdu: Boolean
                 $filterFigureHasHousingDestruction: Boolean
                 $filterFigureIsToBeReviewed: Boolean
-                $report: String
+                $report: ID
             ) {
             figureAggregations(
                 filters: {
@@ -258,9 +258,10 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                 ]
             ),
         ]:
-            response = self.query(query, variables={**filter_data})
+            response = self.query(query, variables={**filter_data}).json()
+
             self.assertEqual(
-                response.json()['data']['figureAggregations']['idpsConflictFigures'],
+                response['data']['figureAggregations']['idpsConflictFigures'],
                 expected_data,
             )
 

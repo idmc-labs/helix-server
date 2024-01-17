@@ -119,7 +119,6 @@ class Disaster(models.Model):
 
 
 class StatusLog(models.Model):
-
     class Status(enum.Enum):
         PENDING = 0
         SUCCESS = 1
@@ -214,7 +213,6 @@ class DisasterLegacy(models.Model):
 
 
 class ReleaseMetadata(models.Model):
-
     class ReleaseEnvironment(enum.Enum):
         PRE_RELEASE = 0
         RELEASE = 1

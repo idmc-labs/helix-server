@@ -1363,7 +1363,7 @@ input EntryExtractionFilterDataInputType {
   filterFigureApprovedBy: [ID!]
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
-  reportId: String
+  reportId: ID
   filterFigureContextOfViolence: [ID!]
   filterFigureIsToBeReviewed: Boolean
 }
@@ -1857,7 +1857,7 @@ input FigureExtractionBulkOperationFilterDataInputType {
   filterFigureViolenceTypes: [ID!]
   filterFigureOsvSubTypes: [ID!]
   filterFigureHasDisaggregatedData: Boolean
-  reportId: String
+  reportId: ID
   filterFigureContextOfViolence: [ID!]
   filterFigureReviewStatus: [String!]
   filterFigureApprovedBy: [ID!]
@@ -1900,7 +1900,7 @@ type FigureExtractionBulkOperationFilterDataType {
   filterFigureEndBefore: Date
   filterEntryArticleTitle: String
   filterFigureHasDisaggregatedData: Boolean
-  reportId: String
+  reportId: ID
   filterFigureIsToBeReviewed: Boolean
   filterFigureHasExcerptIdu: Boolean
   filterFigureHasHousingDestruction: Boolean
@@ -1933,7 +1933,7 @@ input FigureExtractionFilterDataInputType {
   filterFigureViolenceTypes: [ID!]
   filterFigureOsvSubTypes: [ID!]
   filterFigureHasDisaggregatedData: Boolean
-  reportId: String
+  reportId: ID
   filterFigureContextOfViolence: [ID!]
   filterFigureReviewStatus: [String!]
   filterFigureApprovedBy: [ID!]

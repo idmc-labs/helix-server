@@ -1,5 +1,5 @@
 import typing
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from random import randint
 from math import sqrt
 
@@ -14,12 +14,15 @@ from utils.factories import (
     EntryFactory,
     ReportFactory,
 )
+from apps.contrib.models import Client
 from apps.crisis.models import Crisis
 from apps.event.models import Event
 from apps.entry.models import Figure, Entry
 from apps.report.models import Report
 from apps.country.models import Country
 from apps.users.enums import USER_ROLE
+from apps.gidd.tasks import update_gidd_data
+from apps.gidd.models import ReleaseMetadata, StatusLog
 from utils.tests import (
     HelixGraphQLTestCase,
     create_user_with_role,
@@ -213,14 +216,19 @@ class TestCoreData(HelixGraphQLTestCase):
         Entry.objects.all().delete()
         Figure.objects.all().delete()
         Report.objects.all().delete()
-
-        cls.start_year = start_year = 2010
-        cls.end_year = end_year = 2013
+        ReleaseMetadata.objects.all().delete()
+        cls.start_year = start_year = 2016
+        cls.end_year = end_year = 2019
 
         # Country
         cls.country_npl = country_npl = CountryFactory.create(iso3='NPL', name="Nepal")
         cls.country_ind = country_ind = CountryFactory.create(iso3='IND', name="India")
         cls.countries = countries = [country_npl, country_ind]
+
+        # User
+        cls.admin = create_user_with_role(
+            USER_ROLE.ADMIN.name,
+        )
 
         # Crisis
         crises_1 = CrisisFactory.create(
@@ -354,6 +362,9 @@ class TestCoreData(HelixGraphQLTestCase):
             for country in [None, *countries]
         ]
         for year, country in report_data_set:
+            # NOTE: we only have full year reports with and without countries
+            # Full year reports without countries are GIDD reports
+            is_gidd_report = not country
             report_name = (
                 f'GRID {year + 1}' if country is None else
                 f'GRID {year + 1} - {country.iso3}'
@@ -365,6 +376,8 @@ class TestCoreData(HelixGraphQLTestCase):
                 filter_figure_start_after=report_start_date,
                 filter_figure_end_before=report_end_date,
                 is_public=True,
+                is_gidd_report=is_gidd_report,
+                gidd_report_year=report_start_date.year if is_gidd_report else None
             )
             if country:
                 report.filter_figure_countries.set([country])
@@ -442,6 +455,25 @@ class TestCoreData(HelixGraphQLTestCase):
         # Create in bulk
         Figure.objects.bulk_create(figures)
         cls.figures = list(Figure.objects.all().select_related('event'))
+
+        # Generate GIDD data
+        cls.gidd_client = Client.objects.create(
+            name='James Bond',
+            code='BOND-007',
+            is_active=True,
+        )
+
+        ReleaseMetadata.objects.create(
+            release_year=cls.end_year,
+            pre_release_year=cls.end_year - 1,
+            modified_by=cls.admin,
+            modified_at=datetime.now(),
+        )
+        status_log = StatusLog.objects.create(
+            triggered_by=cls.admin,
+            triggered_at=datetime.now(),
+        )
+        update_gidd_data(status_log.pk)
 
     @classmethod
     def setUpClass(cls) -> None:
@@ -770,128 +802,6 @@ class TestCoreData(HelixGraphQLTestCase):
             assert len(country_figure_ids[country.pk]) == len(system_data)
             assert set(country_figure_ids[country.pk]) == set(system_data)
 
-    def test_figure_inclusion_in_event(self):
-        event_figure_ids = {}
-        for event in self.all_events:
-            filtered_figures = []
-            for figure in self.figures:
-                if (figure.event == event):
-                    filtered_figures.append(figure)
-            event_figure_ids[event.pk] = [str(f.pk) for f in filtered_figures]
-
-        query = '''
-            query FigureListForEvent($id: [ID!]) {
-              figureList(
-                  ordering: "id",
-                  pageSize: 999999,
-                  filters: {
-                    filterFigureEvents: $id
-                  }
-              ) {
-                totalCount
-                results {
-                  id
-                }
-              }
-            }
-        '''
-        for event in self.all_events:
-            response = self.query(query, variables={'id': event.pk}).json()
-            r_data = response['data']['figureList']
-            system_data = [i['id'] for i in r_data['results']]
-            assert len(event_figure_ids[event.pk]) == r_data['totalCount']
-            assert len(event_figure_ids[event.pk]) == len(system_data)
-            assert set(event_figure_ids[event.pk]) == set(system_data)
-
-    def test_figure_inclusion_in_crisis(self):
-        crisis_figure_ids = {}
-        for crisis in self.all_crises:
-            filtered_figures = []
-            for figure in self.figures:
-                if (figure.event.crisis == crisis):
-                    filtered_figures.append(figure)
-            crisis_figure_ids[crisis.pk] = [str(f.pk) for f in filtered_figures]
-
-        query = '''
-            query FigureListForCrisis($id: [ID!]) {
-              figureList(
-                  ordering: "id",
-                  pageSize: 999999,
-                  filters: {
-                    filterFigureCrises: $id
-                  }
-              ) {
-                totalCount
-                results {
-                  id
-                }
-              }
-            }
-        '''
-        for crisis in self.all_crises:
-            response = self.query(query, variables={'id': crisis.pk}).json()
-            r_data = response['data']['figureList']
-            system_data = [i['id'] for i in r_data['results']]
-            assert len(crisis_figure_ids[crisis.pk]) == r_data['totalCount']
-            assert len(crisis_figure_ids[crisis.pk]) == len(system_data)
-            assert set(crisis_figure_ids[crisis.pk]) == set(system_data)
-
-    def test_figure_inclusion_in_report(self):
-        report_figure_ids = {}
-        for report in self.reports:
-            filtered_figures = []
-            for figure in self.figures:
-                country = report.filter_figure_countries.all().first()
-                if (
-                    figure.category in Figure.flow_list() and
-                    check_date_range_inside_date_range(
-                        figure.start_date,
-                        figure.end_date,
-                        report.filter_figure_start_after,
-                        report.filter_figure_end_before,
-                    ) and (
-                        not country or figure.country == country
-                    )
-                ):
-                    filtered_figures.append(figure)
-                elif (
-                    figure.category in Figure.stock_list() and
-                    check_date_inside_date_range(
-                        figure.end_date,
-                        report.filter_figure_start_after,
-                        report.filter_figure_end_before,
-                    ) and (
-                        not country or figure.country == country
-                    )
-                ):
-                    filtered_figures.append(figure)
-
-            report_figure_ids[report.pk] = [str(f.pk) for f in filtered_figures]
-
-        query = '''
-            query FigureListForReport($id: ID!) {
-              figureList(
-                  ordering: "id",
-                  pageSize: 999999,
-                  filters: {
-                    reportId: $id
-                  }
-              ) {
-                totalCount
-                results {
-                  id
-                }
-              }
-            }
-        '''
-        for report in self.reports:
-            response = self.query(query, variables={'id': report.pk}).json()
-            r_data = response['data']['figureList']
-            system_data = [i['id'] for i in r_data['results']]
-            assert len(report_figure_ids[report.pk]) == r_data['totalCount']
-            assert len(report_figure_ids[report.pk]) == len(system_data)
-            assert set(report_figure_ids[report.pk]) == set(system_data)
-
     def test_crisis_inclusion_in_country(self):
         for country in self.countries:
             filtered_crises = []
@@ -1082,6 +992,161 @@ class TestCoreData(HelixGraphQLTestCase):
             ]
             assert events == system_data
 
+    def test_figure_inclusion_in_event(self):
+        event_figure_ids = {}
+        for event in self.all_events:
+            filtered_figures = []
+            for figure in self.figures:
+                if (figure.event == event):
+                    filtered_figures.append(figure)
+            event_figure_ids[event.pk] = [str(f.pk) for f in filtered_figures]
+
+        query = '''
+            query FigureListForEvent($id: [ID!]) {
+              figureList(
+                  ordering: "id",
+                  pageSize: 999999,
+                  filters: {
+                    filterFigureEvents: $id
+                  }
+              ) {
+                totalCount
+                results {
+                  id
+                }
+              }
+            }
+        '''
+        for event in self.all_events:
+            response = self.query(query, variables={'id': event.pk}).json()
+            r_data = response['data']['figureList']
+            system_data = [i['id'] for i in r_data['results']]
+            assert len(event_figure_ids[event.pk]) == r_data['totalCount']
+            assert len(event_figure_ids[event.pk]) == len(system_data)
+            assert set(event_figure_ids[event.pk]) == set(system_data)
+
+    def test_country_inclusion_in_event(self):
+        for event in self.all_events:
+            for year in range(self.start_year, self.end_year + 1):
+                filtered_countries = []
+                country_aggregates = {}
+                for country in self.countries:
+                    if country not in event.countries.all():
+                        continue
+
+                    filtered_countries.append(country)
+
+                    filtered_figures = []
+                    for figure in self.figures:
+                        if (
+                            figure.event == event and
+                            figure.country == country and
+                            figure.category in Figure.flow_list() and
+                            check_date_range_inside_date_range(
+                                figure.start_date,
+                                figure.end_date,
+                                date(year, 1, 1),
+                                date(year, 12, 31),
+                            )
+                        ):
+                            filtered_figures.append(figure)
+                        elif (
+                            figure.event == event and
+                            figure.country == country and
+                            figure.category in Figure.stock_list() and
+                            check_same_date(figure.end_date, date(year, 12, 31))
+                        ):
+                            filtered_figures.append(figure)
+
+                    country_aggregates[country.pk] = {
+                        'iso3': country.iso3,
+                        **get_figure_aggregations(filtered_figures),
+                    }
+
+                countries = [
+                    {
+                        **country_aggregates[country.pk],
+                        'iso3': country.iso3,
+                        'id': str(country.pk),
+                    }
+                    for country in filtered_countries
+                ]
+
+                query = '''
+                    query CountryListForEvent($year: Float!, $events: [ID!]) {
+                      countryList(
+                          ordering: "id",
+                          filters: {
+                              events: $events
+                              filterFigures: {}
+                              aggregateFigures: {
+                                  year: $year
+                                  filterFigures: {
+                                    filterFigureEvents: $events
+                                  }
+                              }
+                          },
+                      ) {
+                        results {
+                          id
+                          name
+                          iso3
+                          totalStockDisaster
+                          totalFlowDisaster
+                          totalStockConflict
+                          totalFlowConflict
+                        }
+                      }
+                    }
+                '''
+                response = self.query(query, variables={'year': year, 'events': [event.pk]}).json()
+                r_data = response['data']['countryList']['results']
+                system_data = [
+                    {
+                        'id': i['id'],
+                        'iso3': i['iso3'],
+                        'disaster_idps': i['totalStockDisaster'],
+                        'disaster_nds': i['totalFlowDisaster'],
+                        'conflict_idps': i['totalStockConflict'],
+                        'conflict_nds': i['totalFlowConflict'],
+                    }
+                    for i in r_data
+                ]
+                assert countries == system_data
+
+    def test_figure_inclusion_in_crisis(self):
+        crisis_figure_ids = {}
+        for crisis in self.all_crises:
+            filtered_figures = []
+            for figure in self.figures:
+                if (figure.event.crisis == crisis):
+                    filtered_figures.append(figure)
+            crisis_figure_ids[crisis.pk] = [str(f.pk) for f in filtered_figures]
+
+        query = '''
+            query FigureListForCrisis($id: [ID!]) {
+              figureList(
+                  ordering: "id",
+                  pageSize: 999999,
+                  filters: {
+                    filterFigureCrises: $id
+                  }
+              ) {
+                totalCount
+                results {
+                  id
+                }
+              }
+            }
+        '''
+        for crisis in self.all_crises:
+            response = self.query(query, variables={'id': crisis.pk}).json()
+            r_data = response['data']['figureList']
+            system_data = [i['id'] for i in r_data['results']]
+            assert len(crisis_figure_ids[crisis.pk]) == r_data['totalCount']
+            assert len(crisis_figure_ids[crisis.pk]) == len(system_data)
+            assert set(crisis_figure_ids[crisis.pk]) == set(system_data)
+
     def test_country_inclusion_in_crisis(self):
         for crisis in self.all_crises:
             for year in range(self.start_year, self.end_year + 1):
@@ -1266,94 +1331,61 @@ class TestCoreData(HelixGraphQLTestCase):
             ]
             assert events == system_data
 
-    def test_country_inclusion_in_event(self):
-        for event in self.all_events:
-            for year in range(self.start_year, self.end_year + 1):
-                filtered_countries = []
-                country_aggregates = {}
-                for country in self.countries:
-                    if country not in event.countries.all():
-                        continue
+    def test_figure_inclusion_in_report(self):
+        report_figure_ids = {}
+        for report in self.reports:
+            filtered_figures = []
+            for figure in self.figures:
+                country = report.filter_figure_countries.all().first()
+                if (
+                    figure.category in Figure.flow_list() and
+                    check_date_range_inside_date_range(
+                        figure.start_date,
+                        figure.end_date,
+                        report.filter_figure_start_after,
+                        report.filter_figure_end_before,
+                    ) and (
+                        not country or figure.country == country
+                    )
+                ):
+                    filtered_figures.append(figure)
+                elif (
+                    figure.category in Figure.stock_list() and
+                    check_date_inside_date_range(
+                        figure.end_date,
+                        report.filter_figure_start_after,
+                        report.filter_figure_end_before,
+                    ) and (
+                        not country or figure.country == country
+                    )
+                ):
+                    filtered_figures.append(figure)
 
-                    filtered_countries.append(country)
+            report_figure_ids[report.pk] = [str(f.pk) for f in filtered_figures]
 
-                    filtered_figures = []
-                    for figure in self.figures:
-                        if (
-                            figure.event == event and
-                            figure.country == country and
-                            figure.category in Figure.flow_list() and
-                            check_date_range_inside_date_range(
-                                figure.start_date,
-                                figure.end_date,
-                                date(year, 1, 1),
-                                date(year, 12, 31),
-                            )
-                        ):
-                            filtered_figures.append(figure)
-                        elif (
-                            figure.event == event and
-                            figure.country == country and
-                            figure.category in Figure.stock_list() and
-                            check_same_date(figure.end_date, date(year, 12, 31))
-                        ):
-                            filtered_figures.append(figure)
-
-                    country_aggregates[country.pk] = {
-                        'iso3': country.iso3,
-                        **get_figure_aggregations(filtered_figures),
-                    }
-
-                countries = [
-                    {
-                        **country_aggregates[country.pk],
-                        'iso3': country.iso3,
-                        'id': str(country.pk),
-                    }
-                    for country in filtered_countries
-                ]
-
-                query = '''
-                    query CountryListForEvent($year: Float!, $events: [ID!]) {
-                      countryList(
-                          ordering: "id",
-                          filters: {
-                              events: $events
-                              filterFigures: {}
-                              aggregateFigures: {
-                                  year: $year
-                                  filterFigures: {
-                                    filterFigureEvents: $events
-                                  }
-                              }
-                          },
-                      ) {
-                        results {
-                          id
-                          name
-                          iso3
-                          totalStockDisaster
-                          totalFlowDisaster
-                          totalStockConflict
-                          totalFlowConflict
-                        }
-                      }
-                    }
-                '''
-                response = self.query(query, variables={'year': year, 'events': [event.pk]}).json()
-                r_data = response['data']['countryList']['results']
-                system_data = [
-                    {
-                        'id': i['id'],
-                        'iso3': i['iso3'],
-                        'disaster_idps': i['totalStockDisaster'],
-                        'disaster_nds': i['totalFlowDisaster'],
-                        'conflict_idps': i['totalStockConflict'],
-                        'conflict_nds': i['totalFlowConflict'],
-                    }
-                    for i in r_data
-                ]
-                assert countries == system_data
+        query = '''
+            query FigureListForReport($id: ID!) {
+              figureList(
+                  ordering: "id",
+                  pageSize: 999999,
+                  filters: {
+                    reportId: $id
+                  }
+              ) {
+                totalCount
+                results {
+                  id
+                }
+              }
+            }
+        '''
+        for report in self.reports:
+            response = self.query(query, variables={'id': report.pk}).json()
+            r_data = response['data']['figureList']
+            system_data = [i['id'] for i in r_data['results']]
+            assert len(report_figure_ids[report.pk]) == r_data['totalCount']
+            assert len(report_figure_ids[report.pk]) == len(system_data)
+            assert set(report_figure_ids[report.pk]) == set(system_data)
 
     def test_crisis_inclusion_in_report(self):
         for report in self.reports:
@@ -1598,11 +1630,216 @@ class TestCoreData(HelixGraphQLTestCase):
             ]
             assert country_aggregates == system_data
 
-    def test_gidd_conflict(self):
-        assert 1 == 2
+    def test_displacement_data(self):
+        displacement_data = []
+        for year in range(self.start_year, self.end_year + 1):
+            for country in self.countries:
+                filtered_figures = []
+                for figure in self.figures:
+                    if (
+                        figure.category in Figure.flow_list() and
+                        figure.country == country and
+                        check_date_range_inside_date_range(
+                            figure.start_date,
+                            figure.end_date,
+                            date(year, 1, 1),
+                            date(year, 12, 31),
+                        )
+                    ):
+                        filtered_figures.append(figure)
+                    elif (
+                        figure.category in Figure.stock_list() and
+                        figure.country == country and
+                        check_same_date(
+                            figure.end_date,
+                            date(year, 12, 31),
+                        )
+                    ):
+                        filtered_figures.append(figure)
 
-    def test_gidd_disaster(self):
-        assert 1 == 2
+                if filtered_figures:
+                    displacement_data.append({
+                        'year': year,
+                        'iso3': country.iso3,
+                        **get_figure_aggregations(filtered_figures),
+                    })
 
-    def test_gidd_displacement(self):
-        assert 1 == 2
+        # NOTE: Both IDPs and NDs are summed if year is not provided
+        overall_conflict_idps = get_safe_sum([
+            row['conflict_idps']
+            for row in displacement_data
+            if row['conflict_idps'] is not None
+        ])
+        overall_conflict_nds = get_safe_sum([
+            row['conflict_nds']
+            for row in displacement_data
+            if row['conflict_nds'] is not None
+        ])
+        overall_disaster_nds = get_safe_sum([
+            row['disaster_nds']
+            for row in displacement_data
+            if row['disaster_nds'] is not None
+        ])
+        overall_disaster_idps = get_safe_sum([
+            row['disaster_idps']
+            for row in displacement_data
+            if row['disaster_idps'] is not None
+        ])
+
+        query = '''
+            query DisplacementData($clientId: String!){
+                giddPublicDisplacements(
+                    filters: {},
+                    clientId: $clientId,
+                ){
+                    results {
+                        conflictNewDisplacement
+                        conflictTotalDisplacement
+                        disasterNewDisplacement
+                        disasterTotalDisplacement
+                        id
+                        iso3
+                        year
+                    }
+                    totalCount
+                    page
+                    pageSize
+                }
+                giddPublicConflictStatistics(
+                    clientId: $clientId,
+                ){
+                    newDisplacements
+                    totalDisplacements
+                }
+                giddPublicDisasterStatistics(
+                    clientId: $clientId,
+                ){
+                    newDisplacements
+                    totalDisplacements
+                }
+                giddPublicCombinedStatistics(
+                    clientId: $clientId,
+                ) {
+                    internalDisplacements
+                    totalDisplacements
+                }
+            }
+        '''
+        response = self.query(query, variables={'clientId': self.gidd_client.code}).json()
+        r_data = response['data']['giddPublicDisplacements']['results']
+        system_data = [
+            {
+                'iso3': i['iso3'],
+                'year': i['year'],
+                'disaster_idps': i['disasterTotalDisplacement'],
+                'disaster_nds': i['disasterNewDisplacement'],
+                'conflict_idps': i['conflictTotalDisplacement'],
+                'conflict_nds': i['conflictNewDisplacement'],
+            }
+            for i in r_data
+        ]
+        assert displacement_data == system_data
+
+        conflict_stats_r_data = response['data']['giddPublicConflictStatistics']
+        disaster_stats_r_data = response['data']['giddPublicDisasterStatistics']
+        combined_stats_r_data = response['data']['giddPublicCombinedStatistics']
+
+        assert conflict_stats_r_data['newDisplacements'] == overall_conflict_nds
+        assert disaster_stats_r_data['newDisplacements'] == overall_disaster_nds
+        assert conflict_stats_r_data['totalDisplacements'] == overall_conflict_idps
+        assert disaster_stats_r_data['totalDisplacements'] == overall_disaster_idps
+
+        assert combined_stats_r_data['internalDisplacements'] == get_safe_sum([
+            x
+            for x in [overall_disaster_nds, overall_conflict_nds]
+            if x is not None
+        ])
+        assert combined_stats_r_data['totalDisplacements'] == get_safe_sum([
+            x
+            for x in [overall_disaster_idps, overall_conflict_idps]
+            if x is not None
+        ])
+
+    def test_disaster_data(self):
+        disaster_data = []
+        disaster_events = [
+            event
+            for event in self.events
+            if event.event_type == Crisis.CRISIS_TYPE.DISASTER
+        ]
+        for year in range(self.start_year, self.end_year + 1):
+            for country in self.countries:
+                for event in disaster_events:
+                    filtered_figures = []
+                    for figure in self.figures:
+                        if (
+                            figure.event == event and
+                            figure.category in Figure.flow_list() and
+                            figure.country == country and
+                            check_date_range_inside_date_range(
+                                figure.start_date,
+                                figure.end_date,
+                                date(year, 1, 1),
+                                date(year, 12, 31),
+                            )
+                        ):
+                            filtered_figures.append(figure)
+                        elif (
+                            figure.event == event and
+                            figure.category in Figure.stock_list() and
+                            figure.country == country and
+                            check_same_date(
+                                figure.end_date,
+                                date(year, 12, 31),
+                            )
+                        ):
+                            filtered_figures.append(figure)
+
+                    if filtered_figures:
+                        disaster_data.append({
+                            'id': str(event.id),
+                            'year': year,
+                            'iso3': country.iso3,
+                            'event': event.name,
+                            **get_figure_aggregations(filtered_figures),
+                            'disaster_idps': None,
+                        })
+
+        query = '''
+            query DisasterData($clientId: String!){
+                giddPublicDisasters(
+                    filters: {},
+                    clientId: $clientId,
+                ){
+                    results {
+                        id
+                        eventId
+                        eventName
+                        year
+                        iso3
+                        newDisplacement
+                    }
+                    totalCount
+                    page
+                    pageSize
+                }
+            }
+        '''
+        response = self.query(query, variables={'clientId': self.gidd_client.code}).json()
+        r_data = response['data']['giddPublicDisasters']['results']
+        system_data = [
+            {
+                'id': i['eventId'],
+                'year': i['year'],
+                'iso3': i['iso3'],
+                'event': i['eventName'],
+
+                'disaster_idps': None,
+                'disaster_nds': i['newDisplacement'],
+                'conflict_idps': None,
+                'conflict_nds': None,
+            }
+            for i in r_data
+        ]
+        # NOTE: Removing idps as it's not generated in GIDD right now
+        assert [{**row, 'disaster_idps': None} for row in disaster_data] == system_data

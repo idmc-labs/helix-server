@@ -403,7 +403,7 @@ class TestReportFilter(HelixGraphQLTestCase):
             }
         }'''
         self.entries_report_query = '''
-          query MyQuery($id: String) {
+          query MyQuery($id: ID) {
             entryList(filters: {reportId: $id}) {
               results {
                 id
