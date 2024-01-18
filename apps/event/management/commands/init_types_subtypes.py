@@ -27,7 +27,8 @@ class Command(BaseCommand):
                     violence_sub_type = ViolenceSubType.objects.create(name=sub_type, violence=violence)
                 else:
                     violence_sub_type = ViolenceSubType.objects.get(
-                        name__iexact=sub_type, violence__name__iexact=violence.name)
+                        name__iexact=sub_type, violence__name__iexact=violence.name,
+                    )
                 violence_sub_type.save()
         self.stdout.write(self.style.SUCCESS('Saved {} violences with {} violences sub types.'.format(
             Violence.objects.count(),

@@ -1,7 +1,5 @@
 OSV = "Other situations of violence (OSV)"
 
-# TODO: Remove this NOTE
-# NOTE: Changes here might break the data migration script for helix-old -> helix-new
 CONFLICT_TYPES = {
     "International armed conflict(IAC)": [
         # "Military Occupation",  # TODO: Confirm with IDMC
