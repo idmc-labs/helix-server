@@ -2,6 +2,7 @@ import typing
 from datetime import date, timedelta, datetime
 from random import randint
 from math import sqrt
+from itertools import groupby
 
 from django.conf import settings
 from django.test import override_settings
@@ -525,6 +526,7 @@ class TestCoreData(HelixGraphQLTestCase):
                       filters: {
                           aggregateFigures: {year: $year}
                       }
+                      pageSize: 999999,
                   ) {
                     results {
                       id
@@ -594,7 +596,10 @@ class TestCoreData(HelixGraphQLTestCase):
 
         query = '''
             query EventList{
-              eventList(ordering: "id") {
+              eventList(
+                ordering: "id",
+                pageSize: 999999,
+              ) {
                 results {
                   id
                   name
@@ -665,7 +670,10 @@ class TestCoreData(HelixGraphQLTestCase):
 
         query = '''
             query CrisisList{
-              crisisList(ordering: "id") {
+              crisisList(
+                ordering: "id",
+                pageSize: 999999,
+              ) {
                 results {
                   id
                   name
@@ -737,7 +745,10 @@ class TestCoreData(HelixGraphQLTestCase):
 
         query = '''
             query ReportList{
-              reportList(ordering: "id") {
+              reportList(
+                ordering: "id",
+                pageSize: 999999,
+              ) {
                 results {
                   id
                   name
@@ -858,6 +869,7 @@ class TestCoreData(HelixGraphQLTestCase):
                 query CrisisListForCountry($countries: [ID!]){
                   crisisList(
                       ordering: "id"
+                      pageSize: 999999,
                       filters: {
                         countries: $countries,
                         filterFigures: {
@@ -953,6 +965,7 @@ class TestCoreData(HelixGraphQLTestCase):
                 query EventListForCountry($countries: [ID!]){
                   eventList(
                       ordering: "id"
+                      pageSize: 999999,
                       filters: {
                         countries: $countries,
                         filterFigures: {
@@ -1076,6 +1089,7 @@ class TestCoreData(HelixGraphQLTestCase):
                     query CountryListForEvent($year: Float!, $events: [ID!]) {
                       countryList(
                           ordering: "id",
+                          pageSize: 999999,
                           filters: {
                               events: $events
                               filterFigures: {}
@@ -1198,6 +1212,7 @@ class TestCoreData(HelixGraphQLTestCase):
                     query CountryListForCrisis($year: Float!, $crises: [ID!]) {
                       countryList(
                           ordering: "id",
+                          pageSize: 999999,
                           filters: {
                               crises: $crises
                               filterFigures: {}
@@ -1292,6 +1307,7 @@ class TestCoreData(HelixGraphQLTestCase):
                 query EventListForCrisis($crises: [ID!]){
                   eventList(
                       ordering: "id"
+                      pageSize: 999999,
                       filters: {
                         crisisByIds: $crises,
                         filterFigures: {
@@ -1430,6 +1446,7 @@ class TestCoreData(HelixGraphQLTestCase):
                 query crisisListForReport($reportId: ID!){
                   crisisList(
                       ordering: "id"
+                      pageSize: 999999,
                       filters: {
                         filterFigures: {
                             reportId: $reportId,
@@ -1511,6 +1528,7 @@ class TestCoreData(HelixGraphQLTestCase):
                 query EventListForReport($reportId: ID!){
                   eventList(
                       ordering: "id"
+                      pageSize: 999999,
                       filters: {
                         filterFigures: {
                             reportId: $reportId,
@@ -1591,7 +1609,8 @@ class TestCoreData(HelixGraphQLTestCase):
             query = '''
                 query countryListForReport($reportId: ID!){
                   countryList(
-                      ordering: "id"
+                      ordering: "id",
+                      pageSize: 999999,
                       filters: {
                         filterFigures: {
                             reportId: $reportId,
@@ -1630,7 +1649,7 @@ class TestCoreData(HelixGraphQLTestCase):
             ]
             assert country_aggregates == system_data
 
-    def test_displacement_data(self):
+    def test_gidd_displacement_data(self):
         displacement_data = []
         for year in range(self.start_year, self.end_year + 1):
             for country in self.countries:
@@ -1691,6 +1710,7 @@ class TestCoreData(HelixGraphQLTestCase):
                 giddPublicDisplacements(
                     filters: {},
                     clientId: $clientId,
+                    pageSize: 999999,
                 ){
                     results {
                         conflictNewDisplacement
@@ -1760,7 +1780,7 @@ class TestCoreData(HelixGraphQLTestCase):
             if x is not None
         ])
 
-    def test_disaster_data(self):
+    def test_gidd_disaster_data(self):
         disaster_data = []
         disaster_events = [
             event
@@ -1810,6 +1830,7 @@ class TestCoreData(HelixGraphQLTestCase):
                 giddPublicDisasters(
                     filters: {},
                     clientId: $clientId,
+                    pageSize: 999999,
                 ){
                     results {
                         id
@@ -1843,3 +1864,88 @@ class TestCoreData(HelixGraphQLTestCase):
         ]
         # NOTE: Removing idps as it's not generated in GIDD right now
         assert [{**row, 'disaster_idps': None} for row in disaster_data] == system_data
+
+    def test_chart_aggregations(self):
+        figures = [
+            {
+                'date': (
+                    figure.start_date if figure.start_date.year == figure.end_date.year else figure.end_date
+                ) if figure.category == Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT else figure.end_date,
+                'cause': figure.figure_cause,
+                'category': figure.category,
+                'value': figure.total_figures,
+            }
+            for figure in self.figures
+            if (
+                figure.role == Figure.ROLE.RECOMMENDED and
+                figure.category in [Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT, Figure.FIGURE_CATEGORY_TYPES.IDPS]
+            )
+        ]
+
+        def aggregate_by_date(figures):
+            def comparator(f):
+                return f['date']
+
+            by_date_dict = {
+                k: get_safe_sum([f['value'] for f in list(v)])
+                for k, v in groupby(sorted(figures, key=comparator), key=comparator)
+            }
+            return [{'date': k.strftime('%Y-%m-%d'), 'value': v} for k, v in by_date_dict.items()]
+
+        # Let's filter to create 4 groups
+        idps_disaster_figures = aggregate_by_date([
+            f
+            for f in figures
+            if f['cause'] == Crisis.CRISIS_TYPE.DISASTER and
+            f['category'] == Figure.FIGURE_CATEGORY_TYPES.IDPS
+        ])
+        idps_conflict_figures = aggregate_by_date([
+            f
+            for f in figures
+            if f['cause'] == Crisis.CRISIS_TYPE.CONFLICT and
+            f['category'] == Figure.FIGURE_CATEGORY_TYPES.IDPS
+        ])
+        nds_disaster_figures = aggregate_by_date([
+            f
+            for f in figures
+            if f['cause'] == Crisis.CRISIS_TYPE.DISASTER and
+            f['category'] == Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
+        ])
+        nds_conflict_figures = aggregate_by_date([
+            f
+            for f in figures
+            if f['cause'] == Crisis.CRISIS_TYPE.CONFLICT and
+            f['category'] == Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
+        ])
+
+        query = '''
+            query FigureAggregations {
+              figureAggregations(
+                  filters: {}
+              ) {
+                idpsConflictFigures {
+                  date
+                  value
+                }
+                idpsDisasterFigures {
+                  date
+                  value
+                }
+                ndsDisasterFigures {
+                  date
+                  value
+                }
+                ndsConflictFigures {
+                  date
+                  value
+                }
+              }
+            }
+        '''
+        response = self.query(query).json()
+        r_data = response['data']['figureAggregations']
+
+        assert idps_disaster_figures == r_data['idpsDisasterFigures']
+        assert idps_conflict_figures == r_data['idpsConflictFigures']
+        assert nds_disaster_figures == r_data['ndsDisasterFigures']
+        assert nds_conflict_figures == r_data['ndsConflictFigures']
