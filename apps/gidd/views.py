@@ -11,7 +11,7 @@ from rest_framework import mixins
 from drf_spectacular.utils import extend_schema
 
 from apps.country.models import Country
-from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR, EXTERNAL_FIELD_SEPARATOR
 
 from .models import (
     Conflict, Disaster, DisplacementData, IdpsSaddEstimate,
@@ -111,8 +111,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             'Hazard Category',
             'Hazard Type',
             'Hazard Sub Type',
-            'Event Codes',
-            'Event Codes Type',
+            'Event Codes (Event code:Event code type)',
         ])
 
         for disaster in qs:
@@ -128,8 +127,12 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                     disaster.hazard_category_name,
                     disaster.hazard_type_name,
                     disaster.hazard_sub_type_name,
-                    EXTERNAL_ARRAY_SEPARATOR.join([code for code in disaster.event_codes]) or None,
-                    EXTERNAL_ARRAY_SEPARATOR.join([code_type for code_type in disaster.event_codes_type]) or None,
+                    EXTERNAL_ARRAY_SEPARATOR.join(
+                        [f"{key}{EXTERNAL_FIELD_SEPARATOR}{value}" for key, value in zip(
+                            disaster.event_codes,
+                            disaster.event_codes_type
+                        )]
+                    ),
                 ]
             )
 
