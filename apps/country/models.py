@@ -17,7 +17,7 @@ from apps.crisis.models import Crisis
 from apps.users.models import User, Portfolio
 from apps.users.enums import USER_ROLE
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
-from utils.common import generate_storage_url_from_path
+from utils.fields import generate_full_media_url
 
 
 class GeographicalGroup(models.Model):
@@ -366,7 +366,7 @@ class Country(models.Model):
     def geojson_url(cls, iso3):
         if iso3:
             file_path = f'{cls.GEOJSON_PATH}/{iso3.upper()}.json'
-            return generate_storage_url_from_path(file_path)
+            return generate_full_media_url(file_path)
 
     @property
     def entries(self) -> QuerySet:

@@ -5,7 +5,6 @@ import tempfile
 import logging
 from datetime import timedelta
 
-from django.core.files.storage import get_storage_class
 from django.conf import settings
 from rest_framework.exceptions import PermissionDenied
 from drf_spectacular.types import OpenApiTypes
@@ -78,12 +77,6 @@ def is_grid_or_myu_report(start_date, end_date):
         is_year_equal(start_date, end_date)
     )
     return is_ymu_report or is_grid_report
-
-
-def generate_storage_url_from_path(file_path):
-    # instance of the current storage class
-    media_storage = get_storage_class()()
-    return media_storage.url(file_path)
 
 
 def get_string_from_list(list_of_string):
