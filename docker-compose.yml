@@ -43,6 +43,7 @@ services:
     image: postgres:13
     environment:
       POSTGRES_PASSWORD: postgres
+    command: postgres -c log_statement=all
     volumes:
       - helix-db-13-data:/var/lib/postgresql/data
     ports:

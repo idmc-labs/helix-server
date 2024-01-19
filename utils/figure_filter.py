@@ -41,9 +41,6 @@ class FigureFilterHelper:
         if not filters:
             return qs
         figure_qs = ReportFigureExtractionFilterSet(data=filters, request=request).qs
-        figure_qs = Figure.objects.filter(
-            id__in=figure_qs.values('id')
-        )
         outer_ref_field = None
         if qs.model is Country:
             outer_ref_field = 'country'
@@ -79,12 +76,7 @@ class FigureFilterHelper:
             reference_date = report.filter_figure_end_before
 
         if figure_filters:
-            figure_qs = Figure.objects.filter(
-                id__in=ReportFigureExtractionFilterSet(
-                    data=figure_filters,
-                    request=request,
-                ).qs.values('id')
-            )
+            figure_qs = ReportFigureExtractionFilterSet(data=figure_filters, request=request).qs
 
         return figure_qs, reference_date
 

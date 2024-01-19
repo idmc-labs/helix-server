@@ -219,11 +219,6 @@ class QueryAbstractModel(models.Model):
             filter_figure_has_housing_destruction=self.filter_figure_has_housing_destruction,
         )
 
-    @property
-    def extract_figures(self) -> ['Figure']:  # noqa
-        from apps.extraction.filters import FigureExtractionFilterSet
-        return FigureExtractionFilterSet(data=self.get_filter_kwargs).qs
-
     # FIXME: we may not need this anymore
     @property
     def extract_report_figures(self) -> ['Figure']:  # noqa

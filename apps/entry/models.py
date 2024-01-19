@@ -1,7 +1,7 @@
 from collections import OrderedDict
 from datetime import date
 import logging
-from typing import Optional, Union, Dict, Callable
+from typing import Optional, Union, Dict, Callable, List
 from uuid import uuid4
 from dataclasses import dataclass
 
@@ -13,7 +13,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models.query import QuerySet
 from django.db.models import (
-    Sum, F, Value, Min, Max, Q, ExpressionWrapper,
+    F, Value, Min, Max, Q, ExpressionWrapper,
     fields, Case, When,
 )
 from django.db.models.functions import Concat, ExtractYear, Cast
@@ -576,11 +576,12 @@ class Figure(MetaInformationArchiveAbstractModel,
 
     # methods
     @classmethod
-    def filtered_nd_figures(
+    def _filtered_nd_figures(
         cls,
+        categories: List[int],
         qs: QuerySet,
         start_date: Optional[date],
-        end_date: Optional[date] = None,
+        end_date: Optional[date],
     ):
         # NOTE: We should write this query without using union
         year_difference = ExpressionWrapper(
@@ -589,22 +590,62 @@ class Figure(MetaInformationArchiveAbstractModel,
         )
         qs = qs.annotate(year_difference=year_difference)
 
-        same_year_figures = qs.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+        same_year_figures_filter = dict(
             year_difference__lt=1,
         )
-        multiple_year_figures = qs.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+        multiple_year_figures = dict(
             year_difference__gte=1,
         )
-        if start_date:
-            same_year_figures = same_year_figures.filter(start_date__gte=start_date)
-            multiple_year_figures = multiple_year_figures.filter(end_date__gte=start_date)
-        if end_date:
-            same_year_figures = same_year_figures.filter(start_date__lte=end_date)
-            multiple_year_figures = multiple_year_figures.filter(end_date__lte=end_date)
 
-        return same_year_figures | multiple_year_figures
+        if len(categories) > 1:
+            same_year_figures_filter.update(category__in=categories)
+            multiple_year_figures.update(category__in=categories)
+        else:
+            same_year_figures_filter.update(
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+            )
+            multiple_year_figures.update(
+                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+            )
+
+        if start_date:
+            same_year_figures_filter = dict(
+                **same_year_figures_filter,
+                start_date__gte=start_date,
+            )
+            multiple_year_figures = dict(
+                **multiple_year_figures,
+                end_date__gte=start_date
+            )
+
+        if end_date:
+            same_year_figures_filter = dict(
+                **same_year_figures_filter,
+                start_date__lte=end_date
+            )
+            multiple_year_figures = dict(
+                **multiple_year_figures,
+                end_date__lte=end_date,
+            )
+
+        return qs.filter(
+            models.Q(**same_year_figures_filter) |
+            models.Q(**multiple_year_figures)
+        )
+
+    @classmethod
+    def filtered_nd_figures(
+        cls,
+        qs: QuerySet,
+        start_date: Optional[date],
+        end_date: Optional[date] = None,
+    ):
+        return cls._filtered_nd_figures(
+            [Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value],
+            qs,
+            start_date,
+            end_date=end_date,
+        )
 
     @classmethod
     def filtered_nd_figures_for_listing(
@@ -613,30 +654,12 @@ class Figure(MetaInformationArchiveAbstractModel,
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
-        # NOTE: We should write this query without using union
-        year_difference = ExpressionWrapper(
-            ExtractYear('end_date') - ExtractYear('start_date'),
-            output_field=fields.IntegerField(),
+        return cls._filtered_nd_figures(
+            cls.flow_list(),
+            qs,
+            start_date,
+            end_date=end_date,
         )
-
-        qs = qs.annotate(year_difference=year_difference)
-
-        same_year_figures = qs.filter(
-            category__in=cls.flow_list(),
-            year_difference__lt=1,
-        )
-        mutiple_year_figures = qs.filter(
-            category__in=cls.flow_list(),
-            year_difference__gte=1,
-        )
-        if start_date:
-            same_year_figures = same_year_figures.filter(start_date__gte=start_date)
-            mutiple_year_figures = mutiple_year_figures.filter(end_date__gte=start_date)
-        if end_date:
-            same_year_figures = same_year_figures.filter(start_date__lte=end_date)
-            mutiple_year_figures = mutiple_year_figures.filter(end_date__lte=end_date)
-
-        return same_year_figures | mutiple_year_figures
 
     @classmethod
     def annotate_stock_and_flow_dates(cls):
@@ -722,7 +745,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         ]
 
     @classmethod
-    def flow_list(cls):
+    def flow_list(cls) -> List[int]:
         return [
             Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
             Figure.FIGURE_CATEGORY_TYPES.RETURN.value,
@@ -1106,24 +1129,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             'transformer': transformer,
             'readme_data': readme_data,
         }
-
-    @classmethod
-    def get_total_stock_idp_figure(cls, filters):
-        from apps.extraction.filters import FigureExtractionFilterSet
-        # TODO: use ReportFigureExtractionFilterSet
-        return FigureExtractionFilterSet(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
-            role=Figure.ROLE.RECOMMENDED,
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value
-        ).aggregate(total=Sum('total_figures'))['total']
-
-    @classmethod
-    def get_total_flow_nd_figure(cls, filters):
-        from apps.extraction.filters import FigureExtractionFilterSet
-        # TODO: use ReportFigureExtractionFilterSet
-        return FigureExtractionFilterSet(data=filters or dict(), queryset=cls.objects.all()).qs.filter(
-            role=Figure.ROLE.RECOMMENDED,
-            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
-        ).aggregate(total=Sum('total_figures'))['total']
 
     @classmethod
     def can_be_created_by(cls, user: User, entry: 'Entry') -> bool:

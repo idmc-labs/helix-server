@@ -12,8 +12,8 @@ from apps.report.models import Report
 from utils.filters import (
     StringListFilter,
     IDListFilter,
-    IDFilter,
     generate_type_for_filter_set,
+    IDFilter,
 )
 from apps.event.constants import OSV
 from apps.common.enums import GENDER_TYPE
