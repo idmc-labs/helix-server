@@ -18,10 +18,9 @@ def migrate_glide_numbers_to_event_codes():
 
     event_qs = (
         Event.objects.exclude(
-            # TODO: Validated if this filter works
             models.Q(glide_numbers__isnull=True) |
             models.Q(glide_numbers=[]) |
-            models.Q(event_codes__isnull=False)
+            models.Q(event_code__isnull=False)
         )
     )
 
@@ -30,42 +29,61 @@ def migrate_glide_numbers_to_event_codes():
         for country in Country.objects.all()
     }
 
-    events_not_migrated = []
+    invalid_glide_numbers = []
 
     for event in event_qs.values('id', 'name', 'glide_numbers'):
         glide_numbers = event['glide_numbers']
         for glide_no in glide_numbers:
-            glide_no = glide_no.replace('\t', '').replace(' ', '')
-            is_code_in_format = is_glid_no_valid(glide_no)
-            if is_code_in_format:
-                iso3 = glide_no.split('-')[-1]
-                country = country_iso3_map.get(str(iso3), None)
-                if country:
-                    EventCode.objects.get_or_create(
-                        country=country,
-                        event_id=event['id'],
-                        event_code=glide_no,
-                        event_code_type=1
-                    )
-            else:
-                event_countris_iso3_list = list(
-                    Event.countries.through
-                    .objects
-                    .filter(event=event['id'])
-                    .values_list('country__iso3', flat=True)
-                )
-                events_not_migrated.append(
-                    {
-                        'event_id': event['id'],
-                        'event_name': event['name'],
-                        'glide_no': glide_no,
-                        'countries': event_countris_iso3_list,
-                        'no_of_countries': len(event_countris_iso3_list),
-                    }
-                )
+            glide_no = glide_no.strip()
 
-    print("Count of Invalid Glide numbers: ", len(events_not_migrated))
-    print("Not migrated Events: ", events_not_migrated)
+            base_error = {
+                'event_id': event['id'],
+                'event_name': event['name'],
+                'glide_no': glide_no,
+            }
+
+            is_code_in_format = is_glid_no_valid(glide_no)
+            if not is_code_in_format:
+                invalid_glide_numbers.append({
+                    **base_error,
+                    'reason': f'Invalid GLIDE Number: {glide_no}'
+                })
+                continue
+
+            iso3 = glide_no.split('-')[-1]
+            country = country_iso3_map.get(str(iso3), None)
+            if not country:
+                invalid_glide_numbers.append({
+                    **base_error,
+                    'reason': f'Invalid ISO3: {iso3}'
+                })
+                continue
+
+            event_countris_iso3_list = list(
+                Event.countries.through
+                .objects
+                .filter(event=event['id'])
+                .values_list('country__iso3', flat=True)
+            )
+
+            if iso3 not in event_countris_iso3_list:
+                invalid_glide_numbers.append({
+                    **base_error,
+                    'reason': f'ISO3 not in event: {iso3}'
+                })
+                continue
+
+            EventCode.objects.get_or_create(
+                country=country,
+                event_id=event['id'],
+                event_code=glide_no,
+                event_code_type=1
+            )
+
+    print("Count of glide numbers not migrated: ", len(invalid_glide_numbers))
+    print(invalid_glide_numbers)
+
+    raise Exception('hehe')
 
 
 class Command(BaseCommand):
