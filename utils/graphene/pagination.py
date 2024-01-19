@@ -1,3 +1,4 @@
+import typing
 from graphene import String
 from graphene_django_extras.paginations.pagination import BaseDjangoGraphqlPagination
 from graphene_django_extras import PageGraphqlPagination
@@ -5,6 +6,7 @@ from django.db.models import F
 from graphene_django_extras.paginations.utils import (
     _nonzero_int,
 )
+from graphene_django_extras.settings import graphql_api_settings
 
 
 def nulls_last_order_queryset(qs, ordering_param, **kwargs):
@@ -91,6 +93,20 @@ class OrderingOnlyArgumentPagination(BaseDjangoGraphqlPagination):
         return qs
 
 
+def get_page_size(page_size: typing.Optional[int]) -> typing.Optional[int]:
+    """
+    This is separated from PageGraphqlPaginationWithoutCount to support mocking in test cases
+    NOTE: This will ignore manually defined limit within the PageGraphqlPaginationWithoutCount instance
+    """
+    page_size = page_size or graphql_api_settings.DEFAULT_PAGE_SIZE
+    max_page_size = graphql_api_settings.MAX_PAGE_SIZE
+    if page_size is not None:
+        assert page_size <= max_page_size, ValueError(
+            f"Max page size limit {max_page_size} exceeded"
+        )
+        return page_size
+
+
 class PageGraphqlPaginationWithoutCount(PageGraphqlPagination):
     '''
     Default implementation applies qs.count()
@@ -99,6 +115,10 @@ class PageGraphqlPaginationWithoutCount(PageGraphqlPagination):
     '''
     def paginate_queryset(self, qs, **kwargs):
         page = kwargs.pop(self.page_query_param, 1) or 1
+        assert page > 0, ValueError(
+            "Page value for PageGraphqlPagination must be a positive integer"
+        )
+
         if self.page_size_query_param:
             page_size = _nonzero_int(
                 kwargs.get(self.page_size_query_param, self.page_size),
@@ -106,14 +126,8 @@ class PageGraphqlPaginationWithoutCount(PageGraphqlPagination):
             )
         else:
             page_size = self.page_size
-        page_size = page_size or self.default_limit
+        page_size = get_page_size(page_size)
 
-        assert page > 0, ValueError(
-            "Page value for PageGraphqlPagination must be a positive integer"
-        )
-        assert page_size <= self.max_page_size, ValueError(
-            f"Max page size limit {self.max_page_size} exceeded"
-        )
         if page_size is None:
             """
             raise ValueError('Page_size value for PageGraphqlPagination must be a non-null value, you must set global'

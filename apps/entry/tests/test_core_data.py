@@ -1,11 +1,11 @@
 import typing
+import functools
+import mock
+import logging
 from datetime import date, timedelta, datetime
 from random import randint
 from math import sqrt
 from itertools import groupby
-
-from django.conf import settings
-from django.test import override_settings
 
 from utils.factories import (
     EventFactory,
@@ -28,6 +28,8 @@ from utils.tests import (
     HelixGraphQLTestCase,
     create_user_with_role,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def get_safe_max(lst: typing.List[date]):
@@ -200,13 +202,41 @@ def get_dates(_type: GetDatesTypes, year: int) -> GetDatesDateRangeType:
     raise Exception(f'Unknown type: {_type}')
 
 
-@override_settings(
-    GRAPHENE_DJANGO_EXTRAS={
-        **settings.GRAPHENE_DJANGO_EXTRAS,
-        'MAX_PAGE_SIZE': 999999,
-    }
-)
+class RuntimeProfile:
+    label: str
+    start: typing.Optional[datetime]
+
+    def __init__(self, label: str = 'N/A'):
+        self.label = label
+        self.start = None
+
+    def __call__(self, func):
+        self.label = func.__name__
+
+        @functools.wraps(func)
+        def decorated(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
+        return decorated
+
+    def __enter__(self):
+        self.start = datetime.now()
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        assert self.start is not None
+        time_delta = datetime.now() - self.start
+        logger.info(f'Runtime with <{self.label}>: {time_delta}')
+
+
 class TestCoreData(HelixGraphQLTestCase):
+
+    @mock.patch('utils.graphene.pagination.get_page_size', lambda *_: 999999)
+    def query_json(self, query: str, variables: typing.Optional[dict] = None) -> dict:
+        with RuntimeProfile(str(variables)):
+            response = self.query(query, variables=variables)
+        self.assertResponseNoErrors(response)
+        return response.json()
+
     @classmethod
     def init_data(cls):
         # Start from scratch
@@ -218,6 +248,7 @@ class TestCoreData(HelixGraphQLTestCase):
         Figure.objects.all().delete()
         Report.objects.all().delete()
         ReleaseMetadata.objects.all().delete()
+
         cls.start_year = start_year = 2016
         cls.end_year = end_year = 2019
 
@@ -489,6 +520,7 @@ class TestCoreData(HelixGraphQLTestCase):
         )
         self.force_login(self.user_monitoring_expert)
 
+    @RuntimeProfile()
     def test_figure_aggregation_in_countries(self):
         ''' Check for different years for each country '''
         for year in range(self.start_year, self.end_year + 1):
@@ -525,8 +557,7 @@ class TestCoreData(HelixGraphQLTestCase):
                       ordering: "id",
                       filters: {
                           aggregateFigures: {year: $year}
-                      }
-                      pageSize: 999999,
+                      },
                   ) {
                     results {
                       id
@@ -540,7 +571,7 @@ class TestCoreData(HelixGraphQLTestCase):
                   }
                 }
             '''
-            response = self.query(query, variables={'year': year}).json()
+            response = self.query_json(query, variables={'year': year})
             r_data = response['data']['countryList']['results']
             system_data = [
                 {
@@ -554,6 +585,7 @@ class TestCoreData(HelixGraphQLTestCase):
             ]
             assert country_aggregates == system_data
 
+    @RuntimeProfile()
     def test_figure_aggregation_in_events(self):
         event_aggregates = {}
         for event in self.all_events:
@@ -598,7 +630,6 @@ class TestCoreData(HelixGraphQLTestCase):
             query EventList{
               eventList(
                 ordering: "id",
-                pageSize: 999999,
               ) {
                 results {
                   id
@@ -611,7 +642,7 @@ class TestCoreData(HelixGraphQLTestCase):
               }
             }
         '''
-        response = self.query(query).json()
+        response = self.query_json(query)
         r_data = response['data']['eventList']['results']
         system_data = [
             {
@@ -627,6 +658,7 @@ class TestCoreData(HelixGraphQLTestCase):
         ]
         assert events == system_data
 
+    @RuntimeProfile()
     def test_figure_aggregation_in_crises(self):
         crisis_aggregates = {}
         for crisis in self.all_crises:
@@ -672,7 +704,6 @@ class TestCoreData(HelixGraphQLTestCase):
             query CrisisList{
               crisisList(
                 ordering: "id",
-                pageSize: 999999,
               ) {
                 results {
                   id
@@ -685,7 +716,7 @@ class TestCoreData(HelixGraphQLTestCase):
               }
             }
         '''
-        response = self.query(query).json()
+        response = self.query_json(query)
         r_data = response['data']['crisisList']['results']
         system_data = [
             {
@@ -701,6 +732,7 @@ class TestCoreData(HelixGraphQLTestCase):
         ]
         assert crises == system_data
 
+    @RuntimeProfile()
     def test_figure_aggregation_in_reports(self):
         report_aggregates = []
         for report in self.reports:
@@ -747,7 +779,6 @@ class TestCoreData(HelixGraphQLTestCase):
             query ReportList{
               reportList(
                 ordering: "id",
-                pageSize: 999999,
               ) {
                 results {
                   id
@@ -764,7 +795,7 @@ class TestCoreData(HelixGraphQLTestCase):
               }
             }
         '''
-        response = self.query(query).json()
+        response = self.query_json(query)
         r_data = response['data']['reportList']['results']
         system_data = [
             {
@@ -780,6 +811,7 @@ class TestCoreData(HelixGraphQLTestCase):
         ]
         assert report_aggregates == system_data
 
+    @RuntimeProfile()
     def test_figure_inclusion_in_country(self):
         country_figure_ids = {}
         for country in self.countries:
@@ -793,7 +825,6 @@ class TestCoreData(HelixGraphQLTestCase):
             query FigureListForCountry($id: [ID!]) {
               figureList(
                   ordering: "id",
-                  pageSize: 999999,
                   filters: {
                     filterFigureCountries: $id
                   }
@@ -806,13 +837,14 @@ class TestCoreData(HelixGraphQLTestCase):
             }
         '''
         for country in self.countries:
-            response = self.query(query, variables={'id': country.pk}).json()
+            response = self.query_json(query, variables={'id': country.pk})
             r_data = response['data']['figureList']
             system_data = [i['id'] for i in r_data['results']]
             assert len(country_figure_ids[country.pk]) == r_data['totalCount']
             assert len(country_figure_ids[country.pk]) == len(system_data)
             assert set(country_figure_ids[country.pk]) == set(system_data)
 
+    @RuntimeProfile()
     def test_crisis_inclusion_in_country(self):
         for country in self.countries:
             filtered_crises = []
@@ -868,8 +900,7 @@ class TestCoreData(HelixGraphQLTestCase):
             query = '''
                 query CrisisListForCountry($countries: [ID!]){
                   crisisList(
-                      ordering: "id"
-                      pageSize: 999999,
+                      ordering: "id",
                       filters: {
                         countries: $countries,
                         filterFigures: {
@@ -893,7 +924,7 @@ class TestCoreData(HelixGraphQLTestCase):
                   }
                 }
             '''
-            response = self.query(query, variables={'countries': [country.pk]}).json()
+            response = self.query_json(query, variables={'countries': [country.pk]})
             r_data = response['data']['crisisList']['results']
             system_data = [
                 {
@@ -909,6 +940,7 @@ class TestCoreData(HelixGraphQLTestCase):
             ]
             assert crises == system_data
 
+    @RuntimeProfile()
     def test_event_inclusion_in_country(self):
         for country in self.countries:
             filtered_events = []
@@ -964,8 +996,7 @@ class TestCoreData(HelixGraphQLTestCase):
             query = '''
                 query EventListForCountry($countries: [ID!]){
                   eventList(
-                      ordering: "id"
-                      pageSize: 999999,
+                      ordering: "id",
                       filters: {
                         countries: $countries,
                         filterFigures: {
@@ -989,7 +1020,7 @@ class TestCoreData(HelixGraphQLTestCase):
                   }
                 }
             '''
-            response = self.query(query, variables={'countries': [country.pk]}).json()
+            response = self.query_json(query, variables={'countries': [country.pk]})
             r_data = response['data']['eventList']['results']
             system_data = [
                 {
@@ -1005,6 +1036,7 @@ class TestCoreData(HelixGraphQLTestCase):
             ]
             assert events == system_data
 
+    @RuntimeProfile()
     def test_figure_inclusion_in_event(self):
         event_figure_ids = {}
         for event in self.all_events:
@@ -1018,7 +1050,6 @@ class TestCoreData(HelixGraphQLTestCase):
             query FigureListForEvent($id: [ID!]) {
               figureList(
                   ordering: "id",
-                  pageSize: 999999,
                   filters: {
                     filterFigureEvents: $id
                   }
@@ -1031,13 +1062,14 @@ class TestCoreData(HelixGraphQLTestCase):
             }
         '''
         for event in self.all_events:
-            response = self.query(query, variables={'id': event.pk}).json()
+            response = self.query_json(query, variables={'id': event.pk})
             r_data = response['data']['figureList']
             system_data = [i['id'] for i in r_data['results']]
             assert len(event_figure_ids[event.pk]) == r_data['totalCount']
             assert len(event_figure_ids[event.pk]) == len(system_data)
             assert set(event_figure_ids[event.pk]) == set(system_data)
 
+    @RuntimeProfile()
     def test_country_inclusion_in_event(self):
         for event in self.all_events:
             for year in range(self.start_year, self.end_year + 1):
@@ -1089,7 +1121,6 @@ class TestCoreData(HelixGraphQLTestCase):
                     query CountryListForEvent($year: Float!, $events: [ID!]) {
                       countryList(
                           ordering: "id",
-                          pageSize: 999999,
                           filters: {
                               events: $events
                               filterFigures: {}
@@ -1113,7 +1144,7 @@ class TestCoreData(HelixGraphQLTestCase):
                       }
                     }
                 '''
-                response = self.query(query, variables={'year': year, 'events': [event.pk]}).json()
+                response = self.query_json(query, variables={'year': year, 'events': [event.pk]})
                 r_data = response['data']['countryList']['results']
                 system_data = [
                     {
@@ -1128,6 +1159,7 @@ class TestCoreData(HelixGraphQLTestCase):
                 ]
                 assert countries == system_data
 
+    @RuntimeProfile()
     def test_figure_inclusion_in_crisis(self):
         crisis_figure_ids = {}
         for crisis in self.all_crises:
@@ -1141,7 +1173,6 @@ class TestCoreData(HelixGraphQLTestCase):
             query FigureListForCrisis($id: [ID!]) {
               figureList(
                   ordering: "id",
-                  pageSize: 999999,
                   filters: {
                     filterFigureCrises: $id
                   }
@@ -1154,13 +1185,14 @@ class TestCoreData(HelixGraphQLTestCase):
             }
         '''
         for crisis in self.all_crises:
-            response = self.query(query, variables={'id': crisis.pk}).json()
+            response = self.query_json(query, variables={'id': crisis.pk})
             r_data = response['data']['figureList']
             system_data = [i['id'] for i in r_data['results']]
             assert len(crisis_figure_ids[crisis.pk]) == r_data['totalCount']
             assert len(crisis_figure_ids[crisis.pk]) == len(system_data)
             assert set(crisis_figure_ids[crisis.pk]) == set(system_data)
 
+    @RuntimeProfile()
     def test_country_inclusion_in_crisis(self):
         for crisis in self.all_crises:
             for year in range(self.start_year, self.end_year + 1):
@@ -1212,7 +1244,6 @@ class TestCoreData(HelixGraphQLTestCase):
                     query CountryListForCrisis($year: Float!, $crises: [ID!]) {
                       countryList(
                           ordering: "id",
-                          pageSize: 999999,
                           filters: {
                               crises: $crises
                               filterFigures: {}
@@ -1236,7 +1267,7 @@ class TestCoreData(HelixGraphQLTestCase):
                       }
                     }
                 '''
-                response = self.query(query, variables={'year': year, 'crises': [crisis.pk]}).json()
+                response = self.query_json(query, variables={'year': year, 'crises': [crisis.pk]})
                 r_data = response['data']['countryList']['results']
                 system_data = [
                     {
@@ -1251,6 +1282,7 @@ class TestCoreData(HelixGraphQLTestCase):
                 ]
                 assert countries == system_data
 
+    @RuntimeProfile()
     def test_event_inclusion_in_crisis(self):
         for crisis in self.all_crises:
             filtered_events = []
@@ -1306,8 +1338,7 @@ class TestCoreData(HelixGraphQLTestCase):
             query = '''
                 query EventListForCrisis($crises: [ID!]){
                   eventList(
-                      ordering: "id"
-                      pageSize: 999999,
+                      ordering: "id",
                       filters: {
                         crisisByIds: $crises,
                         filterFigures: {
@@ -1331,7 +1362,7 @@ class TestCoreData(HelixGraphQLTestCase):
                   }
                 }
             '''
-            response = self.query(query, variables={'crises': [crisis.pk]}).json()
+            response = self.query_json(query, variables={'crises': [crisis.pk]})
             r_data = response['data']['eventList']['results']
             system_data = [
                 {
@@ -1347,6 +1378,7 @@ class TestCoreData(HelixGraphQLTestCase):
             ]
             assert events == system_data
 
+    @RuntimeProfile()
     def test_figure_inclusion_in_report(self):
         report_figure_ids = {}
         for report in self.reports:
@@ -1383,7 +1415,6 @@ class TestCoreData(HelixGraphQLTestCase):
             query FigureListForReport($id: ID!) {
               figureList(
                   ordering: "id",
-                  pageSize: 999999,
                   filters: {
                     reportId: $id
                   }
@@ -1396,13 +1427,14 @@ class TestCoreData(HelixGraphQLTestCase):
             }
         '''
         for report in self.reports:
-            response = self.query(query, variables={'id': report.pk}).json()
+            response = self.query_json(query, variables={'id': report.pk})
             r_data = response['data']['figureList']
             system_data = [i['id'] for i in r_data['results']]
             assert len(report_figure_ids[report.pk]) == r_data['totalCount']
             assert len(report_figure_ids[report.pk]) == len(system_data)
             assert set(report_figure_ids[report.pk]) == set(system_data)
 
+    @RuntimeProfile()
     def test_crisis_inclusion_in_report(self):
         for report in self.reports:
             crisis_aggregates = []
@@ -1445,8 +1477,7 @@ class TestCoreData(HelixGraphQLTestCase):
             query = '''
                 query crisisListForReport($reportId: ID!){
                   crisisList(
-                      ordering: "id"
-                      pageSize: 999999,
+                      ordering: "id",
                       filters: {
                         filterFigures: {
                             reportId: $reportId,
@@ -1469,7 +1500,7 @@ class TestCoreData(HelixGraphQLTestCase):
                   }
                 }
             '''
-            response = self.query(query, variables={'reportId': report.pk}).json()
+            response = self.query_json(query, variables={'reportId': report.pk})
             r_data = response['data']['crisisList']['results']
             system_data = [
                 {
@@ -1485,6 +1516,7 @@ class TestCoreData(HelixGraphQLTestCase):
             ]
             assert crisis_aggregates == system_data
 
+    @RuntimeProfile()
     def test_event_inclusion_in_report(self):
         for report in self.reports:
             event_aggregates = []
@@ -1527,8 +1559,7 @@ class TestCoreData(HelixGraphQLTestCase):
             query = '''
                 query EventListForReport($reportId: ID!){
                   eventList(
-                      ordering: "id"
-                      pageSize: 999999,
+                      ordering: "id",
                       filters: {
                         filterFigures: {
                             reportId: $reportId,
@@ -1551,7 +1582,7 @@ class TestCoreData(HelixGraphQLTestCase):
                   }
                 }
             '''
-            response = self.query(query, variables={'reportId': report.pk}).json()
+            response = self.query_json(query, variables={'reportId': report.pk})
             r_data = response['data']['eventList']['results']
             system_data = [
                 {
@@ -1567,6 +1598,7 @@ class TestCoreData(HelixGraphQLTestCase):
             ]
             assert event_aggregates == system_data
 
+    @RuntimeProfile()
     def test_country_inclusion_in_report(self):
         for report in self.reports:
             country_aggregates = []
@@ -1610,7 +1642,6 @@ class TestCoreData(HelixGraphQLTestCase):
                 query countryListForReport($reportId: ID!){
                   countryList(
                       ordering: "id",
-                      pageSize: 999999,
                       filters: {
                         filterFigures: {
                             reportId: $reportId,
@@ -1634,7 +1665,7 @@ class TestCoreData(HelixGraphQLTestCase):
                   }
                 }
             '''
-            response = self.query(query, variables={'reportId': report.pk}).json()
+            response = self.query_json(query, variables={'reportId': report.pk})
             r_data = response['data']['countryList']['results']
             system_data = [
                 {
@@ -1649,6 +1680,7 @@ class TestCoreData(HelixGraphQLTestCase):
             ]
             assert country_aggregates == system_data
 
+    @RuntimeProfile()
     def test_gidd_displacement_data(self):
         displacement_data = []
         for year in range(self.start_year, self.end_year + 1):
@@ -1710,7 +1742,6 @@ class TestCoreData(HelixGraphQLTestCase):
                 giddPublicDisplacements(
                     filters: {},
                     clientId: $clientId,
-                    pageSize: 999999,
                 ){
                     results {
                         conflictNewDisplacement
@@ -1745,7 +1776,7 @@ class TestCoreData(HelixGraphQLTestCase):
                 }
             }
         '''
-        response = self.query(query, variables={'clientId': self.gidd_client.code}).json()
+        response = self.query_json(query, variables={'clientId': self.gidd_client.code})
         r_data = response['data']['giddPublicDisplacements']['results']
         system_data = [
             {
@@ -1780,6 +1811,7 @@ class TestCoreData(HelixGraphQLTestCase):
             if x is not None
         ])
 
+    @RuntimeProfile()
     def test_gidd_disaster_data(self):
         disaster_data = []
         disaster_events = [
@@ -1830,7 +1862,6 @@ class TestCoreData(HelixGraphQLTestCase):
                 giddPublicDisasters(
                     filters: {},
                     clientId: $clientId,
-                    pageSize: 999999,
                 ){
                     results {
                         id
@@ -1846,7 +1877,7 @@ class TestCoreData(HelixGraphQLTestCase):
                 }
             }
         '''
-        response = self.query(query, variables={'clientId': self.gidd_client.code}).json()
+        response = self.query_json(query, variables={'clientId': self.gidd_client.code})
         r_data = response['data']['giddPublicDisasters']['results']
         system_data = [
             {
@@ -1865,6 +1896,7 @@ class TestCoreData(HelixGraphQLTestCase):
         # NOTE: Removing idps as it's not generated in GIDD right now
         assert [{**row, 'disaster_idps': None} for row in disaster_data] == system_data
 
+    @RuntimeProfile()
     def test_chart_aggregations(self):
         figures = [
             {
@@ -1942,7 +1974,7 @@ class TestCoreData(HelixGraphQLTestCase):
               }
             }
         '''
-        response = self.query(query).json()
+        response = self.query_json(query)
         r_data = response['data']['figureAggregations']
 
         assert idps_disaster_figures == r_data['idpsDisasterFigures']
