@@ -2,7 +2,6 @@ OSV = "Other situations of violence (OSV)"
 
 CONFLICT_TYPES = {
     "International armed conflict(IAC)": [
-        # "Military Occupation",  # TODO: Confirm with IDMC
         "International armed conflict(IAC)",
     ],
     "Non-International armed conflict (NIAC)": [

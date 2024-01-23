@@ -27,7 +27,7 @@ class ViolenceChangeTestCase(TestCase):
     def test_change_violence_types_and_sub_types(self):
         CONFLICT_TYPES = {
             "International armed conflict(IAC)": [
-                "Military Occupation",  # TODO: Confirm with IDMC
+                "Military Occupation",
                 "IAC (other than occupation)",
                 "Other (IAC)",
                 "Unclear (IAC)",
@@ -142,8 +142,7 @@ class ViolenceChangeTestCase(TestCase):
 
         VIOLENCE_SUB_TYPES_WITH_EXPECTED_COUNTS = {
             "International armed conflict(IAC)": {
-                # "Military Occupation",  # TODO: Confirm with IDMC
-                "International armed conflict(IAC)": _counts_by_sub_violence(4),  # Change 4 -> 5
+                "International armed conflict(IAC)": _counts_by_sub_violence(5),
             },
             "Non-International armed conflict (NIAC)": {
                 "Non-International armed conflict (NIAC)": _counts_by_sub_violence(5),

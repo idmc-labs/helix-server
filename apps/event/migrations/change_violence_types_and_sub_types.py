@@ -223,6 +223,7 @@ def migrate_data(Event, Figure, Violence, ViolenceSubType, Report, ExtractionQue
     for sub_violence_names, destination_sub_violence_name, new_sub_violence_name in [
             [
                 [
+                    ['International armed conflict(IAC)', 'Military Occupation'],
                     ['International armed conflict(IAC)', 'Other (IAC)'],
                     ['International armed conflict(IAC)', 'Unclear (IAC)'],
                     ['International armed conflict(IAC)', 'Unknown (IAC)'],
