@@ -916,7 +916,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__assignee__full_name='Assignee',
             created_by__full_name='Created by',
             last_modified_by__full_name='Updated by',
-            event_codes='Event codes (Event code:Event code type)',
+            event_codes='Event codes (Code:Type)',
         )
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),

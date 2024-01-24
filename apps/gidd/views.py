@@ -111,7 +111,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             'Hazard Category',
             'Hazard Type',
             'Hazard Sub Type',
-            'Event Codes (Event code:Event code type)',
+            'Event Codes (Code:Type)',
         ])
 
         for disaster in qs:
