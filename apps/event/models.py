@@ -279,7 +279,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 ).order_by().values('event').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
-                output_field=models.IntegerField()
+                output_field=models.IntegerField(),
             ),
             cls.IDP_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_idp_figures(
@@ -292,7 +292,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 ).order_by().values('event').annotate(
                     _total=models.Sum('total_figures')
                 ).values('_total')[:1],
-                output_field=models.IntegerField()
+                output_field=models.IntegerField(),
             ),
         }
 

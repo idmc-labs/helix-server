@@ -11,7 +11,6 @@ from .models import StatusLog
 
 
 class GiddUpdateData(graphene.Mutation):
-
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(GiddStatusLogType)
@@ -28,7 +27,7 @@ class GiddUpdateData(graphene.Mutation):
                 errors=[dict(
                     field='nonFieldErrors',
                     messages=gettext(
-                        'Genereting GIDD data in background, you can re-generate once generation will complete'
+                        'Generating GIDD data in background, you can re-generate once generation will complete'
                     )
                 )],
                 ok=False
@@ -66,7 +65,8 @@ class GiddUpdateReleaseMetaData(graphene.Mutation):
         if errors := mutation_is_not_valid(serializer):
             return GiddUpdateReleaseMetaData(errors=errors, ok=False)
         instance = serializer.save()
-        # Update date in background
+        # FIXME: We should not call update_gidd_data when setting metadata
+        # NOTE: Update date in background
         transaction.on_commit(lambda: update_gidd_data.delay(log_id=instance.id))
         return GiddUpdateReleaseMetaData(result=instance, errors=None, ok=True)
 
