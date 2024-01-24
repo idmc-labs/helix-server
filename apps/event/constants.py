@@ -2,29 +2,20 @@ OSV = "Other situations of violence (OSV)"
 
 CONFLICT_TYPES = {
     "International armed conflict(IAC)": [
-        "Military Occupation",
-        "IAC (other than occupation)",
-        "Other (IAC)",
-        "Unclear (IAC)",
-        "Unknown (IAC)"
+        "International armed conflict(IAC)",
     ],
     "Non-International armed conflict (NIAC)": [
-        "NSAG(s) vs. State actor(s)",
-        "NSAG(s) vs. NSAG(s)",
-        "Other (NIAC)",
-        "Unclear (NIAC)",
-        "Unknown (NIAC)"
+        "Non-International armed conflict (NIAC)",
     ],
     OSV: [
         "Civilian-state violence",
         "Crime-related",
         "Communal violence",
-        "Other (OSV)",
-        "Unclear (OSV)",
-        "Unknown (OSV)"
+        "Other",
     ],
-    "Other": ["Other (Other)", "Unclear (Other)", "Unknown (Other)"],
-    "Unknown": ["Unclear (Unknown)", "Unknown (Unknown)"]
+    "Unclear/Unknown": [
+        "Unclear/Unknown",
+    ]
 }
 
 DISASTERS = {

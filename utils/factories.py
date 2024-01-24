@@ -307,6 +307,11 @@ class NotificationFactory(DjangoModelFactory):
         model = 'notification.Notification'
 
 
+class ExtractionQueryFactory(DjangoModelFactory):
+    class Meta:
+        model = 'extraction.ExtractionQuery'
+
+
 class OSMNameFactory(DjangoModelFactory):
     lat = factory.Faker('pyint', min_value=100, max_value=200)
     lon = factory.Faker('pyint', min_value=100, max_value=200)
