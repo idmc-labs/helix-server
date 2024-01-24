@@ -38,7 +38,7 @@ from apps.parking_lot.models import ParkedItem
 from apps.common.enums import GENDER_TYPE
 from apps.notification.models import Notification
 from apps.common.utils import (
-    get_attr_str_from_event_codes,
+    format_event_codes,
     EXTERNAL_ARRAY_SEPARATOR,
     EXTERNAL_TUPLE_SEPARATOR,
 )
@@ -916,8 +916,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             event__assignee__full_name='Assignee',
             created_by__full_name='Created by',
             last_modified_by__full_name='Updated by',
-            event_codes='Event codes',
-            event_codes_type='Event codes type',
+            event_codes='Event codes (Code:Type)',
         )
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
@@ -1044,7 +1043,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             ),
         ).order_by(
             'created_at',
-        ).values(*[header for header in headers.keys() if header != 'event_codes_type'])
+        ).values(*[header for header in headers.keys()])
 
         def transformer(datum):
 
@@ -1106,8 +1105,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                     'review_status', Figure.FIGURE_REVIEW_STATUS
                 ),
                 'is_disaggregated': 'Yes' if datum['is_disaggregated'] else 'No',
-                'event_codes': get_attr_str_from_event_codes(datum['event_codes'], 'code'),
-                'event_codes_type': get_attr_str_from_event_codes(datum['event_codes'], 'code_type'),
+                'event_codes': format_event_codes(datum['event_codes']),
             }
 
         readme_data = [

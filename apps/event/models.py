@@ -21,7 +21,7 @@ from apps.crisis.models import Crisis
 from apps.contrib.commons import DATE_ACCURACY
 from apps.entry.models import Figure
 from apps.users.models import User, USER_ROLE
-from apps.common.utils import get_attr_str_from_event_codes, EXTERNAL_ARRAY_SEPARATOR
+from apps.common.utils import format_event_codes, EXTERNAL_ARRAY_SEPARATOR
 
 
 class NameAttributedModels(models.Model):
@@ -425,9 +425,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             actor_id='Actor ID',
             actor__name='Actor',
             context_of_violences='Context of violences',
-            event_codes='Event codes',
-            event_codes_type='Event codes type',
-            event_codes_iso3='Event codes ISO3',
+            event_codes='Event codes (Code:Type:ISO3)',
         )
 
         data = EventFilter(
@@ -457,16 +455,14 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 **dict(
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'label', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'label', ''),
-                    event_codes=get_attr_str_from_event_codes(datum['event_codes'], 'code'),
-                    event_codes_type=get_attr_str_from_event_codes(datum['event_codes'], 'code_type'),
-                    event_codes_iso3=get_attr_str_from_event_codes(datum['event_codes'], 'iso3'),
+                    event_codes=format_event_codes(datum['event_codes']),
                 )
             }
 
         return {
             'headers': headers,
             'data': data.values(
-                *[header for header in headers.keys() if header not in ['event_codes_type', 'event_codes_iso3']]
+                *[header for header in headers.keys()]
             ),
             'formulae': None,
             'transformer': transformer,

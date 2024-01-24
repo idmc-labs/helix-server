@@ -17,6 +17,36 @@ EventCodeDataType = typing.List[
 EventCodeAttrType = typing.Literal['code', 'code_type', 'iso3']
 
 
+def format_event_codes(event_codes):
+    from apps.event.models import EventCode
+
+    def _get_event_code_label(key: str) -> str:
+        obj = EventCode.EVENT_CODE_TYPE(int(key))
+        return getattr(obj, "label", key)
+
+    code_list = []
+    for code in event_codes:
+        if len(code) == 3:
+            event_code, event_code_type, event_iso3 = code
+            if not event_code and not event_code_type and not event_iso3:
+                continue
+            code_list.append(EXTERNAL_FIELD_SEPARATOR.join([
+                event_code,
+                _get_event_code_label(event_code_type),
+                event_iso3,
+            ]))
+        else:
+            event_code, event_code_type = code
+            if not event_code and not event_code_type:
+                continue
+            code_list.append(EXTERNAL_FIELD_SEPARATOR.join([
+                event_code,
+                _get_event_code_label(event_code_type),
+            ]))
+
+    return EXTERNAL_ARRAY_SEPARATOR.join(code_list)
+
+
 def get_attr_list_from_event_codes(event_codes: EventCodeDataType, attr_type: EventCodeAttrType):
     from apps.event.models import EventCode
 
@@ -30,7 +60,7 @@ def get_attr_list_from_event_codes(event_codes: EventCodeDataType, attr_type: Ev
             return event_code[0]
         elif attr_type == 'code_type':
             return _get_event_code_label(event_code[1])
-        return event_code[2]
+        return event_code
 
     if not event_codes or event_codes == '':
         return []
