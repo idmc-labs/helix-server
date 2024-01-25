@@ -24,6 +24,8 @@ response.json
 secrets.yml
 celerybeat-schedule
 
+*.log
+
 # testing
 /coverage
 .coverage
