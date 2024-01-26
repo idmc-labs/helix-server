@@ -76,6 +76,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     def filter_report(self, qs, name, value):
         if not value:
             return qs
+        # Can't we just use: ReportFigureExtractionFilterSet(data=figure_filters, request=request).qs
         return qs.filter(
             id__in=Report.objects.get(id=value).report_figures.values('entry')
         )
@@ -380,9 +381,11 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
         if not value:
             return qs
 
-        return qs.filter(
-            id__in=Report.objects.get(id=value).report_figures.values('id')
-        )
+        report = Report.objects.get(id=value)
+        return ReportFigureExtractionFilterSet(
+            queryset=qs,
+            data=report.get_filter_kwargs,
+        ).qs
 
     def filter_geographical_groups(self, qs, name, value):
         if value:

@@ -388,6 +388,7 @@ class TestCoreData(HelixGraphQLTestCase):
 
         # Reports
         cls.reports: list[Report] = []
+        cls.report_country_mapping = {}
         report_data_set: typing.List[typing.Tuple[int, typing.Union[None, Country]]] = [
             (year, country)
             for year in range(start_year, end_year + 1)
@@ -413,6 +414,8 @@ class TestCoreData(HelixGraphQLTestCase):
             )
             if country:
                 report.filter_figure_countries.set([country])
+                cls.report_country_mapping[report.pk] = country
+
             cls.reports.append(report)
 
         figure_data_set: typing.List[typing.Tuple[int, Figure.ROLE, Country, Event]] = [
@@ -486,7 +489,9 @@ class TestCoreData(HelixGraphQLTestCase):
 
         # Create in bulk
         Figure.objects.bulk_create(figures)
-        cls.figures = list(Figure.objects.all().select_related('event'))
+        cls.figures = list(
+            Figure.objects.all().select_related('event', 'event__crisis', 'country')
+        )
 
         # Generate GIDD data
         cls.gidd_client = Client.objects.create(
@@ -736,9 +741,9 @@ class TestCoreData(HelixGraphQLTestCase):
     def test_figure_aggregation_in_reports(self):
         report_aggregates = []
         for report in self.reports:
+            country = self.report_country_mapping.get(report.pk)
             filtered_figures = []
             for figure in self.figures:
-                country = report.filter_figure_countries.all().first()
                 if (
                     figure.category in Figure.flow_list() and
                     check_date_range_inside_date_range(
@@ -1383,8 +1388,8 @@ class TestCoreData(HelixGraphQLTestCase):
         report_figure_ids = {}
         for report in self.reports:
             filtered_figures = []
+            country = self.report_country_mapping.get(report.pk)
             for figure in self.figures:
-                country = report.filter_figure_countries.all().first()
                 if (
                     figure.category in Figure.flow_list() and
                     check_date_range_inside_date_range(
@@ -1437,11 +1442,11 @@ class TestCoreData(HelixGraphQLTestCase):
     @RuntimeProfile()
     def test_crisis_inclusion_in_report(self):
         for report in self.reports:
+            country = self.report_country_mapping.get(report.pk)
             crisis_aggregates = []
             for crisis in self.all_crises:
                 filtered_figures = []
                 for figure in self.figures:
-                    country = report.filter_figure_countries.all().first()
                     if (
                         figure.event.crisis == crisis and
                         figure.category in Figure.flow_list() and
@@ -1519,11 +1524,11 @@ class TestCoreData(HelixGraphQLTestCase):
     @RuntimeProfile()
     def test_event_inclusion_in_report(self):
         for report in self.reports:
+            country = self.report_country_mapping.get(report.pk)
             event_aggregates = []
             for event in self.all_events:
                 filtered_figures = []
                 for figure in self.figures:
-                    country = report.filter_figure_countries.all().first()
                     if (
                         figure.event == event and
                         figure.category in Figure.flow_list() and
@@ -1601,11 +1606,11 @@ class TestCoreData(HelixGraphQLTestCase):
     @RuntimeProfile()
     def test_country_inclusion_in_report(self):
         for report in self.reports:
+            report_country = self.report_country_mapping.get(report.pk)
             country_aggregates = []
             for country in self.countries:
                 filtered_figures = []
                 for figure in self.figures:
-                    report_country = report.filter_figure_countries.all().first()
                     if (
                         figure.country == country and
                         figure.category in Figure.flow_list() and

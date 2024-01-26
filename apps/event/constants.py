@@ -9,7 +9,7 @@ CONFLICT_TYPES = {
     ],
     OSV: [
         "Civilian-state violence",
-        "Crime-related",
+        "Crime-related violence",
         "Communal violence",
         "Other",
     ],
