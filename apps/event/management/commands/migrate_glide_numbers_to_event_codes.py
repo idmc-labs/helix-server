@@ -83,8 +83,6 @@ def migrate_glide_numbers_to_event_codes():
     print("Count of glide numbers not migrated: ", len(invalid_glide_numbers))
     print(invalid_glide_numbers)
 
-    raise Exception('hehe')
-
 
 class Command(BaseCommand):
     help = 'Migrate existing glide-numbers to new event codes'
