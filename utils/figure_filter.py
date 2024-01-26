@@ -72,7 +72,7 @@ class FigureFilterHelper:
         figure_qs = None
         reference_date = None
         if report:
-            figure_qs = Figure.objects.filter(id__in=report.report_figures.values('id'))
+            figure_qs = report.report_figures
             reference_date = report.filter_figure_end_before
 
         if figure_filters:
