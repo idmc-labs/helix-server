@@ -25,6 +25,7 @@ image:
   # Port exposed through your container to route traffic to it.
   port: 80
 
+# https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-cpu-memory-error.html
 cpu: 1024       # Number of CPU units for the task.
 memory: 4096    # Amount of memory in MiB used by the task.
 count: 1       # Number of tasks that should be running in your service.
@@ -55,7 +56,7 @@ environments:
     http:
       alias: helix-tools-api-staging.idmcdb.org
     cpu: 256
-    memory: 1024
+    memory: 2048
     count:
       range: 1-2
       cpu_percentage: 80
