@@ -42,7 +42,7 @@ class ViolenceChangeTestCase(TestCase):
             ],
             "Other situations of violence (OSV)": [
                 "Civilian-state violence",
-                "Crime-related",
+                "Crime-related violence",
                 "Communal violence",
                 "Other (OSV)",
                 "Unclear (OSV)",
@@ -149,7 +149,7 @@ class ViolenceChangeTestCase(TestCase):
             },
             "Other situations of violence (OSV)": {
                 "Civilian-state violence": _counts_by_sub_violence(1),
-                "Crime-related": _counts_by_sub_violence(1),
+                "Crime-related violence": _counts_by_sub_violence(1),
                 "Communal violence": _counts_by_sub_violence(1),
                 "Other": _counts_by_sub_violence(3),
             },
