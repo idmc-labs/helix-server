@@ -9,7 +9,6 @@ from django.http import HttpRequest
 
 from utils.filters import SimpleInputFilter, generate_type_for_filter_set
 from apps.report.models import Report
-from apps.entry.models import Figure
 from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.event.models import Event
@@ -72,7 +71,7 @@ class FigureFilterHelper:
         figure_qs = None
         reference_date = None
         if report:
-            figure_qs = Figure.objects.filter(id__in=report.report_figures.values('id'))
+            figure_qs = report.report_figures
             reference_date = report.filter_figure_end_before
 
         if figure_filters:
