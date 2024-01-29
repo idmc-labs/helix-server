@@ -34,6 +34,7 @@ def get_idu_data():
     ).annotate(
         country_name=F('country__idmc_short_name'),
         iso3=F('country__iso3'),
+        figure_role=F('role'),
         centroid_lat=Avg('geo_locations__lat'),
         centroid_lon=Avg('geo_locations__lon'),
         centroid=Case(

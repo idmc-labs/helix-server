@@ -659,6 +659,7 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
     year = serializers.IntegerField()
     standard_popup_text = serializers.CharField()
     standard_info_text = serializers.CharField()
+    role = serializers.CharField()
 
     class Meta:
         model = Figure
@@ -669,6 +670,7 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
             'latitude',
             'longitude',
             'centroid',
+            'role',
             'displacement_type',
             'qualifier',
             'figure',
