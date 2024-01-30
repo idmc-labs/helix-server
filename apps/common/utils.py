@@ -1,5 +1,6 @@
 import typing
 
+
 REDIS_SEPARATOR = ':'
 INTERNAL_SEPARATOR = ':'
 
@@ -15,6 +16,29 @@ EventCodeDataType = typing.List[
 ]
 
 EventCodeAttrType = typing.Literal['code', 'code_type', 'iso3']
+
+
+def format_locations(locations_data):
+    from apps.entry.models import OSMName
+
+    def _get_accuracy_label(key: str) -> str:
+        obj = OSMName.OSM_ACCURACY(int(key))
+        return getattr(obj, "label", key)
+
+    def _get_identifier_label(key: str) -> str:
+        obj = OSMName.IDENTIFIER(int(key))
+        return getattr(obj, "label", key)
+
+    location_list = []
+    for loc in locations_data:
+        location_name, location, accuracy, type_of_point = loc
+        location_list.append(EXTERNAL_FIELD_SEPARATOR.join([
+            location_name.strip(),
+            location,
+            _get_accuracy_label(accuracy),
+            _get_identifier_label(type_of_point)
+        ]))
+    return EXTERNAL_ARRAY_SEPARATOR.join(location_list)
 
 
 def format_event_codes(event_codes):
