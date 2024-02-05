@@ -39,6 +39,7 @@ from apps.common.enums import GENDER_TYPE
 from apps.notification.models import Notification
 from apps.common.utils import (
     format_event_codes,
+    format_locations,
     EXTERNAL_ARRAY_SEPARATOR,
     EXTERNAL_TUPLE_SEPARATOR,
 )
@@ -888,10 +889,6 @@ class Figure(MetaInformationArchiveAbstractModel,
             entry_url_or_document_url='Source url',
             entry__preview__pdf='Source url snapshot',
             source_document='Source document',
-            geolocations='Locations name',
-            geolocation_list='Locations',
-            geo_locations_accuracy='Locations accuracy',
-            geo_locations_identifier='Type of point',
             entry__id='Entry ID',
             entry__old_id='Entry old ID',
             entry__article_title='Entry title',
@@ -917,6 +914,7 @@ class Figure(MetaInformationArchiveAbstractModel,
             created_by__full_name='Created by',
             last_modified_by__full_name='Updated by',
             event_codes='Event codes (Code:Type)',
+            locations='Locations (Name:Lat, Lon:Accuracy:Type)',
         )
         values = figures.annotate(
             **Figure.annotate_stock_and_flow_dates(),
@@ -956,13 +954,6 @@ class Figure(MetaInformationArchiveAbstractModel,
                 Value('#/figures-and-analysis'),
                 output_field=models.CharField()
             ),
-            geolocations=StringAgg(
-                'geo_locations__display_name',
-                EXTERNAL_ARRAY_SEPARATOR,
-                filter=~Q(
-                    Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name='')
-                ), distinct=True, output_field=models.CharField()
-            ),
             publishers_name=StringAgg(
                 'entry__publishers__name',
                 EXTERNAL_ARRAY_SEPARATOR,
@@ -990,32 +981,11 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'sources__methodology', EXTERNAL_ARRAY_SEPARATOR,
                 distinct=True, output_field=models.CharField()
             ),
-            geo_locations_accuracy=ArrayAgg(
-                Cast('geo_locations__accuracy', models.IntegerField()),
-                distinct=True, filter=Q(geo_locations__accuracy__isnull=False)
-            ),
-            geo_locations_identifier=ArrayAgg(
-                Cast('geo_locations__identifier', models.IntegerField()),
-                distinct=True, filter=Q(geo_locations__identifier__isnull=False)
-            ),
             centroid=Concat(
                 F('centroid_lat'),
                 Value(EXTERNAL_TUPLE_SEPARATOR),
                 F('centroid_lon'),
                 output_field=models.CharField()
-            ),
-            geolocation_list=StringAgg(
-                Concat(
-                    F('geo_locations__lat'),
-                    Value(EXTERNAL_TUPLE_SEPARATOR),
-                    F('geo_locations__lon'),
-                    output_field=models.CharField(),
-                    distinct=True
-                ),
-                EXTERNAL_ARRAY_SEPARATOR,
-                filter=models.Q(geo_locations__isnull=False),
-                output_field=models.CharField(),
-                distinct=True,
             ),
             event_main_trigger=Case(
                 When(
@@ -1040,6 +1010,24 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 distinct=True,
                 filter=models.Q(event__event_code__country__id=F('country__id')),
+            ),
+            locations=ArrayAgg(
+                Array(
+                    F('geo_locations__display_name'),
+                    Concat(
+                        F('geo_locations__lat'),
+                        Value(EXTERNAL_TUPLE_SEPARATOR),
+                        F('geo_locations__lon'),
+                        output_field=models.CharField(),
+                    ),
+                    Cast('geo_locations__accuracy', models.CharField()),
+                    Cast('geo_locations__identifier', models.CharField()),
+                    output_field=ArrayField(models.CharField()),
+                ),
+                distinct=True,
+                filter=~Q(
+                    Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name='')
+                ),
             ),
         ).order_by(
             'created_at',
@@ -1081,12 +1069,6 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'figure_cause': get_enum_label(
                     'figure_cause', Crisis.CRISIS_TYPE
                 ),
-                'geo_locations_accuracy': get_string_from_list([
-                    OSMName.OSM_ACCURACY(item).label for item in datum['geo_locations_accuracy']
-                ]),
-                'geo_locations_identifier': get_string_from_list([
-                    OSMName.IDENTIFIER(item).label for item in datum['geo_locations_identifier']
-                ]),
                 'sources_reliability': get_enum_label(
                     'sources_reliability', Figure.SOURCES_RELIABILITY
                 ),
@@ -1106,6 +1088,7 @@ class Figure(MetaInformationArchiveAbstractModel,
                 ),
                 'is_disaggregated': 'Yes' if datum['is_disaggregated'] else 'No',
                 'event_codes': format_event_codes(datum['event_codes']),
+                'locations': format_locations(datum['locations']),
             }
 
         readme_data = [
