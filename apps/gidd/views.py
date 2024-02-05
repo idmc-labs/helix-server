@@ -127,11 +127,15 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                     disaster.hazard_category_name,
                     disaster.hazard_type_name,
                     disaster.hazard_sub_type_name,
+                    # FIXME: Remove the fallback using glide_numbers
+                    # after GIDD is generated around 2024 May
                     EXTERNAL_ARRAY_SEPARATOR.join(
                         [f"{key}{EXTERNAL_FIELD_SEPARATOR}{value}" for key, value in zip(
                             disaster.event_codes,
                             disaster.event_codes_type
                         )]
+                    ) or EXTERNAL_ARRAY_SEPARATOR.join(
+                        [f"{key}{EXTERNAL_FIELD_SEPARATOR}Glide Number" for key in disaster.glide_numbers]
                     ),
                 ]
             )
