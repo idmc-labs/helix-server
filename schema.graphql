@@ -90,6 +90,7 @@ type AttachmentType {
 
 enum BULK_OPERATION_ACTION {
   FIGURE_ROLE
+  FIGURE_EVENT
 }
 
 enum BULK_OPERATION_STATUS {
@@ -105,6 +106,18 @@ type BulkApiOperationFailureType {
   frontendUrl: String!
   frontendPermalinkUrl: String!
   errors: [GenericScalar!]!
+}
+
+input BulkApiOperationFigureEventFilterInputType {
+  figure: FigureExtractionBulkOperationFilterDataInputType!
+}
+
+input BulkApiOperationFigureEventPayloadInputType {
+  event: ID!
+}
+
+type BulkApiOperationFigureEventPayloadType {
+  event: ID!
 }
 
 input BulkApiOperationFigureRoleFilterInputType {
@@ -130,6 +143,7 @@ input BulkApiOperationFilterDataInputType {
 
 input BulkApiOperationFilterInputType {
   figureRole: BulkApiOperationFigureRoleFilterInputType
+  figureEvent: BulkApiOperationFigureEventFilterInputType
 }
 
 type BulkApiOperationFilterType {
@@ -169,10 +183,12 @@ type BulkApiOperationObjectType {
 
 input BulkApiOperationPayloadInputType {
   figureRole: BulkApiOperationFigureRolePayloadInputType
+  figureEvent: BulkApiOperationFigureEventPayloadInputType
 }
 
 type BulkApiOperationPayloadType {
   figureRole: BulkApiOperationFigureRolePayloadType
+  figureEvent: BulkApiOperationFigureEventPayloadType
 }
 
 type BulkApiOperationSuccessType {

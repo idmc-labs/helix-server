@@ -5,6 +5,7 @@ from rest_framework import serializers
 
 from utils.graphene.fields import generate_serializer_field_class
 from utils.serializers import GraphqlSupportDrfSerializerJSONField
+from apps.event.models import Event
 from apps.entry.models import Figure
 from apps.extraction.filters import FigureExtractionBulkOperationFilterDataInputType
 from apps.contrib.models import BulkApiOperation
@@ -24,6 +25,16 @@ class BulkApiOperationFilterSerializer(serializers.Serializer):
             )(required=True),
         ),
     )(required=False, allow_null=True)
+    figure_event = type(
+        'BulkApiOperationFigureEventFilterSerializer',
+        (serializers.Serializer,),
+        dict(
+            figure=generate_serializer_field_class(
+                FigureExtractionBulkOperationFilterDataInputType,
+                GraphqlSupportDrfSerializerJSONField,
+            )(required=True),
+        ),
+    )(required=False, allow_null=True)
 
 
 class BulkApiOperationPayloadSerializer(serializers.Serializer):
@@ -34,6 +45,19 @@ class BulkApiOperationPayloadSerializer(serializers.Serializer):
             role=serializers.ChoiceField(choices=Figure.ROLE.choices()),
         ),
     )(required=False, allow_null=True)
+    figure_event = type(
+        'BulkApiOperationFigureEventPayloadSerializer',
+        (serializers.Serializer,),
+        dict(
+            event=serializers.PrimaryKeyRelatedField(queryset=Event.objects.all()),
+        ),
+    )(required=False, allow_null=True)
+
+    def validate_figure_event(self, v):
+        # NOTE: Convert Event object to id
+        return {
+            'event': v['event'].id
+        }
 
 
 class BulkApiOperationSerializer(serializers.ModelSerializer):
@@ -42,7 +66,9 @@ class BulkApiOperationSerializer(serializers.ModelSerializer):
 
     ACTION_FIELD_MAP = {
         BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_ROLE.value: 'figure_role',
+        BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_EVENT.value: 'figure_event',
     }
+    RUN_TASK_SYNC = False
 
     class Meta:
         model = BulkApiOperation
@@ -57,6 +83,7 @@ class BulkApiOperationSerializer(serializers.ModelSerializer):
         filterset = op_handler.get_filterset()
         _filters = op_handler.get_filters(filters)
         count = filterset(data=_filters).qs.count()
+
         if count > BulkApiOperation.QUERYSET_COUNT_THRESHOLD:
             raise serializers.ValidationError(
                 gettext(
@@ -90,9 +117,13 @@ class BulkApiOperationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
         instance = super().create(validated_data)
-        transaction.on_commit(
-            lambda: run_bulk_api_operation.delay(instance.pk)
-        )
+        if self.RUN_TASK_SYNC:
+            print('Running background task now....')
+            run_bulk_api_operation(instance.pk)
+        else:
+            transaction.on_commit(
+                lambda: run_bulk_api_operation.delay(instance.pk)
+            )
         return instance
 
     def update(self, *_):
