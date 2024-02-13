@@ -528,7 +528,9 @@ class TestUserListSchema(HelixGraphQLTestCase):
                 results {
                   id
                   email
-                  isAdmin
+                  portfoliosMetadata {
+                    isAdmin
+                  }
                 }
               }
             }
@@ -570,8 +572,10 @@ class TestUserListSchema(HelixGraphQLTestCase):
                 totalCount
                 results {
                   id
-                  portfolioRole
-                  portfolioRoleDisplay
+                  portfoliosMetadata {
+                    portfolioRole
+                    portfolioRoleDisplay
+                  }
                   permissions {
                     action
                   }
@@ -611,8 +615,8 @@ class TestUserListSchema(HelixGraphQLTestCase):
         self.assertEqual(
             {
                 item['id']: (
-                    item['portfolioRole'],
-                    item['portfolioRoleDisplay'],
+                    item['portfoliosMetadata']['portfolioRole'],
+                    item['portfoliosMetadata']['portfolioRoleDisplay'],
                 )
                 for item in content['data']['users']['results']
             },
@@ -662,7 +666,7 @@ class TestUserListSchema(HelixGraphQLTestCase):
         self.assertEqual(len(content['data']['users']['results']), 1)
         self.assertEqual(content['data']['users']['results'][0]['id'], str(admin_user.id))
         self.assertEqual(content['data']['users']['results'][0]['email'], admin_user.email)
-        self.assertEqual(content['data']['users']['results'][0]['isAdmin'], True)
+        self.assertEqual(content['data']['users']['results'][0]['portfoliosMetadata']['isAdmin'], True)
 
 
 class TestAPIMe(HelixAPITestCase):

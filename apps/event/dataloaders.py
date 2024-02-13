@@ -168,3 +168,12 @@ class EventCodeLoader(DataLoader):
         for event_code in qs.all():
             _map[event_code.event_id].append(event_code)
         return Promise.resolve([_map.get(key) for key in keys])
+
+
+class EventCrisisLoader(DataLoader):
+    def batch_load_fn(self, keys: list):
+        qs = Event.objects.filter(id__in=keys).select_related('crisis').only('id', 'crisis')
+        _map = {}
+        for event in qs.all():
+            _map[event.id] = event.crisis
+        return Promise.resolve([_map.get(key) for key in keys])

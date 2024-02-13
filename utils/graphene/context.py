@@ -19,6 +19,9 @@ from apps.entry.dataloaders import (
     FigureGeoLocationLoader,
     FigureSourcesReliability,
     FigureLastReviewCommentStatusLoader,
+    FigureEntryLoader,
+    EntryDocumentLoader,
+    EntryPreviewLoader,
 )
 from apps.contrib.dataloaders import (
     BulkApiOperationFailureListLoader,
@@ -33,10 +36,12 @@ from apps.event.dataloaders import (
     EventFigureTypologyLoader,
     EventReviewCountLoader,
     EventCodeLoader,
+    EventCrisisLoader,
 )
 from utils.graphene.dataloaders import OneToManyLoader, CountLoader
 from apps.entry.models import Figure
-from apps.users.dataloaders import UserPortfolioRoleLoader
+from apps.users.dataloaders import UserPortfoliosMetadataLoader
+from apps.organization.dataloaders import OrganizationCountriesLoader, OrganizationOrganizationKindLoader
 
 
 class GQLContext:
@@ -182,10 +187,6 @@ class GQLContext:
         return CrisisReviewCountLoader()
 
     @cached_property
-    def user_portfolio_role_loader(self):
-        return UserPortfolioRoleLoader()
-
-    @cached_property
     def event_code_loader(self):
         return EventCodeLoader()
 
@@ -196,3 +197,31 @@ class GQLContext:
     @cached_property
     def bulk_api_operation_failure_list_loader(self):
         return BulkApiOperationFailureListLoader()
+
+    @cached_property
+    def event_crisis_loader(self):
+        return EventCrisisLoader()
+
+    @cached_property
+    def figure_entry_loader(self):
+        return FigureEntryLoader()
+
+    @cached_property
+    def entry_document_loader(self):
+        return EntryDocumentLoader()
+
+    @cached_property
+    def organization_countries_loader(self):
+        return OrganizationCountriesLoader()
+
+    @cached_property
+    def organization_organization_kind_loader(self):
+        return OrganizationOrganizationKindLoader()
+
+    @cached_property
+    def entry_preview_loader(self):
+        return EntryPreviewLoader()
+
+    @cached_property
+    def user_portfolios_metadata(self):
+        return UserPortfoliosMetadataLoader()

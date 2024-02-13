@@ -4,6 +4,7 @@ from graphene_django_extras import DjangoObjectField
 from utils.graphene.enums import EnumDescription
 
 from apps.contact.schema import ContactListType
+from apps.country.schema import CountryType
 from apps.organization.models import Organization, OrganizationKind
 from apps.organization.enums import (
     OrganizationCategoryTypeGrapheneEnum, OrganizationReliablityEnum
@@ -24,6 +25,14 @@ class OrganizationType(DjangoObjectType):
                                               pagination=PageGraphqlPaginationWithoutCount(
                                                   page_size_query_param='pageSize'
                                               ))
+    organization_kind = graphene.Field("apps.organization.schema.OrganizationKindObjectType")
+    countries = graphene.List(graphene.NonNull(CountryType))
+
+    def resolve_countries(root, info, **kwargs):
+        return info.context.organization_countries_loader.load(root.id)
+
+    def resolve_organization_kind(root, info, **kwargs):
+        return info.context.organization_organization_kind_loader.load(root.id)
 
 
 class OrganizationListType(CustomDjangoListObjectType):
