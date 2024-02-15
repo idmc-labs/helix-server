@@ -218,6 +218,7 @@ class CommonFigureValidationMixin:
         errors = OrderedDict()
 
         event = attrs.get('event', getattr(instance, 'event', None))
+        print("Event-->", event)
 
         if event:
             errors.update(is_child_parent_inclusion_valid(
