@@ -103,7 +103,7 @@ class OSMNameListType(CustomDjangoListObjectType):
 class FigureTagType(DjangoObjectType):
     class Meta:
         model = FigureTag
-        exclude_fields = ('entry_set',)
+        exclude_fields = ()
 
 
 class FigureLastReviewCommentStatusType(ObjectType):
@@ -209,7 +209,9 @@ class EntryType(DjangoObjectType):
     class Meta:
         model = Entry
         exclude_fields = (
-            'reviews', 'figures', 'reviewers', 'review_status', 'review_comments',
+            'reviewers',
+            'review_status',
+            'review_comments',
             'reviewing',
         )
 

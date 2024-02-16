@@ -108,16 +108,26 @@ type BulkApiOperationFailureType {
   errors: [GenericScalar!]!
 }
 
+input BulkApiOperationFigureEventByFiguresPayloadInputType {
+  figure: ID!
+  event: ID!
+}
+
+type BulkApiOperationFigureEventByFiguresPayloadType {
+  figure: ID!
+  event: ID!
+}
+
 input BulkApiOperationFigureEventFilterInputType {
   figure: FigureExtractionBulkOperationFilterDataInputType!
 }
 
 input BulkApiOperationFigureEventPayloadInputType {
-  event: ID!
+  byFigures: [BulkApiOperationFigureEventByFiguresPayloadInputType!]!
 }
 
 type BulkApiOperationFigureEventPayloadType {
-  event: ID!
+  byFigures: [BulkApiOperationFigureEventByFiguresPayloadType!]!
 }
 
 input BulkApiOperationFigureRoleFilterInputType {

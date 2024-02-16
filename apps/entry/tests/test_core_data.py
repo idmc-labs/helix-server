@@ -1,5 +1,4 @@
 import typing
-import functools
 import mock
 import logging
 from datetime import date, timedelta, datetime
@@ -7,6 +6,7 @@ from random import randint
 from math import sqrt
 from itertools import groupby
 
+from utils.common import RuntimeProfile
 from utils.factories import (
     EventFactory,
     CrisisFactory,
@@ -200,32 +200,6 @@ def get_dates(_type: GetDatesTypes, year: int) -> GetDatesDateRangeType:
             'end_date': end_of_year + timedelta(days=(1 + randint(1, 200))),
         }
     raise Exception(f'Unknown type: {_type}')
-
-
-class RuntimeProfile:
-    label: str
-    start: typing.Optional[datetime]
-
-    def __init__(self, label: str = 'N/A'):
-        self.label = label
-        self.start = None
-
-    def __call__(self, func):
-        self.label = func.__name__
-
-        @functools.wraps(func)
-        def decorated(*args, **kwargs):
-            with self:
-                return func(*args, **kwargs)
-        return decorated
-
-    def __enter__(self):
-        self.start = datetime.now()
-
-    def __exit__(self, exc_type, exc_value, exc_traceback):
-        assert self.start is not None
-        time_delta = datetime.now() - self.start
-        logger.info(f'Runtime with <{self.label}>: {time_delta}')
 
 
 class TestCoreData(HelixGraphQLTestCase):

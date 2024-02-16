@@ -156,7 +156,7 @@ class BulkApiOperationBaseTask(typing.Generic[ModelType]):
         cls,
         operation: BulkApiOperation,
         items: typing.List[ModelType],
-    ) -> typing.Tuple[typing.List[dict], typing.List[dict]]:
+    ) -> typing.Tuple[typing.List[SuccessDataType], typing.List[FailureDataType]]:
         """
         NOTE: Response should be (success_count, failure_count, errors)
         """
@@ -304,10 +304,13 @@ class BulkFigureRoleUpdateTask(BulkFigureBulkUpdateTask):
 
     @staticmethod
     def get_update_payload(payload: dict) -> dict:
-        return {'role': Figure.ROLE(payload['figure_role']['role']).name}
+        return {
+            'role': Figure.ROLE(payload['figure_role']['role']).name,
+        }
 
 
 class BulkFigureEventUpdateTask(BulkFigureBulkUpdateTask):
+    # TODO: Use eventId instead of event{id}
     MUTATION = '''
         mutation BulkUpdateFigures($items: [FigureUpdateInputType!]) {
             bulkUpdateFigures(items: $items) {
@@ -327,9 +330,22 @@ class BulkFigureEventUpdateTask(BulkFigureBulkUpdateTask):
     def get_filters(filters: dict):
         return filters['figure_event']['figure']
 
-    @staticmethod
-    def get_update_payload(payload: dict) -> dict:
-        return {'event': payload['figure_event']['event']}
+    @classmethod
+    def get_mutation_variables(cls, payload: dict, items: typing.List[Figure]) -> dict:
+        by_figures = {
+            data['figure']: data['event']
+            for data in payload['figure_event']['by_figures']
+        }
+        return {
+            'items': [
+                {
+                    'id': str(figure.pk),
+                    'event': by_figures[figure.pk]
+                }
+                for figure in items
+                if figure.pk in by_figures
+            ],
+        }
 
 
 def get_operation_handler(operation_action):

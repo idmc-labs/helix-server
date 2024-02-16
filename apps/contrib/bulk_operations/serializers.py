@@ -37,27 +37,42 @@ class BulkApiOperationFilterSerializer(serializers.Serializer):
     )(required=False, allow_null=True)
 
 
-class BulkApiOperationPayloadSerializer(serializers.Serializer):
-    figure_role = type(
-        'BulkApiOperationFigureRolePayloadSerializer',
-        (serializers.Serializer,),
-        dict(
-            role=serializers.ChoiceField(choices=Figure.ROLE.choices()),
-        ),
-    )(required=False, allow_null=True)
-    figure_event = type(
-        'BulkApiOperationFigureEventPayloadSerializer',
-        (serializers.Serializer,),
-        dict(
-            event=serializers.PrimaryKeyRelatedField(queryset=Event.objects.all()),
-        ),
-    )(required=False, allow_null=True)
+# ---- Payload
+class BulkApiOperationFigureRolePayloadSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(choices=Figure.ROLE.choices(), required=True)
 
-    def validate_figure_event(self, v):
-        # NOTE: Convert Event object to id
+
+class BulkApiOperationFigureEventPayloadSerializer(serializers.Serializer):
+    by_figures = type(
+        'BulkApiOperationFigureEventByFiguresPayloadSerializer',
+        (serializers.Serializer,),
+        dict(
+            figure=serializers.PrimaryKeyRelatedField(queryset=Figure.objects.all(), required=True),
+            event=serializers.PrimaryKeyRelatedField(queryset=Event.objects.all(), required=True),
+        ),
+    )(required=True, many=True)
+
+    def validate(self, attrs):
+        by_figures = attrs.get('by_figures') or []
+
+        if not by_figures:
+            raise serializers.ValidationError('Please provide data')
+
         return {
-            'event': v['event'].id
+            'by_figures': [
+                {
+                    # NOTE: Convert Django object to id
+                    'figure': by_figure['figure'].pk,
+                    'event': by_figure['event'].pk,
+                }
+                for by_figure in by_figures
+            ],
         }
+
+
+class BulkApiOperationPayloadSerializer(serializers.Serializer):
+    figure_role = BulkApiOperationFigureRolePayloadSerializer(required=False, allow_null=True)
+    figure_event = BulkApiOperationFigureEventPayloadSerializer(required=False, allow_null=True)
 
 
 class BulkApiOperationSerializer(serializers.ModelSerializer):
@@ -68,7 +83,6 @@ class BulkApiOperationSerializer(serializers.ModelSerializer):
         BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_ROLE.value: 'figure_role',
         BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_EVENT.value: 'figure_event',
     }
-    RUN_TASK_SYNC = False
 
     class Meta:
         model = BulkApiOperation
@@ -84,12 +98,16 @@ class BulkApiOperationSerializer(serializers.ModelSerializer):
         _filters = op_handler.get_filters(filters)
         count = filterset(data=_filters).qs.count()
 
-        if count > BulkApiOperation.QUERYSET_COUNT_THRESHOLD:
+        queryset_count_threshold = self.context.get(
+            'QUERYSET_COUNT_THRESHOLD',
+            BulkApiOperation.QUERYSET_COUNT_THRESHOLD,
+        )
+        if count > queryset_count_threshold:
             raise serializers.ValidationError(
                 gettext(
                     'Bulk update should include less then %(threshold)s. Current count is %(count)s'
                 ) % dict(
-                    threshold=BulkApiOperation.QUERYSET_COUNT_THRESHOLD,
+                    threshold=queryset_count_threshold,
                     count=count,
                 )
             )
@@ -117,7 +135,7 @@ class BulkApiOperationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         validated_data['created_by'] = self.context['request'].user
         instance = super().create(validated_data)
-        if self.RUN_TASK_SYNC:
+        if self.context.get('RUN_TASK_SYNC', False):
             print('Running background task now....')
             run_bulk_api_operation(instance.pk)
         else:

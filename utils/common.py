@@ -1,4 +1,6 @@
 import datetime
+import typing
+import functools
 import re
 import decimal
 import tempfile
@@ -164,6 +166,32 @@ def track_gidd(client_id, endpoint_type, viewset: viewsets.GenericViewSet = None
         endpoint_type,
         client_id,
     )
+
+
+class RuntimeProfile:
+    label: str
+    start: typing.Optional[datetime.datetime]
+
+    def __init__(self, label: str = 'N/A'):
+        self.label = label
+        self.start = None
+
+    def __call__(self, func):
+        self.label = func.__name__
+
+        @functools.wraps(func)
+        def decorated(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
+        return decorated
+
+    def __enter__(self):
+        self.start = datetime.datetime.now()
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        assert self.start is not None
+        time_delta = datetime.datetime.now() - self.start
+        logger.info(f'Runtime with <{self.label}>: {time_delta}')
 
 
 client_id = extend_schema(
