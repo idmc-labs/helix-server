@@ -453,6 +453,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             return {
                 **datum,
                 **dict(
+                    event_type=getattr(Crisis.CRISIS_TYPE.get(datum['event_type']), 'label', ''),
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'label', ''),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'label', ''),
                     event_codes=format_event_codes(datum['event_codes']),
