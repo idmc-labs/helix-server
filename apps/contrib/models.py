@@ -77,7 +77,7 @@ class Attachment(MetaInformationAbstractModel):
         'image/gif', 'image/jpg', 'image/jpeg', 'image/png', 'image/svg+xml', 'image/tiff',
         'image/webp', 'image/bmp', 'image/vnd.microsoft.icon'
     )
-    MAX_FILE_SIZE = 50 * 1024 * 1024  # MB
+    MAX_FILE_SIZE = 100 * 1024 * 1024  # MB
 
     class FOR_CHOICES(enum.Enum):
         ENTRY = 0
