@@ -10,11 +10,6 @@ from apps.event.models import Event, EventCode
 from apps.common.enums import GENDER_TYPE
 
 
-class PortfolioFactory(DjangoModelFactory):
-    class Meta:
-        model = 'users.Portfolio'
-
-
 class UserFactory(DjangoModelFactory):
     class Meta:
         model = 'users.User'

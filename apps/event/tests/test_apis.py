@@ -18,7 +18,6 @@ from utils.factories import (
     OtherSubtypeFactory,
     OSMNameFactory,
     EventCodeFactory,
-    UserFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -31,26 +30,35 @@ from apps.contrib.models import BulkApiOperation
 class TestDataMigrationTestCase(HelixGraphQLTestCase):
     def setUp(self):
         country1 = CountryFactory.create()
-        self.user1 = UserFactory.create(email='bina.desai@idmc.ch')
         self.event1, self.event2 = EventFactory.create_batch(
-            2, event_type=Crisis.CRISIS_TYPE.CONFLICT, countries=[country1]
+            2,
+            event_type=Crisis.CRISIS_TYPE.CONFLICT,
+            countries=[country1],
         )
         entry1 = EntryFactory.create()
-        self.figure1 = FigureFactory.create(entry=entry1, event=self.event1, country=country1)
-        self.figure2 = FigureFactory.create(entry=entry1, event=self.event2, country=country1)
+        figure_kwargs = {
+            'entry': entry1,
+            'country': country1,
+            'category': Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
+        }
+        FigureFactory.create_batch(10, event=self.event1, **figure_kwargs)
+        FigureFactory.create_batch(15, event=self.event2, **figure_kwargs)
+        # TODO: Add figure which will create validation issue when migrating
 
     def test_event_merge(self):
         data = {
-            self.event1.id: [self.event2.id,]
+            self.event1.id: [self.event2.id]
         }
-        merge_events(data=data)
 
-        print("Failure List ----------->", BulkApiOperation.objects.first().failure_list)
+        def _assert_bulk_operation_count(count):
+            assert BulkApiOperation.objects.count() == count
 
-        self.assertEqual(
-            Figure.objects.get(id=self.figure1.id).event.id,
-            Figure.objects.get(id=self.figure2.id).event.id
-        )
+        _assert_bulk_operation_count(0)
+        merge_events(data)
+        _assert_bulk_operation_count(1)
+
+        self.assertEqual(Figure.objects.filter(event_id=self.event2.id).count(), 0)
+        self.assertEqual(set(Figure.objects.values_list('event_id', flat=True)), {self.event1.id})
 
 
 class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
@@ -146,7 +154,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['createventvent']['ok'], content)
+        self.assertTrue(content['data']['createEvent']['ok'], content)
         self.assertIsNone(content['data']['createEvent']['errors'], content)
         self.assertEqual(content['data']['createEvent']['result']['name'],
                          self.input['name'])

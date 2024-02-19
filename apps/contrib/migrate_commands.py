@@ -60,6 +60,7 @@ def merge_events(event_ids_mapping):
             for event_id in event_ids
         ]
     ).annotate(figure_count=Count('figures'))
+    print('event_qs-------------->', event_qs)
 
     total_processed_events = event_qs.values('id').count()
     total_processed_figures = event_qs.aggregate(total_failed_figure=Sum('figure_count'))['total_failed_figure']
