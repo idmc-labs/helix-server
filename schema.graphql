@@ -2021,7 +2021,7 @@ type FigureType {
   disaggregationConflictCommunal: Int
   disaggregationConflictOther: Int
   uuid: UUID!
-  entry: EntryType!
+  entry: EntryType
   wasSubfact: Boolean!
   quantifier: QUANTIFIER
   reported: Int!
@@ -2045,7 +2045,7 @@ type FigureType {
   calculationLogic: String
   tags: [FigureTagType!]!
   sourceExcerpt: String
-  event: EventType!
+  event: EventType
   contextOfViolence: [ContextOfViolenceType!]!
   figureCause: CRISIS_TYPE
   violence: ViolenceType
@@ -2081,6 +2081,8 @@ type FigureType {
   sourcesReliability: SOURCES_RELIABILITY
   reviewStatusDisplay: EnumDescription
   lastReviewCommentStatus: [FigureLastReviewCommentStatusType!]
+  eventId: ID!
+  entryId: ID!
 }
 
 input FigureUpdateInputType {
@@ -2819,7 +2821,7 @@ type OrganizationType {
   name: String!
   shortName: String
   category: ORGANIZATION_CATEGORY
-  countries: [CountryType!]!
+  countries: [CountryType!]
   organizationKind: OrganizationKindObjectType
   methodology: String
   parent: OrganizationType
@@ -3957,6 +3959,14 @@ input UserPasswordInputType {
   newPassword: String!
 }
 
+type UserPortfolioMetaDataType {
+  isAdmin: Boolean
+  isDirectorsOffice: Boolean
+  isReportingTeam: Boolean
+  portfolioRole: USER_ROLE
+  portfolioRoleDisplay: String
+}
+
 type UserType {
   id: ID!
   lastLogin: DateTime
@@ -3969,12 +3979,8 @@ type UserType {
   fullName: String!
   createdEntry(filters: EntryExtractionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): EntryListType
   portfolios: [PortfolioType!]
-  portfolioRole: USER_ROLE
-  portfolioRoleDisplay: String
+  portfoliosMetadata: UserPortfolioMetaDataType!
   permissions: [PermissionsType!]
-  isAdmin: Boolean
-  isDirectorsOffice: Boolean
-  isReportingTeam: Boolean
 }
 
 input UserUpdateInputType {

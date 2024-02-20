@@ -50,7 +50,7 @@ from apps.extraction.filters import (
 )
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.models import Crisis
-from apps.event.schema import OtherSubTypeObjectType
+from apps.event.schema import OtherSubTypeObjectType, EventType
 from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
 
 logger = logging.getLogger(__name__)
@@ -103,7 +103,6 @@ class OSMNameListType(CustomDjangoListObjectType):
 class FigureTagType(DjangoObjectType):
     class Meta:
         model = FigureTag
-        exclude_fields = ('entry_set',)
 
 
 class FigureLastReviewCommentStatusType(ObjectType):
@@ -162,6 +161,10 @@ class FigureType(DjangoObjectType):
     review_status = graphene.Field(FigureReviewStatusEnum)
     review_status_display = EnumDescription(source='get_review_status_display')
     last_review_comment_status = graphene.List(graphene.NonNull(FigureLastReviewCommentStatusType))
+    event = graphene.Field(EventType)
+    event_id = graphene.ID(required=True, source='event_id')
+    entry = graphene.Field("apps.entry.schema.EntryType")
+    entry_id = graphene.ID(required=True, source='entry_id')
 
     def resolve_stock_date(root, info, **kwargs):
         if root.category in Figure.stock_list():
@@ -191,6 +194,9 @@ class FigureType(DjangoObjectType):
     def resolve_last_review_comment_status(root, info, **kwargs):
         return info.context.last_review_comment_status_loader.load(root.id)
 
+    def resolve_entry(root, info, **kwargs):
+        return info.context.figure_entry_loader.load(root.id)
+
 
 class FigureListType(CustomDjangoListObjectType):
     class Meta:
@@ -209,7 +215,7 @@ class EntryType(DjangoObjectType):
     class Meta:
         model = Entry
         exclude_fields = (
-            'reviews', 'figures', 'reviewers', 'review_status', 'review_comments',
+            'reviewers', 'review_status', 'review_comments',
             'reviewing',
         )
 
@@ -221,6 +227,7 @@ class EntryType(DjangoObjectType):
         reverse_related_name='published_entries'
     )
     figures = graphene.List(graphene.NonNull(FigureType))
+    preview = graphene.Field("apps.entry.schema.SourcePreviewType")
 
     def resolve_figures(root, info, **kwargs):
         # FIXME: this might be wrong
@@ -254,6 +261,12 @@ class EntryType(DjangoObjectType):
             'sources__countries',
             'sources__organization_kind',
         )
+
+    def resolve_document(root, info, **kwargs):
+        return info.context.entry_document_loader.load(root.id)
+
+    def resolve_preview(root, info, **kwargs):
+        return info.context.entry_preview_loader.load(root.id)
 
 
 class EntryListType(CustomDjangoListObjectType):

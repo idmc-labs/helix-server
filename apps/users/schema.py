@@ -14,7 +14,6 @@ from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 from apps.users.filters import UserFilter, PortfolioFilter
-from apps.users.roles import USER_ROLE
 from apps.users.models import Portfolio
 
 from .enums import PermissionActionEnum, PermissionModelEnum, PermissionRoleEnum
@@ -45,6 +44,14 @@ class PortfolioListType(CustomDjangoListObjectType):
         filterset_class = PortfolioFilter
 
 
+class UserPortfolioMetaDataType(graphene.ObjectType):
+    is_admin = graphene.Boolean()
+    is_directors_office = graphene.Boolean()
+    is_reporting_team = graphene.Boolean()
+    portfolio_role = Field(PermissionRoleEnum)
+    portfolio_role_display = graphene.String()
+
+
 class UserType(DjangoObjectType):
     class Meta:
         model = User
@@ -64,12 +71,8 @@ class UserType(DjangoObjectType):
     full_name = Field(graphene.String, required=True)
     email = graphene.String()
     portfolios = graphene.List(graphene.NonNull(PortfolioType))
-    portfolio_role = Field(PermissionRoleEnum)
-    portfolio_role_display = graphene.String()
+    portfolios_metadata = graphene.Field(UserPortfolioMetaDataType, required=True)
     permissions = graphene.List(graphene.NonNull(PermissionsType))
-    is_admin = graphene.Boolean()
-    is_directors_office = graphene.Boolean()
-    is_reporting_team = graphene.Boolean()
 
     @staticmethod
     def resolve_permissions(root, info, **_):
@@ -82,30 +85,8 @@ class UserType(DjangoObjectType):
             return root.email
 
     @staticmethod
-    def resolve_is_admin(user, info, **_):
-        # FIXME: Send the roles list to client instead
-        roles = list(user.portfolios.values_list('role', flat=True))
-        return USER_ROLE.ADMIN.value in roles
-
-    @staticmethod
-    def resolve_is_directors_office(user, info, **_):
-        # FIXME: Send the roles list to client instead
-        roles = list(user.portfolios.values_list('role', flat=True))
-        return USER_ROLE.DIRECTORS_OFFICE.value in roles
-
-    @staticmethod
-    def resolve_is_reporting_team(user, info, **_):
-        # FIXME: Send the roles list to client instead
-        roles = list(user.portfolios.values_list('role', flat=True))
-        return USER_ROLE.REPORTING_TEAM.value in roles
-
-    @staticmethod
-    def resolve_portfolio_role(root, info, **_):
-        return info.context.user_portfolio_role_loader.load(root.id)
-
-    @staticmethod
-    def resolve_portfolio_role_display(root, info, **_):
-        return info.context.user_portfolio_role_loader.load(root.id)
+    def resolve_portfolios_metadata(user, info, **_):
+        return info.context.user_portfolios_metadata.load(user.id)
 
     @staticmethod
     def resolve_portfolios(root, info, **_):
