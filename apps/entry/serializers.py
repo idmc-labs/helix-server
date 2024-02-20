@@ -371,7 +371,6 @@ class FigureSerializer(
 
     id = IntegerIDField(required=False)
     disaggregation_age = DisaggregatedAgeSerializer(many=True, required=False, allow_null=False)
-    disaggregation_strata_json = DisaggregatedStratumSerializer(many=True, required=False)
     geo_locations = OSMNameSerializer(many=True, required=False, allow_null=False)
 
     class Meta:
@@ -403,11 +402,8 @@ class FigureSerializer(
             'event',
             'context_of_violence',
             'figure_cause',
-            'violence',
             'violence_sub_type',
-            'disaster_category',
             'disaster_sub_category',
-            'disaster_type',
             'disaster_sub_type',
             'other_sub_type',
             'osv_sub_type',
@@ -425,14 +421,12 @@ class FigureSerializer(
             'disaggregation_sex_male',
             'disaggregation_sex_female',
             'disaggregation_age',
-            'disaggregation_strata_json',
             'disaggregation_conflict',
             'disaggregation_conflict_political',
             'disaggregation_conflict_criminal',
             'disaggregation_conflict_communal',
             'disaggregation_conflict_other',
             'disaggregation_age',
-            'disaggregation_strata_json',
             'geo_locations'
         ]
         extra_kwargs = {

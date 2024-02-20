@@ -1153,12 +1153,6 @@ type DisaggregatedAgeType {
   sexDisplay: EnumDescription
 }
 
-input DisaggregatedStratumInputType {
-  uuid: String!
-  date: Date!
-  value: Int!
-}
-
 type DisaggregatedStratumType {
   uuid: String!
   date: String
@@ -1319,8 +1313,6 @@ enum EXCEL_GENERATION_STATUS {
 }
 
 input EntryCreateInputType {
-  oldId: String
-  versionId: String
   url: String
   documentUrl: String
   articleTitle: String!
@@ -1399,8 +1391,6 @@ type EntryType {
 
 input EntryUpdateInputType {
   id: ID!
-  oldId: String
-  versionId: String
   url: String
   documentUrl: String
   articleTitle: String
@@ -1446,8 +1436,6 @@ input EventCodeUpdateInputType {
 
 input EventCreateInputType {
   eventCodes: [EventCodeInputType!]
-  oldId: String
-  versionId: String
   name: String!
   eventType: CRISIS_TYPE!
   startDate: Date!
@@ -1455,19 +1443,14 @@ input EventCreateInputType {
   endDate: Date!
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String
-  ignoreQa: Boolean
   includeTriangulationInQa: Boolean
   crisis: ID
   otherSubType: ID
-  violence: ID
   violenceSubType: ID
   actor: ID
-  disasterCategory: ID
   disasterSubCategory: ID
-  disasterType: ID
   disasterSubType: ID
   osvSubType: ID
-  assignee: ID
   countries: [ID!]
   contextOfViolence: [ID!]
 }
@@ -1577,8 +1560,6 @@ type EventType {
 input EventUpdateInputType {
   id: ID!
   eventCodes: [EventCodeUpdateInputType!]
-  oldId: String
-  versionId: String
   name: String
   eventType: CRISIS_TYPE
   startDate: Date
@@ -1586,19 +1567,14 @@ input EventUpdateInputType {
   endDate: Date
   endDateAccuracy: DATE_ACCURACY
   eventNarrative: String
-  ignoreQa: Boolean
   includeTriangulationInQa: Boolean
   crisis: ID
   otherSubType: ID
-  violence: ID
   violenceSubType: ID
   actor: ID
-  disasterCategory: ID
   disasterSubCategory: ID
-  disasterType: ID
   disasterSubType: ID
   osvSubType: ID
-  assignee: ID
   countries: [ID!]
   contextOfViolence: [ID!]
 }
@@ -2110,11 +2086,8 @@ input FigureUpdateInputType {
   event: ID
   contextOfViolence: [ID!]
   figureCause: CRISIS_TYPE
-  violence: ID
   violenceSubType: ID
-  disasterCategory: ID
   disasterSubCategory: ID
-  disasterType: ID
   disasterSubType: ID
   otherSubType: ID
   osvSubType: ID
@@ -2130,7 +2103,6 @@ input FigureUpdateInputType {
   disaggregationSexMale: Int
   disaggregationSexFemale: Int
   disaggregationAge: [DisaggregatedAgeInputType!]
-  disaggregationStrataJson: [DisaggregatedStratumInputType!]
   disaggregationConflict: Int
   disaggregationConflictPolitical: Int
   disaggregationConflictCriminal: Int
