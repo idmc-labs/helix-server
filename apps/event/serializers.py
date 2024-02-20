@@ -66,7 +66,19 @@ class EventSerializer(MetaInformationSerializerMixin,
 
     class Meta:
         model = Event
-        exclude = ('assigner', 'assigned_at', 'review_status', 'glide_numbers')
+        exclude = (
+            'assigner',
+            'assigned_at',
+            'review_status',
+            'glide_numbers',
+            'assignee',
+            'disaster_category',
+            'disaster_type',
+            'ignore_qa',
+            'old_id',
+            'version_id',
+            'violence',
+        )
 
     def validate_violence_sub_type_and_type(self, attrs):
         errors = OrderedDict()
