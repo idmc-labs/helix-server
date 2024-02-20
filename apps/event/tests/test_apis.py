@@ -6,6 +6,8 @@ from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
 from apps.entry.models import Figure
 from apps.event.models import EventCode
+from apps.report.models import Report
+from apps.review.models import UnifiedReviewComment
 
 from utils.factories import (
     CountryFactory,
@@ -18,6 +20,8 @@ from utils.factories import (
     OtherSubtypeFactory,
     OSMNameFactory,
     EventCodeFactory,
+    ReportFactory,
+    UnifiedReviewCommentFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
@@ -30,8 +34,8 @@ from apps.contrib.models import BulkApiOperation
 class TestDataMigrationTestCase(HelixGraphQLTestCase):
     def setUp(self):
         country1 = CountryFactory.create()
-        self.event1, self.event2 = EventFactory.create_batch(
-            2,
+        self.event1, self.event2, self.event3 = EventFactory.create_batch(
+            3,
             event_type=Crisis.CRISIS_TYPE.CONFLICT,
             countries=[country1],
         )
@@ -43,11 +47,22 @@ class TestDataMigrationTestCase(HelixGraphQLTestCase):
         }
         FigureFactory.create_batch(10, event=self.event1, **figure_kwargs)
         FigureFactory.create_batch(15, event=self.event2, **figure_kwargs)
-        # TODO: Add figure which will create validation issue when migrating
+
+        for report in ReportFactory.create_batch(3):
+            report.filter_figure_events.set([self.event1, self.event2])
+
+        UnifiedReviewCommentFactory.create_batch(3, event=self.event2)
+
+        # to arise validation error : Choose your start date after event start date
+        FigureFactory.create(
+            event=self.event3,
+            start_date=self.event2.start_date - timedelta(days=2),
+            **figure_kwargs
+        )
 
     def test_event_merge(self):
         data = {
-            self.event1.id: [self.event2.id]
+            self.event1.id: [self.event2.id, self.event3.id]
         }
 
         def _assert_bulk_operation_count(count):
@@ -58,7 +73,36 @@ class TestDataMigrationTestCase(HelixGraphQLTestCase):
         _assert_bulk_operation_count(1)
 
         self.assertEqual(Figure.objects.filter(event_id=self.event2.id).count(), 0)
-        self.assertEqual(set(Figure.objects.values_list('event_id', flat=True)), {self.event1.id})
+        self.assertEqual(
+            set(Figure.objects.exclude(event_id=self.event3.id).values_list('event_id', flat=True)),
+            {self.event1.id}
+        )
+
+        # check for failed figure update
+        self.assertNotEqual(
+            BulkApiOperation.objects.first().failure_list,
+            []
+        )
+        self.assertEqual(Figure.objects.filter(event_id=self.event3.id).count(), 1)
+
+        # test report_filter_figure_events
+        report_filter_figure_events_ids = []
+        for report in Report.objects.all():
+            report_filter_figure_events_ids.extend(
+                list(report.filter_figure_events.all().values_list('id', flat=True))
+            )
+        self.assertEqual(
+            set(report_filter_figure_events_ids),
+            {self.event1.id}
+        )
+        self.assertEqual(Report.objects.filter(filter_figure_events=self.event2).count(), 0)
+
+        # test event unified review comment.
+        self.assertEqual(
+            set(UnifiedReviewComment.objects.values_list('event_id', flat=True)),
+            {self.event1.id}
+        )
+        self.assertEqual(UnifiedReviewComment.objects.filter(event=self.event2).count(), 0)
 
 
 class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
