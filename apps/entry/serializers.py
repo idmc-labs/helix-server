@@ -584,7 +584,11 @@ class EntryCreateSerializer(
 ):
     class Meta:
         model = Entry
-        exclude = ('review_status',)
+        exclude = (
+            'review_status',
+            'old_id',
+            'version_id',
+        )
 
     def validate_figures(self, figures):
         if len(figures) > Entry.FIGURES_PER_ENTRY:
