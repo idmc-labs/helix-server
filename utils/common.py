@@ -1,4 +1,5 @@
 import datetime
+import traceback
 import typing
 import functools
 import re
@@ -192,6 +193,16 @@ class RuntimeProfile:
         assert self.start is not None
         time_delta = datetime.datetime.now() - self.start
         logger.info(f'Runtime with <{self.label}>: {time_delta}')
+
+
+def return_error_as_string(func):
+    def _wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception:
+            return traceback.format_exc()
+    _wrapper.__name__ = func.__name__
+    return _wrapper
 
 
 client_id = extend_schema(

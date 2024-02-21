@@ -1,6 +1,9 @@
 from django.contrib import admin
+from django.utils.safestring import mark_safe
+from django.conf import settings
 from admin_auto_filters.filters import AutocompleteFilterFactory
 
+from utils.common import return_error_as_string
 from apps.contrib.models import (
     Client,
     ClientTrackInfo,
@@ -85,9 +88,76 @@ class BulkApiOperationAdmin(ReadOnlyMixin, admin.ModelAdmin):
         AutocompleteFilterFactory('User', 'created_by'),
     )
     list_display_links = ['id']
+    readonly_fields = (
+        'success_list_preview',
+        'failure_list_preview',
+    )
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('created_by')
+
+    @return_error_as_string
+    def success_list_preview(self, obj: BulkApiOperation):
+        header = ""
+        rows = ""
+        if obj.action == BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_EVENT:
+            header = """
+                  <tr>
+                    <th>Figure ID</th>
+                    <th>URL</th>
+                  </tr>
+            """
+            rows = ""
+            for success in obj.success_list:
+                url = settings.FRONTEND_BASE_URL + success["frontend_url"]
+                rows += (f'''
+                    <tr>
+                      <td>{success["id"]}</td>
+                      <td><a href={url} target="_blank">{url}</a></td>
+                    </tr>
+                ''')
+        return mark_safe(f"<table>{header}{rows}</table>")
+
+    @return_error_as_string
+    def failure_list_preview(self, obj: BulkApiOperation):
+        def _errors_to_str(errors):
+            try:
+                _errors = []
+                for error in errors:
+                    if type(error) is list:
+                        _errors.append(_errors_to_str(error))
+                    else:
+                        _errors.append(
+                            ": ".join([error['field'], error['messages']])
+                        )
+                return "</br>".join(_errors)
+            except Exception:
+                return str(errors)
+
+        header = ""
+        rows = ""
+        if obj.action == BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_EVENT:
+            header = """
+                  <tr>
+                    <th>Figure ID</th>
+                    <th>URL</th>
+                    <th>Errors</th>
+                    <th style="width:10%">Errors (Raw)</th>
+                  </tr>
+            """
+            rows = ""
+            for failure in obj.failure_list:
+                url = settings.FRONTEND_BASE_URL + failure["frontend_url"]
+                errors = _errors_to_str(failure["errors"])
+                rows += (f'''
+                    <tr>
+                      <td>{failure["id"]}</td>
+                      <td><a href={url} target="_blank">{url}</a></td>
+                      <td>{errors}</td>
+                      <td>{failure["errors"]}</td>
+                    </tr>
+                ''')
+        return mark_safe(f"<table>{header}{rows}</table>")
 
 
 admin.site.register(Client, ClientAdmin)

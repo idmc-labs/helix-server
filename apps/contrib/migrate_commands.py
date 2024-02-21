@@ -1,4 +1,4 @@
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, Q
 from django.db import connection
 
 from utils.common import RuntimeProfile
@@ -15,7 +15,7 @@ from apps.contrib.bulk_operations.tasks import generate_dummy_request
 
 
 @RuntimeProfile('merge_events')
-def merge_events(event_ids_mapping):
+def merge_events(event_ids_mapping, figure_event_map=None):
 
     def _migrate_event_non_figure_tables(destination_event_id, source_event_ids):
         print('-' * 10, source_event_ids, '---->', destination_event_id)
@@ -82,12 +82,13 @@ def merge_events(event_ids_mapping):
     internal_bot = HelixInternalBot()
     api_request = generate_dummy_request(internal_bot.user)
 
-    figure_event_map = {}
-    for primary_event_id, other_event_ids in event_ids_mapping.items():
-        figures_to_be_updated = Figure.objects.filter(event_id__in=other_event_ids)
-        figure_ids = list(figures_to_be_updated.values_list('id', flat=True))
-        for figure_id in figure_ids:
-            figure_event_map[figure_id] = primary_event_id
+    if figure_event_map is None:
+        figure_event_map = {}
+        for primary_event_id, other_event_ids in event_ids_mapping.items():
+            figures_to_be_updated = Figure.objects.filter(event_id__in=other_event_ids)
+            figure_ids = list(figures_to_be_updated.values_list('id', flat=True))
+            for figure_id in figure_ids:
+                figure_event_map[figure_id] = primary_event_id
 
     data = {
         "action": BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_EVENT.value,
@@ -126,7 +127,13 @@ def merge_events(event_ids_mapping):
             for event_ids in event_ids_mapping.values()
             for event_id in event_ids
         ]
-    ).annotate(figure_count=Count('figures'))
+    ).annotate(
+        total_figure_count=Count('figures'),
+        figure_count=Count(
+            'figures',
+            filter=Q(figures__id__in=figure_event_map.keys()),
+        )
+    )
 
     total_processed_events = event_qs.values('id').count()
     total_processed_figures = event_qs.aggregate(total_failed_figure=Sum('figure_count'))['total_failed_figure']
@@ -141,13 +148,13 @@ def merge_events(event_ids_mapping):
         # Move events for non-figures tables
         for primary_event_id, other_event_ids in event_ids_mapping.items():
             destination_event_ids = list(
-                event_qs.filter(figure_count=0, id__in=other_event_ids).values_list('id', flat=True)
+                event_qs.filter(total_figure_count=0, id__in=other_event_ids).values_list('id', flat=True)
             )
             if destination_event_ids:
                 _migrate_event_non_figure_tables(primary_event_id, destination_event_ids)
 
     # Delete event with zero figures
-    print('Deleted events:', event_qs.filter(figure_count=0).delete())
+    print('Deleted events:', event_qs.filter(total_figure_count=0).delete())
 
     # Show summary
     failed_events_count = event_qs.values('id').count()

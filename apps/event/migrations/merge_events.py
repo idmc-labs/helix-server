@@ -4,6 +4,7 @@ from django.conf import settings
 from apps.contrib.migrate_commands import merge_events as update_figures_and_merge_events
 
 
+# https://github.com/idmc-labs/helix2.0-meta/issues/1041
 EVENT_ID_MAP = {
     "22166": [16137, 16138, 16175, 16200],
     "22167": [14032, 14033],
