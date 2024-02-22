@@ -56,6 +56,7 @@ env = environ.Env(
     CSRF_USE_SESSIONS=(bool, False),
     # MISC
     DEFAULT_FROM_EMAIL=(str, 'contact@idmcdb.org'),
+    INTERNAL_BOT_EMAIL=(str, 'helix-internal-bot@idmc.ch'),
     BACKEND_BASE_URL=str,  # http://localhost:9000
     FRONTEND_BASE_URL=str,  # http://localhost:3000
     HCAPTCHA_SECRET=str,
@@ -351,6 +352,7 @@ else:
     EMAIL_BACKEND = 'django_ses.SESBackend'
 
 DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
+INTERNAL_BOT_EMAIL = env('INTERNAL_BOT_EMAIL')
 
 # https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-APPEND_SLASH
 APPEND_SLASH = False

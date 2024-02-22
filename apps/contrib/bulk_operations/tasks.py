@@ -55,6 +55,13 @@ def process_request(request: HttpRequest) -> None:
     auth_middlware.process_request(request)
 
 
+def generate_dummy_request(user):
+    api_request = HttpRequest()
+    process_request(api_request)
+    login(api_request, user)
+    return api_request
+
+
 def run_mutation(
     request: HttpRequest,
     query: str,
@@ -149,14 +156,12 @@ class BulkApiOperationBaseTask(typing.Generic[ModelType]):
         cls,
         operation: BulkApiOperation,
         items: typing.List[ModelType],
-    ) -> typing.Tuple[typing.List[dict], typing.List[dict]]:
+    ) -> typing.Tuple[typing.List[SuccessDataType], typing.List[FailureDataType]]:
         """
         NOTE: Response should be (success_count, failure_count, errors)
         """
         # TODO: Create a context manager for login/logout
-        api_request = HttpRequest()
-        process_request(api_request)
-        login(api_request, operation.created_by)
+        api_request = generate_dummy_request(operation.created_by)
 
         variables = cls.get_mutation_variables(operation.payload, items)
         gql_data, gql_errors = cls.run_mutation(api_request, cls.MUTATION, variables)
@@ -299,13 +304,56 @@ class BulkFigureRoleUpdateTask(BulkFigureBulkUpdateTask):
 
     @staticmethod
     def get_update_payload(payload: dict) -> dict:
-        return {'role': Figure.ROLE(payload['figure_role']['role']).name}
+        return {
+            'role': Figure.ROLE(payload['figure_role']['role']).name,
+        }
+
+
+class BulkFigureEventUpdateTask(BulkFigureBulkUpdateTask):
+    # TODO: Use eventId instead of event{id}
+    MUTATION = '''
+        mutation BulkUpdateFigures($items: [FigureUpdateInputType!]) {
+            bulkUpdateFigures(items: $items) {
+                errors
+                result {
+                  id
+                  event {
+                    id
+                  }
+                }
+            }
+        }
+    '''
+    filter_set = FigureExtractionBulkOperationFilterSet
+
+    @staticmethod
+    def get_filters(filters: dict):
+        return filters['figure_event']['figure']
+
+    @classmethod
+    def get_mutation_variables(cls, payload: dict, items: typing.List[Figure]) -> dict:
+        by_figures = {
+            data['figure']: data['event']
+            for data in payload['figure_event']['by_figures']
+        }
+        return {
+            'items': [
+                {
+                    'id': str(figure.pk),
+                    'event': by_figures[figure.pk]
+                }
+                for figure in items
+                if figure.pk in by_figures
+            ],
+        }
 
 
 def get_operation_handler(operation_action):
     _handler: typing.Optional[typing.Type[BulkApiOperationBaseTask]] = None
     if operation_action == BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_ROLE:
         _handler = BulkFigureRoleUpdateTask
+    if operation_action == BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_EVENT:
+        _handler = BulkFigureEventUpdateTask
     if _handler is None:
         raise serializers.ValidationError(f'Action not implemented yet: {operation_action}')
     return _handler
