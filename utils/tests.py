@@ -1,4 +1,5 @@
 import os
+import copy
 import shutil
 from unittest.mock import patch
 import pytz
@@ -16,6 +17,7 @@ from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio
 from helix.settings import BASE_DIR
 from utils.factories import UserFactory, MonitoringSubRegionFactory, CountryFactory
+from utils.common import convert_date_object_to_string_in_dict
 
 User = get_user_model()
 TEST_MEDIA_ROOT = 'media-temp'
@@ -220,3 +222,51 @@ class HelixAPITestCase(APITestCase):
     def authenticate(self, user=None):
         user = user or self.user
         self.client.force_login(user)
+
+
+class CommonUtilTest(TestCase):
+    def test_convert_date_object_to_string_in_dict(self):
+        data = {
+            'key1': datetime.date(2021, 1, 1),
+            'key2': {
+                'key1': datetime.date(2021, 1, 1),
+                'key2': datetime.date(2021, 1, 2),
+                'key3': datetime.date(2021, 1, 3),
+            },
+            'key3': [
+                datetime.date(2021, 1, 1),
+                datetime.date(2021, 1, 2),
+                datetime.date(2021, 1, 3),
+            ],
+        }
+        expected_data = {
+            'key1': '2021-01-01',
+            'key2': {
+                'key1': '2021-01-01',
+                'key2': '2021-01-02',
+                'key3': '2021-01-03',
+            },
+            'key3': [
+                '2021-01-01',
+                '2021-01-02',
+                '2021-01-03',
+            ],
+        }
+
+        def generate_nested(data, level):
+            _data = copy.deepcopy(data)
+            for _ in range(0, level):
+                _data = {
+                    **copy.deepcopy(_data),
+                    'nested1': {
+                        **copy.deepcopy(_data),
+                    },
+                    'nested2': {
+                        **copy.deepcopy(_data),
+                    },
+                }
+            return _data
+
+        fdata = generate_nested(data, 5)
+        edata = generate_nested(expected_data, 5)
+        assert convert_date_object_to_string_in_dict(fdata) == edata

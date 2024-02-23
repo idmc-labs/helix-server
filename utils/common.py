@@ -30,6 +30,14 @@ def convert_date_object_to_string_in_dict(dictionary):
     for key, value in dictionary.items():
         if isinstance(value, (datetime.date, datetime.datetime)):
             dictionary[key] = str(value)
+        elif isinstance(value, dict):
+            convert_date_object_to_string_in_dict(value)
+        elif isinstance(value, list):
+            for index, array_value in enumerate(value):
+                if isinstance(array_value, dict):
+                    convert_date_object_to_string_in_dict(array_value)
+                elif isinstance(array_value, (datetime.date, datetime.datetime)):
+                    dictionary[key][index] = str(array_value)
     return dictionary
 
 
