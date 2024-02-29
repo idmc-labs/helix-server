@@ -312,7 +312,6 @@ class TestUpdateEvent(HelixGraphQLTestCase):
             "eventType": "CONFLICT",
             "name": "xyz",
             "startDate": "2020-10-20",
-            "violence": v_sub_type.violence.id,
             "violenceSubType": v_sub_type.id,
             "eventCodes": [
                 {
