@@ -379,7 +379,6 @@ class FigureSerializer(
         fields = [
             'id',
             'entry',
-            'was_subfact',
             'quantifier',
             'reported',
             'unit',

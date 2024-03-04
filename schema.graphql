@@ -2112,7 +2112,6 @@ type FigureType {
 input FigureUpdateInputType {
   id: ID
   entry: ID
-  wasSubfact: Boolean
   quantifier: QUANTIFIER
   reported: Int
   unit: UNIT
