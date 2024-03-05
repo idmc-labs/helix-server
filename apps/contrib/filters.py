@@ -121,3 +121,11 @@ ClientTrackInfoFilterDataType, ClientTrackInfoFilterDataInputType = generate_typ
     'ClientTrackInfoFilterDataType',
     'ClientTrackInfoFilterDataInputType',
 )
+
+
+ClientFilterDataType, ClientFilterDataInputType = generate_type_for_filter_set(
+    ClientFilter,
+    'contrib.schema.client_list',
+    'ClientFilterDataType',
+    'ClientFilterDataInputType',
+)

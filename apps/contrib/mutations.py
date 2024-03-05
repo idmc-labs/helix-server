@@ -7,6 +7,7 @@ from utils.mutation import generate_input_type_for_serializer
 from utils.common import convert_date_object_to_string_in_dict
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import is_authenticated, permission_checker
+from apps.contrib.filters import ClientFilterDataInputType
 from apps.contrib.serializers import ExcelDownloadSerializer
 from apps.contrib.models import ExcelDownload
 from apps.contrib.schema import AttachmentType, ClientType, BulkApiOperationObjectType
@@ -53,8 +54,8 @@ class CreateAttachment(graphene.Mutation):
 
 
 ClientCreateInputType = generate_input_type_for_serializer(
-    'clientCreateInputType',
-    ClientSerializer
+    'ClientCreateInputType',
+    ClientSerializer,
 )
 
 ClientUpdateInputType = generate_input_type_for_serializer(
@@ -157,6 +158,12 @@ class ExportTrackingData(ExportBaseMutation):
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.TRACKING_DATA
 
 
+class ExportClients(ExportBaseMutation):
+    class Arguments:
+        filters = ClientFilterDataInputType(required=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.CLIENT
+
+
 class TriggerBulkOperation(graphene.Mutation):
     class Arguments:
         data = BulkApiOperationInputType(required=True)
@@ -182,4 +189,5 @@ class Mutation:
     create_client = CreateClient.Field()
     update_client = UpdateClient.Field()
     export_tracking_data = ExportTrackingData.Field()
+    export_client = ExportClients.Field()
     trigger_bulk_operation = TriggerBulkOperation.Field()

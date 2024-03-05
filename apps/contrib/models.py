@@ -6,6 +6,7 @@ from collections import OrderedDict
 
 from django.apps import apps
 from django.db.models import JSONField
+from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -39,7 +40,7 @@ class ArchiveAbstractModel(models.Model):
 
 
 class MetaInformationAbstractModel(models.Model):
-    created_at = models.DateTimeField(verbose_name=_('Created At'), default=timezone.now)
+    created_at = models.DateTimeField(verbose_name=_('Created At'), auto_now_add=True)
     modified_at = models.DateTimeField(verbose_name=_('Modified At'), auto_now=True)
     created_by = models.ForeignKey('users.User', verbose_name=_('Created By'),
                                    blank=True, null=True,
@@ -221,6 +222,7 @@ class ExcelDownload(MetaInformationAbstractModel):
         USER = 13
         CONTEXT_OF_VIOLENCE = 14
         MONITORING_SUB_REGION = 15
+        CLIENT = 16
 
     started_at = models.DateTimeField(
         verbose_name=_('Started at'),
@@ -277,6 +279,7 @@ class ExcelDownload(MetaInformationAbstractModel):
             self.DOWNLOAD_TYPES.USER: apps.get_model('users', 'User'),
             self.DOWNLOAD_TYPES.CONTEXT_OF_VIOLENCE: apps.get_model('event', 'ContextOfViolence'),
             self.DOWNLOAD_TYPES.MONITORING_SUB_REGION: apps.get_model('country', 'MonitoringSubRegion'),
+            self.DOWNLOAD_TYPES.CLIENT: apps.get_model('contrib', 'Client'),
         }
         model = mapper.get(self.download_type)
         if not model:
@@ -300,19 +303,106 @@ class ExcelDownload(MetaInformationAbstractModel):
 
 
 class Client(MetaInformationAbstractModel):
+    class USE_CASE_CHOICES(enum.Enum):
+        ANTICIPATORY_ACTION = 0
+        RESPONSE = 1
+        PREVENTION = 2
+        RESEARCH_DATA_ANALYSIS = 3
+        MODELLING_FORECASTING = 4
+        DATA_SHARING_EXTERNAL_REPOSITORIES = 5
+        OTHER = 6
+
+        __labels__ = {
+            ANTICIPATORY_ACTION: _("Anticipatory action"),
+            RESPONSE: _("Response"),
+            PREVENTION: _("Prevention"),
+            RESEARCH_DATA_ANALYSIS: _("Research / Data analysis"),
+            MODELLING_FORECASTING: _("Modelling/Data science project/forecasting"),
+            DATA_SHARING_EXTERNAL_REPOSITORIES: _("Data Sharing and External Repositories Usage"),
+            OTHER: _("Other"),
+        }
+
     name = models.CharField(max_length=255)
     code = models.CharField(
         max_length=100,
-        help_text=_('Recommended format client-short-name:custom-name:month:day'),
-        unique=True
+        unique=True,
+        verbose_name=_('Client Code'),
+        editable=False  # Make it non-editable
     )
+    acronym = models.CharField(
+        max_length=255,
+        verbose_name=_('Client Acronym'),
+        blank=True,
+        null=True
+    )
+    contact_name = models.CharField(
+        max_length=255,
+        verbose_name=_('Client Contact Name'),
+        help_text=_('Client Contact Name: focal person'),
+        blank=True,
+        null=True
+    )
+    contact_email = models.EmailField(
+        verbose_name=_('Client Contact Email'),
+        help_text=_('Client Contact Email: email focal person'),
+        blank=True,
+        null=True
+    )
+    contact_website = models.URLField(
+        verbose_name=_('Client Contact Website'),
+        help_text=_('Client Contact Website: link to the website (IDMC application)'),
+        blank=True,
+        null=True
+    )
+    opted_out_of_emails = models.BooleanField(verbose_name='Opted out of receiving emails', default=False)
+    use_case = ArrayField(
+        base_field=enum.EnumField(USE_CASE_CHOICES, verbose_name=_('Use case')),
+        blank=True, default=list
+    )
+    other_notes = models.CharField(max_length=255, null=True, blank=True)
     is_active = models.BooleanField(
         verbose_name=_('Is active?'),
         default=False
     )
 
     def __str__(self):
-        return self.code
+        return self.name
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.contrib.filters import ClientFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='ID',
+            name='Name',
+            code='Client Code',
+            acronym='Client Acronym',
+            contact_name='Client Contact Name',
+            contact_email='Client Contact Email',
+            contact_website='Client Contact Website',
+            opted_out_of_emails='Opted out of receiving emails',
+            other_notes='Other Notes',
+            created_at='Created At',
+            modified_at='Modified At',
+            is_active='Active',
+        )
+
+        data = (ClientFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.order_by('id'))
+
+        return {
+            'headers': headers,
+            'data': data.values(*[header for header in headers.keys()]),
+            'formulae': None,
+            # 'transformer': transformer,
+            'transformer': None,
+        }
 
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)

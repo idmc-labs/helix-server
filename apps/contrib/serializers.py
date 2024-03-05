@@ -1,4 +1,6 @@
 import magic
+import random
+import string
 from datetime import timedelta
 from django.utils import timezone
 
@@ -150,9 +152,36 @@ class ClientSerializer(
         fields = (
             'id',
             'name',
-            'code',
             'is_active',
+            'acronym',
+            'contact_name',
+            'contact_email',
+            'contact_website',
+            'use_case',
+            'other_notes',
+            'opted_out_of_emails',
         )
+        read_only_fields = (
+            'code',
+            'created_by',
+            'created_at',
+            'last_modified_by',
+            'modified_at',
+        )
+
+    def create(self, validated_data):
+        # Generate a random alphanumeric key of length 16
+        validated_data['code'] = ''.join(random.choices(string.ascii_uppercase + string.digits, k=16))
+        # Set the user who created the client
+        validated_data['created_by'] = self.context['request'].user
+        return super().create(validated_data)
+
+    def update(self, instance, validated_data):
+        # Check if the client is being revoked
+        if 'revoked_by' in validated_data and validated_data['revoked_by'] is not None:
+            # Set the revoked_at field to the current datetime if it's being revoked
+            instance.revoked_at = timezone.now()
+        return super().update(instance, validated_data)
 
 
 class ClientUpdateSerializer(UpdateSerializerMixin, ClientSerializer):

@@ -5,6 +5,7 @@ from apps.contrib.models import (
     ExcelDownload,
     SourcePreview,
     BulkApiOperation,
+    Client,
 )
 from apps.entry.models import ExternalApiDump
 from apps.contact.enums import enum_map as contact_enums
@@ -34,6 +35,10 @@ ExternalApiTypeEnum = graphene.Enum.from_enum(
     ExternalApiDump.ExternalApiType,
     description=enum_description
 )
+ClientUseCaseEnum = graphene.Enum.from_enum(
+    Client.USE_CASE_CHOICES,
+    description=enum_description
+)
 
 BulkApiOperationActionEnum = graphene.Enum.from_enum(
     BulkApiOperation.BULK_OPERATION_ACTION, description=enum_description)
@@ -48,6 +53,7 @@ enum_map = dict(
     EXCEL_GENERATION_STATUS=ExcelGenerationStatusGrapheneEnum,
     BULK_OPERATION_ACTION=BulkApiOperationActionEnum,
     BULK_OPERATION_STATUS=BulkApiOperationStatusEnum,
+    USE_CASE_CHOICES=ClientUseCaseEnum,
 )
 
 ENUM_TO_GRAPHENE_ENUM_MAP = {
