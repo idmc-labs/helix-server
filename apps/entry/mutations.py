@@ -18,11 +18,13 @@ from apps.entry.serializers import (
 )
 from apps.extraction.filters import FigureExtractionFilterDataInputType, EntryExtractionFilterDataInputType
 from apps.contrib.models import SourcePreview, ExcelDownload
-from apps.contrib.serializers import SourcePreviewSerializer
 from apps.contrib.mutations import ExportBaseMutation
+from apps.contrib.serializers import SourcePreviewSerializer
+from apps.extraction.filters import FigureTagFilterDataInputType
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker, is_authenticated
 from utils.mutation import generate_input_type_for_serializer, BulkUpdateMutation
+
 from apps.notification.models import Notification
 from .utils import BulkUpdateFigureManager, send_figure_notifications, get_figure_notification_type
 
@@ -293,6 +295,15 @@ class ExportFigures(ExportBaseMutation):
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.FIGURE
 
 
+class ExportFigureTags(ExportBaseMutation):
+    """
+    Mutation to figure tags data based on provided filters.
+    """
+    class Arguments(ExportBaseMutation.Arguments):
+        filters = FigureTagFilterDataInputType(required=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.FIGURE_TAG
+
+
 class DeleteFigure(graphene.Mutation):
     class Arguments:
         id = graphene.ID(required=True)
@@ -552,6 +563,7 @@ class Mutation(object):
     # exports
     export_entries = ExportEntries.Field()
     export_figures = ExportFigures.Field()
+    export_figure_tags = ExportFigureTags.Field()
     bulk_update_figures = BulkUpdateFigures.Field()
     # figure
     delete_figure = DeleteFigure.Field()

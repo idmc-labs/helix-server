@@ -1017,6 +1017,8 @@ enum DOWNLOAD_TYPES {
   INDIVIDUAL_REPORT
   TRACKING_DATA
   PARKING_LOT
+  FIGURE_TAG
+  USER
 }
 
 scalar Date
@@ -1693,6 +1695,11 @@ type ExportEvents {
   ok: Boolean
 }
 
+type ExportFigureTags {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
 type ExportFigures {
   errors: [GenericScalar!]
   ok: Boolean
@@ -1720,6 +1727,11 @@ type ExportReports {
 }
 
 type ExportTrackingData {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportUsers {
   errors: [GenericScalar!]
   ok: Boolean
 }
@@ -2580,6 +2592,7 @@ type Mutation {
   deleteFigureTag(id: ID!): DeleteFigureTag
   exportEntries(filters: EntryExtractionFilterDataInputType!): ExportEntries
   exportFigures(filters: FigureExtractionFilterDataInputType!): ExportFigures
+  exportFigureTags(filters: FigureTagFilterDataInputType!): ExportFigureTags
   bulkUpdateFigures(deleteIds: [ID!], items: [FigureUpdateInputType!]): BulkUpdateFigures
   deleteFigure(id: ID!): DeleteFigure
   approveFigure(id: ID!): ApproveFigure
@@ -2642,6 +2655,7 @@ type Mutation {
   updateAdminPortfolio(data: AdminPortfolioInputType!): UpdateAdminPortfolio
   updateDirectorsOfficePortfolio(data: DirectorsOfficePortfolioInputType!): UpdateDirectorsOfficePortfolio
   updateReportingTeamPortfolio(data: ReportingTeamPortfolioInputType!): UpdateReportingTeamPortfolio
+  exportUser(filters: UserFilterDataInputType!): ExportUsers
 }
 
 input NotificationFilterDataInputType {
