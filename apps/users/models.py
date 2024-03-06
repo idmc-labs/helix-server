@@ -1,5 +1,6 @@
 from __future__ import annotations
 import logging
+from collections import OrderedDict
 
 from django.core.cache import cache
 from django.db import models
@@ -33,6 +34,67 @@ class User(AbstractUser):
     def can_update_user(cls, user_id: int, authenticated_user: User) -> bool:
         return authenticated_user.has_perm('users.change_user') or\
             user_id == authenticated_user.id
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        """
+        Generates data for Excel sheets based on filters applied to the user queryset.
+
+        Parameters:
+            user_id: The ID of the user requesting the data.
+            filters: A dictionary of filters to apply to the user queryset.
+
+        Returns:
+            A dictionary containing headers, data, formulae, and a transformer function for Excel sheet generation.
+        """
+        from apps.users.filters import UserFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='ID',
+            date_joined='Date Joined',
+            full_name='Name',
+            portfolios__role='Role',
+            is_admin='Admin',
+            is_directors_office="Director's Office",
+            is_reporting_team='Reporting Team',
+            is_active='Active',
+        )
+        excluded_headers = ['is_admin', 'is_directors_office', 'is_reporting_team']
+
+        users = UserFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.order_by('date_joined')
+
+        def transformer(datum):
+            role_label_map = {
+                USER_ROLE.ADMIN: 'Yes',
+                USER_ROLE.DIRECTORS_OFFICE: 'Yes',
+                USER_ROLE.REPORTING_TEAM: 'Yes',
+                'default': 'No'
+            }
+
+            return {
+                **datum,
+                'portfolios__role': USER_ROLE.get(datum['portfolios__role']).label,
+                'is_admin': role_label_map.get(datum['portfolios__role'], role_label_map['default']),
+                'is_directors_office': role_label_map.get(datum['portfolios__role'], role_label_map['default']),
+                'is_reporting_team': role_label_map.get(datum['portfolios__role'], role_label_map['default']),
+                'is_active': 'Yes' if datum['is_active'] else 'No',
+            }
+
+        filtered_headers = [header for header in headers.keys() if header not in excluded_headers]
+
+        return {
+            'headers': headers,
+            'data': users.values(*filtered_headers),
+            'formulae': None,
+            'transformer': transformer,
+        }
 
     @staticmethod
     def _reset_login_cache(email: str):

@@ -15,6 +15,7 @@ from utils.filters import (
     generate_type_for_filter_set,
     IDFilter,
 )
+from apps.entry.filters import FigureTagFilter
 from apps.event.constants import OSV
 from apps.common.enums import GENDER_TYPE
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
@@ -710,4 +711,12 @@ FigureExtractionBulkOperationFilterDataType, FigureExtractionBulkOperationFilter
     'entry.schema.figure_list',
     'FigureExtractionBulkOperationFilterDataType',
     'FigureExtractionBulkOperationFilterDataInputType',
+)
+
+
+FigureTagFilterDataType, FigureTagFilterDataInputType = generate_type_for_filter_set(
+    FigureTagFilter,
+    'entry.schema.figure_tag_list',
+    'FigureTagFilterDataType',
+    'FigureTagFilterDataInputType',
 )
