@@ -65,3 +65,12 @@ exclude = [
 ]
 reportMissingImports = true
 reportMissingTypeStubs = false
+
+[tool.ruff]
+exclude = [
+    "**/node_modules",
+    "**/__pycache__",
+    "apps/experimental",
+    "apps/typestubs",
+    "apps/**/migrations"
+]
