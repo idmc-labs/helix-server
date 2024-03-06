@@ -216,6 +216,7 @@ class ExcelDownload(MetaInformationAbstractModel):
         ACTOR = 8
         INDIVIDUAL_REPORT = 9
         TRACKING_DATA = 10
+        PARKING_LOT = 11
 
     started_at = models.DateTimeField(
         verbose_name=_('Started at'),
@@ -267,6 +268,7 @@ class ExcelDownload(MetaInformationAbstractModel):
             self.DOWNLOAD_TYPES.ACTOR: apps.get_model('event', 'Actor'),
             self.DOWNLOAD_TYPES.INDIVIDUAL_REPORT: apps.get_model('report', 'Report'),
             self.DOWNLOAD_TYPES.TRACKING_DATA: apps.get_model('contrib', 'ClientTrackInfo'),
+            self.DOWNLOAD_TYPES.PARKING_LOT: apps.get_model('parking_lot', 'ParkedItem'),
         }
         model = mapper.get(self.download_type)
         if not model:

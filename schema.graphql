@@ -1016,6 +1016,7 @@ enum DOWNLOAD_TYPES {
   ACTOR
   INDIVIDUAL_REPORT
   TRACKING_DATA
+  PARKING_LOT
 }
 
 scalar Date
@@ -1698,6 +1699,11 @@ type ExportFigures {
 }
 
 type ExportOrganizations {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportParkedItem {
   errors: [GenericScalar!]
   ok: Boolean
 }
@@ -2540,6 +2546,7 @@ type Mutation {
   createParkedItem(data: ParkedItemCreateInputType!): CreateParkedItem
   updateParkedItem(data: ParkedItemUpdateInputType!): UpdateParkedItem
   deleteParkedItem(id: ID!): DeleteParkedItem
+  exportParkedItem(filters: ParkingLotFilterDataInputType!): ExportParkedItem
   createReviewComment(data: UnifiedReviewCommentCreateInputType!): CreateUnifiedReviewComment
   updateReviewComment(data: UnifiedReviewCommentUpdateInputType!): UpdateUnifiedReviewComment
   deleteReviewComment(id: ID!): DeleteUnifiedReviewComment
