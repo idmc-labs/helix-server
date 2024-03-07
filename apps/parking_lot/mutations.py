@@ -1,18 +1,16 @@
 import graphene
 from django.utils.translation import gettext
 
+from utils.mutation import generate_input_type_for_serializer
+from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.permissions import permission_checker
+from utils.filters import generate_type_for_filter_set
+from apps.contrib.mutations import ExportBaseMutation
+from apps.contrib.models import ExcelDownload
 from apps.parking_lot.models import ParkedItem
 from apps.parking_lot.schema import ParkedItemType
 from apps.parking_lot.serializers import ParkedItemSerializer, ParkedItemUpdateSerializer
 from apps.parking_lot.filters import ParkingLotFilter
-from apps.contrib.serializers import ExcelDownloadSerializer
-from utils.mutation import generate_input_type_for_serializer
-from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import permission_checker
-from utils.common import convert_date_object_to_string_in_dict
-from utils.filters import (
-    generate_type_for_filter_set,
-)
 
 
 ParkedItemCreateInputType = generate_input_type_for_serializer(
@@ -101,28 +99,10 @@ class DeleteParkedItem(graphene.Mutation):
         return DeleteParkedItem(result=instance, errors=None, ok=True)
 
 
-class ExportParkedItem(graphene.Mutation):
-    class Arguments:
+class ExportParkedItem(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
         filters = ParkedItemFilterDataInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-
-    @staticmethod
-    def mutate(_, info, filters):
-        from apps.contrib.models import ExcelDownload
-
-        serializer = ExcelDownloadSerializer(
-            data=dict(
-                download_type=int(ExcelDownload.DOWNLOAD_TYPES.PARKING_LOT),
-                filters=convert_date_object_to_string_in_dict(filters),
-            ),
-            context=dict(request=info.context.request)
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return ExportParkedItem(errors=errors, ok=False)
-        serializer.save()
-        return ExportParkedItem(errors=None, ok=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.PARKING_LOT
 
 
 class Mutation(object):

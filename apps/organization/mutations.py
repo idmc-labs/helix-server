@@ -1,7 +1,8 @@
 from django.utils.translation import gettext
 import graphene
 
-from apps.contrib.serializers import ExcelDownloadSerializer
+from apps.contrib.mutations import ExportBaseMutation
+from apps.contrib.models import ExcelDownload
 from apps.organization.models import Organization, OrganizationKind
 from apps.organization.schema import OrganizationType, OrganizationKindObjectType
 from apps.organization.filters import OrganizationFilterDataInputType
@@ -14,7 +15,6 @@ from apps.organization.serializers import (
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 from utils.mutation import generate_input_type_for_serializer
-from utils.common import convert_date_object_to_string_in_dict
 
 
 # organization kind
@@ -175,28 +175,10 @@ class DeleteOrganization(graphene.Mutation):
         return DeleteOrganization(result=instance, errors=None, ok=True)
 
 
-class ExportOrganizations(graphene.Mutation):
-    class Arguments:
+class ExportOrganizations(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
         filters = OrganizationFilterDataInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-
-    @staticmethod
-    def mutate(_, info, filters):
-        from apps.contrib.models import ExcelDownload
-
-        serializer = ExcelDownloadSerializer(
-            data=dict(
-                download_type=int(ExcelDownload.DOWNLOAD_TYPES.ORGANIZATION),
-                filters=convert_date_object_to_string_in_dict(filters),
-            ),
-            context=dict(request=info.context.request)
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return ExportOrganizations(errors=errors, ok=False)
-        serializer.save()
-        return ExportOrganizations(errors=None, ok=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.ORGANIZATION
 
 
 class Mutation(object):
