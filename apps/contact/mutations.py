@@ -1,6 +1,11 @@
 from django.utils.translation import gettext
 import graphene
 
+from utils.mutation import generate_input_type_for_serializer
+from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.permissions import permission_checker
+from apps.contrib.models import ExcelDownload
+from apps.contrib.mutations import ExportBaseMutation
 from apps.contact.models import Contact, Communication
 from apps.contact.filters import ContactFilterDataInputType
 from apps.contact.schema import ContactType, CommunicationType
@@ -10,11 +15,6 @@ from apps.contact.serializers import (
     ContactUpdateSerializer,
     CommunicationUpdateSerializer,
 )
-from apps.contrib.serializers import ExcelDownloadSerializer
-from utils.mutation import generate_input_type_for_serializer
-from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import permission_checker
-from utils.common import convert_date_object_to_string_in_dict
 
 ContactCreateInputType = generate_input_type_for_serializer(
     'ContactCreateInputType',
@@ -176,28 +176,10 @@ class DeleteCommunication(graphene.Mutation):
         return DeleteCommunication(result=instance, errors=None, ok=True)
 
 
-class ExportContacts(graphene.Mutation):
-    class Arguments:
+class ExportContacts(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
         filters = ContactFilterDataInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-
-    @staticmethod
-    def mutate(_, info, filters):
-        from apps.contrib.models import ExcelDownload
-
-        serializer = ExcelDownloadSerializer(
-            data=dict(
-                download_type=int(ExcelDownload.DOWNLOAD_TYPES.CONTACT),
-                filters=convert_date_object_to_string_in_dict(filters),
-            ),
-            context=dict(request=info.context.request)
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return ExportContacts(errors=errors, ok=False)
-        serializer.save()
-        return ExportContacts(errors=None, ok=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.CONTACT
 
 
 class Mutation(object):

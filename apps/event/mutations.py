@@ -2,7 +2,11 @@ import graphene
 from django.utils import timezone
 from django.utils.translation import gettext
 
-from apps.contrib.serializers import ExcelDownloadSerializer
+from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.permissions import permission_checker
+from utils.mutation import generate_input_type_for_serializer
+from apps.contrib.models import ExcelDownload
+from apps.contrib.mutations import ExportBaseMutation
 from apps.event.models import Event, Actor, ContextOfViolence
 from apps.event.filters import ActorFilterDataInputType, EventFilterDataInputType
 from apps.event.schema import EventType, ActorType, ContextOfViolenceType
@@ -16,10 +20,6 @@ from apps.event.serializers import (
     ContextOfViolenceUpdateSerializer
 )
 from apps.notification.models import Notification
-from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import permission_checker
-from utils.mutation import generate_input_type_for_serializer
-from utils.common import convert_date_object_to_string_in_dict
 
 
 ActorCreateInputType = generate_input_type_for_serializer(
@@ -180,52 +180,16 @@ class DeleteEvent(graphene.Mutation):
         return DeleteEvent(result=instance, errors=None, ok=True)
 
 
-class ExportEvents(graphene.Mutation):
-    class Arguments:
+class ExportEvents(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
         filters = EventFilterDataInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-
-    @staticmethod
-    def mutate(_, info, filters):
-        from apps.contrib.models import ExcelDownload
-
-        serializer = ExcelDownloadSerializer(
-            data=dict(
-                download_type=int(ExcelDownload.DOWNLOAD_TYPES.EVENT),
-                filters=convert_date_object_to_string_in_dict(filters),
-            ),
-            context=dict(request=info.context.request)
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return ExportEvents(errors=errors, ok=False)
-        serializer.save()
-        return ExportEvents(errors=None, ok=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.EVENT
 
 
-class ExportActors(graphene.Mutation):
-    class Arguments:
+class ExportActors(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
         filters = ActorFilterDataInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-
-    @staticmethod
-    def mutate(_, info, filters):
-        from apps.contrib.models import ExcelDownload
-
-        serializer = ExcelDownloadSerializer(
-            data=dict(
-                download_type=int(ExcelDownload.DOWNLOAD_TYPES.ACTOR),
-                filters=convert_date_object_to_string_in_dict(filters),
-            ),
-            context=dict(request=info.context.request)
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return ExportActors(errors=errors, ok=False)
-        serializer.save()
-        return ExportActors(errors=None, ok=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.ACTOR
 
 
 CloneEntryInputType = generate_input_type_for_serializer(

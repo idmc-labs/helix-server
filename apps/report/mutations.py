@@ -1,7 +1,12 @@
-from django.utils.translation import gettext
 import graphene
+from django.utils.translation import gettext
 
+from utils.mutation import generate_input_type_for_serializer
+from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.permissions import permission_checker
 from apps.contrib.serializers import ExcelDownloadSerializer
+from apps.contrib.mutations import ExportBaseMutation
+from apps.contrib.models import ExcelDownload
 from apps.report.models import (
     Report,
     ReportComment,
@@ -17,10 +22,6 @@ from apps.report.serializers import (
     ReportSignoffSerializer,
     check_is_pfa_visible_in_gidd,
 )
-from utils.mutation import generate_input_type_for_serializer
-from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import permission_checker
-from utils.common import convert_date_object_to_string_in_dict
 
 
 ReportCreateInputType = generate_input_type_for_serializer(
@@ -279,28 +280,10 @@ class ApproveReport(graphene.Mutation):
         return ApproveReport(result=instance, errors=None, ok=True)
 
 
-class ExportReports(graphene.Mutation):
-    class Arguments:
+class ExportReports(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
         filters = ReportFilterDataInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-
-    @staticmethod
-    def mutate(_, info, filters):
-        from apps.contrib.models import ExcelDownload
-
-        serializer = ExcelDownloadSerializer(
-            data=dict(
-                download_type=int(ExcelDownload.DOWNLOAD_TYPES.REPORT),
-                filters=convert_date_object_to_string_in_dict(filters),
-            ),
-            context=dict(request=info.context.request)
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return ExportReports(errors=errors, ok=False)
-        serializer.save()
-        return ExportReports(errors=None, ok=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.REPORT
 
 
 class ExportReport(graphene.Mutation):
@@ -324,7 +307,7 @@ class ExportReport(graphene.Mutation):
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.INDIVIDUAL_REPORT),
                 filters=dict(),
-                model_instance_id=instance.id
+                model_instance_id=instance.pk
             ),
             context=dict(request=info.context.request)
         )

@@ -1,12 +1,16 @@
 import graphene
 from django.utils.translation import gettext
 
-from apps.parking_lot.models import ParkedItem
-from apps.parking_lot.schema import ParkedItemType
-from apps.parking_lot.serializers import ParkedItemSerializer, ParkedItemUpdateSerializer
 from utils.mutation import generate_input_type_for_serializer
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
+from utils.filters import generate_type_for_filter_set
+from apps.contrib.mutations import ExportBaseMutation
+from apps.contrib.models import ExcelDownload
+from apps.parking_lot.models import ParkedItem
+from apps.parking_lot.schema import ParkedItemType
+from apps.parking_lot.serializers import ParkedItemSerializer, ParkedItemUpdateSerializer
+from apps.parking_lot.filters import ParkingLotFilter
 
 
 ParkedItemCreateInputType = generate_input_type_for_serializer(
@@ -17,6 +21,13 @@ ParkedItemCreateInputType = generate_input_type_for_serializer(
 ParkedItemUpdateInputType = generate_input_type_for_serializer(
     'ParkedItemUpdateInputType',
     ParkedItemUpdateSerializer
+)
+
+ParkedItemFilterDataType, ParkedItemFilterDataInputType = generate_type_for_filter_set(
+    ParkingLotFilter,
+    'parking_lot.schema.parking_lot_list',
+    'ParkingLotFilterDataType',
+    'ParkingLotFilterDataInputType',
 )
 
 
@@ -88,7 +99,14 @@ class DeleteParkedItem(graphene.Mutation):
         return DeleteParkedItem(result=instance, errors=None, ok=True)
 
 
+class ExportParkedItem(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
+        filters = ParkedItemFilterDataInputType(required=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.PARKING_LOT
+
+
 class Mutation(object):
     create_parked_item = CreateParkedItem.Field()
     update_parked_item = UpdateParkedItem.Field()
     delete_parked_item = DeleteParkedItem.Field()
+    export_parked_item = ExportParkedItem.Field()

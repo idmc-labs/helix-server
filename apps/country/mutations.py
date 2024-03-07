@@ -1,16 +1,16 @@
 import graphene
 
+from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.permissions import permission_checker
+from apps.contrib.mutations import ExportBaseMutation
+from apps.contrib.models import ExcelDownload
 from apps.country.schema import (
     SummaryType,
     ContextualAnalysisType,
 )
 from apps.country.filters import CountryFilterDataInputType
 from apps.country.serializers import SummarySerializer, ContextualAnalysisSerializer
-from apps.contrib.serializers import ExcelDownloadSerializer
 from apps.crisis.enums import CrisisTypeGrapheneEnum
-from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import permission_checker
-from utils.common import convert_date_object_to_string_in_dict
 
 
 class SummaryCreateInputType(graphene.InputObjectType):
@@ -69,28 +69,10 @@ class CreateContextualAnalysis(graphene.Mutation):
         return CreateContextualAnalysis(result=instance, errors=None, ok=True)
 
 
-class ExportCountries(graphene.Mutation):
-    class Arguments:
+class ExportCountries(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
         filters = CountryFilterDataInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-
-    @staticmethod
-    def mutate(_, info, filters):
-        from apps.contrib.models import ExcelDownload
-
-        serializer = ExcelDownloadSerializer(
-            data=dict(
-                download_type=int(ExcelDownload.DOWNLOAD_TYPES.COUNTRY),
-                filters=convert_date_object_to_string_in_dict(filters),
-            ),
-            context=dict(request=info.context.request)
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return ExportCountries(errors=errors, ok=False)
-        serializer.save()
-        return ExportCountries(errors=None, ok=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.COUNTRY
 
 
 class Mutation:
