@@ -222,7 +222,6 @@ class ExcelDownload(MetaInformationAbstractModel):
         CONTEXT_OF_VIOLENCE = 14
         MONITORING_SUB_REGION = 15
 
-
     started_at = models.DateTimeField(
         verbose_name=_('Started at'),
         blank=True,

@@ -3,6 +3,7 @@ from datetime import datetime
 
 from collections import OrderedDict
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
 from django.db.models.query import QuerySet
 from django.db.models import Count, OuterRef
@@ -134,10 +135,10 @@ class MonitoringSubRegion(models.Model):
             id='ID',
             name='Region Name',
             regional_coordinator='Regional Coordinator',
-            # monitoring_experts_count='No. of Monitoring Experts',
+            monitoring_experts_count='No. of Monitoring Experts',
             countries_count='No. of Countries',
             unmonitored_countries_count='No. of Unmonitored Countries',
-            # unmonitored_countries='Unmonitored Countries',
+            unmonitored_countries='Unmonitored Countries',
         )
         subregions = MonitoringSubRegionFilter(
             data=filters,
@@ -150,6 +151,14 @@ class MonitoringSubRegion(models.Model):
                     monitoring_sub_region=models.OuterRef('pk'),
                     role=USER_ROLE.REGIONAL_COORDINATOR
                 ).values('user__full_name')[:1]
+            ),
+            monitoring_experts_count=models.Count('portfolios', filters=models.Q(role=USER_ROLE.MONITORING_EXPERT)),
+            unmonitored_countries=StringAgg(
+                'portfolios__country__name',
+                EXTERNAL_ARRAY_SEPARATOR,
+                distinct=True,
+                output_field=models.CharField(),
+                filters=models.Q(portfolios__role=USER_ROLE.MONITORING_EXPERT)
             ),
         ).order_by('id')
 
