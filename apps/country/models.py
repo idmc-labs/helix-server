@@ -122,6 +122,44 @@ class CountryRegion(models.Model):
 class MonitoringSubRegion(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=256)
 
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.country.filters import MonitoringSubRegionFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='ID',
+            name='Region Name',
+            regional_coordinator='Regional Coordinator',
+            # monitoring_experts_count='No. of Monitoring Experts',
+            countries_count='No. of Countries',
+            unmonitored_countries_count='No. of Unmonitored Countries',
+            # unmonitored_countries='Unmonitored Countries',
+        )
+        subregions = MonitoringSubRegionFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.annotate(
+            countries_count=Count('countries', distinct=True),
+            unmonitored_countries_count=models.Count('countries', filter=models.Q(countries__isnull=True)),
+            regional_coordinator=models.Subquery(
+                Portfolio.objects.filter(
+                    monitoring_sub_region=models.OuterRef('pk'),
+                    role=USER_ROLE.REGIONAL_COORDINATOR
+                ).values('user__full_name')[:1]
+            ),
+        ).order_by('id')
+
+        return {
+            'headers': headers,
+            'data': subregions.values(*[header for header in headers.keys()]),
+            'formulae': None,
+            'transformer': None,
+        }
+
     @property
     def unmonitored_countries_count(self) -> int:
         country_portfolios = Portfolio.objects.filter(

@@ -341,3 +341,10 @@ ActorFilterDataType, ActorFilterDataInputType = generate_type_for_filter_set(
     'ActorFilterDataType',
     'ActorFilterDataInputType',
 )
+
+ContextOfViolenceFilterDataType, ContextOfViolenceFilterDataInputType = generate_type_for_filter_set(
+    ContextOfViolenceFilter,
+    'event.schema.context_of_violence_list',
+    'ContextOfViolenceFilterDataType',
+    'ContextOfViolenceFilterDataInputType',
+)
