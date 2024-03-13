@@ -63,7 +63,6 @@ class User(AbstractUser):
             is_reporting_team='Reporting Team',
             is_active='Active',
         )
-        excluded_headers = ['is_admin', 'is_directors_office', 'is_reporting_team']
 
         users = UserFilter(
             data=filters,
@@ -86,7 +85,7 @@ class User(AbstractUser):
                 'is_reporting_team': role_label_map.get(datum['portfolios__role'], role_label_map['default']),
                 'is_active': 'Yes' if datum['is_active'] else 'No',
             }
-
+        excluded_headers = ['is_admin', 'is_directors_office', 'is_reporting_team']
         filtered_headers = [header for header in headers.keys() if header not in excluded_headers]
 
         return {

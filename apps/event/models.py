@@ -55,6 +55,33 @@ class ContextOfViolence(MetaInformationAbstractModel, NameAttributedModels):
     """
     Holds the context of violence
     """
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.event.filters import ContextOfViolenceFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='ID',
+            created_at='Created at',
+            created_by__full_name='Created by',
+            name='Name',
+            modified_at='Modified At',
+            last_modified_by__full_name='Last Modified By',
+        )
+        data = ContextOfViolenceFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.order_by('created_at')
+
+        return {
+            'headers': headers,
+            'data': data.values(*[header for header in headers.keys()]),
+            'formulae': None,
+            'transformer': None,
+        }
 
 
 class OtherSubType(MetaInformationAbstractModel, NameAttributedModels):

@@ -8,7 +8,7 @@ from apps.country.schema import (
     SummaryType,
     ContextualAnalysisType,
 )
-from apps.country.filters import CountryFilterDataInputType
+from apps.country.filters import CountryFilterDataInputType, MonitoringSubRegionFilterDataInputType
 from apps.country.serializers import SummarySerializer, ContextualAnalysisSerializer
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 
@@ -75,7 +75,14 @@ class ExportCountries(ExportBaseMutation):
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.COUNTRY
 
 
+class ExportMonitoringSubRegion(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
+        filters = MonitoringSubRegionFilterDataInputType(required=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.MONITORING_SUB_REGION
+
+
 class Mutation:
     create_summary = CreateSummary.Field()
     create_contextual_analysis = CreateContextualAnalysis.Field()
     export_countries = ExportCountries.Field()
+    export_monitoring_sub_region = ExportMonitoringSubRegion.Field()

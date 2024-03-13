@@ -8,7 +8,11 @@ from utils.mutation import generate_input_type_for_serializer
 from apps.contrib.models import ExcelDownload
 from apps.contrib.mutations import ExportBaseMutation
 from apps.event.models import Event, Actor, ContextOfViolence
-from apps.event.filters import ActorFilterDataInputType, EventFilterDataInputType
+from apps.event.filters import (
+    ActorFilterDataInputType,
+    EventFilterDataInputType,
+    ContextOfViolenceFilterDataInputType,
+)
 from apps.event.schema import EventType, ActorType, ContextOfViolenceType
 from apps.event.serializers import (
     EventSerializer,
@@ -551,6 +555,12 @@ class SignOffEvent(graphene.Mutation):
         return SignOffEvent(result=event, errors=None, ok=True)
 
 
+class ExportContextOfViolence(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
+        filters = ContextOfViolenceFilterDataInputType(required=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.CONTEXT_OF_VIOLENCE
+
+
 class Mutation(object):
     create_event = CreateEvent.Field()
     update_event = UpdateEvent.Field()
@@ -565,6 +575,7 @@ class Mutation(object):
     # exports
     export_events = ExportEvents.Field()
     export_actors = ExportActors.Field()
+    export_context_of_violence = ExportContextOfViolence.Field()
     clone_event = CloneEvent.Field()
 
     # review related
