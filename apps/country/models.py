@@ -135,7 +135,7 @@ class MonitoringSubRegion(models.Model):
             id='ID',
             name='Region Name',
             regional_coordinator='Regional Coordinator',
-            monitoring_experts_count='No. of Monitoring Experts',
+            monitoring_expert_count='No. of Monitoring Experts',
             countries_count='No. of Countries',
             unmonitored_countries_count='No. of Unmonitored Countries',
             unmonitored_countries='Unmonitored Countries',
@@ -152,7 +152,17 @@ class MonitoringSubRegion(models.Model):
                     role=USER_ROLE.REGIONAL_COORDINATOR
                 ).values('user__full_name')[:1]
             ),
-            monitoring_experts_count=models.Count('portfolios', filters=models.Q(role=USER_ROLE.MONITORING_EXPERT)),
+            monitoring_expert_count=models.Subquery(
+                Portfolio.objects.filter(
+                    monitoring_sub_region=models.OuterRef('pk'),
+                    role=USER_ROLE.MONITORING_EXPERT
+                ).values(
+                    'monitoring_sub_region'
+                ).annotate(
+                    monitoring_expert_count=Count('monitoring_sub_region')
+                ).values('monitoring_expert_count')[:1],
+                output_field=models.IntegerField()
+            ),
             unmonitored_countries=StringAgg(
                 'portfolios__country__name',
                 EXTERNAL_ARRAY_SEPARATOR,
