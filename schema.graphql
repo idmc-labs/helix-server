@@ -1019,6 +1019,8 @@ enum DOWNLOAD_TYPES {
   PARKING_LOT
   FIGURE_TAG
   USER
+  CONTEXT_OF_VIOLENCE
+  MONITORING_SUB_REGION
 }
 
 scalar Date
@@ -1675,6 +1677,11 @@ type ExportContacts {
   ok: Boolean
 }
 
+type ExportContextOfViolence {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
 type ExportCountries {
   errors: [GenericScalar!]
   ok: Boolean
@@ -1701,6 +1708,11 @@ type ExportFigureTags {
 }
 
 type ExportFigures {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportMonitoringSubRegion {
   errors: [GenericScalar!]
   ok: Boolean
 }
@@ -2609,6 +2621,7 @@ type Mutation {
   deleteContextOfViolence(id: ID!): DeleteContextOfViolence
   exportEvents(filters: EventFilterDataInputType!): ExportEvents
   exportActors(filters: ActorFilterDataInputType!): ExportActors
+  exportContextOfViolence(filters: ContextOfViolenceFilterDataInputType!): ExportContextOfViolence
   cloneEvent(data: CloneEventInputType!): CloneEvent
   setAssigneeToEvent(eventId: ID!, userId: ID!): SetAssigneeToEvent
   setSelfAssigneeToEvent(eventId: ID!): SetSelfAssigneeToEvent
@@ -2629,6 +2642,7 @@ type Mutation {
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
   exportCountries(filters: CountryFilterDataInputType!): ExportCountries
+  exportMonitoringSubRegion(filters: MonitoringSubRegionFilterDataInputType!): ExportMonitoringSubRegion
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
   createClient(data: clientCreateInputType!): CreateClient
   updateClient(data: ClientUpdateInputType!): UpdateClient
