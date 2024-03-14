@@ -555,7 +555,7 @@ class SignOffEvent(graphene.Mutation):
         return SignOffEvent(result=event, errors=None, ok=True)
 
 
-class ExportContextOfViolence(ExportBaseMutation):
+class ExportContextOfViolences(ExportBaseMutation):
     class Arguments(ExportBaseMutation.Arguments):
         filters = ContextOfViolenceFilterDataInputType(required=True)
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.CONTEXT_OF_VIOLENCE
@@ -575,7 +575,7 @@ class Mutation(object):
     # exports
     export_events = ExportEvents.Field()
     export_actors = ExportActors.Field()
-    export_context_of_violence = ExportContextOfViolence.Field()
+    export_context_of_violences = ExportContextOfViolences.Field()
     clone_event = CloneEvent.Field()
 
     # review related
