@@ -1677,7 +1677,7 @@ type ExportContacts {
   ok: Boolean
 }
 
-type ExportContextOfViolence {
+type ExportContextOfViolences {
   errors: [GenericScalar!]
   ok: Boolean
 }
@@ -1712,7 +1712,7 @@ type ExportFigures {
   ok: Boolean
 }
 
-type ExportMonitoringSubRegion {
+type ExportMonitoringSubRegions {
   errors: [GenericScalar!]
   ok: Boolean
 }
@@ -2621,7 +2621,7 @@ type Mutation {
   deleteContextOfViolence(id: ID!): DeleteContextOfViolence
   exportEvents(filters: EventFilterDataInputType!): ExportEvents
   exportActors(filters: ActorFilterDataInputType!): ExportActors
-  exportContextOfViolence(filters: ContextOfViolenceFilterDataInputType!): ExportContextOfViolence
+  exportContextOfViolences(filters: ContextOfViolenceFilterDataInputType!): ExportContextOfViolences
   cloneEvent(data: CloneEventInputType!): CloneEvent
   setAssigneeToEvent(eventId: ID!, userId: ID!): SetAssigneeToEvent
   setSelfAssigneeToEvent(eventId: ID!): SetSelfAssigneeToEvent
@@ -2642,7 +2642,7 @@ type Mutation {
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
   exportCountries(filters: CountryFilterDataInputType!): ExportCountries
-  exportMonitoringSubRegion(filters: MonitoringSubRegionFilterDataInputType!): ExportMonitoringSubRegion
+  exportMonitoringSubRegions(filters: MonitoringSubRegionFilterDataInputType!): ExportMonitoringSubRegions
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
   createClient(data: clientCreateInputType!): CreateClient
   updateClient(data: ClientUpdateInputType!): UpdateClient
@@ -2669,7 +2669,7 @@ type Mutation {
   updateAdminPortfolio(data: AdminPortfolioInputType!): UpdateAdminPortfolio
   updateDirectorsOfficePortfolio(data: DirectorsOfficePortfolioInputType!): UpdateDirectorsOfficePortfolio
   updateReportingTeamPortfolio(data: ReportingTeamPortfolioInputType!): UpdateReportingTeamPortfolio
-  exportUser(filters: UserFilterDataInputType!): ExportUsers
+  exportUsers(filters: UserFilterDataInputType!): ExportUsers
 }
 
 input NotificationFilterDataInputType {

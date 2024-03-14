@@ -6,7 +6,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
 from django.db.models.query import QuerySet
-from django.db.models import Count, OuterRef
+from django.db.models import Count, OuterRef, Case, When
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -17,7 +17,7 @@ from apps.entry.models import Entry, Figure
 from apps.crisis.models import Crisis
 from apps.users.models import User, Portfolio
 from apps.users.enums import USER_ROLE
-from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR, EXTERNAL_TUPLE_SEPARATOR
 from utils.fields import generate_full_media_url
 
 
@@ -150,26 +150,28 @@ class MonitoringSubRegion(models.Model):
                 Portfolio.objects.filter(
                     monitoring_sub_region=models.OuterRef('pk'),
                     role=USER_ROLE.REGIONAL_COORDINATOR
-                ).values('user__full_name')[:1]
+                ).order_by('id').values('user__full_name')[:1]
             ),
             monitoring_expert_count=models.Subquery(
                 Portfolio.objects.filter(
-                    monitoring_sub_region=models.OuterRef('pk'),
-                    role=USER_ROLE.MONITORING_EXPERT
+                    models.Q(monitoring_sub_region=models.OuterRef('pk')) & models.Q(role=USER_ROLE.MONITORING_EXPERT),
                 ).values(
                     'monitoring_sub_region'
                 ).annotate(
-                    monitoring_expert_count=Count('monitoring_sub_region')
-                ).values('monitoring_expert_count')[:1],
+                    monitoring_expert_count=Count('user', distinct=True)
+                ).order_by('id').values('monitoring_expert_count')[:1],
                 output_field=models.IntegerField()
             ),
             unmonitored_countries=StringAgg(
-                'portfolios__country__name',
-                EXTERNAL_ARRAY_SEPARATOR,
+                Case(
+                    When(
+                        models.Q(portfolios__role=USER_ROLE.MONITORING_EXPERT) & models.Q(portfolios__country__isnull=True),
+                        then="portfolios__country__name"
+                    ),
+                ),
+                delimiter=EXTERNAL_TUPLE_SEPARATOR,
                 distinct=True,
-                output_field=models.CharField(),
-                filters=models.Q(portfolios__role=USER_ROLE.MONITORING_EXPERT)
-            ),
+            )
         ).order_by('id')
 
         return {

@@ -435,4 +435,4 @@ class Mutation(object):
     update_reporting_team_portfolio = UpdateReportingTeamPortfolio.Field()
     # end portfolio
     # exports
-    export_user = ExportUsers.Field()
+    export_users = ExportUsers.Field()

@@ -75,7 +75,7 @@ class ExportCountries(ExportBaseMutation):
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.COUNTRY
 
 
-class ExportMonitoringSubRegion(ExportBaseMutation):
+class ExportMonitoringSubRegions(ExportBaseMutation):
     class Arguments(ExportBaseMutation.Arguments):
         filters = MonitoringSubRegionFilterDataInputType(required=True)
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.MONITORING_SUB_REGION
@@ -85,4 +85,4 @@ class Mutation:
     create_summary = CreateSummary.Field()
     create_contextual_analysis = CreateContextualAnalysis.Field()
     export_countries = ExportCountries.Field()
-    export_monitoring_sub_region = ExportMonitoringSubRegion.Field()
+    export_monitoring_sub_regions = ExportMonitoringSubRegions.Field()

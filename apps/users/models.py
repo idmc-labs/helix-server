@@ -7,6 +7,7 @@ from django.db import models
 from django.db.models.constraints import UniqueConstraint
 from django.db.models.query import QuerySet
 from django.contrib.auth.models import AbstractUser, Group
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
@@ -57,7 +58,7 @@ class User(AbstractUser):
             id='ID',
             date_joined='Date Joined',
             full_name='Name',
-            portfolios__role='Role',
+            portfolio_role='Role',
             is_admin='Admin',
             is_directors_office="Director's Office",
             is_reporting_team='Reporting Team',
@@ -67,7 +68,22 @@ class User(AbstractUser):
         users = UserFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
-        ).qs.order_by('date_joined')
+        ).qs.annotate(
+            portfolio_roles=ArrayAgg(models.F('portfolios__role'), distinct=True),
+        ).annotate(
+            portfolio_role=models.Case(
+                models.When(
+                    portfolio_roles__overlap=[USER_ROLE.REGIONAL_COORDINATOR.value],
+                    then=USER_ROLE.REGIONAL_COORDINATOR.value
+                ),
+                models.When(
+                    portfolio_roles__overlap=[USER_ROLE.MONITORING_EXPERT.value],
+                    then=USER_ROLE.MONITORING_EXPERT.value
+                ),
+                default=USER_ROLE.GUEST.value,
+                output_field=models.IntegerField(),
+            ),
+        ).order_by('date_joined')
 
         def transformer(datum):
             role_label_map = {
@@ -79,10 +95,10 @@ class User(AbstractUser):
 
             return {
                 **datum,
-                'portfolios__role': USER_ROLE.get(datum['portfolios__role']).label,
-                'is_admin': role_label_map.get(datum['portfolios__role'], role_label_map['default']),
-                'is_directors_office': role_label_map.get(datum['portfolios__role'], role_label_map['default']),
-                'is_reporting_team': role_label_map.get(datum['portfolios__role'], role_label_map['default']),
+                'portfolio_role': USER_ROLE.get(datum['portfolio_role']).label,
+                'is_admin': role_label_map.get(datum['portfolio_role'], role_label_map['default']),
+                'is_directors_office': role_label_map.get(datum['portfolio_role'], role_label_map['default']),
+                'is_reporting_team': role_label_map.get(datum['portfolio_role'], role_label_map['default']),
                 'is_active': 'Yes' if datum['is_active'] else 'No',
             }
         excluded_headers = ['is_admin', 'is_directors_office', 'is_reporting_team']
