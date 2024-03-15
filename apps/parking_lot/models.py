@@ -79,8 +79,8 @@ class ParkedItem(MetaInformationAbstractModel):
         headers = OrderedDict(
             id='ID',
             created_at='Date Created',
-            created_by='Created by',
-            assigned_to='Assignee',
+            created_by__full_name='Created by',
+            assigned_to__full_name='Assignee',
             title='Title',
             status='Status',
             url='Url',
