@@ -1,4 +1,5 @@
 from __future__ import annotations
+import typing
 import logging
 from collections import OrderedDict
 
@@ -34,7 +35,7 @@ class User(AbstractUser):
     @classmethod
     def can_update_user(cls, user_id: int, authenticated_user: User) -> bool:
         return authenticated_user.has_perm('users.change_user') or\
-            user_id == authenticated_user.id
+            user_id == authenticated_user.pk
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
@@ -236,7 +237,7 @@ class Portfolio(models.Model):
         )
 
     @classmethod
-    def get_coordinator(cls, ms_region: int) -> Portfolio:
+    def get_coordinator(cls, ms_region: int) -> typing.Optional[Portfolio]:
         """Only one coordinator per region"""
         return cls.get_coordinators().filter(
             monitoring_sub_region=ms_region
@@ -244,7 +245,7 @@ class Portfolio(models.Model):
 
     @classmethod
     def get_highest_role(cls, user: User) -> USER_ROLE:
-        # region based role is not required
+        # -- region based role is not required
         roles = list(user.portfolios.values_list('role', flat=True))
 
         if USER_ROLE.ADMIN in roles:

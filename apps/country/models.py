@@ -1,4 +1,4 @@
-from typing import Union
+import typing
 from datetime import datetime
 
 from collections import OrderedDict
@@ -6,7 +6,7 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
 from django.db.models.query import QuerySet
-from django.db.models import Count, OuterRef, Case, When
+from django.db.models import Count, OuterRef
 from django.contrib.postgres.fields import ArrayField
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
@@ -123,6 +123,8 @@ class CountryRegion(models.Model):
 class MonitoringSubRegion(models.Model):
     name = models.CharField(verbose_name=_('Name'), max_length=256)
 
+    countries: models.QuerySet['Country']
+
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
         from apps.country.filters import MonitoringSubRegionFilter
@@ -136,42 +138,63 @@ class MonitoringSubRegion(models.Model):
             name='Region Name',
             regional_coordinator='Regional Coordinator',
             monitoring_expert_count='No. of Monitoring Experts',
+            monitoring_experts='Monitoring Experts',
             countries_count='No. of Countries',
+            monitored_countries='Monitored Countries',
             unmonitored_countries_count='No. of Unmonitored Countries',
             unmonitored_countries='Unmonitored Countries',
         )
+
+        unmonitored_countries_qs = Country.objects.filter(
+            monitoring_sub_region=models.OuterRef('pk'),
+        ).exclude(
+            portfolio__role=USER_ROLE.MONITORING_EXPERT,
+        )
+
         subregions = MonitoringSubRegionFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.annotate(
-            countries_count=Count('countries', distinct=True),
-            unmonitored_countries_count=models.Count('countries', filter=models.Q(countries__isnull=True)),
-            regional_coordinator=models.Subquery(
-                Portfolio.objects.filter(
-                    monitoring_sub_region=models.OuterRef('pk'),
-                    role=USER_ROLE.REGIONAL_COORDINATOR
-                ).order_by('id').values('user__full_name')[:1]
-            ),
-            monitoring_expert_count=models.Subquery(
-                Portfolio.objects.filter(
-                    models.Q(monitoring_sub_region=models.OuterRef('pk')) & models.Q(role=USER_ROLE.MONITORING_EXPERT),
-                ).values(
-                    'monitoring_sub_region'
-                ).annotate(
-                    monitoring_expert_count=Count('user', distinct=True)
-                ).order_by('id').values('monitoring_expert_count')[:1],
-                output_field=models.IntegerField()
-            ),
-            unmonitored_countries=StringAgg(
-                Case(
-                    When(
-                        models.Q(portfolios__role=USER_ROLE.MONITORING_EXPERT) & models.Q(portfolios__country__isnull=True),
-                        then="portfolios__country__name"
-                    ),
-                ),
-                delimiter=EXTERNAL_TUPLE_SEPARATOR,
+            # User stats
+            monitoring_experts=StringAgg(
+                'portfolios__user__full_name',
+                EXTERNAL_TUPLE_SEPARATOR,
+                filter=models.Q(portfolios__role=USER_ROLE.MONITORING_EXPERT),
                 distinct=True,
-            )
+            ),
+            monitoring_expert_count=Count(
+                'portfolios__user',
+                filter=models.Q(portfolios__role=USER_ROLE.MONITORING_EXPERT),
+                distinct=True,
+            ),
+            regional_coordinator=StringAgg(
+                'portfolios__user__full_name',
+                EXTERNAL_TUPLE_SEPARATOR,
+                filter=models.Q(portfolios__role=USER_ROLE.REGIONAL_COORDINATOR),
+                distinct=True,
+            ),
+            # Country stats
+            countries_count=Count('countries', distinct=True),
+            monitored_countries=StringAgg(
+                'portfolios__country__idmc_full_name',
+                EXTERNAL_TUPLE_SEPARATOR,
+                filter=models.Q(portfolios__role=USER_ROLE.MONITORING_EXPERT),
+                distinct=True,
+            ),
+            unmonitored_countries=models.Subquery(
+                unmonitored_countries_qs.order_by().values('monitoring_sub_region').annotate(
+                    country_names=StringAgg(
+                        'idmc_full_name',
+                        EXTERNAL_TUPLE_SEPARATOR,
+                        distinct=True,
+                    ),
+                ).values('country_names')[:1],
+            ),
+            unmonitored_countries_count=models.Subquery(
+                unmonitored_countries_qs.order_by().values('monitoring_sub_region').annotate(
+                    count=models.Count('id', distinct=True),
+                ).values('count')[:1],
+            ),
         ).order_by('id')
 
         return {
@@ -204,7 +227,7 @@ class MonitoringSubRegion(models.Model):
         return EXTERNAL_ARRAY_SEPARATOR.join(q.values_list('idmc_short_name', flat=True))
 
     @property
-    def regional_coordinator(self) -> Union[Portfolio, None]:
+    def regional_coordinator(self) -> typing.Optional[Portfolio]:
         if Portfolio.objects.filter(monitoring_sub_region=self,
                                     role=USER_ROLE.REGIONAL_COORDINATOR).exists():
             return Portfolio.objects.get(monitoring_sub_region=self,
@@ -263,6 +286,9 @@ class Country(models.Model):
     idmc_short_name_es = models.CharField(verbose_name=_('IDMC Short Name Es'), max_length=256, null=True)
     idmc_short_name_fr = models.CharField(verbose_name=_('IDMC Short Name Fr'), max_length=256, null=True)
     idmc_short_name_ar = models.CharField(verbose_name=_('IDMC Short Name Ar'), max_length=256, null=True)
+
+    contextual_analyses: models.QuerySet['ContextualAnalysis']
+    summaries: models.QuerySet['Summary']
 
     @classmethod
     def _total_figure_disaggregation_subquery(
@@ -429,7 +455,7 @@ class Country(models.Model):
 
     @property
     def entries(self) -> QuerySet:
-        return Entry.objects.filter(figures__event__countries=self.id).distinct()
+        return Entry.objects.filter(figures__event__countries=self.pk).distinct()
 
     @property
     def last_contextual_analysis(self):
@@ -440,7 +466,7 @@ class Country(models.Model):
         return self.monitoring_sub_region.regional_coordinator
 
     @property
-    def monitoring_expert(self) -> Portfolio:
+    def monitoring_expert(self) -> typing.Optional[Portfolio]:
         return Portfolio.objects.filter(
             country=self,
             role=USER_ROLE.MONITORING_EXPERT,

@@ -232,7 +232,7 @@ class DisaggregatedAge(models.Model):
     age_to = models.PositiveIntegerField(blank=True, null=True, verbose_name=_('Age To'))
 
     def __str__(self):
-        return str(self.id)
+        return str(self.pk)
 
 
 class Figure(MetaInformationArchiveAbstractModel,
