@@ -1,5 +1,6 @@
 import typing
 from datetime import datetime
+from django.db.models.functions import Coalesce
 
 from collections import OrderedDict
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -190,11 +191,11 @@ class MonitoringSubRegion(models.Model):
                     ),
                 ).values('country_names')[:1],
             ),
-            unmonitored_countries_count=models.Subquery(
+            unmonitored_countries_count=Coalesce(models.Subquery(
                 unmonitored_countries_qs.order_by().values('monitoring_sub_region').annotate(
                     count=models.Count('id', distinct=True),
                 ).values('count')[:1],
-            ),
+            ), 0),
         ).order_by('id')
 
         return {
