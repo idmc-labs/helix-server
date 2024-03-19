@@ -68,8 +68,9 @@ class User(AbstractUser):
         users = UserFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
-        ).qs.annotate(
+        ).qs.order_by('date_joined').annotate(
             portfolio_roles=ArrayAgg(models.F('portfolios__role'), distinct=True),
+            roles=ArrayAgg(models.F('portfolios__role'), distinct=True),
         ).annotate(
             portfolio_role=models.Case(
                 models.When(
@@ -83,26 +84,24 @@ class User(AbstractUser):
                 default=USER_ROLE.GUEST.value,
                 output_field=models.IntegerField(),
             ),
-        ).order_by('date_joined')
+        )
+
+        ROLE_TO_HEADER_MAPPING = {
+            USER_ROLE.ADMIN: 'is_admin',
+            USER_ROLE.DIRECTORS_OFFICE: 'is_directors_office',
+            USER_ROLE.REPORTING_TEAM: 'is_reporting_team',
+        }
 
         def transformer(datum):
-            role_label_map = {
-                USER_ROLE.ADMIN: 'Yes',
-                USER_ROLE.DIRECTORS_OFFICE: 'Yes',
-                USER_ROLE.REPORTING_TEAM: 'Yes',
-                'default': 'No'
-            }
+            transformed_data = {**datum, 'portfolio_role': USER_ROLE.get(datum['portfolio_role']).label}
+            for role, header in ROLE_TO_HEADER_MAPPING.items():
+                transformed_data[header] = "Yes" if role in datum['roles'] else "No"
+            transformed_data['is_active'] = 'Yes' if datum['is_active'] else 'No'
+            return transformed_data
 
-            return {
-                **datum,
-                'portfolio_role': USER_ROLE.get(datum['portfolio_role']).label,
-                'is_admin': role_label_map.get(datum['portfolio_role'], role_label_map['default']),
-                'is_directors_office': role_label_map.get(datum['portfolio_role'], role_label_map['default']),
-                'is_reporting_team': role_label_map.get(datum['portfolio_role'], role_label_map['default']),
-                'is_active': 'Yes' if datum['is_active'] else 'No',
-            }
         excluded_headers = ['is_admin', 'is_directors_office', 'is_reporting_team']
         filtered_headers = [header for header in headers.keys() if header not in excluded_headers]
+        filtered_headers.append('roles')
 
         return {
             'headers': headers,
