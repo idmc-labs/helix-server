@@ -4,6 +4,7 @@ import csv
 from functools import lru_cache
 from io import StringIO
 from django.db import migrations
+from django.conf import settings
 
 CSV_DATE = '''
 figure_old_id,event_old_id,figure_role
@@ -392,6 +393,9 @@ def get_obj_by_old_id(Model, old_id):
 
 
 def update_figure_event_data(apps, _):
+    if settings.TESTING:
+        return
+
     Figure = apps.get_model('entry', 'Figure')
     Event = apps.get_model('event', 'Event')
     reader = csv.DictReader(

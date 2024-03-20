@@ -124,7 +124,7 @@ class BulkApiOperationAdmin(ReadOnlyMixin, admin.ModelAdmin):
             try:
                 _errors = []
                 for error in errors:
-                    if type(error) is list:
+                    if isinstance(error, list):
                         _errors.append(_errors_to_str(error))
                     else:
                         _errors.append(
