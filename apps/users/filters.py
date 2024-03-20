@@ -6,7 +6,11 @@ from django.db.models import Min
 
 from apps.users.models import User, Portfolio
 from apps.users.enums import USER_ROLE
-from utils.filters import StringListFilter, IDListFilter
+from utils.filters import (
+    StringListFilter,
+    IDListFilter,
+    generate_type_for_filter_set,
+)
 
 
 class UserFilter(django_filters.FilterSet):
@@ -96,3 +100,11 @@ class ReviewerUserFilter(UserFilter):
         return super().qs.filter(
             groups__permissions__id=Permission.objects.get(codename='add_review').id
         )
+
+
+UserFilterDataType, UserFilterDataInputType = generate_type_for_filter_set(
+    UserFilter,
+    'users.schema.users',
+    'UserFilterDataType',
+    'UserFilterDataInputType',
+)

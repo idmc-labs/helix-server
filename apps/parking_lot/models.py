@@ -1,8 +1,12 @@
+from collections import OrderedDict
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 from django.db.models import JSONField
+from django.contrib.auth import get_user_model
 from apps.contrib.models import MetaInformationAbstractModel
+
+User = get_user_model()
 
 
 class ParkedItem(MetaInformationAbstractModel):
@@ -54,3 +58,55 @@ class ParkedItem(MetaInformationAbstractModel):
 
     def __str__(self):
         return f'{self.country.name} - {self.title}'
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.parking_lot.filters import ParkingLotFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        qs = ParkingLotFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs
+        return cls.get_parking_lot_excel_sheets_data(qs)
+
+    @classmethod
+    def get_parking_lot_excel_sheets_data(cls, parking_lot: models.QuerySet):
+
+        headers = OrderedDict(
+            id='ID',
+            created_at='Date Created',
+            created_by__full_name='Created by',
+            assigned_to__full_name='Assignee',
+            title='Title',
+            status='Status',
+            url='Url',
+            comments='Comments',
+        )
+        values = parking_lot.order_by(
+            'created_at',
+        ).values(*[header for header in headers.keys()])
+
+        def transformer(datum):
+
+            def get_enum_label(key, Enum):
+                val = datum[key]
+                obj = Enum.get(val)
+                return getattr(obj, "label", val)
+
+            return {
+                **datum,
+                'status': get_enum_label(
+                    'status', ParkedItem.PARKING_LOT_STATUS
+                )
+            }
+
+        return {
+            'headers': headers,
+            'data': values,
+            'formulae': None,
+            'transformer': transformer,
+        }

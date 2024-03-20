@@ -214,3 +214,11 @@ CountryFilterDataType, CountryFilterDataInputType = generate_type_for_filter_set
         'aggregate_figures': graphene.Field(CountryFigureAggregateFilterDataType),
     },
 )
+
+
+MonitoringSubRegionFilterDataType, MonitoringSubRegionFilterDataInputType = generate_type_for_filter_set(
+    MonitoringSubRegionFilter,
+    'country.schema.monitoring_sub_region_list',
+    'MonitoringSubRegionFilterDataType',
+    'MonitoringSubRegionFilterDataInputType',
+)

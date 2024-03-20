@@ -1016,6 +1016,11 @@ enum DOWNLOAD_TYPES {
   ACTOR
   INDIVIDUAL_REPORT
   TRACKING_DATA
+  PARKING_LOT
+  FIGURE_TAG
+  USER
+  CONTEXT_OF_VIOLENCE
+  MONITORING_SUB_REGION
 }
 
 scalar Date
@@ -1672,6 +1677,11 @@ type ExportContacts {
   ok: Boolean
 }
 
+type ExportContextOfViolences {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
 type ExportCountries {
   errors: [GenericScalar!]
   ok: Boolean
@@ -1692,12 +1702,27 @@ type ExportEvents {
   ok: Boolean
 }
 
+type ExportFigureTags {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
 type ExportFigures {
   errors: [GenericScalar!]
   ok: Boolean
 }
 
+type ExportMonitoringSubRegions {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
 type ExportOrganizations {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportParkedItem {
   errors: [GenericScalar!]
   ok: Boolean
 }
@@ -1714,6 +1739,11 @@ type ExportReports {
 }
 
 type ExportTrackingData {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportUsers {
   errors: [GenericScalar!]
   ok: Boolean
 }
@@ -2540,6 +2570,7 @@ type Mutation {
   createParkedItem(data: ParkedItemCreateInputType!): CreateParkedItem
   updateParkedItem(data: ParkedItemUpdateInputType!): UpdateParkedItem
   deleteParkedItem(id: ID!): DeleteParkedItem
+  exportParkedItem(filters: ParkingLotFilterDataInputType!): ExportParkedItem
   createReviewComment(data: UnifiedReviewCommentCreateInputType!): CreateUnifiedReviewComment
   updateReviewComment(data: UnifiedReviewCommentUpdateInputType!): UpdateUnifiedReviewComment
   deleteReviewComment(id: ID!): DeleteUnifiedReviewComment
@@ -2573,6 +2604,7 @@ type Mutation {
   deleteFigureTag(id: ID!): DeleteFigureTag
   exportEntries(filters: EntryExtractionFilterDataInputType!): ExportEntries
   exportFigures(filters: FigureExtractionFilterDataInputType!): ExportFigures
+  exportFigureTags(filters: FigureTagFilterDataInputType!): ExportFigureTags
   bulkUpdateFigures(deleteIds: [ID!], items: [FigureUpdateInputType!]): BulkUpdateFigures
   deleteFigure(id: ID!): DeleteFigure
   approveFigure(id: ID!): ApproveFigure
@@ -2589,6 +2621,7 @@ type Mutation {
   deleteContextOfViolence(id: ID!): DeleteContextOfViolence
   exportEvents(filters: EventFilterDataInputType!): ExportEvents
   exportActors(filters: ActorFilterDataInputType!): ExportActors
+  exportContextOfViolences(filters: ContextOfViolenceFilterDataInputType!): ExportContextOfViolences
   cloneEvent(data: CloneEventInputType!): CloneEvent
   setAssigneeToEvent(eventId: ID!, userId: ID!): SetAssigneeToEvent
   setSelfAssigneeToEvent(eventId: ID!): SetSelfAssigneeToEvent
@@ -2609,6 +2642,7 @@ type Mutation {
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
   exportCountries(filters: CountryFilterDataInputType!): ExportCountries
+  exportMonitoringSubRegions(filters: MonitoringSubRegionFilterDataInputType!): ExportMonitoringSubRegions
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
   createClient(data: clientCreateInputType!): CreateClient
   updateClient(data: ClientUpdateInputType!): UpdateClient
@@ -2635,6 +2669,7 @@ type Mutation {
   updateAdminPortfolio(data: AdminPortfolioInputType!): UpdateAdminPortfolio
   updateDirectorsOfficePortfolio(data: DirectorsOfficePortfolioInputType!): UpdateDirectorsOfficePortfolio
   updateReportingTeamPortfolio(data: ReportingTeamPortfolioInputType!): UpdateReportingTeamPortfolio
+  exportUsers(filters: UserFilterDataInputType!): ExportUsers
 }
 
 input NotificationFilterDataInputType {

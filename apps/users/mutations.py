@@ -3,6 +3,8 @@ from django.utils.translation import gettext
 from django.conf import settings
 import graphene
 
+from apps.contrib.models import ExcelDownload
+from apps.contrib.mutations import ExportBaseMutation
 from apps.country.models import MonitoringSubRegion
 from apps.users.schema import UserType, PortfolioType
 from apps.users.models import User, Portfolio
@@ -22,6 +24,7 @@ from apps.users.serializers import (
     ReportingTeamPortfolioSerializer,
 )
 from utils.permissions import is_authenticated, permission_checker
+from apps.users.filters import UserFilterDataInputType
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.mutation import generate_input_type_for_serializer
 from utils.validations import MissingCaptchaException
@@ -405,6 +408,15 @@ class UpdateReportingTeamPortfolio(graphene.Mutation):
         return UpdateReportingTeamPortfolio(result=user, errors=None, ok=True)
 
 
+class ExportUsers(ExportBaseMutation):
+    """
+    Mutation to export user data based on provided filters.
+    """
+    class Arguments:
+        filters = UserFilterDataInputType(required=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.USER
+
+
 class Mutation(object):
     login = Login.Field()
     register = Register.Field()
@@ -422,3 +434,5 @@ class Mutation(object):
     update_directors_office_portfolio = UpdateDirectorsOfficePortfolio.Field()
     update_reporting_team_portfolio = UpdateReportingTeamPortfolio.Field()
     # end portfolio
+    # exports
+    export_users = ExportUsers.Field()

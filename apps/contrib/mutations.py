@@ -1,10 +1,14 @@
 import graphene
+import typing
 from graphene_file_upload.scalars import Upload
 from django.utils.translation import gettext
 from utils.mutation import generate_input_type_for_serializer
 
-from apps.contrib.serializers import ExcelDownloadSerializer
 from utils.common import convert_date_object_to_string_in_dict
+from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.permissions import is_authenticated, permission_checker
+from apps.contrib.serializers import ExcelDownloadSerializer
+from apps.contrib.models import ExcelDownload
 from apps.contrib.schema import AttachmentType, ClientType, BulkApiOperationObjectType
 from apps.contrib.bulk_operations.serializers import BulkApiOperationSerializer
 from apps.contrib.serializers import (
@@ -16,8 +20,6 @@ from apps.contrib.models import (
     Client,
 )
 from .filters import ClientTrackInfoFilterDataInputType
-from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import is_authenticated, permission_checker
 
 
 BulkApiOperationInputType = generate_input_type_for_serializer(
@@ -111,28 +113,48 @@ class UpdateClient(graphene.Mutation):
         return UpdateClient(result=instance, errors=None, ok=True)
 
 
-class ExportTrackingData(graphene.Mutation):
+class ExportBaseMutation(graphene.Mutation, abstract=True):
     class Arguments:
-        filters = ClientTrackInfoFilterDataInputType(required=True)
+        ...
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
 
-    @staticmethod
-    def mutate(_, info, filters):
-        from apps.contrib.models import ExcelDownload
+    DOWNLOAD_TYPE: typing.ClassVar[ExcelDownload.DOWNLOAD_TYPES]
 
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        errors = []
+        if not hasattr(cls, 'DOWNLOAD_TYPE'):
+            errors.append(f"{cls.__name__} must have a 'DOWNLOAD_TYPE' attribute")
+        if not hasattr(cls.Arguments, 'filters'):
+            errors.append(f"{cls.__name__} must have a 'Arguments.filters' attribute")
+        elif isinstance(getattr(cls.Arguments, 'filters'), graphene.InputField):
+            errors.append(
+                f"{cls.__name__} must have a 'Arguments.filters' attribute as InputField"
+            )
+        if errors:
+            raise TypeError(errors)
+
+    @classmethod
+    def mutate(cls, _, info, filters):
         serializer = ExcelDownloadSerializer(
             data=dict(
-                download_type=int(ExcelDownload.DOWNLOAD_TYPES.TRACKING_DATA),
+                download_type=int(cls.DOWNLOAD_TYPE),
                 filters=convert_date_object_to_string_in_dict(filters),
             ),
             context=dict(request=info.context.request)
         )
         if errors := mutation_is_not_valid(serializer):
-            return ExportTrackingData(errors=errors, ok=False)
+            return cls(errors=errors, ok=False)
         serializer.save()
-        return ExportTrackingData(errors=None, ok=True)
+        return cls(errors=None, ok=True)
+
+
+class ExportTrackingData(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
+        filters = ClientTrackInfoFilterDataInputType(required=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.TRACKING_DATA
 
 
 class TriggerBulkOperation(graphene.Mutation):

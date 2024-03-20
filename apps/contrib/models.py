@@ -216,6 +216,11 @@ class ExcelDownload(MetaInformationAbstractModel):
         ACTOR = 8
         INDIVIDUAL_REPORT = 9
         TRACKING_DATA = 10
+        PARKING_LOT = 11
+        FIGURE_TAG = 12
+        USER = 13
+        CONTEXT_OF_VIOLENCE = 14
+        MONITORING_SUB_REGION = 15
 
     started_at = models.DateTimeField(
         verbose_name=_('Started at'),
@@ -267,6 +272,11 @@ class ExcelDownload(MetaInformationAbstractModel):
             self.DOWNLOAD_TYPES.ACTOR: apps.get_model('event', 'Actor'),
             self.DOWNLOAD_TYPES.INDIVIDUAL_REPORT: apps.get_model('report', 'Report'),
             self.DOWNLOAD_TYPES.TRACKING_DATA: apps.get_model('contrib', 'ClientTrackInfo'),
+            self.DOWNLOAD_TYPES.PARKING_LOT: apps.get_model('parking_lot', 'ParkedItem'),
+            self.DOWNLOAD_TYPES.FIGURE_TAG: apps.get_model('entry', 'FigureTag'),
+            self.DOWNLOAD_TYPES.USER: apps.get_model('users', 'User'),
+            self.DOWNLOAD_TYPES.CONTEXT_OF_VIOLENCE: apps.get_model('event', 'ContextOfViolence'),
+            self.DOWNLOAD_TYPES.MONITORING_SUB_REGION: apps.get_model('country', 'MonitoringSubRegion'),
         }
         model = mapper.get(self.download_type)
         if not model:

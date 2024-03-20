@@ -3,7 +3,6 @@ import graphene
 from django.utils import timezone
 from django.db import transaction
 
-from apps.contrib.models import SourcePreview
 from apps.entry.models import Entry, FigureTag, Figure
 from apps.entry.schema import (
     EntryType,
@@ -18,11 +17,14 @@ from apps.entry.serializers import (
     FigureSerializer,
 )
 from apps.extraction.filters import FigureExtractionFilterDataInputType, EntryExtractionFilterDataInputType
-from apps.contrib.serializers import SourcePreviewSerializer, ExcelDownloadSerializer
+from apps.contrib.models import SourcePreview, ExcelDownload
+from apps.contrib.mutations import ExportBaseMutation
+from apps.contrib.serializers import SourcePreviewSerializer
+from apps.extraction.filters import FigureTagFilterDataInputType
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker, is_authenticated
 from utils.mutation import generate_input_type_for_serializer, BulkUpdateMutation
-from utils.common import convert_date_object_to_string_in_dict
+
 from apps.notification.models import Notification
 from .utils import BulkUpdateFigureManager, send_figure_notifications, get_figure_notification_type
 
@@ -279,53 +281,27 @@ class DeleteFigureTag(graphene.Mutation):
         return DeleteFigureTag(result=instance, errors=None, ok=True)
 
 
-class ExportEntries(graphene.Mutation):
-    class Arguments:
+class ExportEntries(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
         filters = EntryExtractionFilterDataInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-
-    @staticmethod
-    def mutate(_, info, filters):
-        from apps.contrib.models import ExcelDownload
-
-        serializer = ExcelDownloadSerializer(
-            data=dict(
-                download_type=int(ExcelDownload.DOWNLOAD_TYPES.ENTRY),
-                filters=convert_date_object_to_string_in_dict(filters),
-            ),
-            context=dict(request=info.context.request)
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return ExportEntries(errors=errors, ok=False)
-        serializer.save()
-        return ExportEntries(errors=None, ok=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.ENTRY
 
 
-class ExportFigures(graphene.Mutation):
-    class Arguments:
+class ExportFigures(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
         # TODO: use Can we use ReportFigureExtractionFilterSet?
         filters = FigureExtractionFilterDataInputType(required=True)
 
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.FIGURE
 
-    @staticmethod
-    def mutate(_, info, filters):
-        from apps.contrib.models import ExcelDownload
 
-        serializer = ExcelDownloadSerializer(
-            data=dict(
-                download_type=int(ExcelDownload.DOWNLOAD_TYPES.FIGURE),
-                filters=convert_date_object_to_string_in_dict(filters),
-            ),
-            context=dict(request=info.context.request)
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return ExportFigures(errors=errors, ok=False)
-        serializer.save()
-        return ExportFigures(errors=None, ok=True)
+class ExportFigureTags(ExportBaseMutation):
+    """
+    Mutation to figure tags data based on provided filters.
+    """
+    class Arguments(ExportBaseMutation.Arguments):
+        filters = FigureTagFilterDataInputType(required=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.FIGURE_TAG
 
 
 class DeleteFigure(graphene.Mutation):
@@ -587,6 +563,7 @@ class Mutation(object):
     # exports
     export_entries = ExportEntries.Field()
     export_figures = ExportFigures.Field()
+    export_figure_tags = ExportFigureTags.Field()
     bulk_update_figures = BulkUpdateFigures.Field()
     # figure
     delete_figure = DeleteFigure.Field()

@@ -232,7 +232,7 @@ class DisaggregatedAge(models.Model):
     age_to = models.PositiveIntegerField(blank=True, null=True, verbose_name=_('Age To'))
 
     def __str__(self):
-        return str(self.id)
+        return str(self.pk)
 
 
 class Figure(MetaInformationArchiveAbstractModel,
@@ -1203,6 +1203,34 @@ class Figure(MetaInformationArchiveAbstractModel,
 
 class FigureTag(MetaInformationAbstractModel):
     name = models.CharField(verbose_name=_('Name'), max_length=256)
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.entry.filters import FigureTagFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='ID',
+            name='Name',
+            created_at='Created At',
+            modified_at='Modified At',
+            created_by__full_name='Created By',
+            last_modified_by__full_name='Last Modified By',
+        )
+        data = FigureTagFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.order_by('created_at')
+
+        return {
+            'headers': headers,
+            'data': data.values(*[header for header in headers.keys()]),
+            'formulae': None,
+            'transformer': None,
+        }
 
 
 class EntryReviewer(MetaInformationAbstractModel, models.Model):

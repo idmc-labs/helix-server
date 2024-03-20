@@ -1,15 +1,15 @@
-from django.utils.translation import gettext
 import graphene
+from django.utils.translation import gettext
 
-from apps.contrib.serializers import ExcelDownloadSerializer
+from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.permissions import permission_checker
+from utils.mutation import generate_input_type_for_serializer
+from apps.contrib.models import ExcelDownload
+from apps.contrib.mutations import ExportBaseMutation
 from apps.crisis.models import Crisis
 from apps.crisis.filters import CrisisFilterDataInputType
 from apps.crisis.schema import CrisisType
 from apps.crisis.serializers import CrisisSerializer, CrisisUpdateSerializer
-from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import permission_checker
-from utils.mutation import generate_input_type_for_serializer
-from utils.common import convert_date_object_to_string_in_dict
 
 CrisisCreateInputType = generate_input_type_for_serializer(
     'CrisisCreateInputType',
@@ -91,28 +91,10 @@ class DeleteCrisis(graphene.Mutation):
         return DeleteCrisis(result=instance, errors=None, ok=True)
 
 
-class ExportCrises(graphene.Mutation):
-    class Arguments:
+class ExportCrises(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
         filters = CrisisFilterDataInputType(required=True)
-
-    errors = graphene.List(graphene.NonNull(CustomErrorType))
-    ok = graphene.Boolean()
-
-    @staticmethod
-    def mutate(_, info, filters):
-        from apps.contrib.models import ExcelDownload
-
-        serializer = ExcelDownloadSerializer(
-            data=dict(
-                download_type=int(ExcelDownload.DOWNLOAD_TYPES.CRISIS),
-                filters=convert_date_object_to_string_in_dict(filters),
-            ),
-            context=dict(request=info.context.request)
-        )
-        if errors := mutation_is_not_valid(serializer):
-            return ExportCrises(errors=errors, ok=False)
-        serializer.save()
-        return ExportCrises(errors=None, ok=True)
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.CRISIS
 
 
 class Mutation(object):

@@ -1,11 +1,14 @@
 from __future__ import annotations
+import typing
 import logging
+from collections import OrderedDict
 
 from django.core.cache import cache
 from django.db import models
 from django.db.models.constraints import UniqueConstraint
 from django.db.models.query import QuerySet
 from django.contrib.auth.models import AbstractUser, Group
+from django.contrib.postgres.aggregates import ArrayAgg
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
@@ -32,7 +35,81 @@ class User(AbstractUser):
     @classmethod
     def can_update_user(cls, user_id: int, authenticated_user: User) -> bool:
         return authenticated_user.has_perm('users.change_user') or\
-            user_id == authenticated_user.id
+            user_id == authenticated_user.pk
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        """
+        Generates data for Excel sheets based on filters applied to the user queryset.
+
+        Parameters:
+            user_id: The ID of the user requesting the data.
+            filters: A dictionary of filters to apply to the user queryset.
+
+        Returns:
+            A dictionary containing headers, data, formulae, and a transformer function for Excel sheet generation.
+        """
+        from apps.users.filters import UserFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        headers = OrderedDict(
+            id='ID',
+            date_joined='Date Joined',
+            full_name='Name',
+            portfolio_role='Role',
+            is_admin='Admin',
+            is_directors_office="Director's Office",
+            is_reporting_team='Reporting Team',
+            is_active='Active',
+        )
+
+        users = UserFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs.order_by('date_joined').annotate(
+            portfolio_roles=ArrayAgg(models.F('portfolios__role'), distinct=True),
+            roles=ArrayAgg(models.F('portfolios__role'), distinct=True),
+        ).annotate(
+            portfolio_role=models.Case(
+                models.When(
+                    portfolio_roles__overlap=[USER_ROLE.REGIONAL_COORDINATOR.value],
+                    then=USER_ROLE.REGIONAL_COORDINATOR.value
+                ),
+                models.When(
+                    portfolio_roles__overlap=[USER_ROLE.MONITORING_EXPERT.value],
+                    then=USER_ROLE.MONITORING_EXPERT.value
+                ),
+                default=USER_ROLE.GUEST.value,
+                output_field=models.IntegerField(),
+            ),
+        )
+
+        ROLE_TO_HEADER_MAPPING = {
+            USER_ROLE.ADMIN: 'is_admin',
+            USER_ROLE.DIRECTORS_OFFICE: 'is_directors_office',
+            USER_ROLE.REPORTING_TEAM: 'is_reporting_team',
+        }
+
+        def transformer(datum):
+            transformed_data = {**datum, 'portfolio_role': USER_ROLE.get(datum['portfolio_role']).label}
+            for role, header in ROLE_TO_HEADER_MAPPING.items():
+                transformed_data[header] = "Yes" if role in datum['roles'] else "No"
+            transformed_data['is_active'] = 'Yes' if datum['is_active'] else 'No'
+            return transformed_data
+
+        excluded_headers = ['is_admin', 'is_directors_office', 'is_reporting_team']
+        filtered_headers = [header for header in headers.keys() if header not in excluded_headers]
+        filtered_headers.append('roles')
+
+        return {
+            'headers': headers,
+            'data': users.values(*filtered_headers),
+            'formulae': None,
+            'transformer': transformer,
+        }
 
     @staticmethod
     def _reset_login_cache(email: str):
@@ -160,7 +237,7 @@ class Portfolio(models.Model):
         )
 
     @classmethod
-    def get_coordinator(cls, ms_region: int) -> Portfolio:
+    def get_coordinator(cls, ms_region: int) -> typing.Optional[Portfolio]:
         """Only one coordinator per region"""
         return cls.get_coordinators().filter(
             monitoring_sub_region=ms_region
@@ -168,7 +245,7 @@ class Portfolio(models.Model):
 
     @classmethod
     def get_highest_role(cls, user: User) -> USER_ROLE:
-        # region based role is not required
+        # -- region based role is not required
         roles = list(user.portfolios.values_list('role', flat=True))
 
         if USER_ROLE.ADMIN in roles:
