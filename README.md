@@ -69,3 +69,13 @@ sh deploy/scripts/s3_bucket_setup.sh
 ```bash
 python manage.py addstatictoken -t 123456 "admin@idmcdb.org"
 ```
+
+## Management Command
+There are custom management commands available to facilitate specific tasks.
+
+### Populate figure `Calculation Logic`
+```bash
+./manage.py populate_calculation_logic_field
+```
+> NOTE: This command populates the `calculation_logic` field in the Figure Table if there is no existing data in it.
+
