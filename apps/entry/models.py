@@ -914,6 +914,10 @@ class Figure(MetaInformationArchiveAbstractModel,
             created_by__full_name='Created by',
             last_modified_by__full_name='Updated by',
             event_codes='Event codes (Code:Type)',
+            locations__display_name='Location Name',
+            locations_lat_lon='Locations',
+            locations__accuracy='Location accuracy',
+            locations__identifier='Type of Point',
             locations='Locations (Name:Lat, Lon:Accuracy:Type)',
         )
         values = figures.annotate(
@@ -1029,6 +1033,31 @@ class Figure(MetaInformationArchiveAbstractModel,
                     Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name='')
                 ),
             ),
+            locations__display_name=StringAgg(
+                'geo_locations__display_name',
+                EXTERNAL_ARRAY_SEPARATOR,
+                output_field=models.CharField()
+            ),
+            locations__accuracy=ArrayAgg(
+                Cast('geo_locations__accuracy', models.IntegerField()),
+                filter=Q(geo_locations__accuracy__isnull=False)
+            ),
+            locations__identifier=ArrayAgg(
+                Cast('geo_locations__identifier', models.IntegerField()),
+                filter=Q(geo_locations__accuracy__isnull=False)
+            ),
+            locations_lat_lon=StringAgg(
+                Concat(
+                    F('geo_locations__lat'),
+                    Value(EXTERNAL_TUPLE_SEPARATOR),
+                    F('geo_locations__lon'),
+                    output_field=models.CharField(),
+                    distinct=True
+                ),
+                EXTERNAL_ARRAY_SEPARATOR,
+                filter=models.Q(geo_locations__isnull=False),
+                output_field=models.CharField(),
+            ),
         ).order_by(
             'created_at',
         ).values(*[header for header in headers.keys()])
@@ -1089,6 +1118,12 @@ class Figure(MetaInformationArchiveAbstractModel,
                 'is_disaggregated': 'Yes' if datum['is_disaggregated'] else 'No',
                 'event_codes': format_event_codes(datum['event_codes']),
                 'locations': format_locations(datum['locations']),
+                'locations__accuracy': get_string_from_list([
+                    OSMName.OSM_ACCURACY(item).label for item in datum['locations__accuracy']
+                ]),
+                'locations__identifier': get_string_from_list([
+                    OSMName.IDENTIFIER(item).label for item in datum['locations__identifier']
+                ]),
             }
 
         readme_data = [
