@@ -242,6 +242,18 @@ type ClearSelfAssigneFromEvent {
   result: EventType
 }
 
+input ClientCreateInputType {
+  name: String!
+  isActive: Boolean
+  acronym: String
+  contactName: String
+  contactEmail: String
+  contactWebsite: String
+  useCase: [USE_CASE_CHOICES!]
+  otherNotes: String
+  optedOutOfEmails: Boolean
+}
+
 input ClientFilterDataInputType {
   name: String
   isActive: Boolean
@@ -284,18 +296,34 @@ type ClientTrackInformationType {
 
 type ClientType {
   id: ID!
+  createdAt: DateTime!
+  modifiedAt: DateTime!
   createdBy: UserType
   lastModifiedBy: UserType
   name: String!
   code: String!
+  acronym: String
+  contactName: String
+  contactEmail: String
+  contactWebsite: String
+  optedOutOfEmails: Boolean!
+  otherNotes: String
   isActive: Boolean!
+  useCase: [USE_CASE_CHOICES!]
+  useCaseDisplay: EnumDescription
 }
 
 input ClientUpdateInputType {
   id: ID!
   name: String
-  code: String
   isActive: Boolean
+  acronym: String
+  contactName: String
+  contactEmail: String
+  contactWebsite: String
+  useCase: [USE_CASE_CHOICES!]
+  otherNotes: String
+  optedOutOfEmails: Boolean
 }
 
 type CloneEvent {
@@ -1021,6 +1049,7 @@ enum DOWNLOAD_TYPES {
   USER
   CONTEXT_OF_VIOLENCE
   MONITORING_SUB_REGION
+  CLIENT
 }
 
 scalar Date
@@ -1668,6 +1697,11 @@ type ExcelExportsListType {
 }
 
 type ExportActors {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportClients {
   errors: [GenericScalar!]
   ok: Boolean
 }
@@ -2644,9 +2678,10 @@ type Mutation {
   exportCountries(filters: CountryFilterDataInputType!): ExportCountries
   exportMonitoringSubRegions(filters: MonitoringSubRegionFilterDataInputType!): ExportMonitoringSubRegions
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
-  createClient(data: clientCreateInputType!): CreateClient
+  createClient(data: ClientCreateInputType!): CreateClient
   updateClient(data: ClientUpdateInputType!): UpdateClient
   exportTrackingData(filters: ClientTrackInfoFilterDataInputType!): ExportTrackingData
+  exportClient(filters: ClientFilterDataInputType!): ExportClients
   triggerBulkOperation(data: BulkApiOperationInputType!): TriggerBulkOperation
   createContact(data: ContactCreateInputType!): CreateContact
   updateContact(data: ContactUpdateInputType!): UpdateContact
@@ -3751,6 +3786,16 @@ enum USER_ROLE {
   REPORTING_TEAM
 }
 
+enum USE_CASE_CHOICES {
+  ANTICIPATORY_ACTION
+  RESPONSE
+  PREVENTION
+  RESEARCH_DATA_ANALYSIS
+  MODELLING_FORECASTING
+  DATA_SHARING_EXTERNAL_REPOSITORIES
+  OTHER
+}
+
 scalar UUID
 
 type UnapproveFigure {
@@ -4096,10 +4141,4 @@ type VisualizationFigureType {
 type VisualizationValueType {
   date: Date!
   value: Int!
-}
-
-input clientCreateInputType {
-  name: String!
-  code: String!
-  isActive: Boolean
 }

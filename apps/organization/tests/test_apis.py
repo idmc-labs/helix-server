@@ -1,5 +1,6 @@
 import json
 from datetime import datetime
+from unittest.mock import patch
 
 from apps.users.enums import USER_ROLE
 from utils.factories import OrganizationFactory, OrganizationKindFactory
@@ -292,18 +293,11 @@ class TestQueryResourceGroup(HelixGraphQLTestCase):
         self.force_login(guest)
 
     def test_organizations_ordering(self):
-        org1 = OrganizationFactory.create(
-            short_name='abc',
-            created_at=datetime(2020, 9, 9, 10, 6, 0)
-        )
-        org2 = OrganizationFactory.create(
-            short_name='abc',
-            created_at=datetime(2020, 10, 9, 10, 6, 0)
-        )
-        org3 = OrganizationFactory.create(
-            short_name='xyz',
-            created_at=datetime(2020, 9, 9, 10, 6, 0)
-        )
+        with patch('django.utils.timezone.now', return_value=datetime(2020, 9, 9, 10, 6, 0)):
+            org1 = OrganizationFactory.create(short_name='abc')
+            org3 = OrganizationFactory.create(short_name='xyz')
+        with patch('django.utils.timezone.now', return_value=datetime(2020, 10, 9, 10, 6, 0)):
+            org2 = OrganizationFactory.create(short_name='abc')
         vars = {
             'ordering': "shortName,-createdAt"
         }

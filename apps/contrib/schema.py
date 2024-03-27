@@ -30,6 +30,7 @@ from apps.contrib.bulk_operations.serializers import BulkApiOperationPayloadSeri
 from apps.extraction.filters import FigureExtractionBulkOperationFilterDataType
 from apps.entry.models import ExternalApiDump
 from apps.entry.enums import ExternalApiTypeEnum
+from apps.contrib.enums import ClientUseCaseEnum
 from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField, generate_type_for_serializer
 from utils.error_types import CustomErrorType
@@ -70,9 +71,19 @@ class ClientType(DjangoObjectType):
             'name',
             'is_active',
             'code',
+            'acronym',
+            'contact_name',
+            'contact_email',
+            'contact_website',
             'created_by',
+            'created_at',
+            'other_notes',
+            'opted_out_of_emails',
             'last_modified_by',
+            'modified_at',
         )
+    use_case = graphene.List(graphene.NonNull(ClientUseCaseEnum))
+    use_case_display = EnumDescription(source='get_use_case_display')
 
 
 class ClientListType(CustomDjangoListObjectType):
