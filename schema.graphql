@@ -3385,10 +3385,18 @@ input ReportCreateInputType {
   publicFigureAnalysis: String
   isGiddReport: Boolean
   giddReportYear: Int
+  changeInSource: Boolean
+  changeInMethodology: Boolean
+  changeInDataAvailability: Boolean
+  retroactiveChange: Boolean
 }
 
 input ReportFilterDataInputType {
   name_Unaccent_Icontains: String
+  changeInSource: Boolean
+  changeInMethodology: Boolean
+  changeInDataAvailability: Boolean
+  retroactiveChange: Boolean
   filterFigureCountries: [ID!]
   reviewStatus: [String!]
   startDateAfter: Date
@@ -3521,6 +3529,10 @@ type ReportType {
   giddReportYear: Int
   giddPublishedDate: DateTime
   isPfaPublishedInGidd: Boolean!
+  changeInSource: Boolean!
+  changeInMethodology: Boolean!
+  changeInDataAvailability: Boolean!
+  retroactiveChange: Boolean!
   comments(filters: ReportCommentFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): ReportCommentListType
   generations(filters: ReportGenerationFilterDataInputType, ordering: String): ReportGenerationListType
   filterFigureRolesDisplay: EnumDescription
@@ -3560,6 +3572,10 @@ input ReportUpdateInputType {
   publicFigureAnalysis: String
   isGiddReport: Boolean
   giddReportYear: Int
+  changeInSource: Boolean
+  changeInMethodology: Boolean
+  changeInDataAvailability: Boolean
+  retroactiveChange: Boolean
 }
 
 input ReportingTeamPortfolioInputType {

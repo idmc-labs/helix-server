@@ -212,6 +212,10 @@ class Report(MetaInformationArchiveAbstractModel,
         verbose_name=_('Is PFA published in GIDD'),
         default=False
     )
+    change_in_source = models.BooleanField(default=False)
+    change_in_methodology = models.BooleanField(default=False)
+    change_in_data_availability = models.BooleanField(default=False)
+    retroactive_change = models.BooleanField(default=False)
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
