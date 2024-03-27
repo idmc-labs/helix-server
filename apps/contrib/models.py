@@ -370,6 +370,16 @@ class Client(MetaInformationAbstractModel):
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
+        """
+        Generates data for Excel sheets based on filters applied to the client queryset.
+
+        Parameters:
+            user_id: The ID of the user requesting the data.
+            filters: A dictionary of filters to apply to the client queryset.
+
+        Returns:
+            A dictionary containing headers, data, formulae, and a transformer function for Excel sheet generation.
+        """
         from apps.contrib.filters import ClientFilter
 
         class DummyRequest:
@@ -384,24 +394,36 @@ class Client(MetaInformationAbstractModel):
             contact_name='Client Contact Name',
             contact_email='Client Contact Email',
             contact_website='Client Contact Website',
-            opted_out_of_emails='Opted out of receiving emails',
+            use_case='Use case',
             other_notes='Other Notes',
+            opted_out_of_emails='Opted out of receiving emails',
+            created_by__full_name='Created By',
             created_at='Created At',
+            last_modified_by__full_name='Last Modified By',
             modified_at='Modified At',
             is_active='Active',
         )
 
-        data = (ClientFilter(
+        data = ClientFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
-        ).qs.order_by('id'))
+        ).qs.order_by('created_at')
+
+        def transformer(datum):
+            transformed_use_cases = [getattr(Client.USE_CASE_CHOICES.get(use_case), 'label', '') for use_case in
+                                     datum['use_case']]
+            return {
+                **datum,
+                'use_case': ', '.join(transformed_use_cases),
+                'is_active': 'Yes' if datum['is_active'] else 'No',
+                'opted_out_of_emails': 'Yes' if datum['opted_out_of_emails'] else 'No'
+            }
 
         return {
             'headers': headers,
             'data': data.values(*[header for header in headers.keys()]),
             'formulae': None,
-            # 'transformer': transformer,
-            'transformer': None,
+            'transformer': transformer,
         }
 
     def save(self, *args, **kwargs):
