@@ -37,6 +37,10 @@ class TestCreateReport(HelixGraphQLTestCase):
                     isPublic
                     id
                     isPfaVisibleInGidd
+                    changeInDataAvailability
+                    changeInMethodology
+                    changeInSource
+                    retroactiveChange
                 }
                 ok
                 errors
@@ -47,6 +51,10 @@ class TestCreateReport(HelixGraphQLTestCase):
             "filterFigureStartAfter": "2020-01-01",
             "filterFigureEndBefore": "2020-07-01",
             "filterFigureCountries": [str(each.id) for each in countries],
+            "changeInSource": True,
+            "changeInMethodology": True,
+            "changeInDataAvailability": True,
+            "retroactiveChange": True,
         }
 
     def test_valid_report_creation(self) -> None:
@@ -64,6 +72,8 @@ class TestCreateReport(HelixGraphQLTestCase):
         self.assertEqual(content['data']['createReport']['result']['name'], self.input['name'])
         self.assertEqual(len(content['data']['createReport']['result']['filterFigureCountries']),
                          len(self.input['filterFigureCountries']))
+        self.assertEqual(content['data']['createReport']['result']['changeInSource'],
+                         True)
 
     def test_invalid_report_creation_by_guest(self) -> None:
         reviewer = create_user_with_role(USER_ROLE.GUEST.name)
@@ -422,11 +432,33 @@ class TestReportFilter(HelixGraphQLTestCase):
                   entry {
                     id
                   }
+                  changeInSource
+                  changeInMethodology
+                  changeInDataAvailability
+                  retroactiveChange
                 }
                 totalCount
               }
             }
           }
+        '''
+        self.report_list_query = '''
+            query MyQuery(
+                $changeInSource: Boolean,
+                $changeInMethodology: Boolean
+                $changeInDataAvailability: Boolean
+            ){
+              reportList(filters: {
+                changeInSource: $changeInSource,
+                changeInMethodology: $changeInMethodology
+                changeInDataAvailability: $changeInDataAvailability
+                }) {
+                results {
+                  id
+                }
+                totalCount
+              }
+            }
         '''
         # Create 10 days grid report
         report_start_date = timezone.now() + timezone.timedelta(days=-20)
@@ -442,6 +474,28 @@ class TestReportFilter(HelixGraphQLTestCase):
         self.event = EventFactory.create(
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
+
+    def test_filter_report(self):
+        user = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.force_login(user)
+
+        ReportFactory.create_batch(3, is_public=True, change_in_source=True)
+        ReportFactory.create_batch(4, is_public=True, change_in_methodology=True)
+        ReportFactory.create_batch(5, is_public=True, change_in_data_availability=True)
+
+        for filter, exp_result in [
+                ("changeInSource", 3),
+                ("changeInMethodology", 4),
+                ("changeInDataAvailability", 5),
+        ]:
+            response = self.query(
+                self.report_list_query,
+                variables={
+                    filter: True
+                }
+            )
+            content = response.json()
+            self.assertEqual(content['data']['reportList']['totalCount'], exp_result)
 
     def test_report_should_list_entries_between_figure_start_date_and_figure_end_date(self):
         # Create entries such that report end date is between figure start

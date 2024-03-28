@@ -28,6 +28,10 @@ class ReportFilter(df.FilterSet):
         model = Report
         fields = {
             'name': ['unaccent__icontains'],
+            'change_in_source': ['exact'],
+            'change_in_methodology': ['exact'],
+            'change_in_data_availability': ['exact'],
+            'retroactive_change': ['exact']
         }
 
     def filter_countries(self, qs, name, value):
