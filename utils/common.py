@@ -1,4 +1,6 @@
 import datetime
+import gzip
+import csv
 import traceback
 import typing
 import functools
@@ -201,6 +203,30 @@ class RuntimeProfile:
         assert self.start is not None
         time_delta = datetime.datetime.now() - self.start
         logger.info(f'Runtime with <{self.label}>: {time_delta}')
+
+
+def load_csv(
+    filename: str,
+    headers: typing.List[str],
+    skip_header: bool = True,
+    gz: bool = False,
+):
+    _open = open
+    _open_read_attr = 'r'
+    if gz:
+        _open = gzip.open
+        # Open the gzipped file in read mode ('rt' for text mode)
+        _open_read_attr = 'rt'
+
+    with _open(filename, _open_read_attr) as fp:
+        reader = csv.DictReader(
+            fp,  # type: ignore[reportCallIssue]
+            fieldnames=headers,
+        )
+        if skip_header:
+            next(reader)
+        for datum in reader:
+            yield datum
 
 
 def return_error_as_string(func):
