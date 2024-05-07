@@ -89,11 +89,6 @@ class QueryAbstractModel(models.Model):
         blank=True,
         null=True
     )
-    filter_figure_glide_number = ArrayField(
-        base_field=models.CharField(verbose_name=_('Event Code'), max_length=100, null=True),
-        blank=True,
-        null=True
-    )
     filter_figure_created_by = models.ManyToManyField(
         'users.User',
         verbose_name=_('Figure Created by'),
@@ -210,7 +205,6 @@ class QueryAbstractModel(models.Model):
             filter_figure_context_of_violence=self.filter_figure_context_of_violence.all(),
             filter_figure_is_to_be_reviewed=self.filter_figure_is_to_be_reviewed,
             filter_figure_approved_by=self.filter_figure_approved_by.all(),
-            filter_figure_glide_number=self.filter_figure_glide_number,
             filter_figure_created_by=self.filter_figure_created_by.all(),
             filter_figure_sources=self.filter_figure_sources.all(),
             filter_entry_publishers=self.filter_entry_publishers.all(),

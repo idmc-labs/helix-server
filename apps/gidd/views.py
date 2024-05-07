@@ -216,8 +216,6 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                             disaster.event_codes,
                             disaster.event_codes_type
                         )]
-                    ) or EXTERNAL_ARRAY_SEPARATOR.join(
-                        [f"{key}{EXTERNAL_FIELD_SEPARATOR}Glide Number" for key in disaster.glide_numbers]
                     ),
                     disaster.event_id,
                     self.get_displacement_status(disaster.displacement_occurred),

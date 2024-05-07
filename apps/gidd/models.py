@@ -100,13 +100,6 @@ class Disaster(models.Model):
         default=list,
     )
 
-    # Deprecated
-    glide_numbers = ArrayField(
-        models.CharField(
-            verbose_name=_('Event Codes'), max_length=256
-        ),
-        default=list,
-    )
     event_codes = ArrayField(
         models.CharField(
             verbose_name=_('Event Codes'), max_length=256
@@ -341,12 +334,6 @@ class GiddEvent(MetaInformationAbstractModel):
         null=True,
     )
 
-    glide_numbers = ArrayField(
-        models.CharField(
-            verbose_name=_('Event Codes'), max_length=256
-        ),
-        default=list,
-    )
     event_codes = ArrayField(
         models.CharField(
             verbose_name=_('Event Codes'), max_length=256

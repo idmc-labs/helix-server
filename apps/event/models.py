@@ -198,13 +198,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         'OtherSubType', verbose_name=_('Other sub type'),
         blank=True, null=True,
         related_name='events', on_delete=models.SET_NULL)
-    glide_numbers = ArrayField(
-        models.CharField(
-            verbose_name=_('Event Codes'), max_length=256, null=True, blank=True
-        ),
-        default=list,
-        null=True, blank=True
-    )
     violence = models.ForeignKey('Violence', verbose_name=_('Violence'),
                                  blank=False, null=True,
                                  related_name='events', on_delete=models.SET_NULL)

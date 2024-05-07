@@ -190,7 +190,6 @@ class GiddDisasterType(DjangoObjectType):
             'hazard_sub_category_name',
             'hazard_type_name',
             'hazard_sub_type_name',
-            'glide_numbers',
             'event_codes',
             'event_codes_type',
         )
@@ -332,10 +331,6 @@ class GiddEventType(graphene.ObjectType):
     new_displacement_rounded = graphene.Int()
     start_date = graphene.Date(required=True)
     end_date = graphene.Date(required=True)
-    glide_numbers = graphene.List(
-        graphene.NonNull(graphene.String),
-        required=True,
-    )
     event_codes = graphene.List(
         graphene.NonNull(graphene.String),
         required=True,
@@ -735,7 +730,6 @@ class Query(graphene.ObjectType):
         # so first objects is taken directly from queryset instead of iterating
         event_data = disaster_qs.values(
             'event_name',
-            'glide_numbers',
             'start_date',
             'end_date',
             'event_codes',
@@ -762,7 +756,6 @@ class Query(graphene.ObjectType):
             new_displacement=event_data.get('total_new_displacement'),
             start_date=event_data.get('start_date'),
             end_date=event_data.get('end_date'),
-            glide_numbers=event_data.get('glide_numbers'),
             event_codes=event_data.get('event_codes'),
             event_codes_type=event_data.get('event_codes_type'),
             affected_countries=[
