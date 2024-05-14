@@ -1,23 +1,24 @@
 import typing
 import json
 from datetime import datetime
-from django.core.serializers.json import DjangoJSONEncoder
-from django.utils import timezone
-from rest_framework import viewsets
-from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
-from django.http import HttpResponse
+from rest_framework import viewsets
+from rest_framework import mixins
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
-from rest_framework import mixins
 from drf_spectacular.utils import extend_schema
+from django.core.serializers.json import DjangoJSONEncoder
+from django.utils import timezone
+from django_filters.rest_framework import DjangoFilterBackend
 from django.db import models
+from django.shortcuts import redirect
 from django.db.models import (
     F, Case, When, Q
 )
 
+from utils.common import track_gidd, client_id
 from apps.contrib.commons import DATE_ACCURACY
 from apps.country.models import Country
 from apps.entry.models import ExternalApiDump, Figure, OSMName
@@ -29,8 +30,13 @@ from apps.event.models import EventCode
 from apps.crisis.models import Crisis
 
 from .models import (
-    Conflict, Disaster, DisplacementData, GiddFigure, IdpsSaddEstimate,
-    StatusLog, PublicFigureAnalysis
+    Conflict,
+    Disaster,
+    DisplacementData,
+    GiddFigure,
+    IdpsSaddEstimate,
+    StatusLog,
+    PublicFigureAnalysis,
 )
 from .serializers import (
     CountrySerializer,
@@ -49,7 +55,7 @@ from .rest_filters import (
     PublicFigureAnalysisFilterSet,
     DisaggregationPublicFigureAnalysisFilterSet,
 )
-from utils.common import track_gidd, client_id
+from .cache import GiddExportCache
 
 
 def _get_location_accuracy_label(accuracy):
@@ -165,19 +171,10 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             return "Displacement reporting preventive evacuations"
         return "Displacement without preventive evacuations reported"
 
-    @extend_schema(responses=DisasterSerializer(many=True))
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="disaster-export",
-        permission_classes=[AllowAny],
-        pagination_class=None,
-    )
-    def export(self, request):
+    def _export(self, qs):
         """
         Export disaster
         """
-        qs = self.filter_queryset(self.get_queryset())
         wb = Workbook(write_only=True)
         ws = wb.create_sheet('1_Disaster_Displacement_data')
         ws.append([
@@ -347,11 +344,32 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         ]
         for item in table:
             ws2.append(item)
-        response = HttpResponse(content=save_virtual_workbook(wb))
+        return save_virtual_workbook(wb)
+
+    @extend_schema(responses=DisasterSerializer(many=True))
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="disaster-export",
+        permission_classes=[AllowAny],
+        pagination_class=None,
+    )
+    def export(self, request):
+        qs = self.filter_queryset(self.get_queryset())
         filename = 'IDMC_GIDD_Disasters_Internal_Displacement_Data.xlsx'
-        response['Content-Disposition'] = f'attachment; filename={filename}'
-        response['Content-Type'] = 'application/octet-stream'
-        return response
+        return redirect(
+            GiddExportCache.get_or_create(
+                filename,
+                request,
+                [self.filterset_class],
+                GiddExportCache.Key.DISASTER_EXPORT,
+                lambda: self._export(qs),
+                s3_parameters={
+                    'ResponseContentDisposition': f'attachment; filename={filename}',
+                    'ResponseContentType': 'application/octet-stream',
+                },
+            )
+        )
 
 
 class DisplacementDataViewSet(ListOnlyViewSetMixin):
@@ -441,30 +459,14 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 item.disaster_total_displacement,
             ])
 
-    @extend_schema(responses=DisplacementDataSerializer(many=True))
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="displacement-export",
-        permission_classes=[AllowAny],
-        pagination_class=None,
-    )
-    def export(self, request):
+    def _export(self, qs, pfa_qs, idps_sadd_qs, request_cause):
         """
         Export displacements, conflict and disaster
         """
 
-        # Track export
-        qs = self.filter_queryset(self.get_queryset()).order_by(
-            '-year',
-            'iso3',
-        )
-
         wb = Workbook(write_only=True)
         # Tab 1
         ws = wb.create_sheet('1_Displacement_data')
-
-        request_cause = request.GET.get('cause')
 
         if request_cause and request_cause.lower() == 'conflict':
             self.export_conflicts(ws, qs)
@@ -483,10 +485,6 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             'Figures',
             'Figures rounded',
         ])
-        pfa_qs = PublicFigureAnalysisFilterSet(
-            data=self.request.query_params,
-            queryset=PublicFigureAnalysis.objects.all()
-        ).qs.order_by('iso3', 'year')
         for item in pfa_qs:
             ws2.append([
                 item.iso3,
@@ -511,10 +509,6 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             '18-59',
             '60+',
         ])
-        idps_sadd_qs = IdpsSaddEstimateFilter(
-            data=self.request.query_params,
-            queryset=IdpsSaddEstimate.objects.all(),
-        ).qs.order_by('iso3', 'year')
         for item in idps_sadd_qs:
             ws3.append([
                 item.iso3,
@@ -738,11 +732,49 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         for item in readme_text_4:
             ws4.append(item)
 
-        response = HttpResponse(content=save_virtual_workbook(wb))
+        return save_virtual_workbook(wb)
+
+    @extend_schema(responses=DisplacementDataSerializer(many=True))
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="displacement-export",
+        permission_classes=[AllowAny],
+        pagination_class=None,
+    )
+    def export(self, request):
+        # Track export
+        qs = self.filter_queryset(self.get_queryset()).order_by(
+            '-year',
+            'iso3',
+        )
+
+        request_cause = request.GET.get('cause')
+
+        pfa_qs = PublicFigureAnalysisFilterSet(
+            data=self.request.query_params,
+            queryset=PublicFigureAnalysis.objects.all()
+        ).qs.order_by('iso3', 'year')
+
+        idps_sadd_qs = IdpsSaddEstimateFilter(
+            data=self.request.query_params,
+            queryset=IdpsSaddEstimate.objects.all(),
+        ).qs.order_by('iso3', 'year')
+
         filename = 'IDMC_Internal_Displacement_Conflict-Violence_Disasters.xlsx'
-        response['Content-Disposition'] = f'attachment; filename={filename}'
-        response['Content-Type'] = 'application/octet-stream'
-        return response
+        return redirect(
+            GiddExportCache.get_or_create(
+                filename,
+                request,
+                [self.filterset_class, PublicFigureAnalysisFilterSet, IdpsSaddEstimateFilter],
+                GiddExportCache.Key.DISASTER_EXPORT,
+                lambda: self._export(qs, pfa_qs, idps_sadd_qs, request_cause),
+                s3_parameters={
+                    'ResponseContentDisposition': f'attachment; filename={filename}',
+                    'ResponseContentType': 'application/octet-stream',
+                },
+            )
+        )
 
 
 class DisaggregationViewSet(ListOnlyViewSetMixin):
@@ -751,6 +783,11 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
     filter_backends = (DjangoFilterBackend, )
     filterset_class = DisaggregationFilterSet
     pagination_class = None
+
+    EXPORT_FILENAME_MAP = {
+        Crisis.CRISIS_TYPE.CONFLICT.name.lower(): 'IDMC_GIDD_Conflict_Internal_Displacement_Disaggregated',
+        Crisis.CRISIS_TYPE.DISASTER.name.lower(): 'IDMC_GIDD_Disasters_Internal_Displacement_Disaggregated'
+    }
 
     def _get_category(self, category) -> typing.Optional[str]:
         if category is None:
@@ -817,7 +854,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             if loc[2] == filter_iso3
         ]
 
-    def _export_disaggregated_geojson(self, qs):
+    def _export_disaggregated_geojson(self, filename, qs):
         def format_coordinate(coordinate: str) -> typing.Tuple[float, float]:
             lat, lng = coordinate.split(', ')
             return (float(lng), float(lat))
@@ -846,14 +883,6 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             ),
         )
         now = timezone.now().strftime("%B %d, %Y")
-
-        # Determine the filename based on filters
-        filter_cause = self.request.query_params.get('cause', '').lower()
-        filename_map = {
-            Crisis.CRISIS_TYPE.CONFLICT.name.lower(): 'IDMC_GIDD_Conflict_Internal_Displacement_Disaggregated',
-            Crisis.CRISIS_TYPE.DISASTER.name.lower(): 'IDMC_GIDD_Disasters_Internal_Displacement_Disaggregated'
-        }
-        filename = filename_map.get(filter_cause, 'IDMC_GIDD_Internal_Displacement_Disaggregated')
 
         readme_text = (
             "TITLE: Disasters Global Internal Displacement Database (GIDD)\n"
@@ -1085,21 +1114,15 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             }
             feature_collection['features'].append(feature)
 
-        feature_collection = json.dumps(feature_collection, cls=DjangoJSONEncoder)
-        response = HttpResponse(content=feature_collection, content_type='application/json')
-        response['Content-Disposition'] = f'attachment; filename={filename}.geojson'
-        return response
+        return json.dumps(feature_collection, cls=DjangoJSONEncoder).encode('utf-8')
 
-    def _export_disaggregated_excel(self, qs):
+    def _export_disaggregated_excel(
+        self,
+        filename: str,
+        qs: models.QuerySet[GiddFigure],
+        pfa_qs: models.QuerySet[PublicFigureAnalysis],
+    ):
         wb = Workbook(write_only=True)
-
-        # Determine the filename based on filters
-        filter_cause = self.request.query_params.get('cause', '').lower()
-        filename_map = {
-            Crisis.CRISIS_TYPE.CONFLICT.name.lower(): 'IDMC_GIDD_Conflict_Internal_Displacement_Disaggregated',
-            Crisis.CRISIS_TYPE.DISASTER.name.lower(): 'IDMC_GIDD_Disasters_Internal_Displacement_Disaggregated'
-        }
-        filename = filename_map.get(filter_cause, 'IDMC_GIDD_Internal_Displacement_Disaggregated')
 
         ws = wb.create_sheet('1_Disaggregated_Data')
         ws.append([
@@ -1158,11 +1181,6 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             'Figures',
             'Figures rounded',
         ])
-
-        pfa_qs = DisaggregationPublicFigureAnalysisFilterSet(
-            data=self.request.query_params,
-            queryset=PublicFigureAnalysis.objects.filter(year__gte=2023)
-        ).qs.order_by('iso3', 'year', 'id')
 
         for item in pfa_qs:
             ws2.append([
@@ -1523,10 +1541,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 self._get_displacement_occurred(item.displacement_occurred),
             ])
 
-        response = HttpResponse(content=save_virtual_workbook(wb))
-        response['Content-Disposition'] = f'attachment; filename={filename}.xlsx'
-        response['Content-Type'] = 'application/octet-stream'
-        return response
+        return save_virtual_workbook(wb)
 
     @extend_schema(responses=DisaggregationSerializer(many=True))
     @action(
@@ -1553,7 +1568,21 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             year__gte=2023
         )
         qs = self.filter_queryset(queryset)
-        return self._export_disaggregated_geojson(qs)
+
+        filter_cause = self.request.query_params.get('cause', '').lower()
+        filename = self.EXPORT_FILENAME_MAP.get(filter_cause, 'IDMC_GIDD_Internal_Displacement_Disaggregated')
+        return redirect(
+            GiddExportCache.get_or_create(
+                f"{filename}.geojson",
+                request,
+                [self.filterset_class],
+                GiddExportCache.Key.DISAGGREGATION_EXPORT_GEOJSON,
+                lambda: self._export_disaggregated_geojson(filename, qs),
+                s3_parameters={
+                    'ResponseContentDisposition': f'attachment; filename={filename}.geojson',
+                },
+            )
+        )
 
     @extend_schema(responses=DisaggregationSerializer(many=True))
     @action(
@@ -1579,8 +1608,28 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         ).filter(
             year__gte=2023
         )
-        qs = self.filter_queryset(queryset)
-        return self._export_disaggregated_excel(qs)
+        qs: models.QuerySet[GiddFigure] = self.filter_queryset(queryset)
+
+        pfa_qs: models.QuerySet[PublicFigureAnalysis] = DisaggregationPublicFigureAnalysisFilterSet(
+            data=self.request.query_params,
+            queryset=PublicFigureAnalysis.objects.filter(year__gte=2023)
+        ).qs.order_by('iso3', 'year', 'id')
+
+        filter_cause = self.request.query_params.get('cause', '').lower()
+        filename = self.EXPORT_FILENAME_MAP.get(filter_cause, 'IDMC_GIDD_Internal_Displacement_Disaggregated')
+        return redirect(
+            GiddExportCache.get_or_create(
+                f"{filename}.xlsx",
+                request,
+                [self.filterset_class, DisaggregationPublicFigureAnalysisFilterSet],
+                GiddExportCache.Key.DISAGGREGATION_EXPORT,
+                lambda: self._export_disaggregated_excel(filename, qs, pfa_qs),
+                s3_parameters={
+                    'ResponseContentDisposition': f'attachment; filename={filename}.xlsx',
+                    'ResponseContentType': 'application/octet-stream',
+                },
+            )
+        )
 
 
 class PublicFigureAnalysisViewSet(ListOnlyViewSetMixin):
