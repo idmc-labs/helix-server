@@ -1,7 +1,6 @@
 import typing
 import hashlib
 import os
-import re
 import json
 import django_filters
 from django.db import models
@@ -42,17 +41,10 @@ class GiddExportCache:
 
     @staticmethod
     def last_release_date() -> str:
-        return (
-            re.sub(
-                ' +',
-                ' ',
-                (StatusLog.last_release_date() or '').replace(',', ' ')
-            )
-        ).replace(',', ' ').strip().replace(' ', '-')
+        return StatusLog.last_release_date(strf_format='%Y-%m-%d-%H-%M-%S') or 'NA'
 
     @classmethod
     def generate_cache_key(cls, key: Key, data: dict, filename: str) -> typing.Tuple[bytes, str]:
-        # XXX: data should includes RELEASE data?
         last_release_date = cls.last_release_date()
 
         hashable = json.dumps(

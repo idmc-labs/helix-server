@@ -159,9 +159,9 @@ class StatusLog(models.Model):
         return str(self.triggered_at)
 
     @classmethod
-    def last_release_date(cls) -> typing.Optional[str]:
+    def last_release_date(cls, strf_format: str = "%B %d, %Y") -> typing.Optional[str]:
         if last_log := StatusLog.objects.filter(completed_at__isnull=False).last():
-            return last_log.completed_at.strftime("%B %d, %Y")
+            return last_log.completed_at.strftime(strf_format)
 
 
 class ConflictLegacy(models.Model):

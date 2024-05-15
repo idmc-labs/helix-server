@@ -1580,6 +1580,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 lambda: self._export_disaggregated_geojson(filename, qs),
                 s3_parameters={
                     'ResponseContentDisposition': f'attachment; filename={filename}.geojson',
+                    'ResponseContentType': 'application/json',
                 },
             )
         )
