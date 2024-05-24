@@ -37,6 +37,15 @@ class ConflictSerializer(serializers.ModelSerializer):
 
 
 class DisasterSerializer(serializers.ModelSerializer):
+    displacement_occurred = serializers.SerializerMethodField('get_displacement_occurred_display')
+
+    def get_displacement_occurred_display(self, obj) -> str:
+        if not obj.displacement_occurred:
+            return None
+        elif Figure.DISPLACEMENT_OCCURRED.BEFORE.value in obj.displacement_occurred:
+            return "Displacement reporting preventive evacuations"
+        return "Displacement without preventive evacuations reported"
+
     class Meta:
         model = Disaster
         fields = (
@@ -63,6 +72,8 @@ class DisasterSerializer(serializers.ModelSerializer):
             'glide_numbers',
             'event_codes',
             'event_codes_type',
+            'event_id',
+            'displacement_occurred',
         )
         lookup_field = 'id'
 
