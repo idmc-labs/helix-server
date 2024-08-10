@@ -12,11 +12,13 @@
 5. [Development](#development)
 6. [Deployment](#deployment)
 7. [API Documentation](#api-documentation)
-8. [Testing](#testing)
-9. [Management Commands](#management-commands)
-10. [Troubleshooting](#troubleshooting)
-11. [Performance and Scaling](#performance-and-scaling)
-12. [Contributing](#contributing)
+8. [Database Schema](#database-schema)
+9. [User Groups and Authorization Details](#user-groups-and-authorization-details)
+10. [Testing](#testing)
+11. [Management Commands](#management-commands)
+12. [Troubleshooting](#troubleshooting)
+13. [Performance and Scaling](#performance-and-scaling)
+14. [Contributing](#contributing)
 
 ## Overview
 
@@ -158,6 +160,29 @@ python manage.py graphql_schema --out schema.graphql
 - **Endpoint**: `/api/auth/login/`
 - **Methods**: 
   - `POST`: Authenticate user
+
+## Database Schema
+
+Located at `/docs/helix-server-db-schema.sql`, this document offers a detailed description of the Helix Server's database structure. Key features include:
+
+- Overview of the database purpose and design
+- Comprehensive list of tables with their primary keys and important fields
+- Explanation of key relationships between tables
+- Summary of key features in the database schema (e.g., use of UUIDs, versioning system)
+- Notes on specific design choices and capabilities
+
+This document is crucial for developers working on database-related tasks or trying to understand the data structure of the Helix Server.
+
+## User Groups and Authorization Details
+
+Located at `/docs/user_groups_auth.md`, this document provides a detailed overview of the user group structure and associated permissions within the Helix Server. Key features include:
+
+- Comprehensive list of user groups (e.g., ADMIN, DIRECTORS_OFFICE, MONITORING_EXPERT)
+- Detailed permissions for each user group
+- Overview of content types and modules that permissions apply to
+- Explanation of different permission types (e.g., can add, can change, can delete)
+
+This document is essential for understanding the role-based access control implemented in the system.
 
 ## Testing
 
