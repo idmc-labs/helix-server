@@ -113,21 +113,16 @@ To set up the development environment:
 
 ### Using AWS Copilot
 
-1. Initialize the Copilot application:
-   ```bash
-   copilot app init --domain idmcdb.org
-   copilot init
-   ```
+For detailed instructions on deploying the Helix Server using AWS Copilot, please refer to the `README.copilot.md` file in the root directory of this project. This file contains step-by-step guidelines for:
 
-2. Deploy the application:
-   ```bash
-   copilot svc deploy -e ENV
-   ```
+- Setting up the AWS environment
+- Initializing and deploying services
+- Configuring additional resources (e.g., RDS, S3, Redis)
+- Troubleshooting common deployment issues
+- Deactivating services or the entire project
+- Restarting individual services
 
-3. Update the pipeline:
-   ```bash
-   copilot pipeline update
-   ```
+The Copilot README also includes important information about the project's dependencies and future update considerations.
 
 ### Setup S3 buckets
 
