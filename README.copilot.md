@@ -5,12 +5,13 @@
 2. [Initial Setup](#initial-setup)
 3. [Environment Setup](#environment-setup)
 4. [Service Initialization and Deployment](#service-initialization-and-deployment)
-5. [Additional Configuration](#additional-configuration)
-6. [Deactivating the Project/Service](#deactivating-the-projectservice)
-7. [Restarting Individual Services](#restarting-individual-services)
-8. [Troubleshooting](#troubleshooting)
-9. [Future Improvements](#future-improvements)
-10. [Stale Dependencies](#stale-dependencies)
+5. [Post-Deployment Setup](#post-deployment-setup)
+6. [Additional Configuration](#additional-configuration)
+7. [Deactivating the Project/Service](#deactivating-the-projectservice)
+8. [Restarting Individual Services](#restarting-individual-services)
+9. [Troubleshooting](#troubleshooting)
+10. [Future Improvements](#future-improvements)
+11. [Stale Dependencies](#stale-dependencies)
 
 ## Prerequisites
 
@@ -66,6 +67,34 @@
    ```
 
 Important Note: If initial deployment fails, delete the S3 buckets and try again.
+
+## Post-Deployment Setup
+
+After successful deployment, follow these steps to set up the Django application:
+
+1. Connect to the ECS container's bash shell:
+   ```bash
+   copilot svc exec --name api --env <environment-name> -c /bin/bash
+   ```
+   Note: If prompted for a password, use your device's user password.
+
+2. Once connected, run the init script:
+   ```bash
+   ./init.sh
+   ```
+   Note: If you encounter a permission error, make the file executable:
+   ```bash
+   chmod +x init.sh
+   ```
+
+3. If setting up from a local device (not needed for CI builds), run the following commands manually:
+   ```bash
+   ./manage.py collectstatic
+   ./manage.py migrate
+   ./manage.py init_roles
+   ```
+
+Important: The `aws/session-manager-plugin` is required to use `copilot exec` commands. Ensure it's installed on your local machine.
 
 ## Additional Configuration
 
@@ -153,6 +182,8 @@ This can be useful if you need to restart a service due to temporary issues or t
 - When deploying an environment for the first time, if the pipeline is unable to create Addon stacks, deploy the environment manually first using `svc deploy -e ENV`. Then add the env to the pipeline and run `pipeline update`.
 - Ensure that secrets are used from the same given app and environment when required.
 - Make sure names are unique across environments by attaching `${Env}` to the names.
+- If the ECS dashboard displays the number of tasks as 0:
+   - Set the task count to 1 for both the `api` and `worker` services to initiate container orchestration.
 
 ## Future Improvements
 
