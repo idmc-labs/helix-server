@@ -147,6 +147,14 @@ THIRD_PARTY_APPS = [
     'django_otp.plugins.otp_hotp',
     'drf_spectacular',
     'drf_spectacular_sidecar',  # required for Django collectstatic discovery
+    # External - Health-check
+    'health_check',  # required
+    'health_check.db',  # stock Django health checkers
+    'health_check.cache',
+    'health_check.storage',
+    'health_check.contrib.migrations',
+    'health_check.contrib.psutil',  # disk and memory utilization; requires psutil
+    'health_check.contrib.redis',  # requires Redis broker
 ]
 
 INSTALLED_APPS = [
@@ -427,6 +435,13 @@ GZIP_CONTENT_TYPES = [
     'application/json',
     'application/pdf',
 ]
+
+# HEALTH-CHECK
+REDIS_URL = DJANGO_CACHE_REDIS_URL
+HEALTH_CHECK = {
+    'DISK_USAGE_MAX': 80,  # percentage
+    'MEMORY_MIN': 100,  # MB
+}
 
 # Sentry Config
 SENTRY_DSN = env('SENTRY_DSN')
