@@ -82,6 +82,7 @@ if not settings.DEBUG:
 urlpatterns = [
     path('admin/', admin.site.urls),
     re_path('^graphql/?$', csrf_exempt(CustomGraphQLView.as_view())),
+    path('health-check/', include('health_check.urls')),
     path('api/', include(rest_urls)),
     path('external-api/', include(external_rest_urls))
 ]
