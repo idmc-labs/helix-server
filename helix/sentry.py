@@ -7,6 +7,8 @@ from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 from sentry_sdk.integrations.logging import ignore_logger
 from django.core.exceptions import PermissionDenied
+from celery import signals
+
 from helix.exceptions import GraphqlNotAllowedException
 
 logging.basicConfig(level=logging.INFO)
@@ -73,11 +75,14 @@ def fetch_git_sha(path, head=None):
         return str(fh.read()).strip()
 
 
+@signals.beat_init.connect
+@signals.celeryd_init.connect
 def init_sentry(app_type, tags={}, **config):
+    from helix.settings import MONITOR_BEAT_TASKS
     integrations = [
         DjangoIntegration(),
         RedisIntegration(),
-        CeleryIntegration(),
+        CeleryIntegration(monitor_beat_tasks=MONITOR_BEAT_TASKS),
     ]
     sentry_sdk.init(
         **config,

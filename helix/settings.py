@@ -72,6 +72,7 @@ env = environ.Env(
     SENTRY_DSN=(str, None),
     SENTRY_SAMPLE_RATE=(float, 0.2),  # TODO: Change this to SENTRY_TRACES_SAMPLE_RATE
     SENTRY_PROFILES_SAMPLE_RATE=(float, None),
+    MONITOR_BEAT_TASKS=(bool, False),
     # Copilot
     COPILOT_ENVIRONMENT_NAME=(str, None),
     COPILOT_SERVICE_NAME=(str, None),
@@ -445,6 +446,8 @@ HEALTH_CHECK = {
 
 # Sentry Config
 SENTRY_DSN = env('SENTRY_DSN')
+# Enable sentry monitor for beat tasks
+MONITOR_BEAT_TASKS = env('MONITOR_BEAT_TASKS')
 
 if SENTRY_DSN:
     SENTRY_CONFIG = {
