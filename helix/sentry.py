@@ -78,11 +78,11 @@ def fetch_git_sha(path, head=None):
 @signals.beat_init.connect
 @signals.celeryd_init.connect
 def init_sentry(app_type, tags={}, **config):
-    from helix.settings import MONITOR_BEAT_TASKS
+    from helix.settings import SENTRY_MONITOR_CELERY_BEAT_TASKS
     integrations = [
         DjangoIntegration(),
         RedisIntegration(),
-        CeleryIntegration(monitor_beat_tasks=MONITOR_BEAT_TASKS),
+        CeleryIntegration(monitor_beat_tasks=SENTRY_MONITOR_CELERY_BEAT_TASKS),
     ]
     sentry_sdk.init(
         **config,
