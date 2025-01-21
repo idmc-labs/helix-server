@@ -72,7 +72,7 @@ env = environ.Env(
     SENTRY_DSN=(str, None),
     SENTRY_SAMPLE_RATE=(float, 0.2),  # TODO: Change this to SENTRY_TRACES_SAMPLE_RATE
     SENTRY_PROFILES_SAMPLE_RATE=(float, None),
-    MONITOR_BEAT_TASKS=(bool, False),
+    SENTRY_MONITOR_CELERY_BEAT_TASKS=(bool, False),
     # Copilot
     COPILOT_ENVIRONMENT_NAME=(str, None),
     COPILOT_SERVICE_NAME=(str, None),
@@ -154,7 +154,6 @@ THIRD_PARTY_APPS = [
     'health_check.cache',
     'health_check.storage',
     'health_check.contrib.migrations',
-    'health_check.contrib.psutil',  # disk and memory utilization; requires psutil
     'health_check.contrib.redis',  # requires Redis broker
 ]
 
@@ -447,7 +446,7 @@ HEALTH_CHECK = {
 # Sentry Config
 SENTRY_DSN = env('SENTRY_DSN')
 # Enable sentry monitor for beat tasks
-MONITOR_BEAT_TASKS = env('MONITOR_BEAT_TASKS')
+SENTRY_MONITOR_CELERY_BEAT_TASKS = env('SENTRY_MONITOR_CELERY_BEAT_TASKS')
 
 if SENTRY_DSN:
     SENTRY_CONFIG = {
