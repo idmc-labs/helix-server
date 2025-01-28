@@ -58,7 +58,7 @@ jobs:
         env:
           DOCKER_IMAGE_SERVER: ${{ steps.prep.outputs.tagged_image }}
         run: |
-          docker-compose -f gh-docker-compose.yml run --rm server ./manage.py graphql_schema --out schema-latest.graphql &&
+          docker compose -f gh-docker-compose.yml run --rm server ./manage.py graphql_schema --out schema-latest.graphql &&
           cmp --silent schema.graphql schema-latest.graphql || {
             echo 'The schema.graphql is not up to date with the latest changes. Please update and push latest';
             diff schema.graphql schema-latest.graphql;
@@ -69,7 +69,7 @@ jobs:
         env:
           DOCKER_IMAGE_SERVER: ${{ steps.prep.outputs.tagged_image }}
         run: |
-          docker-compose -f gh-docker-compose.yml run --rm server python3 manage.py makemigrations --check --dry-run || {
+          docker compose -f gh-docker-compose.yml run --rm server python3 manage.py makemigrations --check --dry-run || {
             echo 'There are some changes to be reflected in the migration. Make sure to run makemigrations';
             exit 1;
           }
@@ -80,7 +80,7 @@ jobs:
           CC_TEST_REPORTER_ID: ${{ secrets.CODE_CLIMATE_ID }}
           DOCKER_IMAGE_SERVER: ${{ steps.prep.outputs.tagged_image }}
         with:
-          coverageCommand: docker-compose -f gh-docker-compose.yml run --rm server /code/run_tests.sh
+          coverageCommand: docker compose -f gh-docker-compose.yml run --rm server /code/run_tests.sh
 
         # Temp fix
         # https://github.com/docker/build-push-action/blob/master/docs/advanced/cache.md#github-cache

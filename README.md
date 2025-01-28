@@ -11,7 +11,7 @@ Create a `.env` file in the project folder. (For development, blank file is fine
 ## Get started with:
 
 ```bash
-docker-compose up
+docker compose up
 ```
 
 ## Initialize database
@@ -23,13 +23,13 @@ docker-compose up
 ## Initialize database (seed)
 ```bash
 # Fix the full_name constraint
-docker-compose exec server python manage.py save_users_dummy
-docker-compose exec server python manage.py create_dummy_users
+docker compose exec server python manage.py save_users_dummy
+docker compose exec server python manage.py create_dummy_users
 
-docker-compose exec server python manage.py loadtestdata <case sensitive model_names> --count 2
+docker compose exec server python manage.py loadtestdata <case sensitive model_names> --count 2
 # eg.
-# docker-compose exec server python manage.py loadtestdata Country --count 2
-# docker-compose exec server python manage.py loadtestdata Resource ResourceGroup --count 2
+# docker compose exec server python manage.py loadtestdata Country --count 2
+# docker compose exec server python manage.py loadtestdata Resource ResourceGroup --count 2
 ```
 
 And navigate to `localhost:9000/graphiql` to view available graphs.
