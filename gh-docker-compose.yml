@@ -15,8 +15,6 @@ services:
       CI: "true"
       # https://github.com/pytest-dev/pytest/issues/7443
       PYTEST_ADDOPTS: "--color=yes"
-      DJANGO_DEBUG: "true"
-
       HELIX_ENVIRONMENT: development
       DJANGO_DEBUG: "true"
       ENABLE_DEBUG_TOOLBAR: "true"
