@@ -1,0 +1,48 @@
+{{- if .Values.api.enabled }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "helix-backend.fullname" . }}-api
+  labels:
+    app: {{ include "helix-backend.fullname" . }}
+    component: api
+    environment: {{ .Values.environment }}
+    release: {{ .Release.Name }}
+spec:
+  replicas: {{ .Values.api.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "helix-backend.fullname" . }}
+      component: api
+  template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include (print .Template.BasePath "/config/secret.yaml") . | sha256sum }}
+        checksum/configmap: {{ include (print .Template.BasePath "/config/configmap.yaml") . | sha256sum }}
+      labels:
+        app: {{ include "helix-backend.fullname" . }}
+        component: api
+    spec:
+      containers:
+        - name: api
+          image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy:  {{ .Values.image.imagePullPolicy  }}
+          command: ["/code/deploy/scripts/run_prod.sh"]
+          ports:
+            - name: http
+              containerPort: {{ .Values.api.containerPort }}
+              protocol: TCP
+          # TODO: livenessProbe
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+          env:
+            - name: DJANGO_APP_TYPE
+              value: web
+          envFrom:
+            - secretRef:
+                name: {{ template "helix-backend.secretname" . }}
+            - configMapRef:
+                name: {{ template "helix-backend.envConfigMapName" . }}
+
+{{- end }}

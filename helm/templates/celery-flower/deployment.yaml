@@ -1,0 +1,46 @@
+{{- if .Values.worker.enabled }}
+{{- if .Values.worker.flower.enabled }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "helix-backend.fullname" . }}-celery-flower
+  labels:
+    app: {{ include "helix-backend.fullname" . }}
+    component: worker-flower
+    environment: {{ .Values.environment }}
+    release: {{ .Release.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "helix-backend.fullname" . }}
+      component: worker-flower
+  template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include (print .Template.BasePath "/config/secret.yaml") . | sha256sum }}
+        checksum/configmap: {{ include (print .Template.BasePath "/config/configmap.yaml") . | sha256sum }}
+      labels:
+        app: {{ include "helix-backend.fullname" . }}
+        component: worker-flower
+    spec:
+      containers:
+        - name: worker
+          image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy:  {{ .Values.image.imagePullPolicy  }}
+          command: ["celery", "-A", "main", "flower", "--port=8000"]
+          # TODO: livenessProbe
+          resources:
+            {{- toYaml .Values.worker.flower.resources | nindent 12 }}
+          env:
+            - name: DJANGO_APP_TYPE
+              value: worker
+          envFrom:
+            - secretRef:
+                name: {{ template "helix-backend.secretname" . }}
+            - configMapRef:
+                name: {{ template "helix-backend.envConfigMapName" . }}
+
+{{- end }}
+{{- end }}
