@@ -1,3 +1,4 @@
+import typing
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
@@ -158,9 +159,11 @@ class StatusLog(models.Model):
         return str(self.triggered_at)
 
     @classmethod
-    def last_release_date(cls):
+    def last_release_date(cls, format=None) -> typing.Optional[str]:
         last_log = StatusLog.objects.last()
-        return last_log.completed_at.strftime("%B %d, %Y") if last_log else None
+        if last_log:
+            _format = format or "%B %d, %Y"
+            return last_log.completed_at.strftime(_format)
 
 
 class ConflictLegacy(models.Model):

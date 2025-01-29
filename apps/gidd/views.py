@@ -32,6 +32,7 @@ from .models import (
     Conflict, Disaster, DisplacementData, GiddFigure, IdpsSaddEstimate,
     StatusLog, PublicFigureAnalysis
 )
+from .paginations import GiddLimitOffsetPagination
 from .serializers import (
     CountrySerializer,
     ConflictSerializer,
@@ -118,6 +119,7 @@ class CountryViewSet(ListOnlyViewSetMixin):
     lookup_field = 'iso3'
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
     filterset_fields = ['id']
+    pagination_class = GiddLimitOffsetPagination
 
     def get_queryset(self):
         track_gidd(
@@ -131,6 +133,7 @@ class CountryViewSet(ListOnlyViewSetMixin):
 class ConflictViewSet(ListOnlyViewSetMixin):
     serializer_class = ConflictSerializer
     filterset_class = RestConflictFilterSet
+    pagination_class = GiddLimitOffsetPagination
 
     def get_queryset(self):
         track_gidd(
@@ -144,6 +147,7 @@ class ConflictViewSet(ListOnlyViewSetMixin):
 class DisasterViewSet(ListOnlyViewSetMixin):
     serializer_class = DisasterSerializer
     filterset_class = RestDisasterFilterSet
+    pagination_class = GiddLimitOffsetPagination
 
     def get_queryset(self):
         api_type = ExternalApiDump.ExternalApiType.GIDD_DISASTER_REST
@@ -353,6 +357,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
 class DisplacementDataViewSet(ListOnlyViewSetMixin):
     serializer_class = DisplacementDataSerializer
     filterset_class = RestDisplacementDataFilterSet
+    pagination_class = GiddLimitOffsetPagination
 
     def get_queryset(self):
         api_type = ExternalApiDump.ExternalApiType.GIDD_DISPLACEMENT_REST
@@ -1643,6 +1648,7 @@ class PublicFigureAnalysisViewSet(ListOnlyViewSetMixin):
     serializer_class = PublicFigureAnalysisSerializer
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
     filterset_class = PublicFigureAnalysisFilterSet
+    pagination_class = GiddLimitOffsetPagination
 
     def get_queryset(self):
         track_gidd(
