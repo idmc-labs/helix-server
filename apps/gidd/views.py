@@ -539,8 +539,8 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             [f'LAST UPDATE: {StatusLog.last_release_date()}'],
             [],
             ['DESCRIPTION:'],
+            [],
             [
-                '\n'
                 'The Internal Displacement Monitoring Centre (IDMC) monitors internal displacement events globally, '
                 'triggered by disasters, conflict, and other forms of violence. It gathers and analyses both structured '
                 'and unstructured secondary data from diverse sources—including government agencies, UN agencies, the '
@@ -556,11 +556,13 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 '\n'
                 'The GIDD database documents displacement due to conflict from 2009 to 2023 and disaster-induced '
                 'displacement from 2008 to 2023. For detailed definitions and more comprehensive descriptions, please '
-                'refer to the IDMC Monitoring Tools (https://www.internal-displacement.org/monitoring-tools).\n'
-                '\n'
-                'For information on how to access the data programmatically, please visit our API documentation page '
-                'https://www.internal-displacement.org/database/api-documentation/ \n'
+                'refer to the IDMC Monitoring Tools (https://www.internal-displacement.org/monitoring-tools).'
             ],
+            [
+                'For information on how to access the data programmatically, please visit our API documentation page '
+                'https://www.internal-displacement.org/database/api-documentation/'
+            ],
+            [],
             ['KEY DEFINITIONS:'],
             [],
             [
