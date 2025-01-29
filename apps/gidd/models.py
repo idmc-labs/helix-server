@@ -160,7 +160,7 @@ class StatusLog(models.Model):
 
     @classmethod
     def last_release_date(cls, format=None) -> typing.Optional[str]:
-        last_log = StatusLog.objects.filter(status=cls.Status.SUCCESS).last()
+        last_log = StatusLog.objects.filter(status=cls.Status.SUCCESS).order_by('-completed_at').first()
         if last_log:
             _format = format or "%B %d, %Y"
             return last_log.completed_at.strftime(_format)
