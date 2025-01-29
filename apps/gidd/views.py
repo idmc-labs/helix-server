@@ -1085,6 +1085,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         feature_collection = {
             "type": "FeatureCollection",
             "readme": readme_text,
+            "lastUpdated": StatusLog.last_release_date(format="%Y-%m-%d"),
             "features": []
         }
 
