@@ -1,6 +1,3 @@
-version: '3.4'
-
-
 x-server: &base_server_setup
   environment: &base_server_environment
     HELIX_ENVIRONMENT: development

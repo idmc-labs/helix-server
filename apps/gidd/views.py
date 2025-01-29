@@ -540,6 +540,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             [],
             ['DESCRIPTION:'],
             [
+                '\n'
                 'The Internal Displacement Monitoring Centre (IDMC) monitors internal displacement events globally, '
                 'triggered by disasters, conflict, and other forms of violence. It gathers and analyses both structured '
                 'and unstructured secondary data from diverse sources—including government agencies, UN agencies, the '
@@ -556,8 +557,10 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 'The GIDD database documents displacement due to conflict from 2009 to 2023 and disaster-induced '
                 'displacement from 2008 to 2023. For detailed definitions and more comprehensive descriptions, please '
                 'refer to the IDMC Monitoring Tools (https://www.internal-displacement.org/monitoring-tools).\n'
+                '\n'
+                'For information on how to access the data programmatically, please visit our API documentation page '
+                'https://www.internal-displacement.org/database/api-documentation/ \n'
             ],
-            [],
             ['KEY DEFINITIONS:'],
             [],
             [
@@ -702,22 +705,6 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         ws4.append([])
         for item in readme_text_3:
             ws4.append(item)
-        readme_text_4 = [
-            ['ISO3: Represents the ISO 3166-1 alpha-3 code, the code \'AB9\' is assigned to the Abyei Area.'],
-            ['Country: Short name of the country or territory.'],
-            ['Geographical region: Corresponds to IDMC\'s geographical regions'],
-            ['Year: The year for which displacement figures are reported.'],
-            [
-                'Sex : This field contains information on Female, Male and Both Sexes categories following the United '
-                'Nations Department of Economic and Social Affairs (UN DESA) classifications. '
-            ],
-            ['Cause:  Identifies the trigger of displacement, such as conflict or disasters.'],
-            ['Age_0_4: Represents the age cohort from newborns to 4 years old.'],
-            ['Age_5_11: Represents children aged 5 to 11 years.'],
-            ['Age_12_17: Represents adolescents aged 12 to 17 years.'],
-            ['Age_18_59: Represents adults aged 18 to 59 years.'],
-            ['Age_60_plus: Represents the population aged 60 years and older.'],
-        ]
         ws4.append([])
         ws4.append([
             'DATA DESCRIPTION: 3_IDPs_SADD_estimates table'
@@ -731,7 +718,78 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             'https://www.internal-displacement.org/monitoring-tools'
         ])
         ws4.append([])
+        readme_text_4 = [
+            ['ISO3: Represents the ISO 3166-1 alpha-3 code, the code \'AB9\' is assigned to the Abyei Area.'],
+            ['Country: Short name of the country or territory.'],
+            ['Year: The year for which displacement figures are reported.'],
+            [
+                'Sex : This field contains information on Female, Male and Both Sexes categories following the United '
+                'Nations Department of Economic and Social Affairs (UN DESA) classifications. '
+            ],
+            ['Cause:  Identifies the trigger of displacement, such as conflict or disasters.'],
+            ['Age_0_4: Represents the age cohort from newborns to 4 years old.'],
+            ['Age_5_11: Represents children aged 5 to 11 years.'],
+            ['Age_12_17: Represents adolescents aged 12 to 17 years.'],
+            ['Age_18_59: Represents adults aged 18 to 59 years.'],
+            ['Age_60_plus: Represents the population aged 60 years and older.'],
+        ]
         for item in readme_text_4:
+            ws4.append(item)
+
+        readme_text_5 = [
+            ['HISTORICAL DATA REVISIONS AND CORRECTIONS'],
+            [],
+            ['The description of our methodology is available at https://www.internal-displacement.org/monitoring-tools'],
+            [
+                'As part of our ongoing commitment to providing accurate and reliable internal displacement data, '
+                'the Internal Displacement Monitoring Centre (IDMC) has released updated figures for several countries '
+                'and years where data was previously unavailable or required corrections. '
+                'These revisions, which result from a comprehensive methodological review, address discrepancies in earlier '
+                'figures published in the Global Internal Displacement Database (GIDD) and reflect our dedication to '
+                'upholding the highest standards of data quality and reliability.\n\n'
+                'Our team of experts rigorously reviewed and validated the new figures to ensure they meet IDMC’s '
+                'stringent data requirements. For questions or further information about these updates, '
+                'please contact us at info@idmc.ch.'
+            ],
+            [],
+            [],
+            ['FIGURES REVIEWED FIGURES IN JANUARY 2025'],
+            [
+                'All figures have undergone thorough expert validation to ensure consistency with IDMC’s '
+                'quality requirements. A detailed account of the changes and the analytical processes '
+                'underpinning them is provided in Tab 2_Context_Displacement_data, which contains '
+                'a full summary of the revisions conducted by IDMC experts.\n\n'
+                'For further information or inquiries, please contact us at info@idmc.ch.'
+            ],
+            ['ISO3', 'Country', 'Geographical region', 'Year', 'Figure cause', 'Figure category'],
+            ['BFA', 'Burkina Faso', 'Sub-Saharan Africa', '2023', 'Conflict', 'Internal Displacements'],
+            ['BDI', 'Burundi', 'Sub-Saharan Africa', '2021', 'Disaster', 'Internal Displacements'],
+            ['COD', 'Dem. Rep. Congo', 'Sub-Saharan Africa', '2023', 'Conflict', 'IDPs'],
+            ['GRC', 'Greece', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['IND', 'India', 'South Asia', '2021', 'Disaster', 'IDPs'],
+            ['KGZ', 'Kyrgyzstan', 'Europe and Central Asia', '2023', 'Disaster', 'IDPs'],
+            ['KGZ', 'Kyrgyzstan', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['LSO', 'Lesotho', 'Sub-Saharan Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['MLI', 'Mali', 'Sub-Saharan Africa', '2023', 'Conflict', 'Internal Displacements'],
+            ['MEX', 'Mexico', 'The Americas', '2023', 'Conflict', 'IDPs'],
+            ['MAR', 'Morocco', 'Middle East and North Africa', '2023', 'Disaster', 'IDPs'],
+            ['MAR', 'Morocco', 'Middle East and North Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['MOZ', 'Mozambique', 'Sub-Saharan Africa', '2022', 'Conflict', 'Internal Displacements'],
+            ['NAM', 'Namibia', 'Sub-Saharan Africa', '2023', 'Disaster', 'IDPs'],
+            ['NAM', 'Namibia', 'Sub-Saharan Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2023', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2017', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2018', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2021', 'Disaster', 'IDPs'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2022', 'Disaster', 'IDPs'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2022', 'Disaster', 'Internal Displacements'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2023', 'Disaster', 'IDPs'],
+            ['USA', 'United States', 'The Americas', '2023', 'Disaster', 'Internal Displacements'],
+        ]
+        ws4.append([])
+        ws4.append([])
+        for item in readme_text_5:
             ws4.append(item)
 
         response = HttpResponse(content=save_virtual_workbook(wb))
