@@ -11,6 +11,7 @@ from rest_framework.decorators import action
 from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
+from openpyxl.cell import Cell as OpCell
 from rest_framework import mixins
 from drf_spectacular.utils import extend_schema
 from django.db import models
@@ -50,7 +51,7 @@ from .rest_filters import (
     PublicFigureAnalysisFilterSet,
     DisaggregationPublicFigureAnalysisFilterSet,
 )
-from utils.common import track_gidd, client_id
+from utils.common import track_gidd, client_id, get_valid_xml_string
 
 
 def _get_location_accuracy_label(accuracy):
@@ -87,6 +88,16 @@ def _get_location_type_labels(
         EXTERNAL_ARRAY_SEPARATOR,
         [_get_location_type_label(type) for type in location_type]
     )
+
+
+def get_hyperlink(ws, url, text):
+    # NOTE: 0, 0 will be updated by append
+    # - https://openpyxl.readthedocs.io/en/3.1.3/_modules/openpyxl/worksheet/worksheet.html#Worksheet.append
+    cell = OpCell(ws, 0, 0)
+    clean_text = get_valid_xml_string(text.replace('"', '""'))
+    cell.value = f'=HYPERLINK("{url}", "{clean_text}")'
+    cell.style = "Hyperlink"
+    return cell
 
 
 def string_join(
@@ -564,8 +575,14 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 'refer to the IDMC Monitoring Tools (https://www.internal-displacement.org/monitoring-tools).'
             ],
             [
-                'For information on how to access the data programmatically, please visit our API documentation page '
-                'https://www.internal-displacement.org/database/api-documentation/'
+                get_hyperlink(
+                    ws4,
+                    'https://www.internal-displacement.org/database/api-documentation/',
+                    (
+                        'For information on how to access the data programmatically, please visit our API documentation page '  # noqa: E501
+                        'https://www.internal-displacement.org/database/api-documentation/'
+                    )
+                ),
             ],
             [],
             ['KEY DEFINITIONS:'],
