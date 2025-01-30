@@ -177,6 +177,6 @@ class IdpsSaddEstimateSerializer(serializers.ModelSerializer):
     def validate(self, validated_data):
         validated_data = super().validate(validated_data)
         country = validated_data['country']
-        validated_data['country_name'] = country.name
+        validated_data['country_name'] = country.idmc_short_name
         validated_data['iso3'] = country.iso3
         return validated_data
