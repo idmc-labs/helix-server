@@ -159,7 +159,7 @@ class StatusLog(models.Model):
 
     @classmethod
     def last_release_date(cls):
-        last_log = StatusLog.objects.last()
+        last_log = StatusLog.objects.filter(completed_at__isnull=False).last()
         return last_log.completed_at.strftime("%B %d, %Y") if last_log else None
 
 
