@@ -7,6 +7,7 @@ import decimal
 import tempfile
 import logging
 from datetime import timedelta
+from xml.sax.saxutils import escape as xml_escape
 
 from django.conf import settings
 from rest_framework.exceptions import PermissionDenied
@@ -211,6 +212,24 @@ def return_error_as_string(func):
             return traceback.format_exc()
     _wrapper.__name__ = func.__name__
     return _wrapper
+
+
+def is_valid_xml_char_ordinal(c):
+    codepoint = ord(c)
+    # conditions ordered by presumed frequency
+    return (
+        0x20 <= codepoint <= 0xD7FF or
+        codepoint in (0x9, 0xA, 0xD) or
+        0xE000 <= codepoint <= 0xFFFD or
+        0x10000 <= codepoint <= 0x10FFFF
+    )
+
+
+def get_valid_xml_string(string, escape=True):
+    if string:
+        s = xml_escape(string) if escape else string
+        return ''.join(c for c in s if is_valid_xml_char_ordinal(c))
+    return ''
 
 
 client_id = extend_schema(
