@@ -34,7 +34,6 @@ spec:
         - name: worker
           image: "{{ $.Values.worker.image.name }}:{{ $.Values.worker.image.tag }}"
           imagePullPolicy: {{ $.Values.worker.image.imagePullPolicy  }}
-          command: ["/code/deploy/scripts/run_tasks.sh"]
           command:
             - "celery"
             - "-A"
