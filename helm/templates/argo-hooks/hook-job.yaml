@@ -1,0 +1,43 @@
+{{- range $hookName, $hook := .Values.argoHooks }}
+
+{{- if $hook.enabled }}
+
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  {{- if $hook.preserveHistory }}
+  generateName: {{ template "helix-backend.fullname" $ }}-{{ $hookName }}-
+  {{- else }}
+  name: {{ template "helix-backend.fullname" $ }}-{{ $hookName }}
+  {{- end }}
+  annotations:
+    argocd.argoproj.io/hook: {{ $hook.hook }}
+spec:
+  template:
+    spec:
+      restartPolicy: "Never"
+      containers:
+        - name: {{ $hookName }}
+          image: "{{ $.Values.image.name }}:{{ $.Values.image.tag }}"
+          imagePullPolicy:  {{ $.Values.image.imagePullPolicy  }}
+          command: {{ toYaml $hook.command | trim | nindent 12 }}
+          resources:
+            requests:
+              cpu: {{ default $.Values.api.resources.requests.cpu $hook.requestsCpu }}
+              memory: {{ default $.Values.api.resources.requests.memory $hook.requestsMemory }}
+            limits:
+              cpu: {{ default $.Values.api.resources.limits.cpu $hook.limitsCpu }}
+              memory: {{ default $.Values.api.resources.limits.memory $hook.limitsMemory }}
+          env:
+            - name: DJANGO_APP_TYPE
+              value: hook
+          envFrom:
+            - secretRef:
+                name: {{ template "helix-backend.secretname" $ }}
+            - configMapRef:
+                name: {{ template "helix-backend.envConfigMapName" $ }}
+
+{{- end }}
+
+{{- end }}

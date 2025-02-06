@@ -1,0 +1,59 @@
+{{- if .Values.worker.enabled }}
+
+{{- range $queue_name, $config := .Values.worker.queues }}
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "helix-backend.fullname" $ }}-worker-{{ $queue_name }}
+  labels:
+    app: {{ include "helix-backend.fullname" $ }}
+    component: worker
+    queue: {{ $queue_name }}
+    environment: {{ $.Values.environment }}
+    release: {{ $.Release.Name }}
+spec:
+  replicas: {{ $config.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ include "helix-backend.fullname" $ }}
+      component: worker
+      queue: {{ $queue_name }}
+  template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/config/secret.yaml") $ | sha256sum }}
+        checksum/configmap: {{ include (print $.Template.BasePath "/config/configmap.yaml") $ | sha256sum }}
+      labels:
+        app: {{ include "helix-backend.fullname" $ }}
+        component: worker
+        queue: {{ $queue_name }}
+    spec:
+      containers:
+        - name: worker
+          image: "{{ $.Values.worker.image.name }}:{{ $.Values.worker.image.tag }}"
+          imagePullPolicy: {{ $.Values.worker.image.imagePullPolicy  }}
+          command:
+            - "celery"
+            - "-A"
+            - "helix"
+            - "worker"
+            - "-l"
+            - "INFO"
+            {{- toYaml $config.celeryArgs | nindent 12 }}
+          # TODO: livenessProbe
+          resources:
+            {{- toYaml $config.resources | nindent 12 }}
+          env:
+            - name: DJANGO_APP_TYPE
+              value: worker
+          envFrom:
+            - secretRef:
+                name: {{ template "helix-backend.secretname" $ }}
+            - configMapRef:
+                name: {{ template "helix-backend.envConfigMapName" $ }}
+
+{{- end }}
+
+{{- end }}

@@ -1,0 +1,200 @@
+environment: prod
+
+image:
+  name: SET-BY-CICD-IMAGE
+  tag: SET-BY-CICD-TAG
+  imagePullPolicy: IfNotPresent
+
+
+ingress:
+  enabled: false
+  host:
+  className:
+  tls:
+    enabled: false
+    secretName:
+
+redis:
+  enabled: true
+  architecture: standalone
+  fullnameOverride: idmc-redis
+  auth:
+    enabled: false
+  master:
+    persistence:
+      enabled: true
+      size: .5Gi
+      storageClass:
+
+postgresql:
+  enabled: false
+  fullnameOverride: "idmc-pg"
+  architecture: standalone
+  auth:
+    postgresPassword: ""
+    username: ""
+    password: ""
+    database: ""
+  primary:
+    persistence:
+      enabled: true
+      storageClass: ""
+      size: 8Gi
+
+# https://artifacthub.io/packages/helm/bitnami/minio
+# extraEnvVars: https://github.com/bitnami/containers/blob/main/bitnami/minio/README.md#environment-variables
+minio:
+  enabled: false
+  disableWebUI: true
+  mode: standalone
+  fullnameOverride: helix-minio
+  global:
+    defaultStorageClass:
+  apiIngress:
+    enabled: true
+    ingressClassName:
+    hostname:
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+  auth:
+    forceNewKeys: True
+    rootUser: helix
+    rootPassword:
+  persistence:
+    enabled: true
+    size: 1Gi
+  defaultBuckets: helix-data,helix-external-data  # XXX: Don't change this
+  provisioning:
+    enabled: true
+    resourcesPreset: "nano"
+    cleanupAfterFinished:
+      enabled: true
+    extraCommands:
+      - "mc anonymous set download provisioning/helix-data"
+      - "mc anonymous set download provisioning/helix-external-data"
+
+api:
+  enabled: true
+  replicaCount: 1
+  containerPort: 80
+  resources:
+    requests:
+      cpu: "2"
+      memory: 0.5Gi
+    limits:
+      cpu: "2"
+      memory: 1Gi
+
+worker:
+  image:
+    name: WORKER-SET-BY-CICD-IMAGE
+    tag: WORKER-SET-BY-CICD-TAG
+    imagePullPolicy: IfNotPresent
+  enabled: true
+  beat:
+    resources:
+      requests:
+        cpu: "1"
+        memory: 0.5Gi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+  flower:
+    enabled: false  # Install flower package first
+    resources:
+      requests:
+        cpu: "0.1"
+        memory: 0.5Gi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+  queues:
+    # NOTE: Make sure keys are lowercase
+    default:
+      enabled: true
+      replicaCount: 1
+      celeryArgs:
+        - "-Q"
+        - "celery"
+        - "--concurrency"
+        - "4"
+        - "--max-tasks-per-child"
+        - "10"
+      resources:
+        requests:
+          cpu: "1"
+          memory: 1Gi
+        limits:
+          cpu: "1"
+          memory: 2Gi
+
+argoHooks:
+  # NOTE: Make sure keys are lowercase
+  db-migrate:
+    enabled: true
+    hook: PostSync
+    preserveHistory: true
+    command: ["./manage.py", "migrate"]
+    requestsCpu: 0.1
+    requestsMemory: 1G
+    limitsCpu: 4
+    limitsMemory: 2G
+  collect-static:
+    enabled: true
+    hook: PostSync
+    command: ["./manage.py", "collectstatic", "--noinput"]
+
+envConfigMapName: ""
+env:
+  # DJANGO_APP_ENVIRONMENT: using .environment
+  # APP_RELEASE: using .image.tag
+  DJANGO_DEBUG: false
+  DJANGO_TIME_ZONE: UTC
+  # App Domain
+  APP_DOMAIN:
+  DJANGO_ALLOWED_HOST:
+  SESSION_COOKIE_DOMAIN:
+  CSRF_COOKIE_DOMAIN:
+  BACKEND_BASE_URL:
+  FRONTEND_BASE_URL:
+  # Misc
+  # Sentry
+  SENTRY_SAMPLE_RATE: "0.2"
+  SENTRY_PROFILES_SAMPLE_RATE: "0.2"
+# NOTE: Used to pass additional configs to api/worker containers
+envAdditional:
+  # SOME_CONFIG_THING: "NON-SENSITIVE"
+
+secretsName: ""
+secrets:
+  DJANGO_SECRET_KEY:
+  # Database (Provide: if not postgres.enabled)
+  POSTGRES_DB:
+  POSTGRES_HOST:
+  POSTGRES_PASSWORD:
+  POSTGRES_PORT:
+  POSTGRES_USER:
+  # Sentry
+  SENTRY_DSN:
+  # Redis (Provide: if not redis.enabled)
+  # - Celery
+  CELERY_BROKER_URL:
+  CELERY_RESULT_BACKEND_URL:
+  DJANGO_CACHE_REDIS_URL:
+  DJANGO_EXTERNAL_API_CACHE_REDIS_URL:
+  # - Cache
+  CACHE_REDIS_URL:
+  # Hcaptcha
+  HCAPTCHA_SITEKEY:
+  HCAPTCHA_SECRET:
+  # S3 (Provide: if not minio.enabled)
+  USE_S3_BUCKET:
+  AWS_S3_ACCESS_KEY_ID:
+  AWS_S3_AWS_ENDPOINT_URL:
+  AWS_S3_REGION:
+  AWS_S3_SECRET_ACCESS_KEY:
+  EXTERNAL_S3_BUCKET_NAME:
+  S3_BUCKET_NAME:
+# NOTE: Used to pass additional secrets to api/worker containers
+secretsAdditional:
+  # SOME_SECRET_THING: "VERY-SENSITIVE"
