@@ -600,11 +600,16 @@ CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
 CORS_ALLOW_CREDENTIALS = True
 
 HELIX_TRUSTED_ORIGINS = [
-    # Localhost
-    "http://localhost:3080",
-    "http://127.0.0.1:3080",
     # Frontend
     FRONTEND_BASE_URL,
+
+    # Helix Client - Localhost
+    "http://localhost:3080",
+    "http://127.0.0.1:3080",
+
+    # IDMC Website Components - Localhost
+    "http://localhost:3081",
+    "http://127.0.0.1:3081",
 
     # Obsolete: Media Monitoring
     'https://media-monitoring.idmcdb.org',
@@ -624,7 +629,6 @@ HELIX_TRUSTED_ORIGINS = [
     'https://uat.internal-displacement.org',
     'https://develop.internal-displacement.org',
 ]
-
 
 CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = HELIX_TRUSTED_ORIGINS
 
