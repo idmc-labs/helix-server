@@ -605,18 +605,24 @@ HELIX_TRUSTED_ORIGINS = [
     "http://127.0.0.1:3080",
     # Frontend
     FRONTEND_BASE_URL,
-    # External services
+
+    # Obsolete: Media Monitoring
     'https://media-monitoring.idmcdb.org',
 
-    'https://www.internal-displacement.org',
-    'https://staging.internal-displacement.org',
-
+    # IDMC Website Components - Prod/Staging
     'https://preview-website-components.idmcdb.org',
     'https://release-website-components.idmcdb.org',
 
-    # Axelerant deployment instances https://idmc-dfs-dev.slack.com/archives/C05TDRZCQ9W/p1704090909962969
+    # IDMC Website - Prod
+    'https://www.internal-displacement.org',
+
+    # IDMC Website - Staging: https://idmc-dfs-dev.slack.com/archives/C05TDRZCQ9W/p1704090909962969
+    'https://staging.internal-displacement.org',
     'https://newdev.internal-displacement.org',
     'https://www.newdev.internal-displacement.org',
+
+    'https://uat.internal-displacement.org',
+    'https://develop.internal-displacement.org',
 ]
 
 
