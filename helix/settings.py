@@ -69,10 +69,12 @@ env = environ.Env(
     POSTGRES_PORT=(int, 5432),
     POSTGRES_USER=str,
     SEND_ACTIVATION_EMAIL=(bool, True),
+    # Sentry
+    SENTRY_DEBUG=(bool, False),
     SENTRY_DSN=(str, None),
     SENTRY_SAMPLE_RATE=(float, 0.2),  # TODO: Change this to SENTRY_TRACES_SAMPLE_RATE
     SENTRY_PROFILES_SAMPLE_RATE=(float, None),
-    SENTRY_MONITOR_CELERY_BEAT_TASKS=(bool, False),
+    SENTRY_MONITOR_CELERY_BEAT_TASKS=(bool, True),
     # Copilot
     COPILOT_ENVIRONMENT_NAME=(str, None),
     COPILOT_SERVICE_NAME=(str, None),
@@ -438,10 +440,6 @@ GZIP_CONTENT_TYPES = [
 
 # HEALTH-CHECK
 REDIS_URL = DJANGO_CACHE_REDIS_URL
-HEALTH_CHECK = {
-    'DISK_USAGE_MAX': 80,  # percentage
-    'MEMORY_MIN': 100,  # MB
-}
 
 # Sentry Config
 SENTRY_DSN = env('SENTRY_DSN')
@@ -449,7 +447,7 @@ SENTRY_DSN = env('SENTRY_DSN')
 SENTRY_MONITOR_CELERY_BEAT_TASKS = env('SENTRY_MONITOR_CELERY_BEAT_TASKS')
 
 if SENTRY_DSN:
-    SENTRY_CONFIG = {
+    SENTRY_CORE_CONFIG = {
         'dsn': SENTRY_DSN,
         'send_default_pii': True,
         # TODO: Move server to root directory to get access to .git
@@ -457,15 +455,15 @@ if SENTRY_DSN:
         'environment': HELIX_ENVIRONMENT,
         'traces_sample_rate': env('SENTRY_SAMPLE_RATE'),
         'profiles_sample_rate': env('SENTRY_PROFILES_SAMPLE_RATE'),
-        'debug': DEBUG,
+        'debug': env('SENTRY_DEBUG'),
+    }
+    SENTRY_ADDITIONAL_CONFIG = {
         'tags': {
             'site': ALLOWED_HOSTS[0],
         },
+        'app_type': 'server',
     }
-    sentry.init_sentry(
-        app_type='server',
-        **SENTRY_CONFIG,
-    )
+    sentry.init_sentry()
 
 RESOURCE_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
 RESOURCEGROUP_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']

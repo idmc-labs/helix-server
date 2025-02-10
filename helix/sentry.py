@@ -77,19 +77,21 @@ def fetch_git_sha(path, head=None):
 
 @signals.beat_init.connect
 @signals.celeryd_init.connect
-def init_sentry(app_type, tags={}, **config):
-    from helix.settings import SENTRY_MONITOR_CELERY_BEAT_TASKS
+def init_sentry(**_kwargs):
+    from helix.settings import SENTRY_MONITOR_CELERY_BEAT_TASKS, SENTRY_CORE_CONFIG, SENTRY_ADDITIONAL_CONFIG
     integrations = [
         DjangoIntegration(),
         RedisIntegration(),
         CeleryIntegration(monitor_beat_tasks=SENTRY_MONITOR_CELERY_BEAT_TASKS),
     ]
     sentry_sdk.init(
-        **config,
+        **SENTRY_CORE_CONFIG,
         integrations=integrations,
         ignore_errors=IGNORED_ERRORS,
     )
     ignore_logger('graphql.execution.utils')
+    app_type = SENTRY_ADDITIONAL_CONFIG['app_type']
+    tags = SENTRY_ADDITIONAL_CONFIG['tags']
     with sentry_sdk.configure_scope() as scope:
         scope.set_tag('app_type', app_type)
         for tag, value in tags.items():
