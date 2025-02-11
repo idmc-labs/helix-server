@@ -11,7 +11,7 @@ on:
       - 'project/**'
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     strategy:
       matrix:

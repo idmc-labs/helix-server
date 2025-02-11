@@ -54,6 +54,7 @@ env = environ.Env(
     SESSION_COOKIE_DOMAIN=str,  # .tools.idmdb.org
     CSRF_COOKIE_DOMAIN=str,   # .tools.idmdb.org
     CSRF_USE_SESSIONS=(bool, False),
+    ADDITIONAL_TRUSTED_ORIGINS=(list, []),
     # MISC
     DEFAULT_FROM_EMAIL=(str, 'contact@idmcdb.org'),
     INTERNAL_BOT_EMAIL=(str, 'helix-internal-bot@idmc.ch'),
@@ -626,6 +627,8 @@ HELIX_TRUSTED_ORIGINS = [
 
     'https://uat.internal-displacement.org',
     'https://develop.internal-displacement.org',
+
+    *env('ADDITIONAL_TRUSTED_ORIGINS'),
 ]
 
 CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = HELIX_TRUSTED_ORIGINS
