@@ -18,44 +18,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('csv_file_path', type=str, help='Path to the CSV file')
+        parser.add_argument(
+            '--delete-empty-events',
+            action='store_true',
+            help='Delete events that are not associated with any figures'
+        )
 
-    def handle(self, *args, **kwargs):
-        figures_file = kwargs['csv_file_path']
-
-        figure_event_map = {}
-        event_ids = set()
-        new_event_ids = set()
-
-        with open(figures_file, 'r') as file:
-            reader = csv.DictReader(file)
-            next(reader)  # Skip headers
-
-            for row in reader:
-                figure_id = int(row['ID'])
-                event_id = int(row['Event ID'])
-                new_event_id = int(row['New Event ID'])
-                if row['Event to be deleted']:
-                    event_ids.add(int(row['Event to be deleted']))
-
-                figure_instance = Figure.objects.filter(id=figure_id).first()
-                if not figure_instance:
-                    self.stdout.write(self.style.ERROR(f'Figure with ID {figure_id} not found'))
-                    continue
-
-                if figure_instance.event_id != event_id:
-                    self.stdout.write(
-                        self.style.ERROR(
-                            f'Expected event ID {event_id} for figure ID {figure_id}, but found {figure_instance.event_id}'
-                        )
-                    )
-                    continue
-
-                if not Event.objects.filter(id=new_event_id).first():
-                    new_event_ids.add(new_event_id)
-                    continue
-
-                figure_event_map[figure_id] = new_event_id
-
+    def update_figure_event(self, figure_event_map: dict) -> None:
         # Helix Bot
         internal_bot = HelixInternalBot()
         api_request = generate_dummy_request(internal_bot.user)
@@ -74,9 +43,9 @@ class Command(BaseCommand):
                     "by_figures": [
                         {
                             "figure": figure_id,
-                            "event": event_id,
+                            "event": new_event_id,
                         }
-                        for figure_id, event_id in figure_event_map.items()
+                        for figure_id, new_event_id in figure_event_map.items()
                     ],
                 },
             },
@@ -97,27 +66,66 @@ class Command(BaseCommand):
                 assert serializer.is_valid() is True, serializer.errors
                 serializer.save()
 
-        event_figure_qs = Event.objects.filter(id__in=list(event_ids)).annotate(
-            total_figure_count=Count('figures')
-        )
+    def handle(self, *args, **kwargs):
+        csv_file_path = kwargs['csv_file_path']
 
-        if new_event_ids:
+        figure_event_map = {}
+        event_ids = set()
+
+        with open(csv_file_path, 'r') as file:
+            reader = csv.DictReader(file)
+
+            for row in reader:
+                figure_id = int(row['ID'])
+                event_id = int(row['Event ID'])
+                new_event_id = int(row['New Event ID'])
+                event_ids.add(event_id)
+
+                figure_instance = Figure.objects.filter(id=figure_id).first()
+                if not figure_instance:
+                    self.stdout.write(self.style.ERROR(f'Figure with ID {figure_id} not found'))
+                    continue
+
+                if figure_instance.event_id != event_id:
+                    self.stdout.write(
+                        self.style.ERROR(
+                            f'Expected event ID {event_id} for figure ID {figure_id}, but found {figure_instance.event_id}'
+                        )
+                    )
+                    continue
+
+                if not Event.objects.filter(id=new_event_id).first():
+                    self.stdout.write(
+                        self.style.ERROR(
+                            f'Expected new event ID {new_event_id} for figure ID {figure_id} has not been found'
+                        )
+                    )
+                    continue
+
+                figure_event_map[figure_id] = new_event_id
+
+        if figure_event_map:
+            self.update_figure_event(figure_event_map)
+
+        if kwargs['delete_empty_events']:
+            event_to_be_deleted_qs = Event.objects.filter(id__in=list(event_ids)).annotate(
+                total_figure_count=Count('figures')
+            )
+
+            # Delete the events that arenot associated with any figures
+            events_to_be_deleted_stat = event_to_be_deleted_qs.filter(total_figure_count=0).delete()
             self.stdout.write(
-                self.style.ERROR(
-                    f'New Events not found: {new_event_ids}'
+                self.style.SUCCESS(
+                    f'Deleted events: {events_to_be_deleted_stat}'
                 )
             )
 
-        # Delete the events that arenot associated with any figures
-        self.stdout.write(
-            self.style.SUCCESS(
-                f'Deleted events: {event_figure_qs.filter(total_figure_count=0).delete()}'
+            # Events associated with figure will not be deleted
+            failed_to_delete_event_stat = event_to_be_deleted_qs.filter(
+                total_figure_count__gt=0
+            ).values_list("id", flat=True)
+            self.stdout.write(
+                self.style.ERROR(
+                    f'Failed to delete events: {failed_to_delete_event_stat}'
+                )
             )
-        )
-
-        # Events associated with figure will not be deleted
-        self.stdout.write(
-            self.style.ERROR(
-                f'Failed to delete events: {event_figure_qs.filter(total_figure_count__gt=0).values_list("id", flat=True)}'
-            )
-        )

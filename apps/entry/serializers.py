@@ -22,6 +22,7 @@ from apps.entry.models import (
     DisaggregatedAge,
 )
 from apps.country.models import Country
+from apps.review.models import UnifiedReviewComment
 from utils.validations import is_child_parent_inclusion_valid, is_child_parent_dates_valid
 from utils.common import round_half_up
 from .utils import (
@@ -553,6 +554,8 @@ class FigureSerializer(
 
         bulk_manager: BulkUpdateFigureManager = self.context['bulk_manager']
         if existing_event != instance.event:
+            # NOTE: Updating UnifiedReviewComment while changing event for the figure
+            UnifiedReviewComment.objects.filter(figure=instance.id, event=existing_event).update(event_id=instance.event)
             bulk_manager.add_event(existing_event.pk)
             self._send_event_change_notification(instance, existing_event, instance.event)
         else:
