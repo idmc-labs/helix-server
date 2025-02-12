@@ -219,7 +219,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                             disaster.event_codes_type
                         )]
                     ),
-                    disaster.event_id,
+                    disaster.event_raw_id,
                     self.get_displacement_status(disaster.displacement_occurred),
                 ]
             )
@@ -1097,7 +1097,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                     "coordinates": format_coordinates(item.locations_coordinates),
                 },
                 "properties": remove_null_from_dict({
-                    "ID": item.figure_id,
+                    "ID": item.figure_raw_id,
                     "ISO3": item.iso3,
                     "Country": item.country_name,
                     "Geographical region": item.geographical_region_name,
@@ -1124,7 +1124,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                     "Publishers": item.publishers,
                     "Sources": item.sources,
                     "Sources type": item.sources_type,
-                    "Event ID": item.gidd_event.event_id,
+                    "Event ID": item.gidd_event.event_raw_id,
                     "Event name": item.gidd_event.name,
                     "Event cause": self._get_cause(item.gidd_event.cause),
                     "Event main trigger": item.event_main_trigger,
@@ -1536,7 +1536,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
 
         for item in qs:
             ws.append([
-                item.figure_id,
+                item.figure_raw_id,
                 item.iso3,
                 item.country_name,
                 item.geographical_region_name,
@@ -1563,7 +1563,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 string_join(EXTERNAL_ARRAY_SEPARATOR, item.publishers),
                 string_join(EXTERNAL_ARRAY_SEPARATOR, item.sources),
                 string_join(EXTERNAL_ARRAY_SEPARATOR, item.sources_type),
-                item.gidd_event.event_id,
+                item.gidd_event.event_raw_id,
                 item.gidd_event.name,
                 self._get_cause(item.gidd_event.cause),
                 item.event_main_trigger,

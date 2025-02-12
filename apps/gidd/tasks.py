@@ -285,6 +285,7 @@ def update_conflict_and_disaster_data():
             [
                 Disaster(
                     event_id=item['event__id'],
+                    event_raw_id=item['event__id'],
                     event_name=item['event__name'],
                     year=item['year'],
                     start_date=item['event__start_date'],
@@ -396,7 +397,8 @@ def update_public_figure_analysis():
                     _get_figures(figure_category, figure_cause, report_country_aggregation)
                 ),
                 description=report.public_figure_analysis,
-                report=report
+                report=report,
+                report_raw_id=report.id,
             ),
         )
 
@@ -549,6 +551,7 @@ def update_gidd_event_and_gidd_figure_data():
             GiddEvent(
                 id=item['id'],  # NOTE: GiddEvent ID is same as Event ID
                 event_id=item['id'],
+                event_raw_id=item['id'],
                 name=item['name'],
                 cause=item['event_type'],
 
@@ -724,8 +727,11 @@ def update_gidd_event_and_gidd_figure_data():
         GiddFigure.objects.bulk_create(
             [
                 GiddFigure(
+                    # FIXME: Use this on next release
+                    # id=item['id'],
                     iso3=item['country__iso3'],
                     figure_id=item['id'],
+                    figure_raw_id=item['id'],
                     country_name=item['country__idmc_short_name'],
                     country_id=item['country'],
                     gidd_event_id=item['event__id'],    # NOTE: GiddEvent ID is same as Event ID
@@ -741,6 +747,7 @@ def update_gidd_event_and_gidd_figure_data():
                     calculation_logic=item['calculation_logic'],
                     is_disaggregated=item['is_disaggregated'],
                     entry_id=item['entry'],
+                    entry_raw_id=item['entry'],
                     entry_name=item['entry__article_title'],
                     publishers=publisher_data['publishers'],
                     publishers_ids=publisher_data['ids'],

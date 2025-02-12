@@ -200,7 +200,7 @@ class GiddDisasterType(DjangoObjectType):
 
     @staticmethod
     def resolve_event_id(root, info, **kwargs):
-        return root.event_id
+        return root.event_raw_id
 
     @staticmethod
     def resolve_hazard_category_id(root, info, **kwargs):
@@ -721,7 +721,7 @@ class Query(graphene.ObjectType):
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_EVENT_GRAPHQL)
 
         event_id = kwargs['event_id']
-        disaster_qs = DisasterFilter(data=kwargs).qs.filter(event_id=event_id)
+        disaster_qs = DisasterFilter(data=kwargs).qs.filter(event_raw_id=event_id)
 
         if not disaster_qs.exists():
             return None

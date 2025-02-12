@@ -44,6 +44,7 @@ class Disaster(models.Model):
         'event.Event', verbose_name=_('Event'),
         related_name='gidd_events', on_delete=models.SET_NULL, null=True, blank=True
     )
+    event_raw_id = models.IntegerField(null=True, blank=True)
     year = models.IntegerField()
     country = models.ForeignKey(
         'country.Country', related_name='country_disaster', on_delete=models.PROTECT,
@@ -269,6 +270,7 @@ class PublicFigureAnalysis(models.Model):
         'report.Report', verbose_name=_('Report'), null=True,
         related_name='+', on_delete=models.SET_NULL
     )
+    report_raw_id = models.IntegerField()
 
 
 class DisplacementData(models.Model):
@@ -322,6 +324,7 @@ class IdpsSaddEstimate(models.Model):
 
 class GiddEvent(MetaInformationAbstractModel):
     name = models.CharField(verbose_name=_('Event Name'), max_length=256)
+    event_raw_id = models.IntegerField(null=True, blank=True)
     event = models.ForeignKey(
         'event.Event', verbose_name=_('Event'),
         related_name='+', on_delete=models.SET_NULL, null=True, blank=True
@@ -430,6 +433,7 @@ class GiddEvent(MetaInformationAbstractModel):
 
 class GiddFigure(MetaInformationAbstractModel):
     iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
+    figure_raw_id = models.IntegerField(null=True, blank=True)
     figure = models.ForeignKey(
         Figure,
         related_name='+', on_delete=models.SET_NULL, null=True, blank=True,
@@ -550,6 +554,7 @@ class GiddFigure(MetaInformationAbstractModel):
         default=list,
     )
 
+    # NOTE: Gidd event id and event id must be same
     gidd_event = models.ForeignKey(
         'gidd.GiddEvent', verbose_name=_('GIDD Event'),
         related_name='gidd_figures', on_delete=models.PROTECT
@@ -561,6 +566,7 @@ class GiddFigure(MetaInformationAbstractModel):
         on_delete=models.SET_NULL,
         null=True,
     )
+    entry_raw_id = models.IntegerField(null=True, blank=True)
     entry_name = models.CharField(
         max_length=512,
         verbose_name=_('Entry Title'),
