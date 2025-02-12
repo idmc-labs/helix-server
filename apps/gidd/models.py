@@ -40,11 +40,11 @@ class Conflict(models.Model):
 
 
 class Disaster(models.Model):
-    event_reference = models.ForeignKey(
+    event = models.ForeignKey(
         'event.Event', verbose_name=_('Event'),
         related_name='gidd_events', on_delete=models.SET_NULL, null=True, blank=True
     )
-    event_id = models.IntegerField(null=True, blank=True)
+    event_raw_id = models.IntegerField(null=True, blank=True)
     year = models.IntegerField()
     country = models.ForeignKey(
         'country.Country', related_name='country_disaster', on_delete=models.PROTECT,
@@ -266,11 +266,11 @@ class PublicFigureAnalysis(models.Model):
     figures = models.IntegerField(verbose_name=_('Figures'), null=True)
     figures_rounded = models.IntegerField(verbose_name=_('Figures rounded'), null=True)
     description = models.TextField(verbose_name=_('Description'), null=True)
-    report_reference = models.ForeignKey(
+    report = models.ForeignKey(
         'report.Report', verbose_name=_('Report'), null=True,
         related_name='+', on_delete=models.SET_NULL
     )
-    report_id = models.IntegerField()
+    report_raw_id = models.IntegerField()
 
 
 class DisplacementData(models.Model):
@@ -324,8 +324,8 @@ class IdpsSaddEstimate(models.Model):
 
 class GiddEvent(MetaInformationAbstractModel):
     name = models.CharField(verbose_name=_('Event Name'), max_length=256)
-    event_id = models.IntegerField(null=True, blank=True)
-    event_reference = models.ForeignKey(
+    event_raw_id = models.IntegerField(null=True, blank=True)
+    event = models.ForeignKey(
         'event.Event', verbose_name=_('Event'),
         related_name='+', on_delete=models.SET_NULL, null=True, blank=True
     )
@@ -433,8 +433,8 @@ class GiddEvent(MetaInformationAbstractModel):
 
 class GiddFigure(MetaInformationAbstractModel):
     iso3 = models.CharField(verbose_name=_('ISO3'), max_length=5)
-    figure_id = models.IntegerField(null=True, blank=True)
-    figure_reference = models.ForeignKey(
+    figure_raw_id = models.IntegerField(null=True, blank=True)
+    figure = models.ForeignKey(
         Figure,
         related_name='+', on_delete=models.SET_NULL, null=True, blank=True,
     )
@@ -558,14 +558,14 @@ class GiddFigure(MetaInformationAbstractModel):
         'gidd.GiddEvent', verbose_name=_('GIDD Event'),
         related_name='gidd_figures', on_delete=models.PROTECT
     )
-    entry_reference = models.ForeignKey(
+    entry = models.ForeignKey(
         Entry,
         verbose_name=_('Entry'),
         related_name='gidd_figures',
         on_delete=models.SET_NULL,
         null=True,
     )
-    entry_id = models.IntegerField(null=True, blank=True)
+    entry_raw_id = models.IntegerField(null=True, blank=True)
     entry_name = models.CharField(
         max_length=512,
         verbose_name=_('Entry Title'),

@@ -9,54 +9,29 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameField(
-            model_name='disaster',
-            old_name='event',
-            new_name='event_reference',
-        ),
-        migrations.RenameField(
-            model_name='giddevent',
-            old_name='event',
-            new_name='event_reference',
-        ),
-        migrations.RenameField(
-            model_name='giddfigure',
-            old_name='entry',
-            new_name='entry_reference',
-        ),
-        migrations.RenameField(
-            model_name='giddfigure',
-            old_name='figure',
-            new_name='figure_reference',
-        ),
-        migrations.RenameField(
-            model_name='publicfigureanalysis',
-            old_name='report',
-            new_name='report_reference',
-        ),
         migrations.AddField(
             model_name='disaster',
-            name='event_id',
+            name='event_raw_id',
             field=models.IntegerField(blank=True, null=True),
         ),
         migrations.AddField(
             model_name='giddevent',
-            name='event_id',
+            name='event_raw_id',
             field=models.IntegerField(blank=True, null=True),
         ),
         migrations.AddField(
             model_name='giddfigure',
-            name='entry_id',
+            name='entry_raw_id',
             field=models.IntegerField(blank=True, null=True),
         ),
         migrations.AddField(
             model_name='giddfigure',
-            name='figure_id',
+            name='figure_raw_id',
             field=models.IntegerField(blank=True, null=True),
         ),
         migrations.AddField(
             model_name='publicfigureanalysis',
-            name='report_id',
+            name='report_raw_id',
             field=models.IntegerField(default=1),
             preserve_default=False,
         ),

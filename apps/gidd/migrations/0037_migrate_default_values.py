@@ -10,17 +10,17 @@ def set_default_values(apps, schema_editor):
     PublicFigureAnalysis = apps.get_model('gidd', 'PublicFigureAnalysis')
     
     Disaster.objects.update(
-        event_id=models.F('event_reference_id')
+        event_raw_id=models.F('event_id')
     )
     Giddevent.objects.update(
-        event_id=models.F('event_reference_id')
+        event_raw_id=models.F('event_id')
     )
     GiddFigure.objects.update(
-        entry_id=models.F('entry_reference_id'),
-        figure_id=models.F('figure_reference_id')
+        entry_raw_id=models.F('entry_id'),
+        figure_raw_id=models.F('figure_id')
     )
     PublicFigureAnalysis.objects.update(
-        report_id=models.F('report_reference_id')
+        report_raw_id=models.F('report_id')
     )
 
     
