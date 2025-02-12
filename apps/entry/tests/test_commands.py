@@ -43,22 +43,25 @@ class TestUpdateFigureEventMigrations(HelixGraphQLTestCase):
             event=event2,
         )
 
-        fields = ['ID', 'Event ID', 'New Event ID']
+        fields = ['ID', 'Event ID', 'New Event ID', 'Event to be deleted']
         data = [
             {
                 'ID': figure1.id,
                 'Event ID': event1.id,
                 'New Event ID': event2.id,
+                'Event to be deleted': event1.id,
             },
             {
                 'ID': figure2.id,
                 'Event ID': event2.id,
                 'New Event ID': event1.id,
+                'Event to be deleted': event2.id,
             },
             {
                 'ID': figure3.id,
                 'Event ID': event_with_no_figure.id,
                 'New Event ID': event1.id,
+                'Event to be deleted': event_with_no_figure,
             },
         ]
 

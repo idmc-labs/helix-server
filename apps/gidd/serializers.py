@@ -134,7 +134,7 @@ class DisaggregationSerializer(serializers.ModelSerializer):
         model = GiddFigure
         fields = (
             'iso3',
-            'figure',
+            'figure_raw_id',
             'country_name',
             'geographical_region_name',
             'year',

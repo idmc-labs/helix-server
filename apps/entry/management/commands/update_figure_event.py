@@ -79,7 +79,8 @@ class Command(BaseCommand):
                 figure_id = int(row['ID'])
                 event_id = int(row['Event ID'])
                 new_event_id = int(row['New Event ID'])
-                events_id_to_be_deleted.add(event_id)
+                if row['Event to be deleted']:
+                    events_id_to_be_deleted.add(event_id)
 
                 figure_instance = Figure.objects.filter(id=figure_id).first()
                 if not figure_instance:
