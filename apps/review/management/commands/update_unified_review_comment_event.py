@@ -9,7 +9,9 @@ class Command(BaseCommand):
     help = "Update Unified review comment events related to figure"
 
     def handle(self, *args, **options):
-        unified_review_comment_qs = UnifiedReviewComment.objects.update(
+        unified_review_comment_qs = UnifiedReviewComment.objects.filter(
+            ~models.Q(event_id=models.F('figure__event_id'))
+        ).update(
             event_id=models.Subquery(
                 Figure.objects.filter(
                     pk=models.OuterRef('figure_id')
@@ -21,4 +23,3 @@ class Command(BaseCommand):
                 f'Updated UnifiedReviewComment: {unified_review_comment_qs}'
             )
         )
-        return super().handle(*args, **options)
