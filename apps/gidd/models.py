@@ -554,6 +554,7 @@ class GiddFigure(MetaInformationAbstractModel):
         default=list,
     )
 
+    # NOTE: Gidd event id and event id must be same
     gidd_event = models.ForeignKey(
         'gidd.GiddEvent', verbose_name=_('GIDD Event'),
         related_name='gidd_figures', on_delete=models.PROTECT

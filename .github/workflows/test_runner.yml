@@ -1,7 +1,6 @@
 name: Django Test Runner
 
 on:
-  workflow_call:
   push:
     branches:
       - 'develop'
