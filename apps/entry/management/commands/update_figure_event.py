@@ -70,7 +70,7 @@ class Command(BaseCommand):
         csv_file_path = kwargs['csv_file_path']
 
         figure_event_map = {}
-        event_ids = set()
+        events_id_to_be_deleted = set()
 
         with open(csv_file_path, 'r') as file:
             reader = csv.DictReader(file)
@@ -79,7 +79,7 @@ class Command(BaseCommand):
                 figure_id = int(row['ID'])
                 event_id = int(row['Event ID'])
                 new_event_id = int(row['New Event ID'])
-                event_ids.add(event_id)
+                events_id_to_be_deleted.add(event_id)
 
                 figure_instance = Figure.objects.filter(id=figure_id).first()
                 if not figure_instance:
@@ -106,9 +106,15 @@ class Command(BaseCommand):
 
         if figure_event_map:
             self.update_figure_event(figure_event_map)
+        else:
+            self.stdout.write(
+                self.style.ERROR(
+                    'No figure event to be updated'
+                )
+            )
 
         if kwargs['delete_empty_events']:
-            event_to_be_deleted_qs = Event.objects.filter(id__in=list(event_ids)).annotate(
+            event_to_be_deleted_qs = Event.objects.filter(id__in=list(events_id_to_be_deleted)).annotate(
                 total_figure_count=Count('figures')
             )
 

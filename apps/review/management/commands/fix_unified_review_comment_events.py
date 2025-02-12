@@ -6,7 +6,7 @@ from apps.entry.models import Figure
 
 
 class Command(BaseCommand):
-    help = "Update Unified review comment events related to figure"
+    help = "Fix Unified review comment events related to figure"
 
     def handle(self, *args, **options):
         unified_review_comment_qs = UnifiedReviewComment.objects.filter(

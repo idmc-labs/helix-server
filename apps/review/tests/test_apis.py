@@ -1,3 +1,5 @@
+from django.core.management import call_command
+
 from apps.users.enums import USER_ROLE
 from apps.entry.models import Figure
 from apps.review.models import UnifiedReviewComment
@@ -257,3 +259,44 @@ class TestDeleteReviewComment(HelixGraphQLTestCase):
                       content['data']['deleteReviewComment']['errors'][0]['field'])
         self.assertIn('does not exist',
                       content['data']['deleteReviewComment']['errors'][0]['messages'].lower())
+
+
+class TestFixUnifiedReviewCommentCommand(HelixGraphQLTestCase):
+
+    def test_fix_unified_review_comment_events(self):
+        event1, event2, event3 = EventFactory.create_batch(3)
+
+        figure1 = FigureFactory.create(event=event1)
+        figure2 = FigureFactory(event=event2)
+
+        unified_review_comment1 = UnifiedReviewCommentFactory.create(
+            figure=figure1,
+            event=event1,
+        )
+        unified_review_comment2 = UnifiedReviewCommentFactory.create(
+            figure=figure2,
+            event=event1,
+        )
+
+        # Update figure events
+        figure1.event = event3
+        figure1.save(
+            update_fields=['event']
+        )
+
+        # Call command
+        call_command('fix_unified_review_comment_events')
+
+        unified_review_comment1.refresh_from_db()
+        unified_review_comment2.refresh_from_db()
+
+        self.assertEqual(
+            {
+                unified_review_comment1.figure.event_id,
+                unified_review_comment2.figure.event_id,
+            },
+            {
+                event3.id,
+                event2.id,
+            }
+        )

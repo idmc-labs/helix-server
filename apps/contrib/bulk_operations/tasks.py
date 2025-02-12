@@ -19,7 +19,6 @@ from django.test import override_settings
 from apps.contrib.models import BulkApiOperation
 from apps.extraction.filters import FigureExtractionBulkOperationFilterSet
 from apps.event.models import Figure
-from apps.review.models import UnifiedReviewComment
 
 from helix.permalinks import Permalink
 from utils.common import get_temp_file
@@ -331,10 +330,6 @@ class BulkFigureEventUpdateTask(BulkFigureBulkUpdateTask):
     @staticmethod
     def get_filters(filters: dict):
         return filters['figure_event']['figure']
-
-    @classmethod
-    def update_unified_review_comment(figure_id: int, event_id: int):
-        UnifiedReviewComment.objects.filter(figure_id=figure_id).update(event_id=event_id)
 
     @classmethod
     def get_mutation_variables(cls, payload: dict, items: typing.List[Figure]) -> dict:
