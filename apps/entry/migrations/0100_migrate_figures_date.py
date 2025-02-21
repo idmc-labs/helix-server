@@ -1,5 +1,6 @@
 import csv
 import logging
+from datetime import datetime, timedelta
 
 from io import StringIO
 from django.db import migrations
@@ -623,7 +624,7 @@ def update_figure_dates(apps, _):
             'migrated_end_date', 'correct_end_date', 'change', 'new_id', 'new_entry_id'
         ]
     )
-    next(reader)
+    next(reader) # Skip the header
 
     Figure = apps.get_model('entry', 'Figure')
     bulk_mgr = BulkUpdateManager(['start_date', 'end_date'])
@@ -632,7 +633,7 @@ def update_figure_dates(apps, _):
         figure = Figure.objects.filter(old_id=row['id']).first()
 
         if not figure:
-            logger.warning(f'Figure with old_id {row["id"]} not found, Skipping update.')
+            logger.error(f'Figure with old_id {row["id"]} not found, Skipping update.')
             continue
 
         update_needed = False
@@ -642,20 +643,40 @@ def update_figure_dates(apps, _):
             # NOTE: No need to migrate the start_date
             pass
         elif row['migrated_start_date'] != str(figure.start_date):
-            logger.warning(f"figure ID:({figure.id}) start date doesnot match with {figure.start_date}, Skipping update.")
+            logger.error(
+                f"Start date has been changed for figure id {figure.id}. "
+                f"Expected {row['migrated_start_date']} but found {figure.start_date}."
+            )
         elif row['migrated_start_date'] == str(figure.start_date):
-            figure.start_date = row['correct_start_date']
-            update_needed = True
+            correct_start_date = datetime.strptime(row['correct_start_date'], '%Y-%m-%d').date()
+            if correct_start_date - figure.start_date != timedelta(days=1):
+                logger.warning(
+                    f"The difference between the correct start date and the migrated start date is not 1 day for figure id {figure.id}. "
+                    f"Expected {row['correct_start_date']} but found {figure.start_date}. Skipping..."
+                )
+            else:
+                figure.start_date = row['correct_start_date']
+                update_needed = True
 
         # Update end date
         if row['migrated_end_date'] == row['correct_end_date']:
             # NOTE: No need to migrate the end_date
             pass
         elif row['migrated_end_date'] != str(figure.end_date):
-            logger.warning(f"figure ID:({figure.id}) end date doesnot match with {figure.end_date}, Skipping update.")
+            logger.error(
+                f"End date has been changed for figure id {figure.id}. "
+                f"Expected {row['migrated_end_date']} but found {figure.end_date}."
+            )
         elif row['migrated_end_date'] == str(figure.end_date):
-            figure.end_date = row['correct_end_date']
-            update_needed = True
+            correct_end_date = datetime.strptime(row['correct_end_date'], '%Y-%m-%d').date()
+            if correct_end_date - figure.end_date != timedelta(days=1):
+                logger.warning(
+                    f"The difference between the correct end date and the migrated end date is not 1 day for figure id {figure.id}. "
+                    f"Expected {row['correct_end_date']} but found {figure.end_date}. Skipping..."
+                )
+            else:
+                figure.end_date = row['correct_end_date']
+                update_needed = True
 
         if update_needed:
             bulk_mgr.add(figure)
