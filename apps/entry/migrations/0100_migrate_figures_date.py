@@ -642,7 +642,10 @@ def update_figure_dates(apps, _):
             # NOTE: No need to migrate the start_date
             pass
         elif row['migrated_start_date'] != str(figure.start_date):
-            logger.warning(f"figure ID:({figure.id}) start date doesnot match with {figure.start_date}, Skipping update.")
+            logger.error(
+                f"Start date has been changed for figure id {figure.id}. "
+                f"Expected {row['migrated_start_date']} but found {figure.start_date}."
+            )
         elif row['migrated_start_date'] == str(figure.start_date):
             figure.start_date = row['correct_start_date']
             update_needed = True
@@ -652,7 +655,10 @@ def update_figure_dates(apps, _):
             # NOTE: No need to migrate the end_date
             pass
         elif row['migrated_end_date'] != str(figure.end_date):
-            logger.warning(f"figure ID:({figure.id}) end date doesnot match with {figure.end_date}, Skipping update.")
+            logger.error(
+                f"End date has been changed for figure id {figure.id}. "
+                f"Expected {row['migrated_end_date']} but found {figure.end_date}."
+            )
         elif row['migrated_end_date'] == str(figure.end_date):
             figure.end_date = row['correct_end_date']
             update_needed = True

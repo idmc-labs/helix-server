@@ -36,7 +36,7 @@ def update_event_dates(apps, _):
         StringIO(CSV_DATA),
         fieldnames=['id', 'migrated_start_date', 'correct_start_date', 'migrated_end_date', 'correct_end_date', 'change', 'new_id'],
     )
-    next(reader)
+    next(reader) # Skip the header
 
     Event = apps.get_model('event', 'Event')
     bulk_mgr = BulkUpdateManager(['start_date', 'end_date'])
@@ -55,7 +55,10 @@ def update_event_dates(apps, _):
             # NOTE: No need to migrate the start_date
             pass
         elif row['migrated_start_date'] != str(event.start_date):
-            logger.warning(f"Event ID:({event.id}) start date doesnot match with {event.start_date}, Skipping update.")
+            logger.error(
+                f"Start date has been changed for event id {event.id}. "
+                f"Expected: {row['migrated_start_date']}, But got {event.start_date}"
+            )
         elif row['migrated_start_date'] == str(event.start_date):
             event.start_date = row['correct_start_date']
             update_needed = True
@@ -65,7 +68,10 @@ def update_event_dates(apps, _):
             # NOTE: No need to migrate the end_date
             pass
         elif row['migrated_end_date'] != str(event.end_date):
-            logger.warning(f"Event ID:({event.id}) end date doesnot match with {event.end_date}, Skipping update.")
+            logger.error(
+                f"End date has been changed for event id {event.id}. "
+                f"Expected: {row['migrated_end_date']}, But got {event.end_date}"
+            )
         elif row['migrated_end_date'] == str(event.end_date):
             event.end_date = row['correct_end_date']
             update_needed = True
