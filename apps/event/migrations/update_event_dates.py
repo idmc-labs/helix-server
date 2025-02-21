@@ -1,5 +1,6 @@
 import csv
 import logging
+from datetime import datetime, timedelta
 
 from io import StringIO
 from django.db import migrations
@@ -36,7 +37,7 @@ def update_event_dates(apps, _):
         StringIO(CSV_DATA),
         fieldnames=['id', 'migrated_start_date', 'correct_start_date', 'migrated_end_date', 'correct_end_date', 'change', 'new_id'],
     )
-    next(reader)
+    next(reader) # Skip the header
 
     Event = apps.get_model('event', 'Event')
     bulk_mgr = BulkUpdateManager(['start_date', 'end_date'])
@@ -45,7 +46,7 @@ def update_event_dates(apps, _):
         event = Event.objects.filter(old_id=row['id']).first()
 
         if not event:
-            logger.warning(f"Event with old_id ({row['id']}) not found. Skipping update.")
+            logger.error(f"Event with old_id ({row['id']}) not found. Skipping update.")
             continue
 
         update_needed = False
@@ -55,20 +56,40 @@ def update_event_dates(apps, _):
             # NOTE: No need to migrate the start_date
             pass
         elif row['migrated_start_date'] != str(event.start_date):
-            logger.warning(f"Event ID:({event.id}) start date doesnot match with {event.start_date}, Skipping update.")
+            logger.error(
+                f"Start date has been changed for event id {event.id}. "
+                f"Expected: {row['migrated_start_date']}, But got {event.start_date}"
+            )
         elif row['migrated_start_date'] == str(event.start_date):
-            event.start_date = row['correct_start_date']
-            update_needed = True
+            correct_start_date = datetime.strptime(row['correct_start_date'], '%Y-%m-%d').date()
+            if event.start_date - correct_start_date != timedelta(days=1):
+                logger.warning(
+                    f"The difference between the correct start date and the migrated start date is not 1 day for event id {event.id}. "
+                    f"Expected: {row['correct_start_date']}, But got {event.start_date}. Skipping..."
+                )
+            else:
+                event.start_date = row['correct_start_date']
+                update_needed = True
 
         # Update end date
         if row['migrated_end_date'] == row['correct_end_date']:
             # NOTE: No need to migrate the end_date
             pass
         elif row['migrated_end_date'] != str(event.end_date):
-            logger.warning(f"Event ID:({event.id}) end date doesnot match with {event.end_date}, Skipping update.")
+            logger.error(
+                f"End date has been changed for event id {event.id}. "
+                f"Expected: {row['migrated_end_date']}, But got {event.end_date}"
+            )
         elif row['migrated_end_date'] == str(event.end_date):
-            event.end_date = row['correct_end_date']
-            update_needed = True
+            correct_end_date = datetime.strptime(row['correct_end_date'], '%Y-%m-%d').date()
+            if correct_end_date - event.end_date != timedelta(days=1):
+                logger.warning(
+                    f"The difference between the correct end date and the migrated end date is not 1 day for event id {event.id}. "
+                    f"Expected: {row['correct_end_date']}, But got {event.end_date}. Skipping..."
+                )
+            else:
+                event.end_date = row['correct_end_date']
+                update_needed = True
 
         if update_needed:
             bulk_mgr.add(event)
