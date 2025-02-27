@@ -1,5 +1,5 @@
-import shlex
 import os
+import shlex
 import subprocess
 
 from django.core.management.base import BaseCommand
@@ -9,9 +9,7 @@ from django.utils import autoreload
 WORKER_STATE_DIR = '/var/run/celery'
 
 CMD = (
-    f"celery -A helix worker -B --concurrency=2 -l INFO "
-    '--scheduler ~/celerybeat-schedule '
-    f'--statedb={WORKER_STATE_DIR}/worker.state'
+    "celery -A helix worker -B --concurrency=2 -l INFO "
 )
 
 

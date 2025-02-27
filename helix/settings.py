@@ -54,6 +54,7 @@ env = environ.Env(
     SESSION_COOKIE_DOMAIN=str,  # .tools.idmdb.org
     CSRF_COOKIE_DOMAIN=str,   # .tools.idmdb.org
     CSRF_USE_SESSIONS=(bool, False),
+    ADDITIONAL_TRUSTED_ORIGINS=(list, []),
     # MISC
     DEFAULT_FROM_EMAIL=(str, 'contact@idmcdb.org'),
     INTERNAL_BOT_EMAIL=(str, 'helix-internal-bot@idmc.ch'),
@@ -69,9 +70,12 @@ env = environ.Env(
     POSTGRES_PORT=(int, 5432),
     POSTGRES_USER=str,
     SEND_ACTIVATION_EMAIL=(bool, True),
+    # Sentry
+    SENTRY_DEBUG=(bool, False),
     SENTRY_DSN=(str, None),
     SENTRY_SAMPLE_RATE=(float, 0.2),  # TODO: Change this to SENTRY_TRACES_SAMPLE_RATE
     SENTRY_PROFILES_SAMPLE_RATE=(float, None),
+    SENTRY_MONITOR_CELERY_BEAT_TASKS=(bool, True),
     # Copilot
     COPILOT_ENVIRONMENT_NAME=(str, None),
     COPILOT_SERVICE_NAME=(str, None),
@@ -147,6 +151,13 @@ THIRD_PARTY_APPS = [
     'django_otp.plugins.otp_hotp',
     'drf_spectacular',
     'drf_spectacular_sidecar',  # required for Django collectstatic discovery
+    # External - Health-check
+    'health_check',  # required
+    'health_check.db',  # stock Django health checkers
+    'health_check.cache',
+    'health_check.storage',
+    'health_check.contrib.migrations',
+    'health_check.contrib.redis',  # requires Redis broker
 ]
 
 INSTALLED_APPS = [
@@ -428,11 +439,16 @@ GZIP_CONTENT_TYPES = [
     'application/pdf',
 ]
 
+# HEALTH-CHECK
+REDIS_URL = DJANGO_CACHE_REDIS_URL
+
 # Sentry Config
 SENTRY_DSN = env('SENTRY_DSN')
+# Enable sentry monitor for beat tasks
+SENTRY_MONITOR_CELERY_BEAT_TASKS = env('SENTRY_MONITOR_CELERY_BEAT_TASKS')
 
 if SENTRY_DSN:
-    SENTRY_CONFIG = {
+    SENTRY_CORE_CONFIG = {
         'dsn': SENTRY_DSN,
         'send_default_pii': True,
         # TODO: Move server to root directory to get access to .git
@@ -440,15 +456,15 @@ if SENTRY_DSN:
         'environment': HELIX_ENVIRONMENT,
         'traces_sample_rate': env('SENTRY_SAMPLE_RATE'),
         'profiles_sample_rate': env('SENTRY_PROFILES_SAMPLE_RATE'),
-        'debug': DEBUG,
+        'debug': env('SENTRY_DEBUG'),
+    }
+    SENTRY_ADDITIONAL_CONFIG = {
         'tags': {
             'site': ALLOWED_HOSTS[0],
         },
+        'app_type': 'server',
     }
-    sentry.init_sentry(
-        app_type='server',
-        **SENTRY_CONFIG,
-    )
+    sentry.init_sentry()
 
 RESOURCE_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
 RESOURCEGROUP_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
@@ -583,25 +599,37 @@ CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
 CORS_ALLOW_CREDENTIALS = True
 
 HELIX_TRUSTED_ORIGINS = [
-    # Localhost
-    "http://localhost:3080",
-    "http://127.0.0.1:3080",
     # Frontend
     FRONTEND_BASE_URL,
-    # External services
+
+    # Helix Client - Localhost
+    "http://localhost:3080",
+    "http://127.0.0.1:3080",
+
+    # IDMC Website Components - Localhost
+    "http://localhost:3081",
+    "http://127.0.0.1:3081",
+
+    # Obsolete: Media Monitoring
     'https://media-monitoring.idmcdb.org',
 
-    'https://www.internal-displacement.org',
-    'https://staging.internal-displacement.org',
-
+    # IDMC Website Components - Prod/Staging
     'https://preview-website-components.idmcdb.org',
     'https://release-website-components.idmcdb.org',
 
-    # Axelerant deployment instances https://idmc-dfs-dev.slack.com/archives/C05TDRZCQ9W/p1704090909962969
+    # IDMC Website - Prod
+    'https://www.internal-displacement.org',
+
+    # IDMC Website - Staging: https://idmc-dfs-dev.slack.com/archives/C05TDRZCQ9W/p1704090909962969
+    'https://staging.internal-displacement.org',
     'https://newdev.internal-displacement.org',
     'https://www.newdev.internal-displacement.org',
-]
 
+    'https://uat.internal-displacement.org',
+    'https://develop.internal-displacement.org',
+
+    *env('ADDITIONAL_TRUSTED_ORIGINS'),
+]
 
 CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = HELIX_TRUSTED_ORIGINS
 
@@ -627,6 +655,7 @@ CORS_ALLOW_HEADERS = (
     'x-csrftoken',
     'x-requested-with',
     'sentry-trace',
+    'baggage',
 )
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'

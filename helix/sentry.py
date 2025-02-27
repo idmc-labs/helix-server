@@ -2,11 +2,14 @@ import logging
 import os
 import sentry_sdk
 
+from django.conf import settings
+from django.core.exceptions import PermissionDenied
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.redis import RedisIntegration
 from sentry_sdk.integrations.logging import ignore_logger
-from django.core.exceptions import PermissionDenied
+from celery import signals
+
 from helix.exceptions import GraphqlNotAllowedException
 
 logging.basicConfig(level=logging.INFO)
@@ -73,18 +76,22 @@ def fetch_git_sha(path, head=None):
         return str(fh.read()).strip()
 
 
-def init_sentry(app_type, tags={}, **config):
+@signals.beat_init.connect
+@signals.celeryd_init.connect
+def init_sentry(**_kwargs):
     integrations = [
         DjangoIntegration(),
         RedisIntegration(),
-        CeleryIntegration(),
+        CeleryIntegration(monitor_beat_tasks=settings.SENTRY_MONITOR_CELERY_BEAT_TASKS),
     ]
     sentry_sdk.init(
-        **config,
+        **settings.SENTRY_CORE_CONFIG,
         integrations=integrations,
         ignore_errors=IGNORED_ERRORS,
     )
     ignore_logger('graphql.execution.utils')
+    app_type = settings.SENTRY_ADDITIONAL_CONFIG["app_type"]
+    tags = settings.SENTRY_ADDITIONAL_CONFIG["tags"]
     with sentry_sdk.configure_scope() as scope:
         scope.set_tag('app_type', app_type)
         for tag, value in tags.items():
