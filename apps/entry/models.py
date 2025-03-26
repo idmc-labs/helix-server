@@ -67,6 +67,19 @@ class OSMName(UUIDAbstractModel, models.Model):
             POINT: _('Point'),
         }
 
+    class GEOCODER(enum.Enum):
+        OSMNAMES = 0
+        GEONAMES = 1
+        GOOGLE_MAPS = 2
+        CUSTOM_SOURCE = 3
+
+        __labels__ = {
+            OSMNAMES: _('OSMNames'),
+            GEONAMES: _('GeoNames'),
+            GOOGLE_MAPS: _('Google Maps'),
+            CUSTOM_SOURCE: _('Custom Source'),
+        }
+
     class IDENTIFIER(enum.Enum):
         ORIGIN = 0
         DESTINATION = 1
@@ -133,6 +146,9 @@ class OSMName(UUIDAbstractModel, models.Model):
                               enum=OSM_ACCURACY)
     moved = models.BooleanField(verbose_name=_('Moved'),
                                 default=False)
+    # geocoder related fields
+    # geocoder = enum.EnumField(enum=GEOCODER, verbose_name=_('Geocoder'), default=GEOCODER.OSMNAMES)
+    geocoder_metadata = models.JSONField(default=dict)
 
 
 class FigureDisaggregationAbstractModel(models.Model):
