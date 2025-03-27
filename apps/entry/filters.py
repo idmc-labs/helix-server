@@ -1,15 +1,15 @@
 from django_filters import rest_framework as df
 from apps.entry.models import (
-    OSMName,
+    FigureLocation,
     DisaggregatedAge,
     Figure,
     FigureTag,
 )
 
 
-class OSMNameFilter(df.FilterSet):
+class FigureLocationFilter(df.FilterSet):
     class Meta:
-        model = OSMName
+        model = FigureLocation
         fields = ['country']
 
 

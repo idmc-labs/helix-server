@@ -3,9 +3,6 @@
 import logging
 from django.db import migrations, models
 
-from apps.entry.serializers import OSMNameSerializer
-from helix.managers import BulkUpdateManager
-
 logger = logging.getLogger(__name__)
 
 class Migration(migrations.Migration):
@@ -55,7 +52,7 @@ class Migration(migrations.Migration):
                             alternative_names,
                             accuracy,
                             moved
-                        LIMIT 1
+                    WHERE entry_osmname.id = id
                     ) t
                 ))
             );

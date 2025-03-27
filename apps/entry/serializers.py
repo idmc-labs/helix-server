@@ -17,7 +17,7 @@ from apps.contrib.serializers import (
 from apps.entry.models import (
     Entry,
     Figure,
-    OSMName,
+    FigureLocation,
     FigureTag,
     DisaggregatedAge,
 )
@@ -72,14 +72,14 @@ class DisaggregatedStratumSerializer(serializers.Serializer):
         return attrs
 
 
-class OSMNameSerializer(serializers.ModelSerializer):
+class FigureLocationSerializer(serializers.ModelSerializer):
     # to allow updating
     id = IntegerIDField(required=False)
     country = CharField(required=False, allow_blank=True)
 
     def validate(self, attrs: dict) -> dict:
         '''
-        NOTE: In some cases osmname api does not provides country,
+        NOTE: In some cases FigureLocation api does not provides country,
         in this case get country from country code
         '''
         if not self.instance and not attrs.get('country'):
@@ -91,7 +91,7 @@ class OSMNameSerializer(serializers.ModelSerializer):
         return attrs
 
     class Meta:
-        model = OSMName
+        model = FigureLocation
         fields = '__all__'
         extra_kwargs = {
             'uuid': {
@@ -365,7 +365,7 @@ class FigureSerializer(
 
     id = IntegerIDField(required=False)
     disaggregation_age = DisaggregatedAgeSerializer(many=True, required=False, allow_null=False)
-    geo_locations = OSMNameSerializer(many=True, required=False, allow_null=False)
+    geo_locations = FigureLocationSerializer(many=True, required=False, allow_null=False)
 
     class Meta:
         model = Figure
@@ -441,8 +441,8 @@ class FigureSerializer(
         disaggregation_ages = validated_data.pop('disaggregation_age', [])
         sources = validated_data.pop('sources', [])
         if geo_locations:
-            geo_locations = OSMName.objects.bulk_create(
-                [OSMName(**each) for each in geo_locations]
+            geo_locations = FigureLocation.objects.bulk_create(
+                [FigureLocation(**each) for each in geo_locations]
             )
 
         if disaggregation_ages:
@@ -471,12 +471,11 @@ class FigureSerializer(
             ).delete()
             for each in data:
                 if not each.get('id'):
-                    osm_serializer = OSMNameSerializer()
+                    osm_serializer = FigureLocationSerializer()
                     osm_serializer._validated_data = {**each}
                 else:
-                    osm_serializer = OSMNameSerializer(
+                    osm_serializer = FigureLocationSerializer(
                         instance=getattr(instance, attr).get(id=each['id']),
-                        # instance=OSMName.objects.get(id=each['id']),
                         partial=True
                     )
                     osm_serializer._validated_data = {**each}

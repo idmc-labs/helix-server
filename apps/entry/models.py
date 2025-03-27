@@ -51,8 +51,8 @@ User = get_user_model()
 CANNOT_UPDATE_MESSAGE = _('You cannot sign off the entry.')
 
 
-class OSMName(UUIDAbstractModel, models.Model):
-    class OSM_ACCURACY(enum.Enum):
+class FigureLocation(UUIDAbstractModel, models.Model):
+    class ACCURACY(enum.Enum):
         ADM0 = 0
         ADM1 = 1
         ADM2 = 2
@@ -68,15 +68,15 @@ class OSMName(UUIDAbstractModel, models.Model):
         }
 
     class GEOCODER(enum.Enum):
-        OSMNAMES = 0
-        GEONAMES = 1
-        GOOGLE_MAPS = 2
+        OSMNAME = 0
+        GEONAME = 1
+        GOOGLE_MAP = 2
         CUSTOM_SOURCE = 3
 
         __labels__ = {
-            OSMNAMES: _('OSMNames'),
-            GEONAMES: _('GeoNames'),
-            GOOGLE_MAPS: _('Google Maps'),
+            OSMNAME: _('OSMName'),
+            GEONAME: _('GeoName'),
+            GOOGLE_MAP: _('Google Map'),
             CUSTOM_SOURCE: _('Custom Source'),
         }
 
@@ -142,12 +142,10 @@ class OSMName(UUIDAbstractModel, models.Model):
     alternative_names = models.TextField(verbose_name=_('Alternative names'),
                                          blank=True, null=True)
     # custom fields
-    accuracy = enum.EnumField(verbose_name=_('Accuracy'),
-                              enum=OSM_ACCURACY)
-    moved = models.BooleanField(verbose_name=_('Moved'),
-                                default=False)
+    accuracy = enum.EnumField(verbose_name=_('Accuracy'), enum=ACCURACY)
+    moved = models.BooleanField(verbose_name=_('Moved'), default=False)
     # geocoder related fields
-    # geocoder = enum.EnumField(enum=GEOCODER, verbose_name=_('Geocoder'), default=GEOCODER.OSMNAMES)
+    geocoder = enum.EnumField(enum=GEOCODER, verbose_name=_('Geocoder'), default=GEOCODER.OSMNAME)
     geocoder_metadata = models.JSONField(default=dict)
 
 
@@ -484,8 +482,11 @@ class Figure(MetaInformationArchiveAbstractModel,
     )
 
     # locations
-    geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
-                                           related_name='figures')
+    geo_locations = models.ManyToManyField(
+        'FigureLocation',
+        verbose_name=_('Geo Locations'),
+        related_name='figures',
+    )
 
     calculation_logic = models.TextField(verbose_name=_('Analysis and Calculation Logic'),
                                          blank=True, null=True)
