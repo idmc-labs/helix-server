@@ -145,7 +145,7 @@ class FigureLocation(UUIDAbstractModel, models.Model):
     accuracy = enum.EnumField(verbose_name=_('Accuracy'), enum=ACCURACY)
     moved = models.BooleanField(verbose_name=_('Moved'), default=False)
     # geocoder related fields
-    geocoder = enum.EnumField(enum=GEOCODER, verbose_name=_('Geocoder'), default=GEOCODER.OSMNAME)
+    geocoder = enum.EnumField(enum=GEOCODER, verbose_name=_('Geocoder'), default=GEOCODER.CUSTOM_SOURCE)
     geocoder_metadata = models.JSONField(default=dict)
 
 
