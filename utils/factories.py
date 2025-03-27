@@ -5,7 +5,7 @@ from factory.django import DjangoModelFactory
 
 from apps.contact.models import Contact
 from apps.crisis.models import Crisis
-from apps.entry.models import Figure, OSMName
+from apps.entry.models import Figure, FigureLocation
 from apps.event.models import Event, EventCode
 from apps.common.enums import GENDER_TYPE
 
@@ -312,15 +312,16 @@ class ExtractionQueryFactory(DjangoModelFactory):
         model = 'extraction.ExtractionQuery'
 
 
-class OSMNameFactory(DjangoModelFactory):
+class FigureLocationFactory(DjangoModelFactory):
     display_name = factory.Sequence(lambda n: f'osm-name-{n}')
     lat = factory.Faker('pyint', min_value=100, max_value=200)
     lon = factory.Faker('pyint', min_value=100, max_value=200)
-    identifier = factory.Iterator(OSMName.IDENTIFIER)
-    accuracy = factory.Iterator(OSMName.OSM_ACCURACY)
+    identifier = factory.Iterator(FigureLocation.IDENTIFIER)
+    accuracy = factory.Iterator(FigureLocation.ACCURACY)
+    geocoder = factory.Iterator(FigureLocation.GEOCODER)
 
     class Meta:
-        model = 'entry.OSMName'
+        model = 'entry.FigureLocation'
 
 
 class HouseholdSizeFactory(DjangoModelFactory):

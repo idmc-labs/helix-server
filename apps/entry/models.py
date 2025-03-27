@@ -68,10 +68,10 @@ class FigureLocation(UUIDAbstractModel, models.Model):
         }
 
     class GEOCODER(enum.Enum):
-        OSMNAME = 0
-        GEONAME = 1
-        GOOGLE_MAP = 2
-        CUSTOM_SOURCE = 3
+        OSMNAME = 1
+        GEONAME = 2
+        GOOGLE_MAP = 3
+        CUSTOM_SOURCE = 4
 
         __labels__ = {
             OSMNAME: _('OSMName'),

@@ -100,6 +100,11 @@ class FigureLocationSerializer(serializers.ModelSerializer):
             },
         }
 
+    # NOTE: Preserving the geocoder_metadata
+    def update(self, instance, validated_data):
+        validated_data.pop('geocoder_metadata', None)
+        return super().update(instance, validated_data)
+
 
 class CommonFigureValidationMixin:
     def validate_disaggregation_age(self, age_groups):
@@ -464,24 +469,24 @@ class FigureSerializer(
         return instance
 
     def _update_locations(self, instance, attr: str, data: list):
-        osms = []
+        figure_locations = []
         if data:
             getattr(instance, attr).exclude(
                 id__in=[each['id'] for each in data if 'id' in each]
             ).delete()
             for each in data:
                 if not each.get('id'):
-                    osm_serializer = FigureLocationSerializer()
-                    osm_serializer._validated_data = {**each}
+                    figure_location_serializer = FigureLocationSerializer()
+                    figure_location_serializer._validated_data = {**each}
                 else:
-                    osm_serializer = FigureLocationSerializer(
+                    figure_location_serializer = FigureLocationSerializer(
                         instance=getattr(instance, attr).get(id=each['id']),
                         partial=True
                     )
-                    osm_serializer._validated_data = {**each}
-                osm_serializer._errors = {}
-                osms.append(osm_serializer.save())
-        getattr(instance, attr).set(osms)
+                    figure_location_serializer._validated_data = {**each}
+                figure_location_serializer._errors = {}
+                figure_locations.append(figure_location_serializer.save())
+        getattr(instance, attr).set(figure_locations)
 
     def _update_disaggregation_age(self, instance, attr: str, data: list):
         disaggregation_age = []

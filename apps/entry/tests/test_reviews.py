@@ -2,7 +2,7 @@ import json
 from uuid import uuid4
 from apps.users.enums import USER_ROLE
 from apps.crisis.models import Crisis
-from apps.entry.models import Figure, OSMName
+from apps.entry.models import Figure, FigureLocation
 from apps.event.models import Event
 from utils.factories import (
     EventFactory,
@@ -273,8 +273,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             lat=68.88,
             lon=46.66,
             name='name',
-            accuracy=OSMName.OSM_ACCURACY.ADM0.name,
-            identifier=OSMName.IDENTIFIER.ORIGIN.name
+            accuracy=FigureLocation.ACCURACY.ADM0.name,
+            identifier=FigureLocation.IDENTIFIER.ORIGIN.name
         )
         figures = [
             {
