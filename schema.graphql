@@ -2055,13 +2055,6 @@ input FigureLocationFilterDataInputType {
   country: String
 }
 
-enum FigureLocationGeocoder {
-  A_1
-  A_2
-  A_3
-  A_4
-}
-
 input FigureLocationInputType {
   id: ID
   country: String
@@ -2090,7 +2083,7 @@ input FigureLocationInputType {
   alternativeNames: String
   accuracy: ACCURACY!
   moved: Boolean
-  geocoder: String
+  geocoder: GEOCODER
   geocoderMetadata: JSONString
 }
 
@@ -2129,12 +2122,13 @@ type FigureLocationType {
   alternativeNames: String
   accuracy: ACCURACY
   moved: Boolean!
-  geocoder: FigureLocationGeocoder!
-  geocoderMetadata: JSONString!
+  geocoder: GEOCODER
+  geocoderMetadata: JSONString
   geoLocationReviewComments: [UnifiedReviewCommentType!]!
   figures: [FigureType!]!
   accuracyDisplay: EnumDescription
   identifierDisplay: EnumDescription
+  geocoderDisplay: EnumDescription
 }
 
 input FigureTagCreateInputType {
@@ -2316,6 +2310,13 @@ enum GENDER_TYPE {
   FEMALE
   UNSPECIFIED
   OTHER
+}
+
+enum GEOCODER {
+  OSMNAME
+  GEONAME
+  GOOGLE_MAP
+  CUSTOM_SOURCE
 }
 
 type GenerateReport {

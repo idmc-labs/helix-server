@@ -21,6 +21,7 @@ from apps.entry.enums import (
     FigureTermsEnum,
     FigureSourcesReliabilityEnum,
     FigureReviewStatusEnum,
+    GeocoderGrapheneEnum,
 )
 from apps.entry.filters import (
     FigureLocationFilter,
@@ -92,6 +93,8 @@ class FigureLocationType(DjangoObjectType):
     accuracy_display = EnumDescription(source='get_accuracy_display')
     identifier = graphene.Field(IdentifierGrapheneEnum)
     identifier_display = EnumDescription(source='get_identifier_display')
+    geocoder = graphene.Field(GeocoderGrapheneEnum)
+    geocoder_display = EnumDescription(source='get_geocoder_display')
 
 
 class FigureLocationListType(CustomDjangoListObjectType):

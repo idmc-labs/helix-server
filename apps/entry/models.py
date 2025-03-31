@@ -150,7 +150,7 @@ class FigureLocation(UUIDAbstractModel, models.Model):
     moved = models.BooleanField(verbose_name=_('Moved'), default=False)
     # geocoder related fields
     geocoder = enum.EnumField(enum=GEOCODER, verbose_name=_('Geocoder'), default=GEOCODER.CUSTOM_SOURCE)
-    geocoder_metadata = models.JSONField(default=dict)
+    geocoder_metadata = models.JSONField(default=dict, null=True, blank=True)
 
 
 class FigureDisaggregationAbstractModel(models.Model):

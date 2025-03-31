@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='osmname',
             name='geocoder_metadata',
-            field=models.JSONField(default=dict),
+            field=models.JSONField(blank=True, default=dict, null=True),
         ),
 
         migrations.RunSQL(
