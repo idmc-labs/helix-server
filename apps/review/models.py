@@ -76,7 +76,7 @@ class UnifiedReviewComment(MetaInformationArchiveAbstractModel, models.Model):
     field = enum.EnumField(enum=REVIEW_FIELD_TYPE, null=True, blank=True)
     comment_type = enum.EnumField(enum=REVIEW_COMMENT_TYPE, default=REVIEW_COMMENT_TYPE.GREY.value)
     geo_location = models.ForeignKey(
-        'entry.FigureLocation', verbose_name=_('Geolocation/OSM'),
+        'entry.FigureLocation', verbose_name=_('Geolocation'),
         null=True, blank=True,
         related_name='geo_location_review_comments', on_delete=models.SET_NULL
     )
@@ -115,7 +115,7 @@ class Review(MetaInformationArchiveAbstractModel, models.Model):
     value = enum.EnumField(enum=ENTRY_REVIEW_STATUS, default=ENTRY_REVIEW_STATUS.GREY.value)
     age = models.CharField(verbose_name=_('Age'), max_length=256,
                            null=True, blank=True)
-    geo_location = models.ForeignKey('entry.FigureLocation', verbose_name=_('Geolocation/OSM'),
+    geo_location = models.ForeignKey('entry.FigureLocation', verbose_name=_('Geolocation'),
                                      null=True, blank=True,
                                      related_name='figure_reviews', on_delete=models.SET_NULL)
     comment = models.ForeignKey('review.ReviewComment', verbose_name=_('Comment'),

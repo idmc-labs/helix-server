@@ -575,7 +575,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         )
 
     # NOTE: Any change done here on the list should also be done on the client
-    SUPPORTED_OSMNAME_COUNTRY_CODES = {
+    SUPPORTED_COUNTRY_CODES = {
         'AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT',
         'AU', 'AZ', 'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BM',
         'BN', 'BO', 'BQ', 'BR', 'BS', 'BT', 'BW', 'BY', 'BZ', 'CA', 'CD', 'CF',

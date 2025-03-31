@@ -24,34 +24,29 @@ class Migration(migrations.Migration):
             SET geocoder_metadata = (
                 SELECT row_to_json((
                     SELECT t FROM (
-                        SELECT 
-                            id,
-                            uuid,
+                        SELECT
                             wikipedia,
                             rank,
-                            country,
-                            country_code,
                             street,
-                            wiki_data,
+                            wiki_data as wikidata,
+                            country_code,
                             osm_id,
-                            osm_type,
-                            house_numbers,
-                            identifier,
+                            house_numbers as housenumbers,
                             city,
                             display_name,
                             lon,
-                            lat,
                             state,
-                            bounding_box,
+                            bounding_box as boundingbox,
                             type,
                             importance,
-                            class_name,
+                            lat,
+                            class_name as class,
                             name,
+                            country,
                             name_suffix,
+                            osm_type,
                             place_rank,
-                            alternative_names,
-                            accuracy,
-                            moved
+                            alternative_names
                     WHERE entry_osmname.id = id
                     ) t
                 ))
