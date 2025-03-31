@@ -101,7 +101,9 @@ class FigureLocation(UUIDAbstractModel, models.Model):
     rank = models.IntegerField(verbose_name=_('Rank'),
                                blank=True,
                                null=True)
-    country = models.TextField(verbose_name=_('Country'))
+    country = models.TextField(verbose_name=_('Country'),
+                               blank=True,
+                               null=True)
     # NOTE: country-code here actually stores iso2
     country_code = models.CharField(verbose_name=_('Country Code'), max_length=8,
                                     null=True, blank=False)
@@ -138,7 +140,7 @@ class FigureLocation(UUIDAbstractModel, models.Model):
                                    blank=True, null=True)
     class_name = models.TextField(verbose_name=_('Class'),
                                   blank=True, null=True)
-    name = models.TextField(verbose_name=_('Name'))
+    name = models.TextField(verbose_name=_('Name'), blank=True, null=True)
     name_suffix = models.TextField(verbose_name=_('Name Suffix'),
                                    blank=True, null=True)
     place_rank = models.IntegerField(verbose_name=_('Place Rank'),

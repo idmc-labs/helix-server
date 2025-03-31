@@ -75,7 +75,8 @@ class DisaggregatedStratumSerializer(serializers.Serializer):
 class FigureLocationSerializer(serializers.ModelSerializer):
     # to allow updating
     id = IntegerIDField(required=False)
-    country = CharField(required=False, allow_blank=True)
+    country = CharField(required=False, allow_blank=True, allow_null=True)
+    geocoder_metadata = serializers.JSONField(required=False, allow_null=True)
 
     def validate(self, attrs: dict) -> dict:
         '''

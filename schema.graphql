@@ -2058,6 +2058,7 @@ input FigureLocationFilterDataInputType {
 input FigureLocationInputType {
   id: ID
   country: String
+  geocoderMetadata: JSONString
   uuid: String!
   wikipedia: String
   rank: Int
@@ -2077,14 +2078,13 @@ input FigureLocationInputType {
   type: String
   importance: Float
   className: String
-  name: String!
+  name: String
   nameSuffix: String
   placeRank: Int
   alternativeNames: String
   accuracy: ACCURACY!
   moved: Boolean
   geocoder: GEOCODER
-  geocoderMetadata: JSONString
 }
 
 type FigureLocationListType {
@@ -2099,7 +2099,7 @@ type FigureLocationType {
   uuid: UUID!
   wikipedia: String
   rank: Int
-  country: String!
+  country: String
   countryCode: String
   street: String
   wikiData: String
@@ -2116,7 +2116,7 @@ type FigureLocationType {
   type: String
   importance: Float
   className: String
-  name: String!
+  name: String
   nameSuffix: String
   placeRank: Int
   alternativeNames: String
