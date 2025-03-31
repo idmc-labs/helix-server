@@ -111,8 +111,12 @@ class FigureLocation(UUIDAbstractModel, models.Model):
     wiki_data = models.TextField(verbose_name=_('Wiki data'),
                                  blank=True,
                                  null=True)
-    osm_id = models.CharField(verbose_name=_('OSM Id'), max_length=256)
-    osm_type = models.CharField(verbose_name=_('OSM Type'), max_length=256)
+    osm_id = models.CharField(verbose_name=_('OSM Id'), max_length=256,
+                              blank=True,
+                              null=True)
+    osm_type = models.CharField(verbose_name=_('OSM Type'), max_length=256,
+                                blank=True,
+                                null=True)
     house_numbers = models.TextField(verbose_name=_('House numbers'),
                                      blank=True,
                                      null=True)

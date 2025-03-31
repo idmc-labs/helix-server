@@ -2071,8 +2071,8 @@ input FigureLocationInputType {
   countryCode: String
   street: String
   wikiData: String
-  osmId: String!
-  osmType: String!
+  osmId: String
+  osmType: String
   houseNumbers: String
   identifier: IDENTIFIER!
   city: String
@@ -2110,8 +2110,8 @@ type FigureLocationType {
   countryCode: String
   street: String
   wikiData: String
-  osmId: String!
-  osmType: String!
+  osmId: String
+  osmType: String
   houseNumbers: String
   identifier: IDENTIFIER
   city: String
