@@ -77,10 +77,14 @@ class FigureLocationSerializer(serializers.ModelSerializer):
     id = IntegerIDField(required=False)
     country = CharField(required=False, allow_blank=True, allow_null=True)
     geocoder_metadata = serializers.JSONField(required=False, allow_null=True)
+    geocoder = serializers.ChoiceField(
+        choices=FigureLocation.GEOCODER.choices(),
+        required=True,
+    )
 
     def validate(self, attrs: dict) -> dict:
         '''
-        NOTE: In some cases FigureLocation api does not provides country,
+        NOTE: In some cases osmname api does not provides country,
         in this case get country from country code
         '''
         if not self.instance and not attrs.get('country'):

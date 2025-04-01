@@ -274,7 +274,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             lon=46.66,
             name='name',
             accuracy=FigureLocation.ACCURACY.ADM0.name,
-            identifier=FigureLocation.IDENTIFIER.ORIGIN.name
+            identifier=FigureLocation.IDENTIFIER.ORIGIN.name,
+            geocoder=FigureLocation.GEOCODER.CUSTOM_SOURCE.name,
         )
         figures = [
             {

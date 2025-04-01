@@ -132,6 +132,7 @@ class TestEntrySerializer(HelixTestCase):
             name='name',
             accuracy=FigureLocation.ACCURACY.ADM0.value,
             identifier=FigureLocation.IDENTIFIER.ORIGIN.value,
+            geocoder=FigureLocation.GEOCODER.CUSTOM_SOURCE.value,
         )
         source2 = copy(source1)
         source2['lat'] = 67.5
@@ -318,6 +319,7 @@ class TestFigureSerializer(HelixTestCase):
             name='name',
             accuracy=FigureLocation.ACCURACY.ADM0.value,
             identifier=FigureLocation.IDENTIFIER.ORIGIN.value,
+            geocoder=FigureLocation.GEOCODER.CUSTOM_SOURCE.value,
         )
         self.data = {
             "uuid": str(uuid4()),
@@ -384,6 +386,7 @@ class TestFigureSerializer(HelixTestCase):
                 "accuracy": FigureLocation.ACCURACY.ADM0.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                 "bounding_box": [1.2],
+                "geocoder": FigureLocation.GEOCODER.CUSTOM_SOURCE.value,
             },
             {
                 "country": "Nepal",
@@ -398,6 +401,7 @@ class TestFigureSerializer(HelixTestCase):
                 "accuracy": FigureLocation.ACCURACY.ADM0.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                 "bounding_box": [1.2],
+                "geocoder": FigureLocation.GEOCODER.CUSTOM_SOURCE.value,
             },
         ]
         serializer = FigureSerializer(

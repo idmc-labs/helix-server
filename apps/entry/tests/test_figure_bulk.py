@@ -61,6 +61,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             'name': 'Jp',
             'accuracy': FigureLocation.ACCURACY.ADM0.name,
             'identifier': FigureLocation.IDENTIFIER.ORIGIN.name,
+            'geocoder': FigureLocation.GEOCODER.CUSTOM_SOURCE.name,
         }
         self.geo_location_2 = {
             'uuid': str(uuid4()),
@@ -75,6 +76,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             'name': 'AFC',
             'accuracy': FigureLocation.ACCURACY.ADM0.name,
             'identifier': FigureLocation.IDENTIFIER.ORIGIN.name,
+            'geocoder': FigureLocation.GEOCODER.CUSTOM_SOURCE.name,
         }
         self.figure_item_input = {
             "id": self.f3.id,

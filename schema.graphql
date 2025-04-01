@@ -2059,6 +2059,7 @@ input FigureLocationInputType {
   id: ID
   country: String
   geocoderMetadata: JSONString
+  geocoder: GEOCODER!
   uuid: String!
   wikipedia: String
   rank: Int
@@ -2084,7 +2085,6 @@ input FigureLocationInputType {
   alternativeNames: String
   accuracy: ACCURACY!
   moved: Boolean
-  geocoder: GEOCODER
 }
 
 type FigureLocationListType {
