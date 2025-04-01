@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='osmname',
             name='identifier',
-            field=django_enumfield.db.fields.EnumField(enum=apps.entry.models.OSMName.IDENTIFIER),
+            field=django_enumfield.db.fields.EnumField(enum=apps.entry.models.FigureLocation.IDENTIFIER),
         ),
     ]

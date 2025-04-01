@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
                 ('name_suffix', models.TextField(blank=True, null=True, verbose_name='Name Suffix')),
                 ('place_rank', models.IntegerField(blank=True, null=True, verbose_name='Place Rank')),
                 ('alternative_names', models.TextField(blank=True, null=True, verbose_name='Alternative names')),
-                ('accuracy', django_enumfield.db.fields.EnumField(enum=apps.entry.models.OSMName.OSM_ACCURACY)),
+                ('accuracy', django_enumfield.db.fields.EnumField(enum=apps.entry.models.FigureLocation.ACCURACY)),
                 ('reported_name', models.TextField(verbose_name='Reported Name')),
                 ('moved', models.BooleanField(default=False, verbose_name='Moved')),
             ],

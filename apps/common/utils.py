@@ -12,14 +12,14 @@ EXTERNAL_FIELD_SEPARATOR = ':'
 def format_locations(
     locations_data: typing.List[typing.Tuple[str, str, str, str]]
 ) -> typing.List[typing.Tuple[str, str, str, str]]:
-    from apps.entry.models import OSMName
+    from apps.entry.models import FigureLocation
 
     def _get_accuracy_label(key: str) -> str:
-        obj = OSMName.OSM_ACCURACY(int(key))
+        obj = FigureLocation.ACCURACY(int(key))
         return getattr(obj, "label", key)
 
     def _get_identifier_label(key: str) -> str:
-        obj = OSMName.IDENTIFIER(int(key))
+        obj = FigureLocation.IDENTIFIER(int(key))
         return getattr(obj, "label", key)
 
     location_list = []

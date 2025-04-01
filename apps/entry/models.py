@@ -51,8 +51,8 @@ User = get_user_model()
 CANNOT_UPDATE_MESSAGE = _('You cannot sign off the entry.')
 
 
-class OSMName(UUIDAbstractModel, models.Model):
-    class OSM_ACCURACY(enum.Enum):
+class FigureLocation(UUIDAbstractModel, models.Model):
+    class ACCURACY(enum.Enum):
         ADM0 = 0
         ADM1 = 1
         ADM2 = 2
@@ -65,6 +65,19 @@ class OSMName(UUIDAbstractModel, models.Model):
             ADM2: _('District/Zone/Department (ADM2)'),
             ADM3: _('County/City/town/Village/Woreda (ADM3)'),
             POINT: _('Point'),
+        }
+
+    class GEOCODER(enum.Enum):
+        OSMNAME = 1
+        GEONAME = 2
+        GOOGLE_MAP = 3
+        CUSTOM_SOURCE = 4
+
+        __labels__ = {
+            OSMNAME: _('OSMName'),
+            GEONAME: _('GeoName'),
+            GOOGLE_MAP: _('Google Map'),
+            CUSTOM_SOURCE: _('Custom Source'),
         }
 
     class IDENTIFIER(enum.Enum):
@@ -88,7 +101,9 @@ class OSMName(UUIDAbstractModel, models.Model):
     rank = models.IntegerField(verbose_name=_('Rank'),
                                blank=True,
                                null=True)
-    country = models.TextField(verbose_name=_('Country'))
+    country = models.TextField(verbose_name=_('Country'),
+                               blank=True,
+                               null=True)
     # NOTE: country-code here actually stores iso2
     country_code = models.CharField(verbose_name=_('Country Code'), max_length=8,
                                     null=True, blank=False)
@@ -98,8 +113,12 @@ class OSMName(UUIDAbstractModel, models.Model):
     wiki_data = models.TextField(verbose_name=_('Wiki data'),
                                  blank=True,
                                  null=True)
-    osm_id = models.CharField(verbose_name=_('OSM Id'), max_length=256)
-    osm_type = models.CharField(verbose_name=_('OSM Type'), max_length=256)
+    osm_id = models.CharField(verbose_name=_('OSM Id'), max_length=256,
+                              blank=True,
+                              null=True)
+    osm_type = models.CharField(verbose_name=_('OSM Type'), max_length=256,
+                                blank=True,
+                                null=True)
     house_numbers = models.TextField(verbose_name=_('House numbers'),
                                      blank=True,
                                      null=True)
@@ -121,7 +140,7 @@ class OSMName(UUIDAbstractModel, models.Model):
                                    blank=True, null=True)
     class_name = models.TextField(verbose_name=_('Class'),
                                   blank=True, null=True)
-    name = models.TextField(verbose_name=_('Name'))
+    name = models.TextField(verbose_name=_('Name'), blank=True, null=True)
     name_suffix = models.TextField(verbose_name=_('Name Suffix'),
                                    blank=True, null=True)
     place_rank = models.IntegerField(verbose_name=_('Place Rank'),
@@ -129,10 +148,11 @@ class OSMName(UUIDAbstractModel, models.Model):
     alternative_names = models.TextField(verbose_name=_('Alternative names'),
                                          blank=True, null=True)
     # custom fields
-    accuracy = enum.EnumField(verbose_name=_('Accuracy'),
-                              enum=OSM_ACCURACY)
-    moved = models.BooleanField(verbose_name=_('Moved'),
-                                default=False)
+    accuracy = enum.EnumField(verbose_name=_('Accuracy'), enum=ACCURACY)
+    moved = models.BooleanField(verbose_name=_('Moved'), default=False)
+    # geocoder related fields
+    geocoder = enum.EnumField(enum=GEOCODER, verbose_name=_('Geocoder'), default=GEOCODER.CUSTOM_SOURCE)
+    geocoder_metadata = models.JSONField(default=dict, null=True, blank=True)
 
 
 class FigureDisaggregationAbstractModel(models.Model):
@@ -468,8 +488,11 @@ class Figure(MetaInformationArchiveAbstractModel,
     )
 
     # locations
-    geo_locations = models.ManyToManyField('OSMName', verbose_name=_('Geo Locations'),
-                                           related_name='figures')
+    geo_locations = models.ManyToManyField(
+        'FigureLocation',
+        verbose_name=_('Geo Locations'),
+        related_name='figures',
+    )
 
     calculation_logic = models.TextField(verbose_name=_('Analysis and Calculation Logic'),
                                          blank=True, null=True)
@@ -554,7 +577,7 @@ class Figure(MetaInformationArchiveAbstractModel,
         )
 
     # NOTE: Any change done here on the list should also be done on the client
-    SUPPORTED_OSMNAME_COUNTRY_CODES = {
+    SUPPORTED_COUNTRY_CODES = {
         'AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT',
         'AU', 'AZ', 'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BM',
         'BN', 'BO', 'BQ', 'BR', 'BS', 'BT', 'BW', 'BY', 'BZ', 'CA', 'CD', 'CF',

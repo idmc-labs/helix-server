@@ -188,7 +188,7 @@ class EventFilter(NameFilterMixin,
                         figure=models.OuterRef('pk')
                     ).order_by().values('figure').annotate(
                         locations=ArrayAgg(
-                            'osmname__name', distinct=True, ordering='osmname__name'
+                            'figurelocation__name', distinct=True, ordering='figurelocation__name'
                         ),
                     ).values('locations')[:1],
                     output_field=models.CharField(),

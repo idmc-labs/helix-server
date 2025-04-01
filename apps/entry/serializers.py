@@ -17,7 +17,7 @@ from apps.contrib.serializers import (
 from apps.entry.models import (
     Entry,
     Figure,
-    OSMName,
+    FigureLocation,
     FigureTag,
     DisaggregatedAge,
 )
@@ -72,10 +72,15 @@ class DisaggregatedStratumSerializer(serializers.Serializer):
         return attrs
 
 
-class OSMNameSerializer(serializers.ModelSerializer):
+class FigureLocationSerializer(serializers.ModelSerializer):
     # to allow updating
     id = IntegerIDField(required=False)
-    country = CharField(required=False, allow_blank=True)
+    country = CharField(required=False, allow_blank=True, allow_null=True)
+    geocoder_metadata = serializers.JSONField(required=False, allow_null=True)
+    geocoder = serializers.ChoiceField(
+        choices=FigureLocation.GEOCODER.choices(),
+        required=True,
+    )
 
     def validate(self, attrs: dict) -> dict:
         '''
@@ -91,7 +96,7 @@ class OSMNameSerializer(serializers.ModelSerializer):
         return attrs
 
     class Meta:
-        model = OSMName
+        model = FigureLocation
         fields = '__all__'
         extra_kwargs = {
             'uuid': {
@@ -99,6 +104,11 @@ class OSMNameSerializer(serializers.ModelSerializer):
                 'required': True
             },
         }
+
+    # NOTE: Preserving the geocoder_metadata
+    def update(self, instance, validated_data):
+        validated_data.pop('geocoder_metadata', None)
+        return super().update(instance, validated_data)
 
 
 class CommonFigureValidationMixin:
@@ -145,7 +155,7 @@ class CommonFigureValidationMixin:
             # If location is moved manually allow to save location of other coutries
             # These locations are considered as problematic border issues
             moved = location.get("moved", False)
-            if country_code not in Figure.SUPPORTED_OSMNAME_COUNTRY_CODES:
+            if country_code not in Figure.SUPPORTED_COUNTRY_CODES:
                 continue
             elif location.get("country_code", '').lower() != country_code.lower() and not moved:
                 errors.update({
@@ -365,7 +375,7 @@ class FigureSerializer(
 
     id = IntegerIDField(required=False)
     disaggregation_age = DisaggregatedAgeSerializer(many=True, required=False, allow_null=False)
-    geo_locations = OSMNameSerializer(many=True, required=False, allow_null=False)
+    geo_locations = FigureLocationSerializer(many=True, required=False, allow_null=False)
 
     class Meta:
         model = Figure
@@ -441,8 +451,8 @@ class FigureSerializer(
         disaggregation_ages = validated_data.pop('disaggregation_age', [])
         sources = validated_data.pop('sources', [])
         if geo_locations:
-            geo_locations = OSMName.objects.bulk_create(
-                [OSMName(**each) for each in geo_locations]
+            geo_locations = FigureLocation.objects.bulk_create(
+                [FigureLocation(**each) for each in geo_locations]
             )
 
         if disaggregation_ages:
@@ -464,25 +474,24 @@ class FigureSerializer(
         return instance
 
     def _update_locations(self, instance, attr: str, data: list):
-        osms = []
+        figure_locations = []
         if data:
             getattr(instance, attr).exclude(
                 id__in=[each['id'] for each in data if 'id' in each]
             ).delete()
             for each in data:
                 if not each.get('id'):
-                    osm_serializer = OSMNameSerializer()
-                    osm_serializer._validated_data = {**each}
+                    figure_location_serializer = FigureLocationSerializer()
+                    figure_location_serializer._validated_data = {**each}
                 else:
-                    osm_serializer = OSMNameSerializer(
+                    figure_location_serializer = FigureLocationSerializer(
                         instance=getattr(instance, attr).get(id=each['id']),
-                        # instance=OSMName.objects.get(id=each['id']),
                         partial=True
                     )
-                    osm_serializer._validated_data = {**each}
-                osm_serializer._errors = {}
-                osms.append(osm_serializer.save())
-        getattr(instance, attr).set(osms)
+                    figure_location_serializer._validated_data = {**each}
+                figure_location_serializer._errors = {}
+                figure_locations.append(figure_location_serializer.save())
+        getattr(instance, attr).set(figure_locations)
 
     def _update_disaggregation_age(self, instance, attr: str, data: list):
         disaggregation_age = []

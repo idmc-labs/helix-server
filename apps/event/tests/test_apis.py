@@ -18,7 +18,7 @@ from utils.factories import (
     EntryFactory,
     FigureFactory,
     OtherSubtypeFactory,
-    OSMNameFactory,
+    FigureLocationFactory,
     EventCodeFactory,
     ReportFactory,
     UnifiedReviewCommentFactory,
@@ -534,7 +534,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
 
-        geo_location = OSMNameFactory.create(
+        geo_location = FigureLocationFactory.create(
             name='random location'
         )
         for i in range(3):
@@ -592,7 +592,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
         # Create events with ignore_qa true
-        geo_location = OSMNameFactory.create(
+        geo_location = FigureLocationFactory.create(
             name='random location2'
         )
         for i in range(3):

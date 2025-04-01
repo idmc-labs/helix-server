@@ -12,7 +12,7 @@ from utils.factories import (
     FigureFactory,
     EventFactory,
     CountryFactory,
-    OSMNameFactory,
+    FigureLocationFactory,
 )
 from apps.contrib.models import Attachment
 from apps.event.models import Figure
@@ -161,7 +161,7 @@ class TestBulkOperation(HelixGraphQLTestCase):
             country=self.country,
             created_by=self.editor,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-            geo_locations=OSMNameFactory.create_batch(3),
+            geo_locations=FigureLocationFactory.create_batch(3),
         )
         self.force_login(self.editor)
 

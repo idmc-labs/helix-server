@@ -13,7 +13,7 @@ from utils.factories import (
 )
 from apps.notification.models import Notification
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
-from apps.entry.models import Figure, OSMName
+from apps.entry.models import Figure, FigureLocation
 from apps.event.models import Event
 from apps.crisis.models import Crisis
 from apps.review.models import UnifiedReviewComment
@@ -279,8 +279,9 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             lat=68.88,
             lon=46.66,
             name='name',
-            accuracy=OSMName.OSM_ACCURACY.ADM0.name,
-            identifier=OSMName.IDENTIFIER.ORIGIN.name
+            accuracy=FigureLocation.ACCURACY.ADM0.name,
+            identifier=FigureLocation.IDENTIFIER.ORIGIN.name,
+            geocoder=FigureLocation.GEOCODER.CUSTOM_SOURCE.name,
         )
         self.figures = [
             {
