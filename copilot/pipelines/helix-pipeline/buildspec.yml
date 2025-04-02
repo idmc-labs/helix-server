@@ -34,7 +34,7 @@ phases:
       - aws --version
       - aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $DOCKER_IMAGE_SERVER_DOMAIN
       - docker pull $DOCKER_IMAGE_SERVER || true
-      - docker build -t $DOCKER_IMAGE_SERVER --cache-from $DOCKER_IMAGE_SERVER -f worker.Dockerfile .
+      - docker build -t $DOCKER_IMAGE_SERVER --cache-from $DOCKER_IMAGE_SERVER --target worker .
       - echo "[Server] Running tests"
       - |
           docker-compose -f gh-docker-compose.yml run --rm server bash -c 'wait-for-it db:5432 && ./manage.py graphql_schema --out schema-latest.graphql' &&
