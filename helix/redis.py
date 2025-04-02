@@ -3,9 +3,7 @@ import redis
 from helix.celery import app as celery_app
 
 
-"""
-Redis connection pool
-"""
+# Redis connection pool
 pool = None
 
 SSL_REQ_MAP = {
