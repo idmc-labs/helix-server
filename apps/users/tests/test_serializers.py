@@ -1,5 +1,5 @@
 from django.test import RequestFactory
-import mock
+from unittest import mock
 
 from apps.users.serializers import (
     RegisterSerializer,

@@ -3,7 +3,7 @@ import json
 from django.contrib.auth.tokens import default_token_generator
 from django.test import override_settings
 from djoser.utils import encode_uid
-import mock
+from unittest import mock
 
 from apps.users.enums import USER_ROLE
 from apps.users.models import User

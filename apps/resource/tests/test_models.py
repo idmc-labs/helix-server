@@ -1,4 +1,4 @@
-from mock import patch
+from unittest.mock import patch
 from django.db.models import ProtectedError
 from django.core.exceptions import ValidationError
 
