@@ -20,7 +20,7 @@ from django.db.models import (
 
 from apps.contrib.commons import DATE_ACCURACY
 from apps.country.models import Country
-from apps.entry.models import ExternalApiDump, Figure, OSMName
+from apps.entry.models import ExternalApiDump, Figure, FigureLocation
 from apps.common.utils import (
     EXTERNAL_ARRAY_SEPARATOR,
     EXTERNAL_FIELD_SEPARATOR,
@@ -56,13 +56,13 @@ from utils.common import track_gidd, client_id
 def _get_location_accuracy_label(accuracy):
     if accuracy is None:
         return None
-    return OSMName.OSM_ACCURACY.get(accuracy).label
+    return FigureLocation.ACCURACY.get(accuracy).label
 
 
 def _get_location_type_label(type):
     if type is None:
         return None
-    return OSMName.IDENTIFIER.get(type).label
+    return FigureLocation.IDENTIFIER.get(type).label
 
 
 def _get_event_code_label(key: str):

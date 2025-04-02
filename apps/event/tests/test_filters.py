@@ -13,7 +13,7 @@ from utils.factories import (
     ContextOfViolenceFactory,
     EntryFactory,
     FigureFactory,
-    OSMNameFactory,
+    FigureLocationFactory,
 )
 from utils.tests import HelixTestCase
 from apps.common.enums import QA_RULE_TYPE
@@ -176,13 +176,13 @@ class TestEventFilter(HelixTestCase):
         entry_2 = EntryFactory.create()
         entry_3 = EntryFactory.create()
 
-        geo_location_1 = OSMNameFactory.create(
+        geo_location_1 = FigureLocationFactory.create(
             name='one'
         )
-        geo_location_2 = OSMNameFactory.create(
+        geo_location_2 = FigureLocationFactory.create(
             name='tow'
         )
-        geo_location_3 = OSMNameFactory.create(
+        geo_location_3 = FigureLocationFactory.create(
             name='three'
         )
 

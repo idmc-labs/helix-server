@@ -85,7 +85,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.self_assign: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_assignee: {PERMISSION_ENTITY.event},
         PERMISSION_ACTION.clear_self_assignee: {PERMISSION_ENTITY.event},
-        PERMISSION_ACTION.update_pfa_visibility: set(),
+        PERMISSION_ACTION.update_pfa_visibility: {PERMISSION_ENTITY.report},
         PERMISSION_ACTION.update_gidd_data: set(),
         PERMISSION_ACTION.update_release_meta_data: set(),
     },

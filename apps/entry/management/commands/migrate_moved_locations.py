@@ -1,6 +1,6 @@
 import requests
 from django.core.management.base import BaseCommand
-from apps.entry.models import OSMName
+from apps.entry.models import FigureLocation
 
 
 class Command(BaseCommand):
@@ -15,7 +15,7 @@ class Command(BaseCommand):
             old_id = figure['figure_old_id']
             for moved_location in figure['locations']:
                 # Make sure if osm name exist in production database
-                osm = OSMName.objects.filter(osm_id=moved_location['osm_id'], figures__old_id=old_id).first()
+                osm = FigureLocation.objects.filter(osm_id=moved_location['osm_id'], figures__old_id=old_id).first()
                 if osm:
                     osm.lat = moved_location['lat']
                     osm.lon = moved_location['lng']

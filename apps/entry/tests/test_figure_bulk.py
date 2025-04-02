@@ -16,7 +16,7 @@ from utils.factories import (
 from apps.crisis.models import Crisis
 from apps.users.enums import USER_ROLE
 from apps.event.models import Event
-from apps.entry.models import Figure, OSMName
+from apps.entry.models import Figure, FigureLocation
 from apps.entry.mutations import BulkUpdateFigures
 from apps.notification.models import Notification
 
@@ -48,7 +48,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
 
         self.f1, self.f2, self.f3 = FigureFactory.create_batch(3, event=self.event, entry=self.entry)
 
-        self.geo_locaiton_1 = {
+        self.geo_location_1 = {
             'uuid': str(uuid4()),
             'rank': 101,
             'country': 'Japan',
@@ -59,10 +59,11 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             'lat': 44,
             'lon': 44,
             'name': 'Jp',
-            'accuracy': OSMName.OSM_ACCURACY.ADM0.name,
-            'identifier': OSMName.IDENTIFIER.ORIGIN.name,
+            'accuracy': FigureLocation.ACCURACY.ADM0.name,
+            'identifier': FigureLocation.IDENTIFIER.ORIGIN.name,
+            'geocoder': FigureLocation.GEOCODER.CUSTOM_SOURCE.name,
         }
-        self.geo_locaiton_2 = {
+        self.geo_location_2 = {
             'uuid': str(uuid4()),
             'rank': 10,
             'country': 'Africa',
@@ -73,8 +74,9 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             'lat': 55,
             'lon': 55,
             'name': 'AFC',
-            'accuracy': OSMName.OSM_ACCURACY.ADM0.name,
-            'identifier': OSMName.IDENTIFIER.ORIGIN.name,
+            'accuracy': FigureLocation.ACCURACY.ADM0.name,
+            'identifier': FigureLocation.IDENTIFIER.ORIGIN.name,
+            'geocoder': FigureLocation.GEOCODER.CUSTOM_SOURCE.name,
         }
         self.figure_item_input = {
             "id": self.f3.id,
@@ -85,7 +87,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             "event": self.event.id,
             "reported": 50,
             "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
-            "geoLocations": [self.geo_locaiton_1],
+            "geoLocations": [self.geo_location_1],
             "country": self.country_1.id,
         }
 
@@ -133,7 +135,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
                 "startDate": "2019-10-10",
                 "includeIdu": True,
                 "excerptIdu": "example xxx",
-                "geoLocations": [self.geo_locaiton_1],
+                "geoLocations": [self.geo_location_1],
                 'calculationLogic': 'test test logic',
                 'sourceExcerpt': 'source test excerpt',
                 'event': self.event.id,
@@ -152,7 +154,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
                 "startDate": "2020-10-10",
                 "includeIdu": True,
                 "excerptIdu": "excerpt for test",
-                "geoLocations": [self.geo_locaiton_2],
+                "geoLocations": [self.geo_location_2],
                 'calculationLogic': 'test check logics',
                 'sourceExcerpt': 'source excerpt content',
                 'event': self.event.id,
@@ -171,7 +173,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
                 "startDate": "2022-10-10",
                 "includeIdu": True,
                 "excerptIdu": "test excerpt ....",
-                "geoLocations": [self.geo_locaiton_1],
+                "geoLocations": [self.geo_location_1],
                 'calculationLogic': 'test logics ...',
                 'sourceExcerpt': 'source excerpt ...',
                 'event': self.event.id,
@@ -226,7 +228,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
                 "event": self.event.id,
                 "reported": 1000,
                 "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
-                "geoLocations": [self.geo_locaiton_1],
+                "geoLocations": [self.geo_location_1],
                 "country": self.country_1.id,
             },
             {
@@ -238,7 +240,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
                 "event": self.event.id,
                 "reported": 1000,
                 "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
-                "geoLocations": [self.geo_locaiton_1],
+                "geoLocations": [self.geo_location_1],
                 "country": self.country_1.id,
             },
         ]

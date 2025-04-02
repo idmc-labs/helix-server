@@ -12,7 +12,7 @@ from apps.entry.serializers import (
 )
 from apps.users.enums import USER_ROLE
 from apps.entry.models import (
-    OSMName,
+    FigureLocation,
     Figure,
 )
 from utils.factories import (
@@ -130,8 +130,9 @@ class TestEntrySerializer(HelixTestCase):
             lat=68.88,
             lon=46.66,
             name='name',
-            accuracy=OSMName.OSM_ACCURACY.ADM0.value,
-            identifier=OSMName.IDENTIFIER.ORIGIN.value,
+            accuracy=FigureLocation.ACCURACY.ADM0.value,
+            identifier=FigureLocation.IDENTIFIER.ORIGIN.value,
+            geocoder=FigureLocation.GEOCODER.CUSTOM_SOURCE.value,
         )
         source2 = copy(source1)
         source2['lat'] = 67.5
@@ -214,8 +215,8 @@ class TestEntrySerializer(HelixTestCase):
             lat=68.88,
             lon=46.66,
             name='name',
-            accuracy=OSMName.OSM_ACCURACY.ADM0.value,
-            identifier=OSMName.IDENTIFIER.ORIGIN.value,
+            accuracy=FigureLocation.ACCURACY.ADM0.value,
+            identifier=FigureLocation.IDENTIFIER.ORIGIN.value,
         )
         data = dict(
             event=event.id,
@@ -316,8 +317,9 @@ class TestFigureSerializer(HelixTestCase):
             lat=68.88,
             lon=46.66,
             name='name',
-            accuracy=OSMName.OSM_ACCURACY.ADM0.value,
-            identifier=OSMName.IDENTIFIER.ORIGIN.value,
+            accuracy=FigureLocation.ACCURACY.ADM0.value,
+            identifier=FigureLocation.IDENTIFIER.ORIGIN.value,
+            geocoder=FigureLocation.GEOCODER.CUSTOM_SOURCE.value,
         )
         self.data = {
             "uuid": str(uuid4()),
@@ -376,28 +378,30 @@ class TestFigureSerializer(HelixTestCase):
                 "country_code": "23",
                 "osm_id": "tets1",
                 "osm_type": "HA",
-                "identifier": OSMName.IDENTIFIER.ORIGIN.value,
+                "identifier": FigureLocation.IDENTIFIER.ORIGIN.value,
                 "display_name": "testname",
                 "lon": 12.34,
                 "lat": 23.21,
                 "name": "testme",
-                "accuracy": OSMName.OSM_ACCURACY.ADM0.value,
+                "accuracy": FigureLocation.ACCURACY.ADM0.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                 "bounding_box": [1.2],
+                "geocoder": FigureLocation.GEOCODER.CUSTOM_SOURCE.value,
             },
             {
                 "country": "Nepal",
                 "country_code": "423",
                 "osm_id": "tets1",
                 "osm_type": "HA",
-                "identifier": OSMName.IDENTIFIER.ORIGIN.value,
+                "identifier": FigureLocation.IDENTIFIER.ORIGIN.value,
                 "display_name": "testname",
                 "lon": 12.34,
                 "lat": 23.21,
                 "name": "testme",
-                "accuracy": OSMName.OSM_ACCURACY.ADM0.value,
+                "accuracy": FigureLocation.ACCURACY.ADM0.value,
                 "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
                 "bounding_box": [1.2],
+                "geocoder": FigureLocation.GEOCODER.CUSTOM_SOURCE.value,
             },
         ]
         serializer = FigureSerializer(

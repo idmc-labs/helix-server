@@ -3,6 +3,14 @@ schema {
   mutation: Mutation
 }
 
+enum ACCURACY {
+  ADM0
+  ADM1
+  ADM2
+  ADM3
+  POINT
+}
+
 type Activate {
   errors: [GenericScalar!]
   ok: Boolean
@@ -2043,6 +2051,86 @@ type FigureListType {
   pageSize: Int
 }
 
+input FigureLocationFilterDataInputType {
+  country: String
+}
+
+input FigureLocationInputType {
+  id: ID
+  country: String
+  geocoderMetadata: JSONString
+  geocoder: GEOCODER!
+  uuid: String!
+  wikipedia: String
+  rank: Int
+  countryCode: String
+  street: String
+  wikiData: String
+  osmId: String
+  osmType: String
+  houseNumbers: String
+  identifier: IDENTIFIER!
+  city: String
+  displayName: String!
+  lon: Float!
+  lat: Float!
+  state: String
+  boundingBox: [Float!]
+  type: String
+  importance: Float
+  className: String
+  name: String
+  nameSuffix: String
+  placeRank: Int
+  alternativeNames: String
+  accuracy: ACCURACY!
+  moved: Boolean
+}
+
+type FigureLocationListType {
+  results: [FigureLocationType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+type FigureLocationType {
+  id: ID!
+  uuid: UUID!
+  wikipedia: String
+  rank: Int
+  country: String
+  countryCode: String
+  street: String
+  wikiData: String
+  osmId: String
+  osmType: String
+  houseNumbers: String
+  identifier: IDENTIFIER
+  city: String
+  displayName: String!
+  lon: Float!
+  lat: Float!
+  state: String
+  boundingBox: [Float!]
+  type: String
+  importance: Float
+  className: String
+  name: String
+  nameSuffix: String
+  placeRank: Int
+  alternativeNames: String
+  accuracy: ACCURACY
+  moved: Boolean!
+  geocoder: GEOCODER
+  geocoderMetadata: JSONString
+  geoLocationReviewComments: [UnifiedReviewCommentType!]!
+  figures: [FigureType!]!
+  accuracyDisplay: EnumDescription
+  identifierDisplay: EnumDescription
+  geocoderDisplay: EnumDescription
+}
+
 input FigureTagCreateInputType {
   versionId: String
   name: String!
@@ -2122,7 +2210,7 @@ type FigureType {
   country: CountryType
   isDisaggregated: Boolean!
   isHousingDestruction: Boolean
-  geoLocations(filters: OSMNameFilterDataInputType, ordering: String): OSMNameListType
+  geoLocations(filters: FigureLocationFilterDataInputType, ordering: String): FigureLocationListType
   calculationLogic: String
   tags: [FigureTagType!]!
   sourceExcerpt: String
@@ -2214,7 +2302,7 @@ input FigureUpdateInputType {
   disaggregationConflictCriminal: Int
   disaggregationConflictCommunal: Int
   disaggregationConflictOther: Int
-  geoLocations: [OSMNameInputType!]
+  geoLocations: [FigureLocationInputType!]
 }
 
 enum GENDER_TYPE {
@@ -2222,6 +2310,13 @@ enum GENDER_TYPE {
   FEMALE
   UNSPECIFIED
   OTHER
+}
+
+enum GEOCODER {
+  OSMNAME
+  GEONAME
+  GOOGLE_MAP
+  CUSTOM_SOURCE
 }
 
 type GenerateReport {
@@ -2735,89 +2830,6 @@ enum ORGANIZATION_RELIABILITY {
   LOW
   MEDIUM
   HIGH
-}
-
-input OSMNameFilterDataInputType {
-  country: String
-}
-
-input OSMNameInputType {
-  id: ID
-  country: String
-  uuid: String!
-  wikipedia: String
-  rank: Int
-  countryCode: String
-  street: String
-  wikiData: String
-  osmId: String!
-  osmType: String!
-  houseNumbers: String
-  identifier: IDENTIFIER!
-  city: String
-  displayName: String!
-  lon: Float!
-  lat: Float!
-  state: String
-  boundingBox: [Float!]
-  type: String
-  importance: Float
-  className: String
-  name: String!
-  nameSuffix: String
-  placeRank: Int
-  alternativeNames: String
-  accuracy: OSM_ACCURACY!
-  moved: Boolean
-}
-
-type OSMNameListType {
-  results: [OSMNameType!]
-  totalCount: Int
-  page: Int
-  pageSize: Int
-}
-
-type OSMNameType {
-  id: ID!
-  uuid: UUID!
-  wikipedia: String
-  rank: Int
-  country: String!
-  countryCode: String
-  street: String
-  wikiData: String
-  osmId: String!
-  osmType: String!
-  houseNumbers: String
-  identifier: IDENTIFIER
-  city: String
-  displayName: String!
-  lon: Float!
-  lat: Float!
-  state: String
-  boundingBox: [Float!]
-  type: String
-  importance: Float
-  className: String
-  name: String!
-  nameSuffix: String
-  placeRank: Int
-  alternativeNames: String
-  accuracy: OSM_ACCURACY
-  moved: Boolean!
-  geoLocationReviewComments: [UnifiedReviewCommentType!]!
-  figures: [FigureType!]!
-  accuracyDisplay: EnumDescription
-  identifierDisplay: EnumDescription
-}
-
-enum OSM_ACCURACY {
-  ADM0
-  ADM1
-  ADM2
-  ADM3
-  POINT
 }
 
 input OrganizationCreateInputType {
@@ -3842,7 +3854,7 @@ type UnifiedReviewCommentType {
   figure: FigureType
   field: REVIEW_FIELD_TYPE!
   commentType: REVIEW_COMMENT_TYPE!
-  geoLocation: OSMNameType
+  geoLocation: FigureLocationType
   comment: String
   isEdited: Boolean!
   isDeleted: Boolean!

@@ -15,15 +15,16 @@ from apps.entry.enums import (
     UnitGrapheneEnum,
     RoleGrapheneEnum,
     DisplacementOccurredGrapheneEnum,
-    OSMAccuracyGrapheneEnum,
+    AccuracyGrapheneEnum,
     IdentifierGrapheneEnum,
     FigureCategoryTypeEnum,
     FigureTermsEnum,
     FigureSourcesReliabilityEnum,
     FigureReviewStatusEnum,
+    GeocoderGrapheneEnum,
 )
 from apps.entry.filters import (
-    OSMNameFilter,
+    FigureLocationFilter,
     DisaggregatedAgeFilter,
     FigureFilter,
     FigureTagFilter,
@@ -32,7 +33,7 @@ from apps.entry.models import (
     Figure,
     FigureTag,
     Entry,
-    OSMName,
+    FigureLocation,
     DisaggregatedAge,
 )
 from apps.contrib.models import SourcePreview
@@ -84,20 +85,22 @@ class DisaggregatedStratumType(ObjectType):
     value = graphene.Int()
 
 
-class OSMNameType(DjangoObjectType):
+class FigureLocationType(DjangoObjectType):
     class Meta:
-        model = OSMName
+        model = FigureLocation
 
-    accuracy = graphene.Field(OSMAccuracyGrapheneEnum)
+    accuracy = graphene.Field(AccuracyGrapheneEnum)
     accuracy_display = EnumDescription(source='get_accuracy_display')
     identifier = graphene.Field(IdentifierGrapheneEnum)
     identifier_display = EnumDescription(source='get_identifier_display')
+    geocoder = graphene.Field(GeocoderGrapheneEnum)
+    geocoder_display = EnumDescription(source='get_geocoder_display')
 
 
-class OSMNameListType(CustomDjangoListObjectType):
+class FigureLocationListType(CustomDjangoListObjectType):
     class Meta:
-        model = OSMName
-        filterset_class = OSMNameFilter
+        model = FigureLocation
+        filterset_class = FigureLocationFilter
 
 
 class FigureTagType(DjangoObjectType):
@@ -132,7 +135,7 @@ class FigureType(DjangoObjectType):
     )
     disaggregation_strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
     geo_locations = DjangoPaginatedListObjectField(
-        OSMNameListType,
+        FigureLocationListType,
         related_name='geo_locations',
     )
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
