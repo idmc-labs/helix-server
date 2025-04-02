@@ -68,10 +68,28 @@ reportMissingImports = true
 reportMissingTypeStubs = false
 
 [tool.ruff]
-exclude = [
-    "**/node_modules",
-    "**/__pycache__",
-    "apps/experimental",
-    "apps/typestubs",
-    "apps/**/migrations"
+line-length = 125
+extend-exclude = [
+    ".git",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".venv",
+    "venv",
+    "**/migrations/*",
+    "__pycache__",
 ]
+
+[tool.ruff.lint]
+flake8-builtins.builtins-strict-checking = false
+ignore = [
+    "C901",
+    "E701",
+    "E203",
+]
+extend-select = ["I", "E", "F"]
+# TODO: Use this instead `select = ["ALL"]` and add rules to ignore
+#   ruff check --statistics ./
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402"]
