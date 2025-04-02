@@ -12,7 +12,7 @@ class TestExcelDownload(HelixTestCase):
     def setUp(self) -> None:
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.request = RequestFactory().post('/graphql')
-        self.context = dict()
+        self.context = {}
 
     def test_valid_excel_export_if_all_complete(self):
         self.request.user = self.admin
@@ -34,7 +34,7 @@ class TestExcelDownload(HelixTestCase):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY.value,
-                filters=dict(),
+                filters={},
             ),
             context=self.context,
         )
@@ -60,7 +60,7 @@ class TestExcelDownload(HelixTestCase):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY.value,
-                filters=dict(),
+                filters={},
             ),
             context=self.context,
         )
@@ -79,7 +79,7 @@ class TestExcelDownload(HelixTestCase):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY.value,
-                filters=dict(),
+                filters={},
             ),
             context=self.context,
         )
@@ -100,7 +100,7 @@ class TestExcelDownload(HelixTestCase):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY.value,
-                filters=dict(),
+                filters={},
             ),
             context=self.context,
         )
@@ -119,7 +119,7 @@ class TestExcelDownload(HelixTestCase):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY.value,
-                filters=dict(),
+                filters={},
             ),
             context=self.context,
         )

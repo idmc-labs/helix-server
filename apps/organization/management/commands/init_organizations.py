@@ -10,7 +10,7 @@ class Command(BaseCommand):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.org_kinds = dict()
+        self.org_kinds = {}
 
     def fetch_organizations(self, offset=0, limit=1000):
         print('Fetching organizations starting from: {} to {}'.format(offset, offset + limit))
