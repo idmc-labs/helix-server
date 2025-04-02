@@ -38,8 +38,8 @@ from .enums import GiddStatusLogEnum
 
 def custom_date_filters(start_year, end_year):
     filters = {
-        'idps_date_filters': dict(),
-        'nd_date_filters': dict(),
+        'idps_date_filters': {},
+        'nd_date_filters': {},
     }
 
     filters['idps_date_filters'].update({'total_displacement__gt': 0})

@@ -185,7 +185,7 @@ def report_global_numbers(report):
     return dict(
         headers=formatted_headers,
         data=formatted_data,
-        formulae=dict(),
+        formulae={},
     )
 
 
@@ -583,7 +583,7 @@ def report_stat_conflict_typology(report):
         typology='Conflict typology',
         total='Sum of figure',
     ))
-    aggregation_formula = dict()
+    aggregation_formula = {}
 
     filtered_report_figures = report.report_figures.filter(
         role=Figure.ROLE.RECOMMENDED,
@@ -624,7 +624,7 @@ def report_stat_conflict_typology(report):
     return {
         'headers': headers,
         'data': data,
-        'formulae': dict(),
+        'formulae': {},
         'aggregation': dict(
             headers=aggregation_headers,
             formulae=aggregation_formula,
@@ -679,7 +679,7 @@ def report_disaster_event(report):
     return {
         'headers': headers,
         'data': data,
-        'formulae': dict(),
+        'formulae': {},
     }
 
 

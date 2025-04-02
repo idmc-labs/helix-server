@@ -43,8 +43,8 @@ class _CustomErrorType(ObjectType):
 
 
 def serializer_error_to_error_types(errors: dict, initial_data: dict = None) -> List:
-    initial_data = initial_data or dict()
-    error_types = list()
+    initial_data = initial_data or {}
+    error_types = []
     for field, value in errors.items():
         if isinstance(value, dict):
             error_types.append(_CustomErrorType(

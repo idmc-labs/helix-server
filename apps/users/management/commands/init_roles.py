@@ -10,7 +10,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         for role in USER_ROLES:
             group, created = Group.objects.get_or_create(name=role.name)
-            permissions = list()
+            permissions = []
             for action, models in PERMISSIONS[role].items():
                 permissions.extend([
                     Permission.objects.get(codename=f'{action.name}_{model.name}') for model in models
