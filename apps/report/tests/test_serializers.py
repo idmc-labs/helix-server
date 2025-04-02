@@ -1,7 +1,7 @@
 from datetime import timedelta
 from django.utils import timezone
 from django.test import RequestFactory
-import mock
+from unittest import mock
 
 from apps.report.models import ReportGeneration, Report
 from apps.report.serializers import (

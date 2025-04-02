@@ -1,5 +1,5 @@
 import typing
-import mock
+from unittest import mock
 import logging
 from datetime import date, timedelta, datetime
 from random import randint
