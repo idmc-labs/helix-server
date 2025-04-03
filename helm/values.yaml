@@ -147,11 +147,24 @@ app:
         enabled: true
         hook: PostSync
         preserveHistory: true
-        command: ["./manage.py", "migrate"]
+        command:
+          - ./manage.py
+          - wait_for_resources
+          - --db
+          - "&&"
+          - ./manage.py
+          - "migrate"
       collect-static:
         enabled: true
         hook: PostSync
-        command: ["./manage.py", "collectstatic", "--noinput"]
+        command:
+          - ./manage.py
+          - wait_for_resources
+          - --minio
+          - "&&"
+          - ./manage.py
+          - collectstatic
+          - --noinput
 
   # NOTE: Check main/settings.py for all available options
   env:
