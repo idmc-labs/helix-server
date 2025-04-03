@@ -15,6 +15,7 @@ if [ "$CI" == "true" ]; then
     coverage report -i
     coverage html -i
     coverage xml
+    coverage report --format=markdown > `pwd`/test-coverage.md
     set +e
 else
     py.test
