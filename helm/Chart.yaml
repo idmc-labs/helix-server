@@ -7,15 +7,7 @@ sources:
   - https://github.com/idmc-labs/helix-server
 
 dependencies:
-  - name: redis
-    version: 20.6.3
-    repository: https://charts.bitnami.com/bitnami
-    condition: redis.enabled
-  - name: postgresql
-    version: 16.4.5
-    condition: postgresql.enabled
-    repository: https://charts.bitnami.com/bitnami
-  - name: minio
-    version: 14.10.5
-    condition: minio.enabled
-    repository: https://charts.bitnami.com/bitnami
+  - name: django-app
+    alias: app
+    version: 0.1.0
+    repository: oci://ghcr.io/toggle-corp/charts

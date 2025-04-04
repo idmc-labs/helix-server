@@ -15,9 +15,9 @@ DOCKER_TAG="$BRANCH_NAME.c$(echo $GIT_HASH)"
 
 set -x
 
-docker compose build
+docker compose build celery
 
-docker tag helix/helix-server:latest $DOCKER_IMAGE:$DOCKER_TAG
+docker tag helix/helix-worker:latest $DOCKER_IMAGE:$DOCKER_TAG
 
 docker push $DOCKER_IMAGE:$DOCKER_TAG
 

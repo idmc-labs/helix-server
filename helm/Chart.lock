@@ -1,12 +1,6 @@
 dependencies:
-- name: redis
-  repository: https://charts.bitnami.com/bitnami
-  version: 20.6.3
-- name: postgresql
-  repository: https://charts.bitnami.com/bitnami
-  version: 16.4.5
-- name: minio
-  repository: https://charts.bitnami.com/bitnami
-  version: 14.10.0
-digest: sha256:e73e4c93012972c9f16a6e6aed878b817ac98f9c6e18cc579eaa057424f20b86
-generated: "2025-01-27T23:14:30.421626446+05:45"
+- name: django-app
+  repository: oci://ghcr.io/toggle-corp/charts
+  version: 0.1.0
+digest: sha256:b700fcc48355f2ef754826c520c39672cc109affaea54f77a2cbf6abe69bfbdd
+generated: "2025-04-04T15:51:24.222335652+05:45"

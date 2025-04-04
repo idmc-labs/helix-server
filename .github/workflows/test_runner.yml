@@ -54,6 +54,16 @@ jobs:
           cache-from: type=local,src=/tmp/.buildx-cache
           cache-to: type=local,dest=/tmp/.buildx-cache-new
 
+      - name: Start app resources
+        timeout-minutes: 1
+        env:
+          DOCKER_IMAGE_SERVER: ${{ steps.prep.outputs.tagged_image }}
+        run: |
+          docker compose -f gh-docker-compose.yml run --rm server ./manage.py wait_for_resources --all || {
+            echo 'Failed to wait for the resources';
+            exit 1;
+          }
+
       - name: 🕮 Validate latest graphql schema.
         env:
           DOCKER_IMAGE_SERVER: ${{ steps.prep.outputs.tagged_image }}
