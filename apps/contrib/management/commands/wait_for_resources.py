@@ -15,6 +15,32 @@ class TimeoutException(Exception):
     ...
 
 
+class RetryHelper:
+    def __init__(self, base_wait_seconds: int = 2, wait_max_seconds: int = 60):
+        self.base_wait_seconds = base_wait_seconds
+        self.wait_max_seconds = wait_max_seconds
+        self.attempt = 1
+        self.next_wait = base_wait_seconds
+        self.start_time = time.time()
+
+    def next_wait_seconds(self) -> int:
+        return self.next_wait
+
+    def wait(self) -> None:
+        time.sleep(self.next_wait)
+        self.attempt += 1
+        if self.next_wait < self.wait_max_seconds:
+            self.next_wait = self.base_wait_seconds ** self.attempt
+        else:
+            self.next_wait = self.wait_max_seconds
+
+    def total_time(self) -> float:
+        return time.time() - self.start_time
+
+    def try_again_message(self, prefix: str) -> str:
+        return f"{prefix}, Attempt: {self.attempt}, try again after {self.next_wait_seconds()} seconds..."
+
+
 def timeout_handler(*_):
     raise Exception("The command timed out.")
 
@@ -25,7 +51,7 @@ class Command(BaseCommand):
     def wait_for_db(self):
         self.stdout.write("Waiting for DB...")
         db_conn = None
-        start_time = time.time()
+        retry_helper = RetryHelper()
         while True:
             try:
                 db_conn = connections["default"]
@@ -34,15 +60,15 @@ class Command(BaseCommand):
             except OperationalError:
                 ...
             # Try again
-            self.stdout.write(self.style.WARNING("DB not available, waiting..."))
-            time.sleep(1)
+            self.stdout.write(self.style.WARNING(retry_helper.try_again_message("DB not available")))
+            retry_helper.wait()
 
-        self.stdout.write(self.style.SUCCESS(f"DB is available after {time.time() - start_time} seconds"))
+        self.stdout.write(self.style.SUCCESS(f"DB is available after {retry_helper.total_time()} seconds"))
 
     def wait_for_redis(self):
         self.stdout.write("Waiting for Redis...")
         redis_conn = None
-        start_time = time.time()
+        retry_helper = RetryHelper()
         while True:
             try:
                 cache.set("wait-for-it-ping", "pong", timeout=1)  # Set a key to check Redis availability
@@ -53,20 +79,19 @@ class Command(BaseCommand):
             except (RedisConnectionError, TypeError):
                 ...
             # Try again
-            self.stdout.write(self.style.WARNING("Redis not available, waiting..."))
-            time.sleep(1)
+            self.stdout.write(self.style.WARNING(retry_helper.try_again_message("Redis not available")))
+            retry_helper.wait()
 
-        self.stdout.write(self.style.SUCCESS(f"Redis is available after {time.time() - start_time} seconds"))
+        self.stdout.write(self.style.SUCCESS(f"Redis is available after {retry_helper.total_time()} seconds"))
 
     def wait_for_minio(self):
         self.stdout.write("Waiting for Minio...")
-        AWS_S3_CONFIG_OPTIONS = getattr(settings, "AWS_S3_CONFIG_OPTIONS", None) or {}
-        endpoint_url = AWS_S3_CONFIG_OPTIONS.get("endpoint_url")
+        endpoint_url = getattr(settings, "AWS_S3_ENDPOINT_URL", None)
         if endpoint_url is None:
             self.stdout.write(self.style.WARNING("No endpoint_url is provided. Skipping wait"))
             return
 
-        start_time = time.time()
+        retry_helper = RetryHelper()
         while True:
             try:
                 response = requests.get(urljoin(endpoint_url, "/minio/health/live"), timeout=5)
@@ -75,10 +100,10 @@ class Command(BaseCommand):
             except requests.exceptions.RequestException:
                 ...
             # Try again
-            self.stdout.write(self.style.WARNING("Minio not available, waiting..."))
-            time.sleep(5)
+            self.stdout.write(self.style.WARNING(retry_helper.try_again_message("Minio not available")))
+            retry_helper.wait()
 
-        self.stdout.write(self.style.SUCCESS(f"Minio is available after {time.time() - start_time} seconds"))
+        self.stdout.write(self.style.SUCCESS(f"Minio is available after {retry_helper.total_time()} seconds"))
 
     def add_arguments(self, parser):
         parser.add_argument(
