@@ -79,6 +79,9 @@ def fetch_git_sha(path, head=None):
 @signals.beat_init.connect
 @signals.celeryd_init.connect
 def init_sentry(**_kwargs):
+    if not settings.SENTRY_DSN:
+        return
+
     integrations = [
         DjangoIntegration(),
         RedisIntegration(),
