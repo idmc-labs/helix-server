@@ -1,7 +1,8 @@
 import os
 
-from celery import Celery
+from celery import Celery, signals
 from celery.schedules import crontab
+from logging.config import dictConfig
 
 
 # Set the default Django settings module for the 'celery' program.
@@ -59,6 +60,13 @@ app.conf.beat_schedule = {
 
 # Load task modules from all registered Django apps.
 app.autodiscover_tasks()
+
+@signals.setup_logging.connect
+def config_loggers(**_):
+    from django.conf import settings
+ 
+    dictConfig(settings.LOGGING)
+
 
 
 @app.task(bind=True)
