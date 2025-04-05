@@ -2,6 +2,7 @@ import os
 
 from celery import Celery, signals
 from celery.schedules import crontab
+from utils.celery import LivenessProbe
 from logging.config import dictConfig
 
 
@@ -9,6 +10,7 @@ from logging.config import dictConfig
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'helix.settings')
 
 app = Celery('helix')
+app.steps["worker"].add(LivenessProbe)  # type: ignore[reportOptionalSubscript]
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.
