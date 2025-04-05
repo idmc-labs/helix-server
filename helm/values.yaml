@@ -105,13 +105,30 @@ app:
         limits:
           cpu: "1"
           memory: 1Gi
-    queueCommandPrefix:
-      - "celery"
-      - "-A"
-      - "helix"
-      - "worker"
-      - "-l"
-      - "INFO"
+    queueCommon:
+      livenessProbe:
+        exec:
+          command:
+          - sh
+          - -c
+          - test $(($(date +%s) - $(stat -c %Y /tmp/worker_heartbeat))) -lt 10
+        initialDelaySeconds: 10
+        periodSeconds: 5
+      readinessProbe:
+        exec:
+          command:
+          - sh
+          - -c
+          - test -e /tmp/worker_ready
+        initialDelaySeconds: 10
+        periodSeconds: 5
+      commandPrefix:
+        - "celery"
+        - "-A"
+        - "helix"
+        - "worker"
+        - "-l"
+        - "INFO"
     queues:
       # NOTE: Make sure keys are lowercase
       default:
