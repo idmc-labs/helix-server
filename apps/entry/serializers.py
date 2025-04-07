@@ -81,6 +81,7 @@ class FigureLocationSerializer(serializers.ModelSerializer):
         choices=FigureLocation.GEOCODER.choices(),
         required=True,
     )
+    country_code = serializers.CharField(required=True)
 
     def validate(self, attrs: dict) -> dict:
         '''
@@ -88,7 +89,7 @@ class FigureLocationSerializer(serializers.ModelSerializer):
         in this case get country from country code
         '''
         if not self.instance and not attrs.get('country'):
-            country_code = attrs.get('country_code', '').upper()
+            country_code = attrs.get('country_code').upper()
             country = Country.objects.filter(iso2__iexact=country_code).first()
             if not country:
                 raise serializers.ValidationError('Country field is required.')
