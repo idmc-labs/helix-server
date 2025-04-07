@@ -29,6 +29,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             monitoring_sub_region=self.monitoring_sub_region,
             region=self.region,
             sub_region=self.sub_region,
+            iso2='NG',
         )
         self.regional_coordinator = create_user_with_role(
             USER_ROLE.REGIONAL_COORDINATOR.name,

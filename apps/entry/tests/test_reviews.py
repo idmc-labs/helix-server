@@ -81,7 +81,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         }
         """
         self.event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
-        self.country = CountryFactory.create()
+        self.country = CountryFactory.create(iso2='NG')
 
     def test_all_users_can_approve_figure_except_guest(self) -> None:
         users = [self.admin, self.monitoring_expert, self.regional_coordinator]

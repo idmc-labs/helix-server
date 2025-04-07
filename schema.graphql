@@ -2060,10 +2060,10 @@ input FigureLocationInputType {
   country: String
   geocoderMetadata: JSONString
   geocoder: GEOCODER!
+  countryCode: String!
   uuid: String!
   wikipedia: String
   rank: Int
-  countryCode: String
   street: String
   wikiData: String
   osmId: String
