@@ -22,66 +22,39 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         file_path = kwargs['csv_file_path']
         bulk_mgr = BulkUpdateManager(['preview_id'])
+
         used_source_preview_ids = set()
 
         with open(file_path, newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 entry_id = int(row["entry_id"])
-                url = row["url"]
-                current_preview_id = int(row["preview_id"])
-
                 # Check if the entry exists
                 if not Entry.objects.filter(id=entry_id).first():
-                    self.stdout.write(
-                        self.style.ERROR(f"Entry ID {entry_id} does not exist")
-                    )
+                    self.stdout.write(self.style.ERROR(f"Entry ({entry_id}) does not exist"))
                     continue
 
-                try:
-                    preview_data = json.loads(row["preview_data"])
-                except json.JSONDecodeError:
-                    self.stdout.write(
-                        self.style.ERROR(f"Invalid JSON in preview_data for entry_id {entry_id}")
-                    )
-                    continue
+                url = row["url"]
+                current_preview_id = int(row["preview_id"])
+                preview_data = json.loads(row["preview_data"])
 
                 # Previews that match the URL
-                matching_previews = [
+                matching_previews = sorted([
                     preview
                     for preview in preview_data
-                    if preview['url'] == url
-                ]
+                    if preview['url'] == url and preview['id'] not in used_source_preview_ids
+                ], key=lambda x: x['id'])
 
                 if not matching_previews:
-                    self.stdout.write(self.style.ERROR(f"No matched preview for entry {entry_id}"))
+                    self.stdout.write(self.style.ERROR(f"No previews remaining for Entry ({entry_id})"))
                     continue
 
-                # Sorting with id
-                matching_previews = sorted(matching_previews, key=lambda x: x['id'])
-
-                available_preview_ids = [
-                    preview['id']
-                    for preview in matching_previews
-                    if preview['id'] not in used_source_preview_ids
-                ]
-
-                if not available_preview_ids:
-                    self.stdout.write(
-                        self.style.ERROR(
-                            f"No available preview IDs for entry {entry_id}"
-                        )
-                    )
-                    continue
-
-                new_preview_id = available_preview_ids[0]
-                used_source_preview_ids.add(new_preview_id)
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Updating EntryID {entry_id}: previewID: ({current_preview_id}) -> ({new_preview_id})"
-                    )
+                new_preview_id = matching_previews[0]['id']
+                self.stdout.write(self.style.SUCCESS(
+                    f"Preview of Entry ({entry_id}) was updated from ({current_preview_id}) to ({new_preview_id})")
                 )
                 bulk_mgr.add(Entry(id=entry_id, preview_id=new_preview_id))
+                used_source_preview_ids.add(new_preview_id)
 
         bulk_mgr.done()
         self.stdout.write(self.style.SUCCESS(f'Updated preview IDs for entries: {bulk_mgr.summary()}'))

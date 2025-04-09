@@ -20,46 +20,38 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         file_path = kwargs['csv_file_path']
         bulk_mgr = BulkUpdateManager(['document_id'])
+
         used_document_ids = set()
 
         with open(file_path, newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 entry_id = int(row["entry_id"])
+                # Check if the entry exists
+                if not Entry.objects.filter(id=entry_id).first():
+                    self.stdout.write(self.style.ERROR(f"Entry ({entry_id}) does not exist"))
+                    continue
+
                 current_document_id = int(row["document_id"])
                 document_ids_list = list(map(int, row["document_ids"].split(", ")))
 
-                # Check if the entry exists
-                if not Entry.objects.filter(id=entry_id).first():
-                    self.stdout.write(
-                        self.style.ERROR(f"Entry ID {entry_id} does not exist")
-                    )
+                matching_document_ids = sorted([
+                    doc_id
+                    for doc_id in document_ids_list
+                    if doc_id not in used_document_ids
+                ])
+
+                if not matching_document_ids:
+                    self.stdout.write(self.style.ERROR(f"No documents remaining for Entry ({entry_id})"))
                     continue
 
-                # Set the same document ID for the first entry
-                if current_document_id not in used_document_ids:
-                    used_document_ids.add(current_document_id)
-                    continue
-
-                available_document_ids = [doc_id for doc_id in document_ids_list if doc_id not in used_document_ids]
-                if not available_document_ids:
-                    self.stdout.write(
-                        self.style.ERROR(
-                            f"No available document IDs for entry {entry_id}"
-                        )
-                    )
-                    continue
-
-                # Sorting with id
-                available_document_ids = sorted(available_document_ids)
-                new_document_id = available_document_ids[0]
-                used_document_ids.add(new_document_id)
-                self.stdout.write(
-                    self.style.SUCCESS(
-                        f"Updating EntryID {entry_id}: documentID: ({current_document_id}) -> ({new_document_id})"
-                    )
+                # FIXME: If I am in this list, skip
+                new_document_id = matching_document_ids[0]
+                self.stdout.write(self.style.SUCCESS(
+                    f"Document of Entry ({entry_id}) was updated from ({current_document_id}) to ({new_document_id})")
                 )
                 bulk_mgr.add(Entry(id=entry_id, document_id=new_document_id))
+                used_document_ids.add(new_document_id)
 
         bulk_mgr.done()
         self.stdout.write(self.style.SUCCESS(f'Updated document IDs for entries: {bulk_mgr.summary()}'))
