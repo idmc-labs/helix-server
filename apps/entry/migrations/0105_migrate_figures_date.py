@@ -21,7 +21,7 @@ def update_figure_dates(apps, _):
     )
 
     with gzip.open(file_path, 'rt', encoding='utf-8') as fp:
-        csv_reader = csv.DictReader(fp, fieldnames=['type', 'id', 'old_id', 'start_date', 'end_date'])
+        csv_reader = csv.DictReader(fp, fieldnames=['id', 'old_id', 'start_date', 'end_date', 'category', 'type'])
         # Skip the csv header
         next(csv_reader)
 
@@ -30,7 +30,7 @@ def update_figure_dates(apps, _):
 
             # NOTE: Check if figure exist or not
             if not figure_queryset.exists():
-                logger.error(f"Skipped: Figure ({row['old_id']}) not found.")
+                logger.warning(f"Skipped: Figure ({row['old_id']}) not found.")
                 continue
 
             figure_count = figure_queryset.count()
@@ -47,14 +47,20 @@ def update_figure_dates(apps, _):
                         flow_figures_count += 1
 
                 if flow_figures_count == 1 and stock_figures_count == 1:
-                    logger.error(f"Skipped: Figure ({row['old_id']} has 2 figures with different categories.")
+                    logger.warning(f"Skipped: Figure ({row['old_id']} has 2 figures with different categories.")
                     continue
             elif figure_count > 2:
-                logger.error(f"Skipped: Figure ({row['old_id']} has {figure_count} figures.")
+                logger.warning(f"Skipped: Figure ({row['old_id']} has {figure_count} figures.")
                 continue
 
             for figure_instance in figure_queryset.iterator():
                 update_needed = False
+
+                start_end_date_inconsistent = (
+                    figure_instance.start_date
+                    and figure_instance.end_date
+                    and figure_instance.start_date > figure_instance.end_date
+                )
 
                 if row['start_date']:
                     correct_start_date = datetime.strptime(row['start_date'], '%Y-%m-%d').date()
@@ -78,10 +84,9 @@ def update_figure_dates(apps, _):
                     else:
                         logger.warning(f"Flag: For figure ({row['old_id']}), delta between actual end_date ({figure_instance.end_date}) and the correct end_date ({row['end_date']}) is greater than 1")
 
-
                 # NOTE: Logging if the start date is greater than the end date
-                if figure_instance.start_date and figure_instance.end_date and figure_instance.start_date > figure_instance.end_date:
-                    logger.warning(f"Flag: For figure ({row['old_id']}), start_date ({figure_instance.start_date}) is greater than end_date ({figure_instance.end_date})")
+                if not start_end_date_inconsistent and figure_instance.start_date and figure_instance.end_date and figure_instance.start_date > figure_instance.end_date:
+                    logger.warning(f"Skipped: For figure ({row['old_id']}), start_date ({figure_instance.start_date}) is greater than end_date ({figure_instance.end_date})")
                     continue
 
                 if update_needed:

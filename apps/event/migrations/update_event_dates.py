@@ -59,9 +59,6 @@ def update_event_dates(apps, _):
 
             if update_needed:
                 bulk_mgr.add(event)
-                logger.warning(f"Processed: Event ({row['old_id']}) was updated.")
-            else:
-                logger.warning(f"Skipped: Event ({row['old_id']}) was not updated.")
 
     bulk_mgr.done()
     logger.info(f"Bulk update summary: {bulk_mgr.summary()}")
