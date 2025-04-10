@@ -4,12 +4,14 @@ import os
 import logging
 from datetime import datetime, timedelta
 
-from django.db import migrations
+from django.db import migrations, transaction
 
 from helix.managers import BulkUpdateManager
 
 logger = logging.getLogger(__name__)
 
+
+@transaction.atomic
 def update_event_dates(apps, _):
     Event = apps.get_model('event', 'Event')
     bulk_mgr = BulkUpdateManager(['start_date', 'end_date'])
@@ -28,7 +30,7 @@ def update_event_dates(apps, _):
             event = Event.objects.filter(old_id=row['old_id']).first()
 
             if not event:
-                logger.error(f"Skipped: Event ({row['old_id']}) not found.")
+                logger.warning(f"Skipped: Event ({row['old_id']}) not found.")
                 continue
 
             update_needed = False
