@@ -4,6 +4,7 @@ import os
 import typing
 from django.core.management.base import BaseCommand, CommandParser
 
+from django.db import transaction
 from apps.entry.models import Entry
 from apps.contrib.models import Attachment, SourcePreview
 
@@ -63,6 +64,7 @@ class Command(BaseCommand):
             ]
         )
 
+    @transaction.atomic
     def handle(self, *args: typing.Any, **kwargs: typing.Any):
         updated_documents_count = 0
         updated_previews_count = 0
@@ -91,7 +93,9 @@ class Command(BaseCommand):
             filename = entry.preview.pdf.name.split('helix-old/')[1]
             metadata = mapping.get(filename)
             if not metadata:
-                self.stdout.write(self.style.FAILURE(f"Metadata not found for Entry ({entry.id}) with filename ({filename})"))
+                self.stdout.write(
+                    self.style.ERROR(f"Metadata not found for Entry ({entry.id}) with filename ({filename})")
+                )
                 continue
             if (metadata['type'] == 'document'):
                 self.convert_entry_to_document_type(entry=entry)
@@ -110,7 +114,9 @@ class Command(BaseCommand):
             filename = entry.document.attachment.name.split('helix-old/')[1]
             metadata = mapping.get(filename)
             if not metadata:
-                self.stdout.write(self.style.FAILURE(f"Metadata not found for Entry ({entry.id}) with filename ({filename})"))
+                self.stdout.write(
+                    self.style.ERROR(f"Metadata not found for Entry ({entry.id}) with filename ({filename})")
+                )
                 continue
             if (metadata['type'] == 'url' and entry.document_url):
                 self.convert_entry_to_url_type(entry=entry)
