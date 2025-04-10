@@ -2,15 +2,16 @@ import gzip
 import os
 import csv
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta, date
 
-from django.db import migrations
+from django.db import migrations, transaction
 
 from helix.managers import BulkUpdateManager
 from apps.entry.models import Figure as FigureModel
 
 logger = logging.getLogger(__name__)
 
+@transaction.atomic
 def update_figure_dates(apps, _):
     Figure = apps.get_model('entry', 'Figure')
     bulk_mgr = BulkUpdateManager(['start_date', 'end_date'])
@@ -63,7 +64,7 @@ def update_figure_dates(apps, _):
                 )
 
                 if row['start_date']:
-                    correct_start_date = datetime.strptime(row['start_date'], '%Y-%m-%d').date()
+                    correct_start_date = date.fromisoformat(row['start_date'])
                     if correct_start_date == figure_instance.start_date:
                         # NOTE: No need to migrate the start_date
                         pass
@@ -74,7 +75,7 @@ def update_figure_dates(apps, _):
                         logger.warning(f"Flag: For figure ({row['old_id']}), delta between actual start_date ({figure_instance.start_date}) and the correct start_date ({row['start_date']}) is greater than 1")
 
                 if row['end_date']:
-                    correct_end_date = datetime.strptime(row['end_date'], '%Y-%m-%d').date()
+                    correct_end_date = date.fromisoformat(row['end_date'])
                     if correct_end_date == figure_instance.end_date:
                         # NOTE: No need to migrate the end_date
                         pass
