@@ -64,10 +64,10 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args: typing.Any, **kwargs: typing.Any):
-        csv_file_path = kwargs['csv_file_path']
         updated_documents_count = 0
         updated_previews_count = 0
 
+        csv_file_path = kwargs['csv_file_path']
         if not os.path.exists(csv_file_path):
             self.stdout.write(self.style.ERROR(f"CSV file path does not exist: {csv_file_path}"))
             return
@@ -90,7 +90,10 @@ class Command(BaseCommand):
         for entry in entry_with_previews_from_helix1:
             filename = entry.preview.pdf.name.split('helix-old/')[1]
             metadata = mapping.get(filename)
-            if (metadata and metadata['type'] == 'document'):
+            if not metadata:
+                self.stdout.write(self.style.FAILURE(f"Metadata not found for Entry ({entry.id}) with filename ({filename})"))
+                continue
+            if (metadata['type'] == 'document'):
                 self.convert_entry_to_document_type(entry=entry)
                 self.stdout.write(self.style.SUCCESS(f"Converted entry {entry.id} to document type."))
                 updated_documents_count += 1
@@ -106,7 +109,10 @@ class Command(BaseCommand):
         for entry in entry_with_documents_from_helix1:
             filename = entry.document.attachment.name.split('helix-old/')[1]
             metadata = mapping.get(filename)
-            if (metadata and metadata['type'] == 'url' and entry.document_url):
+            if not metadata:
+                self.stdout.write(self.style.FAILURE(f"Metadata not found for Entry ({entry.id}) with filename ({filename})"))
+                continue
+            if (metadata['type'] == 'url' and entry.document_url):
                 self.convert_entry_to_url_type(entry=entry)
                 self.stdout.write(self.style.SUCCESS(f"Converted entry {entry.id} to url type."))
                 updated_previews_count += 1
