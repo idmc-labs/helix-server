@@ -17,8 +17,6 @@ from apps.users.utils import HelixInternalBot
 from helix.managers import BulkUpdateManager
 from utils.common import round_half_up
 
-YEAR = 2024
-
 
 def format_date(date: str) -> typing.Union[datetime.datetime, str]:
     try:
@@ -32,15 +30,21 @@ class Command(BaseCommand):
     help = "Update AHHS based on new household size data."
 
     def add_arguments(self, parser):
-        parser.add_argument('csv_file_path', type=str, help="Path to the CSV file containing the data.")
+        parser.add_argument("csv_file_path", type=str, help="Path to the CSV file containing the data.")
+        parser.add_argument(
+            "year",
+            nargs="+",
+            type=int,
+            help="AHHS year to be updated",
+        )
 
-    def iso3_to_household_sizes(self) -> CaseInsensitiveDict:
+    def iso3_to_household_sizes(self, year: int) -> CaseInsensitiveDict:
         """
         Retrieves active household sizes for certain year, mapped by their respective countries.
         Returns:
             CaseInsensitiveDict: A dictionary with Country instances as keys and HouseholdSize instances as values.
         """
-        household_sizes = HouseholdSize.objects.filter(year=YEAR, is_active=True).select_related('country')
+        household_sizes = HouseholdSize.objects.filter(year=year, is_active=True).select_related("country")
         return CaseInsensitiveDict({size.country.iso3: size for size in household_sizes})
 
     @cached_property
@@ -83,7 +87,7 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(f"Created {len(validated_data)} AHHS items."))
         self.stdout.write(self.style.SUCCESS(f"Updated {updated_count} previous AHHS items as inactive."))
 
-    def process_household_size_row(self, row: dict) -> typing.Optional:
+    def process_household_size_row(self, row: dict) -> typing.Optional[dict]:
         """
         Convert a CSV row into a dictionary suitable for serialization.
         Args:
@@ -194,6 +198,7 @@ class Command(BaseCommand):
 
     def update_figures(
         self,
+        year: int,
         old_household_sizes: CaseInsensitiveDict,
         new_household_sizes: CaseInsensitiveDict,
         filter_countries: typing.Set[str],
@@ -202,7 +207,7 @@ class Command(BaseCommand):
         figures = Figure.objects.filter(
             unit=Figure.UNIT.HOUSEHOLD,
             # Year can be calculated from the end_date (for both flow and stock figures)
-            end_date__year=YEAR,
+            end_date__year=year,
             country__in=filter_countries,
         )
         for figure in figures:
@@ -221,18 +226,16 @@ class Command(BaseCommand):
         """
         Entry point for processing the CSV file to update Household Size.
         """
-        csv_file_path = kwargs['csv_file_path']
+        csv_file_path = kwargs["csv_file_path"]
+        year = kwargs["year"]
+        assert year is not None, "Year is required"
         if not os.path.exists(csv_file_path):
             self.stdout.write(self.style.ERROR(f"CSV file path does not exist: {csv_file_path}"))
             return
 
-        old_household_sizes = self.iso3_to_household_sizes()
+        old_household_sizes = self.iso3_to_household_sizes(year)
         household_sizes = self.updates_household_sizes_from_csv(csv_file_path)
         # FIXME: We may need to clear cache
-        new_household_sizes = self.iso3_to_household_sizes()
+        new_household_sizes = self.iso3_to_household_sizes(year)
 
-        self.update_figures(
-            old_household_sizes,
-            new_household_sizes,
-            set([x['country'].pk for x in household_sizes])
-        )
+        self.update_figures(year, old_household_sizes, new_household_sizes, set([x["country"].pk for x in household_sizes]))
