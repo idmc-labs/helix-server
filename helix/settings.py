@@ -674,6 +674,7 @@ SPECTACULAR_SETTINGS = {
         "syntaxHighlight": False,  # Disabling syntax highlighting as it takes considerable time to load
         "persistAuthorization": True,
         "displayOperationId": True,
+        "tryItOutEnabled": True,
     },
     'ENABLE_LIST_MECHANICS_ON_NON_2XX': True,
     'SWAGGER_UI_DIST': 'SIDECAR',  # shorthand to use the sidecar instead
