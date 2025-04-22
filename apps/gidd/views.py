@@ -12,11 +12,16 @@ from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
 from rest_framework import mixins
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_view,
+)
+from drf_spectacular.types import OpenApiTypes
 from django.db import models
 from django.db.models import (
     F, Case, When, Q
 )
+from pathlib import Path
 
 from apps.contrib.commons import DATE_ACCURACY
 from apps.country.models import Country
@@ -144,6 +149,11 @@ class ConflictViewSet(ListOnlyViewSetMixin):
         return Conflict.objects.all().select_related('country')
 
 
+@extend_schema_view(
+    list=extend_schema(
+        responses=DisasterSerializer(many=True),
+    ),
+)
 class DisasterViewSet(ListOnlyViewSetMixin):
     serializer_class = DisasterSerializer
     filterset_class = RestDisasterFilterSet
@@ -169,7 +179,12 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             return "Displacement reporting preventive evacuations"
         return "Displacement without preventive evacuations reported"
 
-    @extend_schema(responses=DisasterSerializer(many=True))
+    @extend_schema(
+        description=Path("docs/disaster/xlsx-export-description.md").read_text(),
+        responses={
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
+        }
+    )
     @action(
         detail=False,
         methods=["get"],
@@ -409,6 +424,12 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         return response
 
 
+@extend_schema_view(
+    list=extend_schema(
+        description=Path("docs/displacement/main-description.md").read_text(),
+        responses=DisplacementDataSerializer(many=True),
+    )
+)
 class DisplacementDataViewSet(ListOnlyViewSetMixin):
     serializer_class = DisplacementDataSerializer
     filterset_class = RestDisplacementDataFilterSet
@@ -497,7 +518,12 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 item.disaster_total_displacement,
             ])
 
-    @extend_schema(responses=DisplacementDataSerializer(many=True))
+    @extend_schema(
+        description=Path("docs/displacement/xlsx-export-description.md").read_text(),
+        responses={
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
+        }
+    )
     @action(
         detail=False,
         methods=["get"],
@@ -1842,7 +1868,12 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         response['Content-Type'] = 'application/octet-stream'
         return response
 
-    @extend_schema(responses=DisaggregationSerializer(many=True))
+    @extend_schema(
+        description=Path("docs/disaggregation/geojson-export-description.md").read_text(),
+        responses={
+            (200, "application/geo+json"): OpenApiTypes.OBJECT,
+        },
+    )
     @action(
         detail=False,
         methods=["get"],
@@ -1869,7 +1900,12 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         qs = self.filter_queryset(queryset)
         return self._export_disaggregated_geojson(qs)
 
-    @extend_schema(responses=DisaggregationSerializer(many=True))
+    @extend_schema(
+        description=Path("docs/disaggregation/xlsx-export-description.md").read_text(),
+        responses={
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
+        }
+    )
     @action(
         detail=False,
         methods=["get"],
@@ -1897,6 +1933,12 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         return self._export_disaggregated_excel(qs)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        description=Path("docs/public-figure-analyses/main-description.md").read_text(),
+        responses=PublicFigureAnalysisSerializer(many=True),
+    ),
+)
 class PublicFigureAnalysisViewSet(ListOnlyViewSetMixin):
     serializer_class = PublicFigureAnalysisSerializer
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)

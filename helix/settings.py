@@ -19,6 +19,7 @@ import environ
 
 from . import sentry
 from helix.aws.secrets_manager import fetch_db_credentials_from_secret_arn
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -662,7 +663,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Helix API',
-    'DESCRIPTION': 'Public rest API endpoints for Helix',
+    'DESCRIPTION': Path("docs/main/description.md").read_text(),
     'VERSION': 'v1',
     'SERVE_INCLUDE_SCHEMA': False,
     'PREPROCESSING_HOOKS': [
