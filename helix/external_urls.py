@@ -15,6 +15,11 @@ from apps.gidd.views import (
 )
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
+
+class CustomSwaggerView(SpectacularSwaggerView):
+    template_name = 'drf_spectular/custom_swagger_ui.html'
+
+
 router = DefaultRouter()
 router.register("countries", CountryViewSet, "countries-view")
 router.register("conflicts", ConflictViewSet, "conflicts-view")

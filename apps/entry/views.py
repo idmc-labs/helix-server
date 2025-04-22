@@ -10,7 +10,6 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import redirect
-
 from apps.common.utils import (
     EXTERNAL_TUPLE_SEPARATOR,
     EXTERNAL_ARRAY_SEPARATOR,
