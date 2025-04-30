@@ -2,40 +2,33 @@ import graphene
 from django.utils import timezone
 from django.utils.translation import gettext
 
-from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import permission_checker
-from utils.mutation import generate_input_type_for_serializer
 from apps.contrib.models import ExcelDownload
 from apps.contrib.mutations import ExportBaseMutation
-from apps.event.models import Event, Actor, ContextOfViolence
 from apps.event.filters import (
     ActorFilterDataInputType,
-    EventFilterDataInputType,
     ContextOfViolenceFilterDataInputType,
+    EventFilterDataInputType,
 )
-from apps.event.schema import EventType, ActorType, ContextOfViolenceType
+from apps.event.models import Actor, ContextOfViolence, Event
+from apps.event.schema import ActorType, ContextOfViolenceType, EventType
 from apps.event.serializers import (
-    EventSerializer,
-    EventUpdateSerializer,
     ActorSerializer,
     ActorUpdateSerializer,
     CloneEventSerializer,
     ContextOfViolenceSerializer,
-    ContextOfViolenceUpdateSerializer
+    ContextOfViolenceUpdateSerializer,
+    EventSerializer,
+    EventUpdateSerializer,
 )
 from apps.notification.models import Notification
+from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.mutation import generate_input_type_for_serializer
+from utils.permissions import permission_checker
+
+ActorCreateInputType = generate_input_type_for_serializer("ActorCreateInputType", ActorSerializer)
 
 
-ActorCreateInputType = generate_input_type_for_serializer(
-    'ActorCreateInputType',
-    ActorSerializer
-)
-
-
-ActorUpdateInputType = generate_input_type_for_serializer(
-    'ActorUpdateInputType',
-    ActorUpdateSerializer
-)
+ActorUpdateInputType = generate_input_type_for_serializer("ActorUpdateInputType", ActorUpdateSerializer)
 
 
 class CreateActor(graphene.Mutation):
@@ -47,9 +40,9 @@ class CreateActor(graphene.Mutation):
     result = graphene.Field(ActorType)
 
     @staticmethod
-    @permission_checker(['event.add_actor'])
+    @permission_checker(["event.add_actor"])
     def mutate(root, info, data):
-        serializer = ActorSerializer(data=data, context={'request': info.context.request})
+        serializer = ActorSerializer(data=data, context={"request": info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateActor(errors=errors, ok=False)
         instance = serializer.save()
@@ -65,16 +58,13 @@ class UpdateActor(graphene.Mutation):
     result = graphene.Field(ActorType)
 
     @staticmethod
-    @permission_checker(['event.change_actor'])
+    @permission_checker(["event.change_actor"])
     def mutate(root, info, data):
         try:
-            instance = Actor.objects.get(id=data['id'])
+            instance = Actor.objects.get(id=data["id"])
         except Actor.DoesNotExist:
-            return UpdateActor(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Actor does not exist.'))
-            ])
-        serializer = ActorSerializer(instance=instance, data=data,
-                                     context=dict(request=info.context.request), partial=True)
+            return UpdateActor(errors=[dict(field="nonFieldErrors", messages=gettext("Actor does not exist."))])
+        serializer = ActorSerializer(instance=instance, data=data, context=dict(request=info.context.request), partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateActor(errors=errors, ok=False)
         instance = serializer.save()
@@ -90,29 +80,21 @@ class DeleteActor(graphene.Mutation):
     result = graphene.Field(ActorType)
 
     @staticmethod
-    @permission_checker(['event.delete_actor'])
+    @permission_checker(["event.delete_actor"])
     def mutate(root, info, id):
         try:
             instance = Actor.objects.get(id=id)
         except Actor.DoesNotExist:
-            return DeleteActor(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Actor does not exist.'))
-            ])
+            return DeleteActor(errors=[dict(field="nonFieldErrors", messages=gettext("Actor does not exist."))])
         instance.delete()
         instance.id = id
         return DeleteActor(result=instance, errors=None, ok=True)
 
 
-EventCreateInputType = generate_input_type_for_serializer(
-    'EventCreateInputType',
-    EventSerializer
-)
+EventCreateInputType = generate_input_type_for_serializer("EventCreateInputType", EventSerializer)
 
 
-EventUpdateInputType = generate_input_type_for_serializer(
-    'EventUpdateInputType',
-    EventUpdateSerializer
-)
+EventUpdateInputType = generate_input_type_for_serializer("EventUpdateInputType", EventUpdateSerializer)
 
 
 class CreateEvent(graphene.Mutation):
@@ -124,7 +106,7 @@ class CreateEvent(graphene.Mutation):
     result = graphene.Field(EventType)
 
     @staticmethod
-    @permission_checker(['event.add_event'])
+    @permission_checker(["event.add_event"])
     def mutate(root, info, data):
         serializer = EventSerializer(data=data, context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
@@ -142,14 +124,12 @@ class UpdateEvent(graphene.Mutation):
     result = graphene.Field(EventType)
 
     @staticmethod
-    @permission_checker(['event.change_event'])
+    @permission_checker(["event.change_event"])
     def mutate(root, info, data):
         try:
-            instance = Event.objects.get(id=data['id'])
+            instance = Event.objects.get(id=data["id"])
         except Event.DoesNotExist:
-            return UpdateEvent(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
-            ])
+            return UpdateEvent(errors=[dict(field="nonFieldErrors", messages=gettext("Event does not exist."))])
         serializer = EventUpdateSerializer(
             instance=instance,
             data=data,
@@ -171,14 +151,12 @@ class DeleteEvent(graphene.Mutation):
     result = graphene.Field(EventType)
 
     @staticmethod
-    @permission_checker(['event.delete_event'])
+    @permission_checker(["event.delete_event"])
     def mutate(root, info, id):
         try:
             instance = Event.objects.get(id=id)
         except Event.DoesNotExist:
-            return DeleteEvent(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
-            ])
+            return DeleteEvent(errors=[dict(field="nonFieldErrors", messages=gettext("Event does not exist."))])
         instance.delete()
         instance.id = id
         return DeleteEvent(result=instance, errors=None, ok=True)
@@ -187,19 +165,18 @@ class DeleteEvent(graphene.Mutation):
 class ExportEvents(ExportBaseMutation):
     class Arguments(ExportBaseMutation.Arguments):
         filters = EventFilterDataInputType(required=True)
+
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.EVENT
 
 
 class ExportActors(ExportBaseMutation):
     class Arguments(ExportBaseMutation.Arguments):
         filters = ActorFilterDataInputType(required=True)
+
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.ACTOR
 
 
-CloneEntryInputType = generate_input_type_for_serializer(
-    'CloneEventInputType',
-    CloneEventSerializer
-)
+CloneEntryInputType = generate_input_type_for_serializer("CloneEventInputType", CloneEventSerializer)
 
 
 class CloneEvent(graphene.Mutation):
@@ -211,7 +188,7 @@ class CloneEvent(graphene.Mutation):
     result = graphene.Field(EventType)
 
     @staticmethod
-    @permission_checker(['event.add_event'])
+    @permission_checker(["event.add_event"])
     def mutate(root, info, data):
         serializer = CloneEventSerializer(
             data=data,
@@ -224,13 +201,11 @@ class CloneEvent(graphene.Mutation):
 
 
 ContextOfViolenceCreateInputType = generate_input_type_for_serializer(
-    'ContextOfViolenceCreateInputType',
-    ContextOfViolenceSerializer
+    "ContextOfViolenceCreateInputType", ContextOfViolenceSerializer
 )
 
 ContextOfViolenceUpdateInputType = generate_input_type_for_serializer(
-    'ContextOfViolenceUpdateInputType',
-    ContextOfViolenceUpdateSerializer
+    "ContextOfViolenceUpdateInputType", ContextOfViolenceUpdateSerializer
 )
 
 
@@ -243,7 +218,7 @@ class CreateContextOfViolence(graphene.Mutation):
     result = graphene.Field(ContextOfViolenceType)
 
     @staticmethod
-    @permission_checker(['event.add_contextofviolence'])
+    @permission_checker(["event.add_contextofviolence"])
     def mutate(root, info, data):
         serializer = ContextOfViolenceSerializer(data=data, context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
@@ -261,17 +236,16 @@ class UpdateContextOfViolence(graphene.Mutation):
     result = graphene.Field(ContextOfViolenceType)
 
     @staticmethod
-    @permission_checker(['event.change_contextofviolence'])
+    @permission_checker(["event.change_contextofviolence"])
     def mutate(root, info, data):
         try:
-            instance = ContextOfViolence.objects.get(id=data['id'])
+            instance = ContextOfViolence.objects.get(id=data["id"])
         except ContextOfViolence.DoesNotExist:
-            return UpdateContextOfViolence(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Context of violence does not exist.'))
-            ])
+            return UpdateContextOfViolence(
+                errors=[dict(field="nonFieldErrors", messages=gettext("Context of violence does not exist."))]
+            )
         serializer = ContextOfViolenceUpdateSerializer(
-            instance=instance, data=data,
-            context=dict(request=info.context.request), partial=True
+            instance=instance, data=data, context=dict(request=info.context.request), partial=True
         )
         if errors := mutation_is_not_valid(serializer):
             return UpdateContextOfViolence(errors=errors, ok=False)
@@ -288,14 +262,14 @@ class DeleteContextOfViolence(graphene.Mutation):
     result = graphene.Field(ContextOfViolenceType)
 
     @staticmethod
-    @permission_checker(['event.delete_contextofviolence'])
+    @permission_checker(["event.delete_contextofviolence"])
     def mutate(root, info, id):
         try:
             instance = ContextOfViolence.objects.get(id=id)
         except ContextOfViolence.DoesNotExist:
-            return DeleteContextOfViolence(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Context of violence does not exist.'))
-            ])
+            return DeleteContextOfViolence(
+                errors=[dict(field="nonFieldErrors", messages=gettext("Context of violence does not exist."))]
+            )
         instance.delete()
         instance.id = id
         return DeleteContextOfViolence(result=instance, errors=None, ok=True)
@@ -305,26 +279,26 @@ class SetAssigneeToEvent(graphene.Mutation):
     class Arguments:
         event_id = graphene.ID(required=True)
         user_id = graphene.ID(required=True)
+
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(EventType)
 
     @staticmethod
-    @permission_checker(['event.assign_event'])
+    @permission_checker(["event.assign_event"])
     def mutate(root, info, event_id, user_id):
         from apps.users.models import User
+
         event = Event.objects.filter(id=event_id).first()
         if not event:
-            return SetAssigneeToEvent(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
-            ])
+            return SetAssigneeToEvent(errors=[dict(field="nonFieldErrors", messages=gettext("Event does not exist."))])
 
         user = User.objects.filter(id=user_id).first()
         # To prevent users being saved with no permission in event review process. for eg GUEST
-        if not user.has_perm('event.self_assign_event'):
-            return SetAssigneeToEvent(errors=[
-                dict(field='nonFieldErrors', messages=gettext('The user does not exist or has enough permissions.'))
-            ])
+        if not user.has_perm("event.self_assign_event"):
+            return SetAssigneeToEvent(
+                errors=[dict(field="nonFieldErrors", messages=gettext("The user does not exist or has enough permissions."))]
+            )
 
         prev_assignee_id = event.assignee_id
         prev_assigner_id = event.assigner_id
@@ -363,18 +337,17 @@ class SetAssigneeToEvent(graphene.Mutation):
 class SetSelfAssigneeToEvent(graphene.Mutation):
     class Arguments:
         event_id = graphene.ID(required=True)
+
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(EventType)
 
     @staticmethod
-    @permission_checker(['event.self_assign_event'])
+    @permission_checker(["event.self_assign_event"])
     def mutate(root, info, event_id):
         event = Event.objects.filter(id=event_id).first()
         if not event:
-            return SetSelfAssigneeToEvent(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
-            ])
+            return SetSelfAssigneeToEvent(errors=[dict(field="nonFieldErrors", messages=gettext("Event does not exist."))])
 
         prev_assignee_id = event.assignee_id
         prev_assigner_id = event.assigner_id
@@ -397,10 +370,13 @@ class SetSelfAssigneeToEvent(graphene.Mutation):
                 type=Notification.Type.EVENT_ASSIGNEE_CLEARED,
             )
 
-        recipients = [user['id'] for user in Event.regional_coordinators(
-            event,
-            actor=info.context.user,
-        )]
+        recipients = [
+            user["id"]
+            for user in Event.regional_coordinators(
+                event,
+                actor=info.context.user,
+            )
+        ]
         if prev_assigner_id:
             recipients.append(prev_assigner_id)
         Notification.send_safe_multiple_notifications(
@@ -416,29 +392,30 @@ class SetSelfAssigneeToEvent(graphene.Mutation):
 class ClearAssigneFromEvent(graphene.Mutation):
     class Arguments:
         event_id = graphene.ID(required=True)
+
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(EventType)
 
     @staticmethod
-    @permission_checker(['event.clear_assignee_event'])
+    @permission_checker(["event.clear_assignee_event"])
     def mutate(root, info, event_id):
         # Admin, assigner and assignee(self) can only clear assignee
         event = Event.objects.filter(id=event_id).first()
         if not event:
-            return ClearAssigneFromEvent(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
-            ])
+            return ClearAssigneFromEvent(errors=[dict(field="nonFieldErrors", messages=gettext("Event does not exist."))])
 
         prev_assignee_id = event.assignee_id
         prev_assigner_id = event.assigner_id
         if not prev_assignee_id:
-            return ClearAssigneFromEvent(errors=[
-                dict(
-                    field='nonFieldErrors',
-                    messages=gettext('Cannot clear assignee because event does not have an assignee'),
-                )
-            ])
+            return ClearAssigneFromEvent(
+                errors=[
+                    dict(
+                        field="nonFieldErrors",
+                        messages=gettext("Cannot clear assignee because event does not have an assignee"),
+                    )
+                ]
+            )
 
         event.assignee = None
         event.assigner = None
@@ -464,25 +441,26 @@ class ClearAssigneFromEvent(graphene.Mutation):
 class ClearSelfAssigneFromEvent(graphene.Mutation):
     class Arguments:
         event_id = graphene.ID(required=True)
+
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(EventType)
 
     @staticmethod
-    @permission_checker(['event.clear_self_assignee_event'])
+    @permission_checker(["event.clear_self_assignee_event"])
     def mutate(root, info, event_id):
         event = Event.objects.filter(id=event_id).first()
         if not event:
-            return ClearSelfAssigneFromEvent(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
-            ])
+            return ClearSelfAssigneFromEvent(
+                errors=[dict(field="nonFieldErrors", messages=gettext("Event does not exist."))]
+            )
 
         # Admin and RE can clear all other users from assignee except ME
         # FIXME: this logic does not seem right after `or`
-        if event.assignee_id != info.context.user.id or info.context.user.has_perm('clear_assignee_from_event'):
-            return ClearAssigneFromEvent(errors=[
-                dict(field='nonFieldErrors', messages=gettext('You are not allowed to clear others from assignee.'))
-            ])
+        if event.assignee_id != info.context.user.id or info.context.user.has_perm("clear_assignee_from_event"):
+            return ClearAssigneFromEvent(
+                errors=[dict(field="nonFieldErrors", messages=gettext("You are not allowed to clear others from assignee."))]
+            )
 
         prev_assigner_id = event.assigner_id
 
@@ -493,10 +471,15 @@ class ClearSelfAssigneFromEvent(graphene.Mutation):
 
         recipients = []
         if event.regional_coordinators:
-            recipients.extend([user['id'] for user in Event.regional_coordinators(
-                event,
-                actor=info.context.user,
-            )])
+            recipients.extend(
+                [
+                    user["id"]
+                    for user in Event.regional_coordinators(
+                        event,
+                        actor=info.context.user,
+                    )
+                ]
+            )
         if prev_assigner_id:
             recipients.append(prev_assigner_id)
 
@@ -514,28 +497,26 @@ class ClearSelfAssigneFromEvent(graphene.Mutation):
 class SignOffEvent(graphene.Mutation):
     class Arguments:
         event_id = graphene.ID(required=True)
+
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
     result = graphene.Field(EventType)
 
     @staticmethod
-    @permission_checker(['event.sign_off_event'])
+    @permission_checker(["event.sign_off_event"])
     def mutate(root, info, event_id):
         event = Event.objects.filter(id=event_id).first()
         if not event:
-            return SignOffEvent(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Event does not exist.'))
-            ])
+            return SignOffEvent(errors=[dict(field="nonFieldErrors", messages=gettext("Event does not exist."))])
         if not event.review_status == Event.EVENT_REVIEW_STATUS.APPROVED:
-            return SignOffEvent(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Event is not approved yet.'))
-            ])
+            return SignOffEvent(errors=[dict(field="nonFieldErrors", messages=gettext("Event is not approved yet."))])
 
         event.review_status = Event.EVENT_REVIEW_STATUS.SIGNED_OFF
         event.save()
 
         recipients = [
-            user['id'] for user in Event.regional_coordinators(
+            user["id"]
+            for user in Event.regional_coordinators(
                 event,
                 actor=info.context.user,
             )
@@ -558,6 +539,7 @@ class SignOffEvent(graphene.Mutation):
 class ExportContextOfViolences(ExportBaseMutation):
     class Arguments(ExportBaseMutation.Arguments):
         filters = ContextOfViolenceFilterDataInputType(required=True)
+
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.CONTEXT_OF_VIOLENCE
 
 

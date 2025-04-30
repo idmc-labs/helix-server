@@ -5,13 +5,11 @@ from utils.filters import StringListFilter
 
 
 class ResourceFilter(df.FilterSet):
-    countries = StringListFilter(method='filter_countries')
+    countries = StringListFilter(method="filter_countries")
 
     class Meta:
         model = Resource
-        fields = {
-            'name': ['unaccent__icontains']
-        }
+        fields = {"name": ["unaccent__icontains"]}
 
     @property
     def qs(self):
@@ -28,9 +26,7 @@ class ResourceFilter(df.FilterSet):
 class ResourceGroupFilter(df.FilterSet):
     class Meta:
         model = ResourceGroup
-        fields = {
-            'name': ['unaccent__icontains']
-        }
+        fields = {"name": ["unaccent__icontains"]}
 
     @property
     def qs(self):

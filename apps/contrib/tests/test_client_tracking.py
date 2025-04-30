@@ -1,36 +1,37 @@
-from rest_framework import status
 from datetime import timedelta
-from utils.tests import HelixAPITestCase
-from utils.factories import ClientFactory
 
-from apps.entry.models import ExternalApiDump
+from rest_framework import status
+
 from apps.contrib.models import ClientTrackInfo
 from apps.contrib.tasks import (
-    generate_idus_dump_file,
-    generate_idus_all_dump_file,
     generate_idus_all_disaster_dump_file,
+    generate_idus_all_dump_file,
+    generate_idus_dump_file,
     save_and_delete_tracked_data_from_redis_to_db,
 )
+from apps.entry.models import ExternalApiDump
 from helix.caches import external_api_cache
+from utils.factories import ClientFactory
+from utils.tests import HelixAPITestCase
 
 
 class TestExternalClientTrack(HelixAPITestCase):
     def setUp(self):
         super().setUp()
         # Idus REST endpoints
-        self.idus_url = '/external-api/idus/last-180-days/'
-        self.idus_all_url = '/external-api/idus/all/'
-        self.idus_all_disaster_url = '/external-api/idus/all/disaster/'
+        self.idus_url = "/external-api/idus/last-180-days/"
+        self.idus_all_url = "/external-api/idus/all/"
+        self.idus_all_disaster_url = "/external-api/idus/all/disaster/"
 
         # Gidd public REST endpoints
-        self.countries_url = '/external-api/gidd/countries/'
-        self.conflicts_url = '/external-api/gidd/conflicts/'
-        self.disasters_url = '/external-api/gidd/disasters/'
-        self.displacements_url = '/external-api/gidd/displacements/'
-        self.public_figure_analysis_url = '/external-api/gidd/public-figure-analyses/'
+        self.countries_url = "/external-api/gidd/countries/"
+        self.conflicts_url = "/external-api/gidd/conflicts/"
+        self.disasters_url = "/external-api/gidd/disasters/"
+        self.displacements_url = "/external-api/gidd/displacements/"
+        self.public_figure_analysis_url = "/external-api/gidd/public-figure-analyses/"
 
-        self.client1 = ClientFactory.create(code='random-code-1', is_active=True)
-        self.client2 = ClientFactory.create(code='random-code-2', is_active=True)
+        self.client1 = ClientFactory.create(code="random-code-1", is_active=True)
+        self.client2 = ClientFactory.create(code="random-code-2", is_active=True)
 
     def test_should_raise_permission_denied_if_client_is_not_registered(self):
         for endpoint in [self.idus_url, self.idus_all_url]:
@@ -39,9 +40,9 @@ class TestExternalClientTrack(HelixAPITestCase):
 
         # Test with invalid client ids
         endpoints = [
-            f'{self.idus_url}?client_id=random-client-id-1',
-            f'{self.idus_all_url}?client_id=random-client-id-2',
-            f'{self.idus_all_disaster_url}?client_id=random-client-id-2',
+            f"{self.idus_url}?client_id=random-client-id-1",
+            f"{self.idus_all_url}?client_id=random-client-id-2",
+            f"{self.idus_all_disaster_url}?client_id=random-client-id-2",
         ]
 
         for endpoint in endpoints:
@@ -49,12 +50,11 @@ class TestExternalClientTrack(HelixAPITestCase):
             assert response.status_code == status.HTTP_403_FORBIDDEN
 
     def test_should_return_api_data_for_registered_clients(self):
-
         # Test with invalid client ids
         endpoints = [
-            f'{self.idus_url}?client_id={self.client1.code}',
-            f'{self.idus_all_url}?client_id={self.client2.code}',
-            f'{self.idus_all_disaster_url}?client_id={self.client2.code}',
+            f"{self.idus_url}?client_id={self.client1.code}",
+            f"{self.idus_all_url}?client_id={self.client2.code}",
+            f"{self.idus_all_disaster_url}?client_id={self.client2.code}",
         ]
 
         def _response_status_check(status_code):
@@ -80,12 +80,12 @@ class TestExternalClientTrack(HelixAPITestCase):
     def test_tracked_data(self):
         # Test with invalid client ids
         endpoints = [
-            f'{self.idus_url}?client_id={self.client1.code}',
-            f'{self.idus_url}?client_id={self.client2.code}',
-            f'{self.idus_all_url}?client_id={self.client1.code}',
-            f'{self.idus_all_url}?client_id={self.client2.code}',
-            f'{self.idus_all_disaster_url}?client_id={self.client1.code}',
-            f'{self.idus_all_disaster_url}?client_id={self.client2.code}',
+            f"{self.idus_url}?client_id={self.client1.code}",
+            f"{self.idus_url}?client_id={self.client2.code}",
+            f"{self.idus_all_url}?client_id={self.client1.code}",
+            f"{self.idus_all_url}?client_id={self.client2.code}",
+            f"{self.idus_all_disaster_url}?client_id={self.client1.code}",
+            f"{self.idus_all_disaster_url}?client_id={self.client2.code}",
         ]
 
         # Assume yesterdays data
@@ -120,30 +120,30 @@ class TestExternalClientTrack(HelixAPITestCase):
     def test_should_update_duplicated_tracking_record(self):
         # Create duplicated redis client tracking keys
         keys = [
-            'trackinfo:2022-07-09:idus',
-            'trackinfo:2022-07-12:idus',
-            'trackinfo:2022-07-28:idus',
-            'trackinfo:2022-07-05:idus',
-            'trackinfo:2022-07-04:idus',
-            'trackinfo:2022-07-01:idus',
-            'trackinfo:2022-07-06:idus',
-            'trackinfo:2022-08-01:idus',
-            'trackinfo:2022-08-02:idus',
-            'trackinfo:2022-07-14:idus',
-            'trackinfo:2022-07-03:idus',
-            'trackinfo:2022-07-13:idus',
-            'trackinfo:2022-07-02:idus',
-            'trackinfo:2022-07-07:idus',
+            "trackinfo:2022-07-09:idus",
+            "trackinfo:2022-07-12:idus",
+            "trackinfo:2022-07-28:idus",
+            "trackinfo:2022-07-05:idus",
+            "trackinfo:2022-07-04:idus",
+            "trackinfo:2022-07-01:idus",
+            "trackinfo:2022-07-06:idus",
+            "trackinfo:2022-08-01:idus",
+            "trackinfo:2022-08-02:idus",
+            "trackinfo:2022-07-14:idus",
+            "trackinfo:2022-07-03:idus",
+            "trackinfo:2022-07-13:idus",
+            "trackinfo:2022-07-02:idus",
+            "trackinfo:2022-07-07:idus",
         ]
         for key in keys:
-            external_api_cache.set(f'{key}:{self.client1.code}', 100, None)
+            external_api_cache.set(f"{key}:{self.client1.code}", 100, None)
 
         # Trigger task
         save_and_delete_tracked_data_from_redis_to_db()
         self.assertEqual(ClientTrackInfo.objects.count(), 14)
 
         for key in keys:
-            external_api_cache.set(f'{key}:{self.client1.code}', 100, None)
+            external_api_cache.set(f"{key}:{self.client1.code}", 100, None)
 
         # Trigger task
         save_and_delete_tracked_data_from_redis_to_db()
@@ -153,17 +153,17 @@ class TestExternalClientTrack(HelixAPITestCase):
         # Test with invalid client ids
         endpoints = [
             # For the first client
-            f'{self.countries_url}?client_id={self.client1.code}',
-            f'{self.conflicts_url}?client_id={self.client1.code}',
-            f'{self.disasters_url}?client_id={self.client1.code}',
-            f'{self.displacements_url}?client_id={self.client1.code}',
-            f'{self.public_figure_analysis_url}?client_id={self.client1.code}',
+            f"{self.countries_url}?client_id={self.client1.code}",
+            f"{self.conflicts_url}?client_id={self.client1.code}",
+            f"{self.disasters_url}?client_id={self.client1.code}",
+            f"{self.displacements_url}?client_id={self.client1.code}",
+            f"{self.public_figure_analysis_url}?client_id={self.client1.code}",
             # For the second client
-            f'{self.countries_url}?client_id={self.client2.code}',
-            f'{self.conflicts_url}?client_id={self.client2.code}',
-            f'{self.disasters_url}?client_id={self.client2.code}',
-            f'{self.displacements_url}?client_id={self.client2.code}',
-            f'{self.public_figure_analysis_url}?client_id={self.client2.code}',
+            f"{self.countries_url}?client_id={self.client2.code}",
+            f"{self.conflicts_url}?client_id={self.client2.code}",
+            f"{self.disasters_url}?client_id={self.client2.code}",
+            f"{self.displacements_url}?client_id={self.client2.code}",
+            f"{self.public_figure_analysis_url}?client_id={self.client2.code}",
         ]
 
         # Assume yesterdays data

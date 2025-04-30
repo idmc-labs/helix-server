@@ -55,5 +55,3 @@ exclude_patterns:
 - "**/tests/*"
 - "**/wsgi.py"
 - "manage.py"
-
-

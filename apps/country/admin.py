@@ -1,31 +1,31 @@
-from django.contrib import admin
 from admin_auto_filters.filters import AutocompleteFilterFactory
+from django.contrib import admin
 
 from apps.country.models import (
-    GeographicalGroup,
-    CountryRegion,
     ContextualAnalysis,
-    Summary,
-    HouseholdSize,
     Country,
+    CountryRegion,
+    GeographicalGroup,
+    HouseholdSize,
+    Summary,
 )
 
 
 @admin.register(HouseholdSize)
 class HouseholdSizeAdmin(admin.ModelAdmin):
     list_display = (
-        'id',
-        'country',
-        'year',
-        'size',
+        "id",
+        "country",
+        "year",
+        "size",
     )
     list_filter = (
-        AutocompleteFilterFactory('Country', 'country'),
-        'year',
+        AutocompleteFilterFactory("Country", "country"),
+        "year",
     )
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related('country')
+        return super().get_queryset(request).select_related("country")
 
 
 admin.site.register(GeographicalGroup)

@@ -1,11 +1,11 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
+
 from apps.contrib.models import MetaInformationArchiveAbstractModel
 
 
 class UnifiedReviewComment(MetaInformationArchiveAbstractModel, models.Model):
-
     class REVIEW_COMMENT_TYPE(enum.Enum):
         RED = 0
         GREEN = 1
@@ -40,60 +40,71 @@ class UnifiedReviewComment(MetaInformationArchiveAbstractModel, models.Model):
         LOCATION_ACCURACY = 101
 
         __labels__ = {
-            FIGURE_SOURCE_EXCERPT: 'Source Excerpt',
-            FIGURE_ANALYSIS_CAVEATS_AND_CALCULATION_LOGIC: 'Analysis, Caveats And Calculation Logic',
-            FIGURE_SOURCES: 'Sources',
-            FIGURE_ROLE: 'Role',
-            FIGURE_DISPLACEMENT_OCCURRED: 'Displacement Occurred',
-            FIGURE_TERM: 'Term',
-            FIGURE_REPORTED_FIGURE: 'Reported Figure',
-            FIGURE_CATEGORY: 'Category',
-            FIGURE_START_DATE: 'Start Date',
-            FIGURE_END_DATE: 'End Date',
-            FIGURE_STOCK_DATE: 'Stock Date',
-            FIGURE_STOCK_REPORTING_DATE: 'Stock Reporting Date',
-            FIGURE_MAIN_TRIGGER_OF_REPORTED_FIGURE: 'Main Trigger Of Reported Figure',
-            FIGURE_COUNTRY: 'Country',
-            LOCATION_TYPE: 'Location type',
-            LOCATION_ACCURACY: 'Location accuracy',
-            FIGURE_UNIT: 'Figure Unit',
+            FIGURE_SOURCE_EXCERPT: "Source Excerpt",
+            FIGURE_ANALYSIS_CAVEATS_AND_CALCULATION_LOGIC: "Analysis, Caveats And Calculation Logic",
+            FIGURE_SOURCES: "Sources",
+            FIGURE_ROLE: "Role",
+            FIGURE_DISPLACEMENT_OCCURRED: "Displacement Occurred",
+            FIGURE_TERM: "Term",
+            FIGURE_REPORTED_FIGURE: "Reported Figure",
+            FIGURE_CATEGORY: "Category",
+            FIGURE_START_DATE: "Start Date",
+            FIGURE_END_DATE: "End Date",
+            FIGURE_STOCK_DATE: "Stock Date",
+            FIGURE_STOCK_REPORTING_DATE: "Stock Reporting Date",
+            FIGURE_MAIN_TRIGGER_OF_REPORTED_FIGURE: "Main Trigger Of Reported Figure",
+            FIGURE_COUNTRY: "Country",
+            LOCATION_TYPE: "Location type",
+            LOCATION_ACCURACY: "Location accuracy",
+            FIGURE_UNIT: "Figure Unit",
         }
 
     # TODO: Make event non nullable field after review data migration
     event = models.ForeignKey(
-        'event.Event', verbose_name=_('Event'),
-        related_name='event_reviews', on_delete=models.CASCADE, null=True, blank=True
+        "event.Event", verbose_name=_("Event"), related_name="event_reviews", on_delete=models.CASCADE, null=True, blank=True
     )
     geo_location = models.ForeignKey(
-        'entry.FigureLocation', verbose_name=_('Geo location'), null=True, blank=True,
-        related_name='geo_location_reviews', on_delete=models.CASCADE
+        "entry.FigureLocation",
+        verbose_name=_("Geo location"),
+        null=True,
+        blank=True,
+        related_name="geo_location_reviews",
+        on_delete=models.CASCADE,
     )
     figure = models.ForeignKey(
-        'entry.Figure', verbose_name=_('Figure'),
-        blank=True, null=True,
-        related_name='figure_review_comments', on_delete=models.CASCADE
+        "entry.Figure",
+        verbose_name=_("Figure"),
+        blank=True,
+        null=True,
+        related_name="figure_review_comments",
+        on_delete=models.CASCADE,
     )
     field = enum.EnumField(enum=REVIEW_FIELD_TYPE, null=True, blank=True)
     comment_type = enum.EnumField(enum=REVIEW_COMMENT_TYPE, default=REVIEW_COMMENT_TYPE.GREY.value)
     geo_location = models.ForeignKey(
-        'entry.FigureLocation', verbose_name=_('Geolocation'),
-        null=True, blank=True,
-        related_name='geo_location_review_comments', on_delete=models.SET_NULL
+        "entry.FigureLocation",
+        verbose_name=_("Geolocation"),
+        null=True,
+        blank=True,
+        related_name="geo_location_review_comments",
+        on_delete=models.SET_NULL,
     )
     comment = models.TextField(
-        verbose_name=_('Comment'),
-        blank=True, null=True,
+        verbose_name=_("Comment"),
+        blank=True,
+        null=True,
     )
-    is_edited = models.BooleanField(verbose_name=_('Is edited?'), default=False)
-    is_deleted = models.BooleanField(verbose_name=_('Is deleted?'), default=False)
+    is_edited = models.BooleanField(verbose_name=_("Is edited?"), default=False)
+    is_deleted = models.BooleanField(verbose_name=_("Is deleted?"), default=False)
 
 
 class Review(MetaInformationArchiveAbstractModel, models.Model):
-    '''
+    """
     NOTE: Add to UNIQUE_TOGETHER_FIELDS if you add a new field to this model, if required
-    '''
-    UNIQUE_TOGETHER_FIELDS = {'entry', 'figure', 'field', 'age', 'geo_location'}
-    UNIQUE_TOGETHER_WITHOUT_ENTRY_FIELDS = UNIQUE_TOGETHER_FIELDS - {'entry'}
+    """
+
+    UNIQUE_TOGETHER_FIELDS = {"entry", "figure", "field", "age", "geo_location"}
+    UNIQUE_TOGETHER_WITHOUT_ENTRY_FIELDS = UNIQUE_TOGETHER_FIELDS - {"entry"}
 
     class ENTRY_REVIEW_STATUS(enum.Enum):
         RED = 0
@@ -106,24 +117,40 @@ class Review(MetaInformationArchiveAbstractModel, models.Model):
             GREY: _("Grey"),
         }
 
-    entry = models.ForeignKey('entry.Entry', verbose_name=_('Entry'),
-                              related_name='figure_reviews', on_delete=models.CASCADE)
-    figure = models.ForeignKey('entry.Figure', verbose_name=_('Figure'),
-                               blank=True, null=True,
-                               related_name='figure_reviews', on_delete=models.SET_NULL)
-    field = models.CharField(verbose_name=_('Field'), max_length=256)
+    entry = models.ForeignKey(
+        "entry.Entry", verbose_name=_("Entry"), related_name="figure_reviews", on_delete=models.CASCADE
+    )
+    figure = models.ForeignKey(
+        "entry.Figure",
+        verbose_name=_("Figure"),
+        blank=True,
+        null=True,
+        related_name="figure_reviews",
+        on_delete=models.SET_NULL,
+    )
+    field = models.CharField(verbose_name=_("Field"), max_length=256)
     value = enum.EnumField(enum=ENTRY_REVIEW_STATUS, default=ENTRY_REVIEW_STATUS.GREY.value)
-    age = models.CharField(verbose_name=_('Age'), max_length=256,
-                           null=True, blank=True)
-    geo_location = models.ForeignKey('entry.FigureLocation', verbose_name=_('Geolocation'),
-                                     null=True, blank=True,
-                                     related_name='figure_reviews', on_delete=models.SET_NULL)
-    comment = models.ForeignKey('review.ReviewComment', verbose_name=_('Comment'),
-                                blank=True, null=True,
-                                related_name='figure_reviews', on_delete=models.CASCADE)
+    age = models.CharField(verbose_name=_("Age"), max_length=256, null=True, blank=True)
+    geo_location = models.ForeignKey(
+        "entry.FigureLocation",
+        verbose_name=_("Geolocation"),
+        null=True,
+        blank=True,
+        related_name="figure_reviews",
+        on_delete=models.SET_NULL,
+    )
+    comment = models.ForeignKey(
+        "review.ReviewComment",
+        verbose_name=_("Comment"),
+        blank=True,
+        null=True,
+        related_name="figure_reviews",
+        on_delete=models.CASCADE,
+    )
 
 
 class ReviewComment(MetaInformationArchiveAbstractModel, models.Model):
-    body = models.TextField(verbose_name=_('Body'), null=True)
-    entry = models.ForeignKey('entry.Entry', verbose_name=_('Entry'),
-                              related_name='review_comments', on_delete=models.CASCADE)
+    body = models.TextField(verbose_name=_("Body"), null=True)
+    entry = models.ForeignKey(
+        "entry.Entry", verbose_name=_("Entry"), related_name="review_comments", on_delete=models.CASCADE
+    )

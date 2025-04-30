@@ -3,14 +3,14 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 
 from apps.crisis.models import Crisis
-from apps.users.enums import USER_ROLE
 from apps.entry.models import (
     Figure,
 )
+from apps.users.enums import USER_ROLE
 from utils.factories import (
     EntryFactory,
-    FigureFactory,
     EventFactory,
+    FigureFactory,
 )
 from utils.tests import HelixTestCase, create_user_with_role
 
@@ -20,11 +20,13 @@ class TestFigureModel(HelixTestCase):
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.event = EventFactory.create(
-            start_date=(timezone.now() + timedelta(days=10)).strftime('%Y-%m-%d'),
-            end_date=(timezone.now() + timedelta(days=25)).strftime('%Y-%m-%d'),
+            start_date=(timezone.now() + timedelta(days=10)).strftime("%Y-%m-%d"),
+            end_date=(timezone.now() + timedelta(days=25)).strftime("%Y-%m-%d"),
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
-        self.entry = EntryFactory.create(created_by=self.editor,)
+        self.entry = EntryFactory.create(
+            created_by=self.editor,
+        )
         self.figure_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.figure = FigureFactory.create(
             entry=self.entry, created_by=self.editor, category=self.figure_cat, event=self.event
@@ -259,14 +261,17 @@ class TestEntryModel(HelixTestCase):
 
     def test_text_field_should_accept_markup_and_speicial_should_remove_html_tags(self):
         html_data = '<html><body><h2>test</h2><p> test</p><p id="demo"> test</p><script></script></body></html>'
-        e = FigureFactory.create(created_by=self.editor, event=self.event,)
+        e = FigureFactory.create(
+            created_by=self.editor,
+            event=self.event,
+        )
         e.source_excerpt = html_data
-        e.calculation_logic = '~!@#$%^&*<>?/'
+        e.calculation_logic = "~!@#$%^&*<>?/"
         e.save()
         e.refresh_from_db()
 
-        self.assertEqual(e.source_excerpt, 'test test test')
-        self.assertEqual(e.calculation_logic, '~!@#$%^&*<>?/')
+        self.assertEqual(e.source_excerpt, "test test test")
+        self.assertEqual(e.calculation_logic, "~!@#$%^&*<>?/")
 
         markup_and_html_mixed_data = """
         # H1 heading 1

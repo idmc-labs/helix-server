@@ -2,23 +2,25 @@ import csv
 import json
 import os
 
-from django.core.management.base import BaseCommand
-from django.conf import settings
 import requests
+from django.conf import settings
+from django.core.management.base import BaseCommand
 
-from apps.country.models import Country, GeographicalGroup, CountryRegion
+from apps.country.models import Country, CountryRegion, GeographicalGroup
 
 
 class Command(BaseCommand):
-    help = 'Initialize Country'
+    help = "Initialize Country"
 
     def handle(self, *args, **options):
-        print('Obsolete. Load directly from migrations...')
+        print("Obsolete. Load directly from migrations...")
         return
-        bbox_url = 'https://gist.githubusercontent.com/botzill/fc2a1581873200739f6dc5c1daf85a7d/raw/' \
-                   '002372a57a40f299a463122c039faf9f927b13fe/countries_bbox.json'
+        bbox_url = (
+            "https://gist.githubusercontent.com/botzill/fc2a1581873200739f6dc5c1daf85a7d/raw/"
+            "002372a57a40f299a463122c039faf9f927b13fe/countries_bbox.json"
+        )
         content = requests.get(bbox_url).json()
-        with open(os.path.join(settings.BASE_DIR, 'fixtures', 'geo_entities.csv')) as csvfile:
+        with open(os.path.join(settings.BASE_DIR, "fixtures", "geo_entities.csv")) as csvfile:
             reader = csv.reader(csvfile)
             for row in list(reader)[1:]:
                 geo_group = GeographicalGroup.objects.get_or_create(name=row[6])[0]
@@ -27,10 +29,10 @@ class Command(BaseCommand):
                 bbox = None
                 if content.get(iso3):
                     bbox = [
-                        content.get(iso3)['sw']['lon'],
-                        content.get(iso3)['sw']['lat'],
-                        content.get(iso3)['ne']['lon'],
-                        content.get(iso3)['ne']['lat'],
+                        content.get(iso3)["sw"]["lon"],
+                        content.get(iso3)["sw"]["lat"],
+                        content.get(iso3)["ne"]["lon"],
+                        content.get(iso3)["ne"]["lat"],
                     ]
                 data = dict(
                     country_code=int(row[2]) if row[2] else None,
@@ -46,6 +48,5 @@ class Command(BaseCommand):
                     idmc_short_name_fr=row[12],
                     idmc_short_name_ar=row[13],
                 )
-                Country.objects.update_or_create(iso3=iso3,
-                                                 defaults=data)
-        print(f'Loaded {Country.objects.count()} countries.')
+                Country.objects.update_or_create(iso3=iso3, defaults=data)
+        print(f"Loaded {Country.objects.count()} countries.")

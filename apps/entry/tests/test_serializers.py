@@ -1,38 +1,38 @@
 from copy import copy
 from datetime import timedelta
-from django.utils import timezone
 from uuid import uuid4
 
 from django.test import RequestFactory
+from django.utils import timezone
 
+from apps.crisis.models import Crisis
+from apps.entry.models import (
+    Figure,
+    FigureLocation,
+)
 from apps.entry.serializers import (
     EntryCreateSerializer,
     EntryUpdateSerializer,
     FigureSerializer,
 )
 from apps.users.enums import USER_ROLE
-from apps.entry.models import (
-    FigureLocation,
-    Figure,
-)
 from utils.factories import (
-    EventFactory,
-    EntryFactory,
-    OrganizationFactory,
     CountryFactory,
-    FigureFactory,
     DisasterCategoryFactory,
     DisasterSubCategoryFactory,
-    DisasterTypeFactory,
     DisasterSubTypeFactory,
+    DisasterTypeFactory,
+    EntryFactory,
+    EventFactory,
+    FigureFactory,
+    OrganizationFactory,
     ViolenceFactory,
     ViolenceSubTypeFactory,
 )
 from utils.tests import HelixTestCase, create_user_with_role
-from apps.crisis.models import Crisis
 
 
-class DummyFigureBulkManager():
+class DummyFigureBulkManager:
     @staticmethod
     def add_event(_):
         return
@@ -43,7 +43,7 @@ class TestEntrySerializer(HelixTestCase):
         r1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         r2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.factory = RequestFactory()
-        self.country = CountryFactory.create(country_code=123, iso2='ak')
+        self.country = CountryFactory.create(country_code=123, iso2="ak")
         self.event = EventFactory.create(
             event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
         )
@@ -62,56 +62,37 @@ class TestEntrySerializer(HelixTestCase):
             "calculation_logic": "calculation logic 1",
             "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
         }
-        self.request = self.factory.get('/graphql')
-        self.request.user = self.user = create_user_with_role(
-            USER_ROLE.MONITORING_EXPERT.name
-        )
+        self.request = self.factory.get("/graphql")
+        self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
 
     def test_create_entry_requires_document_or_url(self):
-        self.data['url'] = None
-        self.data['document'] = None
-        serializer = EntryCreateSerializer(data=self.data,
-                                           context={'request': self.request})
+        self.data["url"] = None
+        self.data["document"] = None
+        serializer = EntryCreateSerializer(data=self.data, context={"request": self.request})
         self.assertFalse(serializer.is_valid())
-        self.assertIn('url', serializer.errors)
-        self.assertIn('document', serializer.errors)
+        self.assertIn("url", serializer.errors)
+        self.assertIn("document", serializer.errors)
 
     def test_update_entry_url_and_document_is_redundant(self):
-        OLD = 'http://abc.com'
-        entry = EntryFactory.create(
-            url=OLD
-        )
-        data = {
-            'source_methodology': 'method'
-        }
-        serializer = EntryCreateSerializer(instance=entry,
-                                           data=data,
-                                           context={'request': self.request},
-                                           partial=True)
+        OLD = "http://abc.com"
+        entry = EntryFactory.create(url=OLD)
+        data = {"source_methodology": "method"}
+        serializer = EntryCreateSerializer(instance=entry, data=data, context={"request": self.request}, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        data = {
-            'url': 'http://abc.com/new-url/',
-            'document': None
-        }
-        serializer = EntryCreateSerializer(instance=entry,
-                                           data=data,
-                                           context={'request': self.request},
-                                           partial=True)
+        data = {"url": "http://abc.com/new-url/", "document": None}
+        serializer = EntryCreateSerializer(instance=entry, data=data, context={"request": self.request}, partial=True)
         self.assertTrue(serializer.is_valid())
         self.assertEqual(OLD, entry.url)
 
     def test_create_entry_populates_created_by(self):
-        serializer = EntryCreateSerializer(data=self.data,
-                                           context={'request': self.request})
+        serializer = EntryCreateSerializer(data=self.data, context={"request": self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
         instance = serializer.save()
         self.assertEqual(instance.created_by, self.user)
 
     def test_update_entry_populates_last_modified_by(self):
         entry = EntryFactory.create()
-        serializer = EntryCreateSerializer(instance=entry,
-                                           data=self.data,
-                                           context={'request': self.request})
+        serializer = EntryCreateSerializer(instance=entry, data=self.data, context={"request": self.request})
         self.assertTrue(serializer.is_valid())
         instance = serializer.save()
         self.assertEqual(instance.last_modified_by, self.user)
@@ -124,49 +105,51 @@ class TestEntrySerializer(HelixTestCase):
             rank=101,
             country=str(self.country.name),
             country_code=self.country.iso2,
-            osm_id='ted',
-            osm_type='okay',
-            display_name='okay',
+            osm_id="ted",
+            osm_type="okay",
+            display_name="okay",
             lat=68.88,
             lon=46.66,
-            name='name',
+            name="name",
             accuracy=FigureLocation.ACCURACY.ADM0.value,
             identifier=FigureLocation.IDENTIFIER.ORIGIN.value,
             geocoder=FigureLocation.GEOCODER.CUSTOM_SOURCE.value,
         )
         source2 = copy(source1)
-        source2['lat'] = 67.5
-        source2['uuid'] = str(uuid4())
+        source2["lat"] = 67.5
+        source2["uuid"] = str(uuid4())
         source3 = copy(source1)
-        source3['lon'] = 45.9
-        source3['uuid'] = str(uuid4())
+        source3["lon"] = 45.9
+        source3["uuid"] = str(uuid4())
         flow = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
 
-        entry_serializer = EntryCreateSerializer(data=self.data, context={'request': self.request})
+        entry_serializer = EntryCreateSerializer(data=self.data, context={"request": self.request})
         self.assertTrue(entry_serializer.is_valid(), True)
         entry = entry_serializer.save()
-        figures = [{
-            "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
-            "quantifier": Figure.QUANTIFIER.MORE_THAN_OR_EQUAL.value,
-            "reported": 10,
-            "category": flow.value,
-            "country": str(self.country.id),
-            "unit": Figure.UNIT.PERSON.value,
-            "term": Figure.FIGURE_TERMS.EVACUATED.value,
-            "role": Figure.ROLE.RECOMMENDED.value,
-            "start_date": "2020-09-09",
-            "include_idu": False,
-            "geo_locations": [source1, source2, source3],
-            "event": self.event.id,
-            "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
-            "entry": entry.id,
-        }]
+        figures = [
+            {
+                "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
+                "quantifier": Figure.QUANTIFIER.MORE_THAN_OR_EQUAL.value,
+                "reported": 10,
+                "category": flow.value,
+                "country": str(self.country.id),
+                "unit": Figure.UNIT.PERSON.value,
+                "term": Figure.FIGURE_TERMS.EVACUATED.value,
+                "role": Figure.ROLE.RECOMMENDED.value,
+                "start_date": "2020-09-09",
+                "include_idu": False,
+                "geo_locations": [source1, source2, source3],
+                "event": self.event.id,
+                "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
+                "entry": entry.id,
+            }
+        ]
         figure_serializer = FigureSerializer(
             instance=None,
             data=figures,
             context={
-                'request': self.request,
-                'bulk_manager': DummyFigureBulkManager(),
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
             },
             many=True,
         )
@@ -209,12 +192,12 @@ class TestEntrySerializer(HelixTestCase):
             rank=101,
             country=str(self.country.name),
             country_code=self.country.iso2,
-            osm_id='ted',
-            osm_type='okay',
-            display_name='okay',
+            osm_id="ted",
+            osm_type="okay",
+            display_name="okay",
             lat=68.88,
             lon=46.66,
-            name='name',
+            name="name",
             accuracy=FigureLocation.ACCURACY.ADM0.value,
             identifier=FigureLocation.IDENTIFIER.ORIGIN.value,
         )
@@ -225,27 +208,17 @@ class TestEntrySerializer(HelixTestCase):
                     id=figure.id,
                     uuid=figure.uuid,
                     country=c1.id,
-                    start_date=event.start_date.strftime('%Y-%m-%d'),
-                    end_date=event.end_date.strftime('%Y-%m-%d'),
+                    start_date=event.start_date.strftime("%Y-%m-%d"),
+                    end_date=event.end_date.strftime("%Y-%m-%d"),
                     geo_locations=[source1],
                     disaggregation_age=[],
                     figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value,
                 )
-            ]
+            ],
         )
-        serializer = EntryUpdateSerializer(
-            instance=entry,
-            data=data,
-            context={'request': self.request},
-            partial=True
-        )
+        serializer = EntryUpdateSerializer(instance=entry, data=data, context={"request": self.request}, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        serializer = EntryUpdateSerializer(
-            instance=entry,
-            data=data,
-            context={'request': self.request},
-            partial=True
-        )
+        serializer = EntryUpdateSerializer(instance=entry, data=data, context={"request": self.request}, partial=True)
         # Because we don't have event in entry this should not raise error
         self.assertTrue(serializer.is_valid())
 
@@ -265,27 +238,21 @@ class TestEntrySerializer(HelixTestCase):
                     id=figure.id,
                     uuid=figure.uuid,
                     country=c1.id,
-                    start_date=event.start_date.strftime('%Y-%m-%d'),
-                    end_date=(event.end_date + timedelta(days=1)).strftime('%Y-%m-%d'),
+                    start_date=event.start_date.strftime("%Y-%m-%d"),
+                    end_date=(event.end_date + timedelta(days=1)).strftime("%Y-%m-%d"),
                     geo_locations=[source1],
                     figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value,
                 )
-            ]
+            ],
         )
-        serializer = EntryUpdateSerializer(
-            instance=entry,
-            data=data,
-            context={'request': self.request},
-            partial=True
-        )
+        serializer = EntryUpdateSerializer(instance=entry, data=data, context={"request": self.request}, partial=True)
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_idmc_analysis_should_be_non_required_field(self):
-        self.data['idmc_analysis'] = None
-        serializer = EntryCreateSerializer(data=self.data,
-                                           context={'request': self.request})
+        self.data["idmc_analysis"] = None
+        serializer = EntryCreateSerializer(data=self.data, context={"request": self.request})
         self.assertTrue(serializer.is_valid())
-        self.assertNotIn('idmc_analysis', serializer.errors)
+        self.assertNotIn("idmc_analysis", serializer.errors)
         entry_obj = serializer.save()
         self.assertEqual(entry_obj.idmc_analysis, None)
 
@@ -294,8 +261,8 @@ class TestFigureSerializer(HelixTestCase):
     def setUp(self):
         self.creator = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.factory = RequestFactory()
-        country1 = CountryFactory.create(country_code=123, iso2='AD')
-        country2 = CountryFactory.create(name='Nepal', iso2='AF')
+        country1 = CountryFactory.create(country_code=123, iso2="AD")
+        country2 = CountryFactory.create(name="Nepal", iso2="AF")
         self.event = EventFactory.create(
             name="hahaha",
             event_type=Crisis.CRISIS_TYPE.DISASTER.value,
@@ -311,12 +278,12 @@ class TestFigureSerializer(HelixTestCase):
             rank=101,
             country=str(self.country.name),
             country_code=self.country.iso2,
-            osm_id='ted',
-            osm_type='okay',
-            display_name='okay',
+            osm_id="ted",
+            osm_type="okay",
+            display_name="okay",
             lat=68.88,
             lon=46.66,
-            name='name',
+            name="name",
             accuracy=FigureLocation.ACCURACY.ADM0.value,
             identifier=FigureLocation.IDENTIFIER.ORIGIN.value,
             geocoder=FigureLocation.GEOCODER.CUSTOM_SOURCE.value,
@@ -341,38 +308,35 @@ class TestFigureSerializer(HelixTestCase):
             "figure_cause": Crisis.CRISIS_TYPE.DISASTER.value,
             "sources": [str(OrganizationFactory.create().id)],
         }
-        self.request = self.factory.get('/graphql')
+        self.request = self.factory.get("/graphql")
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
 
     def test_displacement_occur_only_allowed_for_specific_terms(self):
         term = Figure.FIGURE_TERMS.DISPLACED.value
-        self.data['term'] = term
-        self.data['displacement_occurred'] = 0
+        self.data["term"] = term
+        self.data["displacement_occurred"] = 0
         serializer = FigureSerializer(
             data=self.data,
             context={
-                'request': self.request,
-                'bulk_manager': DummyFigureBulkManager(),
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
             },
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        self.assertEqual(
-            serializer.data['displacement_occurred'],
-            self.data['displacement_occurred']
-        )
-        self.data['displacement_occurred'] = None
+        self.assertEqual(serializer.data["displacement_occurred"], self.data["displacement_occurred"])
+        self.data["displacement_occurred"] = None
         serializer = FigureSerializer(
             data=self.data,
             context={
-                'request': self.request,
-                'bulk_manager': DummyFigureBulkManager(),
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
             },
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
-        self.assertIsNone(serializer.data['displacement_occurred'])
+        self.assertIsNone(serializer.data["displacement_occurred"])
 
     def test_invalid_geo_locations_country_codes(self):
-        self.data['geo_locations'] = [
+        self.data["geo_locations"] = [
             {
                 "country": "Nepal",
                 "country_code": "23",
@@ -407,12 +371,12 @@ class TestFigureSerializer(HelixTestCase):
         serializer = FigureSerializer(
             data=self.data,
             context={
-                'request': self.request,
-                'bulk_manager': DummyFigureBulkManager(),
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
             },
         )
         self.assertFalse(serializer.is_valid())
-        self.assertIn('geo_locations', serializer.errors)
+        self.assertIn("geo_locations", serializer.errors)
 
         # if the figure country iso2 is missing, ignore the validation
         self.country.iso2 = None
@@ -421,83 +385,70 @@ class TestFigureSerializer(HelixTestCase):
         serializer = FigureSerializer(
             data=self.data,
             context={
-                'request': self.request,
-                'bulk_manager': DummyFigureBulkManager(),
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
             },
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_invalid_displacement(self):
-        self.data['disaggregation_displacement_urban'] = 10
-        self.data['disaggregation_displacement_rural'] = 120
+        self.data["disaggregation_displacement_urban"] = 10
+        self.data["disaggregation_displacement_rural"] = 120
         serializer = FigureSerializer(
             data=self.data,
             context={
-                'request': self.request,
-                'bulk_manager': DummyFigureBulkManager(),
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
             },
         )
         self.assertFalse(serializer.is_valid())
-        self.assertIn('disaggregation_displacement_rural', serializer.errors)
+        self.assertIn("disaggregation_displacement_rural", serializer.errors)
 
     def test_invalid_disaggregation_age(self):
-        self.data['disaggregation_age'] = [
-            {
-                "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                "category": 1,
-                "sex": 0,
-                "value": 1000
-            },
-            {
-                "uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce",
-                "category": 4,
-                "sex": 1,
-                "value": 23
-            }
+        self.data["disaggregation_age"] = [
+            {"uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce", "category": 1, "sex": 0, "value": 1000},
+            {"uuid": "4c3dd257-30b1-4f62-8f3a-e90e8ac57bce", "category": 4, "sex": 1, "value": 23},
         ]
-        self.data['reported'] = sum([item['value'] for item in self.data['disaggregation_age']]) - 1
+        self.data["reported"] = sum([item["value"] for item in self.data["disaggregation_age"]]) - 1
         serializer = FigureSerializer(
             data=self.data,
             context={
-                'request': self.request,
-                'bulk_manager': DummyFigureBulkManager(),
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
             },
         )
         self.assertFalse(serializer.is_valid())
-        self.assertIn('disaggregation_age', serializer.errors)
+        self.assertIn("disaggregation_age", serializer.errors)
 
     def test_valid_disaggregation_age_can_be_empty_list(self):
-        self.data['disaggregation_age'] = []
+        self.data["disaggregation_age"] = []
         serializer = FigureSerializer(
             data=self.data,
             context={
-                'request': self.request,
-                'bulk_manager': DummyFigureBulkManager(),
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
             },
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
     def test_should_save_parent_fields_if_sub_field_selected(self):
-
         disaster_category = DisasterCategoryFactory.create()
         disaster_sub_category = DisasterSubCategoryFactory.create(category=disaster_category)
 
-        disaster_type = DisasterTypeFactory.create(
-            disaster_sub_category=disaster_sub_category
-        )
+        disaster_type = DisasterTypeFactory.create(disaster_sub_category=disaster_sub_category)
         disaster_sub_type = DisasterSubTypeFactory.create(
             type=disaster_type,
         )
         violence = ViolenceFactory.create()
         violence_sub_type = ViolenceSubTypeFactory.create(violence=violence)
 
-        self.data['disaster_sub_type'] = disaster_sub_type.id
-        self.data['violence_sub_type'] = violence_sub_type.id
+        self.data["disaster_sub_type"] = disaster_sub_type.id
+        self.data["violence_sub_type"] = violence_sub_type.id
         serializer = FigureSerializer(
             data=self.data,
             context={
-                'request': self.request,
-                'bulk_manager': DummyFigureBulkManager(),
+                "request": self.request,
+                "bulk_manager": DummyFigureBulkManager(),
             },
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)

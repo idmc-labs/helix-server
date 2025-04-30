@@ -1,14 +1,14 @@
 from collections import defaultdict
 
-from promise import Promise
-from promise.dataloader import DataLoader
 from django.db.models import (
-    Prefetch,
-    Subquery,
-    OuterRef,
     Count,
     IntegerField,
+    OuterRef,
+    Prefetch,
+    Subquery,
 )
+from promise import Promise
+from promise.dataloader import DataLoader
 
 
 def get_relations(model1, model2):
@@ -20,21 +20,21 @@ def get_relations(model1, model2):
 
 
 def get_related_name(model1, model2):
-    '''
+    """
     To be used with models with single relationship in between
     Returns the first relation found
 
     If multiple relations exists, pass related_name and reverse_related_name explicitly
-    '''
+    """
     relations = get_relations(model1, model2)
     if relations:
         return relations[0]
 
 
 class DataLoaderException(Exception):
-    '''
+    """
     Unable to batch load
-    '''
+    """
 
 
 class CountLoader(DataLoader):
@@ -50,7 +50,7 @@ class CountLoader(DataLoader):
         filterset_class=None,
         filter_kwargs=None,
         request=None,
-        **kwargs
+        **kwargs,
     ):
         self.parent = parent
         self.child = child
@@ -69,31 +69,26 @@ class CountLoader(DataLoader):
         # queryset by related names
         reverse_related_name = self.reverse_related_name or get_related_name(self.child, self.parent)
 
-        filtered_qs = self.filterset_class(
-            data=self.filter_kwargs,
-            request=self.request
-        ).qs
+        filtered_qs = self.filterset_class(data=self.filter_kwargs, request=self.request).qs
 
-        qs = self.parent.objects.filter(
-            id__in=keys
-        ).annotate(
-            count=Subquery(
-                filtered_qs.filter(**{
-                    reverse_related_name: OuterRef('pk')
-                }).order_by().values(
-                    reverse_related_name
-                ).annotate(
-                    c=Count('*')
-                ).values('c'),
-                output_field=IntegerField()
+        qs = (
+            self.parent.objects.filter(id__in=keys)
+            .annotate(
+                count=Subquery(
+                    filtered_qs.filter(**{reverse_related_name: OuterRef("pk")})
+                    .order_by()
+                    .values(reverse_related_name)
+                    .annotate(c=Count("*"))
+                    .values("c"),
+                    output_field=IntegerField(),
+                )
             )
-        ).values_list('id', 'count')
+            .values_list("id", "count")
+        )
 
         related_objects_by_parent = {id_: count for id_, count in qs}
 
-        return Promise.resolve([
-            related_objects_by_parent.get(key) or 0 for key in keys
-        ])
+        return Promise.resolve([related_objects_by_parent.get(key) or 0 for key in keys])
 
 
 class OneToManyLoader(DataLoader):
@@ -109,7 +104,7 @@ class OneToManyLoader(DataLoader):
         filterset_class=None,
         filter_kwargs=None,
         request=None,
-        **kwargs
+        **kwargs,
     ):
         self.parent = parent
         self.child = child
@@ -135,23 +130,14 @@ class OneToManyLoader(DataLoader):
         filtered_qs = self.filterset_class(
             data=self.filter_kwargs,
             request=self.request,
-        ).qs.filter(**{
-            reverse_related_name: OuterRef(reverse_related_name)
-        })
-        filtered_paginated_qs = self.pagination.paginate_queryset(
-            filtered_qs,
-            **self.kwargs
-        ).values('id')
+        ).qs.filter(**{reverse_related_name: OuterRef(reverse_related_name)})
+        filtered_paginated_qs = self.pagination.paginate_queryset(filtered_qs, **self.kwargs).values("id")
 
-        OUT_RELATED_FIELD = 'out_related_field'
+        OUT_RELATED_FIELD = "out_related_field"
 
         prefetch = Prefetch(
             related_name,
-            queryset=self.child.objects.filter(
-                id__in=Subquery(
-                    filtered_paginated_qs
-                )
-            ).distinct(),
+            queryset=self.child.objects.filter(id__in=Subquery(filtered_paginated_qs)).distinct(),
             to_attr=OUT_RELATED_FIELD,
         )
 
@@ -161,6 +147,4 @@ class OneToManyLoader(DataLoader):
         for each in qs:
             related_objects_by_parent[each.id] = getattr(each, OUT_RELATED_FIELD)
 
-        return Promise.resolve([
-            related_objects_by_parent.get(key, []) for key in keys
-        ])
+        return Promise.resolve([related_objects_by_parent.get(key, []) for key in keys])

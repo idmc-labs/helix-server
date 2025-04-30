@@ -1,19 +1,20 @@
 from datetime import timedelta
+
 from django.utils import timezone
+
 from apps.crisis.models import Crisis
 from apps.event.models import Event
 from apps.users.enums import USER_ROLE
 from utils.factories import (
-    CrisisFactory,
-    DisasterSubTypeFactory,
     CountryFactory,
-    EventFactory,
-    MonitoringSubRegionFactory,
     CountryRegionFactory,
     CountrySubRegionFactory,
+    CrisisFactory,
+    DisasterSubTypeFactory,
+    EventFactory,
+    MonitoringSubRegionFactory,
 )
-from utils.tests import create_user_with_role
-from utils.tests import HelixTestCase
+from utils.tests import HelixTestCase, create_user_with_role
 from utils.validations import is_child_parent_dates_valid
 
 
@@ -39,28 +40,28 @@ class TestGenericValidator(HelixTestCase):
         c_end = _c_end = timezone.now() + timedelta(days=10)
         p_start = _p_start = c_start - timedelta(days=100)
 
-        errors = func(c_start, c_end, p_start, 'parent')
+        errors = func(c_start, c_end, p_start, "parent")
         self.assertFalse(errors)
 
         c_start = _c_end + timedelta(days=1)
-        errors = func(c_start, c_end, p_start, 'parent')
+        errors = func(c_start, c_end, p_start, "parent")
         self.assertTrue(errors)
-        self.assertIn('start_date', errors)
+        self.assertIn("start_date", errors)
 
         c_start = _c_start
 
         p_start = _c_start + timedelta(days=1)
-        errors = func(c_start, c_end, p_start, 'parent')
+        errors = func(c_start, c_end, p_start, "parent")
         self.assertTrue(errors)
-        self.assertIn('start_date', errors)
+        self.assertIn("start_date", errors)
 
         p_start = None
-        errors = func(c_start, c_end, p_start, 'parent')
+        errors = func(c_start, c_end, p_start, "parent")
         self.assertFalse(errors)
 
         p_start = _p_start
         c_start = None
-        errors = func(c_start, c_end, p_start, 'parent')
+        errors = func(c_start, c_end, p_start, "parent")
         self.assertFalse(errors)
 
     def test_regional_coordinators(self):
@@ -68,7 +69,7 @@ class TestGenericValidator(HelixTestCase):
         sub_region_1 = CountrySubRegionFactory.create()
         monitoring_sub_region_1 = MonitoringSubRegionFactory.create()
         country_1 = CountryFactory.create(
-            name='Australia',
+            name="Australia",
             monitoring_sub_region=monitoring_sub_region_1,
             region=region_1,
             sub_region=sub_region_1,
@@ -77,7 +78,7 @@ class TestGenericValidator(HelixTestCase):
         sub_region_2 = CountrySubRegionFactory.create()
         monitoring_sub_region_2 = MonitoringSubRegionFactory.create()
         country_2 = CountryFactory.create(
-            name='Nepal',
+            name="Nepal",
             monitoring_sub_region=monitoring_sub_region_2,
             region=region_2,
             sub_region=sub_region_2,
@@ -107,20 +108,10 @@ class TestGenericValidator(HelixTestCase):
             monitoring_sub_region=monitoring_sub_region_2.id,
         )
 
-        event_1 = EventFactory.create(
-            assigner=regional_coordinator_1,
-            assignee=monitoring_expert_1,
-            countries=[country_1]
-        )
-        event_2 = EventFactory.create(
-            assigner=regional_coordinator_2,
-            assignee=monitoring_expert_2,
-            countries=[country_2]
-        )
+        event_1 = EventFactory.create(assigner=regional_coordinator_1, assignee=monitoring_expert_1, countries=[country_1])
+        event_2 = EventFactory.create(assigner=regional_coordinator_2, assignee=monitoring_expert_2, countries=[country_2])
         event_3 = EventFactory.create(
-            assigner=regional_coordinator_1,
-            assignee=monitoring_expert_1,
-            countries=[country_1, country_2]
+            assigner=regional_coordinator_1, assignee=monitoring_expert_1, countries=[country_1, country_2]
         )
 
         # Test should return single regional coordinator if actor is same monitoring region
@@ -133,23 +124,17 @@ class TestGenericValidator(HelixTestCase):
         # Test should return multiple regional coordinators because it has country from different monitoring regions
         event_3_regional_coordinators = Event.regional_coordinators(event_3)
 
+        self.assertEqual(set([user["id"] for user in event_1_only_regional_coordinators]), set([regional_coordinator_1.id]))
+        self.assertEqual(set([user["id"] for user in event_2_only_regional_coordinators]), set([regional_coordinator_2.id]))
         self.assertEqual(
-            set([user['id'] for user in event_1_only_regional_coordinators]),
-            set([regional_coordinator_1.id])
+            set([user["id"] for user in event_1_regional_coordinators]),
+            set([regional_coordinator_1.id, regional_coordinator_2.id]),
         )
         self.assertEqual(
-            set([user['id'] for user in event_2_only_regional_coordinators]),
-            set([regional_coordinator_2.id])
+            set([user["id"] for user in event_2_regional_coordinators]),
+            set([regional_coordinator_1.id, regional_coordinator_2.id]),
         )
         self.assertEqual(
-            set([user['id'] for user in event_1_regional_coordinators]),
-            set([regional_coordinator_1.id, regional_coordinator_2.id])
-        )
-        self.assertEqual(
-            set([user['id'] for user in event_2_regional_coordinators]),
-            set([regional_coordinator_1.id, regional_coordinator_2.id])
-        )
-        self.assertEqual(
-            set([user['id'] for user in event_3_regional_coordinators]),
-            set([regional_coordinator_1.id, regional_coordinator_2.id])
+            set([user["id"] for user in event_3_regional_coordinators]),
+            set([regional_coordinator_1.id, regional_coordinator_2.id]),
         )

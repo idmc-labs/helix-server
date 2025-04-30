@@ -5,9 +5,10 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
+
 from apps.common.enums import GENDER_TYPE
-from apps.contrib.models import MetaInformationArchiveAbstractModel
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
+from apps.contrib.models import MetaInformationArchiveAbstractModel
 
 User = get_user_model()
 
@@ -25,42 +26,46 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
         }
 
     designation = enum.EnumField(DESIGNATION)
-    first_name = models.CharField(verbose_name=_('First Name'), max_length=256)
-    last_name = models.CharField(verbose_name=_('Last Name'), max_length=256)
-    full_name = models.CharField(verbose_name=_('Full Name'), max_length=512,
-                                 blank=True, null=True,
-                                 help_text=_('Auto generated'))
-    gender = enum.EnumField(GENDER_TYPE, verbose_name=_('Gender'))
-    job_title = models.CharField(verbose_name=_('Job Title'), max_length=256)
-    organization = models.ForeignKey('organization.Organization', verbose_name=_('Organization'),
-                                     blank=True, null=True,
-                                     related_name='contacts', on_delete=models.CASCADE)
-    countries_of_operation = models.ManyToManyField('country.Country',
-                                                    verbose_name=_('Countries of Operation'),
-                                                    blank=True,
-                                                    related_name='operating_contacts',
-                                                    help_text=_(
-                                                        'In which countries does this contact person'
-                                                        ' operate?'
-                                                    ))
-    country = models.ForeignKey('country.Country',
-                                verbose_name=_('Country'),
-                                blank=True, null=True,
-                                related_name='contacts', on_delete=models.SET_NULL)
-    email = models.EmailField(verbose_name=_('Email'), blank=True, null=True)
-    skype = models.CharField(verbose_name=_('Skype'), max_length=32,
-                             blank=True, null=True)
-    phone = models.CharField(verbose_name=_('Phone'), max_length=256,
-                             blank=True, null=True)
-    comment = models.TextField(verbose_name=_('Comment'), blank=True, null=True)
+    first_name = models.CharField(verbose_name=_("First Name"), max_length=256)
+    last_name = models.CharField(verbose_name=_("Last Name"), max_length=256)
+    full_name = models.CharField(
+        verbose_name=_("Full Name"), max_length=512, blank=True, null=True, help_text=_("Auto generated")
+    )
+    gender = enum.EnumField(GENDER_TYPE, verbose_name=_("Gender"))
+    job_title = models.CharField(verbose_name=_("Job Title"), max_length=256)
+    organization = models.ForeignKey(
+        "organization.Organization",
+        verbose_name=_("Organization"),
+        blank=True,
+        null=True,
+        related_name="contacts",
+        on_delete=models.CASCADE,
+    )
+    countries_of_operation = models.ManyToManyField(
+        "country.Country",
+        verbose_name=_("Countries of Operation"),
+        blank=True,
+        related_name="operating_contacts",
+        help_text=_("In which countries does this contact person operate?"),
+    )
+    country = models.ForeignKey(
+        "country.Country",
+        verbose_name=_("Country"),
+        blank=True,
+        null=True,
+        related_name="contacts",
+        on_delete=models.SET_NULL,
+    )
+    email = models.EmailField(verbose_name=_("Email"), blank=True, null=True)
+    skype = models.CharField(verbose_name=_("Skype"), max_length=32, blank=True, null=True)
+    phone = models.CharField(verbose_name=_("Phone"), max_length=256, blank=True, null=True)
+    comment = models.TextField(verbose_name=_("Comment"), blank=True, null=True)
 
     def __str__(self):
-        return f'{self.designation.name} {self.first_name} {self.last_name}'
+        return f"{self.designation.name} {self.first_name} {self.last_name}"
 
     def get_full_name(self):
-        return ' '.join([
-            name for name in [self.first_name, self.last_name] if name
-        ]) or self.email
+        return " ".join([name for name in [self.first_name, self.last_name] if name]) or self.email
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
@@ -71,52 +76,56 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
                 self.user = user
 
         headers = OrderedDict(
-            id='ID',
-            created_by__full_name='Created by',
-            created_at='Created at',
-            last_modified_by__full_name='Updated by',
-            last_modified_by='Updated at',
-            full_name='Name',
-            gender='Gender',
-            organization__name='Organization',
-            job_title='Job title',
-            country__idmc_short_name='Country',
-            operating_countries='Countries of operation',
-            operating_countries_regions='Regions of operation',
+            id="ID",
+            created_by__full_name="Created by",
+            created_at="Created at",
+            last_modified_by__full_name="Updated by",
+            last_modified_by="Updated at",
+            full_name="Name",
+            gender="Gender",
+            organization__name="Organization",
+            job_title="Job title",
+            country__idmc_short_name="Country",
+            operating_countries="Countries of operation",
+            operating_countries_regions="Regions of operation",
             # Extra added fields
-            old_id='Old ID',
-            designation='Designation',
-            communications_count='Communications count'
+            old_id="Old ID",
+            designation="Designation",
+            communications_count="Communications count",
         )
-        data = ContactFilter(
-            data=filters,
-            request=DummyRequest(user=User.objects.get(id=user_id)),
-        ).qs.annotate(
-            operating_countries=StringAgg(
-                'countries_of_operation__idmc_short_name', EXTERNAL_ARRAY_SEPARATOR, distinct=True
-            ),
-            operating_countries_regions=StringAgg(
-                'countries_of_operation__region__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True
-            ),
-            communications_count=models.Count('communications', distinct=True),
-        ).order_by(
-            'created_at',
+        data = (
+            ContactFilter(
+                data=filters,
+                request=DummyRequest(user=User.objects.get(id=user_id)),
+            )
+            .qs.annotate(
+                operating_countries=StringAgg(
+                    "countries_of_operation__idmc_short_name", EXTERNAL_ARRAY_SEPARATOR, distinct=True
+                ),
+                operating_countries_regions=StringAgg(
+                    "countries_of_operation__region__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True
+                ),
+                communications_count=models.Count("communications", distinct=True),
+            )
+            .order_by(
+                "created_at",
+            )
         )
 
         def transformer(datum):
             return {
                 **datum,
                 **dict(
-                    designation=getattr(Contact.DESIGNATION.get(datum['designation']), 'label', ''),
-                    gender=getattr(GENDER_TYPE.get(datum['gender']), 'label', ''),
-                )
+                    designation=getattr(Contact.DESIGNATION.get(datum["designation"]), "label", ""),
+                    gender=getattr(GENDER_TYPE.get(datum["gender"]), "label", ""),
+                ),
             }
 
         return {
-            'headers': headers,
-            'data': data.values(*[header for header in headers.keys()]),
-            'formulae': None,
-            'transformer': transformer,
+            "headers": headers,
+            "data": data.values(*[header for header in headers.keys()]),
+            "formulae": None,
+            "transformer": transformer,
         }
 
     def save(self, *args, **kwargs):
@@ -125,10 +134,10 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
 
 
 class CommunicationMedium(models.Model):
-    name = models.CharField(verbose_name=_('Name'), max_length=256)
+    name = models.CharField(verbose_name=_("Name"), max_length=256)
 
     def __str__(self):
-        return f'{self.name}'
+        return f"{self.name}"
 
 
 class Communication(MetaInformationArchiveAbstractModel, models.Model):
@@ -136,22 +145,26 @@ class Communication(MetaInformationArchiveAbstractModel, models.Model):
         # keeping for the sake of migrations, remove it when recreating all migrations
         pass
 
-    contact = models.ForeignKey('Contact', verbose_name=_('Contact'),
-                                related_name='communications', on_delete=models.CASCADE)
-    country = models.ForeignKey('country.Country', verbose_name=_('Country'),
-                                blank=True, null=True,
-                                related_name='communications', on_delete=models.CASCADE)
-    subject = models.CharField(verbose_name=_('Subject'), max_length=512)
-    content = models.TextField(verbose_name=_('Content'))
-    date = models.DateField(verbose_name=_('Conducted Date'),
-                            null=True, blank=True,
-                            help_text=_('Date on which communication occurred.'))
-    medium = models.ForeignKey(CommunicationMedium,
-                               null=True, blank=False,
-                               related_name='+', on_delete=models.SET_NULL)
-    attachment = models.ForeignKey('contrib.Attachment', verbose_name='Attachment',
-                                   on_delete=models.CASCADE, related_name='+',
-                                   null=True, blank=True)
+    contact = models.ForeignKey(
+        "Contact", verbose_name=_("Contact"), related_name="communications", on_delete=models.CASCADE
+    )
+    country = models.ForeignKey(
+        "country.Country",
+        verbose_name=_("Country"),
+        blank=True,
+        null=True,
+        related_name="communications",
+        on_delete=models.CASCADE,
+    )
+    subject = models.CharField(verbose_name=_("Subject"), max_length=512)
+    content = models.TextField(verbose_name=_("Content"))
+    date = models.DateField(
+        verbose_name=_("Conducted Date"), null=True, blank=True, help_text=_("Date on which communication occurred.")
+    )
+    medium = models.ForeignKey(CommunicationMedium, null=True, blank=False, related_name="+", on_delete=models.SET_NULL)
+    attachment = models.ForeignKey(
+        "contrib.Attachment", verbose_name="Attachment", on_delete=models.CASCADE, related_name="+", null=True, blank=True
+    )
 
     def __str__(self):
-        return f'{self.contact} {self.date}'
+        return f"{self.contact} {self.date}"

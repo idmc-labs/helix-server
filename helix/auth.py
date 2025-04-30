@@ -2,7 +2,7 @@ from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext
 
-PERMISSION_DENIED_MESSAGE = 'You do not have permission to perform this action.'
+PERMISSION_DENIED_MESSAGE = "You do not have permission to perform this action."
 
 
 class WhiteListMiddleware:

@@ -1,34 +1,31 @@
 import typing
+
 import django_filters
-from rest_framework import serializers
 from django.db.models import Q
-from utils.filters import StringListFilter, IDListFilter
-from apps.entry.models import ExternalApiDump
+from rest_framework import serializers
+
 from apps.crisis.models import Crisis
+from apps.entry.models import ExternalApiDump
+from utils.filters import IDListFilter, StringListFilter
+
 from .enums import CRISIS_TYPE_PUBLIC
 from .models import (
     Conflict,
     Disaster,
-    StatusLog,
-    PublicFigureAnalysis,
     DisplacementData,
+    PublicFigureAnalysis,
     ReleaseMetadata,
+    StatusLog,
 )
 
 
 def get_name_choices(enum_class) -> typing.List[typing.Tuple[str, str]]:
-    return [
-        (i.name, i.label)
-        for i in enum_class
-    ] + [
-        (i.name.lower(), i.label)
-        for i in enum_class
-    ]
+    return [(i.name, i.label) for i in enum_class] + [(i.name.lower(), i.label) for i in enum_class]
 
 
 class ReleaseMetadataFilter(django_filters.FilterSet):
     release_environment = django_filters.ChoiceFilter(
-        method='no_op',
+        method="no_op",
         choices=get_name_choices(ReleaseMetadata.ReleaseEnvironment),
     )
 
@@ -38,7 +35,7 @@ class ReleaseMetadataFilter(django_filters.FilterSet):
     def get_release_metadata(self):
         release_meta_data = ReleaseMetadata.objects.last()
         if not release_meta_data:
-            raise serializers.ValidationError('Release metadata is not configured.')
+            raise serializers.ValidationError("Release metadata is not configured.")
         return release_meta_data
 
     def filter_release_environment(self, qs, value):
@@ -51,7 +48,7 @@ class ReleaseMetadataFilter(django_filters.FilterSet):
     def qs(self):
         qs = super().qs
         release_environment_name = self.data.get(
-            'release_environment',
+            "release_environment",
             ReleaseMetadata.ReleaseEnvironment.RELEASE.name,
         )
         qs = self.filter_release_environment(qs, release_environment_name)
@@ -59,26 +56,21 @@ class ReleaseMetadataFilter(django_filters.FilterSet):
 
 
 class ConflictFilter(ReleaseMetadataFilter):
-
     class Meta:
         model = Conflict
-        fields = {
-            'id': ['iexact']
-        }
+        fields = {"id": ["iexact"]}
 
 
 class DisasterFilter(ReleaseMetadataFilter):
-    hazard_types = IDListFilter(method='filter_hazard_types')
-    event_name = django_filters.CharFilter(method='filter_event_name')
-    start_year = django_filters.NumberFilter(method='filter_start_year')
-    end_year = django_filters.NumberFilter(method='filter_end_year')
-    countries_iso3 = StringListFilter(method='filter_countries_iso3')
+    hazard_types = IDListFilter(method="filter_hazard_types")
+    event_name = django_filters.CharFilter(method="filter_event_name")
+    start_year = django_filters.NumberFilter(method="filter_start_year")
+    end_year = django_filters.NumberFilter(method="filter_end_year")
+    countries_iso3 = StringListFilter(method="filter_countries_iso3")
 
     class Meta:
         model = Disaster
-        fields = {
-            'id': ['iexact']
-        }
+        fields = {"id": ["iexact"]}
 
     def filter_event_name(self, queryset, name, value):
         return queryset.filter(event_name__icontains=value)
@@ -102,10 +94,10 @@ class DisasterFilter(ReleaseMetadataFilter):
 
 
 class ConflictStatisticsFilter(ReleaseMetadataFilter):
-    countries = StringListFilter(method='filter_countries')
-    start_year = django_filters.NumberFilter(method='filter_start_year')
-    end_year = django_filters.NumberFilter(method='filter_end_year')
-    countries_iso3 = StringListFilter(method='filter_countries_iso3')
+    countries = StringListFilter(method="filter_countries")
+    start_year = django_filters.NumberFilter(method="filter_start_year")
+    end_year = django_filters.NumberFilter(method="filter_end_year")
+    countries_iso3 = StringListFilter(method="filter_countries_iso3")
 
     class Meta:
         model = Conflict
@@ -125,11 +117,11 @@ class ConflictStatisticsFilter(ReleaseMetadataFilter):
 
 
 class DisasterStatisticsFilter(ReleaseMetadataFilter):
-    hazard_types = IDListFilter(method='filter_hazard_types')
-    countries = StringListFilter(method='filter_countries')
-    start_year = django_filters.NumberFilter(method='filter_start_year')
-    end_year = django_filters.NumberFilter(method='filter_end_year')
-    countries_iso3 = StringListFilter(method='filter_countries_iso3')
+    hazard_types = IDListFilter(method="filter_hazard_types")
+    countries = StringListFilter(method="filter_countries")
+    start_year = django_filters.NumberFilter(method="filter_start_year")
+    end_year = django_filters.NumberFilter(method="filter_end_year")
+    countries_iso3 = StringListFilter(method="filter_countries_iso3")
 
     class Meta:
         model = Disaster
@@ -152,7 +144,7 @@ class DisasterStatisticsFilter(ReleaseMetadataFilter):
 
 
 class GiddStatusLogFilter(django_filters.FilterSet):
-    status = StringListFilter(method='filter_by_status')
+    status = StringListFilter(method="filter_by_status")
 
     class Meta:
         model = StatusLog
@@ -163,9 +155,7 @@ class GiddStatusLogFilter(django_filters.FilterSet):
             if isinstance(value[0], int):
                 # coming from saved query
                 return qs.filter(status__in=value)
-            return qs.filter(status__in=[
-                StatusLog.Status.get(item).value for item in value
-            ])
+            return qs.filter(status__in=[StatusLog.Status.get(item).value for item in value])
         return qs
 
 
@@ -173,17 +163,17 @@ class PublicFigureAnalysisFilter(ReleaseMetadataFilter):
     class Meta:
         model = PublicFigureAnalysis
         fields = {
-            'iso3': ['exact'],
-            'year': ['exact'],
+            "iso3": ["exact"],
+            "year": ["exact"],
         }
 
 
 class DisplacementDataFilter(ReleaseMetadataFilter):
-    start_year = django_filters.NumberFilter(method='filter_start_year')
-    end_year = django_filters.NumberFilter(method='filter_end_year')
-    countries_iso3 = StringListFilter(method='filter_countries_iso3')
+    start_year = django_filters.NumberFilter(method="filter_start_year")
+    end_year = django_filters.NumberFilter(method="filter_end_year")
+    countries_iso3 = StringListFilter(method="filter_countries_iso3")
     cause = django_filters.ChoiceFilter(
-        method='filter_cause',
+        method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
 
@@ -202,26 +192,20 @@ class DisplacementDataFilter(ReleaseMetadataFilter):
 
     def filter_cause(self, queryset, name, value):
         if value.lower() == Crisis.CRISIS_TYPE.CONFLICT.name.lower():
-            return queryset.filter(
-                Q(conflict_new_displacement__gt=0) |
-                Q(conflict_total_displacement__gt=0)
-            )
+            return queryset.filter(Q(conflict_new_displacement__gt=0) | Q(conflict_total_displacement__gt=0))
         elif value.lower() == Crisis.CRISIS_TYPE.DISASTER.name.lower():
-            return queryset.filter(
-                Q(disaster_new_displacement__gt=0) |
-                Q(disaster_total_displacement__gt=0)
-            )
+            return queryset.filter(Q(disaster_new_displacement__gt=0) | Q(disaster_total_displacement__gt=0))
         return queryset
 
     @property
     def qs(self):
         qs = super().qs
-        if 'cause' not in self.data:
+        if "cause" not in self.data:
             return qs.filter(
-                Q(conflict_new_displacement__gt=0) |
-                Q(conflict_total_displacement__gt=0) |
-                Q(disaster_new_displacement__gt=0) |
-                Q(disaster_total_displacement__gt=0)
+                Q(conflict_new_displacement__gt=0)
+                | Q(conflict_total_displacement__gt=0)
+                | Q(disaster_new_displacement__gt=0)
+                | Q(disaster_total_displacement__gt=0)
             )
         return qs
 
@@ -238,7 +222,7 @@ GIDD_TRACKING_FILTERS = {
 
 GIDD_API_TYPE_MAP = {
     # WHY? https://github.com/eamigo86/graphene-django-extras/blob/master/graphene_django_extras/filters/filter.py#L29
-    f'{prefix}{filter_class.__name__}': api_type
-    for prefix in ['Graphene', '']
+    f"{prefix}{filter_class.__name__}": api_type
+    for prefix in ["Graphene", ""]
     for filter_class, api_type in GIDD_TRACKING_FILTERS.items()
 }

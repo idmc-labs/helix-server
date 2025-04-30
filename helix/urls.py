@@ -13,26 +13,31 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 import json
+
+from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.conf import settings
-from django.urls import path, re_path, include
+from django.http import HttpRequest
+from django.urls import include, path, re_path
 from django.views.decorators.csrf import csrf_exempt
+from django_otp.admin import OTPAdminSite
+
 # from graphene_django.views import GraphQLView
 from graphene_file_upload.django import FileUploadGraphQLView
+from sentry_sdk.api import start_transaction
+
 from helix.exceptions import GraphqlNotAllowedException
+from utils.graphene.context import GQLContext
 
 from . import api_urls as rest_urls
 from . import external_urls as external_rest_urls
-from utils.graphene.context import GQLContext
-from django_otp.admin import OTPAdminSite
-from django.http import HttpRequest
-from sentry_sdk.api import start_transaction
 
 
 class CustomGraphQLView(FileUploadGraphQLView):
     """Handles multipart/form-data content type in django views"""
+
     def get_context(self, request):
         return GQLContext(request)
 
@@ -60,17 +65,13 @@ class CustomGraphQLView(FileUploadGraphQLView):
         operation_name,
         show_graphiql,
     ):
-        if request.method == 'GET':
-            raise GraphqlNotAllowedException('Not allowed')
+        if request.method == "GET":
+            raise GraphqlNotAllowedException("Not allowed")
         operation_type = (
-            self.get_backend(request)
-            .document_from_string(self.schema, query)
-            .get_operation_type(operation_name)
+            self.get_backend(request).document_from_string(self.schema, query).get_operation_type(operation_name)
         )
         with start_transaction(op=operation_type, name=operation_name):
-            return super().execute_graphql_request(
-                request, data, query, variables, operation_name, show_graphiql
-            )
+            return super().execute_graphql_request(request, data, query, variables, operation_name, show_graphiql)
 
 
 CustomGraphQLView.graphiql_template = "graphene_graphiql_explorer/graphiql.html"
@@ -80,18 +81,23 @@ if not settings.DEBUG:
     admin.site.__class__ = OTPAdminSite
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    re_path('^graphql/?$', csrf_exempt(CustomGraphQLView.as_view())),
-    path('health-check/', include('health_check.urls')),
-    path('api/', include(rest_urls)),
-    path('external-api/', include(external_rest_urls))
+    path("admin/", admin.site.urls),
+    re_path("^graphql/?$", csrf_exempt(CustomGraphQLView.as_view())),
+    path("health-check/", include("health_check.urls")),
+    path("api/", include(rest_urls)),
+    path("external-api/", include(external_rest_urls)),
 ]
 
 if settings.DEBUG:
     import debug_toolbar
-    urlpatterns = urlpatterns + [
-        path('__debug__/', include(debug_toolbar.urls)),
-        re_path('^graphiql/?$', csrf_exempt(CustomGraphQLView.as_view(graphiql=True))),
-    ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) \
-      + static(settings.EXTERNAL_MEDIA_URL, document_root=settings.EXTERNAL_MEDIA_ROOT) \
-      + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+    urlpatterns = (
+        urlpatterns
+        + [
+            path("__debug__/", include(debug_toolbar.urls)),
+            re_path("^graphiql/?$", csrf_exempt(CustomGraphQLView.as_view(graphiql=True))),
+        ]
+        + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+        + static(settings.EXTERNAL_MEDIA_URL, document_root=settings.EXTERNAL_MEDIA_ROOT)
+        + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    )

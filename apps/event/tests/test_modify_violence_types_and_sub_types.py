@@ -1,26 +1,24 @@
 from collections import defaultdict
+
 from django.test import TestCase
 
-from utils.factories import (
-    EventFactory,
-    FigureFactory,
-    ViolenceSubTypeFactory,
-    ViolenceFactory,
-    ReportFactory,
-    ExtractionQueryFactory,
-)
-
+from apps.entry.models import Figure
+from apps.event.migrations.change_violence_types_and_sub_types import migrate_data
 from apps.event.models import (
     Event,
     Violence,
     ViolenceSubType,
 )
-from apps.report.models import Report
 from apps.extraction.models import ExtractionQuery
-from apps.entry.models import Figure
-
-
-from apps.event.migrations.change_violence_types_and_sub_types import migrate_data
+from apps.report.models import Report
+from utils.factories import (
+    EventFactory,
+    ExtractionQueryFactory,
+    FigureFactory,
+    ReportFactory,
+    ViolenceFactory,
+    ViolenceSubTypeFactory,
+)
 
 
 class ViolenceChangeTestCase(TestCase):
@@ -31,14 +29,14 @@ class ViolenceChangeTestCase(TestCase):
                 "IAC (other than occupation)",
                 "Other (IAC)",
                 "Unclear (IAC)",
-                "Unknown (IAC)"
+                "Unknown (IAC)",
             ],
             "Non-International armed conflict (NIAC)": [
                 "NSAG(s) vs. State actor(s)",
                 "NSAG(s) vs. NSAG(s)",
                 "Other (NIAC)",
                 "Unclear (NIAC)",
-                "Unknown (NIAC)"
+                "Unknown (NIAC)",
             ],
             "Other situations of violence (OSV)": [
                 "Civilian-state violence",
@@ -46,7 +44,7 @@ class ViolenceChangeTestCase(TestCase):
                 "Communal violence",
                 "Other (OSV)",
                 "Unclear (OSV)",
-                "Unknown (OSV)"
+                "Unknown (OSV)",
             ],
             "Other": [
                 "Other (Other)",
@@ -56,35 +54,39 @@ class ViolenceChangeTestCase(TestCase):
             "Unknown": [
                 "Unclear (Unknown)",
                 "Unknown (Unknown)",
-            ]
+            ],
         }
 
         def _get_table_counts_by_violence(_id):
             return {
-                'event': Event.objects.filter(violence=_id).count(),
-                'figure': Figure.objects.filter(violence=_id).count(),
-                'report': Report.filter_figure_violence_types.through.objects.filter(violence=_id).count(),
-                'extractionquery': ExtractionQuery.filter_figure_violence_types.through.objects.filter(violence=_id).count()
+                "event": Event.objects.filter(violence=_id).count(),
+                "figure": Figure.objects.filter(violence=_id).count(),
+                "report": Report.filter_figure_violence_types.through.objects.filter(violence=_id).count(),
+                "extractionquery": ExtractionQuery.filter_figure_violence_types.through.objects.filter(violence=_id).count(),
             }
 
         def _get_table_counts_by_sub_violence(_id):
             return {
-                'event': Event.objects.filter(violence_sub_type=_id).count(),
-                'figure': Figure.objects.filter(violence_sub_type=_id).count(),
-                'report': Report.filter_figure_violence_sub_types.through.objects.filter(violencesubtype=_id).count(),
-                'extractionquery': (
+                "event": Event.objects.filter(violence_sub_type=_id).count(),
+                "figure": Figure.objects.filter(violence_sub_type=_id).count(),
+                "report": Report.filter_figure_violence_sub_types.through.objects.filter(violencesubtype=_id).count(),
+                "extractionquery": (
                     ExtractionQuery.filter_figure_violence_sub_types.through.objects.filter(violencesubtype=_id).count()
                 ),
             }
 
         def _create_objs_in_bulk(model, related_objs, related_obj_key, **kwargs):
-            return model.objects.bulk_create([
-                model(**{
-                    **kwargs,
-                    related_obj_key: related_obj,
-                })
-                for related_obj in related_objs
-            ])
+            return model.objects.bulk_create(
+                [
+                    model(
+                        **{
+                            **kwargs,
+                            related_obj_key: related_obj,
+                        }
+                    )
+                    for related_obj in related_objs
+                ]
+            )
 
         event = EventFactory.create()
         reports = ReportFactory.create_batch(5)
@@ -94,11 +96,15 @@ class ViolenceChangeTestCase(TestCase):
             EventFactory.create_batch(10, violence=violence_type)
             FigureFactory.create_batch(20, event=event, violence=violence_type)
             _create_objs_in_bulk(
-                Report.filter_figure_violence_types.through, reports, 'report',
+                Report.filter_figure_violence_types.through,
+                reports,
+                "report",
                 violence=violence_type,
             )
             _create_objs_in_bulk(
-                ExtractionQuery.filter_figure_violence_types.through, extraction_queries, 'extractionquery',
+                ExtractionQuery.filter_figure_violence_types.through,
+                extraction_queries,
+                "extractionquery",
                 violence=violence_type,
             )
 
@@ -107,11 +113,15 @@ class ViolenceChangeTestCase(TestCase):
                 EventFactory.create_batch(50, violence_sub_type=violence_sub_type)
                 FigureFactory.create_batch(60, event=event, violence_sub_type=violence_sub_type)
                 _create_objs_in_bulk(
-                    Report.filter_figure_violence_sub_types.through, reports, 'report',
+                    Report.filter_figure_violence_sub_types.through,
+                    reports,
+                    "report",
                     violencesubtype=violence_sub_type,
                 )
                 _create_objs_in_bulk(
-                    ExtractionQuery.filter_figure_violence_sub_types.through, extraction_queries, 'extractionquery',
+                    ExtractionQuery.filter_figure_violence_sub_types.through,
+                    extraction_queries,
+                    "extractionquery",
                     violencesubtype=violence_sub_type,
                 )
 
@@ -119,18 +129,18 @@ class ViolenceChangeTestCase(TestCase):
 
         def _counts_by_violence(multiplier):
             return {
-                'event': 10 * multiplier,
-                'figure': 20 * multiplier,
-                'report': 5,
-                'extractionquery': 6,
+                "event": 10 * multiplier,
+                "figure": 20 * multiplier,
+                "report": 5,
+                "extractionquery": 6,
             }
 
         def _counts_by_sub_violence(multiplier):
             return {
-                'event': 50 * multiplier,
-                'figure': 60 * multiplier,
-                'report': 5,
-                'extractionquery': 6,
+                "event": 50 * multiplier,
+                "figure": 60 * multiplier,
+                "report": 5,
+                "extractionquery": 6,
             }
 
         VIOLENCE_TYPES_WITH_EXPECTED_COUNTS = {

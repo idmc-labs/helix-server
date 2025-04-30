@@ -1,7 +1,8 @@
 from collections import OrderedDict
 
 from django.db.models import QuerySet
-from graphene import ObjectType, Field, Int
+from graphene import Field, Int, ObjectType
+
 # we will use graphene_django registry over the one from graphene_django_extras
 # since it adds information regarding nullability in the schema definition
 from graphene_django.registry import get_global_registry
@@ -15,7 +16,7 @@ from utils.graphene.options import CustomObjectTypeOptions
 
 
 class CustomListObjectType(ObjectType):
-    '''
+    """
     Requires a base_type meta argument
 
     Example:
@@ -26,7 +27,8 @@ class CustomListObjectType(ObjectType):
             class Meta:
                 base_type = MyOwnObjectType
                 filterset_class = ... if possible
-    '''
+    """
+
     class Meta:
         abstract = True
 
@@ -38,16 +40,14 @@ class CustomListObjectType(ObjectType):
         filterset_class=None,
         **options,
     ):
-
-        assert base_type is not None, (
-            'Base Type of the ListField should be defined in the Meta.'
-        )
+        assert base_type is not None, "Base Type of the ListField should be defined in the Meta."
 
         if not DJANGO_FILTER_INSTALLED and filterset_class:
             raise Exception("Can only set filterset_class if Django-Filter is installed")
 
         if not filterset_class:
             from django_filters import rest_framework as df
+
             filterset_class = df.FilterSet
 
         results_field_name = results_field_name or "results"
@@ -84,19 +84,18 @@ class CustomListObjectType(ObjectType):
                         name="pageSize",
                         description="Page Size",
                     ),
-                )
+                ),
             ]
         )
 
-        super(CustomListObjectType, cls).__init_subclass_with_meta__(
-            _meta=_meta, **options
-        )
+        super(CustomListObjectType, cls).__init_subclass_with_meta__(_meta=_meta, **options)
 
 
 class CustomDjangoListObjectType(DjangoListObjectType):
     """
     Updates `DjangoListObjectType` to add page related fields into type definition
     """
+
     class Meta:
         abstract = True
 
@@ -114,22 +113,20 @@ class CustomDjangoListObjectType(DjangoListObjectType):
         filterset_class=None,
         **options,
     ):
-
-        assert filterset_class is not None, f'filterset_class is not defined for {cls}. This is required right now'
-        assert is_valid_django_model(model), (
-            'You need to pass a valid Django Model in {}.Meta, received "{}".'
-        ).format(cls.__name__, model)
+        assert filterset_class is not None, f"filterset_class is not defined for {cls}. This is required right now"
+        assert is_valid_django_model(model), ('You need to pass a valid Django Model in {}.Meta, received "{}".').format(
+            cls.__name__, model
+        )
 
         assert pagination is None, (
-            'Pagination should be applied on the ListField enclosing {0} rather than its `{0}.Meta`.'
+            "Pagination should be applied on the ListField enclosing {0} rather than its `{0}.Meta`."
         ).format(cls.__name__)
 
         if not DJANGO_FILTER_INSTALLED and filter_fields:
             raise Exception("Can only set filter_fields if Django-Filter is installed")
 
         assert isinstance(queryset, QuerySet) or queryset is None, (
-            "The attribute queryset in {} needs to be an instance of "
-            'Django model queryset, received "{}".'
+            'The attribute queryset in {} needs to be an instance of Django model queryset, received "{}".'
         ).format(cls.__name__, queryset)
 
         results_field_name = results_field_name or "results"
@@ -189,10 +186,8 @@ class CustomDjangoListObjectType(DjangoListObjectType):
                         name="pageSize",
                         description="Page Size",
                     ),
-                )
+                ),
             ]
         )
 
-        super(DjangoListObjectType, cls).__init_subclass_with_meta__(
-            _meta=_meta, **options
-        )
+        super(DjangoListObjectType, cls).__init_subclass_with_meta__(_meta=_meta, **options)

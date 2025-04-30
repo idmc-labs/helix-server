@@ -11,8 +11,7 @@ from django.db.utils import OperationalError
 from redis.exceptions import ConnectionError as RedisConnectionError
 
 
-class TimeoutException(Exception):
-    ...
+class TimeoutException(Exception): ...
 
 
 class RetryHelper:
@@ -30,7 +29,7 @@ class RetryHelper:
         time.sleep(self.next_wait)
         self.attempt += 1
         if self.next_wait < self.wait_max_seconds:
-            self.next_wait = self.base_wait_seconds ** self.attempt
+            self.next_wait = self.base_wait_seconds**self.attempt
         else:
             self.next_wait = self.wait_max_seconds
 
@@ -107,10 +106,10 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            '--timeout',
+            "--timeout",
             type=int,
             default=600,
-            help='The maximum time (in seconds) the command is allowed to run before timing out. Default is 10 min.'
+            help="The maximum time (in seconds) the command is allowed to run before timing out. Default is 10 min.",
         )
         parser.add_argument("--db", action="store_true", help="Wait for DB to be available")
         parser.add_argument("--redis", action="store_true", help="Wait for Redis to be available")

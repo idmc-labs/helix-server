@@ -7,13 +7,15 @@ from apps.entry.models import (
 
 
 class Command(BaseCommand):
-    help = 'Initialize or update figure tags and figure terms.'
+    help = "Initialize or update figure tags and figure terms."
 
     def handle(self, *args, **options):
         for tag in FIGURE_TAGS:
             FigureTag.objects.get_or_create(name=tag)
-        self.stdout.write(self.style.SUCCESS(
-            'Saved {} figure tags.'.format(
-                FigureTag.objects.count(),
+        self.stdout.write(
+            self.style.SUCCESS(
+                "Saved {} figure tags.".format(
+                    FigureTag.objects.count(),
+                )
             )
-        ))
+        )

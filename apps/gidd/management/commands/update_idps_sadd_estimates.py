@@ -1,11 +1,13 @@
-import typing
 import csv
-import os
-from functools import cached_property
 import logging
-from requests.structures import CaseInsensitiveDict
+import os
+import typing
+from functools import cached_property
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from requests.structures import CaseInsensitiveDict
+
 from apps.country.models import Country, Crisis
 from apps.gidd.models import IdpsSaddEstimate
 from apps.gidd.serializers import IdpsSaddEstimateSerializer
@@ -14,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-
     help = "Update idps sadd estimates"
 
     @cached_property
@@ -26,13 +27,10 @@ class Command(BaseCommand):
             Dict[str, CountryDataType]: A case-insensitive dictionary where keys are ISO3 codes and values are country data.
         """
         countries = Country.objects.filter(iso3__isnull=False)
-        return CaseInsensitiveDict({
-            country.iso3: country
-            for country in countries
-        })
+        return CaseInsensitiveDict({country.iso3: country for country in countries})
 
     def add_arguments(self, parser):
-        parser.add_argument('csv_file_path', type=str, help="Path to the CSV file containing the data.")
+        parser.add_argument("csv_file_path", type=str, help="Path to the CSV file containing the data.")
 
     @classmethod
     def map_cause(cls, cause_string: str) -> int:
@@ -53,7 +51,7 @@ class Command(BaseCommand):
             *args: Variable length argument list.
             **kwargs: Arbitrary keyword arguments.
         """
-        csv_file_path = kwargs['csv_file_path']
+        csv_file_path = kwargs["csv_file_path"]
         if not os.path.exists(csv_file_path):
             logger.error(f"CSV file path does not exist: {csv_file_path}")
             return
@@ -72,13 +70,11 @@ class Command(BaseCommand):
         Args:
             file_path (str): The path to the CSV file.
         """
-        with open(file_path, 'r') as file:
+        with open(file_path, "r") as file:
             reader = csv.DictReader(file)
             processed_rows = []
             for row in reader:
-                processed_rows.append(
-                    self.process_row(row)
-                )
+                processed_rows.append(self.process_row(row))
             serializer = IdpsSaddEstimateSerializer(data=processed_rows, many=True)
             if serializer.is_valid():
                 self.create_estimates(serializer.validated_data)
@@ -102,13 +98,9 @@ class Command(BaseCommand):
             ValueError: If the 'iso3' key is missing in the row.
             LookupError: If no country data is found for the provided ISO3 code.
         """
-        iso3 = row.get('iso3')
+        iso3 = row.get("iso3")
         country = self.iso3_to_country.get(iso3)
-        return {
-            **row,
-            'country': country.id,
-            'cause': self.map_cause(row.get('cause'))
-        }
+        return {**row, "country": country.id, "cause": self.map_cause(row.get("cause"))}
 
     def create_estimates(self, validated_data: typing.List[dict]):
         """
@@ -119,7 +111,5 @@ class Command(BaseCommand):
             validated_data (list): A list of validated data dictionaries to be saved to the database.
         """
         IdpsSaddEstimate.objects.all().delete()
-        IdpsSaddEstimate.objects.bulk_create(
-            [IdpsSaddEstimate(**item) for item in validated_data]
-        )
+        IdpsSaddEstimate.objects.bulk_create([IdpsSaddEstimate(**item) for item in validated_data])
         logger.info(f"Processed {len(validated_data)} new entries.")

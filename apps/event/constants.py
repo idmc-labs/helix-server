@@ -15,7 +15,7 @@ CONFLICT_TYPES = {
     ],
     "Unclear/Unknown": [
         "Unclear/Unknown",
-    ]
+    ],
 }
 
 DISASTERS = {
@@ -42,15 +42,18 @@ DISASTERS = {
         },
         "Meteorological": {
             "Extreme Temperature": ["Cold wave", "Heat wave"],
-            "Storm": ["Hailstorm", "Sand/dust storm", "Storm", "Storm surge",
-                      "Tornado", "Typhoon/Hurricane/Cyclone", "Winter storm/Blizzard"]
-        }
+            "Storm": [
+                "Hailstorm",
+                "Sand/dust storm",
+                "Storm",
+                "Storm surge",
+                "Tornado",
+                "Typhoon/Hurricane/Cyclone",
+                "Winter storm/Blizzard",
+            ],
+        },
     },
-    "Unknown": {
-        "Unknown": {
-            "Unknown": ["Unknown"]
-        }
-    }
+    "Unknown": {"Unknown": {"Unknown": ["Unknown"]}},
 }
 
 OSV_SUB_TYPE = [
@@ -60,5 +63,5 @@ OSV_SUB_TYPE = [
     "Elections",
     "Demonstrations",
     "Police operations",
-    "Other"
+    "Other",
 ]

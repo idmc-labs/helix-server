@@ -8,7 +8,7 @@ from django.template.loader import render_to_string
 from graphiql_debug_toolbar.middleware import get_payload, set_content_length
 from graphiql_debug_toolbar.serializers import CallableJSONEncoder
 
-__all__ = ['DebugToolbarMiddleware']
+__all__ = ["DebugToolbarMiddleware"]
 
 _HTML_TYPES = ("text/html", "application/xhtml+xml", "text/plain")
 
@@ -25,7 +25,7 @@ class DebugToolbarMiddleware(BaseMiddleware):
 
         if html_type:
             response = super().__call__(request)
-            template = render_to_string('graphiql_debug_toolbar/base.html')
+            template = render_to_string("graphiql_debug_toolbar/base.html")
             response.write(template)
             set_content_length(response)
 
@@ -60,8 +60,9 @@ class DisableIntrospectionSchemaMiddleware:
     This middleware should use for production mode. This class hide the
     introspection.
     """
+
     def resolve(self, next, root, info, **args):
-        if info.field_name == '__schema':
+        if info.field_name == "__schema":
             return None
         return next(root, info, **args)
 
@@ -71,6 +72,6 @@ class HealthCheckMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if request.path == '/health':
-            return HttpResponse('ok')
+        if request.path == "/health":
+            return HttpResponse("ok")
         return self.get_response(request)

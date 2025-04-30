@@ -1,5 +1,5 @@
-from django_enumfield import enum
 from django.utils.translation import gettext_lazy as _
+from django_enumfield import enum
 
 
 class GENDER_TYPE(enum.Enum):
