@@ -9,9 +9,9 @@ def update_report_reviewer_status(sender, instance, created, **kwargs):
     if created:
         instance.report.is_signed_off = False
         instance.report.is_signed_off_by = None
-        instance.report.save(update_fields=['is_signed_off', 'is_signed_off_by'])
+        instance.report.save(update_fields=["is_signed_off", "is_signed_off_by"])
     else:
         if instance.is_signed_off:
             instance.report.is_signed_off = True
             instance.report.is_signed_off_by = instance.is_signed_off_by
-            instance.report.save(update_fields=['is_signed_off', 'is_signed_off_by'])
+            instance.report.save(update_fields=["is_signed_off", "is_signed_off_by"])

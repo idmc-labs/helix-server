@@ -1,16 +1,19 @@
+from admin_auto_filters.filters import AutocompleteFilterFactory
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from admin_auto_filters.filters import AutocompleteFilterFactory
 
-from apps.users.models import User, Portfolio
+from apps.users.models import Portfolio, User
 
 
 @admin.register(Portfolio)
 class PortfolioAdmin(admin.ModelAdmin):
-    list_display = ('user', 'role')
+    list_display = ("user", "role")
     list_filter = (
-        AutocompleteFilterFactory('User', 'user',),
-        'role'
+        AutocompleteFilterFactory(
+            "User",
+            "user",
+        ),
+        "role",
     )
 
 

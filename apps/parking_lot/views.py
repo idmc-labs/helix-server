@@ -1,15 +1,14 @@
-from rest_framework.permissions import IsAuthenticated
 from rest_framework import viewsets
-
+from rest_framework.permissions import IsAuthenticated
 
 from apps.parking_lot.models import ParkedItem
 from apps.parking_lot.serializers import ParkedItemSerializer
 
 
-class CreateListMixin():
+class CreateListMixin:
     def get_serializer(self, *args, **kwargs):
-        if isinstance(kwargs.get('data', {}), list):
-            kwargs['many'] = True
+        if isinstance(kwargs.get("data", {}), list):
+            kwargs["many"] = True
         return super().get_serializer(*args, **kwargs)
 
 

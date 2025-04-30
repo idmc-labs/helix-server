@@ -8,6 +8,7 @@ class BaseCacheProxy:
     This allows the legacy `cache` object to be thread-safe using the new
     ``caches`` API.
     """
+
     API_CACHE_ALIAS = None
 
     def __getattr__(self, name):

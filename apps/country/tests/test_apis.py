@@ -1,7 +1,7 @@
 import json
 
 from apps.users.enums import USER_ROLE
-from utils.factories import CountryFactory, ContactFactory
+from utils.factories import ContactFactory, CountryFactory
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
@@ -9,7 +9,7 @@ class TestCountrySchema(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.country1 = CountryFactory.create()
         self.country2, self.country3 = CountryFactory.create_batch(2)
-        self.country_q = '''
+        self.country_q = """
         query MyQuery {
           country(id: %s) {
             operatingContacts {
@@ -24,7 +24,7 @@ class TestCountrySchema(HelixGraphQLTestCase):
             }
           }
         }
-        '''
+        """
         self.contact1 = ContactFactory.create(country=self.country1)
         self.contact1.countries_of_operation.set([self.country2, self.country3])
 
@@ -40,7 +40,7 @@ class TestCountrySchema(HelixGraphQLTestCase):
         self.assertEqual(self.country1.contacts.count(), 1)
         self.assertEqual(self.country1.operating_contacts.count(), 1)
         self.assertEqual(self.country1.operating_contacts.first(), self.contact2)
-        contact_ids = [int(each['id']) for each in content['data']['country']['contacts']['results']]
+        contact_ids = [int(each["id"]) for each in content["data"]["country"]["contacts"]["results"]]
         self.assertEqual(set(contact_ids), {self.contact1.id})
-        contact_ids = [int(each['id']) for each in content['data']['country']['operatingContacts']['results']]
+        contact_ids = [int(each["id"]) for each in content["data"]["country"]["operatingContacts"]["results"]]
         self.assertEqual(set(contact_ids), {self.contact2.id})

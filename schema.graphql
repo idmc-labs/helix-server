@@ -1616,8 +1616,8 @@ type EventType {
   assignedAt: DateTime
   reviewStatus: EVENT_REVIEW_STATUS
   includeTriangulationInQa: Boolean!
-  eventReviews: [UnifiedReviewCommentType!]!
   notifications: [GenericNotificationType!]!
+  eventReviews: [UnifiedReviewCommentType!]!
   eventCode: [EventCodeType!]!
   extractionquerySet: [ExtractionQueryObjectType!]!
   reportSet: [ReportType!]!
@@ -2229,8 +2229,8 @@ type FigureType {
   approvedBy: UserType
   approvedOn: DateTime
   reviewStatus: FIGURE_REVIEW_STATUS
-  figureReviewComments: [UnifiedReviewCommentType!]!
   notifications: [GenericNotificationType!]!
+  figureReviewComments: [UnifiedReviewCommentType!]!
   reportSet: [ReportType!]!
   getQuantifier: EnumDescription
   unitDisplay: EnumDescription

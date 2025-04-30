@@ -12,7 +12,7 @@ type: Backend Service
 image:
   # Docker build arguments. For additional overrides: https://aws.github.io/copilot-cli/docs/manifest/backend-service/#image-build
   build:
-    dockerfile: worker.Dockerfile
+    target: worker
     context: ./
     healthcheck:
       command: ["CMD-SHELL", "celery -A helix status"]

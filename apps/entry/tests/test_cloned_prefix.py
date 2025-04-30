@@ -1,5 +1,5 @@
-from utils.tests import HelixTestCase
 from utils.common import add_clone_prefix
+from utils.tests import HelixTestCase
 
 
 class TestClonedPrefix(HelixTestCase):

@@ -1,7 +1,8 @@
+import copy
 import csv
 import logging
-import copy
 from uuid import uuid4
+
 from django.core.management.base import BaseCommand
 from django.db import transaction
 
@@ -11,31 +12,28 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
-
     help = "Clone flow figure figures to stock figures"
 
     def add_arguments(self, parser):
-        parser.add_argument('figures')
+        parser.add_argument("figures")
 
     @transaction.atomic
     def handle(self, *args, **kwargs):
-        figures_file = kwargs['figures']
+        figures_file = kwargs["figures"]
 
-        with open(figures_file, 'r') as figures_csv_file:
+        with open(figures_file, "r") as figures_csv_file:
             reader = csv.DictReader(figures_csv_file)
-            ids = [figure['id'] for figure in reader]
+            ids = [figure["id"] for figure in reader]
 
         success = 0
-        for figure in Figure.objects.filter(
-            id__in=ids
-        ):
+        for figure in Figure.objects.filter(id__in=ids):
             new_figure = copy.deepcopy(figure)
 
             new_figure.id = None
             new_figure.old_id = None
             new_figure.uuid = uuid4()
             year = int(new_figure.start_date.year)
-            end_date = f'{year}-12-31'
+            end_date = f"{year}-12-31"
             new_figure.end_date = end_date
             new_figure.role = Figure.ROLE.RECOMMENDED
             new_figure.category = Figure.FIGURE_CATEGORY_TYPES.IDPS
@@ -66,15 +64,7 @@ class Command(BaseCommand):
             new_figure.disaggregation_age.set(disaggregation_age_list)
 
             success += 1
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f'Cloned flow figure {figure.id} as stock figure {new_figure.id}'
-                )
-            )
+            self.stdout.write(self.style.SUCCESS(f"Cloned flow figure {figure.id} as stock figure {new_figure.id}"))
 
         # Make a list of new figures that were cloned (clear old_id when cloning or we are going to have a bad time)
-        self.stdout.write(
-            self.style.SUCCESS(
-                f'Cloned {success} flow figures as stock figures'
-            )
-        )
+        self.stdout.write(self.style.SUCCESS(f"Cloned {success} flow figures as stock figures"))

@@ -5,22 +5,21 @@ from utils.filters import StringListFilter
 
 
 class ParkingLotFilter(df.FilterSet):
-    status_in = StringListFilter(method='filter_status_in')
+    status_in = StringListFilter(method="filter_status_in")
     # assigned_to_in = StringListFilter(field_name='assigned_to', lookup_expr='in')
-    assigned_to_in = StringListFilter(method='filter_assigned_to')
+    assigned_to_in = StringListFilter(method="filter_assigned_to")
 
     class Meta:
         model = ParkedItem
         fields = {
-            'title': ['unaccent__icontains'],
-            'created_by': ['exact'],
+            "title": ["unaccent__icontains"],
+            "created_by": ["exact"],
         }
 
     def filter_status_in(self, queryset, name, value):
         if value:
             # map enum names to values
-            return queryset.filter(status__in=[ParkedItem.PARKING_LOT_STATUS.get(each)
-                                               for each in value])
+            return queryset.filter(status__in=[ParkedItem.PARKING_LOT_STATUS.get(each) for each in value])
         return queryset
 
     def filter_assigned_to(self, queryset, name, value):

@@ -1,76 +1,75 @@
-import graphene
 import django_filters
-from django.db.models import Q, Count
-from django.http import HttpRequest
+import graphene
 from django.contrib.postgres.aggregates.general import ArrayAgg
+from django.db import models
+from django.db.models import Count, Q
+from django.http import HttpRequest
 
+from apps.common.enums import QA_RULE_TYPE
+from apps.crisis.models import Crisis
+from apps.entry.models import Figure
+from apps.event.constants import OSV
 from apps.event.models import (
     Actor,
-    Event,
-    DisasterSubType,
-    DisasterType,
+    ContextOfViolence,
     DisasterCategory,
     DisasterSubCategory,
-    ContextOfViolence,
-    Violence,
-    ViolenceSubType,
+    DisasterSubType,
+    DisasterType,
+    Event,
     OsvSubType,
     OtherSubType,
+    Violence,
+    ViolenceSubType,
 )
-from apps.entry.models import Figure
-from apps.crisis.models import Crisis
 from apps.extraction.filters import (
     FigureExtractionFilterDataInputType,
     FigureExtractionFilterDataType,
 )
+from utils.figure_filter import (
+    FigureAggregateFilterDataInputType,
+    FigureAggregateFilterDataType,
+    FigureFilterHelper,
+)
 from utils.filters import (
-    NameFilterMixin,
-    StringListFilter,
     IDListFilter,
+    NameFilterMixin,
     SimpleInputFilter,
+    StringListFilter,
     generate_type_for_filter_set,
 )
-from utils.figure_filter import (
-    FigureFilterHelper,
-    FigureAggregateFilterDataType,
-    FigureAggregateFilterDataInputType,
-)
-from apps.event.constants import OSV
-from django.db import models
-from apps.common.enums import QA_RULE_TYPE
 
 
-class EventFilter(NameFilterMixin,
-                  django_filters.FilterSet):
-    name = django_filters.CharFilter(method='filter_name')
-    crisis_by_ids = IDListFilter(method='filter_crises')
-    event_types = StringListFilter(method='filter_event_types')
-    countries = IDListFilter(method='filter_countries')
+class EventFilter(NameFilterMixin, django_filters.FilterSet):
+    name = django_filters.CharFilter(method="filter_name")
+    crisis_by_ids = IDListFilter(method="filter_crises")
+    event_types = StringListFilter(method="filter_event_types")
+    countries = IDListFilter(method="filter_countries")
 
-    osv_sub_type_by_ids = IDListFilter(method='filter_osv_sub_types')
+    osv_sub_type_by_ids = IDListFilter(method="filter_osv_sub_types")
     # used in report entry table
-    disaster_sub_types = IDListFilter(method='filter_disaster_sub_types')
-    violence_types = IDListFilter(method='filter_violence_types')
-    violence_sub_types = IDListFilter(method='filter_violence_sub_types')
-    created_by_ids = IDListFilter(method='filter_created_by')
-    qa_rule = django_filters.CharFilter(method='filter_qa_rule')
-    context_of_violences = IDListFilter(method='filter_context_of_violences')
-    review_status = StringListFilter(method='filter_review_status')
-    assignees = IDListFilter(method='filter_assignees')
-    assigners = IDListFilter(method='filter_assigners')
+    disaster_sub_types = IDListFilter(method="filter_disaster_sub_types")
+    violence_types = IDListFilter(method="filter_violence_types")
+    violence_sub_types = IDListFilter(method="filter_violence_sub_types")
+    created_by_ids = IDListFilter(method="filter_created_by")
+    qa_rule = django_filters.CharFilter(method="filter_qa_rule")
+    context_of_violences = IDListFilter(method="filter_context_of_violences")
+    review_status = StringListFilter(method="filter_review_status")
+    assignees = IDListFilter(method="filter_assignees")
+    assigners = IDListFilter(method="filter_assigners")
 
-    filter_figures = SimpleInputFilter(FigureExtractionFilterDataInputType, method='filter_by_figures')
-    aggregate_figures = SimpleInputFilter(FigureAggregateFilterDataInputType, method='noop')
+    filter_figures = SimpleInputFilter(FigureExtractionFilterDataInputType, method="filter_by_figures")
+    aggregate_figures = SimpleInputFilter(FigureAggregateFilterDataInputType, method="noop")
 
     request: HttpRequest
 
     class Meta:
         model = Event
         fields = {
-            'created_at': ['lte', 'lt', 'gte', 'gt'],
-            'start_date': ['lte', 'lt', 'gte', 'gt'],
-            'end_date': ['lte', 'lt', 'gte', 'gt'],
-            'ignore_qa': ['exact']
+            "created_at": ["lte", "lt", "gte", "gt"],
+            "start_date": ["lte", "lt", "gte", "gt"],
+            "end_date": ["lte", "lt", "gte", "gt"],
+            "ignore_qa": ["exact"],
         }
 
     def noop(self, qs, name, value):
@@ -109,9 +108,7 @@ class EventFilter(NameFilterMixin,
             if isinstance(value[0], int):
                 # internal filtering
                 return qs.filter(event_type__in=value).distinct()
-            return qs.filter(event_type__in=[
-                Crisis.CRISIS_TYPE.get(item).value for item in value
-            ]).distinct()
+            return qs.filter(event_type__in=[Crisis.CRISIS_TYPE.get(item).value for item in value]).distinct()
         return qs
 
     def filter_review_status(self, qs, name, value):
@@ -119,7 +116,8 @@ class EventFilter(NameFilterMixin,
         value = [
             v
             for v in value or []
-            if v not in [
+            if v
+            not in [
                 Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED.value,
                 Event.EVENT_REVIEW_STATUS.APPROVED_BUT_CHANGED.name,
                 Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED.value,
@@ -128,8 +126,8 @@ class EventFilter(NameFilterMixin,
         ]
         if value:
             if (
-                Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value in value or
-                Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.name in value
+                Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.value in value
+                or Event.EVENT_REVIEW_STATUS.REVIEW_IN_PROGRESS.name in value
             ):
                 # Add *_BUT_CHANGED values if REVIEW_IN_PROGRESS is provided by user
                 value = [
@@ -139,11 +137,13 @@ class EventFilter(NameFilterMixin,
                 ]
             if isinstance(value[0], int):
                 return qs.filter(review_status__in=value).distinct()
-            return qs.filter(review_status__in=[
-                # NOTE: item is string. eg: 'REVIEW_IN_PROGRESS'
-                Event.EVENT_REVIEW_STATUS.get(item).value
-                for item in value
-            ]).distinct()
+            return qs.filter(
+                review_status__in=[
+                    # NOTE: item is string. eg: 'REVIEW_IN_PROGRESS'
+                    Event.EVENT_REVIEW_STATUS.get(item).value
+                    for item in value
+                ]
+            ).distinct()
         return qs
 
     def filter_name(self, qs, name, value):
@@ -160,7 +160,8 @@ class EventFilter(NameFilterMixin,
         if QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name == value:
             return qs.annotate(
                 figure_count=Count(
-                    'figures', filter=Q(
+                    "figures",
+                    filter=Q(
                         figures__category__in=[
                             Figure.FIGURE_CATEGORY_TYPES.IDPS,
                             Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
@@ -168,37 +169,39 @@ class EventFilter(NameFilterMixin,
                         ignore_qa=False,
                         figures__role=Figure.ROLE.RECOMMENDED,
                         figures__geo_locations__isnull=False,
-                    )
+                    ),
                 )
-            ).filter(
-                figure_count=0
-            )
+            ).filter(figure_count=0)
         elif QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name == value:
-            events_id_qs = Figure.objects.filter(
-                category__in=[
-                    Figure.FIGURE_CATEGORY_TYPES.IDPS,
-                    Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-                ],
-                event__ignore_qa=False,
-                role=Figure.ROLE.RECOMMENDED,
-                geo_locations__isnull=False,
-            ).annotate(
-                locations=models.Subquery(
-                    Figure.geo_locations.through.objects.filter(
-                        figure=models.OuterRef('pk')
-                    ).order_by().values('figure').annotate(
-                        locations=ArrayAgg(
-                            'figurelocation__name', distinct=True, ordering='figurelocation__name'
-                        ),
-                    ).values('locations')[:1],
-                    output_field=models.CharField(),
-                ),
-            ).order_by().values('event', 'category', 'locations').annotate(
-                count=Count('id', distinct=True),
+            events_id_qs = (
+                Figure.objects.filter(
+                    category__in=[
+                        Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                        Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                    ],
+                    event__ignore_qa=False,
+                    role=Figure.ROLE.RECOMMENDED,
+                    geo_locations__isnull=False,
+                )
+                .annotate(
+                    locations=models.Subquery(
+                        Figure.geo_locations.through.objects.filter(figure=models.OuterRef("pk"))
+                        .order_by()
+                        .values("figure")
+                        .annotate(
+                            locations=ArrayAgg("figurelocation__name", distinct=True, ordering="figurelocation__name"),
+                        )
+                        .values("locations")[:1],
+                        output_field=models.CharField(),
+                    ),
+                )
+                .order_by()
+                .values("event", "category", "locations")
+                .annotate(
+                    count=Count("id", distinct=True),
+                )
             )
-            return qs.filter(
-                id__in=events_id_qs.filter(count__gt=1).values('event').distinct()
-            )
+            return qs.filter(id__in=events_id_qs.filter(count__gt=1).values("event").distinct())
         return qs
 
     def filter_context_of_violences(self, qs, name, value):
@@ -224,95 +227,83 @@ class EventFilter(NameFilterMixin,
     @property
     def qs(self):
         figure_qs, reference_date = FigureFilterHelper.aggregate_data_generate(
-            self.data.get('aggregate_figures'),
+            self.data.get("aggregate_figures"),
             self.request,
         )
-        return super().qs.annotate(
-            **Event._total_figure_disaggregation_subquery(
-                figures=figure_qs,
-                reference_date=reference_date,
-            ),
-            **Event.annotate_review_figures_count(),
-            entry_count=models.Subquery(
-                Figure.objects.filter(
-                    event=models.OuterRef('pk')
-                ).order_by().values('event').annotate(
-                    count=models.Count('entry', distinct=True)
-                ).values('count')[:1],
-                output_field=models.IntegerField()
+        return (
+            super()
+            .qs.annotate(
+                **Event._total_figure_disaggregation_subquery(
+                    figures=figure_qs,
+                    reference_date=reference_date,
+                ),
+                **Event.annotate_review_figures_count(),
+                entry_count=models.Subquery(
+                    Figure.objects.filter(event=models.OuterRef("pk"))
+                    .order_by()
+                    .values("event")
+                    .annotate(count=models.Count("entry", distinct=True))
+                    .values("count")[:1],
+                    output_field=models.IntegerField(),
+                ),
             )
-        ).prefetch_related("figures", 'context_of_violence')
+            .prefetch_related("figures", "context_of_violence")
+        )
 
 
 class ActorFilter(django_filters.FilterSet):
     class Meta:
         model = Actor
-        fields = {
-            'name': ['unaccent__icontains']
-        }
+        fields = {"name": ["unaccent__icontains"]}
 
 
 class DisasterSubTypeFilter(django_filters.FilterSet):
     class Meta:
         model = DisasterSubType
-        fields = {
-            'name': ['unaccent__icontains']
-        }
+        fields = {"name": ["unaccent__icontains"]}
 
 
 class DisasterTypeFilter(django_filters.FilterSet):
     class Meta:
         model = DisasterType
-        fields = {
-            'name': ['unaccent__icontains']
-        }
+        fields = {"name": ["unaccent__icontains"]}
 
 
 class DisasterCategoryFilter(django_filters.FilterSet):
     class Meta:
         model = DisasterCategory
-        fields = {
-            'name': ['unaccent__icontains']
-        }
+        fields = {"name": ["unaccent__icontains"]}
 
 
 class DisasterSubCategoryFilter(django_filters.FilterSet):
     class Meta:
         model = DisasterSubCategory
-        fields = {
-            'name': ['unaccent__icontains']
-        }
+        fields = {"name": ["unaccent__icontains"]}
 
 
 class OsvSubTypeFilter(django_filters.FilterSet):
     class Meta:
         model = OsvSubType
-        fields = {
-            'name': ['icontains']
-        }
+        fields = {"name": ["icontains"]}
 
 
 class OtherSubTypeFilter(django_filters.FilterSet):
     class Meta:
         model = OtherSubType
-        fields = {
-            'name': ['icontains']
-        }
+        fields = {"name": ["icontains"]}
 
 
 class ContextOfViolenceFilter(django_filters.FilterSet):
     class Meta:
         model = ContextOfViolence
-        fields = {
-            'name': ['icontains']
-        }
+        fields = {"name": ["icontains"]}
 
 
 class ViolenceFilter(django_filters.FilterSet):
     class Meta:
         model = Violence
         fields = {
-            'id': ['iexact'],
+            "id": ["iexact"],
         }
 
 
@@ -320,31 +311,31 @@ class ViolenceSubTypeFilter(django_filters.FilterSet):
     class Meta:
         model = ViolenceSubType
         fields = {
-            'id': ['iexact'],
+            "id": ["iexact"],
         }
 
 
 EventFilterDataType, EventFilterDataInputType = generate_type_for_filter_set(
     EventFilter,
-    'event.schema.event_list',
-    'EventFilterDataType',
-    'EventFilterDataInputType',
+    "event.schema.event_list",
+    "EventFilterDataType",
+    "EventFilterDataInputType",
     custom_new_fields_map={
-        'filter_figures': graphene.Field(FigureExtractionFilterDataType),
-        'aggregate_figures': graphene.Field(FigureAggregateFilterDataType),
+        "filter_figures": graphene.Field(FigureExtractionFilterDataType),
+        "aggregate_figures": graphene.Field(FigureAggregateFilterDataType),
     },
 )
 
 ActorFilterDataType, ActorFilterDataInputType = generate_type_for_filter_set(
     ActorFilter,
-    'event.schema.actor_list',
-    'ActorFilterDataType',
-    'ActorFilterDataInputType',
+    "event.schema.actor_list",
+    "ActorFilterDataType",
+    "ActorFilterDataInputType",
 )
 
 ContextOfViolenceFilterDataType, ContextOfViolenceFilterDataInputType = generate_type_for_filter_set(
     ContextOfViolenceFilter,
-    'event.schema.context_of_violence_list',
-    'ContextOfViolenceFilterDataType',
-    'ContextOfViolenceFilterDataInputType',
+    "event.schema.context_of_violence_list",
+    "ContextOfViolenceFilterDataType",
+    "ContextOfViolenceFilterDataInputType",
 )

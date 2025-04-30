@@ -1,13 +1,13 @@
 from rest_framework import serializers
 
-from apps.contact.models import Contact, Communication
-from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField, MetaInformationSerializerMixin
+from apps.contact.models import Communication, Contact
+from apps.contrib.serializers import IntegerIDField, MetaInformationSerializerMixin, UpdateSerializerMixin
 
 
 class CommunicationSerializer(serializers.ModelSerializer, MetaInformationSerializerMixin):
     class Meta:
         model = Communication
-        fields = '__all__'
+        fields = "__all__"
 
 
 class CommunicationUpdateSerializer(UpdateSerializerMixin, CommunicationSerializer):
@@ -17,7 +17,7 @@ class CommunicationUpdateSerializer(UpdateSerializerMixin, CommunicationSerializ
 class ContactSerializer(serializers.ModelSerializer, MetaInformationSerializerMixin):
     class Meta:
         model = Contact
-        fields = '__all__'
+        fields = "__all__"
 
 
 class ContactUpdateSerializer(UpdateSerializerMixin, ContactSerializer):

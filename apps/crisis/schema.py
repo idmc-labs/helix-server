@@ -1,16 +1,16 @@
 import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
-from utils.graphene.enums import EnumDescription
 
+from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.crisis.filters import CrisisFilter
 from apps.crisis.models import Crisis
-from apps.contrib.commons import DateAccuracyGrapheneEnum
 from apps.event.schema import EventListType
-from utils.graphene.types import CustomDjangoListObjectType
+from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.types import CustomDjangoListObjectType
 
 
 class CrisisReviewCountType(graphene.ObjectType):
@@ -27,49 +27,39 @@ class CrisisType(DjangoObjectType):
         model = Crisis
 
     crisis_type = graphene.Field(CrisisTypeGrapheneEnum)
-    crisis_type_display = EnumDescription(source='get_crisis_type_display')
+    crisis_type_display = EnumDescription(source="get_crisis_type_display")
     events = DjangoPaginatedListObjectField(
         EventListType,
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        related_name='events',
-        reverse_related_name='crisis',
+        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
+        related_name="events",
+        reverse_related_name="crisis",
     )
     total_stock_idp_figures = graphene.Field(graphene.Int)
     stock_idp_figures_max_end_date = graphene.Field(graphene.Date, required=False)
     total_flow_nd_figures = graphene.Field(graphene.Int)
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
-    start_date_accuracy_display = EnumDescription(source='get_start_date_accuracy_display')
+    start_date_accuracy_display = EnumDescription(source="get_start_date_accuracy_display")
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
-    end_date_accuracy_display = EnumDescription(source='get_end_date_accuracy_display')
+    end_date_accuracy_display = EnumDescription(source="get_end_date_accuracy_display")
     event_count = graphene.Field(graphene.Int)
     review_count = graphene.Field(CrisisReviewCountType)
 
     def resolve_total_stock_idp_figures(root, info, **kwargs):
-        NULL = 'null'
-        value = getattr(
-            root,
-            Crisis.IDP_FIGURES_ANNOTATE,
-            NULL
-        )
+        NULL = "null"
+        value = getattr(root, Crisis.IDP_FIGURES_ANNOTATE, NULL)
         if value != NULL:
             return value
         return info.context.crisis_crisis_total_stock_idp_figures.load(root.id)
 
     def resolve_stock_idp_figures_max_end_date(root, info, **kwargs):
-        NULL = 'null'
-        value = getattr(
-            root,
-            Crisis.IDP_FIGURES_REFERENCE_DATE_ANNOTATE,
-            NULL
-        )
+        NULL = "null"
+        value = getattr(root, Crisis.IDP_FIGURES_REFERENCE_DATE_ANNOTATE, NULL)
         if value != NULL:
             return value
         return info.context.crisis_stock_idp_figures_max_end_date.load(root.id)
 
     def resolve_total_flow_nd_figures(root, info, **kwargs):
-        NULL = 'null'
+        NULL = "null"
         value = getattr(
             root,
             Crisis.ND_FIGURES_ANNOTATE,
@@ -94,7 +84,6 @@ class CrisisListType(CustomDjangoListObjectType):
 
 class Query:
     crisis = DjangoObjectField(CrisisType)
-    crisis_list = DjangoPaginatedListObjectField(CrisisListType,
-                                                 pagination=PageGraphqlPaginationWithoutCount(
-                                                     page_size_query_param='pageSize'
-                                                 ))
+    crisis_list = DjangoPaginatedListObjectField(
+        CrisisListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
+    )

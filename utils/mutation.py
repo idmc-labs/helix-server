@@ -1,24 +1,24 @@
+import inspect
 import typing
 from collections import OrderedDict
 
-import inspect
 import graphene
 import graphene_django
+from django.conf import settings
+from django.core.exceptions import PermissionDenied
+from django.db import models, transaction
+from django.utils.translation import gettext
 from graphene.types.generic import GenericScalar
 from graphene_django.registry import get_global_registry
 from graphene_django.rest_framework.serializer_converter import (
     get_graphene_type_from_serializer_field,
 )
 from rest_framework import serializers
-from django.conf import settings
-from django.db import models, transaction
-from django.core.exceptions import PermissionDenied
-from django.utils.translation import gettext
 
-from utils.serializers import IntegerIDField
 from apps.contrib.enums import ENUM_TO_GRAPHENE_ENUM_MAP
 from utils.error_types import mutation_is_not_valid
 from utils.permissions import PERMISSION_DENIED_MESSAGE
+from utils.serializers import IntegerIDField
 
 
 @get_graphene_type_from_serializer_field.register(serializers.ListSerializer)
@@ -75,10 +75,7 @@ def convert_serializer_field(field, is_input=True, convert_choices_to_enum=True,
         graphql_type = get_graphene_type_from_serializer_field(field)
 
     args = []
-    kwargs = {
-        "description": field.help_text,
-        "required": is_input and field.required and not force_optional
-    }
+    kwargs = {"description": field.help_text, "required": is_input and field.required and not force_optional}
 
     # if it is a tuple or a list it means that we are returning
     # the graphql type and the child type
@@ -114,21 +111,16 @@ def convert_serializer_to_input_type(serializer_class):
     """
     graphene_django.rest_framework.serializer_converter.convert_serializer_to_input_type
     """
-    cached_type = convert_serializer_to_input_type.cache.get(
-        serializer_class.__name__, None
-    )
+    cached_type = convert_serializer_to_input_type.cache.get(serializer_class.__name__, None)
     if cached_type:
         return cached_type
     serializer = serializer_class()
 
-    items = {
-        name: convert_serializer_field(field)
-        for name, field in serializer.fields.items()
-    }
+    items = {name: convert_serializer_field(field) for name, field in serializer.fields.items()}
     # Alter naming
     serializer_name = serializer.__class__.__name__
-    serializer_name = ''.join(''.join(serializer_name.split('ModelSerializer')).split('Serializer'))
-    ref_name = f'{serializer_name}InputType'
+    serializer_name = "".join("".join(serializer_name.split("ModelSerializer")).split("Serializer"))
+    ref_name = f"{serializer_name}InputType"
 
     base_classes = (graphene.InputObjectType,)
 
@@ -192,11 +184,7 @@ def generate_input_type_for_serializer(
         is_input=True,
         partial=partial,
     )
-    return type(
-        name,
-        (graphene.InputObjectType,),
-        data_members
-    )
+    return type(name, (graphene.InputObjectType,), data_members)
 
 
 # Only use this for single object type with direct scalar access.
@@ -206,10 +194,7 @@ def generate_object_field_from_input_type(input_type, skip_fields=[]):
         if field_key in skip_fields:
             continue
         _type = field.type
-        if inspect.isclass(_type) and (
-            issubclass(_type, graphene.Scalar) or
-            issubclass(_type, graphene.Enum)
-        ):
+        if inspect.isclass(_type) and (issubclass(_type, graphene.Scalar) or issubclass(_type, graphene.Enum)):
             new_fields_map[field_key] = graphene.Field(_type)
         else:
             new_fields_map[field_key] = _type
@@ -220,8 +205,8 @@ def compare_input_output_type_fields(input_type, output_type):
     if len(output_type._meta.fields) != len(input_type._meta.fields):
         for field in input_type._meta.fields.keys():
             if field not in output_type._meta.fields.keys():
-                print('---> [Entry] Missing: ', field)
-        raise Exception('Conversion failed')
+                print("---> [Entry] Missing: ", field)
+        raise Exception("Conversion failed")
 
 
 # override the default implementation
@@ -245,7 +230,7 @@ class BulkUpdateMutation(graphene.Mutation):
 
     @staticmethod
     def get_queryset() -> models.QuerySet:
-        raise Exception('Implementation required')
+        raise Exception("Implementation required")
 
     @classmethod
     def get_valid_delete_items(cls, delete_ids) -> models.QuerySet:
@@ -256,9 +241,7 @@ class BulkUpdateMutation(graphene.Mutation):
         try:
             return cls.get_queryset().get(id=id), None
         except cls.model.DoesNotExist:
-            return None, [
-                dict(field='nonFieldErrors', messages=f'{cls.model.__name__} does not exist.')
-            ]
+            return None, [dict(field="nonFieldErrors", messages=f"{cls.model.__name__} does not exist.")]
 
     @classmethod
     @transaction.atomic
@@ -294,7 +277,7 @@ class BulkUpdateMutation(graphene.Mutation):
 
     @classmethod
     def get_batch_max_size_limit(cls):
-        if hasattr(cls, 'BATCH_MAX_SIZE_LIMIT'):
+        if hasattr(cls, "BATCH_MAX_SIZE_LIMIT"):
             return cls.BATCH_MAX_SIZE_LIMIT
         return settings.GRAPHENE_BATCH_DEFAULT_MAX_LIMIT
 
@@ -310,13 +293,14 @@ class BulkUpdateMutation(graphene.Mutation):
         if all_len > cls.get_batch_max_size_limit():
             raise PermissionDenied(
                 gettext(
-                    'Max limit for batch is %(limit)s. But %(all_len)s where provided.'
-                    ' Where CREATE/UPDATE = %(items_len)s and DELETE = %(delete_items_len)s'
-                ) % {
-                    'limit': cls.get_batch_max_size_limit(),
-                    'all_len': all_len,
-                    'items_len': items_len,
-                    'delete_items_len': delete_items_len,
+                    "Max limit for batch is %(limit)s. But %(all_len)s where provided."
+                    " Where CREATE/UPDATE = %(items_len)s and DELETE = %(delete_items_len)s"
+                )
+                % {
+                    "limit": cls.get_batch_max_size_limit(),
+                    "all_len": all_len,
+                    "items_len": items_len,
+                    "delete_items_len": delete_items_len,
                 }
             )
 
@@ -327,10 +311,7 @@ class BulkUpdateMutation(graphene.Mutation):
         if not info.context.user.has_perms(cls.permissions):
             raise PermissionDenied(gettext(PERMISSION_DENIED_MESSAGE))
 
-        internal_context = {
-            'request': info.context,
-            **(context or {})
-        }
+        internal_context = {"request": info.context, **(context or {})}
         all_errors = []
         all_instances = []
         all_deleted_instances = []
@@ -341,7 +322,7 @@ class BulkUpdateMutation(graphene.Mutation):
                 all_deleted_instances.append(cls.delete_item(item, internal_context))
         # Bulk Create/Update
         for item in items or []:
-            id = item.get('id')
+            id = item.get("id")
             instance, errors = cls.save_item(info, item, id, internal_context)
             all_errors.append(errors)
             all_instances.append(instance)

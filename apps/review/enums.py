@@ -1,9 +1,8 @@
-__all__ = ['ReviewStatusEnum']
+__all__ = ["ReviewStatusEnum"]
 
 import graphene
 
 from apps.review.models import Review, UnifiedReviewComment
-
 from utils.enums import enum_description
 
 ReviewStatusEnum = graphene.Enum.from_enum(Review.ENTRY_REVIEW_STATUS, description=enum_description)

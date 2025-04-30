@@ -13,19 +13,19 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument(
-            'csv_file_path',
+            "csv_file_path",
             type=str,
-            help='Path to the Document CSV file',
+            help="Path to the Document CSV file",
         )
 
     @transaction.atomic
     def handle(self, *args, **kwargs):
-        file_path = kwargs['csv_file_path']
-        bulk_mgr = BulkUpdateManager(['preview_id'])
+        file_path = kwargs["csv_file_path"]
+        bulk_mgr = BulkUpdateManager(["preview_id"])
 
         used_source_preview_ids = set()
 
-        with open(file_path, newline='', encoding='utf-8') as csvfile:
+        with open(file_path, newline="", encoding="utf-8") as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 entry_id = int(row["entry_id"])
@@ -39,22 +39,27 @@ class Command(BaseCommand):
                 preview_data = json.loads(row["preview_data"])
 
                 # Previews that match the URL
-                matching_previews = sorted([
-                    preview
-                    for preview in preview_data
-                    if preview['url'] == url and preview['id'] not in used_source_preview_ids
-                ], key=lambda x: x['id'])
+                matching_previews = sorted(
+                    [
+                        preview
+                        for preview in preview_data
+                        if preview["url"] == url and preview["id"] not in used_source_preview_ids
+                    ],
+                    key=lambda x: x["id"],
+                )
 
                 if not matching_previews:
                     self.stdout.write(self.style.ERROR(f"No previews remaining for Entry ({entry_id})"))
                     continue
 
-                new_preview_id = matching_previews[0]['id']
-                self.stdout.write(self.style.SUCCESS(
-                    f"Preview of Entry ({entry_id}) was updated from ({current_preview_id}) to ({new_preview_id})")
+                new_preview_id = matching_previews[0]["id"]
+                self.stdout.write(
+                    self.style.SUCCESS(
+                        f"Preview of Entry ({entry_id}) was updated from ({current_preview_id}) to ({new_preview_id})"
+                    )
                 )
                 bulk_mgr.add(Entry(id=entry_id, preview_id=new_preview_id))
                 used_source_preview_ids.add(new_preview_id)
 
         bulk_mgr.done()
-        self.stdout.write(self.style.SUCCESS(f'Updated preview IDs for entries: {bulk_mgr.summary()}'))
+        self.stdout.write(self.style.SUCCESS(f"Updated preview IDs for entries: {bulk_mgr.summary()}"))

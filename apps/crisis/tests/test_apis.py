@@ -1,5 +1,6 @@
 import json
 
+from apps.entry.models import Figure
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     CountryFactory,
@@ -9,13 +10,12 @@ from utils.factories import (
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
-from apps.entry.models import Figure
 
 
 class TestCreateCrisis(HelixGraphQLTestCase):
     def setUp(self) -> None:
         countries = CountryFactory.create_batch(2)
-        self.mutation = '''mutation MyMutation($input: CrisisCreateInputType!) {
+        self.mutation = """mutation MyMutation($input: CrisisCreateInputType!) {
             createCrisis(data: $input) {
                 result {
                     countries {
@@ -26,48 +26,39 @@ class TestCreateCrisis(HelixGraphQLTestCase):
                 ok
                 errors
             }
-        }'''
+        }"""
         self.input = {
             "name": "disss",
             "crisisType": "DISASTER",
             "countries": [each.id for each in countries],
-            "crisisNarrative": "a naarrrative"
+            "crisisNarrative": "a naarrrative",
         }
 
     def test_valid_crisis_creation(self) -> None:
         reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
+        response = self.query(self.mutation, input_data=self.input)
 
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['createCrisis']['ok'], content)
-        self.assertEqual(content['data']['createCrisis']['result']['name'], self.input['name'])
-        self.assertEqual(len(content['data']['createCrisis']['result']['countries']),
-                         len(self.input['countries']))
+        self.assertTrue(content["data"]["createCrisis"]["ok"], content)
+        self.assertEqual(content["data"]["createCrisis"]["result"]["name"], self.input["name"])
+        self.assertEqual(len(content["data"]["createCrisis"]["result"]["countries"]), len(self.input["countries"]))
 
     def test_invalid_crisis_creation_by_guest(self) -> None:
         guest = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(guest)
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
+        response = self.query(self.mutation, input_data=self.input)
 
         content = json.loads(response.content)
-        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content["errors"][0]["message"])
 
 
 class TestCrisisUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        self.crisis = CrisisFactory.create(
-            created_by=self.editor
-        )
+        self.crisis = CrisisFactory.create(created_by=self.editor)
         self.mutation = """
             mutation UpdateCrisis($input: CrisisUpdateInputType!) {
               updateCrisis(data: $input) {
@@ -88,48 +79,35 @@ class TestCrisisUpdate(HelixGraphQLTestCase):
 
     def test_valid_update_crisis(self):
         self.force_login(self.editor)
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
+        response = self.query(self.mutation, input_data=self.input)
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['updateCrisis']['ok'], content)
-        self.assertEqual(content['data']['updateCrisis']['result']['name'],
-                         self.input['name'])
+        self.assertTrue(content["data"]["updateCrisis"]["ok"], content)
+        self.assertEqual(content["data"]["updateCrisis"]["result"]["name"], self.input["name"])
 
     def test_valid_update_crisis_by_different_user(self):
         reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
+        response = self.query(self.mutation, input_data=self.input)
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['updateCrisis']['ok'], content)
-        self.assertEqual(content['data']['updateCrisis']['result']['name'],
-                         self.input['name'])
+        self.assertTrue(content["data"]["updateCrisis"]["ok"], content)
+        self.assertEqual(content["data"]["updateCrisis"]["result"]["name"], self.input["name"])
 
     def test_invalid_update_crisis_by_guest(self):
         guest = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(guest)
-        response = self.query(
-            self.mutation,
-            input_data=self.input
-        )
+        response = self.query(self.mutation, input_data=self.input)
         content = json.loads(response.content)
-        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content["errors"][0]["message"])
 
 
 class TestCrisisDelete(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        self.crisis = CrisisFactory.create(
-            created_by=self.editor
-        )
+        self.crisis = CrisisFactory.create(created_by=self.editor)
         self.mutation = """
             mutation DeleteCrisis($id: ID!) {
               deleteCrisis(id: $id) {
@@ -147,38 +125,29 @@ class TestCrisisDelete(HelixGraphQLTestCase):
 
     def test_valid_delete_crisis(self):
         self.force_login(self.editor)
-        response = self.query(
-            self.mutation,
-            variables=self.variables
-        )
+        response = self.query(self.mutation, variables=self.variables)
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['deleteCrisis']['ok'], content)
-        self.assertIsNotNone(content['data']['deleteCrisis']['result']['name'])
+        self.assertTrue(content["data"]["deleteCrisis"]["ok"], content)
+        self.assertIsNotNone(content["data"]["deleteCrisis"]["result"]["name"])
 
     def test_valid_delete_crisis_by_different_monitoring_expert(self):
         editor2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(editor2)
-        response = self.query(
-            self.mutation,
-            variables=self.variables
-        )
+        response = self.query(self.mutation, variables=self.variables)
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['deleteCrisis']['ok'], content)
-        self.assertIsNotNone(content['data']['deleteCrisis']['result']['name'])
+        self.assertTrue(content["data"]["deleteCrisis"]["ok"], content)
+        self.assertIsNotNone(content["data"]["deleteCrisis"]["result"]["name"])
 
     def test_invalid_delete_crisis_by_guest(self):
         guest = create_user_with_role(USER_ROLE.GUEST.name)
         self.force_login(guest)
-        response = self.query(
-            self.mutation,
-            variables=self.variables
-        )
+        response = self.query(self.mutation, variables=self.variables)
         content = json.loads(response.content)
-        self.assertIn(PERMISSION_DENIED_MESSAGE, content['errors'][0]['message'])
+        self.assertIn(PERMISSION_DENIED_MESSAGE, content["errors"][0]["message"])
 
 
 class TestEventRewviewCount(HelixGraphQLTestCase):
@@ -187,7 +156,7 @@ class TestEventRewviewCount(HelixGraphQLTestCase):
         self.event = EventFactory.create(crisis=self.crisis)
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.f1, self.f2, self.f3 = FigureFactory.create_batch(3, event=self.event, role=Figure.ROLE.RECOMMENDED)
-        self.event_query = '''
+        self.event_query = """
         query MyQuery {
           crisisList {
             results {
@@ -202,7 +171,7 @@ class TestEventRewviewCount(HelixGraphQLTestCase):
             }
           }
         }
-        '''
+        """
 
     def test_progress(self) -> None:
         self.force_login(self.admin)
@@ -211,12 +180,12 @@ class TestEventRewviewCount(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
-        crisis_data = content['data']['crisisList']['results'][0]
-        self.assertEqual(crisis_data['reviewCount']['progress'], 0)
-        self.assertEqual(crisis_data['reviewCount']['reviewApprovedCount'], 0)
-        self.assertEqual(crisis_data['reviewCount']['reviewInProgressCount'], 0)
-        self.assertEqual(crisis_data['reviewCount']['reviewNotStartedCount'], 3)
-        self.assertEqual(crisis_data['reviewCount']['reviewReRequestCount'], 0)
+        crisis_data = content["data"]["crisisList"]["results"][0]
+        self.assertEqual(crisis_data["reviewCount"]["progress"], 0)
+        self.assertEqual(crisis_data["reviewCount"]["reviewApprovedCount"], 0)
+        self.assertEqual(crisis_data["reviewCount"]["reviewInProgressCount"], 0)
+        self.assertEqual(crisis_data["reviewCount"]["reviewNotStartedCount"], 3)
+        self.assertEqual(crisis_data["reviewCount"]["reviewReRequestCount"], 0)
 
         self.f1.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
         self.f1.save()
@@ -225,12 +194,12 @@ class TestEventRewviewCount(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
-        crisis_data = content['data']['crisisList']['results'][0]
-        self.assertEqual(crisis_data['reviewCount']['progress'], 0)
-        self.assertEqual(crisis_data['reviewCount']['reviewApprovedCount'], 0)
-        self.assertEqual(crisis_data['reviewCount']['reviewInProgressCount'], 1)
-        self.assertEqual(crisis_data['reviewCount']['reviewNotStartedCount'], 2)
-        self.assertEqual(crisis_data['reviewCount']['reviewReRequestCount'], 0)
+        crisis_data = content["data"]["crisisList"]["results"][0]
+        self.assertEqual(crisis_data["reviewCount"]["progress"], 0)
+        self.assertEqual(crisis_data["reviewCount"]["reviewApprovedCount"], 0)
+        self.assertEqual(crisis_data["reviewCount"]["reviewInProgressCount"], 1)
+        self.assertEqual(crisis_data["reviewCount"]["reviewNotStartedCount"], 2)
+        self.assertEqual(crisis_data["reviewCount"]["reviewReRequestCount"], 0)
 
         for figure in [self.f1, self.f2, self.f3]:
             figure.review_status = Figure.FIGURE_REVIEW_STATUS.APPROVED
@@ -241,19 +210,19 @@ class TestEventRewviewCount(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
-        crisis_data = content['data']['crisisList']['results'][0]
-        self.assertEqual(crisis_data['reviewCount']['progress'], 1.0)
-        self.assertEqual(crisis_data['reviewCount']['reviewApprovedCount'], 3)
-        self.assertEqual(crisis_data['reviewCount']['reviewInProgressCount'], 0)
-        self.assertEqual(crisis_data['reviewCount']['reviewNotStartedCount'], 0)
-        self.assertEqual(crisis_data['reviewCount']['reviewReRequestCount'], 0)
+        crisis_data = content["data"]["crisisList"]["results"][0]
+        self.assertEqual(crisis_data["reviewCount"]["progress"], 1.0)
+        self.assertEqual(crisis_data["reviewCount"]["reviewApprovedCount"], 3)
+        self.assertEqual(crisis_data["reviewCount"]["reviewInProgressCount"], 0)
+        self.assertEqual(crisis_data["reviewCount"]["reviewNotStartedCount"], 0)
+        self.assertEqual(crisis_data["reviewCount"]["reviewReRequestCount"], 0)
 
 
 class TestCrisisStockFlow(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.crisis = CrisisFactory.create(
-            start_date='2022-05-05',
-            end_date='2022-06-06',
+            start_date="2022-05-05",
+            end_date="2022-06-06",
         )
         self.event = EventFactory.create(crisis=self.crisis)
 
@@ -263,44 +232,44 @@ class TestCrisisStockFlow(HelixGraphQLTestCase):
             role=Figure.ROLE.RECOMMENDED,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             total_figures=100,
-            start_date='2022-05-09',
-            end_date='2022-05-14',
+            start_date="2022-05-09",
+            end_date="2022-05-14",
         )
         FigureFactory.create(
             event=self.event,
             role=Figure.ROLE.RECOMMENDED,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             total_figures=12,
-            start_date='2022-05-10',
-            end_date='2022-05-26',
+            start_date="2022-05-10",
+            end_date="2022-05-26",
         )
         FigureFactory.create(
             event=self.event,
             role=Figure.ROLE.RECOMMENDED,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             total_figures=4,
-            start_date='2022-05-15',
-            end_date='2022-05-26',
+            start_date="2022-05-15",
+            end_date="2022-05-26",
         )
         FigureFactory.create(
             event=self.event,
             role=Figure.ROLE.RECOMMENDED,
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             total_figures=8,
-            start_date='2022-05-20',
-            end_date='2022-06-01',
+            start_date="2022-05-20",
+            end_date="2022-06-01",
         )
         FigureFactory.create(
             event=self.event,
             role=Figure.ROLE.RECOMMENDED,
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             total_figures=200,
-            start_date='2022-05-9',
-            end_date='2022-05-19',
+            start_date="2022-05-9",
+            end_date="2022-05-19",
         )
 
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.crisis_query = '''
+        self.crisis_query = """
             query MyQuery($id: ID!) {
               crisis(id: $id) {
                 id
@@ -308,8 +277,8 @@ class TestCrisisStockFlow(HelixGraphQLTestCase):
                 totalStockIdpFigures
               }
             }
-        '''
-        self.event_query = '''
+        """
+        self.event_query = """
             query MyQuery($id: ID!) {
               event(id: $id) {
                 id
@@ -317,7 +286,7 @@ class TestCrisisStockFlow(HelixGraphQLTestCase):
                 totalStockIdpFigures
               }
             }
-        '''
+        """
 
     def test_should_use_figure_last_date_as_reference_point_in_crisis_stock_and_flow(self) -> None:
         self.force_login(self.admin)
@@ -325,13 +294,13 @@ class TestCrisisStockFlow(HelixGraphQLTestCase):
             self.crisis_query,
             variables=dict(
                 id=self.crisis.id,
-            )
+            ),
         )
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
-        crisis_data = content['data']['crisis']
-        self.assertEqual(crisis_data['totalStockIdpFigures'], 16)
-        self.assertEqual(crisis_data['totalFlowNdFigures'], 208)
+        crisis_data = content["data"]["crisis"]
+        self.assertEqual(crisis_data["totalStockIdpFigures"], 16)
+        self.assertEqual(crisis_data["totalFlowNdFigures"], 208)
 
     def test_should_use_figure_last_date_as_reference_point_in_event_stock_and_flow(self) -> None:
         self.force_login(self.admin)
@@ -339,10 +308,10 @@ class TestCrisisStockFlow(HelixGraphQLTestCase):
             self.event_query,
             variables=dict(
                 id=self.event.id,
-            )
+            ),
         )
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
-        crisis_data = content['data']['event']
-        self.assertEqual(crisis_data['totalStockIdpFigures'], 16)
-        self.assertEqual(crisis_data['totalFlowNdFigures'], 208)
+        crisis_data = content["data"]["event"]
+        self.assertEqual(crisis_data["totalStockIdpFigures"], 16)
+        self.assertEqual(crisis_data["totalFlowNdFigures"], 208)

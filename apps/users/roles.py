@@ -11,7 +11,7 @@ USER_ROLES = [
     USER_ROLE.REGIONAL_COORDINATOR,
     USER_ROLE.DIRECTORS_OFFICE,
     USER_ROLE.REPORTING_TEAM,
-    USER_ROLE.GUEST
+    USER_ROLE.GUEST,
 ]
 
 MONITORING_EXPERT_MODELS = {
@@ -127,5 +127,5 @@ PERMISSIONS = {
         PERMISSION_ACTION.clear_self_assignee: set(),
         PERMISSION_ACTION.update_gidd_data: set(),
         PERMISSION_ACTION.update_release_meta_data: set(),
-    }
+    },
 }

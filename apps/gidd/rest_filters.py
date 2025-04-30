@@ -1,6 +1,6 @@
 import django_filters
-from rest_framework import serializers
 from django.db.models import Q
+from rest_framework import serializers
 
 from apps.crisis.models import Crisis
 
@@ -18,14 +18,14 @@ from .models import (
 
 
 class RestConflictFilterSet(ReleaseMetadataFilter):
-    start_year = django_filters.NumberFilter(field_name='start_year', method='filter_start_year')
-    end_year = django_filters.NumberFilter(field_name='end_year', method='filter_end_year')
+    start_year = django_filters.NumberFilter(field_name="start_year", method="filter_start_year")
+    end_year = django_filters.NumberFilter(field_name="end_year", method="filter_end_year")
 
     class Meta:
         model = Conflict
         fields = {
-            'id': ['iexact'],
-            'iso3': ['iexact'],
+            "id": ["iexact"],
+            "iso3": ["iexact"],
         }
 
     def filter_start_year(self, queryset, name, value):
@@ -40,16 +40,16 @@ class RestConflictFilterSet(ReleaseMetadataFilter):
 
 
 class RestDisasterFilterSet(ReleaseMetadataFilter):
-    event_name = django_filters.CharFilter(method='filter_event_name')
-    start_year = django_filters.NumberFilter(field_name='start_year', method='filter_start_year')
-    end_year = django_filters.NumberFilter(field_name='end_year', method='filter_end_year')
+    event_name = django_filters.CharFilter(method="filter_event_name")
+    start_year = django_filters.NumberFilter(field_name="start_year", method="filter_start_year")
+    end_year = django_filters.NumberFilter(field_name="end_year", method="filter_end_year")
 
     class Meta:
         model = Disaster
         fields = {
-            'event_name': ['icontains'],
-            'iso3': ['in'],
-            'hazard_type': ['in'],
+            "event_name": ["icontains"],
+            "iso3": ["in"],
+            "hazard_type": ["in"],
         }
 
     def filter_event_name(self, queryset, name, value):
@@ -75,16 +75,16 @@ class RestDisasterFilterSet(ReleaseMetadataFilter):
 
 class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
     cause = django_filters.ChoiceFilter(
-        method='filter_cause',
+        method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(field_name='start_year', method='filter_start_year')
-    end_year = django_filters.NumberFilter(field_name='end_year', method='filter_end_year')
+    start_year = django_filters.NumberFilter(field_name="start_year", method="filter_start_year")
+    end_year = django_filters.NumberFilter(field_name="end_year", method="filter_end_year")
 
     class Meta:
         model = DisplacementData
         fields = {
-            'iso3': ['in'],
+            "iso3": ["in"],
         }
 
     def filter_start_year(self, queryset, name, value):
@@ -101,42 +101,36 @@ class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
         if not value:
             return queryset
         if value.lower() == Crisis.CRISIS_TYPE.CONFLICT.name.lower():
-            return queryset.filter(
-                Q(conflict_new_displacement__gt=0) |
-                Q(conflict_total_displacement__gt=0)
-            )
+            return queryset.filter(Q(conflict_new_displacement__gt=0) | Q(conflict_total_displacement__gt=0))
         elif value.lower() == Crisis.CRISIS_TYPE.DISASTER.name.lower():
-            return queryset.filter(
-                Q(disaster_new_displacement__gt=0) |
-                Q(disaster_total_displacement__gt=0)
-            )
+            return queryset.filter(Q(disaster_new_displacement__gt=0) | Q(disaster_total_displacement__gt=0))
         return queryset
 
     @property
     def qs(self):
         qs = super().qs
-        if 'cause' not in self.data:
+        if "cause" not in self.data:
             return qs.filter(
-                Q(conflict_new_displacement__gt=0) |
-                Q(conflict_total_displacement__gt=0) |
-                Q(disaster_new_displacement__gt=0) |
-                Q(disaster_total_displacement__gt=0)
+                Q(conflict_new_displacement__gt=0)
+                | Q(conflict_total_displacement__gt=0)
+                | Q(disaster_new_displacement__gt=0)
+                | Q(disaster_total_displacement__gt=0)
             )
         return qs
 
 
 class IdpsSaddEstimateFilter(ReleaseMetadataFilter):
     cause = django_filters.ChoiceFilter(
-        method='filter_cause',
+        method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(field_name='start_year', method='filter_start_year')
-    end_year = django_filters.NumberFilter(field_name='end_year', method='filter_end_year')
+    start_year = django_filters.NumberFilter(field_name="start_year", method="filter_start_year")
+    end_year = django_filters.NumberFilter(field_name="end_year", method="filter_end_year")
 
     class Meta:
         model = IdpsSaddEstimate
         fields = {
-            'iso3': ['in'],
+            "iso3": ["in"],
         }
 
     def filter_start_year(self, queryset, name, value):
@@ -166,16 +160,16 @@ class IdpsSaddEstimateFilter(ReleaseMetadataFilter):
 
 class PublicFigureAnalysisFilterSet(ReleaseMetadataFilter):
     cause = django_filters.ChoiceFilter(
-        method='filter_cause',
+        method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(field_name='start_year', method='filter_start_year')
-    end_year = django_filters.NumberFilter(field_name='end_year', method='filter_end_year')
+    start_year = django_filters.NumberFilter(field_name="start_year", method="filter_start_year")
+    end_year = django_filters.NumberFilter(field_name="end_year", method="filter_end_year")
 
     class Meta:
         model = PublicFigureAnalysis
         fields = {
-            'iso3': ['in'],
+            "iso3": ["in"],
         }
 
     def filter_start_year(self, queryset, name, value):
@@ -206,19 +200,19 @@ class PublicFigureAnalysisFilterSet(ReleaseMetadataFilter):
 
 class DisaggregationFilterSet(django_filters.FilterSet):
     cause = django_filters.ChoiceFilter(
-        method='filter_cause',
+        method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
     release_environment = django_filters.ChoiceFilter(
-        method='no_op',
+        method="no_op",
         choices=get_name_choices(ReleaseMetadata.ReleaseEnvironment),
     )
 
     class Meta:
         model = GiddFigure
         fields = {
-            'iso3': ['in'],
-            'disaster_type': ['in'],
+            "iso3": ["in"],
+            "disaster_type": ["in"],
         }
 
     def filter_cause(self, queryset, name, value):
@@ -241,7 +235,7 @@ class DisaggregationFilterSet(django_filters.FilterSet):
     def get_release_metadata(self):
         release_meta_data = ReleaseMetadata.objects.last()
         if not release_meta_data:
-            raise serializers.ValidationError('Release metadata is not configured.')
+            raise serializers.ValidationError("Release metadata is not configured.")
         return release_meta_data
 
     def filter_release_environment(self, qs, value):
@@ -254,7 +248,7 @@ class DisaggregationFilterSet(django_filters.FilterSet):
     def qs(self):
         qs = super().qs
         release_environment_name = self.data.get(
-            'release_environment',
+            "release_environment",
             ReleaseMetadata.ReleaseEnvironment.RELEASE.name,
         )
         qs = self.filter_release_environment(qs, release_environment_name)
@@ -263,18 +257,18 @@ class DisaggregationFilterSet(django_filters.FilterSet):
 
 class DisaggregationPublicFigureAnalysisFilterSet(django_filters.FilterSet):
     cause = django_filters.ChoiceFilter(
-        method='filter_figure_cause',
+        method="filter_figure_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
     release_environment = django_filters.ChoiceFilter(
-        method='no_op',
+        method="no_op",
         choices=get_name_choices(ReleaseMetadata.ReleaseEnvironment),
     )
 
     class Meta:
         model = PublicFigureAnalysis
         fields = {
-            'iso3': ['in'],
+            "iso3": ["in"],
         }
 
     def filter_figure_cause(self, qs, name, value):
@@ -297,7 +291,7 @@ class DisaggregationPublicFigureAnalysisFilterSet(django_filters.FilterSet):
     def get_release_metadata(self):
         release_meta_data = ReleaseMetadata.objects.last()
         if not release_meta_data:
-            raise serializers.ValidationError('Release metadata is not configured.')
+            raise serializers.ValidationError("Release metadata is not configured.")
         return release_meta_data
 
     def filter_release_environment(self, qs, value):
@@ -310,7 +304,7 @@ class DisaggregationPublicFigureAnalysisFilterSet(django_filters.FilterSet):
     def qs(self):
         qs = super().qs
         release_environment_name = self.data.get(
-            'release_environment',
+            "release_environment",
             ReleaseMetadata.ReleaseEnvironment.RELEASE.name,
         )
         qs = self.filter_release_environment(qs, release_environment_name)

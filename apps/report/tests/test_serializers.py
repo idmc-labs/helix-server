@@ -1,14 +1,15 @@
 from datetime import timedelta
-from django.utils import timezone
-from django.test import RequestFactory
-import mock
+from unittest import mock
 
-from apps.report.models import ReportGeneration, Report
+from django.test import RequestFactory
+from django.utils import timezone
+
+from apps.report.models import Report, ReportGeneration
 from apps.report.serializers import (
-    ReportSignoffSerializer,
-    ReportGenerationSerializer,
     ReportApproveSerializer,
+    ReportGenerationSerializer,
     ReportSerializer,
+    ReportSignoffSerializer,
 )
 from apps.users.enums import USER_ROLE
 from utils.factories import ReportFactory
@@ -18,23 +19,18 @@ from utils.tests import HelixTestCase, create_user_with_role
 class TestGenerationSerializer(HelixTestCase):
     def setUp(self) -> None:
         self.it_head = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.request = RequestFactory().post('/graphql')
+        self.request = RequestFactory().post("/graphql")
         self.report = ReportFactory.create(
             # only grid based report or null can be generated
-            filter_figure_start_after='2019-01-01',
-            filter_figure_end_before='2019-12-31',
+            filter_figure_start_after="2019-01-01",
+            filter_figure_end_before="2019-12-31",
         )
         self.data = dict(report=self.report.id)
-        self.context = dict(
-            request=self.request
-        )
+        self.context = dict(request=self.request)
 
     def test_generation_creation(self):
         self.request.user = self.it_head
-        serializer = ReportGenerationSerializer(
-            data=self.data,
-            context=self.context
-        )
+        serializer = ReportGenerationSerializer(data=self.data, context=self.context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         assert self.report.is_signed_off is False
         assert self.report.generations.count() == 0
@@ -49,26 +45,17 @@ class TestGenerationSerializer(HelixTestCase):
             generated_from=Report.REPORT_TYPE.MASTERFACT
         )
         data = dict(report=report.id)
-        serializer = ReportGenerationSerializer(
-            data=data,
-            context=self.context
-        )
+        serializer = ReportGenerationSerializer(data=data, context=self.context)
         self.assertTrue(serializer.is_valid())
 
     def test_generation_creation_is_invalid_because_unsigned_exists(self):
         self.request.user = self.it_head
-        serializer = ReportGenerationSerializer(
-            data=self.data,
-            context=self.context
-        )
+        serializer = ReportGenerationSerializer(data=self.data, context=self.context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
-        serializer = ReportGenerationSerializer(
-            data=self.data,
-            context=self.context
-        )
+        serializer = ReportGenerationSerializer(data=self.data, context=self.context)
         self.assertFalse(serializer.is_valid())
-        self.assertIn('report', serializer.errors)
+        self.assertIn("report", serializer.errors)
 
     # TODO: report generation is valid for MYU as well
 
@@ -76,7 +63,7 @@ class TestGenerationSerializer(HelixTestCase):
 class TestReportApprovalSerializer(HelixTestCase):
     def setUp(self):
         self.it_head = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.request = RequestFactory().post('/graphql')
+        self.request = RequestFactory().post("/graphql")
         self.report = ReportFactory.create()
         self.report_id = self.report.id
         self.data = dict(report=self.report.id)
@@ -88,13 +75,8 @@ class TestReportApprovalSerializer(HelixTestCase):
 
         # approve
         self.request.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        context = dict(
-            request=self.request
-        )
-        serializer = ReportApproveSerializer(
-            data=self.data,
-            context=context
-        )
+        context = dict(request=self.request)
+        serializer = ReportApproveSerializer(data=self.data, context=context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
         # check report approved flag should be true
@@ -107,30 +89,22 @@ class TestReportApprovalSerializer(HelixTestCase):
         assert report.is_approved is True
         report.last_generation.approvers.count() == 1
 
-    @mock.patch('apps.report.tasks.trigger_report_generation.delay')
+    @mock.patch("apps.report.tasks.trigger_report_generation.delay")
     def test_invalid_approval_report_signed_off(self, trigger_delay):
         # report not yet started generation
         assert self.report.generations.count() == 0
         # try approving fails
         self.request.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        context = dict(
-            request=self.request
-        )
-        serializer = ReportApproveSerializer(
-            data=self.data,
-            context=context
-        )
+        context = dict(request=self.request)
+        serializer = ReportApproveSerializer(data=self.data, context=context)
         self.assertFalse(serializer.is_valid())
-        self.assertIn('report', serializer.errors)
+        self.assertIn("report", serializer.errors)
         # begin generation
         ReportGeneration.objects.create(report=self.report)
 
         # try approving passes
         # NOTE we cannot reuse the old serializer reference, cache is problematic
-        serializer = ReportApproveSerializer(
-            data=self.data,
-            context=context
-        )
+        serializer = ReportApproveSerializer(data=self.data, context=context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
         # generation is signed off
@@ -142,45 +116,34 @@ class TestReportApprovalSerializer(HelixTestCase):
         self.report.refresh_from_db()
         assert self.report.is_signed_off is True
         # try approving again fails
-        serializer = ReportApproveSerializer(
-            data=self.data,
-            context=context
-        )
+        serializer = ReportApproveSerializer(data=self.data, context=context)
         self.assertFalse(serializer.is_valid())
-        self.assertIn('report', serializer.errors)
+        self.assertIn("report", serializer.errors)
 
 
 class TestReportSignOffSerializer(HelixTestCase):
     def setUp(self):
         self.it_head = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.request = RequestFactory().post('/graphql')
+        self.request = RequestFactory().post("/graphql")
         self.request.user = self.it_head
-        self.context = dict(
-            request=self.request
-        )
+        self.context = dict(request=self.request)
         self.report = ReportFactory.create()
         self.data = dict(report=self.report.id)
 
-    @mock.patch('apps.report.tasks.trigger_report_generation.delay')
+    @mock.patch("apps.report.tasks.trigger_report_generation.delay")
     def test_valid_sign_off_flow(self, trigger_delay):
         # check report approved flag
         assert self.report.is_signed_off is False
-        serializer = ReportSignoffSerializer(
-            data=self.data,
-            context=self.context
-        )
+        serializer = ReportSignoffSerializer(data=self.data, context=self.context)
         self.assertFalse(serializer.is_valid())
-        self.assertIn('report', serializer.errors)
+        self.assertIn("report", serializer.errors)
 
         ReportGeneration.objects.create(report=self.report)
         self.report.refresh_from_db()
         assert self.report.is_signed_off is False
 
         # sign off
-        serializer = ReportSignoffSerializer(
-            data=self.data,
-            context=self.context
-        )
+        serializer = ReportSignoffSerializer(data=self.data, context=self.context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
         trigger_delay.assert_called()
@@ -192,49 +155,28 @@ class TestReportSignOffSerializer(HelixTestCase):
         assert self.report.is_signed_off_by == self.it_head
 
         # re signoff should fail
-        serializer = ReportSignoffSerializer(
-            data=self.data,
-            context=self.context
-        )
+        serializer = ReportSignoffSerializer(data=self.data, context=self.context)
         self.assertFalse(serializer.is_valid())
 
 
 class TestReportSerializer(HelixTestCase):
     def setUp(self):
-        self.request = RequestFactory().post('/graphql')
+        self.request = RequestFactory().post("/graphql")
         self.request.user = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.context = dict(
-            request=self.request
-        )
+        self.context = dict(request=self.request)
 
     def test_report_date_range(self):
         ref = timezone.now()
-        start = ref.strftime('%Y-%m-%d')
-        end = (ref + timedelta(days=1)).strftime('%Y-%m-%d')
+        start = ref.strftime("%Y-%m-%d")
+        end = (ref + timedelta(days=1)).strftime("%Y-%m-%d")
 
-        report = Report.objects.create(name='hello')
-        data = dict(
-            filter_figure_start_after=start,
-            filter_figure_end_before=end
-        )
-        serializer = ReportSerializer(
-            instance=report,
-            data=data,
-            partial=True,
-            context=self.context
-        )
+        report = Report.objects.create(name="hello")
+        data = dict(filter_figure_start_after=start, filter_figure_end_before=end)
+        serializer = ReportSerializer(instance=report, data=data, partial=True, context=self.context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
-        end = (ref - timedelta(days=1)).strftime('%Y-%m-%d')
-        data = dict(
-            filter_figure_start_after=start,
-            filter_figure_end_before=end
-        )
-        serializer = ReportSerializer(
-            instance=report,
-            data=data,
-            partial=True,
-            context=self.context
-        )
+        end = (ref - timedelta(days=1)).strftime("%Y-%m-%d")
+        data = dict(filter_figure_start_after=start, filter_figure_end_before=end)
+        serializer = ReportSerializer(instance=report, data=data, partial=True, context=self.context)
         self.assertFalse(serializer.is_valid())
-        self.assertIn('filter_figure_start_after', serializer.errors)
+        self.assertIn("filter_figure_start_after", serializer.errors)

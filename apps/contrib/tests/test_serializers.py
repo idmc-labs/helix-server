@@ -11,12 +11,12 @@ from utils.tests import HelixTestCase, create_user_with_role
 class TestExcelDownload(HelixTestCase):
     def setUp(self) -> None:
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.request = RequestFactory().post('/graphql')
-        self.context = dict()
+        self.request = RequestFactory().post("/graphql")
+        self.context = {}
 
     def test_valid_excel_export_if_all_complete(self):
         self.request.user = self.admin
-        self.context['request'] = self.request
+        self.context["request"] = self.request
         ExcelDownload.objects.create(
             started_at=timezone.now(),
             completed_at=timezone.now(),
@@ -34,7 +34,7 @@ class TestExcelDownload(HelixTestCase):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY.value,
-                filters=dict(),
+                filters={},
             ),
             context=self.context,
         )
@@ -42,7 +42,7 @@ class TestExcelDownload(HelixTestCase):
 
     def test_invalid_excel_export_if_in_progress_beyond_limit(self):
         self.request.user = self.admin
-        self.context['request'] = self.request
+        self.context["request"] = self.request
         downloads = []
         for _ in range(settings.EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT):
             downloads.append(
@@ -60,7 +60,7 @@ class TestExcelDownload(HelixTestCase):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY.value,
-                filters=dict(),
+                filters={},
             ),
             context=self.context,
         )
@@ -79,13 +79,13 @@ class TestExcelDownload(HelixTestCase):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY.value,
-                filters=dict(),
+                filters={},
             ),
             context=self.context,
         )
         self.assertFalse(serializer.is_valid())
-        self.assertIn('non_field_errors', serializer.errors)
-        self.assertEqual('limited-at-a-time', serializer.errors['non_field_errors'][0].code)
+        self.assertIn("non_field_errors", serializer.errors)
+        self.assertEqual("limited-at-a-time", serializer.errors["non_field_errors"][0].code)
 
         excel_download.delete()
         # failed downloads are allowed though
@@ -100,7 +100,7 @@ class TestExcelDownload(HelixTestCase):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY.value,
-                filters=dict(),
+                filters={},
             ),
             context=self.context,
         )
@@ -119,7 +119,7 @@ class TestExcelDownload(HelixTestCase):
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=ExcelDownload.DOWNLOAD_TYPES.ENTRY.value,
-                filters=dict(),
+                filters={},
             ),
             context=self.context,
         )

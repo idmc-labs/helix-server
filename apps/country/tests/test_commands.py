@@ -1,10 +1,9 @@
 from django.db.models.query import QuerySet
 
-from apps.country.models import HouseholdSize
-from utils.factories import HouseholdSizeFactory, CountryFactory
-from utils.tests import HelixTestCase
-
 from apps.country.management.commands.clone_household_sizes import Command as CloneCommand
+from apps.country.models import HouseholdSize
+from utils.factories import CountryFactory, HouseholdSizeFactory
+from utils.tests import HelixTestCase
 
 
 class TestHouseholdSizeClone(HelixTestCase):
@@ -24,10 +23,10 @@ class TestHouseholdSizeClone(HelixTestCase):
     def serialize_household_size(items: QuerySet):
         return [
             {
-                'id': item.id,
-                'country': item.country_id,
-                'year': item.year,
-                'size': item.size,
+                "id": item.id,
+                "country": item.country_id,
+                "year": item.year,
+                "size": item.size,
             }
             for item in items
         ]
@@ -47,9 +46,4 @@ class TestHouseholdSizeClone(HelixTestCase):
         # Above command should return with success. Resulting in new AHHS
         new_dataset = self.serialize_household_size(HouseholdSize.objects.all())
         assert len(new_dataset) == len(existing_dataset) + 3
-        assert new_dataset == [
-            *existing_dataset,
-            *self.serialize_household_size(
-                HouseholdSize.objects.filter(year=2024)
-            )
-        ]
+        assert new_dataset == [*existing_dataset, *self.serialize_household_size(HouseholdSize.objects.filter(year=2024))]

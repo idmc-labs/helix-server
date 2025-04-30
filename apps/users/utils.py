@@ -1,19 +1,19 @@
-from typing import Union
 from contextlib import contextmanager
+from typing import Union
 
+from django.conf import settings
 from django.contrib.auth.tokens import default_token_generator
 from django.utils.encoding import DjangoUnicodeDecodeError
-from django.conf import settings
 from djoser.compat import get_user_email
 from djoser.email import ActivationEmail
 from djoser.utils import decode_uid
 
-from apps.users.models import User, Portfolio
+from apps.users.models import Portfolio, User
 
 
 def send_activation_email(user, request) -> None:
     to = [get_user_email(user)]
-    ActivationEmail(request, {'user': user}).send(to)
+    ActivationEmail(request, {"user": user}).send(to)
 
 
 def get_user_from_activation_token(uid, token) -> Union[User, None]:

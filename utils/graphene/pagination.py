@@ -1,8 +1,9 @@
 import typing
-from graphene import String
-from graphene_django_extras.paginations.pagination import BaseDjangoGraphqlPagination
-from graphene_django_extras import PageGraphqlPagination
+
 from django.db.models import F
+from graphene import String
+from graphene_django_extras import PageGraphqlPagination
+from graphene_django_extras.paginations.pagination import BaseDjangoGraphqlPagination
 from graphene_django_extras.paginations.utils import (
     _nonzero_int,
 )
@@ -10,11 +11,11 @@ from graphene_django_extras.settings import graphql_api_settings
 
 
 def nulls_last_order_queryset(qs, ordering_param, **kwargs):
-    '''
+    """
     https://docs.djangoproject.com/en/3.1/ref/models/expressions/#django.db.models.Expression.desc
     https://docs.djangoproject.com/en/3.1/ref/models/expressions/#using-f-to-sort-null-values
-    '''
-    order = kwargs.pop(ordering_param, None) or ''
+    """
+    order = kwargs.pop(ordering_param, None) or ""
     if order:
         order = order.strip(",").replace(" ", "").split(",")
 
@@ -25,7 +26,7 @@ def nulls_last_order_queryset(qs, ordering_param, **kwargs):
     for o in order:
         if not o:
             continue
-        if o[0] == '-':
+        if o[0] == "-":
             mod_ordering.append(F(o[1:]).desc(nulls_last=True))
         else:
             mod_ordering.append(F(o).asc(nulls_last=True))
@@ -37,6 +38,7 @@ class NoOrderingPageGraphqlPagination(PageGraphqlPagination):
     """
     Custom pagination to support enum ordering from filterset
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -51,6 +53,7 @@ class OrderingOnlyArgumentPagination(BaseDjangoGraphqlPagination):
     Pagination just for ordering. Created for DjangoFilterPaginateListField (or its subclasses) in mind, to remove the
     page related arguments.
     """
+
     __name__ = "OrderingOnlyArgument"
 
     def __init__(
@@ -101,23 +104,20 @@ def get_page_size(page_size: typing.Optional[int]) -> typing.Optional[int]:
     page_size = page_size or graphql_api_settings.DEFAULT_PAGE_SIZE
     max_page_size = graphql_api_settings.MAX_PAGE_SIZE
     if page_size is not None:
-        assert page_size <= max_page_size, ValueError(
-            f"Max page size limit {max_page_size} exceeded"
-        )
+        assert page_size <= max_page_size, ValueError(f"Max page size limit {max_page_size} exceeded")
         return page_size
 
 
 class PageGraphqlPaginationWithoutCount(PageGraphqlPagination):
-    '''
+    """
     Default implementation applies qs.count()
     which is not possible with dataloading
     https://github.com/eamigo86/graphene-django-extras/blob/master/graphene_django_extras/paginations/pagination.py
-    '''
+    """
+
     def paginate_queryset(self, qs, **kwargs):
         page = kwargs.pop(self.page_query_param, 1) or 1
-        assert page > 0, ValueError(
-            "Page value for PageGraphqlPagination must be a positive integer"
-        )
+        assert page > 0, ValueError("Page value for PageGraphqlPagination must be a positive integer")
 
         if self.page_size_query_param:
             page_size = _nonzero_int(
@@ -141,4 +141,4 @@ class PageGraphqlPaginationWithoutCount(PageGraphqlPagination):
 
         ordering_param = self.ordering_param
         qs = nulls_last_order_queryset(qs, ordering_param, **kwargs)
-        return qs[offset: offset + page_size]
+        return qs[offset : offset + page_size]

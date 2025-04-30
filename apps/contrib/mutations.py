@@ -1,30 +1,31 @@
-import graphene
 import typing
-from graphene_file_upload.scalars import Upload
-from django.utils.translation import gettext
-from utils.mutation import generate_input_type_for_serializer
 
-from utils.common import convert_date_object_to_string_in_dict
-from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import is_authenticated, permission_checker
-from apps.contrib.filters import ClientFilterDataInputType
-from apps.contrib.serializers import ExcelDownloadSerializer
-from apps.contrib.models import ExcelDownload
-from apps.contrib.schema import AttachmentType, ClientType, BulkApiOperationObjectType
+import graphene
+from django.utils.translation import gettext
+from graphene_file_upload.scalars import Upload
+
 from apps.contrib.bulk_operations.serializers import BulkApiOperationSerializer
+from apps.contrib.filters import ClientFilterDataInputType
+from apps.contrib.models import (
+    Client,
+    ExcelDownload,
+)
+from apps.contrib.schema import AttachmentType, BulkApiOperationObjectType, ClientType
 from apps.contrib.serializers import (
     AttachmentSerializer,
     ClientSerializer,
     ClientUpdateSerializer,
+    ExcelDownloadSerializer,
 )
-from apps.contrib.models import (
-    Client,
-)
+from utils.common import convert_date_object_to_string_in_dict
+from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.mutation import generate_input_type_for_serializer
+from utils.permissions import is_authenticated, permission_checker
+
 from .filters import ClientTrackInfoFilterDataInputType
 
-
 BulkApiOperationInputType = generate_input_type_for_serializer(
-    'BulkApiOperationInputType',
+    "BulkApiOperationInputType",
     serializer_class=BulkApiOperationSerializer,
 )
 
@@ -45,8 +46,7 @@ class CreateAttachment(graphene.Mutation):
     @staticmethod
     @is_authenticated()
     def mutate(root, info, data):
-        serializer = AttachmentSerializer(data=data,
-                                          context={'request': info.context.request})
+        serializer = AttachmentSerializer(data=data, context={"request": info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateAttachment(errors=errors, ok=False)
         instance = serializer.save()
@@ -54,12 +54,12 @@ class CreateAttachment(graphene.Mutation):
 
 
 ClientCreateInputType = generate_input_type_for_serializer(
-    'ClientCreateInputType',
+    "ClientCreateInputType",
     ClientSerializer,
 )
 
 ClientUpdateInputType = generate_input_type_for_serializer(
-    'ClientUpdateInputType',
+    "ClientUpdateInputType",
     ClientUpdateSerializer,
 )
 
@@ -73,12 +73,9 @@ class CreateClient(graphene.Mutation):
     result = graphene.Field(ClientType)
 
     @staticmethod
-    @permission_checker(['contrib.add_client'])
+    @permission_checker(["contrib.add_client"])
     def mutate(root, info, data):
-        serializer = ClientSerializer(
-            data=data,
-            context={'request': info.context.request}
-        )
+        serializer = ClientSerializer(data=data, context={"request": info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateClient(errors=errors, ok=False)
         instance = serializer.save()
@@ -94,20 +91,13 @@ class UpdateClient(graphene.Mutation):
     result = graphene.Field(ClientType)
 
     @staticmethod
-    @permission_checker(['contrib.change_client'])
+    @permission_checker(["contrib.change_client"])
     def mutate(root, info, data):
         try:
-            instance = Client.objects.get(id=data['id'])
+            instance = Client.objects.get(id=data["id"])
         except Client.DoesNotExist:
-            return ClientUpdateSerializer(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Client does not exist.'))
-            ])
-        serializer = ClientUpdateSerializer(
-            instance=instance,
-            data=data,
-            context=dict(request=info.context),
-            partial=True
-        )
+            return ClientUpdateSerializer(errors=[dict(field="nonFieldErrors", messages=gettext("Client does not exist."))])
+        serializer = ClientUpdateSerializer(instance=instance, data=data, context=dict(request=info.context), partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateClient(errors=errors, ok=False)
         instance = serializer.save()
@@ -115,8 +105,7 @@ class UpdateClient(graphene.Mutation):
 
 
 class ExportBaseMutation(graphene.Mutation, abstract=True):
-    class Arguments:
-        ...
+    class Arguments: ...
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
@@ -126,14 +115,12 @@ class ExportBaseMutation(graphene.Mutation, abstract=True):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         errors = []
-        if not hasattr(cls, 'DOWNLOAD_TYPE'):
+        if not hasattr(cls, "DOWNLOAD_TYPE"):
             errors.append(f"{cls.__name__} must have a 'DOWNLOAD_TYPE' attribute")
-        if not hasattr(cls.Arguments, 'filters'):
+        if not hasattr(cls.Arguments, "filters"):
             errors.append(f"{cls.__name__} must have a 'Arguments.filters' attribute")
-        elif isinstance(getattr(cls.Arguments, 'filters'), graphene.InputField):
-            errors.append(
-                f"{cls.__name__} must have a 'Arguments.filters' attribute as InputField"
-            )
+        elif isinstance(getattr(cls.Arguments, "filters"), graphene.InputField):
+            errors.append(f"{cls.__name__} must have a 'Arguments.filters' attribute as InputField")
         if errors:
             raise TypeError(errors)
 
@@ -144,7 +131,7 @@ class ExportBaseMutation(graphene.Mutation, abstract=True):
                 download_type=int(cls.DOWNLOAD_TYPE),
                 filters=convert_date_object_to_string_in_dict(filters),
             ),
-            context=dict(request=info.context.request)
+            context=dict(request=info.context.request),
         )
         if errors := mutation_is_not_valid(serializer):
             return cls(errors=errors, ok=False)
@@ -155,6 +142,7 @@ class ExportBaseMutation(graphene.Mutation, abstract=True):
 class ExportTrackingData(ExportBaseMutation):
     class Arguments(ExportBaseMutation.Arguments):
         filters = ClientTrackInfoFilterDataInputType(required=True)
+
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.TRACKING_DATA
 
 
@@ -163,8 +151,10 @@ class ExportClients(ExportBaseMutation):
     A mutation for exporting client data based on provided filters.
     Utilizes the DOWNLOAD_TYPE attribute to specify the type of data to be exported.
     """
+
     class Arguments:
         filters = ClientFilterDataInputType(required=True)
+
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.CLIENT
 
 
@@ -181,7 +171,7 @@ class TriggerBulkOperation(graphene.Mutation):
     # For now, this is handle at client level.
     # We do handle the permission internally as well.
     def mutate(_, info, data):
-        serializer = BulkApiOperationSerializer(data=data, context={'request': info.context.request})
+        serializer = BulkApiOperationSerializer(data=data, context={"request": info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return TriggerBulkOperation(errors=errors, ok=False)
         instance = serializer.save()
