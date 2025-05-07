@@ -669,7 +669,9 @@ SPECTACULAR_SETTINGS = {
     'PREPROCESSING_HOOKS': [
         'helix.openapi.preprocessing_filter_spec'
     ],
-    'CONTACT': {'email': 'info@idmc.ch'},
+    'CONTACT': {
+        "email": "ch.datainfo@idmc.ch",
+    },
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
         "syntaxHighlight": False,  # Disabling syntax highlighting as it takes considerable time to load
