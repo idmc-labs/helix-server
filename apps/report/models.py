@@ -237,6 +237,7 @@ class Report(MetaInformationArchiveAbstractModel,
             filter_figure_start_after='Start date',
             filter_figure_end_before='End date',
             filter_figure_categories="Figure category",
+            filter_figure_crisis_types="Cause of displacement",
             total_figures='Masterfact figures',
             # these are calculated in transformer ref: heavy
             total_flow_conflict_sum='ND conflict',
@@ -250,6 +251,7 @@ class Report(MetaInformationArchiveAbstractModel,
             summary='Summary',
             remarks='Remarks',
             gidd_published_date='Date of data publication in GIDD',
+            is_pfa_visible_in_gidd='Is public figure analysis visible in GIDD',
             is_pfa_published_in_gidd='Is public figure analysis published in GIDD',
             change_in_source='Change in source',
             change_in_methodology='Change in methodology',
@@ -274,8 +276,19 @@ class Report(MetaInformationArchiveAbstractModel,
 
         def transform_filter_figure_category(figure_categories):
             if figure_categories:
-                return get_string_from_list([category.label if category else "" for category in figure_categories])
-            return ''
+                return get_string_from_list([
+                    category.label if category is not None else ""
+                    for category in figure_categories
+                ])
+            return ""
+
+        def transform_filter_figure_crisis_types(figure_crisis_types):
+            if figure_crisis_types:
+                return get_string_from_list([
+                    crisis_type.label if crisis_type is not None else ""
+                    for crisis_type in figure_crisis_types
+                ])
+            return ""
 
         def transformer(datum):
             total_disaggregation = Report.objects.get(id=datum['id']).total_disaggregation
@@ -286,7 +299,9 @@ class Report(MetaInformationArchiveAbstractModel,
                 **total_disaggregation,
                 'remarks': Report.objects.get(id=datum['id']).generate_remarks_for_report,
                 'filter_figure_categories': transform_filter_figure_category(datum['filter_figure_categories']),
+                "filter_figure_crisis_types": transform_filter_figure_crisis_types(datum["filter_figure_crisis_types"]),
 
+                'is_pfa_visible_in_gidd': 'Yes' if datum['is_pfa_visible_in_gidd'] else 'No',
                 'is_pfa_published_in_gidd': 'Yes' if datum['is_pfa_published_in_gidd'] else 'No',
                 'change_in_source': 'Yes' if datum['change_in_source'] else 'No',
                 'change_in_methodology': 'Yes' if datum['change_in_methodology'] else 'No',
