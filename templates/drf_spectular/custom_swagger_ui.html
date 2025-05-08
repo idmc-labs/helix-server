@@ -13,6 +13,23 @@
         background-color: #ffffff,
     }
 
+    * {
+        box-sizing: border-box;
+    }
+
+    a {
+        color: #018eca;
+        text-decoration: none;
+    }
+
+    div[data-name=modelPanel] > .model-box {
+        width: 100%;
+    }
+
+    .model-title__text {
+        font-size: 12px;
+    }
+
     .information-container h1,
     .information-container h2,
     .information-container h3,
@@ -190,21 +207,14 @@
         }
     }
 
-    a {
-        color: #018eca;
-        text-decoration: none;
+    .renderedMarkdown p {
+        margin-bottom: 1rem;
+        margin-top: 0px;
+        font-family: 'proxima-nova', sans-serif !important;
     }
 
-    * {
-        box-sizing: border-box;
-    }
-
-    div[data-name=modelPanel] > .model-box {
-        width: 100%;
-    }
-
-    .model-title__text {
-        font-size: 12px;
+    .renderedMarkdown li, th, td {
+        font-family: 'proxima-nova', sans-serif !important;
     }
 
     .renderedMarkdown th:not(:first-of-type) {
@@ -213,19 +223,21 @@
     .renderedMarkdown td:not(:first-of-type) {
         padding-left: 12px;
     }
-
-    .parameter__in {
-        display: none;
+    .renderedMarkdown th:first-of-type {
+        min-width: 12em;
+    }
+    .renderedMarkdown td:first-of-type {
+        min-width: 12em;
     }
 
-    td.parameters-col_description {
+    .parameters td.parameters-col_description {
         display: flex;
         flex-direction: column-reverse;
         margin-bottom: 0px !important;
         padding-bottom: 10px !important;
         align-items: flex-start;
     }
-    td.parameters-col_description select {
+    .parameters td.parameters-col_description select {
         width: 340px;
         min-height: 40px !important;
         margin: 5px 0;
@@ -233,12 +245,18 @@
         box-shadow: none;
         background-color: #ffff !important;
     }
-
-    .renderedMarkdown th:first-of-type {
-        width: 12em;
+    .parameters .parameter__in {
+        display: none;
     }
-    .renderedMarkdown td:first-of-type {
-        width: 12em;
+
+    .responses-inner .response-controls select {
+        width: 340px;
+        min-height: 40px !important;
+        margin: 5px 0;
+        border-color: #d9d9d9 !important;
+        border-width: 1px;
+        box-shadow: none;
+        background-color: #ffff !important;
     }
   </style>
 {% endblock %}
