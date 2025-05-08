@@ -31,6 +31,7 @@ urlpatterns = [
     path('idus/last-180-days/', IdusFlatCachedView.as_view()),
     path('idus/all/', IdusAllFlatCachedView.as_view()),
     path('idus/all/disaster/', IdusAllDisasterCachedView.as_view()),
+
     path('gidd/', include(router.urls)),
     path('gidd/disaggregations/disaggregation-geojson/', DisaggregationViewSet.as_view({
         'get': 'export_disaggregated_geojson',

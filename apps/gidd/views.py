@@ -119,6 +119,12 @@ class ListOnlyViewSetMixin(mixins.ListModelMixin, viewsets.GenericViewSet):
         return self.list(request, *args, **kwargs)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        responses=CountrySerializer(many=True),
+        tags=['GIDD'],
+    ),
+)
 class CountryViewSet(ListOnlyViewSetMixin):
     serializer_class = CountrySerializer
     lookup_field = 'iso3'
@@ -135,6 +141,12 @@ class CountryViewSet(ListOnlyViewSetMixin):
         return Country.objects.all()
 
 
+@extend_schema_view(
+    list=extend_schema(
+        responses=ConflictSerializer(many=True),
+        tags=['GIDD'],
+    ),
+)
 class ConflictViewSet(ListOnlyViewSetMixin):
     serializer_class = ConflictSerializer
     filterset_class = RestConflictFilterSet
@@ -153,6 +165,7 @@ class ConflictViewSet(ListOnlyViewSetMixin):
     list=extend_schema(
         description=Path("docs/disaster/main-description.md").read_text(),
         responses=DisasterSerializer(many=True),
+        tags=['GIDD'],
     ),
 )
 class DisasterViewSet(ListOnlyViewSetMixin):
@@ -186,6 +199,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
         },
         filters=True,
+        tags=['GIDD'],
     )
     @action(
         detail=False,
@@ -430,6 +444,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
     list=extend_schema(
         description=Path("docs/displacement/main-description.md").read_text(),
         responses=DisplacementDataSerializer(many=True),
+        tags=['GIDD'],
     )
 )
 class DisplacementDataViewSet(ListOnlyViewSetMixin):
@@ -526,6 +541,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
         },
         filters=True,
+        tags=['GIDD'],
     )
     @action(
         detail=False,
@@ -1879,6 +1895,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             (200, "application/geo+json"): OpenApiTypes.STR,
         },
         filters=True,
+        tags=['GIDD'],
     )
     @action(
         detail=False,
@@ -1912,6 +1929,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
         },
         filters=True,
+        tags=['GIDD'],
     )
     @action(
         detail=False,
@@ -1945,6 +1963,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
     list=extend_schema(
         description=Path("docs/public-figure-analyses/main-description.md").read_text(),
         responses=PublicFigureAnalysisSerializer(many=True),
+        tags=['GIDD'],
     ),
 )
 class PublicFigureAnalysisViewSet(ListOnlyViewSetMixin):

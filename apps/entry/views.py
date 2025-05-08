@@ -390,17 +390,24 @@ class ExternalEndpointBaseCachedViewMixin():
     get=extend_schema(
         description=Path("docs/idus/main-description.md").read_text(),
         responses=FigureReadOnlySerializer,
+        tags=['IDU'],
     )
 )
 class IdusFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS
 
 
-@extend_schema(responses=FigureReadOnlySerializer)
+@extend_schema(
+    responses=FigureReadOnlySerializer,
+    tags=['IDU'],
+)
 class IdusAllFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL
 
 
-@extend_schema(responses=FigureReadOnlySerializer)
+@extend_schema(
+    responses=FigureReadOnlySerializer,
+    tags=['IDU'],
+)
 class IdusAllDisasterCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER
