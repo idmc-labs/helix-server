@@ -151,6 +151,7 @@ class ConflictViewSet(ListOnlyViewSetMixin):
 
 @extend_schema_view(
     list=extend_schema(
+        description=Path("docs/disaster/main-description.md").read_text(),
         responses=DisasterSerializer(many=True),
     ),
 )
@@ -183,7 +184,8 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         description=Path("docs/disaster/xlsx-export-description.md").read_text(),
         responses={
             (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
-        }
+        },
+        filters=True,
     )
     @action(
         detail=False,
@@ -522,7 +524,8 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         description=Path("docs/displacement/xlsx-export-description.md").read_text(),
         responses={
             (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
-        }
+        },
+        filters=True,
     )
     @action(
         detail=False,
@@ -1863,16 +1866,19 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 self._get_displacement_occurred(item.displacement_occurred),
             ])
 
-        response = HttpResponse(content=save_virtual_workbook(wb))
+        response = HttpResponse(
+            content=save_virtual_workbook(wb),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
         response['Content-Disposition'] = f'attachment; filename={filename}.xlsx'
-        response['Content-Type'] = 'application/octet-stream'
         return response
 
     @extend_schema(
         description=Path("docs/disaggregation/geojson-export-description.md").read_text(),
         responses={
-            (200, "application/geo+json"): OpenApiTypes.OBJECT,
+            (200, "application/geo+json"): OpenApiTypes.STR,
         },
+        filters=True,
     )
     @action(
         detail=False,
@@ -1904,7 +1910,8 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         description=Path("docs/disaggregation/xlsx-export-description.md").read_text(),
         responses={
             (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
-        }
+        },
+        filters=True,
     )
     @action(
         detail=False,
@@ -1912,6 +1919,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         url_path="disaggregated-export",
         permission_classes=[AllowAny],
         pagination_class=None,
+        renderer_classes=[],
     )
     def export_disaggregated(self, request):
         """

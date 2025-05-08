@@ -641,37 +641,184 @@ class FigureTagUpdateSerializer(UpdateSerializerMixin,
 
 
 class FigureReadOnlySerializer(serializers.ModelSerializer):
-    country = serializers.CharField(source='country_name')
-    iso3 = serializers.CharField()
-    latitude = serializers.FloatField(source='centroid_lat')
-    longitude = serializers.FloatField(source='centroid_lon')
-    centroid = serializers.CharField()
-    displacement_type = serializers.CharField(source='figure_cause')
-    qualifier = serializers.CharField(source='quantifier_label')
-    figure = serializers.IntegerField(source='total_figures')
-    displacement_start_date = serializers.CharField()
-    displacement_end_date = serializers.CharField()
-    displacement_date = serializers.CharField()
-    event_name = serializers.CharField()
-    event_codes = serializers.CharField()
-    event_code_types = serializers.CharField()
-    event_start_date = serializers.CharField()
-    event_end_date = serializers.CharField()
-    category = serializers.CharField(source='disaster_category_name')
-    subcategory = serializers.CharField(source='disaster_sub_category_name')
-    type = serializers.CharField(source='disaster_type_name')
-    subtype = serializers.CharField(source='disaster_sub_type_name')
-    year = serializers.IntegerField()
-    standard_popup_text = serializers.CharField()
-    standard_info_text = serializers.CharField()
-    role = serializers.CharField()
-    sources = serializers.CharField(source='sources_name')
-    source_url = serializers.CharField(source='entry_url_or_document_url')
-    locations_name = serializers.CharField()
-    locations_coordinates = serializers.CharField()
-    locations_accuracy = serializers.CharField()
-    locations_type = serializers.CharField()
-    displacement_occurred = serializers.CharField(source='displacement_occurred_transformed')
+    country = serializers.CharField(
+        source='country_name',
+        help_text="Short name of the country or territory."
+    )
+    iso3 = serializers.CharField(
+        help_text="Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area."
+    )
+    latitude = serializers.FloatField(
+        source='centroid_lat',
+        help_text="Geographic coordinate in decimal degrees (latitude)."
+    )
+    longitude = serializers.FloatField(
+        source='centroid_lon',
+        help_text="Geographic coordinate in decimal degrees (longitude)."
+    )
+    centroid = serializers.CharField(
+        help_text="Geographical center point of the data's location."
+    )
+    displacement_type = serializers.CharField(
+        source='figure_cause',
+        help_text="Identifies the trigger of displacement such as conflict or disasters."
+    )
+    qualifier = serializers.CharField(
+        source='quantifier_label',
+        help_text="Indicates the level of uncertainty or accuracy associated with the figure."
+    )
+    figure = serializers.IntegerField(
+        source='total_figures',
+        help_text="Total number of internal displacements (flows)."
+    )
+    displacement_start_date = serializers.CharField(
+        help_text="Approximate date when the displacement flow started."
+    )
+    displacement_end_date = serializers.CharField(
+        help_text="Approximate date when the displacement flow ended."
+    )
+    displacement_date = serializers.CharField(
+        help_text="Initial date when the displacement flow began."
+    )
+    event_id = serializers.IntegerField(
+        help_text="Unique identifier for events as assigned by IDMC."
+    )
+    event_name = serializers.CharField(
+        help_text="This field includes the event's coded name which is based on the country,\n"
+        "type of hazard, location, and start date. "
+        "It also incorporates the common or official name of the event when available."
+    )
+    event_codes = serializers.CharField(
+        help_text="(Field description not provided in the context; consider documenting separately if needed.)"
+    )
+    event_code_types = serializers.CharField(
+        help_text="(Field description not provided in the context; consider documenting separately if needed.)"
+    )
+    event_start_date = serializers.CharField(
+        help_text="Date when the event or hazard began."
+    )
+    event_end_date = serializers.CharField(
+        help_text="Date when the event or hazard concluded."
+    )
+    category = serializers.CharField(
+        source='disaster_category_name',
+        help_text="Natural Hazard category that triggered displacement based on the "
+        "IRDR Peril Classification and Hazard Glossary."
+    )
+    subcategory = serializers.CharField(
+        source='disaster_sub_category_name',
+        help_text="Hazard category based on the CRED EM-DAT classification."
+    )
+    type = serializers.CharField(
+        source='disaster_type_name',
+        help_text="Hazard type as categorized by CRED EM-DAT."
+    )
+    subtype = serializers.CharField(
+        source='disaster_sub_type_name',
+        help_text="Specific sub-type of the hazard based on the CRED EM-DAT."
+    )
+    year = serializers.IntegerField(
+        help_text="Year in which the displacement occurred."
+    )
+    standard_popup_text = serializers.CharField(
+        help_text="Standard text from the IDMC website for the data entry."
+    )
+    standard_info_text = serializers.CharField(
+        help_text="Additional standard information provided by IDMC."
+    )
+    role = serializers.CharField(
+        help_text="The field of data delineates the most reliable figure accessible"
+        "as determined by the primary data source, "
+        "the methodology employed in data collection, the scope of coverage, "
+        "and the promptness of the reported information. "
+        "This framework is essential in understanding two key types of figures: \n\n"
+        "**Recommended Figure:** This is the figure that has been identified with "
+        "the highest level of confidence or robustness to represent the population "
+        "flow. It is selected based on thorough evaluation and "
+        "is recommended for inclusion in our official estimates for a specific event. "
+        "Such figures are crucial "
+        "as they can be aggregated to facilitate detailed analysis. The role of a "
+        "figure can change over time. "
+        "As new data becomes available, a figure that was once a “Recommended Figure” may become outdated and "
+        "be reclassified as a “Triangulation Figure”.\n\n"
+        "**Triangulation Figure:** For the purposes of the IDU dataset, these entries represent often the first "
+        "estimates of the magnitude of a displacement situation. These are provisional estimates reflect various "
+        "updates regarding displacement situations. They are utilized until a more solid or robust estimate becomes "
+        "available, especially as more data is gathered by local primary data sources."
+    )
+    sources = serializers.CharField(
+        source='sources_name',
+        help_text="Names of the primary data providers or original sources for the reported displacement data."
+    )
+    source_url = serializers.CharField(
+        source='entry_url_or_document_url',
+        help_text="URL of the source reported."
+    )
+    locations_name = serializers.CharField(
+        help_text="This field indicates the names of locations where displacement incidents have been reported.\n\n"
+        "It is important to note that this field may exhibit a many-to-one relationship "
+        "signifying that multiple location names could be associated with a single "
+        "reported figure preventing disaggregation by individual location. "
+        "This becomes particularly relevant in geospatial analysis, where Geographic Information System (GIS) "
+        "software may interpret these multi-point entities as single data points, "
+        "potentially leading to the inadvertent double-counting of figures. "
+        "To mitigate this issue, it's advisable to preprocess the dataset by "
+        "either dividing the total figure by the number of locations "
+        "or distributing the 'Total figures' values based on a weighting factor such as population density. "
+        "This ensures a more accurate representation of the displacement data across "
+        "individual locations and prevents duplication of figures during analysis."
+    )
+    locations_coordinates = serializers.CharField(
+        help_text="This field contains geographic coordinates representing the reported locations. "
+        "Please note that this field contains multipoints, meaning that multiple locations may represent one figures. "
+        "It's important to note that this field may exhibit a many-to-one relationship signifying that multiple location "
+        "names could be associated with a single reported figure preventing disaggregation by individual location. "
+        "This becomes particularly relevant in geospatial analysis, where Geographic Information System (GIS) software "
+        "may interpret these multi-point entities as single data points, potentially leading "
+        "to the inadvertent double-counting of figures. To mitigate this issue, it's "
+        "advisable to preprocess the dataset by either dividing the total figure by the number of locations "
+        "or distributing the 'Total figures' values based on a weighting factor "
+        "such as population density. This ensures a more accurate representation of the displacement "
+        "data across individual locations and prevents duplication of figures during analysis."
+    )
+    locations_accuracy = serializers.CharField(
+        help_text="This field indicates the estimated precision of the reported "
+        "locations. It serves as a clue to the likely administrative unit level (e.g. "
+        "country, state, district) used for reporting."
+    )
+    locations_type = serializers.CharField(
+        help_text="This field specifies the type of displacement location within a reported event. It can indicate:\n\n"
+        "**Origin:** The place where people were displaced from \n\n"
+        "**Destination:** The location where displaced people arrived.\n\n"
+        "**Both:** In some cases both origin and destination information might be included. \n\n"
+        "It's crucial to note that different locations reported for a single figure may "
+        "pertain to both the origin and destination of displacement incidents. This "
+        "distinction is particularly salient in geospatial analysis where Geographic "
+        "Information System (GIS) software may interpret these multi-point entities as "
+        "singular data points potentially resulting in inadvertent double-counting of "
+        "figures. To mitigate this issue, it is recommended to preprocess the dataset "
+        "prior to GIS analysis to ensure accurate representation and avoid duplication "
+        "of figures."
+    )
+    displacement_occurred = serializers.CharField(
+        source='displacement_occurred_transformed',
+        help_text="This field contains values that represent if preventive evacuations were reported."
+        "These evacuations are the result of existing early warning systems."
+    )
+    displacement_type = serializers.CharField(
+        help_text="Identifies the trigger of displacement such as conflict or disasters.",
+    )
+    old_id = serializers.CharField(
+        help_text="Legacy identifier for the data entry."
+    )
+    sources = serializers.CharField(
+        help_text="This field lists the names of the primary data providers "
+        "or the original sources for the internal displacement data reported by IDMC."
+    )
+    source_url = serializers.CharField(
+        help_text="URL of the source reported."
+    )
+    created_at = serializers.DateTimeField(help_text="Date when the data entry was created.")
 
     class Meta:
         model = Figure

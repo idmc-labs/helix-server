@@ -1,3 +1,4 @@
+from pathlib import Path
 from rest_framework import viewsets
 from django.db.models import F, When, Case, Value, CharField, Avg, Q, Func
 from django.db.models.functions import Concat, Coalesce, ExtractYear, Lower, Cast
@@ -19,6 +20,7 @@ from apps.common.utils import (
 from apps.gidd.views import client_id
 from utils.common import track_gidd
 from utils.db import Array
+from drf_spectacular.utils import extend_schema, extend_schema_view
 
 
 def get_idu_data(filters=None):
@@ -384,13 +386,21 @@ class ExternalEndpointBaseCachedViewMixin():
         return Response(_empty_response, status=status.HTTP_202_ACCEPTED)
 
 
+@extend_schema_view(
+    get=extend_schema(
+        description=Path("docs/idus/main-description.md").read_text(),
+        responses=FigureReadOnlySerializer,
+    )
+)
 class IdusFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS
 
 
+@extend_schema(responses=FigureReadOnlySerializer)
 class IdusAllFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL
 
 
+@extend_schema(responses=FigureReadOnlySerializer)
 class IdusAllDisasterCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER
