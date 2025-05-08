@@ -661,6 +661,17 @@ CORS_ALLOW_HEADERS = (
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
+def spectacular_param_sorter(value):
+    if value.get('name', None) == 'client_id':
+        return 1
+    if value.get('name', None) == 'release_environment':
+        return 2
+    if value.get('name', None) == 'offset':
+        return 4
+    if value.get('name', None) == 'limit':
+        return 5
+    return 3
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Helix API documentation',
     'DESCRIPTION': Path("docs/main/description.md").read_text(),
@@ -694,7 +705,7 @@ SPECTACULAR_SETTINGS = {
         'helix.openapi.preprocessing_filter_spec'
     ],
     'SORT_OPERATIONS': True,
-    'SORT_OPERATION_PARAMETERS': False,
+    'SORT_OPERATION_PARAMETERS': spectacular_param_sorter,
     # 'ENABLE_LIST_MECHANICS_ON_NON_2XX': True,
 
     "SWAGGER_UI_SETTINGS": {
