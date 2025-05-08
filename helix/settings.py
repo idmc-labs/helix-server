@@ -662,16 +662,41 @@ CORS_ALLOW_HEADERS = (
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Helix API',
+    'TITLE': 'Helix API documentation',
     'DESCRIPTION': Path("docs/main/description.md").read_text(),
+    'TOS': 'https://www.internal-displacement.org/terms-of-use/',
+    'LICENSE': {
+        'name': 'Creative Commons Attribution-Non-Commercial-Share Alike 3.0 IGO',
+        'url': 'https://creativecommons.org/licenses/by-nc-sa/3.0/igo/legalcode.en',
+    },
     'VERSION': 'v1',
+    'CONTACT': {
+        "email": "ch.datainfo@idmc.ch",
+    },
+    'EXTERNAL_DOCS': {
+        'name': 'About our data',
+        'url': 'https://www.internal-displacement.org/monitoring-tools/',
+    },
+    'TAGS': [
+        {
+            'name': 'GIDD',
+            'description': 'Global Internal Displacement Database',
+        },
+        {
+            'name': 'IDU',
+            'description': 'Internal Displacement Updates',
+        },
+    ],
+
+
     'SERVE_INCLUDE_SCHEMA': False,
     'PREPROCESSING_HOOKS': [
         'helix.openapi.preprocessing_filter_spec'
     ],
-    'CONTACT': {
-        "email": "ch.datainfo@idmc.ch",
-    },
+    'SORT_OPERATIONS': True,
+    'SORT_OPERATION_PARAMETERS': False,
+    # 'ENABLE_LIST_MECHANICS_ON_NON_2XX': True,
+
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
         "defaultModelsExpandDepth": 4,
@@ -682,12 +707,10 @@ SPECTACULAR_SETTINGS = {
         "displayOperationId ": False,
         "tryItOutEnabled": True,
     },
-    'ENABLE_LIST_MECHANICS_ON_NON_2XX': True,
     'SWAGGER_UI_DIST': 'SIDECAR',  # shorthand to use the sidecar instead
     'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
-    'REDOC_DIST': 'SIDECAR',
 
-    'SORT_OPERATION_PARAMETERS': False,
+    'REDOC_DIST': 'SIDECAR',
 }
 
 if DEBUG:

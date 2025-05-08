@@ -1,5 +1,4 @@
-## API documentation
-### Introduction
+## Introduction
 IDMC provides APIs to make the data in our Global Internal Displacement Database (GIDD) and Internal Displacement Updates (IDU) directly available to developers and analysts. This page has detailed descriptions of the databases and how to use the APIs. For feedback or technical questions contact [ch.datainfo@idmc.ch](mailto:ch.datainfo@idmc.ch).
 
 Our API documentation also includes widgets that allow users to embed data visualization products directly into their websites. Additionally, users can access datasets with various levels of geospatial disaggregation, along with contextual information detailing the sources, methodologies, and caveats associated with the figures reported by IDMC in the GIDD.
