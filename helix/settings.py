@@ -94,7 +94,7 @@ HELIX_ENVIRONMENT = env('COPILOT_ENVIRONMENT_NAME') or env('HELIX_ENVIRONMENT')
 DEBUG = env('DJANGO_DEBUG')
 logger.debug(f'\nServer running in {DEBUG=} mode.\n')
 
-ALLOWED_HOSTS = env('DJANGO_ALLOWED_HOST')
+ALLOWED_HOSTS = ['*']
 
 IN_AWS_COPILOT_ECS = not not env('COPILOT_SERVICE_NAME')
 

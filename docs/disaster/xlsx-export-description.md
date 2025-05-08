@@ -1,3 +1,5 @@
+This dataset provides an excel download with disaster data
+
 **Fields description**:
 
 | Label (Excel file)                  | API field name         | Definition |

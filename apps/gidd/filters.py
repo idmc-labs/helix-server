@@ -32,6 +32,17 @@ class ReleaseMetadataFilter(django_filters.FilterSet):
         choices=get_name_choices(ReleaseMetadata.ReleaseEnvironment),
     )
 
+    CUSTOM_HELP_TEXT = {
+        "iso3": "Filter by ISO 3166-1 alpha-3 code"
+    }
+
+    @classmethod
+    def filter_for_field(cls, f, name, lookup_expr):
+        filter = super().filter_for_field(f, name, lookup_expr)
+        if custom_help_text := cls.CUSTOM_HELP_TEXT.get(f.name, None):
+            filter.extra['help_text'] = custom_help_text
+        return filter
+
     def no_op(self, qs, name, value):
         return qs
 
