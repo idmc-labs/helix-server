@@ -674,9 +674,12 @@ SPECTACULAR_SETTINGS = {
     },
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
+        "defaultModelsExpandDepth": 4,
+        "defaultModelExpandDepth": 4,
+        "defaultModelRendering": "model",
         "syntaxHighlight": False,  # Disabling syntax highlighting as it takes considerable time to load
         "persistAuthorization": True,
-        "displayOperationId": True,
+        "displayOperationId ": False,
         "tryItOutEnabled": True,
     },
     'ENABLE_LIST_MECHANICS_ON_NON_2XX': True,
