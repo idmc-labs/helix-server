@@ -7,8 +7,8 @@
 
     html, body {
         position: relative;
-        margin: 0;
-        padding: 0;
+        margin: 0px;
+        padding: 0px;
         font-family: 'proxima-nova', sans-serif;
         background-color: #ffffff,
     }
@@ -38,6 +38,40 @@
 
     .model-title__text {
         font-size: 12px;
+    }
+
+    .renderedMarkdown th:not(:first-of-type) {
+        padding-left: 12px;
+    }
+    .renderedMarkdown td:not(:first-of-type) {
+        padding-left: 12px;
+    }
+
+    .parameter__in {
+        display: none;
+    }
+
+    td.parameters-col_description {
+        display: flex;
+        flex-direction: column-reverse;
+        margin-bottom: 0px !important;
+        padding-bottom: 10px !important;
+        align-items: flex-start;
+    }
+    td.parameters-col_description select {
+        width: 340px;
+        min-height: 40px !important;
+        margin: 5px 0;
+        border-color: #d9d9d9 !important;
+        box-shadow: none;
+        background-color: #ffff !important;
+    }
+
+    .renderedMarkdown th:first-of-type {
+        width: 12em;
+    }
+    .renderedMarkdown td:first-of-type {
+        width: 12em;
     }
   </style>
 {% endblock %}
