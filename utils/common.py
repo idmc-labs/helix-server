@@ -6,9 +6,11 @@ import re
 import decimal
 import tempfile
 import logging
+import urllib.parse
 from datetime import timedelta
 
 from django.conf import settings
+from django.urls import reverse
 from rest_framework.exceptions import PermissionDenied
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -211,6 +213,19 @@ def return_error_as_string(func):
             return traceback.format_exc()
     _wrapper.__name__ = func.__name__
     return _wrapper
+
+
+def get_admin_panel_change_url(obj):
+    return urllib.parse.urljoin(
+        settings.BACKEND_BASE_URL,
+        reverse(
+            "admin:{}_{}_change".format(
+                obj._meta.app_label,
+                obj._meta.model_name,
+            ),
+            args=(obj.pk,),
+        )
+    )
 
 
 client_id = extend_schema(

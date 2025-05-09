@@ -10,7 +10,7 @@ from apps.contrib.models import BulkApiOperation
 from apps.contrib.bulk_operations.serializers import BulkApiOperationSerializer
 from apps.contrib.bulk_operations.tasks import generate_dummy_request
 from apps.users.utils import HelixInternalBot
-from utils.common import RuntimeProfile
+from utils.common import RuntimeProfile, get_admin_panel_change_url
 
 
 class Command(BaseCommand):
@@ -24,7 +24,7 @@ class Command(BaseCommand):
             help='Delete events that are not associated with any figures'
         )
 
-    def update_figure_event(self, figure_event_map: dict) -> None:
+    def update_figure_event(self, figure_event_map: dict) -> BulkApiOperation:
         # Helix Bot
         internal_bot = HelixInternalBot()
         api_request = generate_dummy_request(internal_bot.user)
@@ -64,7 +64,7 @@ class Command(BaseCommand):
         with RuntimeProfile('bulk_operation'):
             with internal_bot.temporary_role(USER_ROLE.ADMIN):
                 assert serializer.is_valid() is True, serializer.errors
-                serializer.save()
+                return serializer.save()
 
     def handle(self, *args, **kwargs):
         csv_file_path = kwargs['csv_file_path']
@@ -106,7 +106,13 @@ class Command(BaseCommand):
                 figure_event_map[figure_id] = new_event_id
 
         if figure_event_map:
-            self.update_figure_event(figure_event_map)
+            bulk_operation_obj = self.update_figure_event(figure_event_map)
+            bulk_operation_obj.refresh_from_db()
+            self.stdout.write(f"Bulk operation: {get_admin_panel_change_url(bulk_operation_obj)}")
+            self.stdout.write(self.style.SUCCESS(f"\tSuccess count: {bulk_operation_obj.success_count}"))
+            if bulk_operation_obj.failure_count:
+                self.stdout.write(self.style.ERROR(f"\tFailure count: {bulk_operation_obj.failure_count}"))
+
         else:
             self.stdout.write(
                 self.style.ERROR(
@@ -119,10 +125,10 @@ class Command(BaseCommand):
                 total_figure_count=Count('figures')
             )
 
-            # Delete the events that arenot associated with any figures
+            # Delete the events that aren't associated with any figures
             events_to_be_deleted_stat = event_to_be_deleted_qs.filter(total_figure_count=0).delete()
             self.stdout.write(
-                self.style.SUCCESS(
+                self.style.WARNING(
                     f'Deleted events: {events_to_be_deleted_stat}'
                 )
             )
@@ -131,8 +137,9 @@ class Command(BaseCommand):
             failed_to_delete_event_stat = event_to_be_deleted_qs.filter(
                 total_figure_count__gt=0
             ).values_list("id", flat=True)
+
             self.stdout.write(
                 self.style.ERROR(
-                    f'Failed to delete events: {failed_to_delete_event_stat}'
+                    f'Failed to delete event IDs: {list(failed_to_delete_event_stat)}'
                 )
             )

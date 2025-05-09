@@ -130,11 +130,13 @@ class ReleaseMetadataSerializer(serializers.ModelSerializer):
 
 
 class DisaggregationSerializer(serializers.ModelSerializer):
+    figure = serializers.IntegerField(source='figure_raw_id', required=False, allow_null=True)
+
     class Meta:
         model = GiddFigure
         fields = (
             'iso3',
-            'figure_raw_id',
+            'figure',
             'country_name',
             'geographical_region_name',
             'year',
