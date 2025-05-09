@@ -661,6 +661,7 @@ CORS_ALLOW_HEADERS = (
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
+
 def spectacular_param_sorter(value):
     if value.get('name', None) == 'client_id':
         return 1
@@ -673,6 +674,7 @@ def spectacular_param_sorter(value):
     if value.get('name', None) == 'limit':
         return 6
     return 3
+
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'IDMC API documentation',

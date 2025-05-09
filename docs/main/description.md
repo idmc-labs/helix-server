@@ -15,10 +15,10 @@ Our API documentation also includes widgets that allow users to embed data visua
 - [Caveats and limitations of the IDU dataset](#caveats)
 - [Code sample to read and export the IDU API as a geojson file for GIS applications](#code-sample)
 - [Widgets](#widgets)
-- [General caveats and limitations of the datasets](#caveats-limitation")
-- [Copyrights and citation of the data](#copyright")
-- [Citation](#citation")
-- [Support](#support")
+- [General caveats and limitations of the datasets](#caveats-limitation)
+- [Copyrights and citation of the data](#copyright)
+- [Citation](#citation)
+- [Support](#support)
 
 <h2 id="overview">Overview of IDMC and the Global Internal Displacement Database (GIDD)</h2>
 
@@ -173,10 +173,10 @@ To integrate a widget, include the provided HTML snippet into your webpage.
 
 All derived work from IDMC data could cite IDMC following this example:
 
-Internal Displacement Monitoring Centre. Global Internal Displacement Database. IDMC (2023). Available at: https://www.internal-displacement.org/database/displacement-data/ (Accessed: [date of access]).
+Internal Displacement Monitoring Centre. Global Internal Displacement Database. IDMC (2023). Available at: [https://www.internal-displacement.org/database/displacement-data/](https://www.internal-displacement.org/database/displacement-data/) (Accessed: [date of access]).
 
 <h2 id="support">Support</h2>
 
-For feedback or technical questions contact ch.datainfo@idmc.ch.
+For feedback or technical questions contact [ch.datainfo@idmc.ch](mailto:ch.datainfo@idmc.ch).
 
-For additional tools and resources visit the IDMC monitoring tools page.
+For additional tools and resources visit the [IDMC monitoring tools](https://www.internal-displacement.org/monitoring-tools/) page.
