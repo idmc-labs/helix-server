@@ -25,7 +25,8 @@ This endpoint provides quality-controlled, annually validated data on internal d
 | Stock date accuracy           | Uncertainty or accuracy of stock date. |
 | Stock reporting date          | This field reflects the year IDMC uses to report the total number of internally displaced persons (IDPs). It represents the IDMC reporting year, which may not coincide with the actual data collection year. Given the protracted nature of displacement, annual updates on the total number of IDPs may not always be available. To maintain accuracy in reporting, IDMC relies on the most recent verified data until evidence shows that the displaced population has achieved a durable solution. |
 | Publishers                    | Organizations responsible for distributing and disseminating internal displacement data. This field lists the names of the primary data providers or the original sources for the internal displacement data reported by IDMC. |
-| Sources                       | Sources type: This field categorizes the type of source as defined by IDMC. |
+| Sources                       | This field lists the names of the primary data providers or the original sources for the internal. |
+| Sources type                  | This field categorizes the type of source as defined by IDMC. |
 | Event ID                      | Unique identifier for events as assigned by IDMC. |
 | Event name                    | This field includes the event's coded name which is based on the country, type of hazard, location, and start date. It also incorporates the common or official name of the event when available. |
 | Event cause                   | Identifies the trigger of displacement such as conflict or disasters. |
