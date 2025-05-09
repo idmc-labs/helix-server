@@ -1905,7 +1905,9 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
     @extend_schema(
         description=Path("docs/disaggregation/geojson-export-description.md").read_text(),
         responses={
-            (200, "application/geo+json"): OpenApiTypes.STR,
+            # FIXME: Handle proper accept header
+            # (200, "application/geo+json"): OpenApiTypes.STR,
+            (200, "application/json"): OpenApiTypes.STR,
         },
         filters=True,
         tags=['GIDD'],

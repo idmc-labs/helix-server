@@ -71,8 +71,9 @@ GET https://helix-tools-api.idmcdb.org/external-api/gidd/displacements/?client_i
 
 IDMC offers widgets that can be embedded into websites to display displacement data. These widgets are configurable and can be tailored to show specific data subsets.
 
-
 <h3 id="conflict-widget">Conflict Widget</h3>
+
+![Conflict Widget](https://s3-ap-southeast-1.amazonaws.com/tc-codimd/uploads/331ae676863e494e83598e717.png)
 
 - Visualizes internal displacements and the total number of IDPs by country and year.
 - Use parameter `page=conflict-widget` to select this widget
@@ -100,12 +101,16 @@ To integrate a widget, include the provided HTML snippet into your webpage.
 
 <h3 id="disaster-widget">Disaster Widget</h3>
 
+![Disaster Widget](https://s3-ap-southeast-1.amazonaws.com/tc-codimd/uploads/331ae676863e494e83598e718.png)
+
 - Displays disaster events disaggregated by country, hazard type, and year.
 - Use parameter `page=disaster-widget` to select this widget
 - **Parameters:**
     - iso3 (required)
 
 <h3 id="idu-widget">IDU Widget</h3>
+
+![IDU Widget](https://s3-ap-southeast-1.amazonaws.com/tc-codimd/uploads/331ae676863e494e83598e719.png)
 
 - Shows IDU map data with filters for monthly queries and a carousel for latest updates.
 - Use parameter `page=idu-map` to select this widget
@@ -114,11 +119,12 @@ To integrate a widget, include the provided HTML snippet into your webpage.
 
 <h3 id="gidd-widget">GIDD Widget</h3>
 
+![GIDD Widget](https://s3-ap-southeast-1.amazonaws.com/tc-codimd/uploads/331ae676863e494e83598e71a.png)
+
 - Shows the GIDD data with charts and filters.
 - Use parameter `page=gidd` to select this widget
 - **Parameters:**
     - No parameters
-
 
 <h2 id="code-sample">Code sample to read and export the IDU API as a geojson file for GIS applications</h2>
 
