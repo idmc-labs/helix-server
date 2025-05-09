@@ -43,36 +43,42 @@ This documentation will guide you through accessing and making the most of IDMCâ
 In order to access the APIs, please request an API key by emailing [ch.datainfo@idmc.ch](mailto:ch.datainfo@idmc.ch). Briefly describe your intended use case for the data in your email. You will receive an API key via email.
 
 1. To get an API key, please contact [ch.datainfo@idmc.ch](ch.datainfo@idmc.ch). The key will be sent to your email, enabling access to IDMC's API. Create and save the Python script in a file, navigate to its directory in a terminal, run it with `python export_geojson.py`, and check for the `IDMC_IDU.geojson` output.
-    ```bash
-    import requests
-    import json
+   ```bash
+   import requests
+   import json
 
-    # URL of the JSON API
-    url = "LINK TO THE API END POINT"
+   # URL of the JSON API
+   url = "LINK TO THE API END POINT"
 
-    response = requests.get(url).json()  # Assumes successful response and valid JSON
+   response = requests.get(url).json()  # Assumes successful response and valid JSON
 
-    geojson = {
-    "type": "FeatureCollection",
-    "features": [{
-    "type": "Feature",
-    "properties": {k: v for k, v in item.items() if k != "latitude" and k != "longitude"},
-    "geometry": {"type": "Point", "coordinates": [item["longitude"], item["latitude"]]}
-    } for item in response]
-    }
+   geojson = {
+       "type": "FeatureCollection",
+       "features": [
+           {
+               "type": "Feature",
+               "properties": {
+                   k: v for k, v in item.items() if k != "latitude" and k != "longitude"
+               },
+               "geometry": {
+                   "type": "Point",
+                   "coordinates": [item["longitude"], item["latitude"]],
+               },
+           } for item in response
+       ],
+   }
 
-    # Define the path where you want to save the file
-    # Adjust the path as needed for your specific requirements
-    file_path = "C:\\path\\to\\your\\folder\\IDMC_IDU.geojson"  # Update this path for windows environments
-    # file_path = "/path/to/your/folder/displacements.geojson"  # Update this path for Linux/MacOS environments
+   # Define the path where you want to save the file
+   # Adjust the path as needed for your specific requirements
+   file_path = "C:\\path\\to\\your\\folder\\IDMC_IDU.geojson"  # Update this path for windows environments
+   # file_path = "/path/to/your/folder/displacements.geojson"  # Update this path for Linux/MacOS environments
 
 
-    with open(file_path, "w") as f:
-    f.write(json.dumps(geojson, indent=4))
+   with open(file_path, "w") as f:
+       f.write(json.dumps(geojson, indent=4))
 
-    print("GeoJSON file created successfully.")
-    ```
-
+   print("GeoJSON file created successfully.")
+   ```
 2. For QGIS, drag and drop the file into QGIS.
 3. For ArcGIS Pro, use the JSON to Features tool to read the geojson file and open it as a shapefile.
 
