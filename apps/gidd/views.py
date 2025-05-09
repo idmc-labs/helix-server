@@ -56,6 +56,18 @@ from .rest_filters import (
     DisaggregationPublicFigureAnalysisFilterSet,
 )
 from utils.common import track_gidd, client_id
+from django.utils.encoding import smart_str
+from rest_framework import renderers
+
+
+class XlsxRenderer(renderers.BaseRenderer):
+    media_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    format = 'xlsx'
+    charset = None
+    render_style = 'binary'
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
 
 
 def _get_location_accuracy_label(accuracy):
@@ -549,6 +561,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         url_path="displacement-export",
         permission_classes=[AllowAny],
         pagination_class=None,
+        renderer_classes=[XlsxRenderer],
     )
     def export(self, request):
         """
@@ -1926,7 +1939,9 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
     @extend_schema(
         description=Path("docs/disaggregation/xlsx-export-description.md").read_text(),
         responses={
-            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
+            # FIXME: Handle proper accept header
+            # (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): None,
         },
         filters=True,
         tags=['GIDD'],
@@ -1937,7 +1952,8 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         url_path="disaggregated-export",
         permission_classes=[AllowAny],
         pagination_class=None,
-        renderer_classes=[],
+        # FIXME: Handle proper accept header
+        # renderer_classes=[XlsxRenderer],
     )
     def export_disaggregated(self, request):
         """

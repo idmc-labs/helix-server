@@ -33,6 +33,7 @@ urlpatterns = [
     path('idus/all/disaster/', IdusAllDisasterCachedView.as_view()),
 
     path('gidd/', include(router.urls)),
+    # NOTE: If we do not add these manually, the are not visible in GIDD
     path('gidd/disaggregations/disaggregation-geojson/', DisaggregationViewSet.as_view({
         'get': 'export_disaggregated_geojson',
     }), name='disaggregations-geojson-view'),

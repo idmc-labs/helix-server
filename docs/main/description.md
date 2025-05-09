@@ -16,7 +16,7 @@ Our API documentation also includes widgets that allow users to embed data visua
 - [Code sample to read and export the IDU API as a geojson file for GIS applications](#code-sample)
 - [Widgets](#widgets)
 - [General caveats and limitations of the datasets](#caveats-limitation")
-- [Copy rights and citation of the data](#copyright")
+- [Copyrights and citation of the data](#copyright")
 - [Citation](#citation")
 - [Support](#support")
 
@@ -32,6 +32,7 @@ IDMC offers two primary data products: the Global Internal Displacement Database
 
 - **[Global Internal Displacement Database (GIDD):](https://www.internal-displacement.org/database/displacement-data/)** This database is the product of an annual process that involves collecting, harmonizing, and validating data followed by a thorough peer review. We engage with primary data providers and relevant actors at various levels—national, regional, and global. Published annually, the GIDD has been acknowledged by several UN resolutions for its significance. The GIDD data is detailed by country and year for conflict-induced displacement, while disaster-induced displacement is recorded at the event level. Additional disaggregated data is also available since 2023.
 - **[Internal Displacement Updates (IDU):](https://www.internal-displacement.org/internal-displacement-updates/)** IDMC's IDU offers preliminary, timely, and detailed insights into new displacement events reflecting our ongoing daily monitoring efforts. This event-based dataset provides initial snapshots of displacement trends which may later be refined and consolidated in the GIDD. It's important to note that these figures do not undergo the same level of quality control as the GIDD data, as the IDU data reflects timely updates that are subject to change as more information becomes available following a displacement event.
+
 For further details on IDMC's methodology please visit our website or our [monitoring tools page](https://www.internal-displacement.org/monitoring-tools/).
 
 This documentation will guide you through accessing and making the most of IDMC’s APIs, helping you to effectively integrate and utilize our data in your applications and analyses.
@@ -162,7 +163,7 @@ To integrate a widget, include the provided HTML snippet into your webpage.
 - Use the "Recommended Figure" over "Triangulation Figure" for the most accurate data.
 - For spatial analysis, preprocess multi-location data to avoid double counting.
 
-<h2 id="copyright">Copy rights and citation of the data</h2>
+<h2 id="copyright">Copyrights and citation of the data</h2>
 
 - **Non-Commercial Use:** Data is available under the Creative Commons Attribution-Non-Commercial-Share Alike 3.0 IGO license.
 - **Attribution:** Proper attribution to IDMC is required when using the data.

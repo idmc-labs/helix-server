@@ -1,6 +1,5 @@
 This endpoint provides quality-controlled, annually validated data on internal displacement due to conflicts and disasters, disaggregated by caseload. This dataset is disaggregated by caseload, location and event.
 
-**Fields description**:
 | Field                          | Description |
 |-------------------------------|-------------|
 | ID                            | IDMC figure unique identifier. |
@@ -43,20 +42,3 @@ This endpoint provides quality-controlled, annually validated data on internal d
 | Locations accuracy            | This field indicates the estimated precision of the reported locations. It serves as a clue to the likely administrative unit level (e.g. country, state, district) used for reporting. |
 | Locations type                | This field specifies the type of displacement location within a reported event. It can indicate:<br>- **Origin:** The place where people were displaced from.<br>- **Destination:** The location where displaced people arrived.<br>- **Both:** In some cases both origin and destination information might be included.<br>It's crucial to note that different locations reported for a single figure may pertain to both the origin and destination of displacement incidents. This distinction is particularly salient in geospatial analysis where Geographic Information System (GIS) software may interpret these multi-point entities as singular data points, potentially resulting in inadvertent double-counting of figures. To mitigate this issue, it is recommended to preprocess the dataset prior to GIS analysis to ensure accurate representation and avoid duplication of figures. |
 | Displacement occurred         | This field contains values that represent if preventive evacuations were reported. These evacuations are the result of existing early warning systems. |
-
-Sex and Age Disaggregated Data (SADD) for displacement associated with conflict or disasters is often scarce. One way to estimate it is to use SADD available at the national level. IDMC employs United Nations Population Estimates and Projections to break down the number of internally displaced people by sex and age. The methodology and limitations of this approach are described on IDMC’s website at: https://www.internal-displacement.org/monitoring-tools
-
-**Fields description:**
-| Label (excel file) | API field name | Definition |
-|--------------------|----------------|------------|
-| ISO3 | iso3 | Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area. |
-| Country | country_name | Short name of the country or territory. |
-| Year | year | Indicates the year for which displacement figures are reported. |
-| Sex | sex | This field contains information on Female, Male, and Both Sexes categories following the United Nations Department of Economic and Social Affairs (UN DESA) classifications. |
-| Cause | cause | Identifies the trigger of displacement such as conflict or disasters. |
-| Age_0_4 | age_0_4 | Represents the age cohort from newborns to 4 years old. |
-| Age_5_11 | age_5_11 | Represents children aged 5 to 11 years. |
-| Age_12_17 | age_12_17 | Represents adolescents aged 12 to 17 years. |
-| Age_18_59 | age_18_59 | Represents adults aged 18 to 59 years. |
-| Age_60_plus | age_60_plus | Represents the population aged 60 years and older. |
-

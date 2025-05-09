@@ -666,14 +666,16 @@ def spectacular_param_sorter(value):
         return 1
     if value.get('name', None) == 'release_environment':
         return 2
-    if value.get('name', None) == 'offset':
+    if value.get('name', None) == 'ordering':
         return 4
-    if value.get('name', None) == 'limit':
+    if value.get('name', None) == 'offset':
         return 5
+    if value.get('name', None) == 'limit':
+        return 6
     return 3
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Helix API documentation',
+    'TITLE': 'IDMC API documentation',
     'DESCRIPTION': Path("docs/main/description.md").read_text(),
     'TOS': 'https://www.internal-displacement.org/terms-of-use/',
     'LICENSE': {
