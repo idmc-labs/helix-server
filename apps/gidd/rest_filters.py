@@ -229,9 +229,6 @@ class PublicFigureAnalysisFilterSet(ReleaseMetadataFilter):
 
 
 class DisaggregationFilterSet(django_filters.FilterSet):
-    # client_id = django_filters.CharFilter(
-    #     method="no_op",
-    # )
     cause = django_filters.ChoiceFilter(
         method='filter_cause',
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),

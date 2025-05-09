@@ -746,14 +746,6 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
         "updates regarding displacement situations. They are utilized until a more solid or robust estimate becomes "
         "available, especially as more data is gathered by local primary data sources."
     )
-    sources = serializers.CharField(
-        source='sources_name',
-        help_text="Names of the primary data providers or original sources for the reported displacement data."
-    )
-    source_url = serializers.CharField(
-        source='entry_url_or_document_url',
-        help_text="URL of the source reported."
-    )
     locations_name = serializers.CharField(
         help_text="This field indicates the names of locations where displacement incidents have been reported.\n\n"
         "It is important to note that this field may exhibit a many-to-one relationship "
@@ -809,10 +801,12 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
         help_text="Legacy identifier for the data entry."
     )
     sources = serializers.CharField(
+        source="sources_name",
         help_text="This field lists the names of the primary data providers "
         "or the original sources for the internal displacement data reported by IDMC."
     )
     source_url = serializers.CharField(
+        source='entry_url_or_document_url',
         help_text="URL of the source reported."
     )
     created_at = serializers.DateTimeField(help_text="Date when the data entry was created.")
