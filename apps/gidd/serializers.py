@@ -115,13 +115,13 @@ class DisasterSerializer(serializers.ModelSerializer):
     new_displacement = serializers.IntegerField(
         help_text="Total number of internal displacements reported \"(not rounded)\" "
         "as a result of disasters over the reporting year. "
-        "Units are recorded as 'internal displacement flows' or 'internal displacement movements.'"
+        "Units are recorded as 'internal displacement flows' or 'internal displacement movements'."
     )
 
     new_displacement_rounded = serializers.IntegerField(
         help_text="Total number of internal displacements reported "
         "\"(rounded figures at national level)\" as a result of disasters "
-        "over the reporting year. Units are recorded as 'internal displacement flows' or 'internal displacement movements.'"
+        "over the reporting year. Units are recorded as 'internal displacement flows' or 'internal displacement movements'."
     )
 
     event_codes = serializers.ListField(
@@ -282,7 +282,7 @@ class PublicFigureAnalysisSerializer(serializers.ModelSerializer):
     figures = serializers.IntegerField(
         help_text="Represents the total number of internal displacements or IDPs. "
         "For internal displacements, units are recorded as 'internal displacement flows' "
-        "or 'internal displacement movements.' For the total number of IDPs, units reflect "
+        "or 'internal displacement movements'. For the total number of IDPs, units reflect "
         "the total number of people living in displacement."
     )
 

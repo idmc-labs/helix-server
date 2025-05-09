@@ -367,17 +367,17 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             ['Date of Event (Start): Approximate start date of the event.'],
             [
                 'Disaster Internal Displacements: Total number of internal displacements reported (rounded figures at '
-                'national level), as a result of disasters over the reporting year.Units are recorded as \'internal '
-                'displacement flows\' or \'internal displacement movements.\' '
+                'national level), as a result of disasters over the reporting year. Units are recorded as \'internal '
+                'displacement flows\' or \'internal displacement movements\'.'
             ],
             [
                 'Disaster Internal Displacements raw: Total number of internal displacements reported (not rounded), '
                 'as a result of disasters over the reporting year. Units are recorded as \'internal displacement flows\' '
-                'or \'internal displacement movements.\' '
+                'or \'internal displacement movements\'.'
             ],
             ['Hazard Category: Hazard category based on the CRED EM-DAT classification.'],
             ['Hazard Type: Hazard type as categorized by CRED EM-DAT.'],
-            ['Hazard Sub-Type: Specific sub-type of the hazard based on CRED EM-DAT.'],
+            ['Hazard Sub-Type: Specific sub-type of the hazard based on the CRED EM-DAT classification.'],
             [
                 'Event Codes (Code:Type): Unique codes such as the GLIDE number and other database-specific codes used '
                 'to identify and track specific events across various databases.'
@@ -757,30 +757,30 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             [
                 'Conflict Internal Displacements: Total number of internal displacements reported (rounded figures at '
                 'national level), as a result of conflict and violence over the reporting year. Units are recorded as '
-                '\'internal displacement flows\' or \'internal displacement movements.\' '
+                '\'internal displacement flows\' or \'internal displacement movements\'.'
             ],
             [
                 'Conflict Internal Displacements raw: Total number of internal displacements '
-                'reported (not rounded), as a result of conflict and violence over the reporting year.  Units are '
-                'recorded as \'internal displacement flows\' or \'internal displacement movements.\' '
+                'reported (not rounded), as a result of conflict and violence over the reporting year. Units are '
+                'recorded as \'internal displacement flows\' or \'internal displacement movements\'.'
             ],
             [
                 'Disaster Internal Displacements: Total number of internal displacements reported '
                 '(rounded figures at national level), as a result of disasters over the reporting year. Units are '
-                'recorded as \'internal displacement flows\' or \'internal displacement movements.\' '
+                'recorded as \'internal displacement flows\' or \'internal displacement movements\'.'
             ],
             [
                 'Disaster Internal Displacements raw: Total number of internal displacements reported (not rounded), '
                 'as a result of disasters over the reporting year. Units are recorded as \'internal displacement flows\''
-                ' or \'internal displacement movements.\' '
+                ' or \'internal displacement movements\'.'
             ],
             [
                 'Disaster Total number of IDPs: Total number of IDPs (rounded figures at '
-                'national level), as a result, of disasters as of the end of the reporting year. '
+                'national level), as a result of disasters as of the end of the reporting year. '
                 'Units are recorded as \'People\'.'
             ],
             [
-                'Disaster Total number of IDPs raw: Total number of IDPs (not rounded), as a result, of disasters as of '
+                'Disaster Total number of IDPs raw: Total number of IDPs (not rounded), as a result of disasters as of '
                 'the end of the reporting year. Units are recorded as \'People\'.'
             ],
         ]
@@ -798,11 +798,11 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 'metric, reporting year, and country.'
             ],
             [],
-            ['ISO3: Represents the ISO 3166-1 alpha-3 code, the code \'AB9\' is assigned to the Abyei Area.'],
+            ['ISO3: Represents the ISO 3166-1 alpha-3 code. The code \'AB9\' is assigned to the Abyei Area.'],
             ['Year: Indicates the year for which displacement data are reported.'],
-            ['Figure_Cause_Name: Identifies the trigger of displacement, such as conflict or disasters.'],
+            ['Figure cause: Identifies the trigger of displacement, such as conflict or disasters.'],
             [
-                'Figure_Category_Name: Categorizes the type of displacement metric. It details values for '
+                'Figure category: Categorizes the type of displacement metric. It details values for '
                 'Internal Displacements (internal displacement flows) and Total Number of IDPs (internal displacement '
                 'stocks), as defined earlier in this document.'
             ],
@@ -814,11 +814,11 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             ],
             [
                 'Figures: Represents the total number of internal displacements or IDPs. For internal displacements, '
-                'units are recorded as \'internal displacement flows\' or \'internal displacement movements.\' For total '
+                'units are recorded as \'internal displacement flows\' or \'internal displacement movements\'. For total '
                 'number of IDPs, units reflect the total number of people living in displacement.'
             ],
             [
-                'Figures_Rounded: Displays rounded figures to provide a simplified view of the data that matches the '
+                'Figures rounded: Displays rounded figures to provide a simplified view of the data that matches the '
                 'figures reported in the Global Report on Internal Displacement (GRID).'
             ],
         ]
@@ -839,11 +839,11 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         ])
         ws4.append([])
         readme_text_4 = [
-            ['ISO3: Represents the ISO 3166-1 alpha-3 code, the code \'AB9\' is assigned to the Abyei Area.'],
+            ['ISO3: Represents the ISO 3166-1 alpha-3 code. The code \'AB9\' is assigned to the Abyei Area.'],
             ['Country: Short name of the country or territory.'],
             ['Year: The year for which displacement figures are reported.'],
             [
-                'Sex : This field contains information on Female, Male and Both Sexes categories following the United '
+                'Sex: This field contains information on Female, Male, and Both Sexes categories following the United '
                 'Nations Department of Economic and Social Affairs (UN DESA) classifications. '
             ],
             ['Cause:  Identifies the trigger of displacement, such as conflict or disasters.'],
@@ -1167,19 +1167,19 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "ISO3: Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area.\n"
             "Country / Territory: Short name of the country or territory.\n"
             "Geographical region: Corresponds to IDMC's geographical regions.\n"
-            "Figure cause:  Identifies the trigger of displacement, such as conflict or disasters.\n"
+            "Figure cause: Identifies the trigger of displacement, such as conflict or disasters.\n"
             "Year: Indicates the year for which displacement data are reported.\n"
-            "Figure category:  Categorizes the type of displacement metric. It details values for Internal Displacements "
+            "Figure category: Categorizes the type of displacement metric. It details values for Internal Displacements "
             "(internal displacement flows) and Total Number of IDPs (internal displacement stocks), as "
             "defined earlier in this document.\n"
             "Total figures: Represents the total number of internal displacements or IDPs. For internal displacements, "
-            "units are recorded as 'internal displacement flows' or 'internal displacement movements.' "
-            "For total number of IDPs, units reflect the total number of people living in displacement.\n"
+            "units are recorded as 'internal displacement flows' or 'internal displacement movements'. "
+            "For the total number of IDPs, units reflect the total number of people living in displacement.\n"
             "Reported figures: This field represents the values reported by the original source. Figures can be reported "
             "either in terms of households or individual counts.\n"
             "Figure unit: This field specifies the type of unit reported in the 'Reported' column. Possible values include "
-            "'households' or 'people'. The catogy people include  'internal displacement flows' or 'internal "
-            "displacement movements.'\n"
+            "'households' or 'people'. The category people includes 'internal displacement flows' or 'internal "
+            "displacement movements'.\n"
             "Household size: This metric represents the average number of individuals per household. It is calculated using "
             "data from various sources, including the United Nations Department of Economic and Social Affairs "
             "(UNDESA), national statistical offices, and estimates from local primary data providers shared with IDMC.\n"
@@ -1189,7 +1189,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "Hazard Sub-Type: Specific sub-type of the hazard based on CRED EM-DAT.\n"
             "Start date: Start date of displacement flow.\n"
             "Start date accuracy: Uncertainty or accuracy of start date.\n"
-            "End date: End date of thedisplacement flow.\n"
+            "End date: End date of the displacement flow.\n"
             "End date accuracy: Uncertainty or accuracy of end date.\n"
             "Stock date: This field indicates the year in which the data for the IDP metric (total number of internally "
             "displaced persons or stocks) was collected.\n"
@@ -1214,11 +1214,11 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "displacement might lead to reports in \"Hazard Sub-Type\" of floods, landslides, and other related disaster "
             "types arising from the initial hazard.\n"
             "Event start date: Event or hazard start date.\n"
-            "Event end date: Event or hazard end date date.\n"
+            "Event end date: Event or hazard end date.\n"
             "Event start date accuracy: Uncertainty or accuracy of event start date.\n"
             "Event end date accuracy: Uncertainty or accuracy of event end date.\n"
-            "Is housing destruction: This field  indicates whether the displacement data includes individuals displaced "
-            "by housing destruction. Values are \"Yes\" if the data reflects households whose homes were destroyed and "
+            "Is housing destruction: This field indicates whether the displacement data includes individuals displaced "
+            "by housing destruction. Values are \"Yes\" if the data reflects households whose homes were destroyed, and "
             "\"No\" otherwise. This field relies on the data specified in \"Reported Figures\" "
             "and is linked to the \"Unit\" "
             "of measurement used, which in this context refers to houses destroyed.\n"
@@ -1241,7 +1241,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "on a weighting factor such as population density. This ensures a more accurate representation "
             "of the displacement data across individual locations and prevents duplication of figures during analysis.\n"
             "Locations coordinates: This field contains geographic coordinates representing the reported locations. "
-            "Please note that this field contains multipoints  meaning that multiple locations may represent one figures. "
+            "Please note that this field contains multipoints  meaning that multiple locations may represent one figure. "
             "It's important to note that this field may exhibit a many-to-one relationship, signifying that multiple "
             "location names could be associated with a single reported figure, preventing disaggregation by individual "
             "location. This becomes particularly relevant in geospatial analysis, where Geographic Information System (GIS) "
@@ -1251,11 +1251,12 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "values based on a weighting factor such as population density. This ensures a more accurate representation "
             "of the displacement data across "
             "individual locations and prevents duplication of figures during analysis.\n"
-            "Locations accuracy:  This field indicates the estimated precision of the reported locations. It serves "
-            "as a clue to the likely administrative unit level (e.g., country, state, district) used for reporting.\n"
+            "Locations accuracy: This field indicates the estimated precision of the reported locations. It serves "
+            "as a clue to the likely administrative unit level (e.g. country, state, district) used for reporting.\n"
             "Locations type: This field specifies the type of displacement location within a reported event. It can "
-            "indicate, Origin: The place where people were displaced from. Destination: The location where displaced "
-            "people arrived. Both: In some cases, both origin and destination information might be included. It's crucial "
+            "indicate\n- Origin: The place where people were displaced from.\n- Destination: The location where displaced "
+            "people arrived.\n- Both: In some cases, both origin and "
+            "destination information might be included. It's crucial "
             "to note that different locations reported for a single figure may pertain to both the origin and destination "
             "of displacement incidents. This distinction is particularly salient in geospatial analysis, where Geographic "
             "Information System (GIS) software may interpret these "
@@ -1519,17 +1520,17 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             ["ISO3: Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area."],
             ["Country / Territory: Short name of the country or territory."],
             ["Geographical region: Corresponds to IDMC's geographical regions."],
-            ["Figure cause:  Identifies the trigger of displacement, such as conflict or disasters."],
+            ["Figure cause: Identifies the trigger of displacement, such as conflict or disasters."],
             ["Year: Indicates the year for which displacement data are reported."],
             [
-                "Figure category:  Categorizes the type of displacement metric. It details values for Internal "
+                "Figure category: Categorizes the type of displacement metric. It details values for Internal "
                 "Displacements (internal displacement flows) and Total Number of IDPs (internal displacement stocks), "
                 "as defined earlier in this document."
             ],
             [
                 "Total figures: Represents the total number of internal displacements or IDPs. For internal "
                 "displacements, units are recorded as 'internal displacement flows' or 'internal displacement "
-                "movements.' For total number of IDPs, units reflect the total number of people living in displacement."
+                "movements'. For the total number of IDPs, units reflect the total number of people living in displacement."
             ],
             [
                 "Reported figures: This field represents the values reported by the original source. Figures can be "
@@ -1537,8 +1538,8 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             ],
             [
                 "Figure unit: This field specifies the type of unit reported in the 'Reported' column. Possible values "
-                "include 'households' or 'people'. The catogy people include  'internal displacement flows' or 'internal"
-                " displacement movements.'"
+                "include 'households' or 'people'. The category people includes 'internal displacement flows' or 'internal"
+                " displacement movements'."
             ],
             [
                 "Household size: This metric represents the average number of individuals per household. It is "
@@ -1552,7 +1553,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             ["Hazard Sub-Type: Specific sub-type of the hazard based on CRED EM-DAT."],
             ["Start date: Start date of displacement flow."],
             ["Start date accuracy: Uncertainty or accuracy of start date."],
-            ["End date: End date of thedisplacement flow."],
+            ["End date: End date of the displacement flow."],
             ["End date accuracy: Uncertainty or accuracy of end date."],
             [
                 "Stock date: This field indicates the year in which the data for the IDP metric (total number of "
@@ -1588,13 +1589,13 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 "other related disaster types arising from the initial hazard."
             ],
             ["Event start date: Event or hazard start date."],
-            ["Event end date: Event or hazard end date date."],
+            ["Event end date: Event or hazard end date."],
             ["Event start date accuracy: Uncertainty or accuracy of event start date."],
             ["Event end date accuracy: Uncertainty or accuracy of event end date."],
             [
-                "Is housing destruction: This field  indicates whether the displacement data includes individuals "
+                "Is housing destruction: This field indicates whether the displacement data includes individuals "
                 "displaced by housing destruction. Values are \"Yes\" if the data reflects households whose homes were "
-                "destroyed and \"No\" otherwise. This field relies on the data specified in \"Reported Figures\" and "
+                "destroyed, and \"No\" otherwise. This field relies on the data specified in \"Reported Figures\" and "
                 "is linked to the \"Unit\" of measurement used, which in this context refers to houses destroyed."
             ],
             [
@@ -1637,9 +1638,9 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 "locations and prevents duplication of figures during analysis."
             ],
             [
-                "Locations accuracy:  This field indicates the estimated precision of the reported locations. It "
-                "serves as a clue to the likely administrative unit level (e.g., country, state, district) used for "
-                "reporting. "
+                "Locations accuracy: This field indicates the estimated precision of the reported locations. It "
+                "serves as a clue to the likely administrative unit level (e.g. country, state, district) used for "
+                "reporting."
             ],
             [
                 "Locations type: This field specifies the type of displacement location within a reported event. It "
@@ -1670,11 +1671,11 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         ws3.append([])
 
         data_description_2 = [
-            ["ISO3: Represents the ISO 3166-1 alpha-3 code, the code 'AB9' is assigned to the Abyei Area."],
+            ["ISO3: Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area."],
             ["Year: Indicates the year for which displacement data are reported."],
-            ["Figure_Cause_Name: Identifies the trigger of displacement, such as conflict or disasters."],
+            ["Figure cause: Identifies the trigger of displacement, such as conflict or disasters."],
             [
-                "Figure_Category_Name: Categorizes the type of displacement metric. It details values for Internal "
+                "Figure category: Categorizes the type of displacement metric. It details values for Internal "
                 "Displacements (internal displacement flows) and Total Number of IDPs (internal displacement stocks), "
                 "as defined earlier in this document."
             ],
@@ -1686,11 +1687,11 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             ],
             [
                 "Figures: Represents the total number of internal displacements or IDPs. For internal displacements, "
-                "units are recorded as 'internal displacement flows' or 'internal displacement movements.' For total "
+                "units are recorded as 'internal displacement flows' or 'internal displacement movements'. For the total "
                 "number of IDPs, units reflect the total number of people living in displacement."
             ],
             [
-                "Figures_Rounded: Displays rounded figures to provide a simplified view of the data that matches the "
+                "Figures rounded: Displays rounded figures to provide a simplified view of the data that matches the "
                 "figures reported in the Global Report on Internal Displacement (GRID)."
             ],
         ]

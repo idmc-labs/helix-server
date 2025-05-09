@@ -9,9 +9,9 @@ This endpoint provides quality-controlled, annually validated data on internal d
 | Figure cause                  | Identifies the trigger of displacement such as conflict or disasters. |
 | Year                          | Indicates the year for which displacement data are reported. |
 | Figure category               | Categorizes the type of displacement metric. It details values for Internal Displacements (internal displacement flows) and Total Number of IDPs (internal displacement stocks) as defined earlier in this document. |
-| Total figures                 | Represents the total number of internal displacements or IDPs. For internal displacements, units are recorded as 'internal displacement flows' or 'internal displacement movements.' For the total number of IDPs, units reflect the total number of people living in displacement. |
+| Total figures                 | Represents the total number of internal displacements or IDPs. For internal displacements, units are recorded as 'internal displacement flows' or 'internal displacement movements'. For the total number of IDPs, units reflect the total number of people living in displacement. |
 | Reported figures              | This field represents the values reported by the original source. Figures can be reported either in terms of households or individual counts. |
-| Figure unit                   | This field specifies the type of unit reported in the 'Reported' column. Possible values include 'households' or 'people'. The category people includes 'internal displacement flows' or 'internal displacement movements.' |
+| Figure unit                   | This field specifies the type of unit reported in the 'Reported' column. Possible values include 'households' or 'people'. The category people includes 'internal displacement flows' or 'internal displacement movements'. |
 | Household size                | This metric represents the average number of individuals per household. It is calculated using data from various sources including the United Nations Department of Economic and Social Affairs (UNDESA), national statistical offices, and estimates from local primary data providers shared with IDMC. |
 | Hazard Category               | Hazard category based on the CRED EM-DAT classification. |
 | Hazard sub category           | Hazard sub category based on the CRED EM-DAT classification. |

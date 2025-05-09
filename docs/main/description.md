@@ -10,6 +10,10 @@ Through the API, users can retrieve datasets that include annual estimates, even
 - [Definitions](#definitions)
 - [How to Create a Token to Access the APIs](#access-api)
 - [Widgets](#widgets)
+    - [Conflict Widget](#conflict-widget)
+    - [Disaster Widget](#disaster-widget)
+    - [IDU Widget](#idu-widget)
+    - [GIDD Widget](#gidd-widget)
 - [General caveats and limitations of the datasets](#caveats-limitation)
 - [Copyrights and citation of the data](#copyright)
 - [Citation](#citation)
@@ -86,10 +90,12 @@ To integrate a widget, include the provided HTML snippet into your webpage.
 
 ```htmlbars
 <div class="container">
-    <iframe 
-        src="https://release-website-components.idmcdb.org/?page=conflict-widget&iso3=AFG&clientCode=YOUR_API_KEY" 
+    <iframe
+        src="https://release-website-components.idmcdb.org/?page=conflict-widget&iso3=AFG&clientCode=YOUR_API_KEY"
         title="Conflict Widget for Afghanistan" 
         allowfullscreen
+        width="100%"
+        height="640px"
     >
     </iframe>
 </div>
