@@ -1,6 +1,6 @@
 This endpoint provides quality-controlled, annually validated data on internal displacement due to conflicts and disasters, disaggregated by caseload. This dataset is disaggregated by caseload, location and event.
 
-| Field                          | Description |
+| Field                         | Description |
 |-------------------------------|-------------|
 | ID                            | IDMC figure unique identifier. |
 | ISO3                          | Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area. |
