@@ -36,6 +36,11 @@
       max-width: 1460px;
     }
 
+    /* Footer */
+    .footer {
+      margin-bottom: 64px;
+    }
+
     /* Swagger overrides */
 
     div[data-name=modelPanel] > .model-box {
@@ -320,4 +325,24 @@
     </div>
   </div>
   {{ block.super }}
+
+  <div class="swagger-ui footer">
+    <div class="information-container wrapper">
+      <div class="renderedMarkdown">
+        <h2 id="retroactive-changes">Retroactive changes to GIDD data</h2>
+        <p>
+          All figures have undergone thorough expert validation to ensure consistency with IDMC’s quality requirements. A detailed account of the changes and the analytical processes underpinning them is provided in <code>Tab 2_Context_Displacement_data</code>, which contains a full summary of the revisions conducted by IDMC experts.
+        </p>
+        <a
+          href="https://static-privacy-policy.s3.us-east-1.amazonaws.com/UpdateGIDD_README_06052025_Historicalchanges.xlsx"
+        >
+          UpdateGIDD_README_06052025_Historicalchanges.xlsx
+        </a>
+        <p>
+          For further information or inquiries, please contact us at <a rel="noopener noreferrer" target="_blank" href="mailto:ch.datainfo@idmc.ch">ch.datainfo@idmc.ch</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
 {% endblock %}
