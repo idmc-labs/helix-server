@@ -207,22 +207,35 @@
         }
     }
 
+    /* Multi-line Codeblock */
     .renderedMarkdown pre > code {
-        background-color: #333333 !important;
-        color: #ffffff !important;
+        background-color: #d3dae2 !important;
+        color: #3b4151 !important;
         font-weight: unset !important;
+        padding: 18px !important;
     }
 
+    /* Codeblock */
+    .renderedMarkdown code {
+        font-size: 12px !important;
+        padding: 4px !important;
+        font-weight: unset !important;
+        color: #d63384 !important;
+    }
+
+    /* Paragraph */
     .renderedMarkdown p {
         margin-bottom: 1rem;
         margin-top: 0px;
         font-family: 'proxima-nova', sans-serif !important;
     }
 
+    /* Font overrides */
     .renderedMarkdown li, th, td, a {
         font-family: 'proxima-nova', sans-serif !important;
     }
 
+    /* Tables */
     .renderedMarkdown th:not(:first-of-type) {
         padding-left: 12px;
     }

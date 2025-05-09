@@ -398,6 +398,7 @@ class IdusFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
 
 
 @extend_schema(
+    description=Path("docs/idus/main-description.md").read_text(),
     responses=FigureReadOnlySerializer,
     tags=['IDU'],
 )
@@ -406,6 +407,7 @@ class IdusAllFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
 
 
 @extend_schema(
+    description=Path("docs/idus/main-description.md").read_text(),
     responses=FigureReadOnlySerializer,
     tags=['IDU'],
 )
