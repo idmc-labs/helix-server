@@ -805,9 +805,6 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
         help_text="This field contains values that represent if preventive evacuations were reported."
         "These evacuations are the result of existing early warning systems."
     )
-    displacement_type = serializers.CharField(
-        help_text="Identifies the trigger of displacement such as conflict or disasters.",
-    )
     old_id = serializers.CharField(
         help_text="Legacy identifier for the data entry."
     )

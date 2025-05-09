@@ -56,7 +56,6 @@ from .rest_filters import (
     DisaggregationPublicFigureAnalysisFilterSet,
 )
 from utils.common import track_gidd, client_id
-from django.utils.encoding import smart_str
 from rest_framework import renderers
 
 
@@ -219,6 +218,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         url_path="disaster-export",
         permission_classes=[AllowAny],
         pagination_class=None,
+        renderer_classes=[XlsxRenderer],
     )
     def export(self, request):
         """
