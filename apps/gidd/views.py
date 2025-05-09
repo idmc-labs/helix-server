@@ -303,7 +303,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                 'https://www.internal-displacement.org/database/displacement-data/ (Accessed: [date of access]).'
             ],
             [],
-            ['CONTACT: info@idmc.ch'],
+            ['CONTACT: ch.datainfo@idmc.ch'],
             [],
         ]
 
@@ -313,7 +313,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         ws2.append(['DATA DESCRIPTION: 1_Disaster_Displacement_data'])
         ws2.append([])
 
-        table = [
+        readme_text_2 = [
             ['ISO3: Represents the ISO 3166-1 alpha-3 code. The code \'AB9\' is assigned to the Abyei Area.'],
             ['Country / Territory: Short name of the country or territory.'],
             ['Year: Indicates the year for which displacement data are reported.'],
@@ -345,8 +345,63 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                 'These evacuations are the result of existing early warning systems.'
             ],
         ]
-        for item in table:
+
+        for item in readme_text_2:
             ws2.append(item)
+
+        readme_text_3 = [
+            [],
+            ['HISTORICAL DATA REVISIONS AND CORRECTIONS'],
+            [],
+            ['The description of our methodology is available at https://www.internal-displacement.org/monitoring-tools'],
+            [
+                'As part of our ongoing commitment to providing accurate and reliable internal displacement data, '
+                'the Internal Displacement Monitoring Centre (IDMC) has released updated figures for several countries '
+                'and years where data was previously unavailable or required corrections. '
+                'These revisions, which result from a comprehensive methodological review, address discrepancies in earlier '
+                'figures published in the Global Internal Displacement Database (GIDD) and reflect our dedication to '
+                'upholding the highest standards of data quality and reliability.\n\n'
+                'Our team of experts rigorously reviewed and validated the new figures to ensure they meet IDMC’s '
+                'stringent data requirements. For questions or further information about these updates, '
+                'please contact us at ch.datainfo@idmc.ch.'
+            ],
+            [],
+            [
+                'All figures have undergone thorough expert validation to ensure consistency with IDMC’s '
+                'quality requirements. A detailed account of the changes and the analytical processes '
+                'underpinning them is provided in Tab 2_Context_Displacement_data, which contains '
+                'a full summary of the revisions conducted by IDMC experts.\n\n'
+                'For further information or inquiries, please contact us at ch.datainfo@idmc.ch.'
+            ],
+            [],
+            ['FIGURES REVIEWED IN JANUARY 2025'],
+            [],
+            ['ISO3', 'Country', 'Geographical region', 'Year', 'Figure cause', 'Figure category'],
+            ['BDI', 'Burundi', 'Sub-Saharan Africa', '2021', 'Disaster', 'Internal Displacements'],
+            ['GRC', 'Greece', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['KGZ', 'Kyrgyzstan', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['LSO', 'Lesotho', 'Sub-Saharan Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['MAR', 'Morocco', 'Middle East and North Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['NAM', 'Namibia', 'Sub-Saharan Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2023', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2017', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2018', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2022', 'Disaster', 'Internal Displacements'],
+            ['USA', 'United States', 'The Americas', '2023', 'Disaster', 'Internal Displacements'],
+            [],
+            ['FIGURES REVIEWED IN MAY 2025'],
+            [],
+            ['ISO3', 'Country', 'Geographical region', 'Year', 'Figure cause', 'Figure category'],
+            ['PRI', 'Puerto Rico', 'The Americas', '2017', 'Disasters', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2018', 'Disasters', 'Internal Displacements'],
+            ['PRI', 'Puerto Rico', 'The Americas', '2019', 'Disasters', 'Internal Displacements'],
+            ['BDI', 'Burundi', 'Sub-Saharan Africa', '2021', 'Disasters', 'Internal Displacements']
+        ]
+
+        for item in readme_text_3:
+            ws2.append(item)
+
         response = HttpResponse(content=save_virtual_workbook(wb))
         filename = 'IDMC_GIDD_Disasters_Internal_Displacement_Data.xlsx'
         response['Content-Disposition'] = f'attachment; filename={filename}'
@@ -614,7 +669,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 'https://www.internal-displacement.org/database/displacement-data/ (Accessed: [date of access]).'
             ],
             [],
-            ['CONTACT: info@idmc.ch'],
+            ['CONTACT: ch.datainfo@idmc.ch'],
             [],
         ]
 
@@ -756,17 +811,17 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 'upholding the highest standards of data quality and reliability.\n\n'
                 'Our team of experts rigorously reviewed and validated the new figures to ensure they meet IDMC’s '
                 'stringent data requirements. For questions or further information about these updates, '
-                'please contact us at info@idmc.ch.'
+                'please contact us at ch.datainfo@idmc.ch.'
             ],
             [],
             [],
-            ['FIGURES REVIEWED FIGURES IN JANUARY 2025'],
+            ['FIGURES REVIEWED IN JANUARY 2025'],
             [
                 'All figures have undergone thorough expert validation to ensure consistency with IDMC’s '
                 'quality requirements. A detailed account of the changes and the analytical processes '
                 'underpinning them is provided in Tab 2_Context_Displacement_data, which contains '
                 'a full summary of the revisions conducted by IDMC experts.\n\n'
-                'For further information or inquiries, please contact us at info@idmc.ch.'
+                'For further information or inquiries, please contact us at ch.datainfo@idmc.ch.'
             ],
             ['ISO3', 'Country', 'Geographical region', 'Year', 'Figure cause', 'Figure category'],
             ['BFA', 'Burkina Faso', 'Sub-Saharan Africa', '2023', 'Conflict', 'Internal Displacements'],
@@ -793,6 +848,77 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             ['UGA', 'Uganda', 'Sub-Saharan Africa', '2022', 'Disaster', 'Internal Displacements'],
             ['UGA', 'Uganda', 'Sub-Saharan Africa', '2023', 'Disaster', 'IDPs'],
             ['USA', 'United States', 'The Americas', '2023', 'Disaster', 'Internal Displacements'],
+            [],
+            ['FIGURES REVIEWED IN MAY 2025'],
+            [
+                'All figures have undergone thorough expert validation to ensure consistency with IDMC’s '
+                'quality requirements. A detailed account of the changes and the analytical processes '
+                'underpinning them is provided in Tab 2_Context_Displacement_data, which contains '
+                'a full summary of the revisions conducted by IDMC experts.\n\n'
+                'For further information or inquiries, please contact us at ch.datainfo@idmc.ch.'
+            ],
+            ['ISO3', 'Country', 'Geographical region', 'Year', 'Figure cause', 'Figure category'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2016', 'Conflict', 'Internal Displacements'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2016', 'Conflict', 'IDPs'],
+            ['PRI', 'Puerto Rico', 'The Americas', '2017', 'Disasters', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2017', 'Disasters', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2017', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2017', 'Conflict', 'Internal Displacements'],
+            ['PAK', 'Pakistan', 'South Asia', '2018', 'Conflict', 'Internal Displacements'],
+            ['PAK', 'Pakistan', 'South Asia', '2018', 'Conflict', 'IDPs'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2018', 'Disasters', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2018', 'Conflict', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2018', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2018', 'Conflict', 'Internal Displacements'],
+            ['IND', 'India', 'South Asia', '2018', 'Conflict', 'Internal Displacements'],
+            ['PRI', 'Puerto Rico', 'The Americas', '2019', 'Disasters', 'Internal Displacements'],
+            ['BGD', 'Bangladesh', 'South Asia', '2019', 'Disasters', 'IDPs'],
+            ['BGD', 'Bangladesh', 'South Asia', '2019', 'Conflict', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2019', 'Conflict', 'Internal Displacements'],
+            ['PAK', 'Pakistan', 'South Asia', '2019', 'Disasters', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2019', 'Conflict', 'IDPs'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2019', 'Disasters', 'IDPs'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2019', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2019', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2019', 'Conflict', 'Internal Displacements'],
+            ['IND', 'India', 'South Asia', '2019', 'Disasters', 'IDPs'],
+            ['BGD', 'Bangladesh', 'South Asia', '2020', 'Disasters', 'IDPs'],
+            ['BGD', 'Bangladesh', 'South Asia', '2020', 'Conflict', 'Internal Displacements'],
+            ['BGD', 'Bangladesh', 'South Asia', '2020', 'Conflict', 'IDPs'],
+            ['BDI', 'Burundi', 'Sub-Saharan Africa', '2021', 'Disasters', 'Internal Displacements'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2021', 'Disasters', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2021', 'Disasters', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2022', 'Conflict', 'IDPs'],
+            ['COL', 'Colombia', 'The Americas', '2022', 'Conflict', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2022', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2022', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2022', 'Conflict', 'Internal Displacements'],
+            ['TUR', 'Türkiye', 'Europe and Central Asia', '2022', 'Conflict', 'IDPs'],
+            ['MDG', 'Madagascar', 'Sub-Saharan Africa', '2022', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2022', 'Conflict', 'IDPs'],
+            ['LKA', 'Sri Lanka', 'South Asia', '2022', 'Conflict', 'IDPs'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2022', 'Conflict', 'IDPs'],
+            ['GEO', 'Georgia', 'Europe and Central Asia', '2022', 'Conflict', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2023', 'Conflict', 'IDPs'],
+            ['COL', 'Colombia', 'The Americas', '2023', 'Conflict', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2023', 'Conflict', 'Internal Displacements'],
+            ['TUR', 'Türkiye', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['PSE', 'Palestine', 'Middle East and North Africa', '2023', 'Conflict', 'IDPs'],
+            ['PSE', 'Palestine', 'Middle East and North Africa', '2023', 'Conflict', 'Internal Displacements'],
+            ['MDG', 'Madagascar', 'Sub-Saharan Africa', '2023', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2023', 'Conflict', 'IDPs'],
+            ['KAZ', 'Kazakhstan', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['LKA', 'Sri Lanka', 'South Asia', '2023', 'Conflict', 'IDPs'],
+            ['BIH', 'Bosnia and Herzegovina', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['PER', 'Peru', 'The Americas', '2023', 'Disasters', 'IDPs'],
+            ['KGZ', 'Kyrgyzstan', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2023', 'Conflict', 'Internal Displacements'],
+            ['THA', 'Thailand', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['GEO', 'Georgia', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['SLE', 'Sierra Leone', 'Sub-Saharan Africa', '2023', 'Conflict', 'IDPs'],
         ]
         ws4.append([])
         ws4.append([])
@@ -954,12 +1080,12 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "of people living in situations of internal displacement as of the end of the reporting year, "
             "specifically on December 31st of each year.\n"
             "Conflict displacement: Refers to situations where people are forced to leave their homes or places "
-            " of habitual residence as a result or in order to avoid the impact of armed conflict, communal violence\n"
+            "of habitual residence as a result or in order to avoid the impact of armed conflict, communal violence "
             "and criminal violence.\n"
             "Disaster displacement: Refers to situations where people are forced to leave their homes or places "
             "of habitual residence as a result, or in anticipation of the negative impact of natural hazards.\n"
             "Disaster: A serious disruption of the functioning of a community or a society involving widespread "
-            "human, material, economic or environmental losses and impacts, which exceeds the ability of the\n"
+            "human, material, economic or environmental losses and impacts, which exceeds the ability of the "
             "affected community or society to cope using its own resources (UNSDR).\n"
             "\n"
             "USE LICENSE: This content is licensed under CC BY-NC. Detailed licensing information is available at "
@@ -975,13 +1101,12 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "Centre. Global Internal Displacement Database. IDMC (2023). "
             "Available at: https://www.internal-displacement.org/database/displacement-data/ (Accessed: [date of access]).\n"
             "\n"
-            "CONTACT: info@idmc.ch\n"
+            "CONTACT: ch.datainfo@idmc.ch\n"
             "\n"
             "DATA DESCRIPTION: 1_Disaggregated_Data table\n"
             "\n"
             "ID: IDMC figure unique identifier.\n"
-            "ISO3: Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area. "
-            "uncertanty or accuracy of start date\n"
+            "ISO3: Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area.\n"
             "Country / Territory: Short name of the country or territory.\n"
             "Geographical region: Corresponds to IDMC's geographical regions.\n"
             "Figure cause:  Identifies the trigger of displacement, such as conflict or disasters.\n"
@@ -1005,19 +1130,19 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "Hazard Type: Hazard type as categorized by CRED EM-DAT.\n"
             "Hazard Sub-Type: Specific sub-type of the hazard based on CRED EM-DAT.\n"
             "Start date: Start date of displacement flow.\n"
-            "Start date accuracy: Uncertanty or accuracy of start date.\n"
+            "Start date accuracy: Uncertainty or accuracy of start date.\n"
             "End date: End date of thedisplacement flow.\n"
-            "End date accuracy: Uncertanty or accuracy of end date.\n"
+            "End date accuracy: Uncertainty or accuracy of end date.\n"
             "Stock date: This field indicates the year in which the data for the IDP metric (total number of internally "
             "displaced persons or stocks) was collected.\n"
-            "Stock date accuracy: Uncertanty or accuracy of stock date.\n"
+            "Stock date accuracy: Uncertainty or accuracy of stock date.\n"
             "Stock reporting date: This field reflects the year IDMC uses to report the total number of internally "
             "displaced persons (IDPs). It represents the IDMC reporting year, which may not coincide with the actual "
             "data collection year. Given the protracted nature of displacement, annual updates on the total number of "
             "IDPs may not always be available. To maintain accuracy in reporting, IDMC relies on the most recent verified "
             "data until evidence shows that the displaced population has achieved a durable solution.\n"
             "Publishers: Organizations responsible for distributing and disseminating internal displacement data\n"
-            "Sources:  This field lists the names of the primary data providers or the original sources for the internal "
+            "Sources: This field lists the names of the primary data providers or the original sources for the internal "
             "displacement data reported by IDMC.\n"
             "Sources type: This field categorizes the type of source as defined by IDMC.\n"
             "Event ID: Unique identifier for events as assigned by IDMC.\n"
@@ -1026,14 +1151,14 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "Event cause: Identifies the trigger of displacement, such as conflict or disasters.\n"
             "Event main trigger: This field identifies the primary hazard subtype or conflict type that initiated "
             "the event, serving as the main driver of a disaster or conflict. For disasters, associated fields such "
-            "as \"Hazard Category,\" \"Hazard Subcategory,\" \"Hazard Type,\" and \"Hazard Sub-Type\" detail the cascading "
+            "as \"Hazard Category\", \"Hazard Subcategory\", \"Hazard Type\", and \"Hazard Sub-Type\" detail the cascading "
             "impacts stemming from this main trigger. For instance, a tropical storm identified as the main driver of "
             "displacement might lead to reports in \"Hazard Sub-Type\" of floods, landslides, and other related disaster "
             "types arising from the initial hazard.\n"
             "Event start date: Event or hazard start date.\n"
             "Event end date: Event or hazard end date date.\n"
-            "Event start date accuracy: Uncertanty or accuracy of event start date.\n"
-            "Event end date accuracy: Uncertanty or accuracy of event end date.\n"
+            "Event start date accuracy: Uncertainty or accuracy of event start date.\n"
+            "Event end date accuracy: Uncertainty or accuracy of event end date.\n"
             "Is housing destruction: This field  indicates whether the displacement data includes individuals displaced "
             "by housing destruction. Values are \"Yes\" if the data reflects households whose homes were destroyed and "
             "\"No\" otherwise. This field relies on the data specified in \"Reported Figures\" "
@@ -1071,15 +1196,15 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "Locations accuracy:  This field indicates the estimated precision of the reported locations. It serves "
             "as a clue to the likely administrative unit level (e.g., country, state, district) used for reporting.\n"
             "Locations type: This field specifies the type of displacement location within a reported event. It can "
-            "indicate,  Origin: The place where people were displaced from. Destination: The location where displaced "
-            "people arrived. Both: In some cases, both origin and destination information might be included.It's crucial "
+            "indicate, Origin: The place where people were displaced from. Destination: The location where displaced "
+            "people arrived. Both: In some cases, both origin and destination information might be included. It's crucial "
             "to note that different locations reported for a single figure may pertain to both the origin and destination "
             "of displacement incidents. This distinction is particularly salient in geospatial analysis, where Geographic "
             "Information System (GIS) software may interpret these "
             "multi-point entities as singular data points, potentially "
             "resulting in inadvertent double-counting of figures. To mitigate this issue, it is recommended to preprocess "
             "the dataset prior to GIS analysis to ensure accurate representation and avoid duplication of figures.\n"
-            "Displacement occurred: Displacement Occurred: This field contains values that represent if preventive "
+            "Displacement occurred: This field contains values that represent if preventive "
             "evacuations were reported. These evacuations are the result of existing early warning systems.\n"
         )
         feature_collection = {
@@ -1322,7 +1447,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 'https://www.internal-displacement.org/database/displacement-data/ (Accessed: [date of access]).'
             ],
             [],
-            ['CONTACT: info@idmc.ch'],
+            ['CONTACT: ch.datainfo@idmc.ch'],
         ]
 
         for item in readme_text:
@@ -1512,6 +1637,133 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             ],
         ]
         for item in data_description_2:
+            ws3.append(item)
+
+        data_description_3 = [
+            [],
+            [],
+            ['HISTORICAL DATA REVISIONS AND CORRECTIONS'],
+            [],
+            ['The description of our methodology is available at https://www.internal-displacement.org/monitoring-tools'],
+            [
+                'As part of our ongoing commitment to providing accurate and reliable internal displacement data, '
+                'the Internal Displacement Monitoring Centre (IDMC) has released updated figures for several countries '
+                'and years where data was previously unavailable or required corrections. '
+                'These revisions, which result from a comprehensive methodological review, address discrepancies in earlier '
+                'figures published in the Global Internal Displacement Database (GIDD) and reflect our dedication to '
+                'upholding the highest standards of data quality and reliability.\n\n'
+                'Our team of experts rigorously reviewed and validated the new figures to ensure they meet IDMC’s '
+                'stringent data requirements. For questions or further information about these updates, '
+                'please contact us at ch.datainfo@idmc.ch.'
+            ],
+            [],
+            ['FIGURES REVIEWED IN JANUARY 2025'],
+            [
+                'All figures have undergone thorough expert validation to ensure consistency with IDMC’s '
+                'quality requirements. A detailed account of the changes and the analytical processes '
+                'underpinning them is provided in Tab 2_Context_Displacement_data, which contains '
+                'a full summary of the revisions conducted by IDMC experts.\n\n'
+                'For further information or inquiries, please contact us at ch.datainfo@idmc.ch.'
+            ],
+            ['ISO3', 'Country', 'Geographical region', 'Year', 'Figure cause', 'Figure category'],
+            ['BFA', 'Burkina Faso', 'Sub-Saharan Africa', '2023', 'Conflict', 'Internal Displacements'],
+            ['BDI', 'Burundi', 'Sub-Saharan Africa', '2021', 'Disaster', 'Internal Displacements'],
+            ['COD', 'Dem. Rep. Congo', 'Sub-Saharan Africa', '2023', 'Conflict', 'IDPs'],
+            ['GRC', 'Greece', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['IND', 'India', 'South Asia', '2021', 'Disaster', 'IDPs'],
+            ['KGZ', 'Kyrgyzstan', 'Europe and Central Asia', '2023', 'Disaster', 'IDPs'],
+            ['KGZ', 'Kyrgyzstan', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['LSO', 'Lesotho', 'Sub-Saharan Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['MLI', 'Mali', 'Sub-Saharan Africa', '2023', 'Conflict', 'Internal Displacements'],
+            ['MEX', 'Mexico', 'The Americas', '2023', 'Conflict', 'IDPs'],
+            ['MAR', 'Morocco', 'Middle East and North Africa', '2023', 'Disaster', 'IDPs'],
+            ['MAR', 'Morocco', 'Middle East and North Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['MOZ', 'Mozambique', 'Sub-Saharan Africa', '2022', 'Conflict', 'Internal Displacements'],
+            ['NAM', 'Namibia', 'Sub-Saharan Africa', '2023', 'Disaster', 'IDPs'],
+            ['NAM', 'Namibia', 'Sub-Saharan Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2023', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2017', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2018', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2021', 'Disaster', 'IDPs'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2022', 'Disaster', 'IDPs'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2022', 'Disaster', 'Internal Displacements'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2023', 'Disaster', 'IDPs'],
+            ['USA', 'United States', 'The Americas', '2023', 'Disaster', 'Internal Displacements'],
+            [],
+            ['FIGURES REVIEWED IN MAY 2025'],
+            [
+                'All figures have undergone thorough expert validation to ensure consistency with IDMC’s '
+                'quality requirements. A detailed account of the changes and the analytical processes '
+                'underpinning them is provided in Tab 2_Context_Displacement_data, which contains '
+                'a full summary of the revisions conducted by IDMC experts.\n\n'
+                'For further information or inquiries, please contact us at ch.datainfo@idmc.ch.'
+            ],
+            ['ISO3', 'Country', 'Geographical region', 'Year', 'Figure cause', 'Figure category'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2016', 'Conflict', 'Internal Displacements'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2016', 'Conflict', 'IDPs'],
+            ['PRI', 'Puerto Rico', 'The Americas', '2017', 'Disasters', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2017', 'Disasters', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2017', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2017', 'Conflict', 'Internal Displacements'],
+            ['PAK', 'Pakistan', 'South Asia', '2018', 'Conflict', 'Internal Displacements'],
+            ['PAK', 'Pakistan', 'South Asia', '2018', 'Conflict', 'IDPs'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2018', 'Disasters', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2018', 'Conflict', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2018', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2018', 'Conflict', 'Internal Displacements'],
+            ['IND', 'India', 'South Asia', '2018', 'Conflict', 'Internal Displacements'],
+            ['PRI', 'Puerto Rico', 'The Americas', '2019', 'Disasters', 'Internal Displacements'],
+            ['BGD', 'Bangladesh', 'South Asia', '2019', 'Disasters', 'IDPs'],
+            ['BGD', 'Bangladesh', 'South Asia', '2019', 'Conflict', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2019', 'Conflict', 'Internal Displacements'],
+            ['PAK', 'Pakistan', 'South Asia', '2019', 'Disasters', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2019', 'Conflict', 'IDPs'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2019', 'Disasters', 'IDPs'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2019', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2019', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2019', 'Conflict', 'Internal Displacements'],
+            ['IND', 'India', 'South Asia', '2019', 'Disasters', 'IDPs'],
+            ['BGD', 'Bangladesh', 'South Asia', '2020', 'Disasters', 'IDPs'],
+            ['BGD', 'Bangladesh', 'South Asia', '2020', 'Conflict', 'Internal Displacements'],
+            ['BGD', 'Bangladesh', 'South Asia', '2020', 'Conflict', 'IDPs'],
+            ['BDI', 'Burundi', 'Sub-Saharan Africa', '2021', 'Disasters', 'Internal Displacements'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2021', 'Disasters', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2021', 'Disasters', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2022', 'Conflict', 'IDPs'],
+            ['COL', 'Colombia', 'The Americas', '2022', 'Conflict', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2022', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2022', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2022', 'Conflict', 'Internal Displacements'],
+            ['TUR', 'Türkiye', 'Europe and Central Asia', '2022', 'Conflict', 'IDPs'],
+            ['MDG', 'Madagascar', 'Sub-Saharan Africa', '2022', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2022', 'Conflict', 'IDPs'],
+            ['LKA', 'Sri Lanka', 'South Asia', '2022', 'Conflict', 'IDPs'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2022', 'Conflict', 'IDPs'],
+            ['GEO', 'Georgia', 'Europe and Central Asia', '2022', 'Conflict', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2023', 'Conflict', 'IDPs'],
+            ['COL', 'Colombia', 'The Americas', '2023', 'Conflict', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2023', 'Conflict', 'Internal Displacements'],
+            ['TUR', 'Türkiye', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['PSE', 'Palestine', 'Middle East and North Africa', '2023', 'Conflict', 'IDPs'],
+            ['PSE', 'Palestine', 'Middle East and North Africa', '2023', 'Conflict', 'Internal Displacements'],
+            ['MDG', 'Madagascar', 'Sub-Saharan Africa', '2023', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2023', 'Conflict', 'IDPs'],
+            ['KAZ', 'Kazakhstan', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['LKA', 'Sri Lanka', 'South Asia', '2023', 'Conflict', 'IDPs'],
+            ['BIH', 'Bosnia and Herzegovina', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['PER', 'Peru', 'The Americas', '2023', 'Disasters', 'IDPs'],
+            ['KGZ', 'Kyrgyzstan', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2023', 'Conflict', 'Internal Displacements'],
+            ['THA', 'Thailand', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['GEO', 'Georgia', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['SLE', 'Sierra Leone', 'Sub-Saharan Africa', '2023', 'Conflict', 'IDPs']
+        ]
+
+        for item in data_description_3:
             ws3.append(item)
 
         qs = qs.filter(
