@@ -1,41 +1,34 @@
 <h2 id="introduction">Introduction</h2>
 
-IDMC provides APIs to make the data in our Global Internal Displacement Database (GIDD) and Internal Displacement Updates (IDU) directly available to developers and analysts. This page has detailed descriptions of the databases and how to use the APIs. For feedback or technical questions contact [ch.datainfo@idmc.ch](mailto:ch.datainfo@idmc.ch).
-
-Our API documentation also includes widgets that allow users to embed data visualization products directly into their websites. Additionally, users can access datasets with various levels of geospatial disaggregation, along with contextual information detailing the sources, methodologies, and caveats associated with the figures reported by IDMC in the GIDD.
+The Internal Displacement Monitoring Centre (IDMC) offers APIs that provide direct access to its primary data products: the **Global Internal Displacement Database (GIDD)** and the **Internal Displacement Updates (IDU)**. 
+Through the API, users can retrieve datasets that include annual estimates, event-level data, and geospatial disaggregation. This documentation outlines how to access the API, retrieve data, and understand its structure and limitations. It also provides technical guidance on embedding widgets, using geospatial data, and integrating IDMC’s datasets into your workflows. For questions or technical issues contact [ch.datainfo@idmc.ch](mailto:ch.datainfo@idmc.ch).
 
 ### Table of Contents
 
 - [Introduction](#introduction)
-- [Overview](#overview)
-- [IDMC's main data products](#data-products)
+- [Overview of IDMC's Core Datasets](#overview)
 - [Definitions](#definitions)
-- [Accessing the API](#access-api)
-- [Authentication](#authentication)
-- [Caveats and limitations of the IDU dataset](#caveats)
-- [Code sample to read and export the IDU API as a geojson file for GIS applications](#code-sample)
+- [How to Create a Token to Access the APIs](#access-api)
 - [Widgets](#widgets)
 - [General caveats and limitations of the datasets](#caveats-limitation)
 - [Copyrights and citation of the data](#copyright)
 - [Citation](#citation)
 - [Support](#support)
 
-<h2 id="overview">Overview of IDMC and the Global Internal Displacement Database (GIDD)</h2>
+<h2 id="overview">Overview of IDMC's Core Datasets</h2>
 
-IDMC established the Global Internal Displacement Database (GIDD) which stands as the only harmonised global repository for data on internal displacement due to conflicts and disasters since 2008. IDMC work focuses on aggregating, curating, analyzing, and standardizing data from a diverse array of sources including United Nations agencies, governmental entities, and non-governmental organizations (NGOs).
+IDMC provides two main datasets accessible via API:
 
-While IDMC does not collect primary data directly, it leverages data from these primary collectors and various secondary sources such as media outlets to fill data gaps and provide a holistic view of internal displacement worldwide. Data from different formats, languages, and terminologies are harmonized and meticulously processed. Each figure reported in the GIDD undergoes a rigorous quality control process involving consultations and partnerships with primary data providers and key stakeholders in the monitored countries’ data ecosystems. Furthermore, our analysis and figures are regularly reviewed with different UN partners to ensure transparency and consistency in our reporting methodologies.
+1. **[Global Internal Displacement Database (GIDD):](https://www.internal-displacement.org/database/displacement-data/)**
+    - The GIDD is an annual dataset that provides validated and peer-reviewed estimates of internal displacement resulting from conflict and disasters. Conflict-related displacement figures are reported at the national level by calendar year, while disaster-related displacement is recorded at the event level. Since 2023, the dataset includes additional disaggregation by location, displacement cause, and event.
+    - The GIDD captures both population flows (new displacements during the year) and stocks (total number of people living in displacement at the end of the year), covering the period from 1 January to 31 December.
+    - Additional methodological notes, caveats, and information on historical revisions are available through the Public Figure Analysis API, which complements the main dataset with detailed contextual insights.
+    - This dataset is available since 2009 for conflict and 2008 for disaster induced displacement.
+2. **[Internal Displacement Updates (IDU):](https://www.internal-displacement.org/internal-displacement-updates/)**
+    - The IDU dataset is an event-based, near real-time resource updated on a daily basis. It captures new displacement events as they are identified through continuous monitoring of primary and secondary sources.
+    - IDU provides the most current estimates of internal displacement population flows only. Figures are provisional and may be updated or revised as more accurate or complete information becomes available over time.
 
-<h2 id="data-products">IDMC's main data products</h2>
-
-IDMC offers two primary data products: the Global Internal Displacement Database (GIDD) and the Internal Displacement Updates (IDU) each catering to distinct needs and audiences:
-
-- **[Global Internal Displacement Database (GIDD):](https://www.internal-displacement.org/database/displacement-data/)** This database is the product of an annual process that involves collecting, harmonizing, and validating data followed by a thorough peer review. We engage with primary data providers and relevant actors at various levels—national, regional, and global. Published annually, the GIDD has been acknowledged by several UN resolutions for its significance. The GIDD data is detailed by country and year for conflict-induced displacement, while disaster-induced displacement is recorded at the event level. Additional disaggregated data is also available since 2023.
-- **[Internal Displacement Updates (IDU):](https://www.internal-displacement.org/internal-displacement-updates/)** IDMC's IDU offers preliminary, timely, and detailed insights into new displacement events reflecting our ongoing daily monitoring efforts. This event-based dataset provides initial snapshots of displacement trends which may later be refined and consolidated in the GIDD. It's important to note that these figures do not undergo the same level of quality control as the GIDD data, as the IDU data reflects timely updates that are subject to change as more information becomes available following a displacement event.
-
-For further details on IDMC's methodology please visit our website or our [monitoring tools page](https://www.internal-displacement.org/monitoring-tools/).
-
-This documentation will guide you through accessing and making the most of IDMC’s APIs, helping you to effectively integrate and utilize our data in your applications and analyses.
+The GIDD and IDU serve different purposes: the GIDD offers historical consistency and comparability, while the IDU allows early detection and analysis of new events. Users are encouraged to consult both datasets depending on their use case.
 
 <h2 id="definitions">Definitions</h2>
 
@@ -46,26 +39,29 @@ This documentation will guide you through accessing and making the most of IDMC�
 - **Disaster displacement**: Refers to situations where people are forced to leave their homes or places of habitual residence as a result or in anticipation of the negative impact of natural hazards.
 - **Disaster**: A serious disruption of the functioning of a community or a society involving widespread human, material, economic, or environmental losses and impacts which exceeds the ability of the affected community or society to cope using its own resources.
 
-<h2 id="access-api">Accessing the API</h2>
+<h2 id="access-api">How to Create a Token to Access the APIs</h2>
 
-In order to access the APIs, please request an API key by emailing [ch.datainfo@idmc.ch](mailto:ch.datainfo@idmc.ch). Briefly describe your intended use case for the data in your email. You will receive an API key via email.
+To access IDMC’s APIs, follow these steps
 
-<h2 id="authentication">Authentication</h2>
+1. **Request Access**
+2. Send an email to ch.datainfo@idmc.ch with a brief description of how you plan to use the data.
+3. Please specify your use case by selecting one or more of the following categories:
+    - Anticipatory action
+    - Humanitarian response
+    - Risk of displacement
+    - Research or data analysis
+    - Modelling
+    - Data sharing on external platforms
+    - Other (please specify)
+4. **Receive Your API Key**
+5. If your request is approved, you will receive an API key (referred to as client_id) via email.
+6. Include the Key in API Requests
+7. Use the client_id as a query parameter in all API calls. For example:
+   ```bash
+   GET https://helix-tools-api.idmcdb.org/external-api/gidd/displacements/?client_id=YOUR_API_KEY
+   ```
 
-API requests require authentication through a `client_id` parameter (your API key). This parameter must be included in every request to access the data.
-
-```bash 
-GET https://helix-tools-api.idmcdb.org/external-api/gidd/displacements/?client_id=YOUR_API_KEY
-```
-
-<h2 id="caveats">Caveats and limitations of the IDU dataset</h2>
-
-- These figures depict reported internal displacement flows and may change as displacement situations evolve and more information emerges. For curated and validated estimates refer to the Global Internal Displacement Database (GIDD) accessible at GIDD: https://www.internal-displacement.org/database/displacement-data/. The IDU dataset provides the most recent updates on internal displacement events (population flows).
-- **Important considerations:** When analyzing the IDU data, it's imperative to exercise caution in certain situations. Specifically, if multiple IDU entries share identical flow dates, eventID, and locations, we advise against summing up the figures. This is because such data might represent varying estimates of population flows rather than distinct population movements. This distinction is crucial to avoid misinterpretation of the data and ensure accurate representation of displacement situations. Hence, please include the following preprocessing considerations per event, i.e. after grouping the figures per "eventID", in the analysis:
-    - **Prioritization of figures:** For any given event with multiple updates, it is imperative to utilize the “Recommended figure” over “Triangulation figure” whenever these are available. This approach ensures the most accurate reflection of the total number of internal displacements resulting from the event.
-    - **Aggregating recommended figures:** When encountering multiple recommended figures, per event aggregation is possible even if they come from different locations with identical flow, as these figures represent disaggregated data. Figures pertaining to the same location can also be aggregated. Such cases are often reported when the names of settlements cannot be located in IDMC geocoders. In these scenarios, analysts will refer to the last well-known higher administrative unit, although the data actually describes disaggregated figures within this higher unit. In these instances, the “Standard_popup_text” field will include the settlement name.
-    - **Triangulation figures with same locations:** In the absence of recommended figures and when multiple triangulation figures exist for the same location for an event, only the most recently updated figure should be used. This recommendation is made to avoid the risk of double counting and is based on the assumption that the latest update offers a more comprehensive estimate than earlier ones.
-    - **Triangulation figures with different locations:** For an event, in the absence of recommended figures and the presence of multiple triangulation figures sharing the same flow dates but referring to different locations, these figures are to be combined. This method enables the representation of the total number of internal displacements arising from an event across various locations.
+> NOTE: API keys help IDMC monitor usage and ensure fair access.
 
 <h2 id="widgets">Widgets</h2>
 
@@ -104,7 +100,7 @@ To integrate a widget, include the provided HTML snippet into your webpage.
 ![Disaster Widget](https://s3-ap-southeast-1.amazonaws.com/tc-codimd/uploads/331ae676863e494e83598e718.png)
 
 - Displays disaster events disaggregated by country, hazard type, and year.
-- Use parameter `page=disaster-widget` to select this widget
+- Use parameter `page=disaster-widget` to select this widget.
 - **Parameters:**
     - iso3 (required)
 
@@ -113,7 +109,7 @@ To integrate a widget, include the provided HTML snippet into your webpage.
 ![IDU Widget](https://s3-ap-southeast-1.amazonaws.com/tc-codimd/uploads/331ae676863e494e83598e719.png)
 
 - Shows IDU map data with filters for monthly queries and a carousel for latest updates.
-- Use parameter `page=idu-map` to select this widget
+- Use parameter `page=idu-map` to select this widget.
 - **Parameters:**
     - iso3
 
@@ -122,45 +118,9 @@ To integrate a widget, include the provided HTML snippet into your webpage.
 ![GIDD Widget](https://s3-ap-southeast-1.amazonaws.com/tc-codimd/uploads/331ae676863e494e83598e71a.png)
 
 - Shows the GIDD data with charts and filters.
-- Use parameter `page=gidd` to select this widget
+- Use parameter `page=gidd` to select this widget.
 - **Parameters:**
     - No parameters
-
-<h2 id="code-sample">Code sample to read and export the IDU API as a geojson file for GIS applications</h2>
-
-1. Create and save the Python script in a file, navigate to its directory in a terminal, run it with `python export_geojson.py`, and check for the `IDMC_IDU.geojson` output.
-   ```python
-   import requests
-   import json
-
-   # URL of the JSON API
-   url = "LINK TO THE API END POINT"
- 
-   response = requests.get(url).json()  # Assumes successful response and valid JSON
-
-   geojson = {
-       "type": "FeatureCollection",
-       "features": [{
-           "type": "Feature",
-           "properties": {k: v for k, v in item.items() if k != "latitude" and k != "longitude"},
-           "geometry": {"type": "Point", "coordinates": [item["longitude"], item["latitude"]]}
-       } for item in response]
-   }
-
-   # Define the path where you want to save the file
-   # Adjust the path as needed for your specific requirements
-   file_path = "C:\\path\\to\\your\\folder\\IDMC_IDU.geojson"  # Update this path for windows environments
-   # file_path = "/path/to/your/folder/displacements.geojson"  # Update this path for Linux/MacOS environments
-
-
-   with open(file_path, "w") as f:
-       f.write(json.dumps(geojson, indent=4))
-
-   print("GeoJSON file created successfully.")
-   ```
-2. For QGIS, drag and drop the file into QGIS.
-3. For ArcGIS Pro, use the JSON to Features tool to read the geojson file and open it as a shapefile.
-
 
 <h2 id="caveats-limitation">General caveats and limitations of the datasets</h2>
 
