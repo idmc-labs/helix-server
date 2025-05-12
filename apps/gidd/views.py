@@ -479,12 +479,12 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     def export_conflicts(self, ws, qs):
         ws.append([
             'ISO3',
-            'Name',
+            'Country / Territory',
             'Year',
-            'Conflict Stock Displacement',
-            'Conflict Stock Displacement (Raw)',
+            'Conflict Total number of IDPs',
+            'Conflict Total number of IDPs raw',
             'Conflict Internal Displacements',
-            'Conflict Internal Displacements (Raw)',
+            'Conflict Internal Displacements raw',
         ])
         for item in qs:
             ws.append([
@@ -500,12 +500,12 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     def export_disasters(self, ws, qs):
         ws.append([
             'ISO3',
-            'Name',
+            'Country / Territory',
             'Year',
             'Disaster Internal Displacements',
-            'Disaster Internal Displacements (Raw)',
-            'Disaster Stock Displacement',
-            'Disaster Stock Displacement (Raw)'
+            'Disaster Internal Displacements raw',
+            'Disaster Total number of IDPs',
+            'Disaster Total number of IDPs raw'
         ])
         for item in qs:
             ws.append([
@@ -521,16 +521,16 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     def export_displacements(self, ws, qs):
         ws.append([
             'ISO3',
-            'Name',
+            'Country / Territory',
             'Year',
-            'Conflict Stock Displacement',
-            'Conflict Stock Displacement (Raw)',
+            'Conflict Total number of IDPs',
+            'Conflict Total number of IDPs raw',
             'Conflict Internal Displacements',
-            'Conflict Internal Displacements (Raw)',
+            'Conflict Internal Displacements raw',
             'Disaster Internal Displacements',
-            'Disaster Internal Displacements (Raw)',
-            'Disaster Stock Displacement',
-            'Disaster Stock Displacement (Raw)'
+            'Disaster Internal Displacements raw',
+            'Disaster Total number of IDPs',
+            'Disaster Total number of IDPs raw'
         ])
         for item in qs:
             ws.append([
@@ -1224,10 +1224,11 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "of measurement used, which in this context refers to houses destroyed.\n"
             "Violence type: This field categorizes the type of violence using IDMC's typology, which aligns with "
             "international classifications. The categories include - International Armed Conflict (IAC): Refers to "
-            "armed conflict between two or more states. - Non-International Armed Conflict (NIAC): Refers to protracted "
+            "armed conflict between two or more states. - Non-International Armed Conflict (NIAC): Refers to "
             "armed conflict occurring within the territory of a single state between its government and non-state armed "
             "groups, or between such groups themselves. - Unclear/Unknown: Indicates situations where the type of violence "
-            "is not definitively categorized due to limited information.\n"
+            "is not definitively categorized due to limited information. - Other situations of violence (OSV): Refers to "
+            "cases of communal violence, civilian-state violence and crime-related violence.\n"
             "Event codes (Code:Type): Unique codes such as the GLIDE number and other database-specific codes used "
             "to identify and track specific events across various databases.\n"
             "Locations name: This field indicates the names of locations where displacement incidents have been "
@@ -1602,11 +1603,13 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 "Violence type: This field categorizes the type of violence using IDMC's typology, which aligns with "
                 "international classifications. The categories include\n"
                 "- International Armed Conflict (IAC): Refers to armed conflict between two or more states.\n"
-                "- Non-International Armed Conflict (NIAC): Refers to protracted armed conflict occurring within the "
+                "- Non-International Armed Conflict (NIAC): Refers to armed conflict occurring within the "
                 "territory of a single state between its government and non-state armed groups, or between such groups "
                 "themselves.\n"
                 "- Unclear/Unknown: Indicates situations where the type of violence is not definitively categorized "
-                "due to limited information."
+                "due to limited information.\n"
+                "- Other situations of violence (OSV): Refers to cases of communal violence, civilian-state "
+                "violence and crime-related violence."
             ],
             [
                 "Event codes (Code:Type): Unique codes such as the GLIDE number and other database-specific codes used "

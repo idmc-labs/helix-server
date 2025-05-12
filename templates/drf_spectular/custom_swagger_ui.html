@@ -319,7 +319,7 @@
     <div class="custom-ui-navbar-container">
       <img
         class="custom-ui-navbar-logo"
-        src="https://s3-ap-southeast-1.amazonaws.com/tc-codimd/uploads/331ae676863e494e83598e71e.png"
+        src="https://idmc-general-assets.s3.us-east-1.amazonaws.com/helix-swagger-ui/media/idmc-logo.svg"
         alt="IDMC"
       />
     </div>
@@ -328,19 +328,31 @@
 
   <div class="swagger-ui footer">
     <div class="information-container wrapper">
-      <div class="renderedMarkdown">
-        <h2 id="retroactive-changes">Retroactive changes to GIDD data</h2>
-        <p>
-          All figures have undergone thorough expert validation to ensure consistency with IDMC’s quality requirements. A detailed account of the changes and the analytical processes underpinning them is provided in <code>Tab 2_Context_Displacement_data</code>, which contains a full summary of the revisions conducted by IDMC experts.
-        </p>
-        <a
-          href="https://static-privacy-policy.s3.us-east-1.amazonaws.com/UpdateGIDD_README_06052025_Historicalchanges.xlsx"
-        >
-          UpdateGIDD_README_06052025_Historicalchanges.xlsx
-        </a>
-        <p>
-          For further information or inquiries, please contact us at <a rel="noopener noreferrer" target="_blank" href="mailto:ch.datainfo@idmc.ch">ch.datainfo@idmc.ch</a>
-        </p>
+    <div class="renderedMarkdown">
+      <h2 id="retroactive-changes">Retroactive Changes to GIDD Data</h2>
+      <h3>Downloadable Files (Excel):</h3>
+      <p>All figures included in the downloadable files from the Global Internal Displacement Database (GIDD) have undergone rigorous expert validation to ensure alignment with IDMC’s data quality standards. Detailed documentation of the changes, including the analytical processes supporting them, is provided in the <code>Tab 2_Context_Displacement_data</code> of each file. A complete summary of historical figure revisions is also included in the accompanying README file.
+      </p>
+      <h3>API Access:</h3>
+      <p>
+         For users accessing GIDD data via the API, detailed documentation describing the methodology, caveats, and historical changes to figures is available through the public figure analysis endpoint:
+      </p>
+      <pre><code>https://helix-tools-api.idmcdb.org/external-api/gidd/public-figure-analyses/?client_id=YOUR_API_KEY</code></pre>
+      <p>
+         This resource provides comprehensive information on the evolution of published figures over time.
+      </p>
+      <h3>Country-Level Historical Revisions:</h3>
+      <p>
+         A complete list of countries with historical data changes since 2025 is available in the following document:
+      </p>
+      <a
+        href="https://idmc-general-assets.s3.us-east-1.amazonaws.com/helix-swagger-ui/gidd-revisions/GIDD_HistoricalChanges_13052025.xlsx"
+      >
+        GIDD_HistoricalChanges_13052025.xlsx
+      </a>
+      <p>
+         For further information or technical inquiries, please contact us at: <a rel="noopener noreferrer" target="_blank" href="mailto:ch.datainfo@idmc.ch">ch.datainfo@idmc.ch</a>
+      </p>
       </div>
     </div>
   </div>

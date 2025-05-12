@@ -77,7 +77,7 @@ IDMC offers widgets that can be embedded into websites to display displacement d
 
 <h3 id="conflict-widget">Conflict Widget</h3>
 
-![Conflict Widget](https://s3-ap-southeast-1.amazonaws.com/tc-codimd/uploads/331ae676863e494e83598e717.png)
+![Conflict Widget](https://idmc-general-assets.s3.us-east-1.amazonaws.com/helix-swagger-ui/media/conflict-widget.png)
 
 - Visualizes internal displacements and the total number of IDPs by country and year.
 - Use parameter `page=conflict-widget` to select this widget
@@ -107,7 +107,7 @@ To integrate a widget, include the provided HTML snippet into your webpage.
 
 <h3 id="disaster-widget">Disaster Widget</h3>
 
-![Disaster Widget](https://s3-ap-southeast-1.amazonaws.com/tc-codimd/uploads/331ae676863e494e83598e718.png)
+![Disaster Widget](https://idmc-general-assets.s3.us-east-1.amazonaws.com/helix-swagger-ui/media/disaster-widget.png)
 
 - Displays disaster events disaggregated by country, hazard type, and year.
 - Use parameter `page=disaster-widget` to select this widget.
@@ -116,7 +116,7 @@ To integrate a widget, include the provided HTML snippet into your webpage.
 
 <h3 id="idu-widget">IDU Widget</h3>
 
-![IDU Widget](https://s3-ap-southeast-1.amazonaws.com/tc-codimd/uploads/331ae676863e494e83598e719.png)
+![IDU Widget](https://idmc-general-assets.s3.us-east-1.amazonaws.com/helix-swagger-ui/media/idu-widget.png)
 
 - Shows IDU map data with filters for monthly queries and a carousel for latest updates.
 - Use parameter `page=idu-map` to select this widget.
@@ -125,7 +125,7 @@ To integrate a widget, include the provided HTML snippet into your webpage.
 
 <h3 id="gidd-widget">GIDD Widget</h3>
 
-![GIDD Widget](https://s3-ap-southeast-1.amazonaws.com/tc-codimd/uploads/331ae676863e494e83598e71a.png)
+![GIDD Widget](https://idmc-general-assets.s3.us-east-1.amazonaws.com/helix-swagger-ui/media/gidd-widget.png)
 
 - Shows the GIDD data with charts and filters.
 - Use parameter `page=gidd` to select this widget.
