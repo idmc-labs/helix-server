@@ -479,12 +479,12 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     def export_conflicts(self, ws, qs):
         ws.append([
             'ISO3',
-            'Country / Territory',
+            'Name',
             'Year',
-            'Conflict Total number of IDPs',
-            'Conflict Total number of IDPs raw',
+            'Conflict Stock Displacement',
+            'Conflict Stock Displacement (Raw)',
             'Conflict Internal Displacements',
-            'Conflict Internal Displacements raw',
+            'Conflict Internal Displacements (Raw)',
         ])
         for item in qs:
             ws.append([
@@ -500,12 +500,12 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     def export_disasters(self, ws, qs):
         ws.append([
             'ISO3',
-            'Country / Territory',
+            'Name',
             'Year',
             'Disaster Internal Displacements',
-            'Disaster Internal Displacements raw',
-            'Disaster Total number of IDPs',
-            'Disaster Total number of IDPs raw'
+            'Disaster Internal Displacements (Raw)',
+            'Disaster Stock Displacement',
+            'Disaster Stock Displacement (Raw)'
         ])
         for item in qs:
             ws.append([
@@ -521,16 +521,16 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     def export_displacements(self, ws, qs):
         ws.append([
             'ISO3',
-            'Country / Territory',
+            'Name',
             'Year',
-            'Conflict Total number of IDPs',
-            'Conflict Total number of IDPs raw',
+            'Conflict Stock Displacement',
+            'Conflict Stock Displacement (Raw)',
             'Conflict Internal Displacements',
-            'Conflict Internal Displacements raw',
+            'Conflict Internal Displacements (Raw)',
             'Disaster Internal Displacements',
-            'Disaster Internal Displacements raw',
-            'Disaster Total number of IDPs',
-            'Disaster Total number of IDPs raw'
+            'Disaster Internal Displacements (Raw)',
+            'Disaster Stock Displacement',
+            'Disaster Stock Displacement (Raw)'
         ])
         for item in qs:
             ws.append([
@@ -743,15 +743,15 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             ],
             [],
             ['ISO3: Represents the ISO 3166-1 alpha-3 code. The code \'AB9\' is assigned to the Abyei Area.'],
-            ['Country / Territory: Short name of the country or territory.'],
+            ['Name: Short name of the country or territory.'],
             ['Year: Indicates the year for which displacement data are reported.'],
             [
-                'Conflict Total number of IDPs: Total number of IDPs (rounded figures at '
+                'Conflict Stock Displacement: Total number of IDPs (rounded figures at '
                 'the national level), as a result of conflict and violence as of the end of '
                 'the reporting year. Units are recorded as \'People\'.'
             ],
             [
-                'Conflict Total number of IDPs raw: Total number of IDPs (not rounded), as a result of conflict and '
+                'Conflict Stock Displacement (Raw): Total number of IDPs (not rounded), as a result of conflict and '
                 'violence as of the end of the reporting year. Units are recorded as \'People\'.'
             ],
             [
@@ -760,7 +760,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 '\'internal displacement flows\' or \'internal displacement movements\'.'
             ],
             [
-                'Conflict Internal Displacements raw: Total number of internal displacements '
+                'Conflict Internal Displacements (Raw): Total number of internal displacements '
                 'reported (not rounded), as a result of conflict and violence over the reporting year. Units are '
                 'recorded as \'internal displacement flows\' or \'internal displacement movements\'.'
             ],
@@ -770,17 +770,17 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 'recorded as \'internal displacement flows\' or \'internal displacement movements\'.'
             ],
             [
-                'Disaster Internal Displacements raw: Total number of internal displacements reported (not rounded), '
+                'Disaster Internal Displacements (Raw): Total number of internal displacements reported (not rounded), '
                 'as a result of disasters over the reporting year. Units are recorded as \'internal displacement flows\''
                 ' or \'internal displacement movements\'.'
             ],
             [
-                'Disaster Total number of IDPs: Total number of IDPs (rounded figures at '
+                'Disaster Stock Displacement: Total number of IDPs (rounded figures at '
                 'national level), as a result of disasters as of the end of the reporting year. '
                 'Units are recorded as \'People\'.'
             ],
             [
-                'Disaster Total number of IDPs raw: Total number of IDPs (not rounded), as a result of disasters as of '
+                'Disaster Stock Displacement (Raw): Total number of IDPs (not rounded), as a result of disasters as of '
                 'the end of the reporting year. Units are recorded as \'People\'.'
             ],
         ]
