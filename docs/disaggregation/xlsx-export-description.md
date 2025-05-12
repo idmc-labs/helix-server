@@ -1,0 +1,58 @@
+This endpoint provides quality-controlled, annually validated data on internal displacement due to conflicts and disasters, disaggregated by caseload. This dataset is disaggregated by caseload, location and event.
+
+| Field                         | Description |
+|-------------------------------|-------------|
+| ID                            | IDMC figure unique identifier. |
+| ISO3                          | Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area. |
+| Country / Territory           | Short name of the country or territory. |
+| Geographical region           | Corresponds to IDMC's geographical regions. |
+| Figure cause                  | Identifies the trigger of displacement, such as conflict or disasters. |
+| Year                          | Indicates the year for which displacement data are reported. |
+| Figure category               | Categorizes the type of displacement metric. It details values for Internal Displacements (internal displacement flows) and Total Number of IDPs (internal displacement stocks), as defined earlier in this document. |
+| Total figures                 | Represents the total number of internal displacements or IDPs. For internal displacements, units are recorded as 'internal displacement flows' or 'internal displacement movements'. For the total number of IDPs, units reflect the total number of people living in displacement. |
+| Reported figures              | This field represents the values reported by the original source. Figures can be reported either in terms of households or individual counts. |
+| Figure unit                   | This field specifies the type of unit reported in the 'Reported' column. Possible values include 'households' or 'people'. The category people includes 'internal displacement flows' or 'internal displacement movements'. |
+| Household size                | This metric represents the average number of individuals per household. It is calculated using data from various sources, including the United Nations Department of Economic and Social Affairs (UNDESA), national statistical offices, and estimates from local primary data providers shared with IDMC. |
+| Hazard Category               | Hazard category based on the CRED EM-DAT classification. |
+| Hazard sub category           | Hazard sub category based on the CRED EM-DAT classification. |
+| Hazard Type                   | Hazard type as categorized by CRED EM-DAT. |
+| Hazard Sub-Type               | Specific sub-type of the hazard based on CRED EM-DAT. |
+| Start date                    | Start date of displacement flow. |
+| Start date accuracy           | Uncertainty or accuracy of start date. |
+| End date                      | End date of the displacement flow. |
+| End date accuracy             | Uncertainty or accuracy of end date. |
+| Stock date                    | This field indicates the year in which the data for the IDP metric (total number of internally displaced persons or stocks) was collected. |
+| Stock date accuracy           | Uncertainty or accuracy of stock date. |
+| Stock reporting date          | This field reflects the year IDMC uses to report the total number of internally displaced persons (IDPs). It represents the IDMC reporting year, which may not coincide with the actual data collection year. Given the protracted nature of displacement, annual updates on the total number of IDPs may not always be available. To maintain accuracy in reporting, IDMC relies on the most recent verified data until evidence shows that the displaced population has achieved a durable solution. |
+| Publishers                    | Organizations responsible for distributing and disseminating internal displacement data. |
+| Sources                       | This field lists the names of the primary data providers or the original sources for the internal displacement data reported by IDMC. |
+| Sources type                  | This field categorizes the type of source as defined by IDMC. |
+| Event ID                      | Unique identifier for events as assigned by IDMC. |
+| Event name                    | This field includes the event's coded name, which is based on the country, type of hazard, location, and start date. It also incorporates the common or official name of the event, when available. |
+| Event cause                   | Identifies the trigger of displacement, such as conflict or disasters. |
+| Event main trigger            | This field identifies the primary hazard subtype or conflict type that initiated the event, serving as the main driver of a disaster or conflict. For disasters, associated fields such as "Hazard Category", "Hazard Subcategory", "Hazard Type", and "Hazard Sub-Type" detail the cascading impacts stemming from this main trigger. For instance, a tropical storm identified as the main driver of displacement might lead to reports in "Hazard Sub-Type" of floods, landslides, and other related disaster types arising from the initial hazard. |
+| Event start date              | Event or hazard start date. |
+| Event end date                | Event or hazard end date. |
+| Event start date accuracy     | Uncertainty or accuracy of event start date. |
+| Event end date accuracy       | Uncertainty or accuracy of event end date. |
+| Is housing destruction        | This field indicates whether the displacement data includes individuals displaced by housing destruction. Values are "Yes" if the data reflects households whose homes were destroyed, and "No" otherwise. This field relies on the data specified in "Reported Figures" and is linked to the "Unit" of measurement used, which in this context refers to houses destroyed. |
+| Violence type                 | This field categorizes the type of violence using IDMC's typology, which aligns with international classifications. The categories include:<br>- **International Armed Conflict (IAC):** Refers to armed conflict between two or more states.<br>- **Non-International Armed Conflict (NIAC):** Refers to armed conflict occurring within the territory of a single state between its government and non-state armed groups or between such groups themselves.<br>- **Unclear/Unknown:** Indicates situations where the type of violence is not definitively categorized due to limited information.<br>- **Other situations of violence (OSV):** Refers to cases of communal violence, civilian-state violence and crime-related violence. |
+| Event codes (Code:Type)       | Unique codes such as the GLIDE number and other database-specific codes used to identify and track specific events across various databases. |
+| Locations name                | This field indicates the names of locations where displacement incidents have been reported. It's important to note that this field may exhibit a many-to-one relationship, signifying that multiple location names could be associated with a single reported figure, preventing disaggregation by individual location. This becomes particularly relevant in geospatial analysis, where Geographic Information System (GIS) software may interpret these multi-point entities as single data points, potentially leading to the inadvertent double-counting of figures. To mitigate this issue, it's advisable to preprocess the dataset by either dividing the total figure by the number of locations or distributing the "Total figures" values based on a weighting factor such as population density. This ensures a more accurate representation of the displacement data across individual locations and prevents duplication of figures during analysis. |
+| Locations coordinates         | This field contains geographic coordinates representing the reported locations. Please note that this field contains multipoints meaning that multiple locations may represent one figure. It's important to note that this field may exhibit a many-to-one relationship, signifying that multiple location names could be associated with a single reported figure, preventing disaggregation by individual location. This becomes particularly relevant in geospatial analysis, where Geographic Information System (GIS) software may interpret these multi-point entities as single data points, potentially leading to the inadvertent double-counting of figures. To mitigate this issue, it's advisable to preprocess the dataset by either dividing the total figure by the number of locations or distributing the "Total figures" values based on a weighting factor such as population density. This ensures a more accurate representation of the displacement data across individual locations and prevents duplication of figures during analysis. |
+| Locations accuracy            | This field indicates the estimated precision of the reported locations. It serves as a clue to the likely administrative unit level (e.g. country, state, district) used for reporting. |
+| Locations type                | This field specifies the type of displacement location within a reported event. It can indicate:<br>- **Origin:** The place where people were displaced from.<br>- **Destination:** The location where displaced people arrived.<br>- **Both:** In some cases, both origin and destination information might be included.<br>It's crucial to note that different locations reported for a single figure may pertain to both the origin and destination of displacement incidents. This distinction is particularly salient in geospatial analysis, where Geographic Information System (GIS) software may interpret these multi-point entities as singular data points, potentially resulting in inadvertent double-counting of figures. To mitigate this issue, it is recommended to preprocess the dataset prior to GIS analysis to ensure accurate representation and avoid duplication of figures. |
+| Displacement occurred         | This field contains values that represent if preventive evacuations were reported. These evacuations are the result of existing early warning systems. |
+
+This dataset provides contextual information and analysis documented by IDMC analysts. It captures flags related to methodology, caveats, sources, and challenges identified for each metric, reporting year, and country.
+
+| Field                   | Description |
+|-------------------------|-------------|
+| ISO3                    | Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area. |
+| Year                    | Indicates the year for which displacement data are reported. |
+| Figure cause            | Identifies the trigger of displacement, such as conflict or disasters. |
+| Figure category         | Categorizes the type of displacement metric. It details values for Internal Displacements (internal displacement flows) and Total Number of IDPs, (internal displacement stocks), as defined earlier in this document. |
+| Description             | Provides contextual information about the data, including sources and data limitations. It is essential for representing the analysis conducted by IDMC analysts. This field also details the methodology used, descriptions of sources, and outlines any caveats and challenges identified with the displacement figures reported. |
+| Figures                 | Represents the total number of internal displacements or IDPs. For internal displacements, units are recorded as 'internal displacement flows' or 'internal displacement movements'. For the total number of IDPs, units reflect the total number of people living in displacement. |
+| Figures rounded         | Displays rounded figures to provide a simplified view of the data that matches the figures reported in the Global Report on Internal Displacement (GRID). |
+

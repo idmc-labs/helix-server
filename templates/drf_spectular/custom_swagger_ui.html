@@ -1,0 +1,360 @@
+{% extends "drf_spectacular/swagger_ui.html" %}
+
+{% block head %}
+  {{ block.super }}
+  <style>
+    @import url("https://use.typekit.net/ret0ejy.css");
+
+    /* Page defaults */
+
+    html, body {
+        position: relative;
+        margin: 0px;
+        padding: 0px;
+        font-family: 'proxima-nova', sans-serif;
+        background-color: #ffffff;
+    }
+
+    * {
+        box-sizing: border-box;
+    }
+
+    a {
+        color: #018eca;
+        text-decoration: none;
+    }
+
+    /* Navbar */
+
+    .custom-ui-navbar {
+      padding: 24px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* soft shadow */
+    }
+
+    .custom-ui-navbar-container {
+      margin: 0 auto;
+      max-width: 1460px;
+    }
+
+    /* Footer */
+    .footer {
+      margin-bottom: 64px;
+    }
+
+    /* Swagger overrides */
+
+    div[data-name=modelPanel] > .model-box {
+        width: 100%;
+    }
+
+    .model-title__text {
+        font-size: 12px;
+    }
+
+    .information-container h1,
+    .information-container h2,
+    .information-container h3,
+    .information-container h4,
+    .information-container h5,
+    .information-container h6 {
+        font-family: 'freight-big-pro', sans-serif !important;
+        color: #193256;
+    }
+
+    .information-container h2 span {
+        line-height: 1.25 !important;
+    }
+
+    @media(min-width:0px)and (max-width:767px) {
+        .information-container h1 {
+            font-size:30px;
+            font-weight:900;
+            line-height:36px;
+            margin-bottom:34px;
+            margin-top:34px
+        }
+    }
+    @media(min-width:768px) {
+        .information-container h1 {
+            font-size:36px;
+            font-weight:900;
+            line-height:48px;
+            margin-bottom:38px;
+            margin-top:38px
+        }
+    }
+    @media(min-width:1200px) {
+        .information-container h1 {
+            font-size:42px;
+            font-weight:900;
+            line-height:48px;
+            margin-bottom:42px;
+            margin-top:42px
+        }
+    }
+    @media(min-width:0px)and (max-width:767px) {
+        .information-container h2 {
+            font-size:26px;
+            font-weight:900;
+            line-height:30px;
+            margin-bottom:34px;
+            margin-top:34px
+        }
+    }
+    @media(min-width:768px) {
+        .information-container h2 {
+            font-size:30px;
+            font-weight:900;
+            line-height:40px;
+            margin-bottom:38px;
+            margin-top:38px
+        }
+    }
+    @media(min-width:1200px) {
+        .information-container h2 {
+            font-size:36px;
+            font-weight:900;
+            line-height:44px;
+            margin-bottom:42px;
+            margin-top:42px
+        }
+    }
+    @media(min-width:0px)and (max-width:767px) {
+        .information-container h3 {
+            font-size:20px;
+            font-weight:900;
+            line-height:28px;
+            margin-bottom:30px;
+            margin-top:30px
+        }
+    }
+    @media(min-width:768px) {
+        .information-container h3 {
+            font-size:22px;
+            font-weight:900;
+            line-height:28px;
+            margin-bottom:32px;
+            margin-top:32px
+        }
+    }
+    @media(min-width:1200px) {
+        .information-container h3 {
+            font-size:26px;
+            font-weight:900;
+            line-height:36px;
+            margin-bottom:36px;
+            margin-top:36px
+        }
+    }
+    @media(min-width:0px)and (max-width:767px) {
+        .information-container h4 {
+            font-size:18px;
+            font-weight:900;
+            line-height:24px;
+            margin-bottom:26px;
+            margin-top:26px
+        }
+    }
+    @media(min-width:768px) {
+        .information-container h4 {
+            font-size:20px;
+            font-weight:900;
+            line-height:28px;
+            margin-bottom:28px;
+            margin-top:28px
+        }
+    }
+    @media(min-width:1200px) {
+        .information-container h4 {
+            font-size:24px;
+            font-weight:900;
+            line-height:36px;
+            margin-bottom:32px;
+            margin-top:32px
+        }
+    }
+    @media(min-width:0px)and (max-width:767px) {
+        .information-container h5 {
+            font-size:16px;
+            font-weight:700;
+            line-height:24px;
+            margin-bottom:18px;
+            margin-top:18px
+        }
+    }
+    @media(min-width:768px) {
+        .information-container h5 {
+            font-size:18px;
+            font-weight:700;
+            line-height:28px;
+            margin-bottom:18px;
+            margin-top:18px
+        }
+    }
+    @media(min-width:1200px) {
+        .information-container h5 {
+            font-size:22px;
+            font-weight:700;
+            line-height:28px;
+            margin-bottom:20px;
+            margin-top:20px
+        }
+    }
+    @media(min-width:0px)and (max-width:767px) {
+        .information-container h6 {
+            font-size:16px;
+            font-weight:700;
+            line-height:22px;
+            margin-bottom:14px;
+            margin-top:14px
+        }
+    }
+    @media(min-width:768px) {
+        .information-container h6 {
+            font-size:18px;
+            font-weight:700;
+            line-height:22px;
+            margin-bottom:16px;
+            margin-top:16px
+        }
+    }
+    @media(min-width:1200px) {
+        .information-container h6 {
+            font-size:20px;
+            font-weight:700;
+            line-height:24px;
+            margin-bottom:16px;
+            margin-top:16px
+        }
+    }
+
+    .renderedMarkdown * {
+        line-height: 1.5;
+    }
+
+    /* Multi-line Codeblock */
+    .renderedMarkdown pre > code {
+        background-color: #d7dee5 !important;
+        color: #3b4151 !important;
+        font-weight: unset !important;
+        padding: 18px !important;
+    }
+
+    /* Codeblock */
+    .renderedMarkdown code {
+        font-size: 12px !important;
+        padding: 4px !important;
+        font-weight: unset !important;
+        color: #d63384 !important;
+    }
+
+    /* Paragraph */
+    .renderedMarkdown p {
+        margin-bottom: 1rem;
+        margin-top: 0px;
+        font-family: 'proxima-nova', sans-serif !important;
+    }
+
+    /* Image */
+    .renderedMarkdown img {
+        border-radius: 12px; /* smooth corners */
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* soft shadow */
+        overflow: hidden; /* clips image corners to match border-radius */
+    }
+
+    /* Font overrides */
+    .renderedMarkdown li, th, td, a {
+        font-family: 'proxima-nova', sans-serif !important;
+    }
+
+    /* Tables */
+    .renderedMarkdown th:not(:first-of-type) {
+        padding-left: 12px;
+    }
+    .renderedMarkdown td:not(:first-of-type) {
+        padding-left: 12px;
+    }
+    .renderedMarkdown th:first-of-type {
+        width: 20em;
+    }
+    .renderedMarkdown td:first-of-type {
+        width: 20em;
+        font-weight:700;
+    }
+
+    .parameters td.parameters-col_description {
+        display: flex;
+        flex-direction: column-reverse;
+        margin-bottom: 0px !important;
+        padding-bottom: 10px !important;
+        align-items: flex-start;
+    }
+    .parameters td.parameters-col_description select {
+        width: 340px;
+        min-height: 40px !important;
+        margin: 5px 0;
+        border-color: #d9d9d9 !important;
+        box-shadow: none;
+        background-color: #ffff !important;
+    }
+    .parameters .parameter__in {
+        display: none;
+    }
+
+    .responses-inner .response-controls select {
+        width: 340px;
+        min-height: 40px !important;
+        margin: 5px 0;
+        border-color: #d9d9d9 !important;
+        border-width: 1px;
+        box-shadow: none;
+        background-color: #ffff !important;
+    }
+  </style>
+{% endblock %}
+
+
+{% block body %}
+  <div class="custom-ui-navbar">
+    <div class="custom-ui-navbar-container">
+      <img
+        class="custom-ui-navbar-logo"
+        src="https://idmc-general-assets.s3.us-east-1.amazonaws.com/helix-swagger-ui/media/idmc-logo.svg"
+        alt="IDMC"
+      />
+    </div>
+  </div>
+  {{ block.super }}
+
+  <div class="swagger-ui footer">
+    <div class="information-container wrapper">
+    <div class="renderedMarkdown">
+      <h2 id="retroactive-changes">Retroactive Changes to GIDD Data</h2>
+      <h3>Downloadable Files (Excel):</h3>
+      <p>All figures included in the downloadable files from the Global Internal Displacement Database (GIDD) have undergone rigorous expert validation to ensure alignment with IDMC’s data quality standards. Detailed documentation of the changes, including the analytical processes supporting them, is provided in the <code>Tab 2_Context_Displacement_data</code> of each file. A complete summary of historical figure revisions is also included in the accompanying README file.
+      </p>
+      <h3>API Access:</h3>
+      <p>
+         For users accessing GIDD data via the API, detailed documentation describing the methodology, caveats, and historical changes to figures is available through the public figure analysis endpoint:
+      </p>
+      <pre><code>https://helix-tools-api.idmcdb.org/external-api/gidd/public-figure-analyses/?client_id=YOUR_API_KEY</code></pre>
+      <p>
+         This resource provides comprehensive information on the evolution of published figures over time.
+      </p>
+      <h3>Country-Level Historical Revisions:</h3>
+      <p>
+         A complete list of countries with historical data changes since 2025 is available in the following document:
+      </p>
+      <a
+        href="https://idmc-general-assets.s3.us-east-1.amazonaws.com/helix-swagger-ui/gidd-revisions/GIDD_HistoricalChanges_13052025.xlsx"
+      >
+        GIDD_HistoricalChanges_13052025.xlsx
+      </a>
+      <p>
+         For further information or technical inquiries, please contact us at: <a rel="noopener noreferrer" target="_blank" href="mailto:ch.datainfo@idmc.ch">ch.datainfo@idmc.ch</a>
+      </p>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}

@@ -12,11 +12,16 @@ from django.http import HttpResponse
 from openpyxl import Workbook
 from openpyxl.writer.excel import save_virtual_workbook
 from rest_framework import mixins
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import (
+    extend_schema,
+    extend_schema_view,
+)
+from drf_spectacular.types import OpenApiTypes
 from django.db import models
 from django.db.models import (
     F, Case, When, Q
 )
+from pathlib import Path
 
 from apps.contrib.commons import DATE_ACCURACY
 from apps.country.models import Country
@@ -51,6 +56,17 @@ from .rest_filters import (
     DisaggregationPublicFigureAnalysisFilterSet,
 )
 from utils.common import track_gidd, client_id
+from rest_framework import renderers
+
+
+class XlsxRenderer(renderers.BaseRenderer):
+    media_type = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    format = 'xlsx'
+    charset = None
+    render_style = 'binary'
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
 
 
 def _get_location_accuracy_label(accuracy):
@@ -114,6 +130,12 @@ class ListOnlyViewSetMixin(mixins.ListModelMixin, viewsets.GenericViewSet):
         return self.list(request, *args, **kwargs)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        responses=CountrySerializer(many=True),
+        tags=['GIDD'],
+    ),
+)
 class CountryViewSet(ListOnlyViewSetMixin):
     serializer_class = CountrySerializer
     lookup_field = 'iso3'
@@ -130,6 +152,12 @@ class CountryViewSet(ListOnlyViewSetMixin):
         return Country.objects.all()
 
 
+@extend_schema_view(
+    list=extend_schema(
+        responses=ConflictSerializer(many=True),
+        tags=['GIDD'],
+    ),
+)
 class ConflictViewSet(ListOnlyViewSetMixin):
     serializer_class = ConflictSerializer
     filterset_class = RestConflictFilterSet
@@ -144,6 +172,13 @@ class ConflictViewSet(ListOnlyViewSetMixin):
         return Conflict.objects.all().select_related('country')
 
 
+@extend_schema_view(
+    list=extend_schema(
+        description=Path("docs/disaster/main-description.md").read_text(),
+        responses=DisasterSerializer(many=True),
+        tags=['GIDD'],
+    ),
+)
 class DisasterViewSet(ListOnlyViewSetMixin):
     serializer_class = DisasterSerializer
     filterset_class = RestDisasterFilterSet
@@ -169,13 +204,21 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             return "Displacement reporting preventive evacuations"
         return "Displacement without preventive evacuations reported"
 
-    @extend_schema(responses=DisasterSerializer(many=True))
+    @extend_schema(
+        description=Path("docs/disaster/xlsx-export-description.md").read_text(),
+        responses={
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
+        },
+        filters=True,
+        tags=['GIDD'],
+    )
     @action(
         detail=False,
         methods=["get"],
         url_path="disaster-export",
         permission_classes=[AllowAny],
         pagination_class=None,
+        renderer_classes=[XlsxRenderer],
     )
     def export(self, request):
         """
@@ -303,7 +346,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                 'https://www.internal-displacement.org/database/displacement-data/ (Accessed: [date of access]).'
             ],
             [],
-            ['CONTACT: info@idmc.ch'],
+            ['CONTACT: ch.datainfo@idmc.ch'],
             [],
         ]
 
@@ -313,7 +356,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         ws2.append(['DATA DESCRIPTION: 1_Disaster_Displacement_data'])
         ws2.append([])
 
-        table = [
+        readme_text_2 = [
             ['ISO3: Represents the ISO 3166-1 alpha-3 code. The code \'AB9\' is assigned to the Abyei Area.'],
             ['Country / Territory: Short name of the country or territory.'],
             ['Year: Indicates the year for which displacement data are reported.'],
@@ -324,17 +367,17 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             ['Date of Event (Start): Approximate start date of the event.'],
             [
                 'Disaster Internal Displacements: Total number of internal displacements reported (rounded figures at '
-                'national level), as a result of disasters over the reporting year.Units are recorded as \'internal '
-                'displacement flows\' or \'internal displacement movements.\' '
+                'national level), as a result of disasters over the reporting year. Units are recorded as \'internal '
+                'displacement flows\' or \'internal displacement movements\'.'
             ],
             [
                 'Disaster Internal Displacements raw: Total number of internal displacements reported (not rounded), '
                 'as a result of disasters over the reporting year. Units are recorded as \'internal displacement flows\' '
-                'or \'internal displacement movements.\' '
+                'or \'internal displacement movements\'.'
             ],
             ['Hazard Category: Hazard category based on the CRED EM-DAT classification.'],
             ['Hazard Type: Hazard type as categorized by CRED EM-DAT.'],
-            ['Hazard Sub-Type: Specific sub-type of the hazard based on CRED EM-DAT.'],
+            ['Hazard Sub-Type: Specific sub-type of the hazard based on the CRED EM-DAT classification.'],
             [
                 'Event Codes (Code:Type): Unique codes such as the GLIDE number and other database-specific codes used '
                 'to identify and track specific events across various databases.'
@@ -345,8 +388,63 @@ class DisasterViewSet(ListOnlyViewSetMixin):
                 'These evacuations are the result of existing early warning systems.'
             ],
         ]
-        for item in table:
+
+        for item in readme_text_2:
             ws2.append(item)
+
+        readme_text_3 = [
+            [],
+            ['HISTORICAL DATA REVISIONS AND CORRECTIONS'],
+            [],
+            ['The description of our methodology is available at https://www.internal-displacement.org/monitoring-tools'],
+            [
+                'As part of our ongoing commitment to providing accurate and reliable internal displacement data, '
+                'the Internal Displacement Monitoring Centre (IDMC) has released updated figures for several countries '
+                'and years where data was previously unavailable or required corrections. '
+                'These revisions, which result from a comprehensive methodological review, address discrepancies in earlier '
+                'figures published in the Global Internal Displacement Database (GIDD) and reflect our dedication to '
+                'upholding the highest standards of data quality and reliability.\n\n'
+                'Our team of experts rigorously reviewed and validated the new figures to ensure they meet IDMC’s '
+                'stringent data requirements. For questions or further information about these updates, '
+                'please contact us at ch.datainfo@idmc.ch.'
+            ],
+            [],
+            [
+                'All figures have undergone thorough expert validation to ensure consistency with IDMC’s '
+                'quality requirements. A detailed account of the changes and the analytical processes '
+                'underpinning them is provided in Tab 2_Context_Displacement_data, which contains '
+                'a full summary of the revisions conducted by IDMC experts.\n\n'
+                'For further information or inquiries, please contact us at ch.datainfo@idmc.ch.'
+            ],
+            [],
+            ['FIGURES REVIEWED IN JANUARY 2025'],
+            [],
+            ['ISO3', 'Country', 'Geographical region', 'Year', 'Figure cause', 'Figure category'],
+            ['BDI', 'Burundi', 'Sub-Saharan Africa', '2021', 'Disaster', 'Internal Displacements'],
+            ['GRC', 'Greece', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['KGZ', 'Kyrgyzstan', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['LSO', 'Lesotho', 'Sub-Saharan Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['MAR', 'Morocco', 'Middle East and North Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['NAM', 'Namibia', 'Sub-Saharan Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2023', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2017', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2018', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2022', 'Disaster', 'Internal Displacements'],
+            ['USA', 'United States', 'The Americas', '2023', 'Disaster', 'Internal Displacements'],
+            [],
+            ['FIGURES REVIEWED IN MAY 2025'],
+            [],
+            ['ISO3', 'Country', 'Geographical region', 'Year', 'Figure cause', 'Figure category'],
+            ['PRI', 'Puerto Rico', 'The Americas', '2017', 'Disasters', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2018', 'Disasters', 'Internal Displacements'],
+            ['PRI', 'Puerto Rico', 'The Americas', '2019', 'Disasters', 'Internal Displacements'],
+            ['BDI', 'Burundi', 'Sub-Saharan Africa', '2021', 'Disasters', 'Internal Displacements']
+        ]
+
+        for item in readme_text_3:
+            ws2.append(item)
+
         response = HttpResponse(content=save_virtual_workbook(wb))
         filename = 'IDMC_GIDD_Disasters_Internal_Displacement_Data.xlsx'
         response['Content-Disposition'] = f'attachment; filename={filename}'
@@ -354,6 +452,13 @@ class DisasterViewSet(ListOnlyViewSetMixin):
         return response
 
 
+@extend_schema_view(
+    list=extend_schema(
+        description=Path("docs/displacement/main-description.md").read_text(),
+        responses=DisplacementDataSerializer(many=True),
+        tags=['GIDD'],
+    )
+)
 class DisplacementDataViewSet(ListOnlyViewSetMixin):
     serializer_class = DisplacementDataSerializer
     filterset_class = RestDisplacementDataFilterSet
@@ -374,12 +479,12 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     def export_conflicts(self, ws, qs):
         ws.append([
             'ISO3',
-            'Name',
+            'Country / Territory',
             'Year',
-            'Conflict Stock Displacement',
-            'Conflict Stock Displacement (Raw)',
+            'Conflict Total number of IDPs',
+            'Conflict Total number of IDPs raw',
             'Conflict Internal Displacements',
-            'Conflict Internal Displacements (Raw)',
+            'Conflict Internal Displacements raw',
         ])
         for item in qs:
             ws.append([
@@ -395,12 +500,12 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     def export_disasters(self, ws, qs):
         ws.append([
             'ISO3',
-            'Name',
+            'Country / Territory',
             'Year',
             'Disaster Internal Displacements',
-            'Disaster Internal Displacements (Raw)',
-            'Disaster Stock Displacement',
-            'Disaster Stock Displacement (Raw)'
+            'Disaster Internal Displacements raw',
+            'Disaster Total number of IDPs',
+            'Disaster Total number of IDPs raw'
         ])
         for item in qs:
             ws.append([
@@ -416,16 +521,16 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
     def export_displacements(self, ws, qs):
         ws.append([
             'ISO3',
-            'Name',
+            'Country / Territory',
             'Year',
-            'Conflict Stock Displacement',
-            'Conflict Stock Displacement (Raw)',
+            'Conflict Total number of IDPs',
+            'Conflict Total number of IDPs raw',
             'Conflict Internal Displacements',
-            'Conflict Internal Displacements (Raw)',
+            'Conflict Internal Displacements raw',
             'Disaster Internal Displacements',
-            'Disaster Internal Displacements (Raw)',
-            'Disaster Stock Displacement',
-            'Disaster Stock Displacement (Raw)'
+            'Disaster Internal Displacements raw',
+            'Disaster Total number of IDPs',
+            'Disaster Total number of IDPs raw'
         ])
         for item in qs:
             ws.append([
@@ -442,13 +547,21 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 item.disaster_total_displacement,
             ])
 
-    @extend_schema(responses=DisplacementDataSerializer(many=True))
+    @extend_schema(
+        description=Path("docs/displacement/xlsx-export-description.md").read_text(),
+        responses={
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
+        },
+        filters=True,
+        tags=['GIDD'],
+    )
     @action(
         detail=False,
         methods=["get"],
         url_path="displacement-export",
         permission_classes=[AllowAny],
         pagination_class=None,
+        renderer_classes=[XlsxRenderer],
     )
     def export(self, request):
         """
@@ -614,7 +727,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 'https://www.internal-displacement.org/database/displacement-data/ (Accessed: [date of access]).'
             ],
             [],
-            ['CONTACT: info@idmc.ch'],
+            ['CONTACT: ch.datainfo@idmc.ch'],
             [],
         ]
 
@@ -644,30 +757,30 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             [
                 'Conflict Internal Displacements: Total number of internal displacements reported (rounded figures at '
                 'national level), as a result of conflict and violence over the reporting year. Units are recorded as '
-                '\'internal displacement flows\' or \'internal displacement movements.\' '
+                '\'internal displacement flows\' or \'internal displacement movements\'.'
             ],
             [
                 'Conflict Internal Displacements raw: Total number of internal displacements '
-                'reported (not rounded), as a result of conflict and violence over the reporting year.  Units are '
-                'recorded as \'internal displacement flows\' or \'internal displacement movements.\' '
+                'reported (not rounded), as a result of conflict and violence over the reporting year. Units are '
+                'recorded as \'internal displacement flows\' or \'internal displacement movements\'.'
             ],
             [
                 'Disaster Internal Displacements: Total number of internal displacements reported '
                 '(rounded figures at national level), as a result of disasters over the reporting year. Units are '
-                'recorded as \'internal displacement flows\' or \'internal displacement movements.\' '
+                'recorded as \'internal displacement flows\' or \'internal displacement movements\'.'
             ],
             [
                 'Disaster Internal Displacements raw: Total number of internal displacements reported (not rounded), '
                 'as a result of disasters over the reporting year. Units are recorded as \'internal displacement flows\''
-                ' or \'internal displacement movements.\' '
+                ' or \'internal displacement movements\'.'
             ],
             [
                 'Disaster Total number of IDPs: Total number of IDPs (rounded figures at '
-                'national level), as a result, of disasters as of the end of the reporting year. '
+                'national level), as a result of disasters as of the end of the reporting year. '
                 'Units are recorded as \'People\'.'
             ],
             [
-                'Disaster Total number of IDPs raw: Total number of IDPs (not rounded), as a result, of disasters as of '
+                'Disaster Total number of IDPs raw: Total number of IDPs (not rounded), as a result of disasters as of '
                 'the end of the reporting year. Units are recorded as \'People\'.'
             ],
         ]
@@ -685,11 +798,11 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 'metric, reporting year, and country.'
             ],
             [],
-            ['ISO3: Represents the ISO 3166-1 alpha-3 code, the code \'AB9\' is assigned to the Abyei Area.'],
+            ['ISO3: Represents the ISO 3166-1 alpha-3 code. The code \'AB9\' is assigned to the Abyei Area.'],
             ['Year: Indicates the year for which displacement data are reported.'],
-            ['Figure_Cause_Name: Identifies the trigger of displacement, such as conflict or disasters.'],
+            ['Figure cause: Identifies the trigger of displacement, such as conflict or disasters.'],
             [
-                'Figure_Category_Name: Categorizes the type of displacement metric. It details values for '
+                'Figure category: Categorizes the type of displacement metric. It details values for '
                 'Internal Displacements (internal displacement flows) and Total Number of IDPs (internal displacement '
                 'stocks), as defined earlier in this document.'
             ],
@@ -701,11 +814,11 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             ],
             [
                 'Figures: Represents the total number of internal displacements or IDPs. For internal displacements, '
-                'units are recorded as \'internal displacement flows\' or \'internal displacement movements.\' For total '
+                'units are recorded as \'internal displacement flows\' or \'internal displacement movements\'. For total '
                 'number of IDPs, units reflect the total number of people living in displacement.'
             ],
             [
-                'Figures_Rounded: Displays rounded figures to provide a simplified view of the data that matches the '
+                'Figures rounded: Displays rounded figures to provide a simplified view of the data that matches the '
                 'figures reported in the Global Report on Internal Displacement (GRID).'
             ],
         ]
@@ -726,11 +839,11 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         ])
         ws4.append([])
         readme_text_4 = [
-            ['ISO3: Represents the ISO 3166-1 alpha-3 code, the code \'AB9\' is assigned to the Abyei Area.'],
+            ['ISO3: Represents the ISO 3166-1 alpha-3 code. The code \'AB9\' is assigned to the Abyei Area.'],
             ['Country: Short name of the country or territory.'],
             ['Year: The year for which displacement figures are reported.'],
             [
-                'Sex : This field contains information on Female, Male and Both Sexes categories following the United '
+                'Sex: This field contains information on Female, Male, and Both Sexes categories following the United '
                 'Nations Department of Economic and Social Affairs (UN DESA) classifications. '
             ],
             ['Cause:  Identifies the trigger of displacement, such as conflict or disasters.'],
@@ -756,17 +869,17 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 'upholding the highest standards of data quality and reliability.\n\n'
                 'Our team of experts rigorously reviewed and validated the new figures to ensure they meet IDMC’s '
                 'stringent data requirements. For questions or further information about these updates, '
-                'please contact us at info@idmc.ch.'
+                'please contact us at ch.datainfo@idmc.ch.'
             ],
             [],
             [],
-            ['FIGURES REVIEWED FIGURES IN JANUARY 2025'],
+            ['FIGURES REVIEWED IN JANUARY 2025'],
             [
                 'All figures have undergone thorough expert validation to ensure consistency with IDMC’s '
                 'quality requirements. A detailed account of the changes and the analytical processes '
                 'underpinning them is provided in Tab 2_Context_Displacement_data, which contains '
                 'a full summary of the revisions conducted by IDMC experts.\n\n'
-                'For further information or inquiries, please contact us at info@idmc.ch.'
+                'For further information or inquiries, please contact us at ch.datainfo@idmc.ch.'
             ],
             ['ISO3', 'Country', 'Geographical region', 'Year', 'Figure cause', 'Figure category'],
             ['BFA', 'Burkina Faso', 'Sub-Saharan Africa', '2023', 'Conflict', 'Internal Displacements'],
@@ -793,6 +906,77 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             ['UGA', 'Uganda', 'Sub-Saharan Africa', '2022', 'Disaster', 'Internal Displacements'],
             ['UGA', 'Uganda', 'Sub-Saharan Africa', '2023', 'Disaster', 'IDPs'],
             ['USA', 'United States', 'The Americas', '2023', 'Disaster', 'Internal Displacements'],
+            [],
+            ['FIGURES REVIEWED IN MAY 2025'],
+            [
+                'All figures have undergone thorough expert validation to ensure consistency with IDMC’s '
+                'quality requirements. A detailed account of the changes and the analytical processes '
+                'underpinning them is provided in Tab 2_Context_Displacement_data, which contains '
+                'a full summary of the revisions conducted by IDMC experts.\n\n'
+                'For further information or inquiries, please contact us at ch.datainfo@idmc.ch.'
+            ],
+            ['ISO3', 'Country', 'Geographical region', 'Year', 'Figure cause', 'Figure category'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2016', 'Conflict', 'Internal Displacements'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2016', 'Conflict', 'IDPs'],
+            ['PRI', 'Puerto Rico', 'The Americas', '2017', 'Disasters', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2017', 'Disasters', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2017', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2017', 'Conflict', 'Internal Displacements'],
+            ['PAK', 'Pakistan', 'South Asia', '2018', 'Conflict', 'Internal Displacements'],
+            ['PAK', 'Pakistan', 'South Asia', '2018', 'Conflict', 'IDPs'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2018', 'Disasters', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2018', 'Conflict', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2018', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2018', 'Conflict', 'Internal Displacements'],
+            ['IND', 'India', 'South Asia', '2018', 'Conflict', 'Internal Displacements'],
+            ['PRI', 'Puerto Rico', 'The Americas', '2019', 'Disasters', 'Internal Displacements'],
+            ['BGD', 'Bangladesh', 'South Asia', '2019', 'Disasters', 'IDPs'],
+            ['BGD', 'Bangladesh', 'South Asia', '2019', 'Conflict', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2019', 'Conflict', 'Internal Displacements'],
+            ['PAK', 'Pakistan', 'South Asia', '2019', 'Disasters', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2019', 'Conflict', 'IDPs'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2019', 'Disasters', 'IDPs'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2019', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2019', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2019', 'Conflict', 'Internal Displacements'],
+            ['IND', 'India', 'South Asia', '2019', 'Disasters', 'IDPs'],
+            ['BGD', 'Bangladesh', 'South Asia', '2020', 'Disasters', 'IDPs'],
+            ['BGD', 'Bangladesh', 'South Asia', '2020', 'Conflict', 'Internal Displacements'],
+            ['BGD', 'Bangladesh', 'South Asia', '2020', 'Conflict', 'IDPs'],
+            ['BDI', 'Burundi', 'Sub-Saharan Africa', '2021', 'Disasters', 'Internal Displacements'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2021', 'Disasters', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2021', 'Disasters', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2022', 'Conflict', 'IDPs'],
+            ['COL', 'Colombia', 'The Americas', '2022', 'Conflict', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2022', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2022', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2022', 'Conflict', 'Internal Displacements'],
+            ['TUR', 'Türkiye', 'Europe and Central Asia', '2022', 'Conflict', 'IDPs'],
+            ['MDG', 'Madagascar', 'Sub-Saharan Africa', '2022', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2022', 'Conflict', 'IDPs'],
+            ['LKA', 'Sri Lanka', 'South Asia', '2022', 'Conflict', 'IDPs'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2022', 'Conflict', 'IDPs'],
+            ['GEO', 'Georgia', 'Europe and Central Asia', '2022', 'Conflict', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2023', 'Conflict', 'IDPs'],
+            ['COL', 'Colombia', 'The Americas', '2023', 'Conflict', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2023', 'Conflict', 'Internal Displacements'],
+            ['TUR', 'Türkiye', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['PSE', 'Palestine', 'Middle East and North Africa', '2023', 'Conflict', 'IDPs'],
+            ['PSE', 'Palestine', 'Middle East and North Africa', '2023', 'Conflict', 'Internal Displacements'],
+            ['MDG', 'Madagascar', 'Sub-Saharan Africa', '2023', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2023', 'Conflict', 'IDPs'],
+            ['KAZ', 'Kazakhstan', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['LKA', 'Sri Lanka', 'South Asia', '2023', 'Conflict', 'IDPs'],
+            ['BIH', 'Bosnia and Herzegovina', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['PER', 'Peru', 'The Americas', '2023', 'Disasters', 'IDPs'],
+            ['KGZ', 'Kyrgyzstan', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2023', 'Conflict', 'Internal Displacements'],
+            ['THA', 'Thailand', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['GEO', 'Georgia', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['SLE', 'Sierra Leone', 'Sub-Saharan Africa', '2023', 'Conflict', 'IDPs'],
         ]
         ws4.append([])
         ws4.append([])
@@ -954,12 +1138,12 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "of people living in situations of internal displacement as of the end of the reporting year, "
             "specifically on December 31st of each year.\n"
             "Conflict displacement: Refers to situations where people are forced to leave their homes or places "
-            " of habitual residence as a result or in order to avoid the impact of armed conflict, communal violence\n"
+            "of habitual residence as a result or in order to avoid the impact of armed conflict, communal violence "
             "and criminal violence.\n"
             "Disaster displacement: Refers to situations where people are forced to leave their homes or places "
             "of habitual residence as a result, or in anticipation of the negative impact of natural hazards.\n"
             "Disaster: A serious disruption of the functioning of a community or a society involving widespread "
-            "human, material, economic or environmental losses and impacts, which exceeds the ability of the\n"
+            "human, material, economic or environmental losses and impacts, which exceeds the ability of the "
             "affected community or society to cope using its own resources (UNSDR).\n"
             "\n"
             "USE LICENSE: This content is licensed under CC BY-NC. Detailed licensing information is available at "
@@ -975,28 +1159,27 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "Centre. Global Internal Displacement Database. IDMC (2023). "
             "Available at: https://www.internal-displacement.org/database/displacement-data/ (Accessed: [date of access]).\n"
             "\n"
-            "CONTACT: info@idmc.ch\n"
+            "CONTACT: ch.datainfo@idmc.ch\n"
             "\n"
             "DATA DESCRIPTION: 1_Disaggregated_Data table\n"
             "\n"
             "ID: IDMC figure unique identifier.\n"
-            "ISO3: Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area. "
-            "uncertanty or accuracy of start date\n"
+            "ISO3: Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area.\n"
             "Country / Territory: Short name of the country or territory.\n"
             "Geographical region: Corresponds to IDMC's geographical regions.\n"
-            "Figure cause:  Identifies the trigger of displacement, such as conflict or disasters.\n"
+            "Figure cause: Identifies the trigger of displacement, such as conflict or disasters.\n"
             "Year: Indicates the year for which displacement data are reported.\n"
-            "Figure category:  Categorizes the type of displacement metric. It details values for Internal Displacements "
+            "Figure category: Categorizes the type of displacement metric. It details values for Internal Displacements "
             "(internal displacement flows) and Total Number of IDPs (internal displacement stocks), as "
             "defined earlier in this document.\n"
             "Total figures: Represents the total number of internal displacements or IDPs. For internal displacements, "
-            "units are recorded as 'internal displacement flows' or 'internal displacement movements.' "
-            "For total number of IDPs, units reflect the total number of people living in displacement.\n"
+            "units are recorded as 'internal displacement flows' or 'internal displacement movements'. "
+            "For the total number of IDPs, units reflect the total number of people living in displacement.\n"
             "Reported figures: This field represents the values reported by the original source. Figures can be reported "
             "either in terms of households or individual counts.\n"
             "Figure unit: This field specifies the type of unit reported in the 'Reported' column. Possible values include "
-            "'households' or 'people'. The catogy people include  'internal displacement flows' or 'internal "
-            "displacement movements.'\n"
+            "'households' or 'people'. The category people includes 'internal displacement flows' or 'internal "
+            "displacement movements'.\n"
             "Household size: This metric represents the average number of individuals per household. It is calculated using "
             "data from various sources, including the United Nations Department of Economic and Social Affairs "
             "(UNDESA), national statistical offices, and estimates from local primary data providers shared with IDMC.\n"
@@ -1005,19 +1188,19 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "Hazard Type: Hazard type as categorized by CRED EM-DAT.\n"
             "Hazard Sub-Type: Specific sub-type of the hazard based on CRED EM-DAT.\n"
             "Start date: Start date of displacement flow.\n"
-            "Start date accuracy: Uncertanty or accuracy of start date.\n"
-            "End date: End date of thedisplacement flow.\n"
-            "End date accuracy: Uncertanty or accuracy of end date.\n"
+            "Start date accuracy: Uncertainty or accuracy of start date.\n"
+            "End date: End date of the displacement flow.\n"
+            "End date accuracy: Uncertainty or accuracy of end date.\n"
             "Stock date: This field indicates the year in which the data for the IDP metric (total number of internally "
             "displaced persons or stocks) was collected.\n"
-            "Stock date accuracy: Uncertanty or accuracy of stock date.\n"
+            "Stock date accuracy: Uncertainty or accuracy of stock date.\n"
             "Stock reporting date: This field reflects the year IDMC uses to report the total number of internally "
             "displaced persons (IDPs). It represents the IDMC reporting year, which may not coincide with the actual "
             "data collection year. Given the protracted nature of displacement, annual updates on the total number of "
             "IDPs may not always be available. To maintain accuracy in reporting, IDMC relies on the most recent verified "
             "data until evidence shows that the displaced population has achieved a durable solution.\n"
             "Publishers: Organizations responsible for distributing and disseminating internal displacement data\n"
-            "Sources:  This field lists the names of the primary data providers or the original sources for the internal "
+            "Sources: This field lists the names of the primary data providers or the original sources for the internal "
             "displacement data reported by IDMC.\n"
             "Sources type: This field categorizes the type of source as defined by IDMC.\n"
             "Event ID: Unique identifier for events as assigned by IDMC.\n"
@@ -1026,25 +1209,26 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "Event cause: Identifies the trigger of displacement, such as conflict or disasters.\n"
             "Event main trigger: This field identifies the primary hazard subtype or conflict type that initiated "
             "the event, serving as the main driver of a disaster or conflict. For disasters, associated fields such "
-            "as \"Hazard Category,\" \"Hazard Subcategory,\" \"Hazard Type,\" and \"Hazard Sub-Type\" detail the cascading "
+            "as \"Hazard Category\", \"Hazard Subcategory\", \"Hazard Type\", and \"Hazard Sub-Type\" detail the cascading "
             "impacts stemming from this main trigger. For instance, a tropical storm identified as the main driver of "
             "displacement might lead to reports in \"Hazard Sub-Type\" of floods, landslides, and other related disaster "
             "types arising from the initial hazard.\n"
             "Event start date: Event or hazard start date.\n"
-            "Event end date: Event or hazard end date date.\n"
-            "Event start date accuracy: Uncertanty or accuracy of event start date.\n"
-            "Event end date accuracy: Uncertanty or accuracy of event end date.\n"
-            "Is housing destruction: This field  indicates whether the displacement data includes individuals displaced "
-            "by housing destruction. Values are \"Yes\" if the data reflects households whose homes were destroyed and "
+            "Event end date: Event or hazard end date.\n"
+            "Event start date accuracy: Uncertainty or accuracy of event start date.\n"
+            "Event end date accuracy: Uncertainty or accuracy of event end date.\n"
+            "Is housing destruction: This field indicates whether the displacement data includes individuals displaced "
+            "by housing destruction. Values are \"Yes\" if the data reflects households whose homes were destroyed, and "
             "\"No\" otherwise. This field relies on the data specified in \"Reported Figures\" "
             "and is linked to the \"Unit\" "
             "of measurement used, which in this context refers to houses destroyed.\n"
             "Violence type: This field categorizes the type of violence using IDMC's typology, which aligns with "
             "international classifications. The categories include - International Armed Conflict (IAC): Refers to "
-            "armed conflict between two or more states. - Non-International Armed Conflict (NIAC): Refers to protracted "
+            "armed conflict between two or more states. - Non-International Armed Conflict (NIAC): Refers to "
             "armed conflict occurring within the territory of a single state between its government and non-state armed "
             "groups, or between such groups themselves. - Unclear/Unknown: Indicates situations where the type of violence "
-            "is not definitively categorized due to limited information.\n"
+            "is not definitively categorized due to limited information. - Other situations of violence (OSV): Refers to "
+            "cases of communal violence, civilian-state violence and crime-related violence.\n"
             "Event codes (Code:Type): Unique codes such as the GLIDE number and other database-specific codes used "
             "to identify and track specific events across various databases.\n"
             "Locations name: This field indicates the names of locations where displacement incidents have been "
@@ -1058,7 +1242,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "on a weighting factor such as population density. This ensures a more accurate representation "
             "of the displacement data across individual locations and prevents duplication of figures during analysis.\n"
             "Locations coordinates: This field contains geographic coordinates representing the reported locations. "
-            "Please note that this field contains multipoints  meaning that multiple locations may represent one figures. "
+            "Please note that this field contains multipoints  meaning that multiple locations may represent one figure. "
             "It's important to note that this field may exhibit a many-to-one relationship, signifying that multiple "
             "location names could be associated with a single reported figure, preventing disaggregation by individual "
             "location. This becomes particularly relevant in geospatial analysis, where Geographic Information System (GIS) "
@@ -1068,18 +1252,19 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             "values based on a weighting factor such as population density. This ensures a more accurate representation "
             "of the displacement data across "
             "individual locations and prevents duplication of figures during analysis.\n"
-            "Locations accuracy:  This field indicates the estimated precision of the reported locations. It serves "
-            "as a clue to the likely administrative unit level (e.g., country, state, district) used for reporting.\n"
+            "Locations accuracy: This field indicates the estimated precision of the reported locations. It serves "
+            "as a clue to the likely administrative unit level (e.g. country, state, district) used for reporting.\n"
             "Locations type: This field specifies the type of displacement location within a reported event. It can "
-            "indicate,  Origin: The place where people were displaced from. Destination: The location where displaced "
-            "people arrived. Both: In some cases, both origin and destination information might be included.It's crucial "
+            "indicate\n- Origin: The place where people were displaced from.\n- Destination: The location where displaced "
+            "people arrived.\n- Both: In some cases, both origin and "
+            "destination information might be included. It's crucial "
             "to note that different locations reported for a single figure may pertain to both the origin and destination "
             "of displacement incidents. This distinction is particularly salient in geospatial analysis, where Geographic "
             "Information System (GIS) software may interpret these "
             "multi-point entities as singular data points, potentially "
             "resulting in inadvertent double-counting of figures. To mitigate this issue, it is recommended to preprocess "
             "the dataset prior to GIS analysis to ensure accurate representation and avoid duplication of figures.\n"
-            "Displacement occurred: Displacement Occurred: This field contains values that represent if preventive "
+            "Displacement occurred: This field contains values that represent if preventive "
             "evacuations were reported. These evacuations are the result of existing early warning systems.\n"
         )
         feature_collection = {
@@ -1322,7 +1507,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 'https://www.internal-displacement.org/database/displacement-data/ (Accessed: [date of access]).'
             ],
             [],
-            ['CONTACT: info@idmc.ch'],
+            ['CONTACT: ch.datainfo@idmc.ch'],
         ]
 
         for item in readme_text:
@@ -1336,17 +1521,17 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             ["ISO3: Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area."],
             ["Country / Territory: Short name of the country or territory."],
             ["Geographical region: Corresponds to IDMC's geographical regions."],
-            ["Figure cause:  Identifies the trigger of displacement, such as conflict or disasters."],
+            ["Figure cause: Identifies the trigger of displacement, such as conflict or disasters."],
             ["Year: Indicates the year for which displacement data are reported."],
             [
-                "Figure category:  Categorizes the type of displacement metric. It details values for Internal "
+                "Figure category: Categorizes the type of displacement metric. It details values for Internal "
                 "Displacements (internal displacement flows) and Total Number of IDPs (internal displacement stocks), "
                 "as defined earlier in this document."
             ],
             [
                 "Total figures: Represents the total number of internal displacements or IDPs. For internal "
                 "displacements, units are recorded as 'internal displacement flows' or 'internal displacement "
-                "movements.' For total number of IDPs, units reflect the total number of people living in displacement."
+                "movements'. For the total number of IDPs, units reflect the total number of people living in displacement."
             ],
             [
                 "Reported figures: This field represents the values reported by the original source. Figures can be "
@@ -1354,8 +1539,8 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             ],
             [
                 "Figure unit: This field specifies the type of unit reported in the 'Reported' column. Possible values "
-                "include 'households' or 'people'. The catogy people include  'internal displacement flows' or 'internal"
-                " displacement movements.'"
+                "include 'households' or 'people'. The category people includes 'internal displacement flows' or 'internal"
+                " displacement movements'."
             ],
             [
                 "Household size: This metric represents the average number of individuals per household. It is "
@@ -1369,7 +1554,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             ["Hazard Sub-Type: Specific sub-type of the hazard based on CRED EM-DAT."],
             ["Start date: Start date of displacement flow."],
             ["Start date accuracy: Uncertainty or accuracy of start date."],
-            ["End date: End date of thedisplacement flow."],
+            ["End date: End date of the displacement flow."],
             ["End date accuracy: Uncertainty or accuracy of end date."],
             [
                 "Stock date: This field indicates the year in which the data for the IDP metric (total number of "
@@ -1405,24 +1590,26 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 "other related disaster types arising from the initial hazard."
             ],
             ["Event start date: Event or hazard start date."],
-            ["Event end date: Event or hazard end date date."],
+            ["Event end date: Event or hazard end date."],
             ["Event start date accuracy: Uncertainty or accuracy of event start date."],
             ["Event end date accuracy: Uncertainty or accuracy of event end date."],
             [
-                "Is housing destruction: This field  indicates whether the displacement data includes individuals "
+                "Is housing destruction: This field indicates whether the displacement data includes individuals "
                 "displaced by housing destruction. Values are \"Yes\" if the data reflects households whose homes were "
-                "destroyed and \"No\" otherwise. This field relies on the data specified in \"Reported Figures\" and "
+                "destroyed, and \"No\" otherwise. This field relies on the data specified in \"Reported Figures\" and "
                 "is linked to the \"Unit\" of measurement used, which in this context refers to houses destroyed."
             ],
             [
                 "Violence type: This field categorizes the type of violence using IDMC's typology, which aligns with "
                 "international classifications. The categories include\n"
                 "- International Armed Conflict (IAC): Refers to armed conflict between two or more states.\n"
-                "- Non-International Armed Conflict (NIAC): Refers to protracted armed conflict occurring within the "
+                "- Non-International Armed Conflict (NIAC): Refers to armed conflict occurring within the "
                 "territory of a single state between its government and non-state armed groups, or between such groups "
                 "themselves.\n"
                 "- Unclear/Unknown: Indicates situations where the type of violence is not definitively categorized "
-                "due to limited information."
+                "due to limited information.\n"
+                "- Other situations of violence (OSV): Refers to cases of communal violence, civilian-state "
+                "violence and crime-related violence."
             ],
             [
                 "Event codes (Code:Type): Unique codes such as the GLIDE number and other database-specific codes used "
@@ -1454,9 +1641,9 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 "locations and prevents duplication of figures during analysis."
             ],
             [
-                "Locations accuracy:  This field indicates the estimated precision of the reported locations. It "
-                "serves as a clue to the likely administrative unit level (e.g., country, state, district) used for "
-                "reporting. "
+                "Locations accuracy: This field indicates the estimated precision of the reported locations. It "
+                "serves as a clue to the likely administrative unit level (e.g. country, state, district) used for "
+                "reporting."
             ],
             [
                 "Locations type: This field specifies the type of displacement location within a reported event. It "
@@ -1487,11 +1674,11 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         ws3.append([])
 
         data_description_2 = [
-            ["ISO3: Represents the ISO 3166-1 alpha-3 code, the code 'AB9' is assigned to the Abyei Area."],
+            ["ISO3: Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area."],
             ["Year: Indicates the year for which displacement data are reported."],
-            ["Figure_Cause_Name: Identifies the trigger of displacement, such as conflict or disasters."],
+            ["Figure cause: Identifies the trigger of displacement, such as conflict or disasters."],
             [
-                "Figure_Category_Name: Categorizes the type of displacement metric. It details values for Internal "
+                "Figure category: Categorizes the type of displacement metric. It details values for Internal "
                 "Displacements (internal displacement flows) and Total Number of IDPs (internal displacement stocks), "
                 "as defined earlier in this document."
             ],
@@ -1503,15 +1690,142 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             ],
             [
                 "Figures: Represents the total number of internal displacements or IDPs. For internal displacements, "
-                "units are recorded as 'internal displacement flows' or 'internal displacement movements.' For total "
+                "units are recorded as 'internal displacement flows' or 'internal displacement movements'. For the total "
                 "number of IDPs, units reflect the total number of people living in displacement."
             ],
             [
-                "Figures_Rounded: Displays rounded figures to provide a simplified view of the data that matches the "
+                "Figures rounded: Displays rounded figures to provide a simplified view of the data that matches the "
                 "figures reported in the Global Report on Internal Displacement (GRID)."
             ],
         ]
         for item in data_description_2:
+            ws3.append(item)
+
+        data_description_3 = [
+            [],
+            [],
+            ['HISTORICAL DATA REVISIONS AND CORRECTIONS'],
+            [],
+            ['The description of our methodology is available at https://www.internal-displacement.org/monitoring-tools'],
+            [
+                'As part of our ongoing commitment to providing accurate and reliable internal displacement data, '
+                'the Internal Displacement Monitoring Centre (IDMC) has released updated figures for several countries '
+                'and years where data was previously unavailable or required corrections. '
+                'These revisions, which result from a comprehensive methodological review, address discrepancies in earlier '
+                'figures published in the Global Internal Displacement Database (GIDD) and reflect our dedication to '
+                'upholding the highest standards of data quality and reliability.\n\n'
+                'Our team of experts rigorously reviewed and validated the new figures to ensure they meet IDMC’s '
+                'stringent data requirements. For questions or further information about these updates, '
+                'please contact us at ch.datainfo@idmc.ch.'
+            ],
+            [],
+            ['FIGURES REVIEWED IN JANUARY 2025'],
+            [
+                'All figures have undergone thorough expert validation to ensure consistency with IDMC’s '
+                'quality requirements. A detailed account of the changes and the analytical processes '
+                'underpinning them is provided in Tab 2_Context_Displacement_data, which contains '
+                'a full summary of the revisions conducted by IDMC experts.\n\n'
+                'For further information or inquiries, please contact us at ch.datainfo@idmc.ch.'
+            ],
+            ['ISO3', 'Country', 'Geographical region', 'Year', 'Figure cause', 'Figure category'],
+            ['BFA', 'Burkina Faso', 'Sub-Saharan Africa', '2023', 'Conflict', 'Internal Displacements'],
+            ['BDI', 'Burundi', 'Sub-Saharan Africa', '2021', 'Disaster', 'Internal Displacements'],
+            ['COD', 'Dem. Rep. Congo', 'Sub-Saharan Africa', '2023', 'Conflict', 'IDPs'],
+            ['GRC', 'Greece', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['IND', 'India', 'South Asia', '2021', 'Disaster', 'IDPs'],
+            ['KGZ', 'Kyrgyzstan', 'Europe and Central Asia', '2023', 'Disaster', 'IDPs'],
+            ['KGZ', 'Kyrgyzstan', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['LSO', 'Lesotho', 'Sub-Saharan Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['MLI', 'Mali', 'Sub-Saharan Africa', '2023', 'Conflict', 'Internal Displacements'],
+            ['MEX', 'Mexico', 'The Americas', '2023', 'Conflict', 'IDPs'],
+            ['MAR', 'Morocco', 'Middle East and North Africa', '2023', 'Disaster', 'IDPs'],
+            ['MAR', 'Morocco', 'Middle East and North Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['MOZ', 'Mozambique', 'Sub-Saharan Africa', '2022', 'Conflict', 'Internal Displacements'],
+            ['NAM', 'Namibia', 'Sub-Saharan Africa', '2023', 'Disaster', 'IDPs'],
+            ['NAM', 'Namibia', 'Sub-Saharan Africa', '2023', 'Disaster', 'Internal Displacements'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2023', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2017', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2018', 'Disaster', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2023', 'Disaster', 'Internal Displacements'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2021', 'Disaster', 'IDPs'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2022', 'Disaster', 'IDPs'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2022', 'Disaster', 'Internal Displacements'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2023', 'Disaster', 'IDPs'],
+            ['USA', 'United States', 'The Americas', '2023', 'Disaster', 'Internal Displacements'],
+            [],
+            ['FIGURES REVIEWED IN MAY 2025'],
+            [
+                'All figures have undergone thorough expert validation to ensure consistency with IDMC’s '
+                'quality requirements. A detailed account of the changes and the analytical processes '
+                'underpinning them is provided in Tab 2_Context_Displacement_data, which contains '
+                'a full summary of the revisions conducted by IDMC experts.\n\n'
+                'For further information or inquiries, please contact us at ch.datainfo@idmc.ch.'
+            ],
+            ['ISO3', 'Country', 'Geographical region', 'Year', 'Figure cause', 'Figure category'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2016', 'Conflict', 'Internal Displacements'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2016', 'Conflict', 'IDPs'],
+            ['PRI', 'Puerto Rico', 'The Americas', '2017', 'Disasters', 'Internal Displacements'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2017', 'Disasters', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2017', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2017', 'Conflict', 'Internal Displacements'],
+            ['PAK', 'Pakistan', 'South Asia', '2018', 'Conflict', 'Internal Displacements'],
+            ['PAK', 'Pakistan', 'South Asia', '2018', 'Conflict', 'IDPs'],
+            ['ESP', 'Spain', 'Europe and Central Asia', '2018', 'Disasters', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2018', 'Conflict', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2018', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2018', 'Conflict', 'Internal Displacements'],
+            ['IND', 'India', 'South Asia', '2018', 'Conflict', 'Internal Displacements'],
+            ['PRI', 'Puerto Rico', 'The Americas', '2019', 'Disasters', 'Internal Displacements'],
+            ['BGD', 'Bangladesh', 'South Asia', '2019', 'Disasters', 'IDPs'],
+            ['BGD', 'Bangladesh', 'South Asia', '2019', 'Conflict', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2019', 'Conflict', 'Internal Displacements'],
+            ['PAK', 'Pakistan', 'South Asia', '2019', 'Disasters', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2019', 'Conflict', 'IDPs'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2019', 'Disasters', 'IDPs'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2019', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2019', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2019', 'Conflict', 'Internal Displacements'],
+            ['IND', 'India', 'South Asia', '2019', 'Disasters', 'IDPs'],
+            ['BGD', 'Bangladesh', 'South Asia', '2020', 'Disasters', 'IDPs'],
+            ['BGD', 'Bangladesh', 'South Asia', '2020', 'Conflict', 'Internal Displacements'],
+            ['BGD', 'Bangladesh', 'South Asia', '2020', 'Conflict', 'IDPs'],
+            ['BDI', 'Burundi', 'Sub-Saharan Africa', '2021', 'Disasters', 'Internal Displacements'],
+            ['UGA', 'Uganda', 'Sub-Saharan Africa', '2021', 'Disasters', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2021', 'Disasters', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2022', 'Conflict', 'IDPs'],
+            ['COL', 'Colombia', 'The Americas', '2022', 'Conflict', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2022', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2022', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2022', 'Conflict', 'Internal Displacements'],
+            ['TUR', 'Türkiye', 'Europe and Central Asia', '2022', 'Conflict', 'IDPs'],
+            ['MDG', 'Madagascar', 'Sub-Saharan Africa', '2022', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2022', 'Conflict', 'IDPs'],
+            ['LKA', 'Sri Lanka', 'South Asia', '2022', 'Conflict', 'IDPs'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2022', 'Conflict', 'IDPs'],
+            ['GEO', 'Georgia', 'Europe and Central Asia', '2022', 'Conflict', 'IDPs'],
+            ['PAK', 'Pakistan', 'South Asia', '2023', 'Conflict', 'IDPs'],
+            ['COL', 'Colombia', 'The Americas', '2023', 'Conflict', 'Internal Displacements'],
+            ['PNG', 'Papua New Guinea', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['IDN', 'Indonesia', 'East Asia and Pacific', '2023', 'Conflict', 'Internal Displacements'],
+            ['TUR', 'Türkiye', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['PSE', 'Palestine', 'Middle East and North Africa', '2023', 'Conflict', 'IDPs'],
+            ['PSE', 'Palestine', 'Middle East and North Africa', '2023', 'Conflict', 'Internal Displacements'],
+            ['MDG', 'Madagascar', 'Sub-Saharan Africa', '2023', 'Conflict', 'IDPs'],
+            ['IND', 'India', 'South Asia', '2023', 'Conflict', 'IDPs'],
+            ['KAZ', 'Kazakhstan', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['LKA', 'Sri Lanka', 'South Asia', '2023', 'Conflict', 'IDPs'],
+            ['BIH', 'Bosnia and Herzegovina', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['PER', 'Peru', 'The Americas', '2023', 'Disasters', 'IDPs'],
+            ['KGZ', 'Kyrgyzstan', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['PHL', 'Philippines', 'East Asia and Pacific', '2023', 'Conflict', 'Internal Displacements'],
+            ['THA', 'Thailand', 'East Asia and Pacific', '2023', 'Conflict', 'IDPs'],
+            ['GEO', 'Georgia', 'Europe and Central Asia', '2023', 'Conflict', 'IDPs'],
+            ['SLE', 'Sierra Leone', 'Sub-Saharan Africa', '2023', 'Conflict', 'IDPs']
+        ]
+
+        for item in data_description_3:
             ws3.append(item)
 
         qs = qs.filter(
@@ -1585,12 +1899,23 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 self._get_displacement_occurred(item.displacement_occurred),
             ])
 
-        response = HttpResponse(content=save_virtual_workbook(wb))
+        response = HttpResponse(
+            content=save_virtual_workbook(wb),
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
         response['Content-Disposition'] = f'attachment; filename={filename}.xlsx'
-        response['Content-Type'] = 'application/octet-stream'
         return response
 
-    @extend_schema(responses=DisaggregationSerializer(many=True))
+    @extend_schema(
+        description=Path("docs/disaggregation/geojson-export-description.md").read_text(),
+        responses={
+            # FIXME: Handle proper accept header
+            # (200, "application/geo+json"): OpenApiTypes.STR,
+            (200, "application/json"): OpenApiTypes.STR,
+        },
+        filters=True,
+        tags=['GIDD'],
+    )
     @action(
         detail=False,
         methods=["get"],
@@ -1617,13 +1942,24 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         qs = self.filter_queryset(queryset)
         return self._export_disaggregated_geojson(qs)
 
-    @extend_schema(responses=DisaggregationSerializer(many=True))
+    @extend_schema(
+        description=Path("docs/disaggregation/xlsx-export-description.md").read_text(),
+        responses={
+            # FIXME: Handle proper accept header
+            # (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): None,
+        },
+        filters=True,
+        tags=['GIDD'],
+    )
     @action(
         detail=False,
         methods=["get"],
         url_path="disaggregated-export",
         permission_classes=[AllowAny],
         pagination_class=None,
+        # FIXME: Handle proper accept header
+        # renderer_classes=[XlsxRenderer],
     )
     def export_disaggregated(self, request):
         """
@@ -1645,6 +1981,13 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         return self._export_disaggregated_excel(qs)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        description=Path("docs/public-figure-analyses/main-description.md").read_text(),
+        responses=PublicFigureAnalysisSerializer(many=True),
+        tags=['GIDD'],
+    ),
+)
 class PublicFigureAnalysisViewSet(ListOnlyViewSetMixin):
     serializer_class = PublicFigureAnalysisSerializer
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)

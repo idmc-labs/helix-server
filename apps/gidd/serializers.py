@@ -9,7 +9,15 @@ from apps.entry.models import Figure
 
 
 class CountrySerializer(serializers.ModelSerializer):
-    country_name = serializers.CharField(source='idmc_short_name')
+    country_name = serializers.CharField(
+        source='idmc_short_name',
+        help_text="Short name of the country or territory."
+    )
+
+    iso3 = serializers.CharField(
+        help_text="Represents the ISO 3166-1 alpha-3 code. "
+        "The code 'AB9' is assigned to the Abyei Area."
+    )
 
     class Meta:
         model = Country
@@ -22,6 +30,43 @@ class CountrySerializer(serializers.ModelSerializer):
 
 
 class ConflictSerializer(serializers.ModelSerializer):
+    iso3 = serializers.CharField(
+        help_text="Represents the ISO 3166-1 alpha-3 code. "
+        "The code 'AB9' is assigned to the Abyei Area."
+    )
+
+    country_name = serializers.CharField(
+        help_text="Short name of the country or territory."
+    )
+
+    year = serializers.IntegerField(
+        help_text="Indicates the year for which displacement data are reported."
+    )
+
+    new_displacement_rounded = serializers.IntegerField(
+        help_text="Total number of internal displacements reported "
+        "\"(rounded figures at national level)\" as a result of conflict "
+        "and violence over the reporting year. Units are recorded as 'internal displacement flows'."
+    )
+
+    new_displacement = serializers.IntegerField(
+        help_text="Total number of internal displacements reported "
+        "\"(not rounded)\" as a result of conflict and violence over the "
+        "reporting year. Units are recorded as 'internal displacement flows'."
+    )
+
+    total_displacement_rounded = serializers.IntegerField(
+        help_text="Total number of IDPs \"(rounded figures at the national level)\" "
+        "as a result of conflict and violence as of the end of the reporting year. "
+        "Units are recorded as 'People'."
+    )
+
+    total_displacement = serializers.IntegerField(
+        help_text="Total number of IDPs \"(not rounded)\" "
+        "as a result of conflict and violence as of the end of the reporting year."
+        "Units are recorded as 'People'."
+    )
+
     class Meta:
         model = Conflict
         fields = (
@@ -37,6 +82,69 @@ class ConflictSerializer(serializers.ModelSerializer):
 
 
 class DisasterSerializer(serializers.ModelSerializer):
+    iso3 = serializers.CharField(
+        help_text="Represents the ISO 3166-1 alpha-3 code. "
+        "The code 'AB9' is assigned to the Abyei Area."
+    )
+
+    country_name = serializers.CharField(
+        help_text="Short name of the country or territory."
+    )
+
+    year = serializers.IntegerField(
+        help_text="Indicates the year for which displacement data are reported."
+    )
+
+    event_name = serializers.CharField(
+        help_text="Common or official event name for the event if available. "
+        "Otherwise events are coded based on the country type of hazard location and event start date."
+    )
+
+    hazard_category_name = serializers.CharField(
+        help_text="Hazard category based on the CRED EM-DAT classification."
+    )
+
+    hazard_type_name = serializers.CharField(
+        help_text="Hazard type as categorized by CRED EM-DAT."
+    )
+
+    hazard_sub_type_name = serializers.CharField(
+        help_text="Specific sub-type of the hazard based on the CRED EM-DAT classification."
+    )
+
+    new_displacement = serializers.IntegerField(
+        help_text="Total number of internal displacements reported \"(not rounded)\" "
+        "as a result of disasters over the reporting year. "
+        "Units are recorded as 'internal displacement flows' or 'internal displacement movements'."
+    )
+
+    new_displacement_rounded = serializers.IntegerField(
+        help_text="Total number of internal displacements reported "
+        "\"(rounded figures at national level)\" as a result of disasters "
+        "over the reporting year. Units are recorded as 'internal displacement flows' or 'internal displacement movements'."
+    )
+
+    event_codes = serializers.ListField(
+        child=serializers.CharField(),
+        help_text="Unique codes such as the GLIDE number and "
+        "other database-specific codes used to identify "
+        "and track specific events across various databases."
+    )
+    start_date = serializers.DateField(
+        help_text="Approximated start date of the event."
+    )
+    end_date = serializers.DateField(
+        help_text="Approximated end date of the event."
+    )
+    start_date_accuracy = serializers.CharField(
+        help_text="This field describes the potential timeframe within which "
+        "the event likely occurred. The values indicate the period around the date."
+    )
+    end_date_accuracy = serializers.CharField(
+        help_text="This field describes the potential timeframe within which "
+        "the event likely ended. The values indicate the period around the date."
+    )
+
     class Meta:
         model = Disaster
         fields = (
@@ -67,6 +175,66 @@ class DisasterSerializer(serializers.ModelSerializer):
 
 
 class DisplacementDataSerializer(serializers.ModelSerializer):
+    iso3 = serializers.CharField(
+        help_text="Represents the ISO 3166-1 alpha-3 code. "
+        "The code 'AB9' is assigned to the Abyei Area."
+    )
+
+    country_name = serializers.CharField(
+        help_text="Short name of the country or territory."
+    )
+
+    year = serializers.IntegerField(
+        help_text="Indicates the year for which displacement data are reported."
+    )
+
+    conflict_total_displacement_rounded = serializers.IntegerField(
+        help_text="Total number of IDPs \"(rounded figures at the national level)\" "
+        "as a result of conflict and violence as of the end of the reporting year. "
+        "Units are recorded as 'People'."
+    )
+
+    conflict_total_displacement = serializers.IntegerField(
+        help_text="Total number of IDPs \"(not rounded)\" "
+        "as a result of conflict and violence as of the end of the reporting year."
+        "Units are recorded as 'People'."
+    )
+
+    conflict_new_displacement_rounded = serializers.IntegerField(
+        help_text="Total number of internal displacements reported "
+        "\"(rounded figures at national level)\" as a result of conflict "
+        "and violence over the reporting year. Units are recorded as 'internal displacement flows'."
+    )
+
+    conflict_new_displacement = serializers.IntegerField(
+        help_text="Total number of internal displacements reported "
+        "\"(not rounded)\" as a result of conflict and violence over the "
+        "reporting year. Units are recorded as 'internal displacement flows'."
+    )
+
+    disaster_new_displacement_rounded = serializers.IntegerField(
+        help_text="Total number of internal displacements reported "
+        "\"(rounded figures at national level)\" as a result of disasters over the reporting year. "
+        "Units are recorded as 'internal displacement flows'."
+    )
+
+    disaster_new_displacement = serializers.IntegerField(
+        help_text="Total number of internal displacements reported \"(not rounded)\" as a "
+        "result of disasters over the reporting year. "
+        "Units are recorded as 'internal displacement flows'."
+    )
+
+    disaster_total_displacement_rounded = serializers.IntegerField(
+        help_text="Total number of IDPs \"(rounded figures at national level)\" as a "
+        "result of disasters as of the end of the reporting year. "
+        "Units are recorded as 'People'."
+    )
+
+    disaster_total_displacement = serializers.IntegerField(
+        help_text="Total number of IDPs \"(not rounded)\" as a result"
+        "of disasters as of the end of the reporting year. Units are recorded as 'People'."
+    )
+
     class Meta:
         model = DisplacementData
         fields = (
@@ -85,8 +253,38 @@ class DisplacementDataSerializer(serializers.ModelSerializer):
 
 
 class PublicFigureAnalysisSerializer(serializers.ModelSerializer):
-    figure_cause_name = serializers.SerializerMethodField('get_figure_cause_name')
-    figure_category_name = serializers.SerializerMethodField('get_figure_category_name')
+    figure_cause_name = serializers.SerializerMethodField(
+        'get_figure_cause_name',
+        help_text="Identifies the trigger of displacement such as conflict or disasters."
+    )
+    figure_category_name = serializers.SerializerMethodField(
+        'get_figure_category_name',
+        help_text="Categorizes the type of displacement metric. "
+        "It details values for \"Internal Displacements\" (internal displacement flows) "
+        "and Total Number of IDPs, \"Total number of IDPs\" as defined earlier in this document"
+    )
+    year = serializers.IntegerField(
+        help_text="Indicates the year for which displacement data are reported."
+    )
+    iso3 = serializers.CharField(
+        help_text="Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area."
+    )
+    figures_rounded = serializers.IntegerField(
+        help_text="Displays rounded figures to provide a simplified view of the data "
+        "that matches the figures reported in the Global Report on Internal Displacement (GRID)."
+    )
+    description = serializers.CharField(
+        help_text="Provides contextual information about the data including sources and data limitations. "
+        "It is essential for representing the analysis conducted by IDMC analysts. "
+        "This field also details the methodology used, descriptions of sources,"
+        "and outlines any caveats and challenges identified with the displacement figures reported."
+    )
+    figures = serializers.IntegerField(
+        help_text="Represents the total number of internal displacements or IDPs. "
+        "For internal displacements, units are recorded as 'internal displacement flows' "
+        "or 'internal displacement movements'. For the total number of IDPs, units reflect "
+        "the total number of people living in displacement."
+    )
 
     def get_figure_cause_name(self, obj):
         return Crisis.CRISIS_TYPE.get(obj.figure_cause).label

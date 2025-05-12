@@ -19,6 +19,7 @@ import environ
 
 from . import sentry
 from helix.aws.secrets_manager import fetch_db_credentials_from_secret_arn
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -660,24 +661,70 @@ CORS_ALLOW_HEADERS = (
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
+
+def spectacular_param_sorter(value):
+    if value.get('name', None) == 'client_id':
+        return 1
+    if value.get('name', None) == 'release_environment':
+        return 2
+    if value.get('name', None) == 'ordering':
+        return 4
+    if value.get('name', None) == 'offset':
+        return 5
+    if value.get('name', None) == 'limit':
+        return 6
+    return 3
+
+
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Helix API',
-    'DESCRIPTION': 'Public rest API endpoints for Helix',
+    'TITLE': 'IDMC API documentation',
+    'DESCRIPTION': Path("docs/main/description.md").read_text(),
+    'TOS': 'https://www.internal-displacement.org/terms-of-use/',
+    'LICENSE': {
+        'name': 'Creative Commons Attribution-Non-Commercial-Share Alike 3.0 IGO',
+        'url': 'https://creativecommons.org/licenses/by-nc-sa/3.0/igo/legalcode.en',
+    },
     'VERSION': 'v1',
+    'CONTACT': {
+        "email": "ch.datainfo@idmc.ch",
+    },
+    'EXTERNAL_DOCS': {
+        'name': 'About our data',
+        'url': 'https://www.internal-displacement.org/monitoring-tools/',
+    },
+    'TAGS': [
+        {
+            'name': 'GIDD',
+            'description': 'Global Internal Displacement Database',
+        },
+        {
+            'name': 'IDU',
+            'description': 'Internal Displacement Updates',
+        },
+    ],
+
+
     'SERVE_INCLUDE_SCHEMA': False,
     'PREPROCESSING_HOOKS': [
         'helix.openapi.preprocessing_filter_spec'
     ],
-    'CONTACT': {'email': 'info@idmc.ch'},
+    'SORT_OPERATIONS': True,
+    'SORT_OPERATION_PARAMETERS': spectacular_param_sorter,
+    # 'ENABLE_LIST_MECHANICS_ON_NON_2XX': True,
+
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
+        "defaultModelsExpandDepth": 4,
+        "defaultModelExpandDepth": 4,
+        "defaultModelRendering": "model",
         "syntaxHighlight": False,  # Disabling syntax highlighting as it takes considerable time to load
         "persistAuthorization": True,
-        "displayOperationId": True,
+        "displayOperationId ": False,
+        "tryItOutEnabled": True,
     },
-    'ENABLE_LIST_MECHANICS_ON_NON_2XX': True,
     'SWAGGER_UI_DIST': 'SIDECAR',  # shorthand to use the sidecar instead
     'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
+
     'REDOC_DIST': 'SIDECAR',
 }
 

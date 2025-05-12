@@ -350,28 +350,28 @@ class Figure(MetaInformationArchiveAbstractModel,
 
         __labels__ = {
             IDPS: _('IDPs'),
-            RETURNEES: _('Returnees'),
-            RETURN: _('Return'),
-            LOCALLY_INTEGRATED_IDPS: _('Locally Integrated IDPs'),
-            IDPS_SETTLED_ELSEWHERE: _('IDPs Settled Elsewhere'),
-            PEOPLE_DISPLACED_ACROSS_BORDERS: _('People displaced across borders'),
+            RETURNEES: _('Returnees'),  # deprecated
+            RETURN: _('Return'),  # deprecated
+            LOCALLY_INTEGRATED_IDPS: _('Locally Integrated IDPs'),  # deprecated
+            IDPS_SETTLED_ELSEWHERE: _('IDPs Settled Elsewhere'),  # deprecated
+            PEOPLE_DISPLACED_ACROSS_BORDERS: _('People displaced across borders'),  # deprecated
             NEW_DISPLACEMENT: _('Internal Displacements'),
-            MULTIPLE_DISPLACEMENT: _('Multiple Displacement'),
-            PARTIAL_STOCK: _('Partial stock'),
-            PARTIAL_FLOW: _('Partial flow'),
-            CROSS_BORDER_FLIGHT: _('Cross-border Flight'),
-            CROSS_BORDER_RETURN: _('Cross-border Return'),
-            RELOCATION_ELSEWHERE: _('Relocation Elsewhere'),
-            DEATHS: _('Deaths'),
-            PROVISIONAL_SOLUTIONS: _('Provisional Solutions'),
-            FAILED_LOCAL_INTEGRATION: _('Failed Local Integration'),
-            LOCAL_INTEGRATION: _('Local Integration'),
-            FAILED_RETURN_RETURNEE_DISPLACEMENT: _('Failed Return / Returnee Displacement'),
-            UNVERIFIED_STOCK: _('Unverified stock'),
-            UNVERIFIED_FLOW: _('Unverified flow'),
-            BIRTH: _('Birth'),
-            FAILED_RELOCATION_ELSEWHERE: _('Failed relocation elsewhere'),
-            PEOPLE_DISPLACED_ACROSS_BORDERS_FLOW: _('People displaced across borders'),
+            MULTIPLE_DISPLACEMENT: _('Multiple Displacement'),  # deprecated
+            PARTIAL_STOCK: _('Partial stock'),  # deprecated
+            PARTIAL_FLOW: _('Partial flow'),  # deprecated
+            CROSS_BORDER_FLIGHT: _('Cross-border Flight'),  # deprecated
+            CROSS_BORDER_RETURN: _('Cross-border Return'),  # deprecated
+            RELOCATION_ELSEWHERE: _('Relocation Elsewhere'),  # deprecated
+            DEATHS: _('Deaths'),  # deprecated
+            PROVISIONAL_SOLUTIONS: _('Provisional Solutions'),  # deprecated
+            FAILED_LOCAL_INTEGRATION: _('Failed Local Integration'),  # deprecated
+            LOCAL_INTEGRATION: _('Local Integration'),  # deprecated
+            FAILED_RETURN_RETURNEE_DISPLACEMENT: _('Failed Return / Returnee Displacement'),  # deprecated
+            UNVERIFIED_STOCK: _('Unverified stock'),  # deprecated
+            UNVERIFIED_FLOW: _('Unverified flow'),  # deprecated
+            BIRTH: _('Birth'),  # deprecated
+            FAILED_RELOCATION_ELSEWHERE: _('Failed relocation elsewhere'),  # deprecated
+            PEOPLE_DISPLACED_ACROSS_BORDERS_FLOW: _('People displaced across borders'),  # deprecated
         }
 
     class FIGURE_TERMS(enum.Enum):

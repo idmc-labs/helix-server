@@ -41,8 +41,16 @@ class RestConflictFilterSet(ReleaseMetadataFilter):
 
 class RestDisasterFilterSet(ReleaseMetadataFilter):
     event_name = django_filters.CharFilter(method='filter_event_name')
-    start_year = django_filters.NumberFilter(field_name='start_year', method='filter_start_year')
-    end_year = django_filters.NumberFilter(field_name='end_year', method='filter_end_year')
+    start_year = django_filters.NumberFilter(
+        field_name='start_year',
+        method='filter_start_year',
+        help_text="Filter by start date",
+    )
+    end_year = django_filters.NumberFilter(
+        field_name='end_year',
+        method='filter_end_year',
+        help_text='Filter by end date',
+    )
 
     class Meta:
         model = Disaster
@@ -78,8 +86,16 @@ class RestDisplacementDataFilterSet(ReleaseMetadataFilter):
         method='filter_cause',
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(field_name='start_year', method='filter_start_year')
-    end_year = django_filters.NumberFilter(field_name='end_year', method='filter_end_year')
+    start_year = django_filters.NumberFilter(
+        field_name='start_year',
+        method='filter_start_year',
+        help_text="Filter by start date",
+    )
+    end_year = django_filters.NumberFilter(
+        field_name='end_year',
+        method='filter_end_year',
+        help_text='Filter by end date',
+    )
 
     class Meta:
         model = DisplacementData
@@ -169,8 +185,16 @@ class PublicFigureAnalysisFilterSet(ReleaseMetadataFilter):
         method='filter_cause',
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
-    start_year = django_filters.NumberFilter(field_name='start_year', method='filter_start_year')
-    end_year = django_filters.NumberFilter(field_name='end_year', method='filter_end_year')
+    start_year = django_filters.NumberFilter(
+        field_name='start_year',
+        method='filter_start_year',
+        help_text="Filter by start date",
+    )
+    end_year = django_filters.NumberFilter(
+        field_name='end_year',
+        method='filter_end_year',
+        help_text='Filter by end date',
+    )
 
     class Meta:
         model = PublicFigureAnalysis

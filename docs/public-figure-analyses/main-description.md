@@ -1,0 +1,1 @@
+This dataset provides contextual information and analysis documented by IDMC analysts. It captures flags related to methodology, caveats, sources, and challenges identified for each metric, reporting year, and country.
