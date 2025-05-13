@@ -271,8 +271,8 @@ class DisaggregationFilterSet(django_filters.FilterSet):
     def filter_release_environment(self, qs, value):
         release_meta_data = self.get_release_metadata()
         if value.lower() == ReleaseMetadata.ReleaseEnvironment.PRE_RELEASE.name.lower():
-            return qs.filter(year=release_meta_data.pre_release_year)
-        return qs.filter(year=release_meta_data.release_year)
+            return qs.filter(year__lte=release_meta_data.pre_release_year)
+        return qs.filter(year__lte=release_meta_data.release_year)
 
     @property
     def qs(self):
@@ -327,8 +327,8 @@ class DisaggregationPublicFigureAnalysisFilterSet(django_filters.FilterSet):
     def filter_release_environment(self, qs, value):
         release_meta_data = self.get_release_metadata()
         if value.lower() == ReleaseMetadata.ReleaseEnvironment.PRE_RELEASE.name.lower():
-            return qs.filter(year=release_meta_data.pre_release_year)
-        return qs.filter(year=release_meta_data.release_year)
+            return qs.filter(year__lte=release_meta_data.pre_release_year)
+        return qs.filter(year__lte=release_meta_data.release_year)
 
     @property
     def qs(self):
