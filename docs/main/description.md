@@ -52,7 +52,7 @@ The GIDD and IDU serve different purposes: the GIDD offers historical consistenc
 To access IDMC’s APIs, follow these steps
 
 1. **Request Access**
-2. Send an email to ch.datainfo@idmc.ch with a brief description of how you plan to use the data.
+2. Send an email to [ch.datainfo@idmc.ch](mailto:ch.datainfo@idmc.ch) with a brief description of how you plan to use the data.
 3. Please specify your use case by selecting one or more of the following categories:
     - Anticipatory action
     - Humanitarian response
@@ -66,7 +66,7 @@ To access IDMC’s APIs, follow these steps
 6. Include the Key in API Requests
 7. Use the client_id as a query parameter in all API calls. For example:
    ```bash
-   GET https://helix-tools-api.idmcdb.org/external-api/gidd/displacements/?client_id=YOUR_API_KEY
+   https://helix-tools-api.idmcdb.org/external-api/gidd/displacements/?client_id=YOUR_API_KEY
    ```
 
 > NOTE: API keys help IDMC monitor usage and ensure fair access.

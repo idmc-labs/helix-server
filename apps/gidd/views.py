@@ -677,8 +677,12 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 'refer to the IDMC Monitoring Tools (https://www.internal-displacement.org/monitoring-tools).'
             ],
             [
-                'For information on how to access the data programmatically, please visit our API documentation page '
-                'https://www.internal-displacement.org/database/api-documentation/'
+                'For information on how to access IDMC data programmatically, please refer to our API documentation at '
+                'https://www.internal-displacement.org/database/api-documentation/.\n'
+                'This page provides guidance on obtaining access, using the API, and understanding IDMC\'s data structure. '
+                'To request an API key, please email ch.datainfo@idmc.ch with a brief description of your intended use.\n'
+                'For detailed specifications, including data models, field definitions, and usage examples, '
+                'consult the IDMC API Swagger documentation at https://helix-tools-api.idmcdb.org/external-api/.'
             ],
             [],
             ['KEY DEFINITIONS:'],

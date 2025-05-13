@@ -714,8 +714,8 @@ SPECTACULAR_SETTINGS = {
 
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
-        "defaultModelsExpandDepth": 4,
-        "defaultModelExpandDepth": 4,
+        "defaultModelsExpandDepth": 0,
+        "defaultModelExpandDepth": 6,
         "defaultModelRendering": "model",
         "syntaxHighlight": False,  # Disabling syntax highlighting as it takes considerable time to load
         "persistAuthorization": True,
