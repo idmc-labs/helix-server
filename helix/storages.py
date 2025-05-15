@@ -1,6 +1,6 @@
-from storages.backends.s3boto3 import S3Boto3Storage
-from django.core.files.storage import FileSystemStorage, get_storage_class, Storage
 from django.conf import settings
+from django.core.files.storage import FileSystemStorage, Storage, get_storage_class
+from storages.backends.s3boto3 import S3Boto3Storage
 
 
 # File System Storage
@@ -21,13 +21,13 @@ class FileSystemExternalMediaStorage(FileSystemStorage):
 
 # S3
 class S3StaticStorage(S3Boto3Storage):
-    default_acl = 'public-read'
+    default_acl = "public-read"
     location = settings.STATIC_ROOT
 
     def get_default_settings(self):
         return {
             **super().get_default_settings(),
-            'bucket_name': settings.AWS_STORAGE_STATIC_BUCKET_NAME,
+            "bucket_name": settings.AWS_STORAGE_STATIC_BUCKET_NAME,
         }
 
 
@@ -37,18 +37,18 @@ class S3MediaStorage(S3Boto3Storage):
     def get_default_settings(self):
         return {
             **super().get_default_settings(),
-            'bucket_name': settings.AWS_STORAGE_MEDIA_BUCKET_NAME,
+            "bucket_name": settings.AWS_STORAGE_MEDIA_BUCKET_NAME,
         }
 
 
 class S3ExternalMediaStorage(S3Boto3Storage):
-    default_acl = 'public-read'
+    default_acl = "public-read"
     location = settings.EXTERNAL_MEDIA_ROOT
 
     def get_default_settings(self):
         return {
             **super().get_default_settings(),
-            'bucket_name': settings.AWS_STORAGE_EXTERNAL_BUCKET_NAME,
+            "bucket_name": settings.AWS_STORAGE_EXTERNAL_BUCKET_NAME,
         }
 
 

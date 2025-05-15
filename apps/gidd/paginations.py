@@ -1,11 +1,11 @@
 from typing import OrderedDict
 
 from rest_framework.pagination import LimitOffsetPagination
+
 from .models import StatusLog
 
 
 class GiddLimitOffsetPagination(LimitOffsetPagination):
-
     def get_paginated_response(self, data):
         paginated_response = super().get_paginated_response(data)
         response_data = paginated_response.data

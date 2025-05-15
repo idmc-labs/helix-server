@@ -1,38 +1,31 @@
 import graphene
 from django.utils.translation import gettext
 
-from utils.mutation import generate_input_type_for_serializer
-from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import permission_checker
-from apps.contrib.serializers import ExcelDownloadSerializer
-from apps.contrib.mutations import ExportBaseMutation
 from apps.contrib.models import ExcelDownload
+from apps.contrib.mutations import ExportBaseMutation
+from apps.contrib.serializers import ExcelDownloadSerializer
+from apps.report.filters import ReportFilterDataInputType
 from apps.report.models import (
     Report,
     ReportComment,
 )
-from apps.report.filters import ReportFilterDataInputType
-from apps.report.schema import ReportType, ReportCommentType
+from apps.report.schema import ReportCommentType, ReportType
 from apps.report.serializers import (
-    ReportSerializer,
-    ReportUpdateSerializer,
+    ReportApproveSerializer,
     ReportCommentSerializer,
     ReportGenerationSerializer,
-    ReportApproveSerializer,
+    ReportSerializer,
     ReportSignoffSerializer,
+    ReportUpdateSerializer,
     check_is_pfa_visible_in_gidd,
 )
+from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.mutation import generate_input_type_for_serializer
+from utils.permissions import permission_checker
 
+ReportCreateInputType = generate_input_type_for_serializer("ReportCreateInputType", ReportSerializer)
 
-ReportCreateInputType = generate_input_type_for_serializer(
-    'ReportCreateInputType',
-    ReportSerializer
-)
-
-ReportUpdateInputType = generate_input_type_for_serializer(
-    'ReportUpdateInputType',
-    ReportUpdateSerializer
-)
+ReportUpdateInputType = generate_input_type_for_serializer("ReportUpdateInputType", ReportUpdateSerializer)
 
 
 class CreateReport(graphene.Mutation):
@@ -44,7 +37,7 @@ class CreateReport(graphene.Mutation):
     result = graphene.Field(ReportType)
 
     @staticmethod
-    @permission_checker(['report.add_report'])
+    @permission_checker(["report.add_report"])
     def mutate(root, info, data):
         serializer = ReportSerializer(data=data, context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
@@ -62,17 +55,13 @@ class UpdateReport(graphene.Mutation):
     result = graphene.Field(ReportType)
 
     @staticmethod
-    @permission_checker(['report.change_report'])
+    @permission_checker(["report.change_report"])
     def mutate(root, info, data):
         try:
-            instance = Report.objects.get(id=data['id'])
+            instance = Report.objects.get(id=data["id"])
         except Report.DoesNotExist:
-            return UpdateReport(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
-            ])
-        serializer = ReportSerializer(
-            instance=instance, data=data, partial=True, context=dict(request=info.context.request)
-        )
+            return UpdateReport(errors=[dict(field="nonFieldErrors", messages=gettext("Report does not exist."))])
+        serializer = ReportSerializer(instance=instance, data=data, partial=True, context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
             return UpdateReport(errors=errors, ok=False)
         instance = serializer.save()
@@ -88,25 +77,22 @@ class DeleteReport(graphene.Mutation):
     result = graphene.Field(ReportType)
 
     @staticmethod
-    @permission_checker(['report.delete_report'])
+    @permission_checker(["report.delete_report"])
     def mutate(root, info, id):
         try:
             instance = Report.objects.get(id=id)
         except Report.DoesNotExist:
-            return DeleteReport(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
-            ])
+            return DeleteReport(errors=[dict(field="nonFieldErrors", messages=gettext("Report does not exist."))])
 
         if not ReportSerializer.has_permission_for_report(
             info.context.request.user,
             instance,
         ):
-            return DeleteReport(errors=[
-                dict(
-                    field='nonFieldErrors',
-                    messages=gettext('You do not have permission to edit report.')
-                ),
-            ])
+            return DeleteReport(
+                errors=[
+                    dict(field="nonFieldErrors", messages=gettext("You do not have permission to edit report.")),
+                ]
+            )
         instance.delete()
         instance.id = id
         return DeleteReport(result=instance, errors=None, ok=True)
@@ -131,7 +117,7 @@ class CreateReportComment(graphene.Mutation):
     result = graphene.Field(ReportCommentType)
 
     @staticmethod
-    @permission_checker(['report.add_reportcomment'])
+    @permission_checker(["report.add_reportcomment"])
     def mutate(root, info, data):
         serializer = ReportCommentSerializer(data=data, context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
@@ -149,15 +135,12 @@ class UpdateReportComment(graphene.Mutation):
     result = graphene.Field(ReportCommentType)
 
     @staticmethod
-    @permission_checker(['report.change_reportcomment'])
+    @permission_checker(["report.change_reportcomment"])
     def mutate(root, info, data):
         try:
-            instance = ReportComment.objects.get(id=data['id'],
-                                                 created_by=info.context.user)
+            instance = ReportComment.objects.get(id=data["id"], created_by=info.context.user)
         except ReportComment.DoesNotExist:
-            return UpdateReportComment(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Comment does not exist.'))
-            ])
+            return UpdateReportComment(errors=[dict(field="nonFieldErrors", messages=gettext("Comment does not exist."))])
         serializer = ReportCommentSerializer(
             instance=instance, data=data, partial=True, context=dict(request=info.context.request)
         )
@@ -176,15 +159,12 @@ class DeleteReportComment(graphene.Mutation):
     result = graphene.Field(ReportCommentType)
 
     @staticmethod
-    @permission_checker(['report.delete_reportcomment'])
+    @permission_checker(["report.delete_reportcomment"])
     def mutate(root, info, id):
         try:
-            instance = ReportComment.objects.get(id=id,
-                                                 created_by=info.context.user)
+            instance = ReportComment.objects.get(id=id, created_by=info.context.user)
         except ReportComment.DoesNotExist:
-            return DeleteReportComment(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Comment does not exist.'))
-            ])
+            return DeleteReportComment(errors=[dict(field="nonFieldErrors", messages=gettext("Comment does not exist."))])
         instance.delete()
         instance.id = id
         return DeleteReportComment(result=instance, errors=None, ok=True)
@@ -199,14 +179,12 @@ class GenerateReport(graphene.Mutation):
     result = graphene.Field(ReportType)
 
     @staticmethod
-    @permission_checker(['report.sign_off_report'])
+    @permission_checker(["report.sign_off_report"])
     def mutate(root, info, id):
         try:
             instance = Report.objects.get(id=id)
         except Report.DoesNotExist:
-            return GenerateReport(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
-            ])
+            return GenerateReport(errors=[dict(field="nonFieldErrors", messages=gettext("Report does not exist."))])
         serializer = ReportGenerationSerializer(
             data=dict(report=instance.id),
             context=dict(request=info.context.request),
@@ -227,19 +205,14 @@ class SignOffReport(graphene.Mutation):
     result = graphene.Field(ReportType)
 
     @staticmethod
-    @permission_checker(['report.sign_off_report'])
+    @permission_checker(["report.sign_off_report"])
     def mutate(root, info, id, include_history):
         try:
             instance = Report.objects.get(id=id)
         except Report.DoesNotExist:
-            return SignOffReport(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
-            ])
+            return SignOffReport(errors=[dict(field="nonFieldErrors", messages=gettext("Report does not exist."))])
         serializer = ReportSignoffSerializer(
-            data=dict(
-                report=id,
-                include_history=include_history or False
-            ),
+            data=dict(report=id, include_history=include_history or False),
             context=dict(request=info.context.request),
         )
         if errors := mutation_is_not_valid(serializer):
@@ -259,14 +232,12 @@ class ApproveReport(graphene.Mutation):
     result = graphene.Field(ReportType)
 
     @staticmethod
-    @permission_checker(['report.approve_report'])
+    @permission_checker(["report.approve_report"])
     def mutate(root, info, id, approve):
         try:
             instance = Report.objects.get(id=id)
         except Report.DoesNotExist:
-            return ApproveReport(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
-            ])
+            return ApproveReport(errors=[dict(field="nonFieldErrors", messages=gettext("Report does not exist."))])
         serializer = ReportApproveSerializer(
             data=dict(
                 report=id,
@@ -283,6 +254,7 @@ class ApproveReport(graphene.Mutation):
 class ExportReports(ExportBaseMutation):
     class Arguments(ExportBaseMutation.Arguments):
         filters = ReportFilterDataInputType(required=True)
+
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.REPORT
 
 
@@ -297,19 +269,18 @@ class ExportReport(graphene.Mutation):
     @staticmethod
     def mutate(root, info, id):
         from apps.contrib.models import ExcelDownload
+
         try:
             instance = Report.objects.get(id=id)
         except Report.DoesNotExist:
-            return ExportReport(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Report does not exist.'))
-            ])
+            return ExportReport(errors=[dict(field="nonFieldErrors", messages=gettext("Report does not exist."))])
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=int(ExcelDownload.DOWNLOAD_TYPES.INDIVIDUAL_REPORT),
                 filters=dict(),
-                model_instance_id=instance.pk
+                model_instance_id=instance.pk,
             ),
-            context=dict(request=info.context.request)
+            context=dict(request=info.context.request),
         )
         if errors := mutation_is_not_valid(serializer):
             return ExportReport(errors=errors, ok=False)
@@ -327,23 +298,17 @@ class SetPfaVisibleInGidd(graphene.Mutation):
     result = graphene.Field(ReportType)
 
     @staticmethod
-    @permission_checker(['report.update_pfa_visibility_report'])
+    @permission_checker(["report.update_pfa_visibility_report"])
     def mutate(root, info, report_id, is_pfa_visible_in_gidd):
         report = Report.objects.filter(id=report_id).first()
         if not report:
-            return SetPfaVisibleInGidd(errors=[
-                dict(field='nonFieldErrors', messages='Report does not exist')
-            ])
+            return SetPfaVisibleInGidd(errors=[dict(field="nonFieldErrors", messages="Report does not exist")])
         if errors := check_is_pfa_visible_in_gidd(report):
-            return SetPfaVisibleInGidd(errors=[
-                dict(field='nonFieldErrors', messages=errors)
-            ])
+            return SetPfaVisibleInGidd(errors=[dict(field="nonFieldErrors", messages=errors)])
         if is_pfa_visible_in_gidd is True:
             errors = check_is_pfa_visible_in_gidd(report)
             if errors:
-                return SetPfaVisibleInGidd(errors=[
-                    dict(field='nonFieldErrors', messages=errors)
-                ])
+                return SetPfaVisibleInGidd(errors=[dict(field="nonFieldErrors", messages=errors)])
         report.is_pfa_visible_in_gidd = is_pfa_visible_in_gidd
         report.save()
         return SetPfaVisibleInGidd(result=report, errors=None, ok=True)

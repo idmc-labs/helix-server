@@ -1,12 +1,13 @@
 import csv
-import magic
 import os
 import typing
-from django.core.management.base import BaseCommand, CommandParser
 
+import magic
+from django.core.management.base import BaseCommand, CommandParser
 from django.db import transaction
-from apps.entry.models import Entry
+
 from apps.contrib.models import Attachment, SourcePreview
+from apps.entry.models import Entry
 
 
 class Command(BaseCommand):
@@ -17,11 +18,11 @@ class Command(BaseCommand):
     """
 
     def add_arguments(self, parser: CommandParser) -> None:
-        parser.add_argument('csv_file_path', type=str, help="Path to the CSV file containing the data.")
+        parser.add_argument("csv_file_path", type=str, help="Path to the CSV file containing the data.")
 
     def convert_entry_to_document_type(self, entry: Entry):
         """Create a document attachment and detach the preview from the entry."""
-        with entry.preview.pdf.open('rb') as file:
+        with entry.preview.pdf.open("rb") as file:
             byte_stream = file.read()
             filetype_detail = magic.Magic().id_buffer(byte_stream)
             encoding = magic.Magic(flags=magic.MAGIC_MIME_ENCODING).id_buffer(byte_stream)
@@ -29,7 +30,7 @@ class Command(BaseCommand):
         entry.document = Attachment.objects.create(
             attachment_for=Attachment.FOR_CHOICES.ENTRY,
             attachment=entry.preview.pdf,
-            mimetype='application/pdf',
+            mimetype="application/pdf",
             encoding=encoding,
             filetype_detail=filetype_detail,
         )
@@ -69,35 +70,33 @@ class Command(BaseCommand):
         updated_documents_count = 0
         updated_previews_count = 0
 
-        csv_file_path = kwargs['csv_file_path']
+        csv_file_path = kwargs["csv_file_path"]
         if not os.path.exists(csv_file_path):
             self.stdout.write(self.style.ERROR(f"CSV file path does not exist: {csv_file_path}"))
             return
 
         # NOTE: Create a mapping of filename to metadata
         mapping: dict[str, dict] = {}
-        with open(csv_file_path, 'r') as file:
+        with open(csv_file_path, "r") as file:
             reader = csv.DictReader(file)
             for row in reader:
-                mapping[row['filename']] = row
+                mapping[row["filename"]] = row
 
         # NOTE: We should check if the filepath starts with helix-old/ because it might have changed
         entry_with_previews_from_helix1 = Entry.objects.filter(
             old_id__isnull=False,
-            preview__pdf__startswith='helix-old/',
+            preview__pdf__startswith="helix-old/",
         )
         # NOTE: entry with previews and documents should be zero
         assert entry_with_previews_from_helix1.filter(document__isnull=False).count() == 0
 
         for entry in entry_with_previews_from_helix1:
-            filename = entry.preview.pdf.name.split('helix-old/')[1]
+            filename = entry.preview.pdf.name.split("helix-old/")[1]
             metadata = mapping.get(filename)
             if not metadata:
-                self.stdout.write(
-                    self.style.ERROR(f"Metadata not found for Entry ({entry.id}) with filename ({filename})")
-                )
+                self.stdout.write(self.style.ERROR(f"Metadata not found for Entry ({entry.id}) with filename ({filename})"))
                 continue
-            if (metadata['type'] == 'document'):
+            if metadata["type"] == "document":
                 self.convert_entry_to_document_type(entry=entry)
                 self.stdout.write(self.style.SUCCESS(f"Converted entry {entry.id} to document type."))
                 updated_documents_count += 1
@@ -105,20 +104,18 @@ class Command(BaseCommand):
         # NOTE: We should check if the filepath starts with helix-old/ because it might have changed
         entry_with_documents_from_helix1 = Entry.objects.filter(
             old_id__isnull=False,
-            document__attachment__startswith='helix-old/',
+            document__attachment__startswith="helix-old/",
         )
         # NOTE: entry with documents and previews should be zero
         assert entry_with_documents_from_helix1.filter(preview__isnull=False).count() == 0
 
         for entry in entry_with_documents_from_helix1:
-            filename = entry.document.attachment.name.split('helix-old/')[1]
+            filename = entry.document.attachment.name.split("helix-old/")[1]
             metadata = mapping.get(filename)
             if not metadata:
-                self.stdout.write(
-                    self.style.ERROR(f"Metadata not found for Entry ({entry.id}) with filename ({filename})")
-                )
+                self.stdout.write(self.style.ERROR(f"Metadata not found for Entry ({entry.id}) with filename ({filename})"))
                 continue
-            if (metadata['type'] == 'url' and entry.document_url):
+            if metadata["type"] == "url" and entry.document_url:
                 self.convert_entry_to_url_type(entry=entry)
                 self.stdout.write(self.style.SUCCESS(f"Converted entry {entry.id} to url type."))
                 updated_previews_count += 1

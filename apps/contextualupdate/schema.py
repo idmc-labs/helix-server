@@ -2,14 +2,14 @@ import graphene
 from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
-from utils.graphene.enums import EnumDescription
 
-from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.contextualupdate.models import ContextualUpdate
 from apps.contextualupdate.filters import ContextualUpdateFilter
-from utils.graphene.types import CustomDjangoListObjectType
+from apps.contextualupdate.models import ContextualUpdate
+from apps.crisis.enums import CrisisTypeGrapheneEnum
+from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.types import CustomDjangoListObjectType
 
 
 class ContextualUpdateType(DjangoObjectType):
@@ -17,19 +17,21 @@ class ContextualUpdateType(DjangoObjectType):
         model = ContextualUpdate
 
     crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
-    crisis_types_display = EnumDescription(source='get_crisis_types_display')
+    crisis_types_display = EnumDescription(source="get_crisis_types_display")
     sources = graphene.Dynamic(
         lambda: DjangoPaginatedListObjectField(
-            get_type('apps.organization.schema.OrganizationListType'),
-            related_name='sources',
-            reverse_related_name='sourced_contextual_updates',
-        ))
+            get_type("apps.organization.schema.OrganizationListType"),
+            related_name="sources",
+            reverse_related_name="sourced_contextual_updates",
+        )
+    )
     publishers = graphene.Dynamic(
         lambda: DjangoPaginatedListObjectField(
-            get_type('apps.organization.schema.OrganizationListType'),
-            related_name='publishers',
-            reverse_related_name='published_contextual_updates',
-        ))
+            get_type("apps.organization.schema.OrganizationListType"),
+            related_name="publishers",
+            reverse_related_name="published_contextual_updates",
+        )
+    )
 
 
 class ContextualUpdateListType(CustomDjangoListObjectType):
@@ -40,7 +42,6 @@ class ContextualUpdateListType(CustomDjangoListObjectType):
 
 class Query:
     contextual_update = DjangoObjectField(ContextualUpdateType)
-    contextual_update_list = DjangoPaginatedListObjectField(ContextualUpdateListType,
-                                                            pagination=PageGraphqlPaginationWithoutCount(
-                                                                page_size_query_param='pageSize'
-                                                            ))
+    contextual_update_list = DjangoPaginatedListObjectField(
+        ContextualUpdateListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
+    )

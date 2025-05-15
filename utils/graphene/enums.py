@@ -1,14 +1,14 @@
 from typing import Union
 
 import graphene
+from django.contrib.postgres.fields import ArrayField
+from django.db import models
 from django_enumfield import enum
 from rest_framework import serializers
-from django.db import models
-from django.contrib.postgres.fields import ArrayField
 
 
 def to_camelcase(snake_str):
-    components = snake_str.split('_')
+    components = snake_str.split("_")
     return components[0] + "".join(x.title() for x in components[1:])
 
 
@@ -61,8 +61,8 @@ def get_enum_name_from_django_field(
             model_name = field.field.model.__name__
             field_name = field.field.name
     if model_name is None or field_name is None:
-        raise Exception(f'{field=} | {type(field)=}: Both {model_name=} and {field_name=} should have a value')
-    return f'{model_name}{to_camelcase(field_name.title())}'
+        raise Exception(f"{field=} | {type(field)=}: Both {model_name=} and {field_name=} should have a value")
+    return f"{model_name}{to_camelcase(field_name.title())}"
 
 
 class EnumDescription(graphene.Scalar):

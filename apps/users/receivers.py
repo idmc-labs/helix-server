@@ -1,11 +1,11 @@
 from django.db.models.signals import (
-    post_save,
     post_delete,
+    post_save,
 )
 from django.dispatch import receiver
 
 from .enums import USER_ROLE
-from .models import User, Portfolio
+from .models import Portfolio, User
 
 
 def set_user_role(user: User) -> None:
@@ -14,18 +14,12 @@ def set_user_role(user: User) -> None:
 
 def remove_guest_portfolio(user: User):
     if user.portfolios.count() > 1:
-        Portfolio.objects.filter(
-            user=user,
-            role=USER_ROLE.GUEST
-        ).delete()
+        Portfolio.objects.filter(user=user, role=USER_ROLE.GUEST).delete()
 
 
 def add_guest_portfolio(user: User):
     if user.portfolios.count() == 0:
-        Portfolio.objects.create(
-            user=user,
-            role=USER_ROLE.GUEST
-        )
+        Portfolio.objects.create(user=user, role=USER_ROLE.GUEST)
 
 
 @receiver(post_save, sender=User)

@@ -1,23 +1,20 @@
 from datetime import datetime, timedelta
 
-from apps.event.filters import EventFilter
+from apps.common.enums import QA_RULE_TYPE
 from apps.crisis.models import Crisis
-from apps.event.models import (
-    Event
-)
 from apps.entry.models import Figure
+from apps.event.filters import EventFilter
+from apps.event.models import Event
 from utils.factories import (
-    CountryFactory,
-    EventFactory,
-    CrisisFactory,
     ContextOfViolenceFactory,
+    CountryFactory,
+    CrisisFactory,
     EntryFactory,
+    EventFactory,
     FigureFactory,
     FigureLocationFactory,
 )
 from utils.tests import HelixTestCase
-from apps.common.enums import QA_RULE_TYPE
-
 
 CONFLICT = Crisis.CRISIS_TYPE.CONFLICT
 DISASTER = Crisis.CRISIS_TYPE.DISASTER
@@ -29,21 +26,16 @@ class TestEventFilter(HelixTestCase):
 
     def test_event_name_filter(self):
         EventFactory.create(
-            name='one',
+            name="one",
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
         e2 = EventFactory.create(
-            name='two',
+            name="two",
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
-        obtained = self.filter_class(data=dict(
-            name='w'
-        )).qs
+        obtained = self.filter_class(data=dict(name="w")).qs
         expected = [e2]
-        self.assertQuerySetEqual(
-            expected,
-            obtained
-        )
+        self.assertQuerySetEqual(expected, obtained)
 
     def test_crisis_filter(self):
         c1 = CrisisFactory.create()
@@ -56,39 +48,26 @@ class TestEventFilter(HelixTestCase):
             crisis=c2,
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
-        obtained = self.filter_class(data=dict(
-            crisis_by_ids=[str(c1.id)]
-        )).qs
+        obtained = self.filter_class(data=dict(crisis_by_ids=[str(c1.id)])).qs
         expected = [e1]
-        self.assertQuerySetEqual(
-            expected,
-            obtained
-        )
+        self.assertQuerySetEqual(expected, obtained)
 
     def test_event_types_filter(self):
         e1 = EventFactory.create(event_type=CONFLICT)
         e2 = EventFactory.create(event_type=DISASTER)
-        obtained = self.filter_class(data=dict(
-            event_types=[
-                CONFLICT.name
-            ]
-        )).qs
+        obtained = self.filter_class(data=dict(event_types=[CONFLICT.name])).qs
         expected = [e1]
-        self.assertQuerySetEqual(
-            expected,
-            obtained
-        )
-        obtained = self.filter_class(data=dict(
-            event_types=[
-                CONFLICT.name,
-                DISASTER.name,
-            ]
-        )).qs
+        self.assertQuerySetEqual(expected, obtained)
+        obtained = self.filter_class(
+            data=dict(
+                event_types=[
+                    CONFLICT.name,
+                    DISASTER.name,
+                ]
+            )
+        ).qs
         expected = [e1, e2]
-        self.assertQuerySetEqual(
-            expected,
-            obtained
-        )
+        self.assertQuerySetEqual(expected, obtained)
 
     def test_start_date_filter(self):
         now = datetime.today()
@@ -101,26 +80,13 @@ class TestEventFilter(HelixTestCase):
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
         expected = [e2]
-        check_against = str(now).split(' ')[0]
-        self.assertQuerySetEqual(
-            Event.objects.filter(start_date__gt=check_against),
-            expected
-        )
-        obtained = self.filter_class(data=dict(
-            start_date__gt=check_against
-        )).qs
-        self.assertQuerySetEqual(
-            expected,
-            obtained
-        )
-        obtained = self.filter_class(data=dict(
-            start_date__gte=str(now)
-        )).qs
+        check_against = str(now).split(" ")[0]
+        self.assertQuerySetEqual(Event.objects.filter(start_date__gt=check_against), expected)
+        obtained = self.filter_class(data=dict(start_date__gt=check_against)).qs
+        self.assertQuerySetEqual(expected, obtained)
+        obtained = self.filter_class(data=dict(start_date__gte=str(now))).qs
         expected = [e1, e2]
-        self.assertQuerySetEqual(
-            expected,
-            obtained
-        )
+        self.assertQuerySetEqual(expected, obtained)
 
     def test_countries_filter(self):
         c1 = CountryFactory.create()
@@ -134,23 +100,13 @@ class TestEventFilter(HelixTestCase):
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
         e2.countries.set([c3, c2])
-        obtained = self.filter_class(data=dict(
-            countries=[str(c1.id)]
-        )).qs
+        obtained = self.filter_class(data=dict(countries=[str(c1.id)])).qs
         expected = [e1]
-        self.assertQuerySetEqual(
-            expected,
-            obtained
-        )
+        self.assertQuerySetEqual(expected, obtained)
 
-        obtained = self.filter_class(data=dict(
-            countries=[str(c2.id)]
-        )).qs
+        obtained = self.filter_class(data=dict(countries=[str(c2.id)])).qs
         expected = [e1, e2]
-        self.assertQuerySetEqual(
-            expected,
-            obtained
-        )
+        self.assertQuerySetEqual(expected, obtained)
 
     def test_filter_by_context_of_violences(self):
         event = EventFactory.create(
@@ -159,32 +115,23 @@ class TestEventFilter(HelixTestCase):
         context_of_violence = ContextOfViolenceFactory.create()
         event.context_of_violence.set([context_of_violence])
         obtained = self.filter_class(data=dict(context_of_violences=[context_of_violence])).qs
-        self.assertQuerySetEqual(
-            [event],
-            obtained
-        )
+        self.assertQuerySetEqual([event], obtained)
 
     def test_qs_rules(self):
         # Create a entry without any recommended figures
         event_0 = EventFactory.create()
 
-        event_1 = EventFactory.create(name='event 1', ignore_qa=False)
-        event_2 = EventFactory.create(name='event 2', ignore_qa=False)
-        event_3 = EventFactory.create(name='event 3', ignore_qa=False)
+        event_1 = EventFactory.create(name="event 1", ignore_qa=False)
+        event_2 = EventFactory.create(name="event 2", ignore_qa=False)
+        event_3 = EventFactory.create(name="event 3", ignore_qa=False)
 
         entry_1 = EntryFactory.create()
         entry_2 = EntryFactory.create()
         entry_3 = EntryFactory.create()
 
-        geo_location_1 = FigureLocationFactory.create(
-            name='one'
-        )
-        geo_location_2 = FigureLocationFactory.create(
-            name='tow'
-        )
-        geo_location_3 = FigureLocationFactory.create(
-            name='three'
-        )
+        geo_location_1 = FigureLocationFactory.create(name="one")
+        geo_location_2 = FigureLocationFactory.create(name="tow")
+        geo_location_3 = FigureLocationFactory.create(name="three")
 
         # Create 3 figures without duplicated geo locations
         FigureFactory.create(
@@ -219,16 +166,17 @@ class TestEventFilter(HelixTestCase):
         )
 
         # Test event with multiple recommended figures in same location
-        filtered_data = self.filter_class(data=dict(
-            qa_rule=QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name
-        )).qs
+        filtered_data = self.filter_class(data=dict(qa_rule=QA_RULE_TYPE.HAS_MULTIPLE_RECOMMENDED_FIGURES.name)).qs
         self.assertEqual(set(filtered_data), {event_2, event_3})
 
         # Test events with no recommended figures
-        filtered_data = self.filter_class(data=dict(
-            qa_rule=QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name
-        )).qs
-        self.assertEqual(set(filtered_data), {event_0, })
+        filtered_data = self.filter_class(data=dict(qa_rule=QA_RULE_TYPE.HAS_NO_RECOMMENDED_FIGURES.name)).qs
+        self.assertEqual(
+            set(filtered_data),
+            {
+                event_0,
+            },
+        )
 
     def test_event_review_status(self):
         e_REVIEW_NOT_STARTED = EventFactory.create(review_status=Event.EVENT_REVIEW_STATUS.REVIEW_NOT_STARTED)
@@ -293,16 +241,8 @@ class TestEventFilter(HelixTestCase):
             ],
         ]:
             # With value - Internal interface
-            obtained = self.filter_class(
-                data=dict(
-                    review_status=[v.value for v in filters]
-                )
-            ).qs
+            obtained = self.filter_class(data=dict(review_status=[v.value for v in filters])).qs
             self.assertQuerySetEqual(expected, obtained, filters)
             # With name - GraphQl interface
-            obtained = self.filter_class(
-                data=dict(
-                    review_status=[v.name for v in filters]
-                )
-            ).qs
+            obtained = self.filter_class(data=dict(review_status=[v.name for v in filters])).qs
             self.assertQuerySetEqual(expected, obtained, filters)

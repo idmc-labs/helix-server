@@ -44,7 +44,7 @@ def send_figure_notifications(
     _event = event or figure.event
 
     recipients = [
-        user['id']
+        user["id"]
         for user in Event.regional_coordinators(
             _event,
             actor=actor,
@@ -61,14 +61,11 @@ def send_figure_notifications(
         event=_event,
         entry=figure.entry,
         type=notification_type,
-        **(
-            dict(figure=figure)
-            if not is_deleted else dict()
-        ),
+        **(dict(figure=figure) if not is_deleted else dict()),
     )
 
 
-class BulkUpdateFigureManager():
+class BulkUpdateFigureManager:
     event_ids: typing.Set[int]
     figure_moved_from_event: typing.Set[Event]
     figure_moved_to_event: typing.Set[Event]

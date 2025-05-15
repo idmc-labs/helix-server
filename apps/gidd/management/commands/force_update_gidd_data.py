@@ -11,6 +11,7 @@ class Command(BaseCommand):
     """
     Management command to force update GIDD data.
     """
+
     help = "Force update GIDD data"
 
     def handle(self, *args, **kwargs):
@@ -18,7 +19,7 @@ class Command(BaseCommand):
         Executes the command to force update GIDD data.
         """
         if not settings.DEBUG:
-            self.stderr.write('This command is only intended for local development.')
+            self.stderr.write("This command is only intended for local development.")
 
         internal_bot = HelixInternalBot()
         status_log = StatusLog.objects.create(

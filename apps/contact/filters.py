@@ -1,21 +1,21 @@
-from django.db.models import Q
 import django_filters
+from django.db.models import Q
 
+from apps.contact.models import Communication, CommunicationMedium, Contact
 from apps.users.roles import USER_ROLE
-from apps.contact.models import Contact, Communication, CommunicationMedium
-from utils.filters import StringListFilter, generate_type_for_filter_set, IDListFilter
+from utils.filters import IDListFilter, StringListFilter, generate_type_for_filter_set
 
 
 class ContactFilter(django_filters.FilterSet):
-    id = django_filters.CharFilter(field_name='id', lookup_expr='iexact')
-    first_name_contains = django_filters.CharFilter(field_name='first_name', lookup_expr='unaccent__icontains')
-    last_name_contains = django_filters.CharFilter(field_name='last_name', lookup_expr='unaccent__icontains')
-    name_contains = django_filters.CharFilter(method='filter_name_contains')
-    countries_of_operation = StringListFilter(method='filter_countries')
+    id = django_filters.CharFilter(field_name="id", lookup_expr="iexact")
+    first_name_contains = django_filters.CharFilter(field_name="first_name", lookup_expr="unaccent__icontains")
+    last_name_contains = django_filters.CharFilter(field_name="last_name", lookup_expr="unaccent__icontains")
+    name_contains = django_filters.CharFilter(method="filter_name_contains")
+    countries_of_operation = StringListFilter(method="filter_countries")
 
     class Meta:
         model = Contact
-        fields = ['country']
+        fields = ["country"]
 
     def filter_name_contains(self, qs, name, value):
         return qs.filter(Q(first_name__unaccent__icontains=value) | Q(last_name__unaccent__icontains=value))
@@ -33,12 +33,12 @@ class ContactFilter(django_filters.FilterSet):
 
 
 class CommunicationFilter(django_filters.FilterSet):
-    id = django_filters.CharFilter(field_name='id', lookup_expr='iexact')
-    subject_contains = django_filters.CharFilter(field_name='subject', lookup_expr='unaccent__icontains')
+    id = django_filters.CharFilter(field_name="id", lookup_expr="iexact")
+    subject_contains = django_filters.CharFilter(field_name="subject", lookup_expr="unaccent__icontains")
 
     class Meta:
         model = Communication
-        fields = ['contact', 'country']
+        fields = ["contact", "country"]
 
     @property
     def qs(self):
@@ -48,7 +48,7 @@ class CommunicationFilter(django_filters.FilterSet):
 
 
 class CommunicationMediumFilter(django_filters.FilterSet):
-    ids = IDListFilter(field_name='id')
+    ids = IDListFilter(field_name="id")
 
     class Meta:
         model = CommunicationMedium
@@ -57,7 +57,7 @@ class CommunicationMediumFilter(django_filters.FilterSet):
 
 ContactFilterDataType, ContactFilterDataInputType = generate_type_for_filter_set(
     ContactFilter,
-    'contact.schema.contact_list',
-    'ContactFilterDataType',
-    'ContactFilterDataInputType',
+    "contact.schema.contact_list",
+    "ContactFilterDataType",
+    "ContactFilterDataInputType",
 )

@@ -90,4 +90,3 @@ There are custom management commands available to facilitate specific tasks.
 ./manage.py force_update_gidd_data
 ```
 > NOTE: This command forces an update of GIDD data. It's important to note that this command is intended for local development purposes only, so it should be used with caution.
-

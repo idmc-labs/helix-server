@@ -8,7 +8,7 @@ def set_default_values(apps, schema_editor):
     Giddevent = apps.get_model('gidd', 'GiddEvent')
     GiddFigure = apps.get_model('gidd', 'GiddFigure')
     PublicFigureAnalysis = apps.get_model('gidd', 'PublicFigureAnalysis')
-    
+
     Disaster.objects.update(
         event_raw_id=models.F('event_id')
     )
@@ -23,7 +23,7 @@ def set_default_values(apps, schema_editor):
         report_raw_id=models.F('report_id')
     )
 
-    
+
 class Migration(migrations.Migration):
     dependencies = [
         ('gidd', '0036_auto_20250212_0614'),
@@ -32,4 +32,3 @@ class Migration(migrations.Migration):
     operations = [
         migrations.RunPython(set_default_values, reverse_code=migrations.RunPython.noop),
     ]
-

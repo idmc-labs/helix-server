@@ -1,13 +1,13 @@
 from rest_framework import serializers
 
+from apps.contrib.serializers import IntegerIDField, MetaInformationSerializerMixin, UpdateSerializerMixin
 from apps.organization.models import Organization, OrganizationKind
-from apps.contrib.serializers import UpdateSerializerMixin, IntegerIDField, MetaInformationSerializerMixin
 
 
 class OrganizationKindSerializer(serializers.ModelSerializer, MetaInformationSerializerMixin):
     class Meta:
         model = OrganizationKind
-        fields = '__all__'
+        fields = "__all__"
 
 
 class OrganizationKindUpdateSerializer(UpdateSerializerMixin, OrganizationKindSerializer):
@@ -17,11 +17,9 @@ class OrganizationKindUpdateSerializer(UpdateSerializerMixin, OrganizationKindSe
 class OrganizationSerializer(serializers.ModelSerializer, MetaInformationSerializerMixin):
     class Meta:
         model = Organization
-        fields = '__all__'
+        fields = "__all__"
         extra_kwargs = {
-            'countries': {
-                'required': False
-            },
+            "countries": {"required": False},
         }
 
 

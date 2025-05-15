@@ -10,25 +10,27 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
-import os
-import sys
 import json
-import socket
 import logging
+import os
+import socket
+import sys
+from pathlib import Path
+
 import environ
 
-from . import sentry
 from helix.aws.secrets_manager import fetch_db_credentials_from_secret_arn
-from pathlib import Path
+
+from . import sentry
 
 logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-APPS_DIRNAME = 'apps'
+APPS_DIRNAME = "apps"
 APPS_DIR = os.path.join(BASE_DIR, APPS_DIRNAME)
 
-DEVELOPMENT_ENV = 'development'
+DEVELOPMENT_ENV = "development"
 
 env = environ.Env(
     DJANGO_DEBUG=(bool, False),
@@ -53,12 +55,12 @@ env = environ.Env(
     ELASTI_CACHE_PORT=str,
     # DJANGO cookie conf
     SESSION_COOKIE_DOMAIN=str,  # .tools.idmdb.org
-    CSRF_COOKIE_DOMAIN=str,   # .tools.idmdb.org
+    CSRF_COOKIE_DOMAIN=str,  # .tools.idmdb.org
     CSRF_USE_SESSIONS=(bool, False),
     ADDITIONAL_TRUSTED_ORIGINS=(list, []),
     # MISC
-    DEFAULT_FROM_EMAIL=(str, 'contact@idmcdb.org'),
-    INTERNAL_BOT_EMAIL=(str, 'helix-internal-bot@idmc.ch'),
+    DEFAULT_FROM_EMAIL=(str, "contact@idmcdb.org"),
+    INTERNAL_BOT_EMAIL=(str, "helix-internal-bot@idmc.ch"),
     BACKEND_BASE_URL=str,  # http://localhost:9000
     FRONTEND_BASE_URL=str,  # http://localhost:3000
     HCAPTCHA_SECRET=str,
@@ -89,26 +91,34 @@ env = environ.Env(
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('DJANGO_SECRET_KEY')
-HELIX_ENVIRONMENT = env('COPILOT_ENVIRONMENT_NAME') or env('HELIX_ENVIRONMENT')
-DEBUG = env('DJANGO_DEBUG')
-logger.debug(f'\nServer running in {DEBUG=} mode.\n')
+SECRET_KEY = env("DJANGO_SECRET_KEY")
+HELIX_ENVIRONMENT = env("COPILOT_ENVIRONMENT_NAME") or env("HELIX_ENVIRONMENT")
+DEBUG = env("DJANGO_DEBUG")
+logger.debug(f"\nServer running in {DEBUG=} mode.\n")
 
-ALLOWED_HOSTS = env('DJANGO_ALLOWED_HOST')
+ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOST")
 
-IN_AWS_COPILOT_ECS = not not env('COPILOT_SERVICE_NAME')
+IN_AWS_COPILOT_ECS = not not env("COPILOT_SERVICE_NAME")
 
 # See if we are inside a test environment (pytest)
-PYTEST_XDIST_WORKER = env('PYTEST_XDIST_WORKER')
-TESTING = any([
-    arg in sys.argv for arg in [
-        'test',
-        'pytest', '/usr/local/bin/pytest',
-        'py.test', '/usr/local/bin/py.test',
-        '/usr/local/lib/python3.6/dist-packages/py/test.py',
-    ]
-    # Provided by pytest-xdist
-]) or PYTEST_XDIST_WORKER is not None
+PYTEST_XDIST_WORKER = env("PYTEST_XDIST_WORKER")
+TESTING = (
+    any(
+        [
+            arg in sys.argv
+            for arg in [
+                "test",
+                "pytest",
+                "/usr/local/bin/pytest",
+                "py.test",
+                "/usr/local/bin/py.test",
+                "/usr/local/lib/python3.6/dist-packages/py/test.py",
+            ]
+            # Provided by pytest-xdist
+        ]
+    )
+    or PYTEST_XDIST_WORKER is not None
+)
 
 if not DEBUG:
     assert TESTING is False
@@ -116,109 +126,114 @@ if not DEBUG:
 # Application definition
 
 LOCAL_APPS = [
-    'contrib',
-    'country',
-    'users',
-    'organization',
-    'contact',
-    'crisis',
-    'event',
-    'entry',
-    'resource',
-    'review',
-    'extraction',
-    'parking_lot',
-    'contextualupdate',
-    'report',
-    'notification',
-    'gidd',
+    "contrib",
+    "country",
+    "users",
+    "organization",
+    "contact",
+    "crisis",
+    "event",
+    "entry",
+    "resource",
+    "review",
+    "extraction",
+    "parking_lot",
+    "contextualupdate",
+    "report",
+    "notification",
+    "gidd",
 ]
 
 THIRD_PARTY_APPS = [
-    'admin_auto_filters',
-    'graphene_django',
-    'rest_framework.authtoken',  # required by djoser
-    'djoser',
-    'corsheaders',
-    'django_filters',
-    'debug_toolbar',
-    'graphene_graphiql_explorer',
-    'graphiql_debug_toolbar',
-    'rest_framework',
-    'django_otp',
-    'django_otp.plugins.otp_static',
-    'django_otp.plugins.otp_email',
-    'django_otp.plugins.otp_totp',
-    'django_otp.plugins.otp_hotp',
-    'drf_spectacular',
-    'drf_spectacular_sidecar',  # required for Django collectstatic discovery
+    "admin_auto_filters",
+    "graphene_django",
+    "rest_framework.authtoken",  # required by djoser
+    "djoser",
+    "corsheaders",
+    "django_filters",
+    "debug_toolbar",
+    "graphene_graphiql_explorer",
+    "graphiql_debug_toolbar",
+    "rest_framework",
+    "django_otp",
+    "django_otp.plugins.otp_static",
+    "django_otp.plugins.otp_email",
+    "django_otp.plugins.otp_totp",
+    "django_otp.plugins.otp_hotp",
+    "drf_spectacular",
+    "drf_spectacular_sidecar",  # required for Django collectstatic discovery
     # External - Health-check
-    'health_check',  # required
-    'health_check.db',  # stock Django health checkers
-    'health_check.cache',
-    'health_check.storage',
-    'health_check.contrib.migrations',
-    'health_check.contrib.redis',  # requires Redis broker
+    "health_check",  # required
+    "health_check.db",  # stock Django health checkers
+    "health_check.cache",
+    "health_check.storage",
+    "health_check.contrib.migrations",
+    "health_check.contrib.redis",  # requires Redis broker
 ]
 
-INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'django.contrib.postgres',
-] + THIRD_PARTY_APPS + [
-    # apps.users.apps.UsersConfig
-    f'{APPS_DIRNAME}.{app}.apps.{"".join([word.title() for word in app.split("_")])}Config' for app in LOCAL_APPS
-]
+INSTALLED_APPS = (
+    [
+        "django.contrib.admin",
+        "django.contrib.auth",
+        "django.contrib.contenttypes",
+        "django.contrib.sessions",
+        "django.contrib.messages",
+        "django.contrib.staticfiles",
+        "django.contrib.postgres",
+    ]
+    + THIRD_PARTY_APPS
+    + [
+        # apps.users.apps.UsersConfig
+        f"{APPS_DIRNAME}.{app}.apps.{''.join([word.title() for word in app.split('_')])}Config"
+        for app in LOCAL_APPS
+    ]
+)
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'utils.middleware.HealthCheckMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django_otp.middleware.OTPMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
+    "utils.middleware.HealthCheckMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django_otp.middleware.OTPMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
 ]
 
-ENABLE_DEBUG_TOOLBAR = env('ENABLE_DEBUG_TOOLBAR')
+ENABLE_DEBUG_TOOLBAR = env("ENABLE_DEBUG_TOOLBAR")
 if ENABLE_DEBUG_TOOLBAR:
     MIDDLEWARE.append(
         # NOTE: DebugToolbarMiddleware will cause mutation to execute twice for the client, works fine with graphiql
-        'utils.middleware.DebugToolbarMiddleware',
+        "utils.middleware.DebugToolbarMiddleware",
     )
 
 if HELIX_ENVIRONMENT not in (DEVELOPMENT_ENV,):
-    MIDDLEWARE.append('django.middleware.clickjacking.XFrameOptionsMiddleware')
+    MIDDLEWARE.append("django.middleware.clickjacking.XFrameOptionsMiddleware")
 
 
 if IN_AWS_COPILOT_ECS:
     _COPILOT_ELASTI_CACHE_URL = f"redis://{env('ELASTI_CACHE_ADDRESS')}:{env('ELASTI_CACHE_PORT')}"
-    DJANGO_CACHE_REDIS_URL = f'{_COPILOT_ELASTI_CACHE_URL}/1'
-    CELERY_BROKER_URL = f'{_COPILOT_ELASTI_CACHE_URL}/0'
-    CELERY_RESULT_BACKEND = f'{_COPILOT_ELASTI_CACHE_URL}/2'
-    DJANGO_EXTERNAL_API_CACHE_REDIS_URL = f'{_COPILOT_ELASTI_CACHE_URL}/3'
+    DJANGO_CACHE_REDIS_URL = f"{_COPILOT_ELASTI_CACHE_URL}/1"
+    CELERY_BROKER_URL = f"{_COPILOT_ELASTI_CACHE_URL}/0"
+    CELERY_RESULT_BACKEND = f"{_COPILOT_ELASTI_CACHE_URL}/2"
+    DJANGO_EXTERNAL_API_CACHE_REDIS_URL = f"{_COPILOT_ELASTI_CACHE_URL}/3"
 else:
-    DJANGO_CACHE_REDIS_URL = env('DJANGO_CACHE_REDIS_URL')
-    DJANGO_EXTERNAL_API_CACHE_REDIS_URL = env('DJANGO_EXTERNAL_API_CACHE_REDIS_URL')
-    CELERY_BROKER_URL = env('CELERY_BROKER_URL')
-    CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND_URL')
+    DJANGO_CACHE_REDIS_URL = env("DJANGO_CACHE_REDIS_URL")
+    DJANGO_EXTERNAL_API_CACHE_REDIS_URL = env("DJANGO_EXTERNAL_API_CACHE_REDIS_URL")
+    CELERY_BROKER_URL = env("CELERY_BROKER_URL")
+    CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND_URL")
 
-EXTERNAL_API_CACHE_ALIAS = 'external_api'
+EXTERNAL_API_CACHE_ALIAS = "external_api"
 
 
 CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': DJANGO_CACHE_REDIS_URL,
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        }
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": DJANGO_CACHE_REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        },
     },
     EXTERNAL_API_CACHE_ALIAS: {
         "BACKEND": "django_redis.cache.RedisCache",
@@ -231,61 +246,60 @@ CACHES = {
 }
 
 REST_FRAMEWORK = {
-    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
-    'PAGE_SIZE': 20,
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    "PAGE_SIZE": 20,
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 
-ROOT_URLCONF = 'helix.urls'
+ROOT_URLCONF = "helix.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.debug',
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [os.path.join(BASE_DIR, "templates")],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.debug",
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'helix.wsgi.application'
+WSGI_APPLICATION = "helix.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
 if IN_AWS_COPILOT_ECS:
-    DBCLUSTER_SECRET = (
-        json.loads(env('HELIXDBCLUSTER_SECRET') or '{}') or
-        fetch_db_credentials_from_secret_arn(env('HELIXDBCLUSTER_SECRET_ARN'))
+    DBCLUSTER_SECRET = json.loads(env("HELIXDBCLUSTER_SECRET") or "{}") or fetch_db_credentials_from_secret_arn(
+        env("HELIXDBCLUSTER_SECRET_ARN")
     )
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        "default": {
+            "ENGINE": "django.db.backends.postgresql_psycopg2",
             # in the workflow environment
-            'NAME': DBCLUSTER_SECRET['dbname'],
-            'USER': DBCLUSTER_SECRET['username'],
-            'PASSWORD': DBCLUSTER_SECRET['password'],
-            'HOST': DBCLUSTER_SECRET['host'],
-            'PORT': DBCLUSTER_SECRET['port'],
+            "NAME": DBCLUSTER_SECRET["dbname"],
+            "USER": DBCLUSTER_SECRET["username"],
+            "PASSWORD": DBCLUSTER_SECRET["password"],
+            "HOST": DBCLUSTER_SECRET["host"],
+            "PORT": DBCLUSTER_SECRET["port"],
         }
     }
 else:
     DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
-            'NAME': env('POSTGRES_DB'),
-            'USER': env('POSTGRES_USER'),
-            'PASSWORD': env('POSTGRES_PASSWORD'),
-            'HOST': env('POSTGRES_HOST'),
-            'PORT': env('POSTGRES_PORT'),
+        "default": {
+            "ENGINE": "django.db.backends.postgresql_psycopg2",
+            "NAME": env("POSTGRES_DB"),
+            "USER": env("POSTGRES_USER"),
+            "PASSWORD": env("POSTGRES_PASSWORD"),
+            "HOST": env("POSTGRES_HOST"),
+            "PORT": env("POSTGRES_PORT"),
         }
     }
 
@@ -294,19 +308,19 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
     {
-        'NAME': 'apps.users.password_validation.MaximumLengthValidator',
+        "NAME": "apps.users.password_validation.MaximumLengthValidator",
     },
 ]
 
@@ -314,9 +328,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/3.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -325,47 +339,47 @@ USE_L10N = True
 USE_TZ = True
 
 
-AUTH_USER_MODEL = 'users.User'
+AUTH_USER_MODEL = "users.User"
 
 # https://docs.graphene-python.org/projects/django/en/latest/settings/
 GRAPHENE = {
-    'ATOMIC_MUTATIONS': True,
-    'SCHEMA': 'helix.schema.schema',
-    'SCHEMA_OUTPUT': 'schema.json',  # defaults to schema.json,
-    'SCHEMA_INDENT': 2,  # Defaults to None (displays all data on a single line)
-    'MIDDLEWARE': [
-        'helix.sentry.SentryMiddleware',
-        'helix.auth.WhiteListMiddleware',
+    "ATOMIC_MUTATIONS": True,
+    "SCHEMA": "helix.schema.schema",
+    "SCHEMA_OUTPUT": "schema.json",  # defaults to schema.json,
+    "SCHEMA_INDENT": 2,  # Defaults to None (displays all data on a single line)
+    "MIDDLEWARE": [
+        "helix.sentry.SentryMiddleware",
+        "helix.auth.WhiteListMiddleware",
     ],
 }
 
 GRAPHENE_DJANGO_EXTRAS = {
-    'DEFAULT_PAGINATION_CLASS': 'utils.pagination.PageGraphqlPaginationWithoutCount',
-    'DEFAULT_PAGE_SIZE': 20,
-    'MAX_PAGE_SIZE': 100,
+    "DEFAULT_PAGINATION_CLASS": "utils.pagination.PageGraphqlPaginationWithoutCount",
+    "DEFAULT_PAGE_SIZE": 20,
+    "MAX_PAGE_SIZE": 100,
     # 'CACHE_ACTIVE': True,
     # 'CACHE_TIMEOUT': 300    # seconds
 }
 if not DEBUG:
-    GRAPHENE['MIDDLEWARE'].append('utils.middleware.DisableIntrospectionSchemaMiddleware')
+    GRAPHENE["MIDDLEWARE"].append("utils.middleware.DisableIntrospectionSchemaMiddleware")
 
 GRAPHENE_BATCH_DEFAULT_MAX_LIMIT = 50
 
 AUTHENTICATION_BACKEND = [
-    'django.contrib.auth.backends.ModelBackend',
+    "django.contrib.auth.backends.ModelBackend",
 ]
 
 DJOSER = {
-    'ACTIVATION_URL': '#/activate/{uid}/{token}',
-    'SEND_ACTIVATION_EMAIL': env('SEND_ACTIVATION_EMAIL'),
+    "ACTIVATION_URL": "#/activate/{uid}/{token}",
+    "SEND_ACTIVATION_EMAIL": env("SEND_ACTIVATION_EMAIL"),
 }
 if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 else:
-    EMAIL_BACKEND = 'django_ses.SESBackend'
+    EMAIL_BACKEND = "django_ses.SESBackend"
 
-DEFAULT_FROM_EMAIL = env('DEFAULT_FROM_EMAIL')
-INTERNAL_BOT_EMAIL = env('INTERNAL_BOT_EMAIL')
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+INTERNAL_BOT_EMAIL = env("INTERNAL_BOT_EMAIL")
 
 # https://docs.djangoproject.com/en/3.1/ref/settings/#std:setting-APPEND_SLASH
 APPEND_SLASH = False
@@ -375,12 +389,12 @@ APPEND_SLASH = False
 #################
 
 INTERNAL_IPS = [
-    '127.0.0.1',
+    "127.0.0.1",
 ]
 
 # https://github.com/flavors/django-graphiql-debug-toolbar/#installation
 hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
-INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
+INTERNAL_IPS += [ip[:-1] + "1" for ip in ips]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
@@ -388,42 +402,42 @@ INTERNAL_IPS += [ip[:-1] + '1' for ip in ips]
 # Use File System Storage as default
 
 # Set URL (Only used in development mode)
-STATIC_URL = '/static/'
-MEDIA_URL = '/media/'
-EXTERNAL_MEDIA_URL = '/external-media/'
+STATIC_URL = "/static/"
+MEDIA_URL = "/media/"
+EXTERNAL_MEDIA_URL = "/external-media/"
 
 # Django storage
-if env('USE_S3_BUCKET'):
+if env("USE_S3_BUCKET"):
     # Get S3 Credentials
-    AWS_S3_ACCESS_KEY_ID = env('AWS_S3_ACCESS_KEY_ID')
+    AWS_S3_ACCESS_KEY_ID = env("AWS_S3_ACCESS_KEY_ID")
     if AWS_S3_ACCESS_KEY_ID:
-        AWS_S3_SECRET_ACCESS_KEY = env('AWS_S3_SECRET_ACCESS_KEY')
-        AWS_S3_REGION_NAME = env('AWS_S3_REGION')
+        AWS_S3_SECRET_ACCESS_KEY = env("AWS_S3_SECRET_ACCESS_KEY")
+        AWS_S3_REGION_NAME = env("AWS_S3_REGION")
 
     # Set storage root
-    STATIC_ROOT = 'static'
-    MEDIA_ROOT = 'media'
-    EXTERNAL_MEDIA_ROOT = 'external-media'
+    STATIC_ROOT = "static"
+    MEDIA_ROOT = "media"
+    EXTERNAL_MEDIA_ROOT = "external-media"
 
     # Set bucket Names
-    AWS_STORAGE_MEDIA_BUCKET_NAME = AWS_STORAGE_STATIC_BUCKET_NAME = env('S3_BUCKET_NAME')
-    AWS_STORAGE_EXTERNAL_BUCKET_NAME = env('EXTERNAL_S3_BUCKET_NAME')
-    AWS_S3_ENDPOINT_URL = env('AWS_S3_AWS_ENDPOINT_URL')
+    AWS_STORAGE_MEDIA_BUCKET_NAME = AWS_STORAGE_STATIC_BUCKET_NAME = env("S3_BUCKET_NAME")
+    AWS_STORAGE_EXTERNAL_BUCKET_NAME = env("EXTERNAL_S3_BUCKET_NAME")
+    AWS_S3_ENDPOINT_URL = env("AWS_S3_AWS_ENDPOINT_URL")
 
     # Set Default storages
-    DEFAULT_FILE_STORAGE = 'helix.storages.S3MediaStorage'
-    STATICFILES_STORAGE = 'helix.storages.S3StaticStorage'
-    EXTERNAL_FILE_STORAGE = 'helix.storages.S3ExternalMediaStorage'
+    DEFAULT_FILE_STORAGE = "helix.storages.S3MediaStorage"
+    STATICFILES_STORAGE = "helix.storages.S3StaticStorage"
+    EXTERNAL_FILE_STORAGE = "helix.storages.S3ExternalMediaStorage"
 else:
     # Set root to code directory as default
-    STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-    EXTERNAL_MEDIA_ROOT = os.path.join(BASE_DIR, 'external-media')
+    STATIC_ROOT = os.path.join(BASE_DIR, "static")
+    MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+    EXTERNAL_MEDIA_ROOT = os.path.join(BASE_DIR, "external-media")
 
     # Set default file storages
-    DEFAULT_FILE_STORAGE = 'helix.storages.FileSystemMediaStorage'
-    STATICFILES_STORAGE = 'helix.storages.FileSystemStaticStorage'
-    EXTERNAL_FILE_STORAGE = 'helix.storages.FileSystemExternalMediaStorage'
+    DEFAULT_FILE_STORAGE = "helix.storages.FileSystemMediaStorage"
+    STATICFILES_STORAGE = "helix.storages.FileSystemStaticStorage"
+    EXTERNAL_FILE_STORAGE = "helix.storages.FileSystemExternalMediaStorage"
 
 # Additional S3 configurations
 # NOTE: s3 bucket is public
@@ -431,45 +445,45 @@ AWS_QUERYSTRING_AUTH = False
 AWS_S3_FILE_OVERWRITE = False
 AWS_IS_GZIPPED = True
 GZIP_CONTENT_TYPES = [
-    'text/css',
-    'text/javascript',
-    'application/javascript',
-    'application/x-javascript',
-    'image/svg+xml',
-    'application/json',
-    'application/pdf',
+    "text/css",
+    "text/javascript",
+    "application/javascript",
+    "application/x-javascript",
+    "image/svg+xml",
+    "application/json",
+    "application/pdf",
 ]
 
 # HEALTH-CHECK
 REDIS_URL = DJANGO_CACHE_REDIS_URL
 
 # Sentry Config
-SENTRY_DSN = env('SENTRY_DSN')
+SENTRY_DSN = env("SENTRY_DSN")
 # Enable sentry monitor for beat tasks
-SENTRY_MONITOR_CELERY_BEAT_TASKS = env('SENTRY_MONITOR_CELERY_BEAT_TASKS')
+SENTRY_MONITOR_CELERY_BEAT_TASKS = env("SENTRY_MONITOR_CELERY_BEAT_TASKS")
 
 if SENTRY_DSN:
     SENTRY_CORE_CONFIG = {
-        'dsn': SENTRY_DSN,
-        'send_default_pii': True,
+        "dsn": SENTRY_DSN,
+        "send_default_pii": True,
         # TODO: Move server to root directory to get access to .git
         # 'release': sentry.fetch_git_sha(os.path.dirname(BASE_DIR)),
-        'environment': HELIX_ENVIRONMENT,
-        'traces_sample_rate': env('SENTRY_SAMPLE_RATE'),
-        'profiles_sample_rate': env('SENTRY_PROFILES_SAMPLE_RATE'),
-        'debug': env('SENTRY_DEBUG'),
+        "environment": HELIX_ENVIRONMENT,
+        "traces_sample_rate": env("SENTRY_SAMPLE_RATE"),
+        "profiles_sample_rate": env("SENTRY_PROFILES_SAMPLE_RATE"),
+        "debug": env("SENTRY_DEBUG"),
     }
     SENTRY_ADDITIONAL_CONFIG = {
-        'tags': {
-            'site': ALLOWED_HOSTS[0],
+        "tags": {
+            "site": ALLOWED_HOSTS[0],
         },
-        'app_type': 'server',
+        "app_type": "server",
     }
     sentry.init_sentry()
 
-RESOURCE_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
-RESOURCEGROUP_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
-FIGURE_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
+RESOURCE_NUMBER = GRAPHENE_DJANGO_EXTRAS["MAX_PAGE_SIZE"]
+RESOURCEGROUP_NUMBER = GRAPHENE_DJANGO_EXTRAS["MAX_PAGE_SIZE"]
+FIGURE_NUMBER = GRAPHENE_DJANGO_EXTRAS["MAX_PAGE_SIZE"]
 
 # CELERY
 
@@ -492,41 +506,39 @@ FIGURE_NUMBER = GRAPHENE_DJANGO_EXTRAS['MAX_PAGE_SIZE']
 # end CELERY
 
 LOCALE_PATHS = [
-    os.path.join(BASE_DIR, 'locale'),
+    os.path.join(BASE_DIR, "locale"),
 ]
 
 # WHITELIST following nodes from authentication checks
 GRAPHENE_NODES_WHITELIST = (
-    'login',
-    'logout',
-    'activate',
-    'register',
-    'me',
-    'generateResetPasswordToken',
-    'resetPassword',
-
+    "login",
+    "logout",
+    "activate",
+    "register",
+    "me",
+    "generateResetPasswordToken",
+    "resetPassword",
     # Gidd external queries
-    'giddPublicCombinedStatistics',
-    'giddPublicConflictStatistics',
-    'giddPublicConflicts',
-    'giddPublicDisasterStatistics',
-    'giddPublicDisasters',
-    'giddPublicDisplacements',
-    'giddPublicEvent',
-    'giddPublicHazardTypes',
-    'giddPublicCountries',
-    'giddPublicFigureAnalysisList',
-    'giddPublicYear',
-    'giddPublicReleaseMetaData',
-
+    "giddPublicCombinedStatistics",
+    "giddPublicConflictStatistics",
+    "giddPublicConflicts",
+    "giddPublicDisasterStatistics",
+    "giddPublicDisasters",
+    "giddPublicDisplacements",
+    "giddPublicEvent",
+    "giddPublicHazardTypes",
+    "giddPublicCountries",
+    "giddPublicFigureAnalysisList",
+    "giddPublicYear",
+    "giddPublicReleaseMetaData",
     # __ double underscore nodes
-    '__schema',
-    '__type',
-    '__typename',
+    "__schema",
+    "__type",
+    "__typename",
 )
 
 # CAPTCHA
-HCAPTCHA_SECRET = env('HCAPTCHA_SECRET')
+HCAPTCHA_SECRET = env("HCAPTCHA_SECRET")
 
 # It login attempts exceed MAX_LOGIN_ATTEMPTS, users will need to enter captcha
 # to login
@@ -538,8 +550,8 @@ MAX_CAPTCHA_LOGIN_ATTEMPTS = 10
 LOGIN_TIMEOUT = 10 * 60  # seconds
 
 # Frontend base url for email button link
-FRONTEND_BASE_URL = env('FRONTEND_BASE_URL').strip('/')
-BACKEND_BASE_URL = env('BACKEND_BASE_URL').strip('/')
+FRONTEND_BASE_URL = env("FRONTEND_BASE_URL").strip("/")
+BACKEND_BASE_URL = env("BACKEND_BASE_URL").strip("/")
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#password-reset-timeout
 PASSWORD_RESET_TIMEOUT = 15 * 60  # seconds
@@ -556,17 +568,17 @@ EXCEL_EXPORT_PENDING_STATE_TIMEOUT = 5 * 60 * 60  # seconds
 # staying in progress for too long will be moved to killed
 EXCEL_EXPORT_PROGRESS_STATE_TIMEOUT = 10 * 60  # seconds
 
-OTP_TOTP_ISSUER = 'IDMC'
-OTP_HOTP_ISSUER = 'IDMC'
+OTP_TOTP_ISSUER = "IDMC"
+OTP_HOTP_ISSUER = "IDMC"
 OTP_EMAIL_SENDER = DEFAULT_FROM_EMAIL
-OTP_EMAIL_SUBJECT = 'IDMC OTP Token'
-OTP_EMAIL_BODY_TEMPLATE_PATH = 'emails/otp.html'
+OTP_EMAIL_SUBJECT = "IDMC OTP Token"
+OTP_EMAIL_BODY_TEMPLATE_PATH = "emails/otp.html"
 
-TEMP_FILE_DIRECTORY = '/tmp/'
+TEMP_FILE_DIRECTORY = "/tmp/"
 
 # Security Header configuration
-SESSION_COOKIE_NAME = f'helix-{HELIX_ENVIRONMENT}-sessionid'
-CSRF_COOKIE_NAME = f'helix-{HELIX_ENVIRONMENT}-csrftoken'
+SESSION_COOKIE_NAME = f"helix-{HELIX_ENVIRONMENT}-sessionid"
+CSRF_COOKIE_NAME = f"helix-{HELIX_ENVIRONMENT}-csrftoken"
 # # SECURE_BROWSER_XSS_FILTER = True
 # # SECURE_CONTENT_TYPE_NOSNIFF = True
 # # X_FRAME_OPTIONS = 'DENY'
@@ -587,11 +599,11 @@ CSRF_COOKIE_NAME = f'helix-{HELIX_ENVIRONMENT}-csrftoken'
 
 
 # https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-CSRF_USE_SESSIONS
-CSRF_USE_SESSIONS = env('CSRF_USE_SESSIONS', 'False')
+CSRF_USE_SESSIONS = env("CSRF_USE_SESSIONS", "False")
 # https://docs.djangoproject.com/en/3.2/ref/settings/#std:setting-SESSION_COOKIE_DOMAIN
-SESSION_COOKIE_DOMAIN = env('SESSION_COOKIE_DOMAIN')
+SESSION_COOKIE_DOMAIN = env("SESSION_COOKIE_DOMAIN")
 # https://docs.djangoproject.com/en/3.2/ref/settings/#csrf-cookie-domain
-CSRF_COOKIE_DOMAIN = env('CSRF_COOKIE_DOMAIN')
+CSRF_COOKIE_DOMAIN = env("CSRF_COOKIE_DOMAIN")
 
 ########
 # CORS #
@@ -602,116 +614,103 @@ CORS_ALLOW_CREDENTIALS = True
 HELIX_TRUSTED_ORIGINS = [
     # Frontend
     FRONTEND_BASE_URL,
-
     # Helix Client - Localhost
     "http://localhost:3080",
     "http://127.0.0.1:3080",
-
     # IDMC Website Components - Localhost
     "http://localhost:3081",
     "http://127.0.0.1:3081",
-
     # Obsolete: Media Monitoring
-    'https://media-monitoring.idmcdb.org',
-
+    "https://media-monitoring.idmcdb.org",
     # IDMC Website Components - Prod/Staging
-    'https://preview-website-components.idmcdb.org',
-    'https://release-website-components.idmcdb.org',
-
+    "https://preview-website-components.idmcdb.org",
+    "https://release-website-components.idmcdb.org",
     # IDMC Website - Prod
-    'https://www.internal-displacement.org',
-
+    "https://www.internal-displacement.org",
     # IDMC Website - Staging: https://idmc-dfs-dev.slack.com/archives/C05TDRZCQ9W/p1704090909962969
-    'https://staging.internal-displacement.org',
-    'https://newdev.internal-displacement.org',
-    'https://www.newdev.internal-displacement.org',
-
-    'https://uat.internal-displacement.org',
-    'https://develop.internal-displacement.org',
-
-    *env('ADDITIONAL_TRUSTED_ORIGINS'),
+    "https://staging.internal-displacement.org",
+    "https://newdev.internal-displacement.org",
+    "https://www.newdev.internal-displacement.org",
+    "https://uat.internal-displacement.org",
+    "https://develop.internal-displacement.org",
+    *env("ADDITIONAL_TRUSTED_ORIGINS"),
 ]
 
 CSRF_TRUSTED_ORIGINS = CORS_ORIGIN_WHITELIST = CORS_ALLOWED_ORIGINS = HELIX_TRUSTED_ORIGINS
 
-CORS_URLS_REGEX = r'(^/api/.*$)|(^/graphql$)|(^/external-api/.*$)'
+CORS_URLS_REGEX = r"(^/api/.*$)|(^/graphql$)|(^/external-api/.*$)"
 
 CORS_ALLOW_METHODS = (
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
 )
 
 CORS_ALLOW_HEADERS = (
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-    'sentry-trace',
-    'baggage',
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
+    "sentry-trace",
+    "baggage",
 )
 
-DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 
 def spectacular_param_sorter(value):
-    if value.get('name', None) == 'client_id':
+    if value.get("name", None) == "client_id":
         return 1
-    if value.get('name', None) == 'release_environment':
+    if value.get("name", None) == "release_environment":
         return 2
-    if value.get('name', None) == 'ordering':
+    if value.get("name", None) == "ordering":
         return 4
-    if value.get('name', None) == 'offset':
+    if value.get("name", None) == "offset":
         return 5
-    if value.get('name', None) == 'limit':
+    if value.get("name", None) == "limit":
         return 6
     return 3
 
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'IDMC API documentation',
-    'DESCRIPTION': Path("docs/main/description.md").read_text(),
-    'TOS': 'https://www.internal-displacement.org/terms-of-use/',
-    'LICENSE': {
-        'name': 'Creative Commons Attribution-Non-Commercial-Share Alike 3.0 IGO',
-        'url': 'https://creativecommons.org/licenses/by-nc-sa/3.0/igo/legalcode.en',
+    "TITLE": "IDMC API documentation",
+    "DESCRIPTION": Path("docs/main/description.md").read_text(),
+    "TOS": "https://www.internal-displacement.org/terms-of-use/",
+    "LICENSE": {
+        "name": "Creative Commons Attribution-Non-Commercial-Share Alike 3.0 IGO",
+        "url": "https://creativecommons.org/licenses/by-nc-sa/3.0/igo/legalcode.en",
     },
-    'VERSION': 'v1',
-    'CONTACT': {
+    "VERSION": "v1",
+    "CONTACT": {
         "email": "ch.datainfo@idmc.ch",
     },
-    'EXTERNAL_DOCS': {
-        'name': 'About our data',
-        'url': 'https://www.internal-displacement.org/monitoring-tools/',
+    "EXTERNAL_DOCS": {
+        "name": "About our data",
+        "url": "https://www.internal-displacement.org/monitoring-tools/",
     },
-    'TAGS': [
+    "TAGS": [
         {
-            'name': 'GIDD',
-            'description': 'Global Internal Displacement Database',
+            "name": "GIDD",
+            "description": "Global Internal Displacement Database",
         },
         {
-            'name': 'IDU',
-            'description': 'Internal Displacement Updates',
+            "name": "IDU",
+            "description": "Internal Displacement Updates",
         },
     ],
-
-
-    'SERVE_INCLUDE_SCHEMA': False,
-    'PREPROCESSING_HOOKS': [
-        'helix.openapi.preprocessing_filter_spec'
-    ],
-    'SORT_OPERATIONS': True,
-    'SORT_OPERATION_PARAMETERS': spectacular_param_sorter,
+    "SERVE_INCLUDE_SCHEMA": False,
+    "PREPROCESSING_HOOKS": ["helix.openapi.preprocessing_filter_spec"],
+    "SORT_OPERATIONS": True,
+    "SORT_OPERATION_PARAMETERS": spectacular_param_sorter,
     # 'ENABLE_LIST_MECHANICS_ON_NON_2XX': True,
-
     "SWAGGER_UI_SETTINGS": {
         "deepLinking": True,
         "defaultModelsExpandDepth": 0,
@@ -722,67 +721,67 @@ SPECTACULAR_SETTINGS = {
         "displayOperationId ": False,
         "tryItOutEnabled": True,
     },
-    'SWAGGER_UI_DIST': 'SIDECAR',  # shorthand to use the sidecar instead
-    'SWAGGER_UI_FAVICON_HREF': 'SIDECAR',
-
-    'REDOC_DIST': 'SIDECAR',
+    "SWAGGER_UI_DIST": "SIDECAR",  # shorthand to use the sidecar instead
+    "SWAGGER_UI_FAVICON_HREF": "SIDECAR",
+    "REDOC_DIST": "SIDECAR",
 }
 
 if DEBUG:
+
     def log_render_extra_context(record):
-        '''
+        """
         Append extra->context to logs
         NOTE: This will appear in logs when used with logger.xxx(..., extra={'context': {..content}})
-        '''
-        if hasattr(record, 'context'):
-            record.context = f' - {str(record.context)}'
+        """
+        if hasattr(record, "context"):
+            record.context = f" - {str(record.context)}"
         else:
-            record.context = ''
+            record.context = ""
         return True
 
     LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'filters': {
-            'render_extra_context': {
-                '()': 'django.utils.log.CallbackFilter',
-                'callback': log_render_extra_context,
+        "version": 1,
+        "disable_existing_loggers": False,
+        "filters": {
+            "render_extra_context": {
+                "()": "django.utils.log.CallbackFilter",
+                "callback": log_render_extra_context,
             }
         },
-        'formatters': {
-            'colored_verbose': {
-                '()': 'colorlog.ColoredFormatter',
-                'format': (
+        "formatters": {
+            "colored_verbose": {
+                "()": "colorlog.ColoredFormatter",
+                "format": (
                     "%(log_color)s%(levelname)-8s%(red)s%(module)-8s%(reset)s %(asctime)s %(blue)s%(message)s %(context)s"
-                )
+                ),
             },
         },
-        'handlers': {
-            'console': {
-                'level': 'INFO',
-                'class': 'logging.StreamHandler',
-                'filters': ['render_extra_context'],
+        "handlers": {
+            "console": {
+                "level": "INFO",
+                "class": "logging.StreamHandler",
+                "filters": ["render_extra_context"],
             },
-            'colored_console': {
-                'level': 'INFO',
-                'class': 'logging.StreamHandler',
-                'formatter': 'colored_verbose',
-                'filters': ['render_extra_context'],
+            "colored_console": {
+                "level": "INFO",
+                "class": "logging.StreamHandler",
+                "formatter": "colored_verbose",
+                "filters": ["render_extra_context"],
             },
         },
-        'loggers': {
+        "loggers": {
             **{
                 app: {
-                    'handlers': ['colored_console'],
-                    'level': 'INFO',
-                    'propagate': False,
+                    "handlers": ["colored_console"],
+                    "level": "INFO",
+                    "propagate": False,
                 }
-                for app in ['apps', 'helix', 'utils', 'celery', 'django']
+                for app in ["apps", "helix", "utils", "celery", "django"]
             },
-            'profiling': {
-                'handlers': ['colored_console'],
-                'level': 'DEBUG',
-                'propagate': False,
+            "profiling": {
+                "handlers": ["colored_console"],
+                "level": "DEBUG",
+                "propagate": False,
             },
         },
     }

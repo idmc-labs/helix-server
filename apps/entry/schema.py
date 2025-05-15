@@ -1,58 +1,59 @@
+import logging
+
 import graphene
-from django.db.models import fields, JSONField, Sum, Case, When, ExpressionWrapper, Q
+from django.db.models import Case, ExpressionWrapper, JSONField, Q, Sum, When, fields
 from django.db.models.functions import ExtractYear
 from graphene import ObjectType
 from graphene.types.generic import GenericScalar
 from graphene_django import DjangoObjectType
-from graphene_django_extras.converter import convert_django_field
 from graphene_django_extras import DjangoObjectField
-import logging
-from utils.graphene.enums import EnumDescription
+from graphene_django_extras.converter import convert_django_field
 
+from apps.contrib.commons import DateAccuracyGrapheneEnum
+from apps.contrib.enums import PreviewStatusGrapheneEnum
+from apps.contrib.models import SourcePreview
+from apps.crisis.enums import CrisisTypeGrapheneEnum
+from apps.crisis.models import Crisis
 from apps.entry.enums import (
-    GenderTypeGrapheneEnum,
-    QuantifierGrapheneEnum,
-    UnitGrapheneEnum,
-    RoleGrapheneEnum,
-    DisplacementOccurredGrapheneEnum,
     AccuracyGrapheneEnum,
-    IdentifierGrapheneEnum,
+    DisplacementOccurredGrapheneEnum,
     FigureCategoryTypeEnum,
-    FigureTermsEnum,
-    FigureSourcesReliabilityEnum,
     FigureReviewStatusEnum,
+    FigureSourcesReliabilityEnum,
+    FigureTermsEnum,
+    GenderTypeGrapheneEnum,
     GeocoderGrapheneEnum,
+    IdentifierGrapheneEnum,
+    QuantifierGrapheneEnum,
+    RoleGrapheneEnum,
+    UnitGrapheneEnum,
 )
 from apps.entry.filters import (
-    FigureLocationFilter,
     DisaggregatedAgeFilter,
     FigureFilter,
+    FigureLocationFilter,
     FigureTagFilter,
 )
 from apps.entry.models import (
-    Figure,
-    FigureTag,
-    Entry,
-    FigureLocation,
     DisaggregatedAge,
+    Entry,
+    Figure,
+    FigureLocation,
+    FigureTag,
 )
-from apps.contrib.models import SourcePreview
-from apps.contrib.enums import PreviewStatusGrapheneEnum
-from apps.contrib.commons import DateAccuracyGrapheneEnum
-from apps.organization.schema import OrganizationListType
-from utils.graphene.types import CustomDjangoListObjectType
-from utils.graphene.fields import DjangoPaginatedListObjectField
-from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from apps.event.schema import EventType, OtherSubTypeObjectType
 from apps.extraction.filters import (
+    EntryExtractionFilterSet,
+    FigureExtractionFilterDataInputType,
     FigureExtractionFilterSet,
     ReportFigureExtractionFilterSet,
-    FigureExtractionFilterDataInputType,
-    EntryExtractionFilterSet,
 )
-from apps.crisis.enums import CrisisTypeGrapheneEnum
-from apps.crisis.models import Crisis
-from apps.event.schema import OtherSubTypeObjectType, EventType
+from apps.organization.schema import OrganizationListType
 from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
+from utils.graphene.enums import EnumDescription
+from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.types import CustomDjangoListObjectType
 
 logger = logging.getLogger(__name__)
 
@@ -66,11 +67,12 @@ def convert_json_field_to_scalar(field, registry=None):
 class DisaggregatedAgeType(DjangoObjectType):
     class Meta:
         model = DisaggregatedAge
+
     uuid = graphene.String(required=True)
     age_from = graphene.Field(graphene.Int)
     age_to = graphene.Field(graphene.Int)
     sex = graphene.Field(GenderTypeGrapheneEnum)
-    sex_display = EnumDescription(source='get_sex_display')
+    sex_display = EnumDescription(source="get_sex_display")
 
 
 class DisaggregatedAgeListType(CustomDjangoListObjectType):
@@ -90,11 +92,11 @@ class FigureLocationType(DjangoObjectType):
         model = FigureLocation
 
     accuracy = graphene.Field(AccuracyGrapheneEnum)
-    accuracy_display = EnumDescription(source='get_accuracy_display')
+    accuracy_display = EnumDescription(source="get_accuracy_display")
     identifier = graphene.Field(IdentifierGrapheneEnum)
-    identifier_display = EnumDescription(source='get_identifier_display')
+    identifier_display = EnumDescription(source="get_identifier_display")
     geocoder = graphene.Field(GeocoderGrapheneEnum)
-    geocoder_display = EnumDescription(source='get_geocoder_display')
+    geocoder_display = EnumDescription(source="get_geocoder_display")
 
 
 class FigureLocationListType(CustomDjangoListObjectType):
@@ -116,44 +118,37 @@ class FigureLastReviewCommentStatusType(ObjectType):
 
 class FigureType(DjangoObjectType):
     class Meta:
-        exclude_fields = (
-            'figure_reviews',
-        )
+        exclude_fields = ("figure_reviews",)
         model = Figure
 
     quantifier = graphene.Field(QuantifierGrapheneEnum)
-    get_quantifier = EnumDescription(source='get_quantifier_display')
+    get_quantifier = EnumDescription(source="get_quantifier_display")
     unit = graphene.Field(UnitGrapheneEnum)
-    unit_display = EnumDescription(source='get_unit_display')
+    unit_display = EnumDescription(source="get_unit_display")
     role = graphene.Field(RoleGrapheneEnum)
-    role_display = EnumDescription(source='get_role_display')
+    role_display = EnumDescription(source="get_role_display")
     displacement_occurred = graphene.Field(DisplacementOccurredGrapheneEnum)
-    displacement_occurred_display = EnumDescription(source='get_displacement_occurred_display')
-    disaggregation_age = DjangoPaginatedListObjectField(
-        DisaggregatedAgeListType,
-        related_name="disaggregation_age"
-    )
+    displacement_occurred_display = EnumDescription(source="get_displacement_occurred_display")
+    disaggregation_age = DjangoPaginatedListObjectField(DisaggregatedAgeListType, related_name="disaggregation_age")
     disaggregation_strata_json = graphene.List(graphene.NonNull(DisaggregatedStratumType))
     geo_locations = DjangoPaginatedListObjectField(
         FigureLocationListType,
-        related_name='geo_locations',
+        related_name="geo_locations",
     )
     start_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
-    start_date_accuracy_display = EnumDescription(source='get_start_date_accuracy_display')
+    start_date_accuracy_display = EnumDescription(source="get_start_date_accuracy_display")
     end_date_accuracy = graphene.Field(DateAccuracyGrapheneEnum)
-    end_date_accuracy_display = EnumDescription(source='get_end_date_accuracy_display')
+    end_date_accuracy_display = EnumDescription(source="get_end_date_accuracy_display")
     category = graphene.Field(FigureCategoryTypeEnum)
-    category_display = EnumDescription(source='get_category_display')
+    category_display = EnumDescription(source="get_category_display")
     term = graphene.Field(FigureTermsEnum)
-    term_display = EnumDescription(source='get_term_display')
+    term_display = EnumDescription(source="get_term_display")
     figure_cause = graphene.Field(CrisisTypeGrapheneEnum)
-    figure_cause_display = EnumDescription(source='get_figure_cause_display')
+    figure_cause_display = EnumDescription(source="get_figure_cause_display")
     other_sub_type = graphene.Field(OtherSubTypeObjectType)
     figure_typology = graphene.String()
     sources = DjangoPaginatedListObjectField(
-        OrganizationListType,
-        related_name='sources',
-        reverse_related_name='sourced_figures'
+        OrganizationListType, related_name="sources", reverse_related_name="sourced_figures"
     )
     stock_date = graphene.Date()
     stock_reporting_date = graphene.Date()
@@ -162,12 +157,12 @@ class FigureType(DjangoObjectType):
     geolocations = graphene.String()
     sources_reliability = graphene.Field(FigureSourcesReliabilityEnum)
     review_status = graphene.Field(FigureReviewStatusEnum)
-    review_status_display = EnumDescription(source='get_review_status_display')
+    review_status_display = EnumDescription(source="get_review_status_display")
     last_review_comment_status = graphene.List(graphene.NonNull(FigureLastReviewCommentStatusType))
     event = graphene.Field(EventType, required=True)
-    event_id = graphene.ID(required=True, source='event_id')
+    event_id = graphene.ID(required=True, source="event_id")
     entry = graphene.Field("apps.entry.schema.EntryType", required=True)
-    entry_id = graphene.ID(required=True, source='entry_id')
+    entry_id = graphene.ID(required=True, source="entry_id")
 
     def resolve_stock_date(root, info, **kwargs):
         if root.category in Figure.stock_list():
@@ -218,53 +213,55 @@ class EntryType(DjangoObjectType):
     class Meta:
         model = Entry
         exclude_fields = (
-            'reviewers',
-            'review_status',
-            'review_comments',
-            'reviewing',
+            "reviewers",
+            "review_status",
+            "review_comments",
+            "reviewing",
         )
 
-    created_by = graphene.Field('apps.users.schema.UserType')
-    last_modified_by = graphene.Field('apps.users.schema.UserType')
+    created_by = graphene.Field("apps.users.schema.UserType")
+    last_modified_by = graphene.Field("apps.users.schema.UserType")
     publishers = DjangoPaginatedListObjectField(
-        OrganizationListType,
-        related_name='publishers',
-        reverse_related_name='published_entries'
+        OrganizationListType, related_name="publishers", reverse_related_name="published_entries"
     )
     figures = graphene.List(graphene.NonNull(FigureType))
     preview = graphene.Field("apps.entry.schema.SourcePreviewType")
 
     def resolve_figures(root, info, **kwargs):
         # FIXME: this might be wrong
-        return Figure.objects.filter(entry=root.id).select_related(
-            'event',
-            'violence',
-            'violence_sub_type',
-            'disaster_category',
-            'disaster_sub_category',
-            'disaster_type',
-            'disaster_sub_type',
-            'disaster_category',
-            'disaster_sub_category',
-            'other_sub_type',
-            'osv_sub_type',
-            'approved_by',
-            'country',
-            'event__disaster_category',
-            'event__disaster_sub_category',
-            'event__disaster_type',
-            'event__disaster_sub_type',
-            'event__disaster_category',
-        ).prefetch_related(
-            'tags',
-            'context_of_violence',
-            'geo_locations',
-            'event__disaster_sub_category',
-            'event__countries',
-            'event__context_of_violence',
-            'sources',
-            'sources__countries',
-            'sources__organization_kind',
+        return (
+            Figure.objects.filter(entry=root.id)
+            .select_related(
+                "event",
+                "violence",
+                "violence_sub_type",
+                "disaster_category",
+                "disaster_sub_category",
+                "disaster_type",
+                "disaster_sub_type",
+                "disaster_category",
+                "disaster_sub_category",
+                "other_sub_type",
+                "osv_sub_type",
+                "approved_by",
+                "country",
+                "event__disaster_category",
+                "event__disaster_sub_category",
+                "event__disaster_type",
+                "event__disaster_sub_type",
+                "event__disaster_category",
+            )
+            .prefetch_related(
+                "tags",
+                "context_of_violence",
+                "geo_locations",
+                "event__disaster_sub_category",
+                "event__countries",
+                "event__context_of_violence",
+                "sources",
+                "sources__countries",
+                "sources__organization_kind",
+            )
         )
 
     def resolve_document(root, info, **kwargs):
@@ -283,10 +280,10 @@ class EntryListType(CustomDjangoListObjectType):
 class SourcePreviewType(DjangoObjectType):
     class Meta:
         model = SourcePreview
-        exclude_fields = ('entry', 'token')
+        exclude_fields = ("entry", "token")
 
     status = graphene.Field(PreviewStatusGrapheneEnum)
-    status_display = EnumDescription(source='get_status_display')
+    status_display = EnumDescription(source="get_status_display")
 
     def resolve_pdf(root, info, **kwargs):
         if root.status == SourcePreview.PREVIEW_STATUS.COMPLETED:
@@ -314,22 +311,23 @@ class FigureTagListType(CustomDjangoListObjectType):
 
 class Query:
     figure_tag = DjangoObjectField(FigureTagType)
-    figure_tag_list = DjangoPaginatedListObjectField(FigureTagListType,
-                                                     pagination=PageGraphqlPaginationWithoutCount(
-                                                         page_size_query_param='pageSize'
-                                                     ))
+    figure_tag_list = DjangoPaginatedListObjectField(
+        FigureTagListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
+    )
 
     figure = DjangoObjectField(FigureType)
-    figure_list = DjangoPaginatedListObjectField(FigureListType,
-                                                 pagination=PageGraphqlPaginationWithoutCount(
-                                                     page_size_query_param='pageSize',
-                                                 ), filterset_class=FigureExtractionFilterSet)
+    figure_list = DjangoPaginatedListObjectField(
+        FigureListType,
+        pagination=PageGraphqlPaginationWithoutCount(
+            page_size_query_param="pageSize",
+        ),
+        filterset_class=FigureExtractionFilterSet,
+    )
     source_preview = DjangoObjectField(SourcePreviewType)
     entry = DjangoObjectField(EntryType)
-    entry_list = DjangoPaginatedListObjectField(EntryListType,
-                                                pagination=PageGraphqlPaginationWithoutCount(
-                                                    page_size_query_param='pageSize'
-                                                ))
+    entry_list = DjangoPaginatedListObjectField(
+        EntryListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
+    )
     disaggregated_age = DjangoObjectField(DisaggregatedAgeType)
     figure_aggregations = graphene.Field(
         VisualizationFigureType,
@@ -342,72 +340,68 @@ class Query:
             qs = qs.annotate(
                 # NOTE: Once we upgrade django, let's rewrite this without two different annotations
                 year_difference=ExpressionWrapper(
-                    ExtractYear('end_date') - ExtractYear('start_date'),
-                    output_field=fields.IntegerField()
+                    ExtractYear("end_date") - ExtractYear("start_date"), output_field=fields.IntegerField()
                 ),
                 canonical_date=Case(
                     When(
                         Q(year_difference__gt=0),
-                        then='end_date',
+                        then="end_date",
                     ),
-                    default='start_date',
+                    default="start_date",
                 ),
             )
 
-            return qs.filter(
-                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
-                role=Figure.ROLE.RECOMMENDED,
-                figure_cause=figure_cause,
-            ).values('canonical_date').annotate(value=Sum('total_figures'))
+            return (
+                qs.filter(
+                    category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+                    role=Figure.ROLE.RECOMMENDED,
+                    figure_cause=figure_cause,
+                )
+                .values("canonical_date")
+                .annotate(value=Sum("total_figures"))
+            )
 
         figure_qs = ReportFigureExtractionFilterSet(data=filters).qs
 
-        idps_conflict_figure_qs = figure_qs.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-            role=Figure.ROLE.RECOMMENDED,
-            figure_cause=Crisis.CRISIS_TYPE.CONFLICT
-        ).values('end_date').annotate(value=Sum('total_figures'))
+        idps_conflict_figure_qs = (
+            figure_qs.filter(
+                category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                role=Figure.ROLE.RECOMMENDED,
+                figure_cause=Crisis.CRISIS_TYPE.CONFLICT,
+            )
+            .values("end_date")
+            .annotate(value=Sum("total_figures"))
+        )
 
-        idps_disaster_figure_qs = figure_qs.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
-            role=Figure.ROLE.RECOMMENDED,
-            figure_cause=Crisis.CRISIS_TYPE.DISASTER
-        ).values('end_date').annotate(value=Sum('total_figures'))
+        idps_disaster_figure_qs = (
+            figure_qs.filter(
+                category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                role=Figure.ROLE.RECOMMENDED,
+                figure_cause=Crisis.CRISIS_TYPE.DISASTER,
+            )
+            .values("end_date")
+            .annotate(value=Sum("total_figures"))
+        )
 
         nds_conflict_figure_qs = _filter_nd_same_or_multiple_year_figures(
-            figure_qs,
-            figure_cause=Crisis.CRISIS_TYPE.CONFLICT
+            figure_qs, figure_cause=Crisis.CRISIS_TYPE.CONFLICT
         )
 
         nds_disaster_figure_qs = _filter_nd_same_or_multiple_year_figures(
-            figure_qs,
-            figure_cause=Crisis.CRISIS_TYPE.DISASTER
+            figure_qs, figure_cause=Crisis.CRISIS_TYPE.DISASTER
         )
 
         return VisualizationFigureType(
             idps_conflict_figures=[
-                VisualizationValueType(
-                    date=k['end_date'],
-                    value=k['value']
-                ) for k in idps_conflict_figure_qs
+                VisualizationValueType(date=k["end_date"], value=k["value"]) for k in idps_conflict_figure_qs
             ],
             idps_disaster_figures=[
-                VisualizationValueType(
-                    date=k['end_date'],
-                    value=k['value']
-                ) for k in idps_disaster_figure_qs
+                VisualizationValueType(date=k["end_date"], value=k["value"]) for k in idps_disaster_figure_qs
             ],
             nds_conflict_figures=[
-                VisualizationValueType(
-                    date=k['canonical_date'],
-                    value=k['value']
-                ) for k in nds_conflict_figure_qs
+                VisualizationValueType(date=k["canonical_date"], value=k["value"]) for k in nds_conflict_figure_qs
             ],
             nds_disaster_figures=[
-                VisualizationValueType(
-                    date=k['canonical_date'],
-                    value=k['value']
-                ) for k in nds_disaster_figure_qs
-            ]
-
+                VisualizationValueType(date=k["canonical_date"], value=k["value"]) for k in nds_disaster_figure_qs
+            ],
         )

@@ -1,22 +1,22 @@
-import magic
 import random
 import string
 from datetime import timedelta
-from django.utils import timezone
 
+import magic
 from django.conf import settings
 from django.template.defaultfilters import filesizeformat
+from django.utils import timezone
 from django.utils.translation import gettext
 from rest_framework import serializers
 
-from utils.serializers import IntegerIDField
-from apps.entry.tasks import PDF_TASK_TIMEOUT
 from apps.contrib.models import (
     Attachment,
     Client,
     ExcelDownload,
     SourcePreview,
 )
+from apps.entry.tasks import PDF_TASK_TIMEOUT
+from utils.serializers import IntegerIDField
 
 
 class MetaInformationSerializerMixin(serializers.Serializer):
@@ -25,6 +25,7 @@ class MetaInformationSerializerMixin(serializers.Serializer):
     - created_by
     - last_modified_by
     """
+
     created_at = serializers.DateTimeField(read_only=True)
     modified_at = serializers.DateTimeField(read_only=True)
     created_by = serializers.PrimaryKeyRelatedField(read_only=True)
@@ -33,25 +34,22 @@ class MetaInformationSerializerMixin(serializers.Serializer):
     def validate(self, attrs) -> dict:
         attrs = super().validate(attrs)
         if self.instance is None:
-            attrs.update({
-                'created_by': self.context['request'].user
-            })
+            attrs.update({"created_by": self.context["request"].user})
         else:
-            attrs.update({
-                'last_modified_by': self.context['request'].user
-            })
+            attrs.update({"last_modified_by": self.context["request"].user})
         return attrs
 
 
 class AttachmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Attachment
-        fields = '__all__'
+        fields = "__all__"
 
     def _validate_file_size(self, file_content):
         if file_content.size > Attachment.MAX_FILE_SIZE:
             raise serializers.ValidationError(
-                gettext('Filesize should be less than: %s. Current is: %s') % (
+                gettext("Filesize should be less than: %s. Current is: %s")
+                % (
                     filesizeformat(Attachment.MAX_FILE_SIZE),
                     filesizeformat(file_content.size),
                 )
@@ -59,67 +57,65 @@ class AttachmentSerializer(serializers.ModelSerializer):
 
     def _validate_mimetype(self, mimetype):
         if mimetype not in Attachment.ALLOWED_MIMETYPES:
-            raise serializers.ValidationError(gettext('Filetype not allowed: %s') % mimetype)
+            raise serializers.ValidationError(gettext("Filetype not allowed: %s") % mimetype)
 
     def validate(self, attrs) -> dict:
-        attachment = attrs['attachment']
+        attachment = attrs["attachment"]
         self._validate_file_size(attachment)
         byte_stream = attachment.file.read()
         with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
-            attrs['mimetype'] = m.id_buffer(byte_stream)
-            self._validate_mimetype(attrs['mimetype'])
+            attrs["mimetype"] = m.id_buffer(byte_stream)
+            self._validate_mimetype(attrs["mimetype"])
         with magic.Magic(flags=magic.MAGIC_MIME_ENCODING) as m:
-            attrs['encoding'] = m.id_buffer(byte_stream)
+            attrs["encoding"] = m.id_buffer(byte_stream)
         with magic.Magic() as m:
-            attrs['filetype_detail'] = m.id_buffer(byte_stream)
+            attrs["filetype_detail"] = m.id_buffer(byte_stream)
         return attrs
 
 
-class SourcePreviewSerializer(MetaInformationSerializerMixin,
-                              serializers.ModelSerializer):
+class SourcePreviewSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = SourcePreview
-        fields = '__all__'
+        fields = "__all__"
 
     def create(self, validated_data):
         filter_params = dict(
-            url=validated_data['url'],
-            created_by=validated_data['created_by'],
+            url=validated_data["url"],
+            created_by=validated_data["created_by"],
             status=SourcePreview.PREVIEW_STATUS.IN_PROGRESS,
-            created_at__gte=timezone.now() - timedelta(seconds=PDF_TASK_TIMEOUT)
+            created_at__gte=timezone.now() - timedelta(seconds=PDF_TASK_TIMEOUT),
         )
 
-        if SourcePreview.objects.filter(
-            **filter_params
-        ).exists():
-            return SourcePreview.objects.filter(
-                **filter_params
-            ).first()
+        if SourcePreview.objects.filter(**filter_params).exists():
+            return SourcePreview.objects.filter(**filter_params).first()
         return SourcePreview.get_pdf(validated_data)
 
     def update(self, instance, validated_data):
         return SourcePreview.get_pdf(validated_data, instance=instance)
 
 
-class ExcelDownloadSerializer(MetaInformationSerializerMixin,
-                              serializers.ModelSerializer):
+class ExcelDownloadSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
     model_instance_id = serializers.IntegerField(required=False)
 
     class Meta:
         model = ExcelDownload
-        fields = '__all__'
+        fields = "__all__"
 
     def validate_concurrent_downloads(self, attrs: dict) -> None:
-        if ExcelDownload.objects.filter(
-            status__in=[
-                ExcelDownload.EXCEL_GENERATION_STATUS.PENDING,
-                ExcelDownload.EXCEL_GENERATION_STATUS.IN_PROGRESS
-            ],
-            created_by=self.context['request'].user,
-        ).count() >= settings.EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT:
-            raise serializers.ValidationError(gettext(
-                'Only %s excel export(s) is allowed at a time'
-            ) % settings.EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT, code='limited-at-a-time')
+        if (
+            ExcelDownload.objects.filter(
+                status__in=[
+                    ExcelDownload.EXCEL_GENERATION_STATUS.PENDING,
+                    ExcelDownload.EXCEL_GENERATION_STATUS.IN_PROGRESS,
+                ],
+                created_by=self.context["request"].user,
+            ).count()
+            >= settings.EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT
+        ):
+            raise serializers.ValidationError(
+                gettext("Only %s excel export(s) is allowed at a time") % settings.EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT,
+                code="limited-at-a-time",
+            )
 
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
@@ -129,27 +125,26 @@ class ExcelDownloadSerializer(MetaInformationSerializerMixin,
     def create(self, validated_data):
         model_instance_id = validated_data.pop("model_instance_id", None)
         instance = super().create(validated_data)
-        instance.trigger_excel_generation(self.context['request'], model_instance_id=model_instance_id)
+        instance.trigger_excel_generation(self.context["request"], model_instance_id=model_instance_id)
         return instance
 
 
 class UpdateSerializerMixin:
     """Makes all fields not required apart from the id field"""
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # all updates will be a patch update
         for name in self.fields:
             self.fields[name].required = False
-        self.fields['id'].required = True
+        self.fields["id"].required = True
 
 
-class ClientSerializer(
-    MetaInformationSerializerMixin,
-    serializers.ModelSerializer
-):
+class ClientSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
     """
     Serializer for Client objects, including custom validation and creation logic.
     """
+
     contact_name = serializers.CharField(required=True)
     contact_email = serializers.EmailField(required=True)
     use_cases = serializers.ListField(
@@ -160,16 +155,16 @@ class ClientSerializer(
     class Meta:
         model = Client
         fields = (
-            'id',
-            'name',
-            'is_active',
-            'acronym',
-            'contact_name',
-            'contact_email',
-            'contact_website',
-            'use_cases',
-            'other_notes',
-            'opted_out_of_emails',
+            "id",
+            "name",
+            "is_active",
+            "acronym",
+            "contact_name",
+            "contact_email",
+            "contact_website",
+            "use_cases",
+            "other_notes",
+            "opted_out_of_emails",
         )
 
     def validate(self, attrs):
@@ -177,8 +172,8 @@ class ClientSerializer(
         Ensures 'other_notes' is provided when 'Other' is selected in use_cases.
         """
         attrs = super().validate(attrs)
-        use_cases = attrs.get('use_cases', [])
-        if Client.USE_CASE_TYPES.OTHER.value in use_cases and not attrs.get('other_notes'):
+        use_cases = attrs.get("use_cases", [])
+        if Client.USE_CASE_TYPES.OTHER.value in use_cases and not attrs.get("other_notes"):
             raise serializers.ValidationError({"other_notes": "Required when 'Other' is selected in use cases."})
         return attrs
 
@@ -186,7 +181,7 @@ class ClientSerializer(
         """
         Generates a unique client code before creating a new Client instance.
         """
-        validated_data['code'] = self._generate_unique_client_code()
+        validated_data["code"] = self._generate_unique_client_code()
         return super().create(validated_data)
 
     def _generate_unique_client_code(self, code_length=16, max_attempts=5):
@@ -209,7 +204,7 @@ class ClientSerializer(
         - Exception: If a unique code cannot be generated after the specified number of attempts.
         """
         for _ in range(max_attempts):
-            code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=code_length))
+            code = "".join(random.choices(string.ascii_uppercase + string.digits, k=code_length))
             if not Client.objects.filter(code=code).exists():
                 return code
         raise Exception("Failed to generate a unique code after several attempts.")

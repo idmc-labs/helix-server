@@ -1,8 +1,9 @@
 import json
+
+from apps.entry.models import Figure
+from apps.event.models import Event
 from apps.users.enums import USER_ROLE
 from utils.factories import EventFactory, FigureFactory
-from apps.event.models import Event
-from apps.entry.models import Figure
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
@@ -13,7 +14,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         self.monitoring_expert = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
         self.guest = create_user_with_role(USER_ROLE.GUEST.name)
-        self.set_assignee_to_event_mutation = '''
+        self.set_assignee_to_event_mutation = """
         mutation setAssigneeToEvent($event_id: ID!, $user_id: ID!) {
             setAssigneeToEvent(eventId: $event_id, userId: $user_id) {
                 errors
@@ -31,8 +32,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
               errors
             }
         }
-        '''
-        self.set_self_assignee_to_event_mutation = '''
+        """
+        self.set_self_assignee_to_event_mutation = """
         mutation setSelfAssigneeToEvent($event_id: ID!) {
             setSelfAssigneeToEvent(eventId: $event_id) {
                 errors
@@ -50,8 +51,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
               errors
             }
         }
-        '''
-        self.clear_assignee_from_event_mutation = '''
+        """
+        self.clear_assignee_from_event_mutation = """
         mutation clearAssigneeFromEvent($event_id: ID!) {
             clearAssigneeFromEvent(eventId: $event_id) {
                 errors
@@ -69,8 +70,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
               errors
             }
         }
-        '''
-        self.clear_self_assignee_from_event_mutation = '''
+        """
+        self.clear_self_assignee_from_event_mutation = """
         mutation clearSelfAssigneeFromEvent($event_id: ID!) {
             clearSelfAssigneeFromEvent(eventId: $event_id) {
                 errors
@@ -88,8 +89,8 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
               errors
             }
         }
-        '''
-        self.sign_off_event = '''
+        """
+        self.sign_off_event = """
         mutation signOffEvent($event_id: ID!) {
             signOffEvent(eventId: $event_id) {
                 errors
@@ -101,7 +102,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
               errors
             }
         }
-        '''
+        """
 
     def test_user_can_set_assignee_on_an_event(self) -> None:
         # Test admin, regional_coordinator, monitoring_expert can be assign assignees
@@ -118,18 +119,18 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         )
         for assigner, assignee in assignee_assigners:
             self.force_login(assigner)
-            input = {'event_id': self.event.id, 'user_id': assignee.id}
+            input = {"event_id": self.event.id, "user_id": assignee.id}
             response = self.query(
                 self.set_assignee_to_event_mutation,
                 variables=input,
             )
             content = json.loads(response.content)
             self.assertResponseNoErrors(response)
-            self.assertTrue(content['data']['setAssigneeToEvent']['ok'], content)
-            self.assertIsNone(content['data']['setAssigneeToEvent']['errors'], content)
+            self.assertTrue(content["data"]["setAssigneeToEvent"]["ok"], content)
+            self.assertIsNone(content["data"]["setAssigneeToEvent"]["errors"], content)
 
-            self.assertEqual(content['data']['setAssigneeToEvent']['result']['assignee']['id'], str(assignee.id))
-            self.assertEqual(content['data']['setAssigneeToEvent']['result']['assigner']['id'], str(assigner.id))
+            self.assertEqual(content["data"]["setAssigneeToEvent"]["result"]["assignee"]["id"], str(assignee.id))
+            self.assertEqual(content["data"]["setAssigneeToEvent"]["result"]["assigner"]["id"], str(assigner.id))
 
         # Test guest should not be assignee
         guest_assignee_assigners = (
@@ -139,13 +140,13 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         )
         for assigner, assignee in guest_assignee_assigners:
             self.force_login(assigner)
-            input = {'event_id': self.event.id, 'user_id': assignee.id}
+            input = {"event_id": self.event.id, "user_id": assignee.id}
             response = self.query(
                 self.set_assignee_to_event_mutation,
                 variables=input,
             )
             content = json.loads(response.content)
-            self.assertIsNotNone(content['data']['setAssigneeToEvent']['errors'])
+            self.assertIsNotNone(content["data"]["setAssigneeToEvent"]["errors"])
 
         # Test guest should not assign assignee
         assignee_assigners = (
@@ -155,13 +156,13 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         )
         for assigner, assignee in assignee_assigners:
             self.force_login(assigner)
-            input = {'event_id': self.event.id, 'user_id': assignee.id}
+            input = {"event_id": self.event.id, "user_id": assignee.id}
             response = self.query(
                 self.set_assignee_to_event_mutation,
                 variables=input,
             )
             content = json.loads(response.content)
-            self.assertIsNotNone(content['errors'])
+            self.assertIsNotNone(content["errors"])
 
     def test_self_event_assignment(self) -> None:
         # Admin, regional coordinator can assign self in an event
@@ -169,7 +170,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
         for user in users:
             event = EventFactory.create(assigner=self.regional_coordinator, assignee=self.monitoring_expert)
             self.force_login(user)
-            input = {'event_id': event.id}
+            input = {"event_id": event.id}
             response = self.query(
                 self.set_self_assignee_to_event_mutation,
                 variables=input,
@@ -177,9 +178,9 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertResponseNoErrors(response)
 
             content = json.loads(response.content)
-            self.assertTrue(content['data']['setSelfAssigneeToEvent']['ok'], content)
-            self.assertEqual(content['data']['setSelfAssigneeToEvent']['result']['assigner']['id'], str(user.id))
-            self.assertEqual(content['data']['setSelfAssigneeToEvent']['result']['assignee']['id'], str(user.id))
+            self.assertTrue(content["data"]["setSelfAssigneeToEvent"]["ok"], content)
+            self.assertEqual(content["data"]["setSelfAssigneeToEvent"]["result"]["assigner"]["id"], str(user.id))
+            self.assertEqual(content["data"]["setSelfAssigneeToEvent"]["result"]["assignee"]["id"], str(user.id))
 
     def test_user_can_clear_assignee_on_an_event(self) -> None:
         # Test assigner or assignee or admin can clear assignee
@@ -189,7 +190,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.force_login(user)
 
             # Let's assigne user
-            assign_input = {'event_id': event.id}
+            assign_input = {"event_id": event.id}
             assign_response = self.query(
                 self.set_self_assignee_to_event_mutation,
                 variables=assign_input,
@@ -197,17 +198,17 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             self.assertResponseNoErrors(assign_response)
 
             # Let's un-assign user
-            input = {'event_id': event.id}
+            input = {"event_id": event.id}
             response = self.query(
                 self.clear_assignee_from_event_mutation,
                 variables=input,
             )
             content = json.loads(response.content)
             self.assertResponseNoErrors(response)
-            self.assertTrue(content['data']['clearAssigneeFromEvent']['ok'], content)
-            self.assertIsNone(content['data']['clearAssigneeFromEvent']['errors'], content)
-            self.assertIsNone(content['data']['clearAssigneeFromEvent']['result']['assigner'], None)
-            self.assertIsNone(content['data']['clearAssigneeFromEvent']['result']['assignee'], None)
+            self.assertTrue(content["data"]["clearAssigneeFromEvent"]["ok"], content)
+            self.assertIsNone(content["data"]["clearAssigneeFromEvent"]["errors"], content)
+            self.assertIsNone(content["data"]["clearAssigneeFromEvent"]["result"]["assigner"], None)
+            self.assertIsNone(content["data"]["clearAssigneeFromEvent"]["result"]["assignee"], None)
 
         # Test amdin and regional coordinator can clear other assignee from event
         admin_1 = create_user_with_role(USER_ROLE.ADMIN.name)
@@ -219,45 +220,45 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
             event.save()
 
             self.force_login(user)
-            input = {'event_id': event.id}
+            input = {"event_id": event.id}
             response = self.query(
                 self.clear_assignee_from_event_mutation,
                 variables=input,
             )
             content = json.loads(response.content)
             self.assertResponseNoErrors(response)
-            self.assertIsNone(content['data']['clearAssigneeFromEvent']['errors'])
-            self.assertTrue(content['data']['clearAssigneeFromEvent']['ok'], content)
-            self.assertIsNone(content['data']['clearAssigneeFromEvent']['errors'], content)
-            self.assertIsNone(content['data']['clearAssigneeFromEvent']['result']['assigner'], None)
-            self.assertIsNone(content['data']['clearAssigneeFromEvent']['result']['assignee'], None)
+            self.assertIsNone(content["data"]["clearAssigneeFromEvent"]["errors"])
+            self.assertTrue(content["data"]["clearAssigneeFromEvent"]["ok"], content)
+            self.assertIsNone(content["data"]["clearAssigneeFromEvent"]["errors"], content)
+            self.assertIsNone(content["data"]["clearAssigneeFromEvent"]["result"]["assigner"], None)
+            self.assertIsNone(content["data"]["clearAssigneeFromEvent"]["result"]["assignee"], None)
 
         # Test monitoring expert should not clear other assignee from event
         monitoring_expert_1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(monitoring_expert_1)
-        input = {'event_id': event.id}
+        input = {"event_id": event.id}
         response = self.query(
             self.clear_assignee_from_event_mutation,
             variables=input,
         )
         content = json.loads(response.content)
-        self.assertIsNotNone(content['data']['clearAssigneeFromEvent']['errors'])
+        self.assertIsNotNone(content["data"]["clearAssigneeFromEvent"]["errors"])
 
     def test_all_users_can_clear_self_assignee_from_event(self) -> None:
         users = [self.regional_coordinator, self.admin, self.monitoring_expert]
         for user in users:
             event = EventFactory.create(assigner=self.admin, assignee=user)
             self.force_login(user)
-            input = {'event_id': event.id}
+            input = {"event_id": event.id}
             response = self.query(
                 self.clear_self_assignee_from_event_mutation,
                 variables=input,
             )
             content = json.loads(response.content)
             self.assertResponseNoErrors(response)
-            self.assertTrue(content['data']['clearSelfAssigneeFromEvent']['ok'], content)
-            self.assertIsNone(content['data']['clearSelfAssigneeFromEvent']['errors'], content)
-            self.assertIsNone(content['data']['clearSelfAssigneeFromEvent']['result']['assigner'], None)
+            self.assertTrue(content["data"]["clearSelfAssigneeFromEvent"]["ok"], content)
+            self.assertIsNone(content["data"]["clearSelfAssigneeFromEvent"]["errors"], content)
+            self.assertIsNone(content["data"]["clearSelfAssigneeFromEvent"]["result"]["assigner"], None)
 
     def test_sign_off_event(self) -> None:
         users = [self.regional_coordinator, self.admin]
@@ -268,15 +269,15 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 review_status=Event.EVENT_REVIEW_STATUS.APPROVED,
             )
             self.force_login(user)
-            input = {'event_id': event.id}
+            input = {"event_id": event.id}
             response = self.query(
                 self.sign_off_event,
                 variables=input,
             )
             content = json.loads(response.content)
             self.assertResponseNoErrors(response)
-            self.assertTrue(content['data']['signOffEvent']['ok'], content)
-            self.assertIsNone(content['data']['signOffEvent']['errors'], content)
+            self.assertTrue(content["data"]["signOffEvent"]["ok"], content)
+            self.assertIsNone(content["data"]["signOffEvent"]["errors"], content)
 
 
 class TestEventReviewCount(HelixGraphQLTestCase):
@@ -289,7 +290,7 @@ class TestEventReviewCount(HelixGraphQLTestCase):
             role=Figure.ROLE.RECOMMENDED,
             review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
         )
-        self.event_query = '''
+        self.event_query = """
         query MyQuery {
           eventList {
             results {
@@ -304,7 +305,7 @@ class TestEventReviewCount(HelixGraphQLTestCase):
             }
           }
         }
-        '''
+        """
 
     def test_progress(self) -> None:
         self.force_login(self.admin)
@@ -314,12 +315,12 @@ class TestEventReviewCount(HelixGraphQLTestCase):
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
         # Initially all counts should be zero
-        event_data = content['data']['eventList']['results'][0]
-        self.assertEqual(event_data['reviewCount']['progress'], 0)
-        self.assertEqual(event_data['reviewCount']['reviewApprovedCount'], 0)
-        self.assertEqual(event_data['reviewCount']['reviewInProgressCount'], 0)
-        self.assertEqual(event_data['reviewCount']['reviewNotStartedCount'], 3)
-        self.assertEqual(event_data['reviewCount']['reviewReRequestCount'], 0)
+        event_data = content["data"]["eventList"]["results"][0]
+        self.assertEqual(event_data["reviewCount"]["progress"], 0)
+        self.assertEqual(event_data["reviewCount"]["reviewApprovedCount"], 0)
+        self.assertEqual(event_data["reviewCount"]["reviewInProgressCount"], 0)
+        self.assertEqual(event_data["reviewCount"]["reviewNotStartedCount"], 3)
+        self.assertEqual(event_data["reviewCount"]["reviewReRequestCount"], 0)
 
         # Update figure status and check review counts
         self.f1.review_status = Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS
@@ -329,12 +330,12 @@ class TestEventReviewCount(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
-        event_data = content['data']['eventList']['results'][0]
-        self.assertEqual(event_data['reviewCount']['progress'], 0)
-        self.assertEqual(event_data['reviewCount']['reviewApprovedCount'], 0)
-        self.assertEqual(event_data['reviewCount']['reviewInProgressCount'], 1)
-        self.assertEqual(event_data['reviewCount']['reviewNotStartedCount'], 2)
-        self.assertEqual(event_data['reviewCount']['reviewReRequestCount'], 0)
+        event_data = content["data"]["eventList"]["results"][0]
+        self.assertEqual(event_data["reviewCount"]["progress"], 0)
+        self.assertEqual(event_data["reviewCount"]["reviewApprovedCount"], 0)
+        self.assertEqual(event_data["reviewCount"]["reviewInProgressCount"], 1)
+        self.assertEqual(event_data["reviewCount"]["reviewNotStartedCount"], 2)
+        self.assertEqual(event_data["reviewCount"]["reviewReRequestCount"], 0)
 
         # Make all figures approved and check review counts
         for figure in [self.f1, self.f2, self.f3]:
@@ -346,9 +347,9 @@ class TestEventReviewCount(HelixGraphQLTestCase):
         )
         content = json.loads(response.content)
         self.assertResponseNoErrors(response)
-        event_data = content['data']['eventList']['results'][0]
-        self.assertEqual(event_data['reviewCount']['progress'], 1.0)
-        self.assertEqual(event_data['reviewCount']['reviewApprovedCount'], 3)
-        self.assertEqual(event_data['reviewCount']['reviewInProgressCount'], 0)
-        self.assertEqual(event_data['reviewCount']['reviewNotStartedCount'], 0)
-        self.assertEqual(event_data['reviewCount']['reviewReRequestCount'], 0)
+        event_data = content["data"]["eventList"]["results"][0]
+        self.assertEqual(event_data["reviewCount"]["progress"], 1.0)
+        self.assertEqual(event_data["reviewCount"]["reviewApprovedCount"], 3)
+        self.assertEqual(event_data["reviewCount"]["reviewInProgressCount"], 0)
+        self.assertEqual(event_data["reviewCount"]["reviewNotStartedCount"], 0)
+        self.assertEqual(event_data["reviewCount"]["reviewReRequestCount"], 0)

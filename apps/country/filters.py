@@ -1,82 +1,81 @@
-import graphene
 import datetime
+
 import django_filters
-from django.db.models import Value
-from django.utils import timezone
-from django.db.models.functions import Lower, StrIndex
+import graphene
 from django.core.exceptions import ValidationError
-from django.utils.translation import gettext
+from django.db.models import Value
+from django.db.models.functions import Lower, StrIndex
 from django.http import HttpRequest
+from django.utils import timezone
+from django.utils.translation import gettext
 
 from apps.country.models import (
+    ContextualAnalysis,
     Country,
     CountryRegion,
     GeographicalGroup,
     MonitoringSubRegion,
-    ContextualAnalysis,
     Summary,
 )
 from apps.extraction.filters import (
     FigureExtractionFilterDataInputType,
     FigureExtractionFilterDataType,
 )
+from utils.figure_filter import (
+    CountryFigureAggregateFilterDataInputType,
+    CountryFigureAggregateFilterDataType,
+    FigureFilterHelper,
+)
 from utils.filters import (
     IDListFilter,
-    StringListFilter,
     NameFilterMixin,
     SimpleInputFilter,
+    StringListFilter,
     generate_type_for_filter_set,
 )
-from utils.figure_filter import (
-    FigureFilterHelper,
-    CountryFigureAggregateFilterDataType,
-    CountryFigureAggregateFilterDataInputType,
-)
 
 
-class GeographicalGroupFilter(NameFilterMixin,
-                              django_filters.FilterSet):
-    name = django_filters.CharFilter(method='_filter_name')
+class GeographicalGroupFilter(NameFilterMixin, django_filters.FilterSet):
+    name = django_filters.CharFilter(method="_filter_name")
 
     class Meta:
         model = GeographicalGroup
         fields = {
-            'id': ['iexact'],
+            "id": ["iexact"],
         }
 
 
-class CountryRegionFilter(NameFilterMixin,
-                          django_filters.FilterSet):
-    name = django_filters.CharFilter(method='_filter_name')
+class CountryRegionFilter(NameFilterMixin, django_filters.FilterSet):
+    name = django_filters.CharFilter(method="_filter_name")
 
     class Meta:
         model = CountryRegion
         fields = {
-            'id': ['iexact'],
+            "id": ["iexact"],
         }
 
 
 class CountryFilter(django_filters.FilterSet):
-    country_name = django_filters.CharFilter(method='_filter_name')
-    region_name = django_filters.CharFilter(method='filter_region_name')
-    geographical_group_name = django_filters.CharFilter(method='filter_geo_group_name')
-    region_by_ids = StringListFilter(method='filter_regions')
-    geo_group_by_ids = StringListFilter(method='filter_geo_groups')
+    country_name = django_filters.CharFilter(method="_filter_name")
+    region_name = django_filters.CharFilter(method="filter_region_name")
+    geographical_group_name = django_filters.CharFilter(method="filter_geo_group_name")
+    region_by_ids = StringListFilter(method="filter_regions")
+    geo_group_by_ids = StringListFilter(method="filter_geo_groups")
 
-    filter_figures = SimpleInputFilter(FigureExtractionFilterDataInputType, method='filter_by_figures')
-    aggregate_figures = SimpleInputFilter(CountryFigureAggregateFilterDataInputType, method='noop')
+    filter_figures = SimpleInputFilter(FigureExtractionFilterDataInputType, method="filter_by_figures")
+    aggregate_figures = SimpleInputFilter(CountryFigureAggregateFilterDataInputType, method="noop")
 
     # used in report country table
-    events = IDListFilter(method='filter_by_events')
-    crises = IDListFilter(method='filter_by_crisis')
+    events = IDListFilter(method="filter_by_events")
+    crises = IDListFilter(method="filter_by_crisis")
 
     request: HttpRequest
 
     class Meta:
         model = Country
         fields = {
-            'iso3': ['unaccent__icontains'],
-            'id': ['iexact'],
+            "iso3": ["unaccent__icontains"],
+            "id": ["iexact"],
         }
 
     def noop(self, qs, name, value):
@@ -88,47 +87,44 @@ class CountryFilter(django_filters.FilterSet):
     def filter_by_events(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(
-            id__in=Country.objects.filter(events__in=value).values('id')
-        )
+        return qs.filter(id__in=Country.objects.filter(events__in=value).values("id"))
 
     def filter_by_crisis(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(
-            id__in=Country.objects.filter(crises__in=value).values('id')
-        )
+        return qs.filter(id__in=Country.objects.filter(crises__in=value).values("id"))
 
     def _filter_name(self, queryset, name, value):
         if not value:
             return queryset
-        return queryset.annotate(
-            lname=Lower('idmc_short_name')
-        ).annotate(
-            idx=StrIndex('lname', Value(value.lower()))
-        ).filter(idx__gt=0).order_by('idx', 'idmc_short_name')
+        return (
+            queryset.annotate(lname=Lower("idmc_short_name"))
+            .annotate(idx=StrIndex("lname", Value(value.lower())))
+            .filter(idx__gt=0)
+            .order_by("idx", "idmc_short_name")
+        )
 
     def filter_geo_group_name(self, queryset, name, value):
         if not value:
             return queryset
-        return queryset.select_related(
-            'geographical_group'
-        ).annotate(
-            geo_name=Lower('geographical_group__name')
-        ).annotate(
-            idx=StrIndex('geo_name', Value(value.lower()))
-        ).filter(idx__gt=0).order_by('idx', 'geo_name')
+        return (
+            queryset.select_related("geographical_group")
+            .annotate(geo_name=Lower("geographical_group__name"))
+            .annotate(idx=StrIndex("geo_name", Value(value.lower())))
+            .filter(idx__gt=0)
+            .order_by("idx", "geo_name")
+        )
 
     def filter_region_name(self, queryset, name, value):
         if not value:
             return queryset
-        return queryset.select_related(
-            'region'
-        ).annotate(
-            region_name=Lower('region__name')
-        ).annotate(
-            idx=StrIndex('region_name', Value(value.lower()))
-        ).filter(idx__gt=0).order_by('idx', 'region_name')
+        return (
+            queryset.select_related("region")
+            .annotate(region_name=Lower("region__name"))
+            .annotate(idx=StrIndex("region_name", Value(value.lower())))
+            .filter(idx__gt=0)
+            .order_by("idx", "region_name")
+        )
 
     def filter_regions(self, qs, name, value):
         if not value:
@@ -141,19 +137,19 @@ class CountryFilter(django_filters.FilterSet):
         return qs.filter(geographical_group__in=value).distinct()
 
     def filter_year(self, qs, name, value):
-        ''' Filter logic is applied in qs'''
+        """Filter logic is applied in qs"""
         return qs
 
     @property
     def qs(self):
         # Aggregate filter logic
-        aggregate_figures = self.data.get('aggregate_figures') or {}
-        year = aggregate_figures.get('year')
+        aggregate_figures = self.data.get("aggregate_figures") or {}
+        year = aggregate_figures.get("year")
         report_id = FigureFilterHelper.get_report_id_from_filter_data(aggregate_figures)
         report = report_id and FigureFilterHelper.get_report(report_id)
         # Only 1 is allowed among report and year
         if report and year:
-            raise ValidationError(gettext('Cannot pass both report and year in filter'))
+            raise ValidationError(gettext("Cannot pass both report and year in filter"))
 
         start_date = None
         figure_qs, end_date = FigureFilterHelper.aggregate_data_generate(aggregate_figures, self.request)
@@ -172,53 +168,50 @@ class CountryFilter(django_filters.FilterSet):
 
 
 class MonitoringSubRegionFilter(django_filters.FilterSet):
-    name = django_filters.CharFilter(method='_filter_name')
+    name = django_filters.CharFilter(method="_filter_name")
 
     class Meta:
         model = MonitoringSubRegion
-        fields = ['id']
+        fields = ["id"]
 
     def _filter_name(self, queryset, name, value):
         if not value:
             return queryset
-        return queryset.annotate(
-            lname=Lower('name')
-        ).annotate(
-            idx=StrIndex('lname', Value(value.lower()))
-        ).filter(idx__gt=0).order_by('idx', 'name')
+        return (
+            queryset.annotate(lname=Lower("name"))
+            .annotate(idx=StrIndex("lname", Value(value.lower())))
+            .filter(idx__gt=0)
+            .order_by("idx", "name")
+        )
 
 
 class CountrySummaryFilter(django_filters.FilterSet):
     class Meta:
         model = Summary
-        fields = {
-            'created_at': ['lte', 'gte']
-        }
+        fields = {"created_at": ["lte", "gte"]}
 
 
 class ContextualAnalysisFilter(django_filters.FilterSet):
     class Meta:
         model = ContextualAnalysis
-        fields = {
-            'created_at': ['lte', 'gte']
-        }
+        fields = {"created_at": ["lte", "gte"]}
 
 
 CountryFilterDataType, CountryFilterDataInputType = generate_type_for_filter_set(
     CountryFilter,
-    'country.schema.country_list',
-    'CountryFilterDataType',
-    'CountryFilterDataInputType',
+    "country.schema.country_list",
+    "CountryFilterDataType",
+    "CountryFilterDataInputType",
     custom_new_fields_map={
-        'filter_figures': graphene.Field(FigureExtractionFilterDataType),
-        'aggregate_figures': graphene.Field(CountryFigureAggregateFilterDataType),
+        "filter_figures": graphene.Field(FigureExtractionFilterDataType),
+        "aggregate_figures": graphene.Field(CountryFigureAggregateFilterDataType),
     },
 )
 
 
 MonitoringSubRegionFilterDataType, MonitoringSubRegionFilterDataInputType = generate_type_for_filter_set(
     MonitoringSubRegionFilter,
-    'country.schema.monitoring_sub_region_list',
-    'MonitoringSubRegionFilterDataType',
-    'MonitoringSubRegionFilterDataInputType',
+    "country.schema.monitoring_sub_region_list",
+    "MonitoringSubRegionFilterDataType",
+    "MonitoringSubRegionFilterDataInputType",
 )

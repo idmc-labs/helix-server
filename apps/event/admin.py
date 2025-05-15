@@ -1,8 +1,16 @@
 from django.contrib import admin
 
-from apps.event.models import Event, Violence, \
-    ViolenceSubType, Actor, DisasterCategory, DisasterSubCategory, DisasterType, \
-    DisasterSubType, EventCode
+from apps.event.models import (
+    Actor,
+    DisasterCategory,
+    DisasterSubCategory,
+    DisasterSubType,
+    DisasterType,
+    Event,
+    EventCode,
+    Violence,
+    ViolenceSubType,
+)
 
 admin.site.register(Event)
 admin.site.register(Violence)

@@ -26,7 +26,6 @@ def format_date(date: str) -> typing.Union[datetime.datetime, str]:
 
 
 class Command(BaseCommand):
-
     help = "Update AHHS based on new household size data."
 
     def add_arguments(self, parser):
@@ -55,10 +54,7 @@ class Command(BaseCommand):
             CaseInsensitiveDict: Keys are ISO3 codes, values are Country instances.
         """
         countries = Country.objects.filter(iso3__isnull=False)
-        return CaseInsensitiveDict({
-            iso3: _id
-            for _id, iso3 in countries.values_list('id', 'iso3')
-        })
+        return CaseInsensitiveDict({iso3: _id for _id, iso3 in countries.values_list("id", "iso3")})
 
     @cached_property
     def admin_user(self) -> User:
@@ -69,8 +65,8 @@ class Command(BaseCommand):
         for item in validated_data:
             # NOTE: deactivating previous values
             updated_households = HouseholdSize.objects.filter(
-                country=item['country'],
-                year=item['year'],
+                country=item["country"],
+                year=item["year"],
                 is_active=True,
             ).update(is_active=False)
             updated_count += updated_households
@@ -80,9 +76,9 @@ class Command(BaseCommand):
             )
             # NOTE: Because of this we haven't used bulk_create
             HouseholdSize.objects.filter(pk=new_ahhs.pk).update(
-                created_at=item['created_at'],
-                last_modified_by=item['last_modified_by'],
-                modified_at=item['modified_at'],
+                created_at=item["created_at"],
+                last_modified_by=item["last_modified_by"],
+                modified_at=item["modified_at"],
             )
         self.stdout.write(self.style.SUCCESS(f"Created {len(validated_data)} AHHS items."))
         self.stdout.write(self.style.SUCCESS(f"Updated {updated_count} previous AHHS items as inactive."))
@@ -96,40 +92,40 @@ class Command(BaseCommand):
             Dict[str, any]: The processed row with country ID.
         """
         country_id = None
-        if iso3 := row.get('ISO3'):
+        if iso3 := row.get("ISO3"):
             country_id = self.iso3_to_country_id.get(iso3)
 
         extract_data = {
-            'size': row['AHHS'],
-            'data_source_category': row['Data source category'],
-            'source': row['Source'],
-            'source_link': row['Source link'],
+            "size": row["AHHS"],
+            "data_source_category": row["Data source category"],
+            "source": row["Source"],
+            "source_link": row["Source link"],
         }
         if not all(extract_data.values()):
-            self.stdout.write(self.style.NOTICE(f'Skipping due to empty dataset: {row}'))
+            self.stdout.write(self.style.NOTICE(f"Skipping due to empty dataset: {row}"))
             return
 
-        created_at = format_date(row['Reference date'])
-        modified_at = format_date(row['IDMC update date']) or created_at
+        created_at = format_date(row["Reference date"])
+        modified_at = format_date(row["IDMC update date"]) or created_at
         return {
             # Data from csv
             **extract_data,
-            'country': country_id,
-            'year': row['Year'],
-            'notes': row['Notes'],
+            "country": country_id,
+            "year": row["Year"],
+            "notes": row["Notes"],
             # Additional metadata
-            'created_by': self.admin_user.pk,
-            'last_modified_by': self.admin_user.pk,
-            'created_at': created_at,
-            'modified_at': modified_at,
-            'is_active': True,
+            "created_by": self.admin_user.pk,
+            "last_modified_by": self.admin_user.pk,
+            "created_at": created_at,
+            "modified_at": modified_at,
+            "is_active": True,
         }
 
     def updates_household_sizes_from_csv(self, file_path):
         """
         Processes the CSV file and updates the database.
         """
-        with open(file_path, 'r') as file:
+        with open(file_path, "r") as file:
             reader = csv.DictReader(file)
             processed_rows = []
             total = 0
@@ -137,9 +133,7 @@ class Command(BaseCommand):
                 total += 1
                 if processed_row := self.process_household_size_row(row):
                     processed_rows.append(processed_row)
-            self.stdout.write(self.style.NOTICE(
-                f"Processed {len(processed_rows)} out of {total} AHHS items from CSV"
-            ))
+            self.stdout.write(self.style.NOTICE(f"Processed {len(processed_rows)} out of {total} AHHS items from CSV"))
 
             household_values = []
 
@@ -154,7 +148,7 @@ class Command(BaseCommand):
                         self.stdout.write(self.style.NOTICE(f"Row data: {processed_rows[i]}"))
                     for field, error in errors.items():
                         self.stdout.write(self.style.ERROR(f"'{field}': {error}"))
-                raise Exception('Import failed')
+                raise Exception("Import failed")
             return household_values
 
     def update_figure_with_new_household_size(
@@ -172,10 +166,12 @@ class Command(BaseCommand):
 
         old_household_size = old_household_sizes.get(figure.country.iso3)
         if old_household_size and figure.household_size != old_household_size.size:
-            self.stdout.write(self.style.WARNING(
-                f"In figure <{figure.pk}>, household size manually changed"
-                f" from {old_household_size.size} to {figure.household_size}"
-            ))
+            self.stdout.write(
+                self.style.WARNING(
+                    f"In figure <{figure.pk}>, household size manually changed"
+                    f" from {old_household_size.size} to {figure.household_size}"
+                )
+            )
             return
 
         new_household_size = new_household_sizes.get(figure.country.iso3)
@@ -184,14 +180,16 @@ class Command(BaseCommand):
             return
 
         if figure.household_size == new_household_size.size:
-            self.stdout.write(self.style.NOTICE(
-                f"In figure <{figure.pk}, household size has not changed {figure.household_size}"
-            ))
+            self.stdout.write(
+                self.style.NOTICE(f"In figure <{figure.pk}, household size has not changed {figure.household_size}")
+            )
             return
 
-        self.stdout.write(self.style.NOTICE(
-            f"In figure <{figure.pk}>, updating household size from {figure.household_size} to {new_household_size.size}"
-        ))
+        self.stdout.write(
+            self.style.NOTICE(
+                f"In figure <{figure.pk}>, updating household size from {figure.household_size} to {new_household_size.size}"
+            )
+        )
         figure.household_size = new_household_size.size
         figure.total_figures = round_half_up(figure.reported * Decimal(str(figure.household_size)))
         bulk_mgr.add(figure)
@@ -203,7 +201,7 @@ class Command(BaseCommand):
         new_household_sizes: CaseInsensitiveDict,
         filter_countries: typing.Set[str],
     ):
-        bulk_mgr = BulkUpdateManager(['household_size', 'total_figures'], chunk_size=1000)
+        bulk_mgr = BulkUpdateManager(["household_size", "total_figures"], chunk_size=1000)
         figures = Figure.objects.filter(
             unit=Figure.UNIT.HOUSEHOLD,
             # Year can be calculated from the end_date (for both flow and stock figures)
@@ -219,7 +217,7 @@ class Command(BaseCommand):
             )
 
         bulk_mgr.done()
-        self.stdout.write(self.style.SUCCESS(f'Updated figures: {bulk_mgr.summary()}'))
+        self.stdout.write(self.style.SUCCESS(f"Updated figures: {bulk_mgr.summary()}"))
 
     @transaction.atomic()
     def handle(self, *args, **kwargs):

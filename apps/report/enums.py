@@ -1,9 +1,8 @@
-__all__ = ['ReportGenerationStatusEnum']
+__all__ = ["ReportGenerationStatusEnum"]
 
 import graphene
 
-from apps.report.models import ReportGeneration, Report
-
+from apps.report.models import Report, ReportGeneration
 from utils.enums import enum_description
 
 ReportGenerationStatusEnum = graphene.Enum.from_enum(ReportGeneration.REPORT_GENERATION_STATUS, description=enum_description)

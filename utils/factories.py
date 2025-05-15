@@ -1,176 +1,177 @@
-import factory
 from datetime import date
+
+import factory
 from dateutil.utils import today
 from factory.django import DjangoModelFactory
 
+from apps.common.enums import GENDER_TYPE
 from apps.contact.models import Contact
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure, FigureLocation
 from apps.event.models import Event, EventCode
-from apps.common.enums import GENDER_TYPE
 
 
 class UserFactory(DjangoModelFactory):
     class Meta:
-        model = 'users.User'
+        model = "users.User"
 
-    email = factory.Sequence(lambda n: f'admin{n}@email.com')
-    username = factory.Sequence(lambda n: f'username{n}')
+    email = factory.Sequence(lambda n: f"admin{n}@email.com")
+    username = factory.Sequence(lambda n: f"username{n}")
 
 
 class GeographicalGroupFactory(DjangoModelFactory):
     class Meta:
-        model = 'country.GeographicalGroup'
+        model = "country.GeographicalGroup"
 
-    name = factory.Faker('first_name')
+    name = factory.Faker("first_name")
 
 
 class CountrySubRegionFactory(DjangoModelFactory):
     class Meta:
-        model = 'country.CountrySubRegion'
+        model = "country.CountrySubRegion"
 
-    name = factory.Faker('first_name')
+    name = factory.Faker("first_name")
 
 
 class MonitoringSubRegionFactory(DjangoModelFactory):
     class Meta:
-        model = 'country.MonitoringSubRegion'
+        model = "country.MonitoringSubRegion"
 
-    name = factory.Faker('first_name')
+    name = factory.Faker("first_name")
 
 
 class CountryRegionFactory(DjangoModelFactory):
     class Meta:
-        model = 'country.CountryRegion'
+        model = "country.CountryRegion"
 
-    name = factory.Faker('first_name')
+    name = factory.Faker("first_name")
 
 
 class CountryFactory(DjangoModelFactory):
     class Meta:
-        model = 'country.Country'
+        model = "country.Country"
 
-    name = factory.Faker('first_name')
+    name = factory.Faker("first_name")
     region = factory.SubFactory(CountryRegionFactory)
     monitoring_sub_region = factory.SubFactory(MonitoringSubRegionFactory)
 
 
 class ContextualAnalysisFactory(DjangoModelFactory):
     class Meta:
-        model = 'country.ContextualAnalysis'
+        model = "country.ContextualAnalysis"
 
-    update = factory.Faker('paragraph')
+    update = factory.Faker("paragraph")
     country = factory.SubFactory(CountryFactory)
 
 
 class SummaryFactory(DjangoModelFactory):
     class Meta:
-        model = 'country.Summary'
+        model = "country.Summary"
 
-    summary = factory.Faker('paragraph')
+    summary = factory.Faker("paragraph")
     country = factory.SubFactory(CountryFactory)
 
 
 class OrganizationKindFactory(DjangoModelFactory):
     class Meta:
-        model = 'organization.OrganizationKind'
+        model = "organization.OrganizationKind"
 
-    name = factory.Faker('company_suffix')
+    name = factory.Faker("company_suffix")
 
 
 class OrganizationFactory(DjangoModelFactory):
     class Meta:
-        model = 'organization.Organization'
+        model = "organization.Organization"
 
-    short_name = factory.Sequence(lambda n: 'shortname %d' % n)
+    short_name = factory.Sequence(lambda n: "shortname %d" % n)
 
 
 class ContactFactory(DjangoModelFactory):
     class Meta:
-        model = 'contact.Contact'
+        model = "contact.Contact"
 
     designation = factory.Iterator(Contact.DESIGNATION)
-    first_name = factory.Faker('first_name')
-    last_name = factory.Faker('last_name')
+    first_name = factory.Faker("first_name")
+    last_name = factory.Faker("last_name")
     gender = factory.Iterator(GENDER_TYPE)
-    job_title = factory.Faker('job')
+    job_title = factory.Faker("job")
     organization = factory.SubFactory(OrganizationFactory)
 
 
 class CommunicationMediumFactory(DjangoModelFactory):
     class Meta:
-        model = 'contact.CommunicationMedium'
+        model = "contact.CommunicationMedium"
 
-    name = factory.Sequence(lambda n: f'Medium{n}')
+    name = factory.Sequence(lambda n: f"Medium{n}")
 
 
 class CommunicationFactory(DjangoModelFactory):
     class Meta:
-        model = 'contact.Communication'
+        model = "contact.Communication"
 
     contact = factory.SubFactory(ContactFactory)
-    title = factory.Faker('sentence')
-    subject = factory.Faker('sentence')
-    content = factory.Faker('paragraph')
-    date_time = factory.Faker('date_time_this_month')
+    title = factory.Faker("sentence")
+    subject = factory.Faker("sentence")
+    content = factory.Faker("paragraph")
+    date_time = factory.Faker("date_time_this_month")
     medium = factory.SubFactory(CommunicationMediumFactory)
 
 
 class DisasterCategoryFactory(DjangoModelFactory):
     class Meta:
-        model = 'event.DisasterCategory'
+        model = "event.DisasterCategory"
 
 
 class DisasterSubCategoryFactory(DjangoModelFactory):
     class Meta:
-        model = 'event.DisasterSubCategory'
+        model = "event.DisasterSubCategory"
 
     category = factory.SubFactory(DisasterCategoryFactory)
 
 
 class DisasterTypeFactory(DjangoModelFactory):
     class Meta:
-        model = 'event.DisasterType'
+        model = "event.DisasterType"
 
     disaster_sub_category = factory.SubFactory(DisasterSubCategoryFactory)
 
 
 class DisasterSubTypeFactory(DjangoModelFactory):
     class Meta:
-        model = 'event.DisasterSubType'
+        model = "event.DisasterSubType"
 
     type = factory.SubFactory(DisasterTypeFactory)
 
 
 class ViolenceFactory(DjangoModelFactory):
     class Meta:
-        model = 'event.Violence'
+        model = "event.Violence"
 
 
 class ViolenceSubTypeFactory(DjangoModelFactory):
     class Meta:
-        model = 'event.ViolenceSubType'
+        model = "event.ViolenceSubType"
 
     violence = factory.SubFactory(ViolenceFactory)
 
 
 class CrisisFactory(DjangoModelFactory):
     class Meta:
-        model = 'crisis.Crisis'
+        model = "crisis.Crisis"
 
     crisis_type = factory.Iterator(Crisis.CRISIS_TYPE)
 
 
 class ActorFactory(DjangoModelFactory):
     class Meta:
-        model = 'event.Actor'
+        model = "event.Actor"
 
     country = factory.SubFactory(CountryFactory)
 
 
 class ContextOfViolenceFactory(DjangoModelFactory):
     class Meta:
-        model = 'event.ContextOfViolence'
+        model = "event.ContextOfViolence"
 
 
 class EventFactory(DjangoModelFactory):
@@ -200,26 +201,26 @@ class EventFactory(DjangoModelFactory):
 
 class EventCodeFactory(DjangoModelFactory):
     class Meta:
-        model = 'event.EventCode'
+        model = "event.EventCode"
 
     event = factory.SubFactory(EventFactory)
     country = factory.SubFactory(CountryFactory)
     event_code_type = factory.Iterator(EventCode.EVENT_CODE_TYPE)
-    event_code = factory.Sequence(lambda n: f'Code-{n}')
+    event_code = factory.Sequence(lambda n: f"Code-{n}")
 
 
 class EntryFactory(DjangoModelFactory):
     class Meta:
-        model = 'entry.Entry'
+        model = "entry.Entry"
 
-    article_title = factory.Sequence(lambda n: f'long title {n}')
-    url = 'https://www.example.com'
+    article_title = factory.Sequence(lambda n: f"long title {n}")
+    url = "https://www.example.com"
     publish_date = factory.LazyFunction(today().date)
 
 
 class FigureFactory(DjangoModelFactory):
     class Meta:
-        model = 'entry.Figure'
+        model = "entry.Figure"
 
     entry = factory.SubFactory(EntryFactory)
     country = factory.SubFactory(CountryFactory)
@@ -245,85 +246,85 @@ class FigureFactory(DjangoModelFactory):
 
 class ResourceGroupFactory(DjangoModelFactory):
     class Meta:
-        model = 'resource.ResourceGroup'
+        model = "resource.ResourceGroup"
 
-    name = factory.Sequence(lambda n: f'resource{n}')
+    name = factory.Sequence(lambda n: f"resource{n}")
 
 
 class ResourceFactory(DjangoModelFactory):
     class Meta:
-        model = 'resource.Resource'
+        model = "resource.Resource"
 
-    name = factory.Sequence(lambda n: f'resource{n}')
+    name = factory.Sequence(lambda n: f"resource{n}")
     group = factory.SubFactory(ResourceGroupFactory)
 
 
 class UnifiedReviewCommentFactory(DjangoModelFactory):
     class Meta:
-        model = 'review.UnifiedReviewComment'
+        model = "review.UnifiedReviewComment"
 
 
 class TagFactory(DjangoModelFactory):
     class Meta:
-        model = 'entry.FigureTag'
+        model = "entry.FigureTag"
 
 
 class ParkingLotFactory(DjangoModelFactory):
     class Meta:
-        model = 'parking_lot.ParkedItem'
+        model = "parking_lot.ParkedItem"
 
     country = factory.SubFactory(CountryFactory)
 
 
 class ReportFactory(DjangoModelFactory):
     class Meta:
-        model = 'report.Report'
+        model = "report.Report"
 
 
 class ReportCommentFactory(DjangoModelFactory):
     class Meta:
-        model = 'report.ReportComment'
+        model = "report.ReportComment"
 
     report = factory.SubFactory(ReportFactory)
 
 
 class OtherSubtypeFactory(DjangoModelFactory):
     class Meta:
-        model = 'event.otherSubType'
+        model = "event.otherSubType"
 
 
 class ClientFactory(DjangoModelFactory):
     class Meta:
-        model = 'contrib.Client'
+        model = "contrib.Client"
 
 
 class ClientTrackInfoFactory(DjangoModelFactory):
     class Meta:
-        model = 'contrib.ClientTrackInfo'
+        model = "contrib.ClientTrackInfo"
 
 
 class NotificationFactory(DjangoModelFactory):
     class Meta:
-        model = 'notification.Notification'
+        model = "notification.Notification"
 
 
 class ExtractionQueryFactory(DjangoModelFactory):
     class Meta:
-        model = 'extraction.ExtractionQuery'
+        model = "extraction.ExtractionQuery"
 
 
 class FigureLocationFactory(DjangoModelFactory):
-    display_name = factory.Sequence(lambda n: f'location-name-{n}')
-    lat = factory.Faker('pyint', min_value=100, max_value=200)
-    lon = factory.Faker('pyint', min_value=100, max_value=200)
+    display_name = factory.Sequence(lambda n: f"location-name-{n}")
+    lat = factory.Faker("pyint", min_value=100, max_value=200)
+    lon = factory.Faker("pyint", min_value=100, max_value=200)
     identifier = factory.Iterator(FigureLocation.IDENTIFIER)
     accuracy = factory.Iterator(FigureLocation.ACCURACY)
     geocoder = factory.Iterator(FigureLocation.GEOCODER)
 
     class Meta:
-        model = 'entry.FigureLocation'
+        model = "entry.FigureLocation"
 
 
 class HouseholdSizeFactory(DjangoModelFactory):
     class Meta:
-        model = 'country.HouseholdSize'
+        model = "country.HouseholdSize"

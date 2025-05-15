@@ -1,15 +1,15 @@
 import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
-from utils.graphene.enums import EnumDescription
 
 from apps.contact.enums import DesignationGrapheneEnum
+from apps.contact.filters import CommunicationFilter, CommunicationMediumFilter, ContactFilter
+from apps.contact.models import Communication, CommunicationMedium, Contact
 from apps.entry.enums import GenderTypeGrapheneEnum
-from apps.contact.filters import ContactFilter, CommunicationFilter, CommunicationMediumFilter
-from apps.contact.models import Contact, Communication, CommunicationMedium
-from utils.graphene.types import CustomDjangoListObjectType
+from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.types import CustomDjangoListObjectType
 
 
 class CommunicationMediumType(DjangoObjectType):
@@ -41,15 +41,13 @@ class ContactType(DjangoObjectType):
 
     full_name = graphene.Field(graphene.String)
     designation = graphene.Field(DesignationGrapheneEnum)
-    designation_display = EnumDescription(source='get_designation_display')
+    designation_display = EnumDescription(source="get_designation_display")
     gender = graphene.Field(GenderTypeGrapheneEnum)
-    gender_display = EnumDescription(source='get_gender_display')
+    gender_display = EnumDescription(source="get_gender_display")
     communications = DjangoPaginatedListObjectField(
         CommunicationListType,
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        related_name='communications'
+        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
+        related_name="communications",
     )
 
 
@@ -62,12 +60,10 @@ class ContactListType(CustomDjangoListObjectType):
 class Query:
     contact = DjangoObjectField(ContactType)
     communication = DjangoObjectField(CommunicationType)
-    contact_list = DjangoPaginatedListObjectField(ContactListType,
-                                                  pagination=PageGraphqlPaginationWithoutCount(
-                                                      page_size_query_param='pageSize'
-                                                  ))
+    contact_list = DjangoPaginatedListObjectField(
+        ContactListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
+    )
     communication_medium_list = DjangoPaginatedListObjectField(CommunicationMediumListType)
-    communication_list = DjangoPaginatedListObjectField(CommunicationListType,
-                                                        pagination=PageGraphqlPaginationWithoutCount(
-                                                            page_size_query_param='pageSize'
-                                                        ))
+    communication_list = DjangoPaginatedListObjectField(
+        CommunicationListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
+    )

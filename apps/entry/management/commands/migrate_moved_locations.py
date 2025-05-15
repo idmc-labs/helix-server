@@ -1,10 +1,11 @@
 import requests
 from django.core.management.base import BaseCommand
+
 from apps.entry.models import FigureLocation
 
 
 class Command(BaseCommand):
-    help = 'Update lat lon of moved locations'
+    help = "Update lat lon of moved locations"
 
     def handle(self, *args, **options):
         figures_with_moved_locations = requests.get(
@@ -12,14 +13,14 @@ class Command(BaseCommand):
         ).json()
         count = 0
         for figure in figures_with_moved_locations:
-            old_id = figure['figure_old_id']
-            for moved_location in figure['locations']:
+            old_id = figure["figure_old_id"]
+            for moved_location in figure["locations"]:
                 # Make sure if osm name exist in production database
-                osm = FigureLocation.objects.filter(osm_id=moved_location['osm_id'], figures__old_id=old_id).first()
+                osm = FigureLocation.objects.filter(osm_id=moved_location["osm_id"], figures__old_id=old_id).first()
                 if osm:
-                    osm.lat = moved_location['lat']
-                    osm.lon = moved_location['lng']
+                    osm.lat = moved_location["lat"]
+                    osm.lon = moved_location["lng"]
                     osm.moved = True
                     osm.save()
                     count += 1
-        print(f'{count} Figure locations updated')
+        print(f"{count} Figure locations updated")

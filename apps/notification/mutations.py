@@ -1,8 +1,9 @@
 import graphene
 from django.utils.translation import gettext
+
 from apps.notification.models import Notification
-from utils.error_types import CustomErrorType
 from apps.notification.schema import GenericNotificationType
+from utils.error_types import CustomErrorType
 
 
 class ToggleNotificationRead(graphene.Mutation):
@@ -15,17 +16,13 @@ class ToggleNotificationRead(graphene.Mutation):
 
     @staticmethod
     def mutate(root, info, id):
-        instance = Notification.objects.filter(
-            recipient=info.context.user,
-            id=id
-        ).first()
+        instance = Notification.objects.filter(recipient=info.context.user, id=id).first()
         if not instance:
             return ToggleNotificationRead(
                 errors=[
-                    dict(field='nonFieldErrors',
-                         messages=gettext('Notification does not exist or you are not recipient.'))
+                    dict(field="nonFieldErrors", messages=gettext("Notification does not exist or you are not recipient."))
                 ],
-                ok=False
+                ok=False,
             )
         if not instance.is_read:
             instance.is_read = True

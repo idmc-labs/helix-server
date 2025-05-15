@@ -1,20 +1,20 @@
 from rest_framework import serializers
 
-from apps.users.models import User
 from apps.contrib.serializers import MetaInformationSerializerMixin
-from apps.country.models import Summary, ContextualAnalysis, HouseholdSize
+from apps.country.models import ContextualAnalysis, HouseholdSize, Summary
+from apps.users.models import User
 
 
 class SummarySerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Summary
-        fields = '__all__'
+        fields = "__all__"
 
 
 class ContextualAnalysisSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = ContextualAnalysis
-        fields = '__all__'
+        fields = "__all__"
 
 
 class HouseholdSizeCliImportSerializer(serializers.ModelSerializer):
@@ -25,4 +25,4 @@ class HouseholdSizeCliImportSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = HouseholdSize
-        fields = '__all__'
+        fields = "__all__"

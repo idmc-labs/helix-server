@@ -1,16 +1,18 @@
-import logging
 import inspect
+import logging
 import typing
-from functools import partial
 from collections import OrderedDict
+from functools import partial
 
 import graphene
-from django.db.models import QuerySet
 from django.core.exceptions import FieldError as DjFieldError
+from django.db.models import QuerySet
 from graphene import NonNull
 from graphene.types.structures import Structure
 from graphene.utils.str_converters import to_snake_case
-from graphene_django.utils import maybe_queryset, is_valid_django_model
+from graphene_django.registry import get_global_registry
+from graphene_django.rest_framework.serializer_converter import get_graphene_type_from_serializer_field
+from graphene_django.utils import is_valid_django_model, maybe_queryset
 from graphene_django_extras import DjangoFilterPaginateListField
 from graphene_django_extras.base_types import DjangoListObjectBase
 from graphene_django_extras.fields import DjangoListField
@@ -18,26 +20,23 @@ from graphene_django_extras.filters.filter import get_filterset_class
 from graphene_django_extras.paginations.pagination import BaseDjangoGraphqlPagination
 from graphene_django_extras.settings import graphql_api_settings
 from graphene_django_extras.utils import get_extra_filters
-from graphene_django.rest_framework.serializer_converter import get_graphene_type_from_serializer_field
-from graphene_django.registry import get_global_registry
 from rest_framework import serializers
 
-from utils.graphene.pagination import OrderingOnlyArgumentPagination
-from utils.filters import generate_type_for_filter_set
-from utils.common import track_gidd
 from apps.gidd.filters import GIDD_API_TYPE_MAP
-
+from utils.common import track_gidd
+from utils.filters import generate_type_for_filter_set
+from utils.graphene.pagination import OrderingOnlyArgumentPagination
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
 def path_has_list(info):
-    '''
+    """
     Checks if the parent path contains list
 
     e.g: ['countryList', 'results', 1, 'region']
-    '''
+    """
     return bool([each for each in info.path if str(each).isdigit()])
 
 
@@ -54,7 +53,7 @@ class CustomDjangoListObjectBase(DjangoListObjectBase):
             self.results_field_name: [e.to_dict() for e in self.results],
             "count": self.count,
             "page": self.page,
-            "pageSize": self.pageSize
+            "pageSize": self.pageSize,
         }
 
 
@@ -62,16 +61,15 @@ class CustomDjangoListField(DjangoListField):
     """
     Removes the compulsion of using `get_queryset` in the DjangoListField
     """
+
     @staticmethod
-    def list_resolver(
-            django_object_type, resolver, root, info, **args
-    ):
+    def list_resolver(django_object_type, resolver, root, info, **args):
         queryset = maybe_queryset(resolver(root, info, **args))
         if queryset is None:
             queryset = QuerySet.none()
 
         if isinstance(queryset, QuerySet):
-            if hasattr(django_object_type, 'get_queryset'):
+            if hasattr(django_object_type, "get_queryset"):
                 # Pass queryset to the DjangoObjectType get_queryset method
                 queryset = maybe_queryset(django_object_type.get_queryset(queryset, info))
         return queryset
@@ -89,9 +87,10 @@ class CustomDjangoListField(DjangoListField):
 
 
 class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
-    '''
+    """
     For non-model (or custom queryset) pagination and filtering
-    '''
+    """
+
     def __init__(
         self,
         _type,
@@ -101,16 +100,13 @@ class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
         *args,
         **kwargs,
     ):
-
         kwargs.setdefault("args", {})
 
         # -- NOTE: This doesn't uses nested filters args
         # Currently arguments aren't used for this
         filterset_class = filterset_class or _type._meta.filterset_class
         self.filterset_class = get_filterset_class(filterset_class)
-        self.filtering_args = get_filtering_args_from_non_model_filterset(
-            self.filterset_class
-        )
+        self.filtering_args = get_filtering_args_from_non_model_filterset(self.filterset_class)
         # -- NOTE: This doesn't uses nested filters args
         kwargs["args"].update(self.filtering_args)
 
@@ -126,25 +122,20 @@ class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
             self.pagination = pagination
             kwargs.update(**pagination_kwargs)
 
-        self.accessor = kwargs.pop('accessor', None)
-        super(DjangoFilterPaginateListField, self).__init__(
-            _type, *args, **kwargs
-        )
+        self.accessor = kwargs.pop("accessor", None)
+        super(DjangoFilterPaginateListField, self).__init__(_type, *args, **kwargs)
 
-    def list_resolver(
-        self, filterset_class, filtering_args, root, info, **kwargs
-    ):
-
+    def list_resolver(self, filterset_class, filtering_args, root, info, **kwargs):
         filter_kwargs = {k: v for k, v in kwargs.items() if k in filtering_args}
         qs = getattr(root, self.accessor)
-        if hasattr(qs, 'all'):
+        if hasattr(qs, "all"):
             qs = qs.all()
         qs = filterset_class(data=filter_kwargs, queryset=qs, request=info.context.request).qs
         count = qs.count()
 
         if getattr(self, "pagination", None):
             ordering = kwargs.pop(self.pagination.ordering_param, None) or self.pagination.ordering
-            ordering = ','.join([to_snake_case(each) for each in ordering.strip(',').replace(' ', '').split(',')])
+            ordering = ",".join([to_snake_case(each) for each in ordering.strip(",").replace(" ", "").split(",")])
             kwargs[self.pagination.ordering_param] = ordering
             qs = self.pagination.paginate_queryset(qs, **kwargs)
 
@@ -152,11 +143,10 @@ class CustomPaginatedListObjectField(DjangoFilterPaginateListField):
             count=count,
             results=maybe_queryset(qs),
             results_field_name=self.type._meta.results_field_name,
-            page=kwargs.get('page', 1) if hasattr(self.pagination, 'page') else None,
-            pageSize=kwargs.get(
-                'pageSize',
-                graphql_api_settings.DEFAULT_PAGE_SIZE
-            ) if hasattr(self.pagination, 'page') else None
+            page=kwargs.get("page", 1) if hasattr(self.pagination, "page") else None,
+            pageSize=kwargs.get("pageSize", graphql_api_settings.DEFAULT_PAGE_SIZE)
+            if hasattr(self.pagination, "page")
+            else None,
         )
 
     def get_resolver(self, parent_resolver):
@@ -181,14 +171,14 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
         *args,
         **kwargs,
     ):
-        '''
+        """
         If pagination is None, then we will only allow Ordering fields.
             - The page size will respect the settings.
             - Client will not be able to add pagination params
-        '''
+        """
         _fields = _type._meta.filter_fields
         if _fields:
-            raise Exception(f'filter_fields are ignored: Provided: {_fields} <> {_type}')
+            raise Exception(f"filter_fields are ignored: Provided: {_fields} <> {_type}")
 
         kwargs.setdefault("args", {})
 
@@ -223,37 +213,33 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             kwargs["description"] = "{} list".format(_type._meta.model.__name__)
 
         # accessor will be used with custom querysets
-        self.accessor = kwargs.pop('accessor', None)
+        self.accessor = kwargs.pop("accessor", None)
         # related_names will be used especially for fkeys and m2ms with
         # relationships spanning across more than one fields
-        self.related_name = kwargs.pop('related_name', None)
-        self.reverse_related_name = kwargs.pop('reverse_related_name', None)
+        self.related_name = kwargs.pop("related_name", None)
+        self.reverse_related_name = kwargs.pop("reverse_related_name", None)
 
-        super(DjangoFilterPaginateListField, self).__init__(
-            _type, *args, **kwargs
-        )
+        super(DjangoFilterPaginateListField, self).__init__(_type, *args, **kwargs)
 
-    def list_resolver(
-        self, manager, filterset_class, filtering_args, root, info, **kwargs
-    ):
-        filter_kwargs = kwargs.get('filters', {})
+    def list_resolver(self, manager, filterset_class, filtering_args, root, info, **kwargs):
+        filter_kwargs = kwargs.get("filters", {})
 
-        client_id = kwargs.get('client_id')
+        client_id = kwargs.get("client_id")
         if client_id:
             api_type = GIDD_API_TYPE_MAP.get(filterset_class.__name__)
             if api_type is None:
-                logger.error(f'Client tracking key was not found for filter {filterset_class.__name__}')
+                logger.error(f"Client tracking key was not found for filter {filterset_class.__name__}")
             track_gidd(client_id, api_type)
 
         # setup pagination
         if getattr(self, "pagination", None):
             ordering = kwargs.pop(self.pagination.ordering_param, None) or self.pagination.ordering
-            ordering = ','.join([to_snake_case(each) for each in ordering.strip(',').replace(' ', '').split(',')])
+            ordering = ",".join([to_snake_case(each) for each in ordering.strip(",").replace(" ", "").split(",")])
             kwargs[self.pagination.ordering_param] = ordering
 
         if root and path_has_list(info):
-            if not getattr(self, 'related_name', None):
-                raise NotImplementedError(f'Dataloader error: fetching without dataloader. {info.path}')
+            if not getattr(self, "related_name", None):
+                raise NotImplementedError(f"Dataloader error: fetching without dataloader. {info.path}")
             parent_class = root._meta.model
             child_class = manager.model
             # TODO: qs should be executed only when we access the results node in the future
@@ -293,7 +279,7 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             accessor = self.accessor or self.related_name
             if accessor:
                 qs = getattr(root, accessor, None)
-                if hasattr(qs, 'all'):
+                if hasattr(qs, "all"):
                     qs = qs.all()
             else:
                 qs = self.get_queryset(manager, info, **kwargs)
@@ -306,25 +292,21 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
                     qs = qs.filter(**extra_filters)
             try:
                 # XXX: Experimental: Try to use 'id' to minimize joins in SQL Query
-                count = qs.values('id').count()
+                count = qs.values("id").count()
             except DjFieldError:
                 # Fallback to normal count
                 count = qs.count()
 
-            qs = self.pagination.paginate_queryset(
-                qs,
-                **kwargs
-            )
+            qs = self.pagination.paginate_queryset(qs, **kwargs)
 
         return CustomDjangoListObjectBase(
             results=qs,
             count=count,
             results_field_name=self.type._meta.results_field_name,
-            page=kwargs.get('page', 1) if hasattr(self.pagination, 'page_query_param') else None,
-            pageSize=kwargs.get(
-                'pageSize',
-                graphql_api_settings.DEFAULT_PAGE_SIZE
-            ) if hasattr(self.pagination, 'page_size_query_param') else None
+            page=kwargs.get("page", 1) if hasattr(self.pagination, "page_query_param") else None,
+            pageSize=kwargs.get("pageSize", graphql_api_settings.DEFAULT_PAGE_SIZE)
+            if hasattr(self.pagination, "page_size_query_param")
+            else None,
         )
 
 
@@ -359,10 +341,7 @@ def generate_object_field_from_input_type(input_type, skip_fields=[]):
         if field_key in skip_fields:
             continue
         _type = field.type
-        if inspect.isclass(_type) and (
-            issubclass(_type, graphene.Scalar) or
-            issubclass(_type, graphene.Enum)
-        ):
+        if inspect.isclass(_type) and (issubclass(_type, graphene.Scalar) or issubclass(_type, graphene.Enum)):
             new_fields_map[field_key] = graphene.Field(_type)
         else:
             new_fields_map[field_key] = _type
@@ -372,15 +351,15 @@ def generate_object_field_from_input_type(input_type, skip_fields=[]):
 # use this for input type with direct scaler fields only.
 def generate_simple_object_type_from_input_type(input_type):
     new_fields_map = generate_object_field_from_input_type(input_type)
-    return type(input_type._meta.name.replace('Input', ''), (graphene.ObjectType,), new_fields_map)
+    return type(input_type._meta.name.replace("Input", ""), (graphene.ObjectType,), new_fields_map)
 
 
 def compare_input_output_type_fields(input_type, output_type):
     if len(output_type._meta.fields) != len(input_type._meta.fields):
         for field in input_type._meta.fields.keys():
             if field not in output_type._meta.fields.keys():
-                print('---> [Entry] Missing: ', field)
-        raise Exception('Conversion failed')
+                print("---> [Entry] Missing: ", field)
+        raise Exception("Conversion failed")
 
 
 def convert_serializer_field(field, convert_choices_to_enum=True, force_optional=False):
@@ -398,10 +377,7 @@ def convert_serializer_field(field, convert_choices_to_enum=True, force_optional
         graphql_type = get_graphene_type_from_serializer_field(field)
 
     args = []
-    kwargs = {
-        "description": field.help_text,
-        "required": field.required and not force_optional
-    }
+    kwargs = {"description": field.help_text, "required": field.required and not force_optional}
 
     # if it is a tuple or a list it means that we are returning
     # the graphql type and the child type
@@ -431,21 +407,16 @@ def convert_serializer_to_type(serializer_class):
     """
     graphene_django.rest_framework.serializer_converter.convert_serializer_to_type
     """
-    cached_type = convert_serializer_to_type.cache.get(
-        serializer_class.__name__, None
-    )
+    cached_type = convert_serializer_to_type.cache.get(serializer_class.__name__, None)
     if cached_type:
         return cached_type
     serializer = serializer_class()
 
-    items = {
-        name: convert_serializer_field(field)
-        for name, field in serializer.fields.items()
-    }
+    items = {name: convert_serializer_field(field) for name, field in serializer.fields.items()}
     # Alter naming
     serializer_name = serializer.__class__.__name__
-    serializer_name = ''.join(''.join(serializer_name.split('ModelSerializer')).split('Serializer'))
-    ref_name = f'{serializer_name}Type'
+    serializer_name = "".join("".join(serializer_name.split("ModelSerializer")).split("Serializer"))
+    ref_name = f"{serializer_name}Type"
 
     base_classes = (graphene.ObjectType,)
 
@@ -504,6 +475,6 @@ def generate_type_for_serializer(
     _type = type(name, (graphene.ObjectType,), data_members)
     if update_cache:
         if name in convert_serializer_to_type.cache:
-            raise Exception(f'<{name}> : <{serializer_class.__name__}> Alreay exists')
+            raise Exception(f"<{name}> : <{serializer_class.__name__}> Alreay exists")
         convert_serializer_to_type.cache[serializer_class.__name__] = _type
     return _type

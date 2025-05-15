@@ -1,16 +1,16 @@
-from apps.users.enums import USER_ROLE
-from apps.extraction.models import ExtractionQuery
 from apps.crisis.models import Crisis
-from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from apps.extraction.models import ExtractionQuery
+from apps.users.enums import USER_ROLE
 from utils.factories import (
     CountryFactory,
     CountryRegionFactory,
     CrisisFactory,
-    EventFactory,
     EntryFactory,
-    TagFactory,
+    EventFactory,
     FigureFactory,
+    TagFactory,
 )
+from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
 class TestCreateExtraction(HelixGraphQLTestCase):
@@ -65,7 +65,7 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         )
         self.fig1entry3.tags.set([self.tag1, self.tag2, self.tag3])
 
-        self.mutation = '''
+        self.mutation = """
         mutation CreateExtraction($input: CreateExtractInputType!) {
           createExtraction(data: $input) {
             result {
@@ -80,8 +80,8 @@ class TestCreateExtraction(HelixGraphQLTestCase):
             errors
           }
         }
-        '''
-        self.get_extractions = '''
+        """
+        self.get_extractions = """
         query MyQuery {
           extractionQueryList {
             results {
@@ -89,34 +89,27 @@ class TestCreateExtraction(HelixGraphQLTestCase):
             }
           }
         }
-        '''
+        """
 
     def test_valid_extract_create_and_filter(self):
         reviewer = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(reviewer)
-        _input = dict(
-            name='LOl',
-            filterFigureRegions=[str(self.reg1.id)]
-        )
-        response = self.query(
-            self.mutation,
-            input_data=_input
-        )
+        _input = dict(name="LOl", filterFigureRegions=[str(self.reg1.id)])
+        response = self.query(self.mutation, input_data=_input)
 
         content = response.json()
         self.assertResponseNoErrors(response)
-        self.assertTrue(content['data']['createExtraction']['ok'], content)
+        self.assertTrue(content["data"]["createExtraction"]["ok"], content)
         self.assertEqual(
-            set([each['id'] for each in
-                 content['data']['createExtraction']['result']['entries']['results']]),
-            {str(self.entry1ev1.id), str(self.entry2ev1.id)}
+            set([each["id"] for each in content["data"]["createExtraction"]["result"]["entries"]["results"]]),
+            {str(self.entry1ev1.id), str(self.entry2ev1.id)},
         )
 
     def test_extraction_query_list_filtered_by_user(self):
         reviewer1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         reviewer2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        ExtractionQuery.objects.create(name='one', created_by=reviewer1)
-        ExtractionQuery.objects.create(name='one', created_by=reviewer2)
+        ExtractionQuery.objects.create(name="one", created_by=reviewer1)
+        ExtractionQuery.objects.create(name="one", created_by=reviewer2)
         self.force_login(reviewer1)
         response = self.query(
             self.get_extractions,
@@ -124,8 +117,8 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         content = response.json()
         self.assertResponseNoErrors(response)
         self.assertEqual(
-            len(content['data']['extractionQueryList']['results']),
-            ExtractionQuery.objects.filter(created_by=reviewer1).count()
+            len(content["data"]["extractionQueryList"]["results"]),
+            ExtractionQuery.objects.filter(created_by=reviewer1).count(),
         )
         self.force_login(reviewer2)
         response = self.query(
@@ -134,6 +127,6 @@ class TestCreateExtraction(HelixGraphQLTestCase):
         content = response.json()
         self.assertResponseNoErrors(response)
         self.assertEqual(
-            len(content['data']['extractionQueryList']['results']),
-            ExtractionQuery.objects.filter(created_by=reviewer2).count()
+            len(content["data"]["extractionQueryList"]["results"]),
+            ExtractionQuery.objects.filter(created_by=reviewer2).count(),
         )

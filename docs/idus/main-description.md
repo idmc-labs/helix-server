@@ -21,7 +21,7 @@ Figures from the IDU may differ from GIDD estimates.
 
    # URL of the JSON API
    url = "LINK TO THE API END POINT"
- 
+
    response = requests.get(url).json()  # Assumes successful response and valid JSON
 
    geojson = {
