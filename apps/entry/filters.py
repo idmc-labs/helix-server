@@ -1,8 +1,9 @@
 from django_filters import rest_framework as df
+
 from apps.entry.models import (
-    FigureLocation,
     DisaggregatedAge,
     Figure,
+    FigureLocation,
     FigureTag,
 )
 
@@ -10,14 +11,14 @@ from apps.entry.models import (
 class FigureLocationFilter(df.FilterSet):
     class Meta:
         model = FigureLocation
-        fields = ['country']
+        fields = ["country"]
 
 
 class DisaggregatedAgeFilter(df.FilterSet):
     class Meta:
         model = DisaggregatedAge
         fields = {
-            'sex': ['in'],
+            "sex": ["in"],
         }
 
 
@@ -25,8 +26,8 @@ class FigureFilter(df.FilterSet):
     class Meta:
         model = Figure
         fields = {
-            'unit': ('exact',),
-            'start_date': ('lte', 'gte'),
+            "unit": ("exact",),
+            "start_date": ("lte", "gte"),
         }
 
 
@@ -34,5 +35,5 @@ class FigureTagFilter(df.FilterSet):
     class Meta:
         model = FigureTag
         fields = {
-            'name': ('unaccent__icontains',),
+            "name": ("unaccent__icontains",),
         }

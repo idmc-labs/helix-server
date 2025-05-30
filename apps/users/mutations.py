@@ -1,38 +1,35 @@
+import graphene
+from django.conf import settings
 from django.contrib.auth import login, logout
 from django.utils.translation import gettext
-from django.conf import settings
-import graphene
 
 from apps.contrib.models import ExcelDownload
 from apps.contrib.mutations import ExportBaseMutation
 from apps.country.models import MonitoringSubRegion
-from apps.users.schema import UserType, PortfolioType
-from apps.users.models import User, Portfolio
 from apps.users.enums import USER_ROLE
-from apps.users.serializers import (
-    LoginSerializer,
-    RegisterSerializer,
-    ActivateSerializer,
-    UserSerializer,
-    UserPasswordSerializer,
-    GenerateResetPasswordTokenSerializer,
-    ResetPasswordSerializer,
-    BulkMonitoringExpertPortfolioSerializer,
-    RegionalCoordinatorPortfolioSerializer,
-    AdminPortfolioSerializer,
-    DirectorsOfficePortfolioSerializer,
-    ReportingTeamPortfolioSerializer,
-)
-from utils.permissions import is_authenticated, permission_checker
 from apps.users.filters import UserFilterDataInputType
+from apps.users.models import Portfolio, User
+from apps.users.schema import PortfolioType, UserType
+from apps.users.serializers import (
+    ActivateSerializer,
+    AdminPortfolioSerializer,
+    BulkMonitoringExpertPortfolioSerializer,
+    DirectorsOfficePortfolioSerializer,
+    GenerateResetPasswordTokenSerializer,
+    LoginSerializer,
+    RegionalCoordinatorPortfolioSerializer,
+    RegisterSerializer,
+    ReportingTeamPortfolioSerializer,
+    ResetPasswordSerializer,
+    UserPasswordSerializer,
+    UserSerializer,
+)
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.mutation import generate_input_type_for_serializer
+from utils.permissions import is_authenticated, permission_checker
 from utils.validations import MissingCaptchaException
 
-RegisterInputType = generate_input_type_for_serializer(
-    'RegisterInputType',
-    RegisterSerializer
-)
+RegisterInputType = generate_input_type_for_serializer("RegisterInputType", RegisterSerializer)
 
 
 class Register(graphene.Mutation):
@@ -46,22 +43,14 @@ class Register(graphene.Mutation):
 
     @staticmethod
     def mutate(root, info, data):
-        serializer = RegisterSerializer(data=data,
-                                        context={'request': info.context.request})
+        serializer = RegisterSerializer(data=data, context={"request": info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return Register(errors=errors, ok=False)
         instance = serializer.save()
-        return Register(
-            result=instance,
-            errors=None,
-            ok=True
-        )
+        return Register(result=instance, errors=None, ok=True)
 
 
-LoginInputType = generate_input_type_for_serializer(
-    'LoginInputType',
-    LoginSerializer
-)
+LoginInputType = generate_input_type_for_serializer("LoginInputType", LoginSerializer)
 
 
 class Login(graphene.Mutation):
@@ -75,32 +64,20 @@ class Login(graphene.Mutation):
 
     @staticmethod
     def mutate(root, info, data):
-        serializer = LoginSerializer(data=data,
-                                     context={'request': info.context.request})
+        serializer = LoginSerializer(data=data, context={"request": info.context.request})
         try:
             errors = mutation_is_not_valid(serializer)
         except MissingCaptchaException:
             return Login(ok=False, captcha_required=True)
         if errors:
-            attempts = User._get_login_attempt(data['email'])
-            return Login(
-                errors=errors,
-                ok=False,
-                captcha_required=attempts >= settings.MAX_LOGIN_ATTEMPTS
-            )
-        if user := serializer.validated_data.get('user'):
+            attempts = User._get_login_attempt(data["email"])
+            return Login(errors=errors, ok=False, captcha_required=attempts >= settings.MAX_LOGIN_ATTEMPTS)
+        if user := serializer.validated_data.get("user"):
             login(info.context.request, user)
-        return Login(
-            result=user,
-            errors=None,
-            ok=True
-        )
+        return Login(result=user, errors=None, ok=True)
 
 
-ActivateInputType = generate_input_type_for_serializer(
-    'ActivateInputType',
-    ActivateSerializer
-)
+ActivateInputType = generate_input_type_for_serializer("ActivateInputType", ActivateSerializer)
 
 
 class Activate(graphene.Mutation):
@@ -112,8 +89,7 @@ class Activate(graphene.Mutation):
 
     @staticmethod
     def mutate(root, info, data):
-        serializer = ActivateSerializer(data=data,
-                                        context={'request': info.context.request})
+        serializer = ActivateSerializer(data=data, context={"request": info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return Activate(errors=errors, ok=False)
         return Activate(errors=None, ok=True)
@@ -128,10 +104,7 @@ class Logout(graphene.Mutation):
         return Logout(ok=True)
 
 
-UserPasswordInputType = generate_input_type_for_serializer(
-    'UserPasswordInputType',
-    UserPasswordSerializer
-)
+UserPasswordInputType = generate_input_type_for_serializer("UserPasswordInputType", UserPasswordSerializer)
 
 
 class ChangeUserPassword(graphene.Mutation):
@@ -145,20 +118,16 @@ class ChangeUserPassword(graphene.Mutation):
     @staticmethod
     @is_authenticated()
     def mutate(root, info, data):
-        serializer = UserPasswordSerializer(instance=info.context.user,
-                                            data=data,
-                                            context={'request': info.context.request},
-                                            partial=True)
+        serializer = UserPasswordSerializer(
+            instance=info.context.user, data=data, context={"request": info.context.request}, partial=True
+        )
         if errors := mutation_is_not_valid(serializer):
             return ChangeUserPassword(errors=errors, ok=False)
         serializer.save()
         return ChangeUserPassword(result=info.context.user, errors=None, ok=True)
 
 
-UserUpdateInputType = generate_input_type_for_serializer(
-    'UserUpdateInputType',
-    UserSerializer
-)
+UserUpdateInputType = generate_input_type_for_serializer("UserUpdateInputType", UserSerializer)
 
 
 class UpdateUser(graphene.Mutation):
@@ -173,17 +142,10 @@ class UpdateUser(graphene.Mutation):
     @is_authenticated()
     def mutate(root, info, data):
         try:
-            user = User.objects.get(id=data['id'])
+            user = User.objects.get(id=data["id"])
         except User.DoesNotExist:
-            return UpdateUser(
-                errors=[
-                    dict(field='nonFieldErrors', messages=gettext('User not found.'))
-                ]
-            )
-        serializer = UserSerializer(instance=user,
-                                    data=data,
-                                    context={'request': info.context.request},
-                                    partial=True)
+            return UpdateUser(errors=[dict(field="nonFieldErrors", messages=gettext("User not found."))])
+        serializer = UserSerializer(instance=user, data=data, context={"request": info.context.request}, partial=True)
         if errors := mutation_is_not_valid(serializer):
             return UpdateUser(errors=errors, ok=False)
         serializer.save()
@@ -191,8 +153,7 @@ class UpdateUser(graphene.Mutation):
 
 
 GenerateResetPasswordTokenType = generate_input_type_for_serializer(
-    'GenerateResetPasswordTokenType',
-    GenerateResetPasswordTokenSerializer
+    "GenerateResetPasswordTokenType", GenerateResetPasswordTokenSerializer
 )
 
 
@@ -211,10 +172,7 @@ class GenerateResetPasswordToken(graphene.Mutation):
         return GenerateResetPasswordToken(errors=None, ok=True)
 
 
-ResetPasswordType = generate_input_type_for_serializer(
-    'ResetPasswordType',
-    ResetPasswordSerializer
-)
+ResetPasswordType = generate_input_type_for_serializer("ResetPasswordType", ResetPasswordSerializer)
 
 
 class ResetPassword(graphene.Mutation):
@@ -233,28 +191,21 @@ class ResetPassword(graphene.Mutation):
 
 
 BulkMonitoringExpertPortfolioInputType = generate_input_type_for_serializer(
-    'BulkMonitoringExpertPortfolioInputType',
-    BulkMonitoringExpertPortfolioSerializer
+    "BulkMonitoringExpertPortfolioInputType", BulkMonitoringExpertPortfolioSerializer
 )
 
 RegionalCoordinatorPortfolioInputType = generate_input_type_for_serializer(
-    'RegionalCoordinatorPortfolioInputType',
-    RegionalCoordinatorPortfolioSerializer
+    "RegionalCoordinatorPortfolioInputType", RegionalCoordinatorPortfolioSerializer
 )
 
-AdminPortfolioInputType = generate_input_type_for_serializer(
-    'AdminPortfolioInputType',
-    AdminPortfolioSerializer
-)
+AdminPortfolioInputType = generate_input_type_for_serializer("AdminPortfolioInputType", AdminPortfolioSerializer)
 
 DirectorsOfficePortfolioInputType = generate_input_type_for_serializer(
-    'DirectorsOfficePortfolioInputType',
-    DirectorsOfficePortfolioSerializer
+    "DirectorsOfficePortfolioInputType", DirectorsOfficePortfolioSerializer
 )
 
 ReportingTeamPortfolioInputType = generate_input_type_for_serializer(
-    'ReportingTeamPortfolioInputType',
-    ReportingTeamPortfolioSerializer
+    "ReportingTeamPortfolioInputType", ReportingTeamPortfolioSerializer
 )
 
 
@@ -264,22 +215,17 @@ class CreateMonitoringExpertPortfolio(graphene.Mutation):
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.Field('apps.country.schema.MonitoringSubRegionType')
+    result = graphene.Field("apps.country.schema.MonitoringSubRegionType")
 
     @staticmethod
-    @permission_checker(['users.add_portfolio'])
+    @permission_checker(["users.add_portfolio"])
     def mutate(root, info, data):
-        serializer = BulkMonitoringExpertPortfolioSerializer(
-            data=data,
-            context={'request': info.context.request}
-        )
+        serializer = BulkMonitoringExpertPortfolioSerializer(data=data, context={"request": info.context.request})
         if errors := mutation_is_not_valid(serializer):
             return CreateMonitoringExpertPortfolio(errors=errors, ok=False)
         serializer.save()
         return CreateMonitoringExpertPortfolio(
-            result=MonitoringSubRegion.objects.get(id=data['region']),
-            errors=None,
-            ok=True
+            result=MonitoringSubRegion.objects.get(id=data["region"]), errors=None, ok=True
         )
 
 
@@ -289,34 +235,26 @@ class UpdateRegionalCoordinatorPortfolio(graphene.Mutation):
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.Field('apps.country.schema.MonitoringSubRegionType')
+    result = graphene.Field("apps.country.schema.MonitoringSubRegionType")
 
     @staticmethod
-    @permission_checker(['users.change_portfolio'])
+    @permission_checker(["users.change_portfolio"])
     def mutate(root, info, data):
         try:
             instance = Portfolio.objects.get(
-                monitoring_sub_region=data['monitoring_sub_region'],
-                role=USER_ROLE.REGIONAL_COORDINATOR
+                monitoring_sub_region=data["monitoring_sub_region"], role=USER_ROLE.REGIONAL_COORDINATOR
             )
         except Portfolio.DoesNotExist:
-            return UpdateRegionalCoordinatorPortfolio(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Portfolio does not exist.'))
-            ])
+            return UpdateRegionalCoordinatorPortfolio(
+                errors=[dict(field="nonFieldErrors", messages=gettext("Portfolio does not exist."))]
+            )
         serializer = RegionalCoordinatorPortfolioSerializer(
-            instance=instance,
-            data=data,
-            context={'request': info.context.request},
-            partial=True
+            instance=instance, data=data, context={"request": info.context.request}, partial=True
         )
         if errors := mutation_is_not_valid(serializer):
             return UpdateRegionalCoordinatorPortfolio(errors=errors, ok=False)
         instance = serializer.save()
-        return UpdateRegionalCoordinatorPortfolio(
-            result=instance.monitoring_sub_region,
-            errors=None,
-            ok=True
-        )
+        return UpdateRegionalCoordinatorPortfolio(result=instance.monitoring_sub_region, errors=None, ok=True)
 
 
 class DeletePortfolio(graphene.Mutation):
@@ -328,18 +266,16 @@ class DeletePortfolio(graphene.Mutation):
     result = graphene.Field(PortfolioType)
 
     @staticmethod
-    @permission_checker(['users.delete_portfolio'])
+    @permission_checker(["users.delete_portfolio"])
     def mutate(root, info, id):
         try:
             instance: Portfolio = Portfolio.objects.get(id=id)
         except Portfolio.DoesNotExist:
-            return DeletePortfolio(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Portfolio does not exist.'))
-            ])
+            return DeletePortfolio(errors=[dict(field="nonFieldErrors", messages=gettext("Portfolio does not exist."))])
         if not instance.user_can_alter(info.context.user):
-            return DeletePortfolio(errors=[
-                dict(field='nonFieldErrors', messages=gettext('You are not permitted to perform this action.'))
-            ])
+            return DeletePortfolio(
+                errors=[dict(field="nonFieldErrors", messages=gettext("You are not permitted to perform this action."))]
+            )
         instance.delete()
         instance.id = id
         return DeletePortfolio(result=instance, errors=None, ok=True)
@@ -354,11 +290,11 @@ class UpdateAdminPortfolio(graphene.Mutation):
     result = graphene.Field(UserType)
 
     @staticmethod
-    @permission_checker(['users.change_portfolio'])
+    @permission_checker(["users.change_portfolio"])
     def mutate(root, info, data):
         serializer = AdminPortfolioSerializer(
             data=data,
-            context={'request': info.context.request},
+            context={"request": info.context.request},
         )
         if errors := mutation_is_not_valid(serializer):
             return UpdateAdminPortfolio(errors=errors, ok=False)
@@ -375,11 +311,11 @@ class UpdateDirectorsOfficePortfolio(graphene.Mutation):
     result = graphene.Field(UserType)
 
     @staticmethod
-    @permission_checker(['users.change_portfolio'])
+    @permission_checker(["users.change_portfolio"])
     def mutate(root, info, data):
         serializer = DirectorsOfficePortfolioSerializer(
             data=data,
-            context={'request': info.context.request},
+            context={"request": info.context.request},
         )
         if errors := mutation_is_not_valid(serializer):
             return UpdateDirectorsOfficePortfolio(errors=errors, ok=False)
@@ -396,11 +332,11 @@ class UpdateReportingTeamPortfolio(graphene.Mutation):
     result = graphene.Field(UserType)
 
     @staticmethod
-    @permission_checker(['users.change_portfolio'])
+    @permission_checker(["users.change_portfolio"])
     def mutate(root, info, data):
         serializer = ReportingTeamPortfolioSerializer(
             data=data,
-            context={'request': info.context.request},
+            context={"request": info.context.request},
         )
         if errors := mutation_is_not_valid(serializer):
             return UpdateReportingTeamPortfolio(errors=errors, ok=False)
@@ -412,8 +348,10 @@ class ExportUsers(ExportBaseMutation):
     """
     Mutation to export user data based on provided filters.
     """
+
     class Arguments:
         filters = UserFilterDataInputType(required=True)
+
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.USER
 
 

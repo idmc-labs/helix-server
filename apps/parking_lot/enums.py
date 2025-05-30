@@ -1,9 +1,8 @@
-__all__ = ['ParkingLotStatusGrapheneEnum', 'ParkingLotSourceGrapheneEnum']
+__all__ = ["ParkingLotStatusGrapheneEnum", "ParkingLotSourceGrapheneEnum"]
 
 import graphene
 
 from apps.parking_lot.models import ParkedItem
-
 from utils.enums import enum_description
 
 ParkingLotStatusGrapheneEnum = graphene.Enum.from_enum(

@@ -40,4 +40,3 @@ Sex and Age Disaggregated Data (SADD) for displacement associated with conflict 
 | Age_12_17 | Represents adolescents aged 12 to 17 years. |
 | Age_18_59 | Represents adults aged 18 to 59 years. |
 | Age_60_plus | Represents the population aged 60 years and older. |
-

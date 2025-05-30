@@ -1,10 +1,10 @@
 from django.contrib import admin
 
 from apps.entry.models import (
-    FigureTag,
-    FigureLocation,
-    Figure,
     Entry,
+    Figure,
+    FigureLocation,
+    FigureTag,
 )
 
 admin.site.register(FigureTag)

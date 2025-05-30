@@ -8,44 +8,43 @@ from utils.filters import StringListFilter
 
 
 class ContextualUpdateFilter(django_filters.FilterSet):
-    article_title = django_filters.CharFilter(method='filter_article_title')
-    countries = StringListFilter(method='filter_countries')
-    sources = StringListFilter(method='filter_sources')
-    publishers = StringListFilter(method='filter_publishers')
-    crisis_types = StringListFilter(method='filter_crisis_types')
+    article_title = django_filters.CharFilter(method="filter_article_title")
+    countries = StringListFilter(method="filter_countries")
+    sources = StringListFilter(method="filter_sources")
+    publishers = StringListFilter(method="filter_publishers")
+    crisis_types = StringListFilter(method="filter_crisis_types")
 
     class Meta:
         model = ContextualUpdate
         fields = {
-            'publish_date': ['lte', 'gte'],
+            "publish_date": ["lte", "gte"],
         }
 
     def filter_article_title(self, queryset, name, value):
         if not value:
             return queryset
         # FIXME: Shouldn't 'name' be 'article_title' on line 31?
-        return queryset.annotate(
-            lname=Lower('article_title')
-        ).annotate(
-            idx=StrIndex('lname', Value(value.lower()))
-        ).filter(idx__gt=0).order_by('idx', 'name')
+        return (
+            queryset.annotate(lname=Lower("article_title"))
+            .annotate(idx=StrIndex("lname", Value(value.lower())))
+            .filter(idx__gt=0)
+            .order_by("idx", "name")
+        )
 
     def filter_m2m(self, qs, field_name, value):
         if not value:
             return qs
-        filter_param = {
-            f'{field_name}__in': value
-        }
+        filter_param = {f"{field_name}__in": value}
         return qs.filter(**filter_param).distinct()
 
     def filter_countries(self, qs, name, value):
-        return self.filter_m2m(qs, 'countries', value)
+        return self.filter_m2m(qs, "countries", value)
 
     def filter_sources(self, qs, name, value):
-        return self.filter_m2m(qs, 'sources', value)
+        return self.filter_m2m(qs, "sources", value)
 
     def filter_publishers(self, qs, name, value):
-        return self.filter_m2m(qs, 'publishers', value)
+        return self.filter_m2m(qs, "publishers", value)
 
     def filter_crisis_types(self, qs, name, value):
         if value:

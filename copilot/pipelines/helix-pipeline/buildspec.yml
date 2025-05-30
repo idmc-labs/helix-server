@@ -4,6 +4,7 @@ version: 0.2
 env:
   variables:
     region: us-east-1
+    DOCKER_BUILDKIT: 1
   parameter-store:
     DOCKER_USERNAME: DOCKER_USERNAME
     DOCKER_PASSWORD: DOCKER_PASSWORD
@@ -11,8 +12,7 @@ env:
 phases:
   install:
     runtime-versions:
-      docker: 20
-      ruby: 3.1
+      ruby: 3.3.4
 
     commands:
       - echo "cd into $CODEBUILD_SRC_DIR"
@@ -34,7 +34,7 @@ phases:
       - aws --version
       - aws ecr get-login-password --region $region | docker login --username AWS --password-stdin $DOCKER_IMAGE_SERVER_DOMAIN
       - docker pull $DOCKER_IMAGE_SERVER || true
-      - docker build -t $DOCKER_IMAGE_SERVER --cache-from $DOCKER_IMAGE_SERVER -f worker.Dockerfile .
+      - docker build -t $DOCKER_IMAGE_SERVER --cache-from $DOCKER_IMAGE_SERVER --target worker .
       - echo "[Server] Running tests"
       - |
           docker-compose -f gh-docker-compose.yml run --rm server bash -c 'wait-for-it db:5432 && ./manage.py graphql_schema --out schema-latest.graphql' &&

@@ -55,4 +55,3 @@ This dataset provides contextual information and analysis documented by IDMC ana
 | Description             | Provides contextual information about the data, including sources and data limitations. It is essential for representing the analysis conducted by IDMC analysts. This field also details the methodology used, descriptions of sources, and outlines any caveats and challenges identified with the displacement figures reported. |
 | Figures                 | Represents the total number of internal displacements or IDPs. For internal displacements, units are recorded as 'internal displacement flows' or 'internal displacement movements'. For the total number of IDPs, units reflect the total number of people living in displacement. |
 | Figures rounded         | Displays rounded figures to provide a simplified view of the data that matches the figures reported in the Global Report on Internal Displacement (GRID). |
-

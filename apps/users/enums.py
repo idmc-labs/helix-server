@@ -1,9 +1,9 @@
-__all__ = ['PermissionRoleEnum', 'PermissionActionEnum', 'PermissionModelEnum']
+__all__ = ["PermissionRoleEnum", "PermissionActionEnum", "PermissionModelEnum"]
 
 import graphene
-
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
+
 from utils.enums import enum_description
 
 
@@ -22,18 +22,18 @@ class PERMISSION_ACTION(enum.Enum):
     update_release_meta_data = 11
 
     __labels__ = {
-        add: _('Add'),
-        change: _('Change'),
-        delete: _('Delete'),
-        sign_off: _('Sign Off'),
-        approve: _('Approve'),
-        assign: _('Assign'),
-        self_assign: _('Self assign'),
-        clear_assignee: _('Clear assignee'),
-        clear_self_assignee: _('Clear self assignee'),
-        update_pfa_visibility: _('Update public figure visibility in GIDD'),
-        update_gidd_data: _('Update GIDD data'),
-        update_release_meta_data: _('Update release meta data'),
+        add: _("Add"),
+        change: _("Change"),
+        delete: _("Delete"),
+        sign_off: _("Sign Off"),
+        approve: _("Approve"),
+        assign: _("Assign"),
+        self_assign: _("Self assign"),
+        clear_assignee: _("Clear assignee"),
+        clear_self_assignee: _("Clear self assignee"),
+        update_pfa_visibility: _("Update public figure visibility in GIDD"),
+        update_gidd_data: _("Update GIDD data"),
+        update_release_meta_data: _("Update release meta data"),
     }
 
 
@@ -64,30 +64,30 @@ class PERMISSION_ENTITY(enum.Enum):
     figuretag = 23
 
     __labels__ = {
-        crisis: _('Crisis'),
-        event: _('Event'),
-        entry: _('Entry'),
-        organization: _('Organization'),
-        organizationkind: _('Organization Kind'),
-        contact: _('Contact'),
-        communication: _('Communication'),
-        figure: _('Figure'),
-        summary: _('Summary'),
-        contextualanalysis: _('Contextual Analysis'),
-        resource: _('Resource'),
-        user: _('User'),
-        review: _('Review'),
-        reviewcomment: _('Review Comment'),
-        actor: _('Actor'),
-        parkeditem: _('Parked Item'),
-        contextualupdate: _('Contextual Update'),
-        report: _('Report'),
-        reportcomment: _('Report Comment'),
-        portfolio: _('Portfolio'),
-        contextofviolence: _('Context of violence'),
-        gidd: _('GIDD'),
-        client: _('Client'),
-        figuretag: _('Figure Tag'),
+        crisis: _("Crisis"),
+        event: _("Event"),
+        entry: _("Entry"),
+        organization: _("Organization"),
+        organizationkind: _("Organization Kind"),
+        contact: _("Contact"),
+        communication: _("Communication"),
+        figure: _("Figure"),
+        summary: _("Summary"),
+        contextualanalysis: _("Contextual Analysis"),
+        resource: _("Resource"),
+        user: _("User"),
+        review: _("Review"),
+        reviewcomment: _("Review Comment"),
+        actor: _("Actor"),
+        parkeditem: _("Parked Item"),
+        contextualupdate: _("Contextual Update"),
+        report: _("Report"),
+        reportcomment: _("Report Comment"),
+        portfolio: _("Portfolio"),
+        contextofviolence: _("Context of violence"),
+        gidd: _("GIDD"),
+        client: _("Client"),
+        figuretag: _("Figure Tag"),
     }
 
 
@@ -102,10 +102,10 @@ class USER_ROLE(enum.Enum):
     REPORTING_TEAM = 5
 
     __labels__ = {
-        ADMIN: _('Admin'),
-        MONITORING_EXPERT: _('Monitoring Expert'),
-        REGIONAL_COORDINATOR: _('Regional Coordinator'),
-        GUEST: _('Guest'),
+        ADMIN: _("Admin"),
+        MONITORING_EXPERT: _("Monitoring Expert"),
+        REGIONAL_COORDINATOR: _("Regional Coordinator"),
+        GUEST: _("Guest"),
         DIRECTORS_OFFICE: _("Director's office"),
         REPORTING_TEAM: _("Reporting Team"),
     }
@@ -115,8 +115,4 @@ PermissionActionEnum = graphene.Enum.from_enum(PERMISSION_ACTION, description=en
 PermissionModelEnum = graphene.Enum.from_enum(PERMISSION_ENTITY, description=enum_description)
 PermissionRoleEnum = graphene.Enum.from_enum(USER_ROLE, description=enum_description)
 
-enum_map = dict(
-    PERMISSION_ENTITY=PermissionModelEnum,
-    PERMISSION_ACTION=PermissionActionEnum,
-    USER_ROLE=PermissionRoleEnum
-)
+enum_map = dict(PERMISSION_ENTITY=PermissionModelEnum, PERMISSION_ACTION=PermissionActionEnum, USER_ROLE=PermissionRoleEnum)

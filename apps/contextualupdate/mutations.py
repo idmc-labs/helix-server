@@ -1,10 +1,10 @@
 import graphene
 from django.utils.translation import gettext
 
-from apps.crisis.enums import CrisisTypeGrapheneEnum
 from apps.contextualupdate.models import ContextualUpdate
 from apps.contextualupdate.schema import ContextualUpdateType
 from apps.contextualupdate.serializers import ContextualUpdateSerializer
+from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.permissions import permission_checker
 
@@ -23,14 +23,12 @@ class ContextualUpdateInputMixin:
     crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
 
 
-class ContextualUpdateCreateInputType(ContextualUpdateInputMixin,
-                                      graphene.InputObjectType):
+class ContextualUpdateCreateInputType(ContextualUpdateInputMixin, graphene.InputObjectType):
     url = graphene.String()
     document = graphene.ID()
 
 
-class ContextualUpdateUpdateInputType(ContextualUpdateInputMixin,
-                                      graphene.InputObjectType):
+class ContextualUpdateUpdateInputType(ContextualUpdateInputMixin, graphene.InputObjectType):
     id = graphene.ID(required=True)
 
 
@@ -43,7 +41,7 @@ class CreateContextualUpdate(graphene.Mutation):
     result = graphene.Field(ContextualUpdateType)
 
     @staticmethod
-    @permission_checker(['contextualupdate.add_contextualupdate'])
+    @permission_checker(["contextualupdate.add_contextualupdate"])
     def mutate(root, info, data):
         serializer = ContextualUpdateSerializer(data=data, context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
@@ -61,16 +59,17 @@ class UpdateContextualUpdate(graphene.Mutation):
     result = graphene.Field(ContextualUpdateType)
 
     @staticmethod
-    @permission_checker(['contextualupdate.change_contextualupdate'])
+    @permission_checker(["contextualupdate.change_contextualupdate"])
     def mutate(root, info, data):
         try:
-            instance = ContextualUpdate.objects.get(id=data['id'])
+            instance = ContextualUpdate.objects.get(id=data["id"])
         except ContextualUpdate.DoesNotExist:
-            return UpdateContextualUpdate(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Contextual update does not exist.'))
-            ])
-        serializer = ContextualUpdateSerializer(instance=instance, data=data, partial=True,
-                                                context=dict(request=info.context.request))
+            return UpdateContextualUpdate(
+                errors=[dict(field="nonFieldErrors", messages=gettext("Contextual update does not exist."))]
+            )
+        serializer = ContextualUpdateSerializer(
+            instance=instance, data=data, partial=True, context=dict(request=info.context.request)
+        )
         if errors := mutation_is_not_valid(serializer):
             return UpdateContextualUpdate(errors=errors, ok=False)
         instance = serializer.save()
@@ -86,14 +85,14 @@ class DeleteContextualUpdate(graphene.Mutation):
     result = graphene.Field(ContextualUpdateType)
 
     @staticmethod
-    @permission_checker(['contextualupdate.delete_contextualupdate'])
+    @permission_checker(["contextualupdate.delete_contextualupdate"])
     def mutate(root, info, id):
         try:
             instance = ContextualUpdate.objects.get(id=id)
         except ContextualUpdate.DoesNotExist:
-            return DeleteContextualUpdate(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Contextual update does not exist.'))
-            ])
+            return DeleteContextualUpdate(
+                errors=[dict(field="nonFieldErrors", messages=gettext("Contextual update does not exist."))]
+            )
         instance.delete()
         instance.id = id
         return DeleteContextualUpdate(result=instance, errors=None, ok=True)

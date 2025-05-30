@@ -1,6 +1,6 @@
 <h2 id="introduction">Introduction</h2>
 
-The Internal Displacement Monitoring Centre (IDMC) offers APIs that provide direct access to its primary data products: the **Global Internal Displacement Database (GIDD)** and the **Internal Displacement Updates (IDU)**. 
+The Internal Displacement Monitoring Centre (IDMC) offers APIs that provide direct access to its primary data products: the **Global Internal Displacement Database (GIDD)** and the **Internal Displacement Updates (IDU)**.
 Through the API, users can retrieve datasets that include annual estimates, event-level data, and geospatial disaggregation. This documentation outlines how to access the API, retrieve data, and understand its structure and limitations. It also provides technical guidance on embedding widgets, using geospatial data, and integrating IDMC’s datasets into your workflows. For questions or technical issues contact [ch.datainfo@idmc.ch](mailto:ch.datainfo@idmc.ch).
 
 ### Table of Contents
@@ -96,7 +96,7 @@ To integrate a widget, include the provided HTML snippet into your webpage.
 <div class="container">
     <iframe
         src="https://release-website-components.idmcdb.org/?page=conflict-widget&iso3=AFG&clientCode=YOUR_API_KEY"
-        title="Conflict Widget for Afghanistan" 
+        title="Conflict Widget for Afghanistan"
         allowfullscreen
         width="100%"
         height="640px"

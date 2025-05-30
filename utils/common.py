@@ -1,24 +1,24 @@
 import datetime
+import decimal
+import functools
+import logging
+import re
+import tempfile
 import traceback
 import typing
-import functools
-import re
-import decimal
-import tempfile
-import logging
 from datetime import timedelta
+from xml.sax.saxutils import escape as xml_escape
 
 from django.conf import settings
-from rest_framework.exceptions import PermissionDenied
 from drf_spectacular.types import OpenApiTypes
-from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import viewsets
+from rest_framework.exceptions import PermissionDenied
 
+from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
+from apps.contrib.redis_client_track import track_client
 from helix import redis
 from helix.caches import external_api_cache
-from apps.contrib.redis_client_track import track_client
-from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
-
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,6 @@ def add_clone_prefix(sentence):
 
 
 def is_grid_or_myu_report(start_date, end_date):
-
     def is_last_day_of_year(date):
         if not date:
             return False
@@ -80,12 +79,13 @@ def is_grid_or_myu_report(start_date, end_date):
             return False
         return date.month == 6 and date.day == 30
 
-    is_grid_report = (is_first_day_of_year(
-        start_date) and is_last_day_of_year(end_date) and is_year_equal(start_date, end_date)
+    is_grid_report = (
+        is_first_day_of_year(start_date) and is_last_day_of_year(end_date) and is_year_equal(start_date, end_date)
     )
     is_ymu_report = (
-        is_first_day_of_year(start_date) and is_last_day_of_sixth_month_in_year(end_date) and
-        is_year_equal(start_date, end_date)
+        is_first_day_of_year(start_date)
+        and is_last_day_of_sixth_month_in_year(end_date)
+        and is_year_equal(start_date, end_date)
     )
     return is_ymu_report or is_grid_report
 
@@ -109,24 +109,27 @@ def redis_lock(lock_key, timeout=60 * 60 * 4):
     """
     Default Lock lifetime 4 hours
     """
+
     def _dec(func):
         def _caller(*args, **kwargs):
             key = lock_key.format(*args, **kwargs)
             lock = redis.get_lock(key, timeout)
             have_lock = lock.acquire(blocking=False)
             if not have_lock:
-                logger.warning(f'Unable to get lock for {key}(ttl: {get_redis_lock_ttl(lock)})')
+                logger.warning(f"Unable to get lock for {key}(ttl: {get_redis_lock_ttl(lock)})")
                 return False
             try:
                 return_value = func(*args, **kwargs) or True
             except Exception:
-                logger.error('{}.{}'.format(func.__module__, func.__name__), exc_info=True)
+                logger.error("{}.{}".format(func.__module__, func.__name__), exc_info=True)
                 return_value = False
             lock.release()
             return return_value
+
         _caller.__name__ = func.__name__
         _caller.__module__ = func.__module__
         return _caller
+
     return _dec
 
 
@@ -134,12 +137,7 @@ def round_half_up(float_value):
     """
     Returns rounded half upper value, eg 2.5 rounds to 3.0
     """
-    return float(
-        decimal.Decimal(float_value).quantize(
-            0,
-            rounding=decimal.ROUND_HALF_UP
-        )
-    )
+    return float(decimal.Decimal(float_value).quantize(0, rounding=decimal.ROUND_HALF_UP))
 
 
 def round_and_remove_zero(num):
@@ -163,12 +161,12 @@ def track_gidd(client_id, endpoint_type, viewset: viewsets.GenericViewSet = None
         # Skip check for swagger view
         return
 
-    if client_id not in external_api_cache.get('client_ids', []):
-        raise PermissionDenied('Client is not registered.')
+    if client_id not in external_api_cache.get("client_ids", []):
+        raise PermissionDenied("Client is not registered.")
 
     client = Client.objects.filter(code=client_id).first()
     if not client.is_active:
-        raise PermissionDenied('Client is deactivated.')
+        raise PermissionDenied("Client is deactivated.")
 
     # Track client
     track_client(
@@ -181,7 +179,7 @@ class RuntimeProfile:
     label: str
     start: typing.Optional[datetime.datetime]
 
-    def __init__(self, label: str = 'N/A'):
+    def __init__(self, label: str = "N/A"):
         self.label = label
         self.start = None
 
@@ -192,6 +190,7 @@ class RuntimeProfile:
         def decorated(*args, **kwargs):
             with self:
                 return func(*args, **kwargs)
+
         return decorated
 
     def __enter__(self):
@@ -200,7 +199,7 @@ class RuntimeProfile:
     def __exit__(self, exc_type, exc_value, exc_traceback):
         assert self.start is not None
         time_delta = datetime.datetime.now() - self.start
-        logger.info(f'Runtime with <{self.label}>: {time_delta}')
+        logger.info(f"Runtime with <{self.label}>: {time_delta}")
 
 
 def return_error_as_string(func):
@@ -209,8 +208,27 @@ def return_error_as_string(func):
             return func(*args, **kwargs)
         except Exception:
             return traceback.format_exc()
+
     _wrapper.__name__ = func.__name__
     return _wrapper
+
+
+def is_valid_xml_char_ordinal(c):
+    codepoint = ord(c)
+    # conditions ordered by presumed frequency
+    return (
+        0x20 <= codepoint <= 0xD7FF
+        or codepoint in (0x9, 0xA, 0xD)
+        or 0xE000 <= codepoint <= 0xFFFD
+        or 0x10000 <= codepoint <= 0x10FFFF
+    )
+
+
+def get_valid_xml_string(string, escape=True):
+    if string:
+        s = xml_escape(string) if escape else string
+        return "".join(c for c in s if is_valid_xml_char_ordinal(c))
+    return ""
 
 
 client_id = extend_schema(

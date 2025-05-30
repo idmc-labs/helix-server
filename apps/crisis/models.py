@@ -5,17 +5,17 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
-from apps.contrib.models import MetaInformationAbstractModel
-from apps.contrib.commons import DATE_ACCURACY
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
+from apps.contrib.commons import DATE_ACCURACY
+from apps.contrib.models import MetaInformationAbstractModel
 from apps.users.models import User
 
 
 class Crisis(MetaInformationAbstractModel, models.Model):
     # NOTE figure disaggregation variable definitions
-    ND_FIGURES_ANNOTATE = 'total_flow_nd_figures'
-    IDP_FIGURES_ANNOTATE = 'total_stock_idp_figures'
-    IDP_FIGURES_REFERENCE_DATE_ANNOTATE = 'idp_figures_reference_date'
+    ND_FIGURES_ANNOTATE = "total_flow_nd_figures"
+    IDP_FIGURES_ANNOTATE = "total_stock_idp_figures"
+    IDP_FIGURES_REFERENCE_DATE_ANNOTATE = "idp_figures_reference_date"
 
     class CRISIS_TYPE(enum.Enum):
         CONFLICT = 0
@@ -28,23 +28,22 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             OTHER: _("Other"),
         }
 
-    name = models.CharField(verbose_name=_('Name'), max_length=256)
-    crisis_type = enum.EnumField(CRISIS_TYPE, verbose_name=_('Cause'))
-    crisis_narrative = models.TextField(_('Crisis Narrative/Summary'))
-    countries = models.ManyToManyField('country.Country', verbose_name=_('Countries'),
-                                       related_name='crises')
-    start_date = models.DateField(verbose_name=_('Start Date'), blank=True, null=True)
+    name = models.CharField(verbose_name=_("Name"), max_length=256)
+    crisis_type = enum.EnumField(CRISIS_TYPE, verbose_name=_("Cause"))
+    crisis_narrative = models.TextField(_("Crisis Narrative/Summary"))
+    countries = models.ManyToManyField("country.Country", verbose_name=_("Countries"), related_name="crises")
+    start_date = models.DateField(verbose_name=_("Start Date"), blank=True, null=True)
     start_date_accuracy = enum.EnumField(
         DATE_ACCURACY,
-        verbose_name=_('Start Date Accuracy'),
+        verbose_name=_("Start Date Accuracy"),
         default=DATE_ACCURACY.DAY,
         blank=True,
         null=True,
     )
-    end_date = models.DateField(verbose_name=_('End Date'), blank=True, null=True)
+    end_date = models.DateField(verbose_name=_("End Date"), blank=True, null=True)
     end_date_accuracy = enum.EnumField(
         DATE_ACCURACY,
-        verbose_name=_('End date accuracy'),
+        verbose_name=_("End date accuracy"),
         default=DATE_ACCURACY.DAY,
         blank=True,
         null=True,
@@ -53,6 +52,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None, reference_date=None):
         from apps.entry.models import Figure
+
         figures = figures or Figure.objects.all()
 
         if reference_date is None:
@@ -60,8 +60,10 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                 figures.filter(
                     category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
                     role=Figure.ROLE.RECOMMENDED,
-                    event__crisis=models.OuterRef('pk'),
-                ).order_by('-end_date').values('end_date')[:1]
+                    event__crisis=models.OuterRef("pk"),
+                )
+                .order_by("-end_date")
+                .values("end_date")[:1]
             )
         else:
             reference_date_qs = models.Value(reference_date)
@@ -71,29 +73,33 @@ class Crisis(MetaInformationAbstractModel, models.Model):
             cls.ND_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_nd_figures(
                     figures.filter(
-                        event__crisis=models.OuterRef('pk'),
+                        event__crisis=models.OuterRef("pk"),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     # TODO: what about date range
                     start_date=None,
                     end_date=None,
-                ).order_by().values('event__crisis').annotate(
-                    _total=models.Sum('total_figures')
-                ).values('_total')[:1],
-                output_field=models.IntegerField()
+                )
+                .order_by()
+                .values("event__crisis")
+                .annotate(_total=models.Sum("total_figures"))
+                .values("_total")[:1],
+                output_field=models.IntegerField(),
             ),
             cls.IDP_FIGURES_ANNOTATE: models.Subquery(
                 Figure.filtered_idp_figures(
                     figures.filter(
-                        event__crisis=models.OuterRef('pk'),
+                        event__crisis=models.OuterRef("pk"),
                         role=Figure.ROLE.RECOMMENDED,
                     ),
                     start_date=None,
                     end_date=models.OuterRef(cls.IDP_FIGURES_REFERENCE_DATE_ANNOTATE),
-                ).order_by().values('event__crisis').annotate(
-                    _total=models.Sum('total_figures')
-                ).values('_total')[:1],
-                output_field=models.IntegerField()
+                )
+                .order_by()
+                .values("event__crisis")
+                .annotate(_total=models.Sum("total_figures"))
+                .values("_total")[:1],
+                output_field=models.IntegerField(),
             ),
         }
 
@@ -106,55 +112,59 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                 self.user = user
 
         headers = OrderedDict(
-            id='ID',
-            created_at='Created at',
-            created_by__full_name='Created by',
-            name='Name',
-            start_date='Start date',
-            start_date_accuracy='Start date accuracy',
-            end_date='End date',
-            end_date_accuracy='End date accuracy',
-            crisis_type='Cause',
-            countries_iso3='ISO3s',
-            countries_name='Countries',
-            regions_name='Regions',
-            events_count='Events count',
-            figures_count='Figures count',
-            min_event_start='Earliest event start',
-            max_event_end='Latest event end',
+            id="ID",
+            created_at="Created at",
+            created_by__full_name="Created by",
+            name="Name",
+            start_date="Start date",
+            start_date_accuracy="Start date accuracy",
+            end_date="End date",
+            end_date_accuracy="End date accuracy",
+            crisis_type="Cause",
+            countries_iso3="ISO3s",
+            countries_name="Countries",
+            regions_name="Regions",
+            events_count="Events count",
+            figures_count="Figures count",
+            min_event_start="Earliest event start",
+            max_event_end="Latest event end",
             **{
-                cls.IDP_FIGURES_ANNOTATE: 'IDPs figure',
-                cls.ND_FIGURES_ANNOTATE: 'ND figure',
+                cls.IDP_FIGURES_ANNOTATE: "IDPs figure",
+                cls.ND_FIGURES_ANNOTATE: "ND figure",
             },
         )
-        data = CrisisFilter(
-            data=filters,
-            request=DummyRequest(user=User.objects.get(id=user_id)),
-        ).qs.annotate(
-            countries_iso3=StringAgg('countries__iso3', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
-            countries_name=StringAgg('countries__idmc_short_name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
-            regions_name=StringAgg('countries__region__name', EXTERNAL_ARRAY_SEPARATOR, distinct=True),
-            events_count=models.Count('events', distinct=True),
-            min_event_start=models.Min('events__start_date'),
-            max_event_end=models.Max('events__end_date'),
-            figures_count=models.Count('events__figures', distinct=True),
-        ).order_by('created_at')
+        data = (
+            CrisisFilter(
+                data=filters,
+                request=DummyRequest(user=User.objects.get(id=user_id)),
+            )
+            .qs.annotate(
+                countries_iso3=StringAgg("countries__iso3", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+                countries_name=StringAgg("countries__idmc_short_name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+                regions_name=StringAgg("countries__region__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+                events_count=models.Count("events", distinct=True),
+                min_event_start=models.Min("events__start_date"),
+                max_event_end=models.Max("events__end_date"),
+                figures_count=models.Count("events__figures", distinct=True),
+            )
+            .order_by("created_at")
+        )
 
         def transformer(datum):
             return {
                 **datum,
                 **dict(
-                    start_date_accuracy=getattr(DATE_ACCURACY.get(datum['start_date_accuracy']), 'label', ''),
-                    end_date_accuracy=getattr(DATE_ACCURACY.get(datum['end_date_accuracy']), 'label', ''),
-                    crisis_type=getattr(Crisis.CRISIS_TYPE.get(datum['crisis_type']), 'label', ''),
-                )
+                    start_date_accuracy=getattr(DATE_ACCURACY.get(datum["start_date_accuracy"]), "label", ""),
+                    end_date_accuracy=getattr(DATE_ACCURACY.get(datum["end_date_accuracy"]), "label", ""),
+                    crisis_type=getattr(Crisis.CRISIS_TYPE.get(datum["crisis_type"]), "label", ""),
+                ),
             }
 
         return {
-            'headers': headers,
-            'data': data.values(*[header for header in headers.keys()]),
-            'formulae': None,
-            'transformer': transformer,
+            "headers": headers,
+            "data": data.values(*[header for header in headers.keys()]),
+            "formulae": None,
+            "transformer": transformer,
         }
 
     # dunders
@@ -167,60 +177,59 @@ class Crisis(MetaInformationAbstractModel, models.Model):
         from apps.entry.models import Figure
 
         return {
-            'review_not_started_count': models.Count(
-                'events__figures',
+            "review_not_started_count": models.Count(
+                "events__figures",
                 filter=models.Q(
                     events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
                     events__figures__role=Figure.ROLE.RECOMMENDED,
-                ) | models.Q(
+                )
+                | models.Q(
                     events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_NOT_STARTED,
                     events__include_triangulation_in_qa=True,
-                )
-            ),
-            'review_in_progress_count': models.Count(
-                'events__figures',
-                filter=models.Q(
-                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
-                    events__figures__role=Figure.ROLE.RECOMMENDED,
-                ) | models.Q(
-                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
-                    events__include_triangulation_in_qa=True,
-                )
-
-            ),
-            'review_re_request_count': models.Count(
-                'events__figures',
-                filter=models.Q(
-                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
-                    events__figures__role=Figure.ROLE.RECOMMENDED,
-                ) | models.Q(
-                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
-                    events__include_triangulation_in_qa=True,
-                )
-
-            ),
-            'review_approved_count': models.Count(
-                'events__figures',
-                filter=models.Q(
-                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
-                    events__figures__role=Figure.ROLE.RECOMMENDED,
-                ) | models.Q(
-                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
-                    events__include_triangulation_in_qa=True,
-                )
-            ),
-            'total_count': (
-                models.F('review_not_started_count') +
-                models.F('review_in_progress_count') +
-                models.F('review_re_request_count') +
-                models.F('review_approved_count')
-            ),
-            'progress': models.Case(
-                models.When(
-                    total_count__gt=0,
-                    then=models.F('review_approved_count') / models.F('total_count')
                 ),
+            ),
+            "review_in_progress_count": models.Count(
+                "events__figures",
+                filter=models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
+                    events__figures__role=Figure.ROLE.RECOMMENDED,
+                )
+                | models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_IN_PROGRESS,
+                    events__include_triangulation_in_qa=True,
+                ),
+            ),
+            "review_re_request_count": models.Count(
+                "events__figures",
+                filter=models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
+                    events__figures__role=Figure.ROLE.RECOMMENDED,
+                )
+                | models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.REVIEW_RE_REQUESTED,
+                    events__include_triangulation_in_qa=True,
+                ),
+            ),
+            "review_approved_count": models.Count(
+                "events__figures",
+                filter=models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
+                    events__figures__role=Figure.ROLE.RECOMMENDED,
+                )
+                | models.Q(
+                    events__figures__review_status=Figure.FIGURE_REVIEW_STATUS.APPROVED,
+                    events__include_triangulation_in_qa=True,
+                ),
+            ),
+            "total_count": (
+                models.F("review_not_started_count")
+                + models.F("review_in_progress_count")
+                + models.F("review_re_request_count")
+                + models.F("review_approved_count")
+            ),
+            "progress": models.Case(
+                models.When(total_count__gt=0, then=models.F("review_approved_count") / models.F("total_count")),
                 default=models.Value(0),
-                output_field=models.FloatField()
-            )
+                output_field=models.FloatField(),
+            ),
         }

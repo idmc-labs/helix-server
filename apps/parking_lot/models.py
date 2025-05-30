@@ -1,9 +1,11 @@
 from collections import OrderedDict
+
+from django.contrib.auth import get_user_model
 from django.db import models
+from django.db.models import JSONField
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
-from django.db.models import JSONField
-from django.contrib.auth import get_user_model
+
 from apps.contrib.models import MetaInformationAbstractModel
 
 User = get_user_model()
@@ -16,9 +18,9 @@ class ParkedItem(MetaInformationAbstractModel):
         ON_GOING = 2
 
         __labels__ = {
-            TO_BE_REVIEWED: _('To be reviewed'),
-            REVIEWED: _('Reviewed'),
-            ON_GOING: _('On going'),
+            TO_BE_REVIEWED: _("To be reviewed"),
+            REVIEWED: _("Reviewed"),
+            ON_GOING: _("On going"),
         }
 
     class PARKING_LOT_SOURCE(enum.Enum):
@@ -26,38 +28,34 @@ class ParkedItem(MetaInformationAbstractModel):
         HAZARD_MONITORING = 1
         ACLED = 2
 
-        __labels__ = {
-            IDETECT: _('Idetect'),
-            HAZARD_MONITORING: _('Hazard Monitoring'),
-            ACLED: _('Acled')
-        }
+        __labels__ = {IDETECT: _("Idetect"), HAZARD_MONITORING: _("Hazard Monitoring"), ACLED: _("Acled")}
 
     country = models.ForeignKey(
-        'country.Country',
-        verbose_name=_('Country'),
-        related_name='parked_items',
+        "country.Country",
+        verbose_name=_("Country"),
+        related_name="parked_items",
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
     )
-    title = models.TextField(verbose_name=_('Title'))
-    url = models.URLField(verbose_name=_('URL'), max_length=2000)
-    assigned_to = models.ForeignKey('users.User', verbose_name=_('Assigned To'),
-                                    related_name='assigned_parked_items',
-                                    on_delete=models.SET_NULL,
-                                    blank=True, null=True)
-    status = enum.EnumField(PARKING_LOT_STATUS, verbose_name=_('Status'),
-                            default=PARKING_LOT_STATUS.TO_BE_REVIEWED)
-    comments = models.TextField(verbose_name=_('Comments'),
-                                blank=True, null=True)
-    source = enum.EnumField(PARKING_LOT_SOURCE, verbose_name=_('Source'),
-                            blank=True, null=True)
-    source_uuid = models.CharField(verbose_name=_('Source Uuid'),
-                                   max_length=255, blank=True, null=True)
+    title = models.TextField(verbose_name=_("Title"))
+    url = models.URLField(verbose_name=_("URL"), max_length=2000)
+    assigned_to = models.ForeignKey(
+        "users.User",
+        verbose_name=_("Assigned To"),
+        related_name="assigned_parked_items",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+    )
+    status = enum.EnumField(PARKING_LOT_STATUS, verbose_name=_("Status"), default=PARKING_LOT_STATUS.TO_BE_REVIEWED)
+    comments = models.TextField(verbose_name=_("Comments"), blank=True, null=True)
+    source = enum.EnumField(PARKING_LOT_SOURCE, verbose_name=_("Source"), blank=True, null=True)
+    source_uuid = models.CharField(verbose_name=_("Source Uuid"), max_length=255, blank=True, null=True)
     meta_data = JSONField(blank=True, null=True, default=None)
 
     def __str__(self):
-        return f'{self.country.name} - {self.title}'
+        return f"{self.country.name} - {self.title}"
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
@@ -75,38 +73,31 @@ class ParkedItem(MetaInformationAbstractModel):
 
     @classmethod
     def get_parking_lot_excel_sheets_data(cls, parking_lot: models.QuerySet):
-
         headers = OrderedDict(
-            id='ID',
-            created_at='Date Created',
-            created_by__full_name='Created by',
-            assigned_to__full_name='Assignee',
-            title='Title',
-            status='Status',
-            url='Url',
-            comments='Comments',
+            id="ID",
+            created_at="Date Created",
+            created_by__full_name="Created by",
+            assigned_to__full_name="Assignee",
+            title="Title",
+            status="Status",
+            url="Url",
+            comments="Comments",
         )
         values = parking_lot.order_by(
-            'created_at',
+            "created_at",
         ).values(*[header for header in headers.keys()])
 
         def transformer(datum):
-
             def get_enum_label(key, Enum):
                 val = datum[key]
                 obj = Enum.get(val)
                 return getattr(obj, "label", val)
 
-            return {
-                **datum,
-                'status': get_enum_label(
-                    'status', ParkedItem.PARKING_LOT_STATUS
-                )
-            }
+            return {**datum, "status": get_enum_label("status", ParkedItem.PARKING_LOT_STATUS)}
 
         return {
-            'headers': headers,
-            'data': values,
-            'formulae': None,
-            'transformer': transformer,
+            "headers": headers,
+            "data": values,
+            "formulae": None,
+            "transformer": transformer,
         }

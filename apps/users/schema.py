@@ -1,31 +1,31 @@
 from typing import Union
 
+import graphene
 from django.contrib.auth import get_user_model
 from django.db.models import Model
-import graphene
 from graphene import Field, ObjectType
 from graphene.types.generic import GenericScalar
 from graphene.types.utils import get_type
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
-from utils.graphene.enums import EnumDescription
 
-from utils.graphene.types import CustomDjangoListObjectType
+from apps.users.filters import PortfolioFilter, UserFilter
+from apps.users.models import Portfolio
+from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
-from apps.users.filters import UserFilter, PortfolioFilter
-from apps.users.models import Portfolio
+from utils.graphene.types import CustomDjangoListObjectType
 
 from .enums import PermissionActionEnum, PermissionModelEnum, PermissionRoleEnum
 
 User: Model = get_user_model()
 
-EntryListType: ObjectType = get_type('apps.entry.schema.EntryListType')
+EntryListType: ObjectType = get_type("apps.entry.schema.EntryListType")
 
 
 class PermissionsType(ObjectType):
     action = Field(PermissionActionEnum, required=True)
-    action_display = EnumDescription(source='get_action_display')
+    action_display = EnumDescription(source="get_action_display")
     entities = graphene.List(graphene.NonNull(PermissionModelEnum), required=True)
 
 
@@ -34,7 +34,7 @@ class PortfolioType(DjangoObjectType):
         model = Portfolio
 
     role = Field(PermissionRoleEnum, required=True)
-    role_display = EnumDescription(source='get_role_display')
+    role_display = EnumDescription(source="get_role_display")
     permissions = graphene.List(graphene.NonNull(PermissionsType))
 
 
@@ -56,17 +56,23 @@ class UserType(DjangoObjectType):
     class Meta:
         model = User
         fields = (
-            'created_entry', 'date_joined', 'email', 'first_name', 'last_name',
-            'full_name', 'id', 'is_active', 'last_login', 'username'
+            "created_entry",
+            "date_joined",
+            "email",
+            "first_name",
+            "last_name",
+            "full_name",
+            "id",
+            "is_active",
+            "last_login",
+            "username",
         )
 
     created_entry = DjangoPaginatedListObjectField(
         EntryListType,
-        pagination=PageGraphqlPaginationWithoutCount(
-            page_size_query_param='pageSize'
-        ),
-        related_name='created_entry',
-        reverse_related_name='created_by',
+        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
+        related_name="created_entry",
+        reverse_related_name="created_by",
     )
     full_name = Field(graphene.String, required=True)
     email = graphene.String()
@@ -90,7 +96,7 @@ class UserType(DjangoObjectType):
 
     @staticmethod
     def resolve_portfolios(root, info, **_):
-        return Portfolio.objects.filter(user=root.id).select_related('monitoring_sub_region')
+        return Portfolio.objects.filter(user=root.id).select_related("monitoring_sub_region")
 
 
 class UserListType(CustomDjangoListObjectType):
@@ -102,14 +108,12 @@ class UserListType(CustomDjangoListObjectType):
 class Query(object):
     me = Field(UserType)
     user = DjangoObjectField(UserType)
-    users = DjangoPaginatedListObjectField(UserListType,
-                                           pagination=PageGraphqlPaginationWithoutCount(
-                                               page_size_query_param='pageSize'
-                                           ))
-    portfolios = DjangoPaginatedListObjectField(PortfolioListType,
-                                                pagination=PageGraphqlPaginationWithoutCount(
-                                                    page_size_query_param='pageSize'
-                                                ))
+    users = DjangoPaginatedListObjectField(
+        UserListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
+    )
+    portfolios = DjangoPaginatedListObjectField(
+        PortfolioListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
+    )
     role_with_region_allowed_map = Field(GenericScalar)
 
     @staticmethod

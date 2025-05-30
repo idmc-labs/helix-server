@@ -1,16 +1,17 @@
 import typing
-import graphene
-import django_filters
 from functools import partial
+
+import django_filters
+import graphene
 from django import forms
-from django.db.models.functions import Lower, StrIndex
 from django.db.models import Value
+from django.db.models.functions import Lower, StrIndex
 from django.db.models.query import QuerySet
 from graphene.types.generic import GenericScalar
-from graphene_django.forms.converter import convert_form_field
 from graphene_django.filter.utils import get_filtering_args_from_filterset
+from graphene_django.forms.converter import convert_form_field
 
-from utils.mutation import generate_object_field_from_input_type, compare_input_output_type_fields
+from utils.mutation import compare_input_output_type_fields, generate_object_field_from_input_type
 
 
 class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
@@ -22,14 +23,14 @@ class DjangoFilterCSVWidget(django_filters.widgets.CSVWidget):
         value = forms.Widget.value_from_datadict(self, data, files, name)
 
         if value is not None:
-            if value == '':  # parse empty value as an empty list
+            if value == "":  # parse empty value as an empty list
                 return []
             # if value is already list(by POST)
             elif isinstance(value, list) or isinstance(value, QuerySet):
                 return value
             elif isinstance(value, str):
-                return [x.strip() for x in value.strip().split(',') if x.strip()]
-            raise Exception(f'Unknown value type {type(value)}')
+                return [x.strip() for x in value.strip().split(",") if x.strip()]
+            raise Exception(f"Unknown value type {type(value)}")
         return None
 
 
@@ -52,9 +53,7 @@ def _generate_filter_class(inner_type, filter_type=None, non_null=False):
             ).format(inner_type.__name__, _filter_type),
         },
     )
-    convert_form_field.register(form_field)(
-        lambda _: graphene.NonNull(inner_type) if non_null else inner_type()
-    )
+    convert_form_field.register(form_field)(lambda _: graphene.NonNull(inner_type) if non_null else inner_type())
 
     return filter_class
 
@@ -91,9 +90,7 @@ def _generate_list_filter_class(inner_type, filter_type=None, field_class=None):
             ).format(inner_type.__name__, _filter_type),
         },
     )
-    convert_form_field.register(form_field)(
-        lambda _: graphene.List(graphene.NonNull(inner_type))
-    )
+    convert_form_field.register(form_field)(lambda _: graphene.List(graphene.NonNull(inner_type)))
 
     return filter_class
 
@@ -135,11 +132,7 @@ def generate_type_for_filter_set(
         compare_input_output_type_fields(input_type, new_type)
         return new_type
 
-    input_type = type(
-        input_type_name,
-        (graphene.InputObjectType,),
-        get_filtering_args_from_filterset(filter_set, used_node)
-    )
+    input_type = type(input_type_name, (graphene.InputObjectType,), get_filtering_args_from_filterset(filter_set, used_node))
     _type = generate_type_from_input_type(input_type)
     generate_type_for_filter_set.cache[filter_set] = (_type, input_type)
     return _type, input_type
@@ -167,17 +160,17 @@ DateTimeFilter = partial(
 )
 DateTimeGteFilter = partial(
     django_filters.DateTimeFilter,
-    lookup_expr='gte',
+    lookup_expr="gte",
     input_formats=[django_filters.fields.IsoDateTimeField.ISO_8601],
 )
 DateTimeLteFilter = partial(
     django_filters.DateTimeFilter,
-    lookup_expr='lte',
+    lookup_expr="lte",
     input_formats=[django_filters.fields.IsoDateTimeField.ISO_8601],
 )
 
-DateGteFilter = partial(django_filters.DateFilter, lookup_expr='gte')
-DateLteFilter = partial(django_filters.DateFilter, lookup_expr='lte')
+DateGteFilter = partial(django_filters.DateFilter, lookup_expr="gte")
+DateLteFilter = partial(django_filters.DateFilter, lookup_expr="lte")
 
 
 class NameFilterMixin:
@@ -187,8 +180,9 @@ class NameFilterMixin:
     def _filter_name(self, queryset, name, value):
         if not value:
             return queryset
-        return queryset.annotate(
-            lname=Lower('name')
-        ).annotate(
-            idx=StrIndex('lname', Value(value.lower()))
-        ).filter(idx__gt=0).order_by('idx', 'name')
+        return (
+            queryset.annotate(lname=Lower("name"))
+            .annotate(idx=StrIndex("lname", Value(value.lower())))
+            .filter(idx__gt=0)
+            .order_by("idx", "name")
+        )

@@ -1,12 +1,13 @@
 from django_filters import rest_framework as df
-from utils.filters import IDListFilter, StringListFilter
+
 from apps.review.models import UnifiedReviewComment
+from utils.filters import IDListFilter, StringListFilter
 
 
 class UnifiedReviewCommentFilter(df.FilterSet):
-    events = IDListFilter(method='filter_events')
-    figures = IDListFilter(method='filter_figures')
-    fields = StringListFilter(method='filter_fields')
+    events = IDListFilter(method="filter_events")
+    figures = IDListFilter(method="filter_figures")
+    fields = StringListFilter(method="filter_fields")
 
     def filter_events(self, qs, name, value):
         if not value:
@@ -22,11 +23,9 @@ class UnifiedReviewCommentFilter(df.FilterSet):
         if value:
             if isinstance(value[0], int):
                 return qs.filter(field__in=value).distinct()
-            return qs.filter(field__in=[
-                UnifiedReviewComment.REVIEW_FIELD_TYPE.get(item).value for item in value
-            ])
+            return qs.filter(field__in=[UnifiedReviewComment.REVIEW_FIELD_TYPE.get(item).value for item in value])
         return qs
 
     class Meta:
         model = UnifiedReviewComment
-        fields = ('is_edited', 'is_deleted')
+        fields = ("is_edited", "is_deleted")

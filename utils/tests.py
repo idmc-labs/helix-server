@@ -1,29 +1,29 @@
-import os
 import copy
+import datetime
+import os
 import shutil
 from unittest.mock import patch
-import pytz
-import datetime
 
+import pytz
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core import management
+from django.core.cache import caches
 from django.test import TestCase, override_settings
-from django.conf import settings
 from graphene_django.utils import GraphQLTestCase
 from rest_framework.test import APITestCase
-from django.core.cache import caches
 
 from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio
 from helix.settings import BASE_DIR
-from utils.factories import UserFactory, MonitoringSubRegionFactory, CountryFactory
 from utils.common import convert_date_object_to_string_in_dict
+from utils.factories import CountryFactory, MonitoringSubRegionFactory, UserFactory
 
 User = get_user_model()
-TEST_MEDIA_ROOT = 'media-temp'
-TEST_EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-TEST_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
-BROKER_BACKEND = 'memory'
+TEST_MEDIA_ROOT = "media-temp"
+TEST_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+TEST_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+BROKER_BACKEND = "memory"
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_EAGER_PROPAGATES = True
 
@@ -44,7 +44,7 @@ class CommonSetupClassMixin:
     def setUpClass(cls):
         super().setUpClass()
         # initialize roles
-        management.call_command('init_roles')
+        management.call_command("init_roles")
 
     @classmethod
     def tearDownClass(cls):
@@ -57,11 +57,11 @@ class CommonSetupClassMixin:
 
     def assertResponseNoErrors(self, response):
         content = response.json()
-        self.assertIsNone(content.get('errors'), content)
+        self.assertIsNone(content.get("errors"), content)
 
     def assertResponseErrors(self, response):
         content = response.json()
-        self.assertIsNotNone(content.get('errors'), content)
+        self.assertIsNotNone(content.get("errors"), content)
 
     def assertQuerySetEqual(self, l1, l2, message=None):
         return self.assertEqual(
@@ -87,17 +87,17 @@ COMMON_OVERRIDE_SETTINGS = dict(
 
 @override_settings(**COMMON_OVERRIDE_SETTINGS)
 class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
-    GRAPHQL_URL = '/graphql'
-    GRAPHQL_SCHEMA = 'helix.schema.schema'
+    GRAPHQL_URL = "/graphql"
+    GRAPHQL_SCHEMA = "helix.schema.schema"
 
     def force_login(self, user):
         self._client.force_login(user)
 
     def create_user(self) -> User:
-        raw_password = 'admin123'
+        raw_password = "admin123"
         user = User.objects.create_user(
-            username='admin',
-            email='admin@email.com',
+            username="admin",
+            email="admin@email.com",
             password=raw_password,
         )
         user.raw_password = raw_password
@@ -106,7 +106,7 @@ class HelixGraphQLTestCase(CommonSetupClassMixin, GraphQLTestCase):
 
 def create_user_with_role(role: str, monitoring_sub_region: int = None, country: int = None) -> User:
     user = UserFactory.create()
-    user.raw_password = 'lhjsjsjsjlj'
+    user.raw_password = "lhjsjsjsjlj"
     user.set_password(user.raw_password)
     user.save()  # saves it as a guest
     user.refresh_from_db()
@@ -127,11 +127,7 @@ def create_user_with_role(role: str, monitoring_sub_region: int = None, country:
         )
     if role == USER_ROLE.REGIONAL_COORDINATOR.name:
         new_mr = monitoring_sub_region or MonitoringSubRegionFactory.create().id
-        Portfolio.objects.create(
-            user=user,
-            role=USER_ROLE[role],
-            monitoring_sub_region_id=new_mr
-        )  # assigns a new role
+        Portfolio.objects.create(user=user, role=USER_ROLE[role], monitoring_sub_region_id=new_mr)  # assigns a new role
     elif role == USER_ROLE.MONITORING_EXPERT.name:
         new_mr = monitoring_sub_region or MonitoringSubRegionFactory.create().id
         new_country = country or CountryFactory.create(monitoring_sub_region_id=new_mr).id
@@ -151,24 +147,26 @@ class ImmediateOnCommitMixin(object):
     Will be redundant in immediate_on_commit function is actually implemented in Django 3.2
     Check this PR: https://github.com/django/django/pull/12944
     """
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
 
         def immediate_on_commit(func, using=None):
             func()
+
         # Context manager executing transaction.on_commit() hooks immediately
         # This is required when using a subclass of django.test.TestCase as all tests are wrapped in
         # a transaction that never gets committed.
-        cls.on_commit_mgr = patch('django.db.transaction.on_commit', side_effect=immediate_on_commit)
+        cls.on_commit_mgr = patch("django.db.transaction.on_commit", side_effect=immediate_on_commit)
         cls.on_commit_mgr.__enter__()
 
     @classmethod
     def tearDownClass(cls):
-        '''
+        """
         NOTE:- __exit__() method expecting 3 positional args exc_type, exc_value, traceback after we changed
         python base from buster to bullseye.
-        '''
+        """
         super().tearDownClass()
 
         # TODO:- Pass proper exc_type, exc_value, traceback instead of None in __exit__
@@ -194,27 +192,27 @@ class HelixAPITestCase(APITestCase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.user_password = 'joHnDave!@#123'
+        self.user_password = "joHnDave!@#123"
 
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
         # initialize roles
-        management.call_command('init_roles')
+        management.call_command("init_roles")
 
     def setUp(self):
         super().setUp()
         for key in TEST_CACHES.keys():
             caches[key].clear()
         self.user = User.objects.create_user(
-            username='jon@dave.com',
-            first_name='Jon',
-            last_name='Mon',
+            username="jon@dave.com",
+            first_name="Jon",
+            last_name="Mon",
             password=self.user_password,
-            email='jon@dave.com',
+            email="jon@dave.com",
         )
         if self.ENABLE_NOW_PATCHER:
-            self.now_patcher = patch('django.utils.timezone.now')
+            self.now_patcher = patch("django.utils.timezone.now")
             self.now_datetime = datetime.datetime(2021, 1, 1, 0, 0, 0, 123456, tzinfo=pytz.UTC)
             self.now_datetime_str = self.now_datetime.isoformat()
             self.now_patcher.start().return_value = self.now_datetime
@@ -227,29 +225,29 @@ class HelixAPITestCase(APITestCase):
 class CommonUtilTest(TestCase):
     def test_convert_date_object_to_string_in_dict(self):
         data = {
-            'key1': datetime.date(2021, 1, 1),
-            'key2': {
-                'key1': datetime.date(2021, 1, 1),
-                'key2': datetime.date(2021, 1, 2),
-                'key3': datetime.date(2021, 1, 3),
+            "key1": datetime.date(2021, 1, 1),
+            "key2": {
+                "key1": datetime.date(2021, 1, 1),
+                "key2": datetime.date(2021, 1, 2),
+                "key3": datetime.date(2021, 1, 3),
             },
-            'key3': [
+            "key3": [
                 datetime.date(2021, 1, 1),
                 datetime.date(2021, 1, 2),
                 datetime.date(2021, 1, 3),
             ],
         }
         expected_data = {
-            'key1': '2021-01-01',
-            'key2': {
-                'key1': '2021-01-01',
-                'key2': '2021-01-02',
-                'key3': '2021-01-03',
+            "key1": "2021-01-01",
+            "key2": {
+                "key1": "2021-01-01",
+                "key2": "2021-01-02",
+                "key3": "2021-01-03",
             },
-            'key3': [
-                '2021-01-01',
-                '2021-01-02',
-                '2021-01-03',
+            "key3": [
+                "2021-01-01",
+                "2021-01-02",
+                "2021-01-03",
             ],
         }
 
@@ -258,10 +256,10 @@ class CommonUtilTest(TestCase):
             for _ in range(0, level):
                 _data = {
                     **copy.deepcopy(_data),
-                    'nested1': {
+                    "nested1": {
                         **copy.deepcopy(_data),
                     },
-                    'nested2': {
+                    "nested2": {
                         **copy.deepcopy(_data),
                     },
                 }

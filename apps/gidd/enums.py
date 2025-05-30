@@ -1,14 +1,15 @@
 import graphene
+from django.utils.translation import gettext_lazy as _
+from django_enumfield import enum
+
+from apps.gidd.models import ReleaseMetadata, StatusLog
 from utils.graphene.enums import (
     convert_enum_to_graphene_enum,
 )
-from django_enumfield import enum
-from apps.gidd.models import StatusLog, ReleaseMetadata
-from django.utils.translation import gettext_lazy as _
 
-GiddStatusLogEnum = convert_enum_to_graphene_enum(StatusLog.Status, name='GiddStatusLogTypeEnum')
+GiddStatusLogEnum = convert_enum_to_graphene_enum(StatusLog.Status, name="GiddStatusLogTypeEnum")
 GiddReleaseEnvironmentsEnum = convert_enum_to_graphene_enum(
-    ReleaseMetadata.ReleaseEnvironment, name='GiddReleaseEnvironmentsEnum'
+    ReleaseMetadata.ReleaseEnvironment, name="GiddReleaseEnvironmentsEnum"
 )
 
 

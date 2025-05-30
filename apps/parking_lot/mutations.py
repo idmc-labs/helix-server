@@ -1,33 +1,26 @@
 import graphene
 from django.utils.translation import gettext
 
-from utils.mutation import generate_input_type_for_serializer
-from utils.error_types import CustomErrorType, mutation_is_not_valid
-from utils.permissions import permission_checker
-from utils.filters import generate_type_for_filter_set
-from apps.contrib.mutations import ExportBaseMutation
 from apps.contrib.models import ExcelDownload
+from apps.contrib.mutations import ExportBaseMutation
+from apps.parking_lot.filters import ParkingLotFilter
 from apps.parking_lot.models import ParkedItem
 from apps.parking_lot.schema import ParkedItemType
 from apps.parking_lot.serializers import ParkedItemSerializer, ParkedItemUpdateSerializer
-from apps.parking_lot.filters import ParkingLotFilter
+from utils.error_types import CustomErrorType, mutation_is_not_valid
+from utils.filters import generate_type_for_filter_set
+from utils.mutation import generate_input_type_for_serializer
+from utils.permissions import permission_checker
 
+ParkedItemCreateInputType = generate_input_type_for_serializer("ParkedItemCreateInputType", ParkedItemSerializer)
 
-ParkedItemCreateInputType = generate_input_type_for_serializer(
-    'ParkedItemCreateInputType',
-    ParkedItemSerializer
-)
-
-ParkedItemUpdateInputType = generate_input_type_for_serializer(
-    'ParkedItemUpdateInputType',
-    ParkedItemUpdateSerializer
-)
+ParkedItemUpdateInputType = generate_input_type_for_serializer("ParkedItemUpdateInputType", ParkedItemUpdateSerializer)
 
 ParkedItemFilterDataType, ParkedItemFilterDataInputType = generate_type_for_filter_set(
     ParkingLotFilter,
-    'parking_lot.schema.parking_lot_list',
-    'ParkingLotFilterDataType',
-    'ParkingLotFilterDataInputType',
+    "parking_lot.schema.parking_lot_list",
+    "ParkingLotFilterDataType",
+    "ParkingLotFilterDataInputType",
 )
 
 
@@ -40,7 +33,7 @@ class CreateParkedItem(graphene.Mutation):
     result = graphene.Field(ParkedItemType)
 
     @staticmethod
-    @permission_checker(['parking_lot.add_parkeditem'])
+    @permission_checker(["parking_lot.add_parkeditem"])
     def mutate(root, info, data):
         serializer = ParkedItemSerializer(data=data, context=dict(request=info.context.request))
         if errors := mutation_is_not_valid(serializer):
@@ -58,16 +51,15 @@ class UpdateParkedItem(graphene.Mutation):
     result = graphene.Field(ParkedItemType)
 
     @staticmethod
-    @permission_checker(['parking_lot.change_parkeditem'])
+    @permission_checker(["parking_lot.change_parkeditem"])
     def mutate(root, info, data):
         try:
-            instance = ParkedItem.objects.get(id=data['id'])
+            instance = ParkedItem.objects.get(id=data["id"])
         except ParkedItem.DoesNotExist:
-            return UpdateParkedItem(errors=[
-                dict(field='nonFieldErrors', messages=gettext('Parked item does not exist.'))
-            ])
-        serializer = ParkedItemSerializer(instance=instance, data=data, partial=True,
-                                          context=dict(request=info.context.request))
+            return UpdateParkedItem(errors=[dict(field="nonFieldErrors", messages=gettext("Parked item does not exist."))])
+        serializer = ParkedItemSerializer(
+            instance=instance, data=data, partial=True, context=dict(request=info.context.request)
+        )
         if errors := mutation_is_not_valid(serializer):
             return UpdateParkedItem(errors=errors, ok=False)
         instance = serializer.save()
@@ -83,17 +75,14 @@ class DeleteParkedItem(graphene.Mutation):
     result = graphene.Field(ParkedItemType)
 
     @staticmethod
-    @permission_checker(['parking_lot.delete_parkeditem'])
+    @permission_checker(["parking_lot.delete_parkeditem"])
     def mutate(root, info, id):
         try:
             instance = ParkedItem.objects.get(id=id)
         except ParkedItem.DoesNotExist:
-            return DeleteParkedItem(errors=[
-                dict(
-                    field='nonFieldErrors',
-                    messages=gettext('Only creator is allowed to delete the parked item.')
-                )
-            ])
+            return DeleteParkedItem(
+                errors=[dict(field="nonFieldErrors", messages=gettext("Only creator is allowed to delete the parked item."))]
+            )
         instance.delete()
         instance.id = id
         return DeleteParkedItem(result=instance, errors=None, ok=True)
@@ -102,6 +91,7 @@ class DeleteParkedItem(graphene.Mutation):
 class ExportParkedItem(ExportBaseMutation):
     class Arguments(ExportBaseMutation.Arguments):
         filters = ParkedItemFilterDataInputType(required=True)
+
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.PARKING_LOT
 
 

@@ -1,24 +1,24 @@
+import logging
+
 import graphene
 from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
-import logging
 
+from apps.crisis.enums import CrisisTypeGrapheneEnum
+from apps.entry.enums import (
+    FigureCategoryTypeEnum,
+    FigureReviewStatusEnum,
+    FigureTermsEnum,
+    RoleGrapheneEnum,
+)
+from apps.entry.schema import EntryListType
 from apps.extraction.filters import ExtractionQueryFilter
 from apps.extraction.models import (
     ExtractionQuery,
 )
-from apps.entry.schema import EntryListType
-
-from apps.entry.enums import (
-    RoleGrapheneEnum,
-    FigureCategoryTypeEnum,
-    FigureTermsEnum,
-    FigureReviewStatusEnum,
-)
-from apps.crisis.enums import CrisisTypeGrapheneEnum
-from utils.graphene.types import CustomDjangoListObjectType
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.types import CustomDjangoListObjectType
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +27,9 @@ class ExtractionQueryObjectType(DjangoObjectType):
     class Meta:
         model = ExtractionQuery
 
-    entries = DjangoPaginatedListObjectField(EntryListType,
-                                             pagination=PageGraphqlPaginationWithoutCount(
-                                                 page_size_query_param='pageSize'
-                                             ), accessor='entries')
+    entries = DjangoPaginatedListObjectField(
+        EntryListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"), accessor="entries"
+    )
     # NOTE: We need to define this at ReportType as well
     filter_figure_roles = graphene.List(graphene.NonNull(RoleGrapheneEnum))
     filter_figure_crisis_types = graphene.List(graphene.NonNull(CrisisTypeGrapheneEnum))
@@ -47,7 +46,6 @@ class ExtractionQueryListType(CustomDjangoListObjectType):
 
 class Query:
     extraction_query = DjangoObjectField(ExtractionQueryObjectType)
-    extraction_query_list = DjangoPaginatedListObjectField(ExtractionQueryListType,
-                                                           pagination=PageGraphqlPaginationWithoutCount(
-                                                               page_size_query_param='pageSize'
-                                                           ))
+    extraction_query_list = DjangoPaginatedListObjectField(
+        ExtractionQueryListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
+    )

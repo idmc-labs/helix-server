@@ -1,48 +1,35 @@
 __all__ = [
-    'QuantifierGrapheneEnum',
-    'UnitGrapheneEnum',
-    'RoleGrapheneEnum',
-    'AccuracyGrapheneEnum',
-    'IdentifierGrapheneEnum',
-    'GeocoderGrapheneEnum'
+    "QuantifierGrapheneEnum",
+    "UnitGrapheneEnum",
+    "RoleGrapheneEnum",
+    "AccuracyGrapheneEnum",
+    "IdentifierGrapheneEnum",
+    "GeocoderGrapheneEnum",
 ]
 
 import graphene
 
+from apps.common.enums import GENDER_TYPE
 from apps.entry.models import (
+    ExternalApiDump,
     Figure,
     FigureLocation,
-    ExternalApiDump,
 )
-
 from utils.enums import enum_description
-from apps.common.enums import GENDER_TYPE
 
-GenderTypeGrapheneEnum = graphene.Enum.from_enum(
-    GENDER_TYPE,
-    description=enum_description
-)
+GenderTypeGrapheneEnum = graphene.Enum.from_enum(GENDER_TYPE, description=enum_description)
 QuantifierGrapheneEnum = graphene.Enum.from_enum(Figure.QUANTIFIER, description=enum_description)
 UnitGrapheneEnum = graphene.Enum.from_enum(Figure.UNIT, description=enum_description)
 RoleGrapheneEnum = graphene.Enum.from_enum(Figure.ROLE, description=enum_description)
-DisplacementOccurredGrapheneEnum = graphene.Enum.from_enum(
-    Figure.DISPLACEMENT_OCCURRED,
-    description=enum_description
-)
+DisplacementOccurredGrapheneEnum = graphene.Enum.from_enum(Figure.DISPLACEMENT_OCCURRED, description=enum_description)
 AccuracyGrapheneEnum = graphene.Enum.from_enum(FigureLocation.ACCURACY, description=enum_description)
 IdentifierGrapheneEnum = graphene.Enum.from_enum(FigureLocation.IDENTIFIER, description=enum_description)
 FigureCategoryTypeEnum = graphene.Enum.from_enum(Figure.FIGURE_CATEGORY_TYPES, description=enum_description)
 FigureTermsEnum = graphene.Enum.from_enum(Figure.FIGURE_TERMS, description=enum_description)
 FigureSourcesReliabilityEnum = graphene.Enum.from_enum(Figure.SOURCES_RELIABILITY, description=enum_description)
 FigureReviewStatusEnum = graphene.Enum.from_enum(Figure.FIGURE_REVIEW_STATUS, description=enum_description)
-ExternalApiTypeEnum = graphene.Enum.from_enum(
-    ExternalApiDump.ExternalApiType,
-    description=enum_description
-)
-GeocoderGrapheneEnum = graphene.Enum.from_enum(
-    FigureLocation.GEOCODER,
-    description=enum_description
-)
+ExternalApiTypeEnum = graphene.Enum.from_enum(ExternalApiDump.ExternalApiType, description=enum_description)
+GeocoderGrapheneEnum = graphene.Enum.from_enum(FigureLocation.GEOCODER, description=enum_description)
 
 
 enum_map = dict(

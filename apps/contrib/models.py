@@ -1,56 +1,58 @@
 import logging
 import typing
 import uuid
-from uuid import uuid4
 from collections import OrderedDict
+from uuid import uuid4
 
 from django.apps import apps
-from django.db.models import JSONField
 from django.contrib.postgres.fields import ArrayField
 from django.db import models, transaction
+from django.db.models import JSONField
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
+from apps.contrib.redis_client_track import set_client_ids_in_redis
 from apps.users.models import User
 from utils.fields import CachedFileField
-from apps.contrib.redis_client_track import set_client_ids_in_redis
 
 logger = logging.getLogger(__name__)
 
 
 def global_upload_to(instance, filename: str) -> str:
-    return f'contrib/{instance.__class__.__name__.lower()}/{uuid4()}/{uuid4()}/{filename}'
+    return f"contrib/{instance.__class__.__name__.lower()}/{uuid4()}/{uuid4()}/{filename}"
 
 
 class UUIDAbstractModel(models.Model):
-    uuid = models.UUIDField(verbose_name='UUID', unique=True,
-                            blank=True, default=uuid4)
+    uuid = models.UUIDField(verbose_name="UUID", unique=True, blank=True, default=uuid4)
 
     class Meta:
         abstract = True
 
 
 class ArchiveAbstractModel(models.Model):
-    old_id = models.CharField(verbose_name=_('Old primary key'), max_length=32,
-                              null=True, blank=True)
+    old_id = models.CharField(verbose_name=_("Old primary key"), max_length=32, null=True, blank=True)
 
     class Meta:
         abstract = True
 
 
 class MetaInformationAbstractModel(models.Model):
-    created_at = models.DateTimeField(verbose_name=_('Created At'), auto_now_add=True)
-    modified_at = models.DateTimeField(verbose_name=_('Modified At'), auto_now=True)
-    created_by = models.ForeignKey('users.User', verbose_name=_('Created By'),
-                                   blank=True, null=True,
-                                   related_name='created_%(class)s', on_delete=models.SET_NULL)
-    last_modified_by = models.ForeignKey('users.User', verbose_name=_('Last Modified By'),
-                                         blank=True, null=True,
-                                         related_name='+', on_delete=models.SET_NULL)
-    version_id = models.CharField(verbose_name=_('Version'), max_length=16,
-                                  blank=True, null=True)
+    created_at = models.DateTimeField(verbose_name=_("Created At"), auto_now_add=True)
+    modified_at = models.DateTimeField(verbose_name=_("Modified At"), auto_now=True)
+    created_by = models.ForeignKey(
+        "users.User",
+        verbose_name=_("Created By"),
+        blank=True,
+        null=True,
+        related_name="created_%(class)s",
+        on_delete=models.SET_NULL,
+    )
+    last_modified_by = models.ForeignKey(
+        "users.User", verbose_name=_("Last Modified By"), blank=True, null=True, related_name="+", on_delete=models.SET_NULL
+    )
+    version_id = models.CharField(verbose_name=_("Version"), max_length=16, blank=True, null=True)
 
     created_by_id: typing.Optional[int]
     last_modified_by_id: typing.Optional[int]
@@ -67,17 +69,37 @@ class MetaInformationArchiveAbstractModel(ArchiveAbstractModel, MetaInformationA
 class Attachment(MetaInformationAbstractModel):
     ALLOWED_MIMETYPES = (
         # text
-        'application/x-abiword', 'text/csv', 'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/epub+zip',
-        'application/vnd.oasis.opendocument.presentation',
-        'application/vnd.oasis.opendocument.spreadsheet', 'application/vnd.oasis.opendocument.text', 'application/pdf',
-        'application/xml', 'text/xml', 'application/vnd.ms-powerpoint', 'application/xhtml+xml', 'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/rtf', 'text/javascript',
-        'text/html', 'text/calendar', 'text/plain',
+        "application/x-abiword",
+        "text/csv",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/epub+zip",
+        "application/vnd.oasis.opendocument.presentation",
+        "application/vnd.oasis.opendocument.spreadsheet",
+        "application/vnd.oasis.opendocument.text",
+        "application/pdf",
+        "application/xml",
+        "text/xml",
+        "application/vnd.ms-powerpoint",
+        "application/xhtml+xml",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "application/rtf",
+        "text/javascript",
+        "text/html",
+        "text/calendar",
+        "text/plain",
         # image
-        'image/gif', 'image/jpg', 'image/jpeg', 'image/png', 'image/svg+xml', 'image/tiff',
-        'image/webp', 'image/bmp', 'image/vnd.microsoft.icon'
+        "image/gif",
+        "image/jpg",
+        "image/jpeg",
+        "image/png",
+        "image/svg+xml",
+        "image/tiff",
+        "image/webp",
+        "image/bmp",
+        "image/vnd.microsoft.icon",
     )
     MAX_FILE_SIZE = 100 * 1024 * 1024  # MB
 
@@ -87,22 +109,22 @@ class Attachment(MetaInformationAbstractModel):
         CONTEXTUAL_UPDATE = 2
 
     attachment = CachedFileField(
-        verbose_name=_('Attachment'),
+        verbose_name=_("Attachment"),
         blank=False,
         null=False,
         upload_to=global_upload_to,
         max_length=2000,
     )
-    attachment_for = enum.EnumField(enum=FOR_CHOICES, verbose_name=_('Attachment for'),
-                                    null=True, blank=True,
-                                    help_text=_('The type of instance for which attachment was'
-                                                ' uploaded for'))
-    mimetype = models.CharField(verbose_name=_('Mimetype'), max_length=256,
-                                blank=True, null=True)
-    encoding = models.CharField(verbose_name=_('Encoding'), max_length=256,
-                                blank=True, null=True)
-    filetype_detail = models.CharField(verbose_name=_('File type detail'), max_length=2000,
-                                       blank=True, null=True)
+    attachment_for = enum.EnumField(
+        enum=FOR_CHOICES,
+        verbose_name=_("Attachment for"),
+        null=True,
+        blank=True,
+        help_text=_("The type of instance for which attachment was uploaded for"),
+    )
+    mimetype = models.CharField(verbose_name=_("Mimetype"), max_length=256, blank=True, null=True)
+    encoding = models.CharField(verbose_name=_("Encoding"), max_length=256, blank=True, null=True)
+    filetype_detail = models.CharField(verbose_name=_("File type detail"), max_length=2000, blank=True, null=True)
 
 
 class SoftDeleteQueryset(models.QuerySet):
@@ -151,31 +173,28 @@ class SourcePreview(MetaInformationAbstractModel):
             KILLED: _("Killed"),
         }
 
-    url = models.URLField(verbose_name=_('Source URL'), max_length=2000)
-    token = models.CharField(verbose_name=_('Token'),
-                             max_length=64, db_index=True,
-                             blank=True, null=True)
+    url = models.URLField(verbose_name=_("Source URL"), max_length=2000)
+    token = models.CharField(verbose_name=_("Token"), max_length=64, db_index=True, blank=True, null=True)
     pdf = CachedFileField(
-        verbose_name=_('Rendered Pdf'),
+        verbose_name=_("Rendered Pdf"),
         blank=True,
         null=True,
         upload_to=global_upload_to,
         max_length=2000,
     )
     status = enum.EnumField(enum=PREVIEW_STATUS, default=PREVIEW_STATUS.PENDING)
-    remark = models.TextField(verbose_name=_('Remark'),
-                              blank=True, null=True)
+    remark = models.TextField(verbose_name=_("Remark"), blank=True, null=True)
 
     @classmethod
-    def get_pdf(cls, data: dict, instance: 'SourcePreview' = None) -> 'SourcePreview':
+    def get_pdf(cls, data: dict, instance: "SourcePreview" = None) -> "SourcePreview":
         """
         Based on the url, generate a pdf and store it.
         """
         from apps.entry.tasks import generate_pdf
 
-        url = data['url']
-        created_by = data.get('created_by')
-        last_modified_by = data.get('last_modified_by')
+        url = data["url"]
+        created_by = data.get("created_by")
+        last_modified_by = data.get("last_modified_by")
         if not instance:
             token = str(uuid.uuid4())
             instance = cls(token=token)
@@ -184,18 +203,16 @@ class SourcePreview(MetaInformationAbstractModel):
         instance.last_modified_by = last_modified_by
         instance.save()
 
-        transaction.on_commit(lambda: generate_pdf.delay(
-            instance.pk
-        ))
+        transaction.on_commit(lambda: generate_pdf.delay(instance.pk))
         return instance
 
 
 def excel_upload_to(instance, filename: str) -> str:
-    return f'contrib/excel/{uuid4()}/{instance.download_type}/{filename}'
+    return f"contrib/excel/{uuid4()}/{instance.download_type}/{filename}"
 
 
 def bulk_operation_snapshot(instance, filename: str) -> str:
-    return f'contrib/bulk-operation/{uuid4()}/{instance.action.name}/{filename}'
+    return f"contrib/bulk-operation/{uuid4()}/{instance.action.name}/{filename}"
 
 
 class ExcelDownload(MetaInformationAbstractModel):
@@ -226,12 +243,12 @@ class ExcelDownload(MetaInformationAbstractModel):
         CLIENT = 16
 
     started_at = models.DateTimeField(
-        verbose_name=_('Started at'),
+        verbose_name=_("Started at"),
         blank=True,
         null=True,
     )
     completed_at = models.DateTimeField(
-        verbose_name=_('Completed at'),
+        verbose_name=_("Completed at"),
         blank=True,
         null=True,
     )
@@ -245,62 +262,62 @@ class ExcelDownload(MetaInformationAbstractModel):
         default=EXCEL_GENERATION_STATUS.PENDING,
     )
     file = CachedFileField(
-        verbose_name=_('Excel File'),
+        verbose_name=_("Excel File"),
         blank=True,
         null=True,
         upload_to=excel_upload_to,
         max_length=2000,
     )
     file_size = models.IntegerField(
-        verbose_name=_('File Size'),
+        verbose_name=_("File Size"),
         blank=True,
         null=True,
     )
     filters = JSONField(
-        verbose_name=_('Filters'),
+        verbose_name=_("Filters"),
         blank=True,
         null=True,
     )
 
     def get_model_sheet_data_getter(self):
         mapper = {
-            self.DOWNLOAD_TYPES.CRISIS: apps.get_model('crisis', 'Crisis'),
-            self.DOWNLOAD_TYPES.EVENT: apps.get_model('event', 'Event'),
-            self.DOWNLOAD_TYPES.COUNTRY: apps.get_model('country', 'Country'),
-            self.DOWNLOAD_TYPES.ENTRY: apps.get_model('entry', 'Entry'),
-            self.DOWNLOAD_TYPES.FIGURE: apps.get_model('entry', 'Figure'),
-            self.DOWNLOAD_TYPES.ORGANIZATION: apps.get_model('organization', 'Organization'),
-            self.DOWNLOAD_TYPES.CONTACT: apps.get_model('contact', 'Contact'),
-            self.DOWNLOAD_TYPES.REPORT: apps.get_model('report', 'Report'),
-            self.DOWNLOAD_TYPES.ACTOR: apps.get_model('event', 'Actor'),
-            self.DOWNLOAD_TYPES.INDIVIDUAL_REPORT: apps.get_model('report', 'Report'),
-            self.DOWNLOAD_TYPES.TRACKING_DATA: apps.get_model('contrib', 'ClientTrackInfo'),
-            self.DOWNLOAD_TYPES.PARKING_LOT: apps.get_model('parking_lot', 'ParkedItem'),
-            self.DOWNLOAD_TYPES.FIGURE_TAG: apps.get_model('entry', 'FigureTag'),
-            self.DOWNLOAD_TYPES.USER: apps.get_model('users', 'User'),
-            self.DOWNLOAD_TYPES.CONTEXT_OF_VIOLENCE: apps.get_model('event', 'ContextOfViolence'),
-            self.DOWNLOAD_TYPES.MONITORING_SUB_REGION: apps.get_model('country', 'MonitoringSubRegion'),
-            self.DOWNLOAD_TYPES.CLIENT: apps.get_model('contrib', 'Client'),
+            self.DOWNLOAD_TYPES.CRISIS: apps.get_model("crisis", "Crisis"),
+            self.DOWNLOAD_TYPES.EVENT: apps.get_model("event", "Event"),
+            self.DOWNLOAD_TYPES.COUNTRY: apps.get_model("country", "Country"),
+            self.DOWNLOAD_TYPES.ENTRY: apps.get_model("entry", "Entry"),
+            self.DOWNLOAD_TYPES.FIGURE: apps.get_model("entry", "Figure"),
+            self.DOWNLOAD_TYPES.ORGANIZATION: apps.get_model("organization", "Organization"),
+            self.DOWNLOAD_TYPES.CONTACT: apps.get_model("contact", "Contact"),
+            self.DOWNLOAD_TYPES.REPORT: apps.get_model("report", "Report"),
+            self.DOWNLOAD_TYPES.ACTOR: apps.get_model("event", "Actor"),
+            self.DOWNLOAD_TYPES.INDIVIDUAL_REPORT: apps.get_model("report", "Report"),
+            self.DOWNLOAD_TYPES.TRACKING_DATA: apps.get_model("contrib", "ClientTrackInfo"),
+            self.DOWNLOAD_TYPES.PARKING_LOT: apps.get_model("parking_lot", "ParkedItem"),
+            self.DOWNLOAD_TYPES.FIGURE_TAG: apps.get_model("entry", "FigureTag"),
+            self.DOWNLOAD_TYPES.USER: apps.get_model("users", "User"),
+            self.DOWNLOAD_TYPES.CONTEXT_OF_VIOLENCE: apps.get_model("event", "ContextOfViolence"),
+            self.DOWNLOAD_TYPES.MONITORING_SUB_REGION: apps.get_model("country", "MonitoringSubRegion"),
+            self.DOWNLOAD_TYPES.CLIENT: apps.get_model("contrib", "Client"),
         }
         model = mapper.get(self.download_type)
         if not model:
-            raise AttributeError(f'Excel mapper cannot find model={model.name} in mapping.')
-        if not hasattr(model, 'get_excel_sheets_data'):
-            raise AttributeError(f'Excel sheet data getter missing for {model.name}')
+            raise AttributeError(f"Excel mapper cannot find model={model.name} in mapping.")
+        if not hasattr(model, "get_excel_sheets_data"):
+            raise AttributeError(f"Excel sheet data getter missing for {model.name}")
         return model.get_excel_sheets_data
 
     def trigger_excel_generation(self, request, model_instance_id=None):
-        '''
+        """
         This should trigger the excel file generation based on the
         given request. Filters are preserved within the instance.
 
         Is called by serializer.create method
-        '''
+        """
         from apps.contrib.tasks import generate_excel_file
 
-        transaction.on_commit(lambda: generate_excel_file.delay(
-            self.pk, request.user.id, model_instance_id=model_instance_id
-        ))
+        transaction.on_commit(
+            lambda: generate_excel_file.delay(self.pk, request.user.id, model_instance_id=model_instance_id)
+        )
 
 
 class Client(MetaInformationAbstractModel):
@@ -324,47 +341,31 @@ class Client(MetaInformationAbstractModel):
         }
 
     name = models.CharField(max_length=255)
-    code = models.CharField(
-        max_length=100,
-        unique=True,
-        verbose_name=_('Client Code'),
-        editable=False
-    )
-    acronym = models.CharField(
-        max_length=255,
-        verbose_name=_('Client Acronym'),
-        blank=True,
-        null=True
-    )
+    code = models.CharField(max_length=100, unique=True, verbose_name=_("Client Code"), editable=False)
+    acronym = models.CharField(max_length=255, verbose_name=_("Client Acronym"), blank=True, null=True)
     contact_name = models.CharField(
         max_length=255,
-        verbose_name=_('Client Contact Name'),
-        help_text=_('Client Contact Name: focal person'),
+        verbose_name=_("Client Contact Name"),
+        help_text=_("Client Contact Name: focal person"),
         blank=False,
-        null=True
+        null=True,
     )
     contact_email = models.EmailField(
-        verbose_name=_('Client Contact Email'),
-        help_text=_('Client Contact Email: email focal person'),
+        verbose_name=_("Client Contact Email"),
+        help_text=_("Client Contact Email: email focal person"),
         blank=False,
-        null=True
+        null=True,
     )
     contact_website = models.URLField(
-        verbose_name=_('Client Contact Website'),
-        help_text=_('Client Contact Website: link to the website (IDMC application)'),
+        verbose_name=_("Client Contact Website"),
+        help_text=_("Client Contact Website: link to the website (IDMC application)"),
         blank=True,
-        null=True
+        null=True,
     )
-    opted_out_of_emails = models.BooleanField(verbose_name='Opted out of receiving emails', default=False)
-    use_cases = ArrayField(
-        base_field=enum.EnumField(USE_CASE_TYPES, verbose_name=_('Use case')),
-        null=False, default=list
-    )
+    opted_out_of_emails = models.BooleanField(verbose_name="Opted out of receiving emails", default=False)
+    use_cases = ArrayField(base_field=enum.EnumField(USE_CASE_TYPES, verbose_name=_("Use case")), null=False, default=list)
     other_notes = models.CharField(max_length=255, null=True, blank=True)
-    is_active = models.BooleanField(
-        verbose_name=_('Is active?'),
-        default=False
-    )
+    is_active = models.BooleanField(verbose_name=_("Is active?"), default=False)
 
     def __str__(self):
         return self.code
@@ -388,63 +389,63 @@ class Client(MetaInformationAbstractModel):
                 self.user = user
 
         headers = OrderedDict(
-            id='ID',
-            name='Name',
-            code='Code',
-            acronym='Acronym',
-            contact_name='Contact Name',
-            contact_email='Contact Email',
-            contact_website='Website',
-            use_cases='Use cases',
-            other_notes='Notes',
-            opted_out_of_emails='Opted out of receiving emails',
-            created_by__full_name='Created By',
-            created_at='Created At',
-            last_modified_by__full_name='Last Modified By',
-            modified_at='Modified At',
-            is_active='Active',
+            id="ID",
+            name="Name",
+            code="Code",
+            acronym="Acronym",
+            contact_name="Contact Name",
+            contact_email="Contact Email",
+            contact_website="Website",
+            use_cases="Use cases",
+            other_notes="Notes",
+            opted_out_of_emails="Opted out of receiving emails",
+            created_by__full_name="Created By",
+            created_at="Created At",
+            last_modified_by__full_name="Last Modified By",
+            modified_at="Modified At",
+            is_active="Active",
         )
 
         data = ClientFilter(
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
-        ).qs.order_by('created_at')
+        ).qs.order_by("created_at")
 
         def transformer(datum):
             transformed_use_cases = [
-                getattr(Client.USE_CASE_TYPES.get(use_case), 'label', '')
-                for use_case in datum['use_cases']
+                getattr(Client.USE_CASE_TYPES.get(use_case), "label", "") for use_case in datum["use_cases"]
             ]
             return {
                 **datum,
-                'use_cases': EXTERNAL_ARRAY_SEPARATOR.join(transformed_use_cases),
-                'is_active': 'Yes' if datum['is_active'] else 'No',
-                'opted_out_of_emails': 'Yes' if datum['opted_out_of_emails'] else 'No'
+                "use_cases": EXTERNAL_ARRAY_SEPARATOR.join(transformed_use_cases),
+                "is_active": "Yes" if datum["is_active"] else "No",
+                "opted_out_of_emails": "Yes" if datum["opted_out_of_emails"] else "No",
             }
 
         return {
-            'headers': headers,
-            'data': data.values(*[header for header in headers.keys()]),
-            'formulae': None,
-            'transformer': transformer,
+            "headers": headers,
+            "data": data.values(*[header for header in headers.keys()]),
+            "formulae": None,
+            "transformer": transformer,
         }
 
     def save(self, *args, **kwargs):
         instance = super().save(*args, **kwargs)
-        client_ids = list(Client.objects.values_list('code', flat=True))
+        client_ids = list(Client.objects.values_list("code", flat=True))
         set_client_ids_in_redis(client_ids)
         return instance
 
     def delete(self, *args, **kwargs):
         deleted = super().delete(*args, **kwargs)
-        client_ids = list(Client.objects.values_list('code', flat=True))
+        client_ids = list(Client.objects.values_list("code", flat=True))
         set_client_ids_in_redis(client_ids)
         return deleted
 
 
 class ClientTrackInfo(models.Model):
     from apps.entry.models import ExternalApiDump
-    client = models.ForeignKey('Client', on_delete=models.CASCADE)
+
+    client = models.ForeignKey("Client", on_delete=models.CASCADE)
     api_type = models.CharField(
         max_length=40,
         choices=ExternalApiDump.ExternalApiType.choices,
@@ -453,14 +454,15 @@ class ClientTrackInfo(models.Model):
     tracked_date = models.DateField()
 
     class Meta:
-        unique_together = ('client', 'api_type', 'tracked_date')
+        unique_together = ("client", "api_type", "tracked_date")
 
     def __str__(self):
-        return f'{self.client} - {self.tracked_date}'
+        return f"{self.client} - {self.tracked_date}"
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
         from apps.entry.models import ExternalApiDump
+
         from .filters import ClientTrackInfoFilter
 
         class DummyRequest:
@@ -472,60 +474,65 @@ class ClientTrackInfo(models.Model):
                 return url
 
         headers = OrderedDict(
-            client_name='Client name',
-            client_code='Client code',
-            api_name='API',
-            api_type='API type',
-            tracked_date='Date',
-            requests_per_day='Requests',
+            client_name="Client name",
+            client_code="Client code",
+            api_name="API",
+            api_type="API type",
+            tracked_date="Date",
+            requests_per_day="Requests",
         )
 
         dummy_request = DummyRequest(user=User.objects.get(id=user_id))
 
-        data = ClientTrackInfoFilter(
-            data=filters,
-            request=dummy_request,
-        ).qs.exclude(
-            api_type='None',
-        ).annotate(
-            client_name=models.F('client__name'),
-            client_code=models.F('client__code'),
-            api_name=models.F('api_type'),
-        ).order_by('-tracked_date')
+        data = (
+            ClientTrackInfoFilter(
+                data=filters,
+                request=dummy_request,
+            )
+            .qs.exclude(
+                api_type="None",
+            )
+            .annotate(
+                client_name=models.F("client__name"),
+                client_code=models.F("client__code"),
+                api_name=models.F("api_type"),
+            )
+            .order_by("-tracked_date")
+        )
 
         def transformer(datum):
-            metadata = ExternalApiDump.API_TYPE_METADATA[datum['api_type']]
+            metadata = ExternalApiDump.API_TYPE_METADATA[datum["api_type"]]
             return {
                 **datum,
-                'api_name': getattr(ExternalApiDump.ExternalApiType(datum['api_type']), 'label', ''),
-                'api_example_request': metadata.get_example_request(dummy_request, datum['client_code']),
-                'api_response_type': metadata.response_type,
-                'api_usage': metadata.get_usage(dummy_request, datum['client_code']),
-                'api_description': metadata.description,
+                "api_name": getattr(ExternalApiDump.ExternalApiType(datum["api_type"]), "label", ""),
+                "api_example_request": metadata.get_example_request(dummy_request, datum["client_code"]),
+                "api_response_type": metadata.response_type,
+                "api_usage": metadata.get_usage(dummy_request, datum["client_code"]),
+                "api_description": metadata.description,
             }
+
         return {
-            'headers': OrderedDict(
+            "headers": OrderedDict(
                 **headers,
-                api_example_request='API Example Request',
-                api_response_type='API Response',
-                api_usage='API Usage',
-                api_description='API Description',
+                api_example_request="API Example Request",
+                api_response_type="API Response",
+                api_usage="API Usage",
+                api_description="API Description",
             ),
-            'data': data.values(*[header for header in headers.keys()]),
-            'formulae': None,
-            'transformer': transformer,
+            "data": data.values(*[header for header in headers.keys()]),
+            "formulae": None,
+            "transformer": transformer,
         }
 
     @classmethod
     def annotate_api_name(cls):
         from apps.entry.models import ExternalApiDump
+
         return {
-            'api_name': models.Case(
+            "api_name": models.Case(
                 *[
-                    models.When(
-                        api_type=enum_obj.value,
-                        then=models.Value(enum_obj.label, output_field=models.CharField())
-                    ) for enum_obj in ExternalApiDump.ExternalApiType
+                    models.When(api_type=enum_obj.value, then=models.Value(enum_obj.label, output_field=models.CharField()))
+                    for enum_obj in ExternalApiDump.ExternalApiType
                 ]
             )
         }
@@ -551,24 +558,26 @@ class BulkApiOperation(models.Model):
     QUERYSET_COUNT_THRESHOLD = 100
     WAIT_TIME_THRESHOLD_IN_MINUTES = 5
 
-    created_at = models.DateTimeField(verbose_name=_('Created At'), auto_now_add=True)
+    created_at = models.DateTimeField(verbose_name=_("Created At"), auto_now_add=True)
     created_by = models.ForeignKey(
-        'users.User', verbose_name=_('Created By'),
-        related_name='created_%(class)s', on_delete=models.PROTECT,
+        "users.User",
+        verbose_name=_("Created By"),
+        related_name="created_%(class)s",
+        on_delete=models.PROTECT,
     )
     # Runtime information
-    started_at = models.DateTimeField(verbose_name=_('Started At'), null=True, blank=True)
-    completed_at = models.DateTimeField(verbose_name=_('Completed At'), null=True, blank=True)
+    started_at = models.DateTimeField(verbose_name=_("Started At"), null=True, blank=True)
+    completed_at = models.DateTimeField(verbose_name=_("Completed At"), null=True, blank=True)
 
     # User provided fields
     action = enum.EnumField(enum=BULK_OPERATION_ACTION)
     filters = JSONField(
-        verbose_name=_('Filters'),
+        verbose_name=_("Filters"),
         blank=True,
         null=True,
     )
     payload = JSONField(
-        verbose_name=_('Operation Payload'),
+        verbose_name=_("Operation Payload"),
         blank=True,
         null=True,
     )
@@ -581,7 +590,7 @@ class BulkApiOperation(models.Model):
     failure_count = models.PositiveIntegerField(blank=True, null=True)
     failure_list = models.JSONField(default=list)
     snapshot = CachedFileField(
-        verbose_name=_('Existing data snapshot'),
+        verbose_name=_("Existing data snapshot"),
         blank=True,
         null=True,
         upload_to=bulk_operation_snapshot,
@@ -592,7 +601,7 @@ class BulkApiOperation(models.Model):
     get_status_display: typing.Callable
 
     def __str__(self):
-        return f'{self.get_action_display()}-{self.pk}'
+        return f"{self.get_action_display()}-{self.pk}"
 
     def update_status(self, status: BULK_OPERATION_STATUS, commit=True):
         # If status has changed
@@ -607,4 +616,4 @@ class BulkApiOperation(models.Model):
                 self.completed_at = timezone.now()
         self.status = status
         if commit:
-            self.save(update_fields=('status',))
+            self.save(update_fields=("status",))

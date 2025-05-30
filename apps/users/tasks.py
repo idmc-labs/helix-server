@@ -1,14 +1,15 @@
 from typing import List
 
 from celery import shared_task
-from helix.settings import DEFAULT_FROM_EMAIL
 from django.core.mail import send_mail
 from django.template import loader
+
+from helix.settings import DEFAULT_FROM_EMAIL
 
 
 @shared_task
 def send_email(subject, message, recipient_list, html_context=None):
-    """ A generic background task for sending emails """
+    """A generic background task for sending emails"""
 
     email_data = {
         "subject": subject,
@@ -28,7 +29,7 @@ def send_email(subject, message, recipient_list, html_context=None):
 
 @shared_task()
 def recalculate_user_roles(pk_list: List[int]):
-    '''Called on portfolio updates. Primarily to reset previous role holders'''
+    """Called on portfolio updates. Primarily to reset previous role holders"""
     from apps.users.models import User
 
     for user in User.objects.filter(id__in=pk_list):

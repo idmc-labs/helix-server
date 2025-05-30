@@ -1,6 +1,6 @@
 from django.db import models
-from django_enumfield import enum
 from django.utils.translation import gettext_lazy as _
+from django_enumfield import enum
 
 
 class Notification(models.Model):
@@ -25,93 +25,80 @@ class Notification(models.Model):
         REVIEW_COMMENT_CREATED = 201
 
         __labels__ = {
-
-            FIGURE_RE_REQUESTED_REVIEW: _('Figure re-requested review'),
-            FIGURE_CREATED_IN_APPROVED_EVENT: _('Figure created in approved event'),
-            FIGURE_UPDATED_IN_APPROVED_EVENT: _('Figure updated in approved event'),
-            FIGURE_DELETED_IN_APPROVED_EVENT: _('Figure deleted in approved event'),
-            FIGURE_CREATED_IN_SIGNED_EVENT: _('Figure created in signed-off event'),
-            FIGURE_UPDATED_IN_SIGNED_EVENT: _('Figure updated in signed-off event'),
-            FIGURE_DELETED_IN_SIGNED_EVENT: _('Figure deleted in signed-off event'),
-            FIGURE_UNAPPROVED_IN_SIGNED_EVENT: _('Figure unapproved in signed-off event'),
-            FIGURE_UNAPPROVED_IN_APPROVED_EVENT: _('Figure unapproved in approved event'),
-
-            EVENT_ASSIGNED: _('Event assigned'),
-            EVENT_ASSIGNEE_CLEARED: _('Event assignee cleared'),
-            EVENT_SIGNED_OFF: _('Event signed off'),
-            EVENT_SELF_ASSIGNED: _('Event self assigned'),
-            EVENT_APPROVED: _('Event approved'),
-            EVENT_INCLUDE_TRIANGULATION_CHANGED: _('Event include triangulation changed'),
-
-            REVIEW_COMMENT_CREATED: _('Comment created'),
+            FIGURE_RE_REQUESTED_REVIEW: _("Figure re-requested review"),
+            FIGURE_CREATED_IN_APPROVED_EVENT: _("Figure created in approved event"),
+            FIGURE_UPDATED_IN_APPROVED_EVENT: _("Figure updated in approved event"),
+            FIGURE_DELETED_IN_APPROVED_EVENT: _("Figure deleted in approved event"),
+            FIGURE_CREATED_IN_SIGNED_EVENT: _("Figure created in signed-off event"),
+            FIGURE_UPDATED_IN_SIGNED_EVENT: _("Figure updated in signed-off event"),
+            FIGURE_DELETED_IN_SIGNED_EVENT: _("Figure deleted in signed-off event"),
+            FIGURE_UNAPPROVED_IN_SIGNED_EVENT: _("Figure unapproved in signed-off event"),
+            FIGURE_UNAPPROVED_IN_APPROVED_EVENT: _("Figure unapproved in approved event"),
+            EVENT_ASSIGNED: _("Event assigned"),
+            EVENT_ASSIGNEE_CLEARED: _("Event assignee cleared"),
+            EVENT_SIGNED_OFF: _("Event signed off"),
+            EVENT_SELF_ASSIGNED: _("Event self assigned"),
+            EVENT_APPROVED: _("Event approved"),
+            EVENT_INCLUDE_TRIANGULATION_CHANGED: _("Event include triangulation changed"),
+            REVIEW_COMMENT_CREATED: _("Comment created"),
         }
 
-    type = enum.EnumField(
-        enum=Type,
-        verbose_name=_("Notification Type")
-    )
+    type = enum.EnumField(enum=Type, verbose_name=_("Notification Type"))
 
     recipient = models.ForeignKey(
-        'users.User',
-        on_delete=models.CASCADE,
-        related_name='recipient_notifications',
-        verbose_name=_('For user')
+        "users.User", on_delete=models.CASCADE, related_name="recipient_notifications", verbose_name=_("For user")
     )
     actor = models.ForeignKey(
-        'users.User',
+        "users.User",
         on_delete=models.CASCADE,
-        related_name='actor_notifications',
-        verbose_name=_('Actor'),
+        related_name="actor_notifications",
+        verbose_name=_("Actor"),
         null=True,
         blank=True,
     )
     is_read = models.BooleanField(
-        default=False,
-        verbose_name=_('Is read?'),
-        help_text=_('Whether notification has been marked as read')
+        default=False, verbose_name=_("Is read?"), help_text=_("Whether notification has been marked as read")
     )
     event = models.ForeignKey(
-        'event.Event',
-        verbose_name=_('Event'),
-        related_name='notifications',
+        "event.Event",
+        verbose_name=_("Event"),
+        related_name="notifications",
         on_delete=models.SET_NULL,
         null=True,
-        blank=True
+        blank=True,
     )
     figure = models.ForeignKey(
-        'entry.Figure',
-        verbose_name=_('Figure'),
-        related_name='notifications',
+        "entry.Figure",
+        verbose_name=_("Figure"),
+        related_name="notifications",
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
     )
     entry = models.ForeignKey(
-        'entry.Entry',
-        verbose_name=_('Entry'),
-        related_name='notifications',
+        "entry.Entry",
+        verbose_name=_("Entry"),
+        related_name="notifications",
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
     )
     review_comment = models.ForeignKey(
-        'review.UnifiedReviewComment',
-        verbose_name=_('Unified review comment'),
-        related_name='notifications',
+        "review.UnifiedReviewComment",
+        verbose_name=_("Unified review comment"),
+        related_name="notifications",
         on_delete=models.SET_NULL,
         blank=True,
         null=True,
     )
     text = models.CharField(
-        verbose_name=_('Raw text'),
+        verbose_name=_("Raw text"),
         max_length=256,
         blank=True,
         null=True,
     )
     created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name=_('Created at'),
-        help_text=_('When notification was created')
+        auto_now_add=True, verbose_name=_("Created at"), help_text=_("When notification was created")
     )
 
     class Meta:
@@ -153,6 +140,7 @@ class Notification(models.Model):
                     entry=entry,
                     text=text,
                     review_comment=review_comment,
-                ) for recipient_id in recipient_list
+                )
+                for recipient_id in recipient_list
             ]
         )

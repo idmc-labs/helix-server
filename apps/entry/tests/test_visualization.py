@@ -1,27 +1,27 @@
 import json
-from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
-from apps.users.enums import USER_ROLE
+from apps.crisis.models import Crisis
 from apps.entry.models import (
     Figure,
 )
-from apps.crisis.models import Crisis
+from apps.users.enums import USER_ROLE
 from utils.factories import (
-    EventFactory,
-    EntryFactory,
-    FigureFactory,
     CountryFactory,
+    EntryFactory,
+    EventFactory,
+    FigureFactory,
 )
+from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
 
 class TestFigureAggegationVisualization(HelixGraphQLTestCase):
     def setUp(self) -> None:
-        self.country_nep = CountryFactory.create(name='Nepal', iso3='NPL')
-        self.country_ind = CountryFactory.create(name='India', iso3='IND')
+        self.country_nep = CountryFactory.create(name="Nepal", iso3="NPL")
+        self.country_ind = CountryFactory.create(name="India", iso3="IND")
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
 
     def test_figure_aggregation(self):
-        query = '''
+        query = """
             query MyQuery (
                 $filterFigureEntry: String
                 $filterFigureContextOfViolence: [ID!]
@@ -111,7 +111,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
                     }
                 }
             }
-        '''
+        """
 
         self.entry = EntryFactory.create()
         self.entry2 = EntryFactory.create()
@@ -129,7 +129,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=101,
             unit=Figure.UNIT.PERSON,
-            end_date='2021-09-12'
+            end_date="2021-09-12",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -141,7 +141,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            end_date='2021-09-12'
+            end_date="2021-09-12",
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -153,7 +153,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            end_date='2021-10-10'
+            end_date="2021-10-10",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -165,7 +165,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            end_date='2022-08-17'
+            end_date="2022-08-17",
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -177,7 +177,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            end_date='2022-12-10'
+            end_date="2022-12-10",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -189,7 +189,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            end_date='2023-12-12'
+            end_date="2023-12-12",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -201,7 +201,7 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            end_date='2023-01-01'
+            end_date="2023-01-01",
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -213,55 +213,38 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            end_date='2023-01-01'
+            end_date="2023-01-01",
         )
 
         self.force_login(self.admin)
 
         for filter_data, expected_data in [
             (
-                {'filterFigureCountries': self.country_nep.id, },
+                {
+                    "filterFigureCountries": self.country_nep.id,
+                },
                 [
-                    {
-                        "date": "2021-09-12",
-                        "value": 4
-                    },
-                    {
-                        "date": "2022-08-17",
-                        "value": 5
-                    },
-                    {
-                        "date": "2023-01-01",
-                        "value": 13
-                    },
-                    {
-                        "date": "2023-12-12",
-                        "value": 11
-                    }
-                ]
+                    {"date": "2021-09-12", "value": 4},
+                    {"date": "2022-08-17", "value": 5},
+                    {"date": "2023-01-01", "value": 13},
+                    {"date": "2023-12-12", "value": 11},
+                ],
             ),
             (
-                {'filterFigureCountries': self.country_ind.id, },
+                {
+                    "filterFigureCountries": self.country_ind.id,
+                },
                 [
-                    {
-                        "date": "2021-10-10",
-                        "value": 3
-                    },
-                    {
-                        "date": "2022-12-10",
-                        "value": 7
-                    },
-                    {
-                        "date": "2023-01-01",
-                        "value": 17
-                    },
-                ]
+                    {"date": "2021-10-10", "value": 3},
+                    {"date": "2022-12-10", "value": 7},
+                    {"date": "2023-01-01", "value": 17},
+                ],
             ),
         ]:
             response = self.query(query, variables={**filter_data}).json()
 
             self.assertEqual(
-                response['data']['figureAggregations']['idpsConflictFigures'],
+                response["data"]["figureAggregations"]["idpsConflictFigures"],
                 expected_data,
             )
 
@@ -276,8 +259,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=101,
             unit=Figure.UNIT.PERSON,
-            start_date='2021-09-01',
-            end_date='2021-09-12'
+            start_date="2021-09-01",
+            end_date="2021-09-12",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -289,8 +272,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2020-09-01',
-            end_date='2021-09-12'
+            start_date="2020-09-01",
+            end_date="2021-09-12",
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -302,8 +285,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2021-10-01',
-            end_date='2021-10-10'
+            start_date="2021-10-01",
+            end_date="2021-10-10",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -315,8 +298,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2022-08-01',
-            end_date='2022-08-17'
+            start_date="2022-08-01",
+            end_date="2022-08-17",
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -328,8 +311,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2022-12-01',
-            end_date='2022-12-10'
+            start_date="2022-12-01",
+            end_date="2022-12-10",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -341,8 +324,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2021-12-12',
-            end_date='2022-12-12'
+            start_date="2021-12-12",
+            end_date="2022-12-12",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -354,8 +337,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2021-01-01',
-            end_date='2022-01-01'
+            start_date="2021-01-01",
+            end_date="2022-01-01",
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -367,54 +350,38 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2022-01-01',
-            end_date='2023-01-01',
+            start_date="2022-01-01",
+            end_date="2023-01-01",
         )
 
         for filter_data, expected_data in [
             (
-                {'filterFigureCountries': self.country_nep.id, },
+                {
+                    "filterFigureCountries": self.country_nep.id,
+                },
                 [
-                    {
-                        "date": "2021-09-12",
-                        "value": 4
-                    },
-                    {
-                        "date": "2022-01-01",
-                        "value": 13
-                    },
-                    {
-                        "date": "2022-08-17",
-                        "value": 5
-                    },
-                    {
-                        "date": "2022-12-12",
-                        "value": 11
-                    },
-                ]
+                    {"date": "2021-09-12", "value": 4},
+                    {"date": "2022-01-01", "value": 13},
+                    {"date": "2022-08-17", "value": 5},
+                    {"date": "2022-12-12", "value": 11},
+                ],
             ),
             (
-                {'filterFigureCountries': self.country_ind.id, },
+                {
+                    "filterFigureCountries": self.country_ind.id,
+                },
                 [
-                    {
-                        "date": "2021-10-10",
-                        "value": 3
-                    },
-                    {
-                        "date": "2022-12-10",
-                        "value": 7
-                    },
-                    {
-                        "date": "2023-01-01",
-                        "value": 17
-                    },
-                ]
-            )
+                    {"date": "2021-10-10", "value": 3},
+                    {"date": "2022-12-10", "value": 7},
+                    {"date": "2023-01-01", "value": 17},
+                ],
+            ),
         ]:
             response = self.query(query, variables={**filter_data})
             content = json.loads(response.content)
             self.assertEqual(
-                content['data']['figureAggregations']['idpsDisasterFigures'], expected_data,
+                content["data"]["figureAggregations"]["idpsDisasterFigures"],
+                expected_data,
             )
 
         # Test for ndsConflictFigures
@@ -428,8 +395,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=101,
             unit=Figure.UNIT.PERSON,
-            start_date='2021-09-12',
-            end_date='2021-09-30'
+            start_date="2021-09-12",
+            end_date="2021-09-30",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -441,8 +408,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2021-09-12',
-            end_date='2022-09-30'
+            start_date="2021-09-12",
+            end_date="2022-09-30",
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -454,8 +421,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2021-10-10',
-            end_date='2023-09-30'
+            start_date="2021-10-10",
+            end_date="2023-09-30",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -467,8 +434,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2022-08-17',
-            end_date='2022-08-30'
+            start_date="2022-08-17",
+            end_date="2022-08-30",
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -480,8 +447,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2022-12-10',
-            end_date='2022-12-30'
+            start_date="2022-12-10",
+            end_date="2022-12-30",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -493,8 +460,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2023-12-12',
-            end_date='2023-12-30'
+            start_date="2023-12-12",
+            end_date="2023-12-30",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -506,8 +473,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2023-01-01',
-            end_date='2023-12-30'
+            start_date="2023-01-01",
+            end_date="2023-12-30",
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -519,58 +486,39 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2023-01-01',
-            end_date='2023-12-30',
+            start_date="2023-01-01",
+            end_date="2023-12-30",
         )
 
         for filter_data, expected_data in [
             (
-                {'filterFigureCountries': self.country_nep.id, },
+                {
+                    "filterFigureCountries": self.country_nep.id,
+                },
                 [
-                    {
-                        "date": "2021-09-12",
-                        "value": 2
-                    },
-                    {
-                        "date": "2022-08-17",
-                        "value": 5
-                    },
-                    {
-                        "date": "2022-09-30",
-                        "value": 2
-                    },
-                    {
-                        "date": "2023-01-01",
-                        "value": 13
-                    },
-                    {
-                        "date": "2023-12-12",
-                        "value": 11
-                    }
-                ]
+                    {"date": "2021-09-12", "value": 2},
+                    {"date": "2022-08-17", "value": 5},
+                    {"date": "2022-09-30", "value": 2},
+                    {"date": "2023-01-01", "value": 13},
+                    {"date": "2023-12-12", "value": 11},
+                ],
             ),
             (
-                {'filterFigureCountries': self.country_ind.id, },
+                {
+                    "filterFigureCountries": self.country_ind.id,
+                },
                 [
-                    {
-                        "date": "2022-12-10",
-                        "value": 7
-                    },
-                    {
-                        "date": "2023-01-01",
-                        "value": 17
-                    },
-                    {
-                        "date": "2023-09-30",
-                        "value": 3
-                    },
-                ]
-            )
+                    {"date": "2022-12-10", "value": 7},
+                    {"date": "2023-01-01", "value": 17},
+                    {"date": "2023-09-30", "value": 3},
+                ],
+            ),
         ]:
             response = self.query(query, variables={**filter_data})
             content = json.loads(response.content)
             self.assertEqual(
-                content['data']['figureAggregations']['ndsConflictFigures'], expected_data,
+                content["data"]["figureAggregations"]["ndsConflictFigures"],
+                expected_data,
             )
 
         # Test for ndsDisasterFigures
@@ -584,8 +532,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=101,
             unit=Figure.UNIT.PERSON,
-            start_date='2021-09-12',
-            end_date='2021-09-30'
+            start_date="2021-09-12",
+            end_date="2021-09-30",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -597,8 +545,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2021-09-12',
-            end_date='2022-09-30'
+            start_date="2021-09-12",
+            end_date="2022-09-30",
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -610,8 +558,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2021-10-10',
-            end_date='2023-09-30'
+            start_date="2021-10-10",
+            end_date="2023-09-30",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -623,8 +571,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2022-08-17',
-            end_date='2022-08-30'
+            start_date="2022-08-17",
+            end_date="2022-08-30",
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -636,8 +584,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2022-12-10',
-            end_date='2022-12-30'
+            start_date="2022-12-10",
+            end_date="2022-12-30",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -649,8 +597,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2023-12-12',
-            end_date='2023-12-30'
+            start_date="2023-12-12",
+            end_date="2023-12-30",
         )
         FigureFactory.create(
             country=self.country_nep,
@@ -662,8 +610,8 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2023-01-01',
-            end_date='2023-12-30'
+            start_date="2023-01-01",
+            end_date="2023-12-30",
         )
         FigureFactory.create(
             country=self.country_ind,
@@ -675,133 +623,74 @@ class TestFigureAggegationVisualization(HelixGraphQLTestCase):
             category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
             reported=111,
             unit=Figure.UNIT.PERSON,
-            start_date='2023-01-01',
-            end_date='2023-12-30',
+            start_date="2023-01-01",
+            end_date="2023-12-30",
         )
 
         for filter_data, expected_data in [
             (
-                {'filterFigureCountries': self.country_nep.id, },
+                {
+                    "filterFigureCountries": self.country_nep.id,
+                },
                 [
-                    {
-                        "date": "2021-09-12",
-                        "value": 2
-                    },
-                    {
-                        "date": "2022-08-17",
-                        "value": 5
-                    },
-                    {
-                        "date": "2022-09-30",
-                        "value": 2
-                    },
-                    {
-                        "date": "2023-01-01",
-                        "value": 13
-                    },
-                    {
-                        "date": "2023-12-12",
-                        "value": 11
-                    }
-                ]
+                    {"date": "2021-09-12", "value": 2},
+                    {"date": "2022-08-17", "value": 5},
+                    {"date": "2022-09-30", "value": 2},
+                    {"date": "2023-01-01", "value": 13},
+                    {"date": "2023-12-12", "value": 11},
+                ],
             ),
             (
-                {'filterFigureCountries': self.country_ind.id, },
+                {
+                    "filterFigureCountries": self.country_ind.id,
+                },
                 [
-                    {
-                        "date": "2022-12-10",
-                        "value": 7
-                    },
-                    {
-                        "date": "2023-01-01",
-                        "value": 17
-                    },
-                    {
-                        "date": "2023-09-30",
-                        "value": 3
-                    },
-                ]
-            )
+                    {"date": "2022-12-10", "value": 7},
+                    {"date": "2023-01-01", "value": 17},
+                    {"date": "2023-09-30", "value": 3},
+                ],
+            ),
         ]:
             response = self.query(query, variables={**filter_data})
             content = json.loads(response.content)
             self.assertEqual(
-                content['data']['figureAggregations']['ndsDisasterFigures'], expected_data,
+                content["data"]["figureAggregations"]["ndsDisasterFigures"],
+                expected_data,
             )
 
         # test filter by year
-        filter_data = {
-            "filterFigureEndBefore": '2022-12-31',
-            'filterFigureCountries': self.country_nep.id
-        }
+        filter_data = {"filterFigureEndBefore": "2022-12-31", "filterFigureCountries": self.country_nep.id}
         response = self.query(query, variables={**filter_data})
         content = json.loads(response.content)
         self.assertEqual(
-            content['data']['figureAggregations']['idpsConflictFigures'],
+            content["data"]["figureAggregations"]["idpsConflictFigures"],
             [
-                {
-                    "date": "2021-09-12",
-                    "value": 4
-                },
-                {
-                    "date": "2022-08-17",
-                    "value": 5
-                },
-
-            ]
+                {"date": "2021-09-12", "value": 4},
+                {"date": "2022-08-17", "value": 5},
+            ],
         )
         self.assertEqual(
-            content['data']['figureAggregations']['idpsDisasterFigures'],
+            content["data"]["figureAggregations"]["idpsDisasterFigures"],
             [
-                {
-                    "date": "2021-09-12",
-                    "value": 4
-                },
-                {
-                    "date": "2022-01-01",
-                    "value": 13
-                },
-                {
-                    "date": "2022-08-17",
-                    "value": 5
-                },
-                {
-                    "date": "2022-12-12",
-                    "value": 11
-                },
-            ]
+                {"date": "2021-09-12", "value": 4},
+                {"date": "2022-01-01", "value": 13},
+                {"date": "2022-08-17", "value": 5},
+                {"date": "2022-12-12", "value": 11},
+            ],
         )
         self.assertEqual(
-            content['data']['figureAggregations']['ndsConflictFigures'],
+            content["data"]["figureAggregations"]["ndsConflictFigures"],
             [
-                {
-                    "date": "2021-09-12",
-                    "value": 2
-                },
-                {
-                    "date": "2022-08-17",
-                    "value": 5
-                },
-                {
-                    "date": "2022-09-30",
-                    "value": 2
-                },
-            ]
+                {"date": "2021-09-12", "value": 2},
+                {"date": "2022-08-17", "value": 5},
+                {"date": "2022-09-30", "value": 2},
+            ],
         )
         self.assertEqual(
-            content['data']['figureAggregations']['ndsDisasterFigures'],
+            content["data"]["figureAggregations"]["ndsDisasterFigures"],
             [
-                {
-                    "date": "2021-09-12",
-                    "value": 2
-                },
-                {
-                    "date": "2022-08-17",
-                    "value": 5
-                },
-                {
-                    "date": "2022-09-30",
-                    "value": 2
-                },
-            ]
+                {"date": "2021-09-12", "value": 2},
+                {"date": "2022-08-17", "value": 5},
+                {"date": "2022-09-30", "value": 2},
+            ],
         )

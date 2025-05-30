@@ -1,37 +1,37 @@
 from django.db.models import (
+    BooleanField,
+    Case,
     Exists,
-    Subquery,
+    F,
     OuterRef,
     Q,
-    F,
-    When,
-    Case,
+    Subquery,
     Value,
-    BooleanField,
+    When,
 )
 from django_filters import rest_framework as df
 
-from apps.report.models import Report, ReportGeneration, ReportApproval, ReportComment
+from apps.report.models import Report, ReportApproval, ReportComment, ReportGeneration
 from utils.filters import IDListFilter, StringListFilter, generate_type_for_filter_set
 
 
 class ReportFilter(df.FilterSet):
-    filter_figure_countries = IDListFilter(method='filter_countries')
-    review_status = StringListFilter(method='filter_by_review_status')
-    start_date_after = df.DateFilter(method='filter_date_after')
-    end_date_before = df.DateFilter(method='filter_end_date_before')
-    is_public = df.BooleanFilter(method='filter_is_public')
-    is_gidd_report = df.BooleanFilter(method='filter_is_gidd_report')
-    is_pfa_visible_in_gidd = df.BooleanFilter(method='filter_is_pfa_visible_in_gidd')
+    filter_figure_countries = IDListFilter(method="filter_countries")
+    review_status = StringListFilter(method="filter_by_review_status")
+    start_date_after = df.DateFilter(method="filter_date_after")
+    end_date_before = df.DateFilter(method="filter_end_date_before")
+    is_public = df.BooleanFilter(method="filter_is_public")
+    is_gidd_report = df.BooleanFilter(method="filter_is_gidd_report")
+    is_pfa_visible_in_gidd = df.BooleanFilter(method="filter_is_pfa_visible_in_gidd")
 
     class Meta:
         model = Report
         fields = {
-            'name': ['unaccent__icontains'],
-            'change_in_source': ['exact'],
-            'change_in_methodology': ['exact'],
-            'change_in_data_availability': ['exact'],
-            'retroactive_change': ['exact']
+            "name": ["unaccent__icontains"],
+            "change_in_source": ["exact"],
+            "change_in_methodology": ["exact"],
+            "change_in_data_availability": ["exact"],
+            "retroactive_change": ["exact"],
         }
 
     def filter_countries(self, qs, name, value):
@@ -42,29 +42,28 @@ class ReportFilter(df.FilterSet):
     def filter_by_review_status(self, qs, name, value):
         if not value:
             return qs
-        qs = qs.annotate(
-            _last_generation_id=Subquery(
-                ReportGeneration.objects.filter(
-                    report=OuterRef('pk')
-                ).order_by('-created_by').values('pk')[:1]
-            )
-        ).annotate(
-            # is_signed_off already exists
-            _is_signed_off=F('is_signed_off'),
-            _is_approved=Exists(
-                ReportApproval.objects.filter(
-                    generation=OuterRef('_last_generation_id'),
-                    is_approved=True,
+        qs = (
+            qs.annotate(
+                _last_generation_id=Subquery(
+                    ReportGeneration.objects.filter(report=OuterRef("pk")).order_by("-created_by").values("pk")[:1]
                 )
-            ),
-        ).annotate(
-            _is_unapproved=Case(
-                When(
-                    Q(_is_approved=False) & Q(_is_signed_off=False),
-                    then=Value(True)
+            )
+            .annotate(
+                # is_signed_off already exists
+                _is_signed_off=F("is_signed_off"),
+                _is_approved=Exists(
+                    ReportApproval.objects.filter(
+                        generation=OuterRef("_last_generation_id"),
+                        is_approved=True,
+                    )
                 ),
-                default=Value(False),
-                output_field=BooleanField()
+            )
+            .annotate(
+                _is_unapproved=Case(
+                    When(Q(_is_approved=False) & Q(_is_signed_off=False), then=Value(True)),
+                    default=Value(False),
+                    output_field=BooleanField(),
+                )
             )
         )
         _temp = qs.none()
@@ -114,12 +113,10 @@ class ReportFilter(df.FilterSet):
     @property
     def qs(self):
         # Return private reports by default if filter is not applied
-        is_public = self.data.get('is_public')
+        is_public = self.data.get("is_public")
         if is_public is None:
             user = self.request.user
-            return super().qs.filter(
-                Q(is_public=True) | Q(is_public=False, created_by=user)
-            )
+            return super().qs.filter(Q(is_public=True) | Q(is_public=False, created_by=user))
 
         return super().qs.distinct()
 
@@ -128,23 +125,24 @@ class DummyFilter(df.FilterSet):
     """
     NOTE: Created to override the default filters of list types
     """
-    id = df.CharFilter(field_name='id', lookup_expr='exact')
+
+    id = df.CharFilter(field_name="id", lookup_expr="exact")
 
 
 class ReportApprovalFilter(df.FilterSet):
     class Meta:
         model = ReportApproval
-        fields = ('is_approved',)
+        fields = ("is_approved",)
 
 
 class ReportGenerationFilter(df.FilterSet):
     class Meta:
         model = ReportGeneration
-        fields = ('report',)
+        fields = ("report",)
 
 
 class ReportCommentFilter(df.FilterSet):
-    ids = IDListFilter(field_name='id')
+    ids = IDListFilter(field_name="id")
 
     class Meta:
         model = ReportComment
@@ -153,7 +151,7 @@ class ReportCommentFilter(df.FilterSet):
 
 ReportFilterDataType, ReportFilterDataInputType = generate_type_for_filter_set(
     ReportFilter,
-    'report.schema.report_list',
-    'ReportFilterDataType',
-    'ReportFilterDataInputType',
+    "report.schema.report_list",
+    "ReportFilterDataType",
+    "ReportFilterDataInputType",
 )
