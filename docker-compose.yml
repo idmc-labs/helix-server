@@ -37,12 +37,12 @@ x-server: &base_server_setup
 
 services:
   db:
-    image: postgres:13
+    image: postgres:17.5
     environment:
       POSTGRES_PASSWORD: postgres
     command: postgres -c log_statement=all
     volumes:
-      - helix-db-13-data:/var/lib/postgresql/data
+      - helix-db-17-data:/var/lib/postgresql/data
     ports:
       - '127.0.0.1:6050:5432'
 
@@ -75,6 +75,6 @@ services:
         hard: 10240
 
 volumes:
-  helix-db-13-data:
+  helix-db-17-data:
   helix-redis-data:
   ipython_data_local:
