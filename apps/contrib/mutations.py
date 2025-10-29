@@ -7,6 +7,7 @@ from graphene_file_upload.scalars import Upload
 from apps.contrib.bulk_operations.serializers import BulkApiOperationSerializer
 from apps.contrib.filters import ClientFilterDataInputType
 from apps.contrib.models import (
+    Attachment,
     Client,
     ExcelDownload,
 )
@@ -51,6 +52,39 @@ class CreateAttachment(graphene.Mutation):
             return CreateAttachment(errors=errors, ok=False)
         instance = serializer.save()
         return CreateAttachment(result=instance, errors=None, ok=True)
+
+
+class MarkAttachmentAsUploaded(graphene.Mutation):
+    class Arguments:
+        attachment_id = graphene.ID(required=True)
+
+    errors = graphene.List(CustomErrorType)
+    ok = graphene.Boolean()
+    result = graphene.Field(AttachmentType)
+
+    @staticmethod
+    @is_authenticated()
+    def mutate(root, info, attachment_id):
+        try:
+            instance = Attachment.objects.get(id=attachment_id)
+        except Attachment.DoesNotExist:
+            return MarkAttachmentAsUploaded(
+                errors=[dict(field="nonFieldErrors", messages=gettext("Attachment does not exist."))],
+                ok=False,
+            )
+
+        if instance.attachment is None:
+            return MarkAttachmentAsUploaded(
+                errors=[dict(field="attachment", messages=gettext("Attachment file is missing."))],
+                ok=False,
+            )
+        if instance.uploaded:
+            return MarkAttachmentAsUploaded(
+                errors=[dict(field="nonFieldErrors", messages=gettext("Attachment is already marked as uploaded."))],
+                ok=False,
+            )
+        instance.mark_as_uploaded()
+        return MarkAttachmentAsUploaded(result=instance, errors=None, ok=True)
 
 
 ClientCreateInputType = generate_input_type_for_serializer(
@@ -180,6 +214,7 @@ class TriggerBulkOperation(graphene.Mutation):
 
 class Mutation:
     create_attachment = CreateAttachment.Field()
+    mark_attachment_as_uploaded = MarkAttachmentAsUploaded.Field()
     create_client = CreateClient.Field()
     update_client = UpdateClient.Field()
     export_tracking_data = ExportTrackingData.Field()
