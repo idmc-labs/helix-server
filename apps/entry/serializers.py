@@ -599,6 +599,12 @@ class EntryCreateSerializer(
             raise serializers.ValidationError(_("This field is required"))
         return value
 
+    def validate_document(self, document):
+        # Document must be uploaded before saving entry
+        if document and not document.uploaded:
+            raise serializers.ValidationError(_("Document is not yet uploaded."))
+        return document
+
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
         errors = OrderedDict()

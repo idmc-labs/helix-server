@@ -45,15 +45,17 @@ class AttachmentSerializer(serializers.ModelSerializer):
         model = Attachment
         fields = "__all__"
 
-    def _validate_file_size(self, file_content):
-        if file_content.size > Attachment.MAX_FILE_SIZE:
+    def _validate_file_size(self, validated_data, file_content) -> None:
+        file_size = file_content.size
+        if file_size > Attachment.MAX_FILE_SIZE:
             raise serializers.ValidationError(
                 gettext("Filesize should be less than: %s. Current is: %s")
                 % (
                     filesizeformat(Attachment.MAX_FILE_SIZE),
-                    filesizeformat(file_content.size),
+                    filesizeformat(file_size),
                 )
             )
+        validated_data["file_size"] = file_size
 
     def _validate_mimetype(self, mimetype):
         if mimetype not in Attachment.ALLOWED_MIMETYPES:
@@ -61,8 +63,8 @@ class AttachmentSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs) -> dict:
         attachment = attrs["attachment"]
-        self._validate_file_size(attachment)
-        byte_stream = attachment.file.read()
+        self._validate_file_size(attrs, attachment)
+        byte_stream = attachment.file.read(2048)
         with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
             attrs["mimetype"] = m.id_buffer(byte_stream)
             self._validate_mimetype(attrs["mimetype"])
