@@ -14,6 +14,26 @@ class CrisisSerializer(serializers.ModelSerializer, MetaInformationSerializerMix
     class Meta:
         model = Crisis
         fields = "__all__"
+    
+    def validate_name(self, value):
+        if value is None:
+            raise serializers.ValidationError("Crisis name is required")
+        
+        value = str(value).strip()
+        if not any(c.isalpha() for c in value):
+            raise serializers.ValidationError("Crisis name should be of alphanumeric characters")
+        
+        return value
+    
+    def validate_crisis_narrative(self, value):
+        if value is None:
+            raise serializers.ValidationError("Crisis Narrative is required")
+        
+        value = str(value).strip()
+        if not any(c.isalpha() for c in value):
+            raise serializers.ValidationError("Crisis Narrative should be a readable content")
+
+        return value
 
     def validate_dates(self, attrs):
         errors = OrderedDict()
