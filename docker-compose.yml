@@ -7,6 +7,13 @@ x-server: &base_server_setup
     DJANGO_ALLOWED_HOST: ${DJANGO_ALLOWED_HOST:-localhost,host.docker.internal}
     BACKEND_BASE_URL: ${BACKEND_BASE_URL:-http://localhost:9000}
     FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3080}
+    USE_S3_BUCKET: ${USE_S3_BUCKET:-true}
+    AWS_S3_ACCESS_KEY_ID: ${AWS_S3_ACCESS_KEY_ID:-dev_user}
+    AWS_S3_SECRET_ACCESS_KEY: ${AWS_S3_SECRET_ACCESS_KEY:-dev_pass}
+    AWS_S3_REGION: ${AWS_S3_REGION:-us-east-1}
+    EXTERNAL_S3_BUCKET_NAME: ${EXTERNAL_S3_BUCKET_NAME:-helix-data}
+    S3_BUCKET_NAME : ${S3_BUCKET_NAME:-helix-data}
+    AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-http://localhost:9001}
     # Database (Default from db container)
     POSTGRES_HOST: ${POSTGRES_HOST:-db}
     POSTGRES_DB: ${POSTGRES_DB:-postgres}
@@ -26,34 +33,59 @@ x-server: &base_server_setup
     HCAPTCHA_SECRET: ${HCAPTCHA_SECRET:-0x0000000000000000000000000000000000000000}
   env_file:
     - .env
+  extra_hosts:
+    - "host.docker.internal:host-gateway"
   volumes:
     - ./:/code
     - ipython_data_local:/root/.ipython/profile_default   # persist ipython data, including ipython history
   # restart: 'on-failure'
   depends_on:
-    - db
-    - redis
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+    minio:
+      condition: service_healthy
+    createbuckets:
+      condition: service_completed_successfully
 
 
 services:
   db:
     image: postgres:17.5
+    restart: unless-stopped
     environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_HOST: db
     command: postgres -c log_statement=all
     volumes:
       - helix-db-17-data:/var/lib/postgresql/data
     ports:
       - '127.0.0.1:6050:5432'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -h localhost -p $$POSTGRES_PORT"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   redis:
     image: redis:latest
     volumes:
       - helix-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      start_period: 2s
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
   server:
     <<: *base_server_setup
     image: helix/helix-server:latest
+    restart: on-failure
     build:
       context: ./
       target: api
@@ -64,6 +96,7 @@ services:
   celery:
     <<: *base_server_setup
     image: helix/helix-worker:latest
+    restart: on-failure
     build:
       context: ./
       target: worker
@@ -74,7 +107,49 @@ services:
         soft: 10240
         hard: 10240
 
+  minio:
+    image: minio/minio:RELEASE.2023-09-30T07-02-29Z.fips
+    command: minio server /data --console-address ":9001"
+    restart: on-failure
+    ports:
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${AWS_S3_ACCESS_KEY_ID:-dev_user}
+      MINIO_ROOT_PASSWORD: ${AWS_S3_SECRET_ACCESS_KEY:-dev_pass}
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/minio/health/live"]
+      start_period: 2s
+      interval: 30s
+      timeout: 20s
+      retries: 5
+
+  createbuckets:
+    image: minio/mc
+    restart: on-failure
+    entrypoint: >
+      /bin/sh -xc "
+      /usr/bin/mc config host add myminio http://minio:9000 $$MINIO_ROOT_USER $$MINIO_ROOT_PASSWORD;
+      /usr/bin/mc mb --quiet myminio/$$AWS_S3_BUCKET_NAME_STATIC;
+      /usr/bin/mc anonymous set none myminio/$$AWS_S3_BUCKET_NAME_STATIC;
+      /usr/bin/mc mb --quiet myminio/$$AWS_S3_BUCKET_NAME_MEDIA;
+      /usr/bin/mc anonymous set none myminio/$$AWS_S3_BUCKET_NAME_MEDIA;
+      /usr/bin/mc mb --quiet myminio/$$EXTERNAL_S3_BUCKET_NAME;
+      /usr/bin/mc anonymous set none myminio/$$EXTERNAL_S3_BUCKET_NAME;
+      "
+    environment:
+      MINIO_ROOT_USER: ${AWS_S3_ACCESS_KEY_ID:-dev_user}
+      MINIO_ROOT_PASSWORD: ${AWS_S3_SECRET_ACCESS_KEY:-dev_pass}
+      AWS_S3_BUCKET_NAME_STATIC: ${AWS_S3_BUCKET_NAME_STATIC:-my-static-bucket}
+      AWS_S3_BUCKET_NAME_MEDIA: ${AWS_S3_BUCKET_NAME_MEDIA:-my-media-bucket}
+      S3_BUCKET_NAME : ${S3_BUCKET_NAME:-helix-data}
+    depends_on:
+      minio:
+        condition: service_healthy
+
 volumes:
   helix-db-17-data:
   helix-redis-data:
   ipython_data_local:
+  miniodata:
