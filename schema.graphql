@@ -90,10 +90,13 @@ type AttachmentType {
   versionId: String
   attachment: String!
   attachmentFor: FOR_CHOICES
+  fileSize: Int
+  isFileUploaded: Boolean!
   mimetype: String
   encoding: String
   filetypeDetail: String
   attachmentForDisplay: EnumDescription
+  s3PresignedUrl: String
 }
 
 enum BULK_OPERATION_ACTION {
@@ -107,6 +110,11 @@ enum BULK_OPERATION_STATUS {
   COMPLETED
   FAILED
   KILLED
+}
+
+input BigFileUploadAttachmentCreateInputType {
+  fileName: String!
+  attachmentFor: String!
 }
 
 type BulkApiOperationFailureType {
@@ -768,6 +776,12 @@ type CreateActor {
 }
 
 type CreateAttachment {
+  errors: [GenericScalar]
+  ok: Boolean
+  result: AttachmentType
+}
+
+type CreateBigFileAttachment {
   errors: [GenericScalar]
   ok: Boolean
   result: AttachmentType
@@ -2647,6 +2661,12 @@ type Logout {
   ok: Boolean
 }
 
+type MarkFileAttachmentAsUploaded {
+  errors: [GenericScalar]
+  ok: Boolean
+  result: AttachmentType
+}
+
 input MonitoringExpertPortfolioInputType {
   user: ID!
   country: ID!
@@ -2759,6 +2779,8 @@ type Mutation {
   exportCountries(filters: CountryFilterDataInputType!): ExportCountries
   exportMonitoringSubRegions(filters: MonitoringSubRegionFilterDataInputType!): ExportMonitoringSubRegions
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
+  createBigFileAttachment(data: BigFileUploadAttachmentCreateInputType!): CreateBigFileAttachment
+  markAttachmentAsUploaded(attachmentId: ID!): MarkFileAttachmentAsUploaded
   createClient(data: ClientCreateInputType!): CreateClient
   updateClient(data: ClientUpdateInputType!): UpdateClient
   exportTrackingData(filters: ClientTrackInfoFilterDataInputType!): ExportTrackingData

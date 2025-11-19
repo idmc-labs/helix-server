@@ -601,7 +601,7 @@ class EntryCreateSerializer(
 
     def validate_document(self, document):
         # Document must be uploaded before saving entry
-        if document and not document.uploaded:
+        if document and not document.is_file_uploaded:
             raise serializers.ValidationError(_("Document is not yet uploaded."))
         return document
 

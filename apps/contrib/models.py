@@ -123,19 +123,10 @@ class Attachment(MetaInformationAbstractModel):
         help_text=_("The type of instance for which attachment was uploaded for"),
     )
     file_size = models.IntegerField(verbose_name=_("File Size"), blank=True, null=True)
-    uploaded = models.BooleanField(verbose_name=_("Uploaded"), default=False)
+    is_file_uploaded = models.BooleanField(verbose_name=_("Is file uploaded?"), default=False)
     mimetype = models.CharField(verbose_name=_("Mimetype"), max_length=256, blank=True, null=True)
     encoding = models.CharField(verbose_name=_("Encoding"), max_length=256, blank=True, null=True)
     filetype_detail = models.CharField(verbose_name=_("File type detail"), max_length=2000, blank=True, null=True)
-
-    def mark_as_uploaded(self, _commit: bool = True) -> None:
-        """
-        Marks the attachment as uploaded.
-        _commit: Whether to save the change to the database immediately.
-        """
-        self.uploaded = True
-        if _commit:
-            self.save(update_fields=["uploaded"])
 
 
 class SoftDeleteQueryset(models.QuerySet):

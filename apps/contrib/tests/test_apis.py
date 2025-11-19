@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 import magic
 from django.core.files.temp import NamedTemporaryFile
+from django.test import override_settings
 
 from apps.contrib.bulk_operations.tasks import run_bulk_api_operation
 from apps.contrib.models import Attachment, BulkApiOperation
@@ -410,3 +411,38 @@ class TestBulkOperation(HelixGraphQLTestCase):
         # This shouldn't change at all
         assert figure_qs.filter(role=Figure.ROLE.TRIANGULATION).count() == 2
         assert figure_qs.filter(role=Figure.ROLE.RECOMMENDED).count() == 2
+
+
+@override_settings(
+    USE_S3_BUCKET=True,
+    DEFAULT_FILE_STORAGE="storages.backends.s3boto3.S3Boto3Storage",
+)
+class TestBigFileUploadAttachment(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.mutation = """
+            mutation ($data: BigFileUploadAttachmentCreateInputType!) {
+              createBigFileAttachment(data: $data) {
+                ok
+                errors
+                result {
+                  id
+                  attachmentFor
+                  s3PresignedUrl
+                }
+              }
+            }
+        """
+        self.variables = {"data": {"attachmentFor": Attachment.FOR_CHOICES.ENTRY, "fileName": "test.txt"}}
+        self.force_login(self.editor)
+
+    def test_create_bigfile_attachment(self):
+        response = self._client.post(
+            "/graphql",
+            data={
+                "operations": json.dumps({"query": self.mutation, "variables": self.variables}),
+            },
+        )
+        content = response.json()
+        self.assertResponseNoErrors(response)
+        self.assertTrue(content["data"]["createBigFileAttachment"]["ok"], content)

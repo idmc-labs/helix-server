@@ -9,6 +9,11 @@ class CommunicationSerializer(serializers.ModelSerializer, MetaInformationSerial
         model = Communication
         fields = "__all__"
 
+    def validate_document(self, document) -> dict:
+        if document and not document.is_file_uploaded:
+            return serializers.ValidationError("Document must be uploaded before linking to communication.")
+        return document
+
 
 class CommunicationUpdateSerializer(UpdateSerializerMixin, CommunicationSerializer):
     id = IntegerIDField(required=True)
