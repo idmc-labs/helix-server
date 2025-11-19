@@ -1,3 +1,4 @@
+import datetime
 from collections import OrderedDict
 from copy import copy
 from decimal import Decimal
@@ -575,6 +576,15 @@ class EntryCreateSerializer(
             "old_id",
             "version_id",
         )
+
+    def validate_publish_date(self, value):
+        if not value:
+            raise serializers.ValidationError("Publish date is required")
+
+        if value > datetime.date.today():
+            raise serializers.ValidationError("Publish date should be in the past")
+
+        return value
 
     def validate_figures(self, figures):
         if len(figures) > Entry.FIGURES_PER_ENTRY:
