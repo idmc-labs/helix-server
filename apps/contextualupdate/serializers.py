@@ -20,6 +20,11 @@ class ContextualUpdateSerializer(MetaInformationSerializerMixin, serializers.Mod
                 errors["document"] = gettext("Please fill the URL or upload a document.")
                 raise serializers.ValidationError(errors)
 
+    def validate_document(self, document) -> dict:
+        if document and not document.is_file_uploaded:
+            return serializers.ValidationError("Document must be uploaded before linking to contextual update.")
+        return document
+
     def validate(self, attrs) -> dict:
         attrs = super(ContextualUpdateSerializer, self).validate(attrs)
         self.validate_url_document(attrs)

@@ -157,9 +157,17 @@ class AttachmentType(DjangoObjectType):
 
     attachment_for = graphene.Field(AttachmentForGrapheneEnum)
     attachment_for_display = EnumDescription(source="get_attachment_for_display")
+    s3_presigned_url = graphene.String()
 
     def resolve_attachment(root, info, **kwargs):
         return info.context.request.build_absolute_uri(root.attachment.url)
+
+    @staticmethod
+    def resolve_s3_presigned_url(root, info, **_):
+        value = getattr(root, "s3_presigned_url", None)
+        if value:
+            return value
+        return None
 
 
 class BulkApiOperationFilterType(graphene.ObjectType):

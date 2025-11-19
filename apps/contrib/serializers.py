@@ -14,6 +14,7 @@ from apps.contrib.models import (
     Client,
     ExcelDownload,
     SourcePreview,
+    global_upload_to,
 )
 from apps.entry.tasks import PDF_TASK_TIMEOUT
 from utils.serializers import IntegerIDField
@@ -38,6 +39,37 @@ class MetaInformationSerializerMixin(serializers.Serializer):
         else:
             attrs.update({"last_modified_by": self.context["request"].user})
         return attrs
+
+
+class BigFileUploadAttachmentSerializer(serializers.ModelSerializer):
+    file_name = serializers.CharField(required=True)
+    s3_presigned_url = serializers.CharField(read_only=True)
+
+    class Meta:
+        model = Attachment
+        fields = "__all__"
+        read_only_fields = (
+            "attachment",
+            "mimetype",
+            "encoding",
+            "filetype_detail",
+            "file_size",
+            "is_file_uploaded",
+            "created_at",
+        )
+
+    def create(self, validated_data):
+        file_name = validated_data.pop("file_name")
+        instance = Attachment(
+            attachment_for=validated_data.get("attachment_for"),
+            is_file_uploaded=False,
+        )
+        instance.attachment.name = global_upload_to(
+            instance,
+            file_name,
+        )
+        instance.save()
+        return instance
 
 
 class AttachmentSerializer(serializers.ModelSerializer):
