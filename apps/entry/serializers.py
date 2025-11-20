@@ -577,6 +577,21 @@ class EntryCreateSerializer(
             "version_id",
         )
 
+    def validate_article_title(self, value):
+        if not value:
+            raise serializers.ValidationError(_("This field is required"))
+
+        article_title = str(value).strip()
+        if not any(c.isalpha() for c in str(article_title)):
+            raise serializers.ValidationError(_("This article title should be readable"))
+
+        return article_title
+
+    def validate_publishers(self, publishers):
+        if not publishers:
+            raise serializers.ValidationError(_("At least one publisher is required"))
+        return publishers
+
     def validate_publish_date(self, value):
         if not value:
             raise serializers.ValidationError("Publish date is required")
