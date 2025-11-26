@@ -115,6 +115,7 @@ enum BULK_OPERATION_STATUS {
 input BigFileUploadAttachmentCreateInputType {
   fileName: String!
   attachmentFor: String!
+  mimetype: String!
 }
 
 type BulkApiOperationFailureType {

@@ -16,6 +16,7 @@ from apps.contrib.models import (
     SourcePreview,
     global_upload_to,
 )
+from apps.contrib.utils import AttachmentBoto3ConnectorService
 from apps.entry.tasks import PDF_TASK_TIMEOUT
 from utils.serializers import IntegerIDField
 
@@ -41,16 +42,31 @@ class MetaInformationSerializerMixin(serializers.Serializer):
         return attrs
 
 
+class MarkBigFileUploadedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Attachment
+        fields = []
+
+    def create(self, validated_data):
+        raise serializers.ValidationError("This is a update-only serializer.")
+
+    def update(self, instance, validated_data):
+        try:
+            return AttachmentBoto3ConnectorService(instance=instance).verify_uploaded()
+        except Exception as e:
+            raise serializers.ValidationError(str(e))
+
+
 class BigFileUploadAttachmentSerializer(serializers.ModelSerializer):
     file_name = serializers.CharField(required=True)
-    s3_presigned_url = serializers.CharField(read_only=True)
+    mimetype = serializers.CharField(required=True)
+    s3_presigned_url = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Attachment
         fields = "__all__"
         read_only_fields = (
             "attachment",
-            "mimetype",
             "encoding",
             "filetype_detail",
             "file_size",
@@ -58,17 +74,21 @@ class BigFileUploadAttachmentSerializer(serializers.ModelSerializer):
             "created_at",
         )
 
+    def get_s3_presigned_url(self, obj):
+        return getattr(obj, "s3_presigned_url", None)
+
     def create(self, validated_data):
         file_name = validated_data.pop("file_name")
         instance = Attachment(
-            attachment_for=validated_data.get("attachment_for"),
-            is_file_uploaded=False,
+            attachment_for=validated_data.get("attachment_for"), is_file_uploaded=False, mimetype=validated_data["mimetype"]
         )
         instance.attachment.name = global_upload_to(
             instance,
             file_name,
         )
         instance.save()
+        instance.s3_presigned_url = AttachmentBoto3ConnectorService(instance=instance).get_attachment_presigned_url()  # type: ignore temporary
+
         return instance
 
 

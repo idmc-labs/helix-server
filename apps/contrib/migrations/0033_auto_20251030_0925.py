@@ -20,9 +20,4 @@ class Migration(migrations.Migration):
             name='is_file_uploaded',
             field=models.BooleanField(default=True, verbose_name='Is file uploaded?'),
         ),
-        migrations.AlterField(
-            model_name='attachment',
-            name='is_file_uploaded',
-            field=models.BooleanField(default=False, verbose_name='Is file uploaded?'),
-        ),
     ]
