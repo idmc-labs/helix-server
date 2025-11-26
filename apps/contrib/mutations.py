@@ -1,7 +1,6 @@
 import typing
 
 import graphene
-from botocore.exceptions import ClientError
 from django.utils.translation import gettext
 from graphene_file_upload.scalars import Upload
 
@@ -19,8 +18,8 @@ from apps.contrib.serializers import (
     ClientSerializer,
     ClientUpdateSerializer,
     ExcelDownloadSerializer,
+    MarkBigFileUploadedSerializer,
 )
-from helix.storages import S3MediaStorage
 from utils.common import convert_date_object_to_string_in_dict
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.mutation import generate_input_type_for_serializer
@@ -42,6 +41,7 @@ class AttachmentCreateInputType(graphene.InputObjectType):
 class BigFileUploadAttachmentCreateInputType(graphene.InputObjectType):
     file_name = graphene.String(required=True)
     attachment_for = graphene.String(required=True)
+    mimetype = graphene.String(required=True)
 
 
 class CreateAttachment(graphene.Mutation):
@@ -78,29 +78,6 @@ class CreateBigFileAttachment(graphene.Mutation):
             return CreateBigFileAttachment(errors=errors, ok=False)
         instance = serializer.save()
 
-        # Generate presigned URL
-        # TODO(susilnem): Move this section to serializer and create utils for presigned
-        s3_object_key = instance.attachment.name
-        storage = S3MediaStorage()
-        s3_client = storage.bucket.meta.client
-
-        presigned_url = None
-        try:
-            presigned_url = s3_client.generate_presigned_url(
-                ClientMethod="put_object",
-                HttpMethod="PUT",
-                Params={
-                    "Bucket": storage.bucket.name,
-                    "Key": s3_object_key,
-                },
-                ExpiresIn=3600,  # 1 hour
-            )
-        except ClientError:
-            return CreateBigFileAttachment(
-                errors=[dict(field="nonFieldErrors", messages=gettext("Could not generate presigned URL."))],
-                ok=False,
-            )
-        instance.s3_presigned_url = presigned_url
         return CreateBigFileAttachment(result=instance, errors=None, ok=True)
 
 
@@ -115,52 +92,12 @@ class MarkFileAttachmentAsUploaded(graphene.Mutation):
     @staticmethod
     @is_authenticated()
     def mutate(root, info, attachment_id):
-        try:
-            instance = Attachment.objects.get(id=attachment_id)
-        except Attachment.DoesNotExist:
-            return MarkFileAttachmentAsUploaded(
-                errors=[dict(field="nonFieldErrors", messages=gettext("Attachment does not exist."))],
-                ok=False,
-            )
+        attachment = Attachment.objects.get(id=attachment_id)
+        serializer = MarkBigFileUploadedSerializer(instance=attachment, data={}, context={"request": info.context.request})
+        if errors := mutation_is_not_valid(serializer):
+            return MarkFileAttachmentAsUploaded(errors=errors, ok=False)
+        instance = serializer.save()
 
-        if instance.is_file_uploaded:
-            return MarkFileAttachmentAsUploaded(
-                errors=[dict(field="nonFieldErrors", messages=gettext("Attachment is already marked as uploaded."))],
-                ok=False,
-            )
-
-        storage = S3MediaStorage()
-        s3_client = storage.bucket.meta.client
-
-        try:
-            response = s3_client.head_object(
-                Bucket=storage.bucket.name,
-                Key=instance.attachment.name,
-            )
-        except s3_client.exceptions.NoSuchKey:
-            return MarkFileAttachmentAsUploaded(
-                errors=[dict(field="attachment", messages="File not found in S3.")],
-                ok=False,
-            )
-
-        # TODO(susilnem): encoding, filesize, mime_type?
-        instance.file_size = response["ContentLength"]
-        mime_type = response["ContentType"]
-
-        if mime_type not in Attachment.ALLOWED_MIMETYPES:
-            return MarkFileAttachmentAsUploaded(
-                errors=[dict(field="attachment", messages=gettext("Filetype not allowed: %s") % mime_type)],
-                ok=False,
-            )
-
-        instance.is_file_uploaded = True
-        instance.save(
-            update_fields=[
-                "file_size",
-                "mime_type",
-                "is_file_uploaded",
-            ],
-        )
         return MarkFileAttachmentAsUploaded(result=instance, errors=None, ok=True)
 
 

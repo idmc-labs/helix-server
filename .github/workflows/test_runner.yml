@@ -58,7 +58,7 @@ jobs:
         env:
           DOCKER_IMAGE_SERVER: ${{ steps.prep.outputs.tagged_image }}
         run: |
-          docker compose -f gh-docker-compose.yml run --rm server ./manage.py wait_for_resources --all || {
+          docker compose -f docker-compose.yml -f gh-docker-compose.yml run --rm server ./manage.py wait_for_resources --all || {
             echo 'Failed to wait for the resources';
             exit 1;
           }
@@ -67,7 +67,7 @@ jobs:
         env:
           DOCKER_IMAGE_SERVER: ${{ steps.prep.outputs.tagged_image }}
         run: |
-          docker compose -f gh-docker-compose.yml run --rm server ./manage.py graphql_schema --out schema-latest.graphql &&
+          docker compose -f docker-compose.yml -f gh-docker-compose.yml run --rm server ./manage.py graphql_schema --out schema-latest.graphql &&
           cmp --silent schema.graphql schema-latest.graphql || {
             echo 'The schema.graphql is not up to date with the latest changes. Please update and push latest';
             diff schema.graphql schema-latest.graphql;
@@ -78,7 +78,7 @@ jobs:
         env:
           DOCKER_IMAGE_SERVER: ${{ steps.prep.outputs.tagged_image }}
         run: |
-          docker compose -f gh-docker-compose.yml run --rm server python3 manage.py makemigrations --check --dry-run || {
+          docker compose -f docker-compose.yml -f gh-docker-compose.yml run --rm server python3 manage.py makemigrations --check --dry-run || {
             echo 'There are some changes to be reflected in the migration. Make sure to run makemigrations';
             exit 1;
           }
@@ -87,7 +87,7 @@ jobs:
         env:
           DOCKER_IMAGE_SERVER: ${{ steps.prep.outputs.tagged_image }}
         run: |
-          docker compose -f gh-docker-compose.yml run --rm server /code/run_tests.sh
+          docker compose -f docker-compose.yml -f gh-docker-compose.yml run --rm server /code/run_tests.sh
           echo '## Test Coverage Report' >> $GITHUB_STEP_SUMMARY
           echo '' >> $GITHUB_STEP_SUMMARY
           echo '<details>' >> $GITHUB_STEP_SUMMARY
