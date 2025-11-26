@@ -1,0 +1,1552 @@
+---
+# Source: helix-backend-helm/charts/app/charts/minio/templates/networkpolicy.yaml
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: helix-minio
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/version: 2024.12.18
+    helm.sh/chart: minio-14.10.5
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: release-name
+      app.kubernetes.io/name: minio
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    - {}
+  ingress:
+    # Allow inbound connections
+    - ports:
+        - port: 9001
+        - port: 9000
+---
+# Source: helix-backend-helm/charts/app/charts/minio/templates/provisioning-networkpolicy.yaml
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: helix-minio-provisioning
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/version: 2024.12.18
+    helm.sh/chart: minio-14.10.5
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: minio-provisioning
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    - {}
+  ingress:
+---
+# Source: helix-backend-helm/charts/app/charts/postgresql/templates/primary/networkpolicy.yaml
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: idmc-pg
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/version: 17.2.0
+    helm.sh/chart: postgresql-16.4.5
+    app.kubernetes.io/component: primary
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/instance: release-name
+      app.kubernetes.io/name: postgresql
+      app.kubernetes.io/component: primary
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+    - {}
+  ingress:
+    - ports:
+        - port: 5432
+---
+# Source: helix-backend-helm/charts/app/charts/minio/templates/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: helix-minio
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/version: 2024.12.18
+    helm.sh/chart: minio-14.10.5
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: release-name
+      app.kubernetes.io/name: minio
+---
+# Source: helix-backend-helm/charts/app/charts/postgresql/templates/primary/pdb.yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: idmc-pg
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/version: 17.2.0
+    helm.sh/chart: postgresql-16.4.5
+    app.kubernetes.io/component: primary
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: release-name
+      app.kubernetes.io/name: postgresql
+      app.kubernetes.io/component: primary
+---
+# Source: helix-backend-helm/charts/app/charts/minio/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: helix-minio
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/version: 2024.12.18
+    helm.sh/chart: minio-14.10.5
+automountServiceAccountToken: false
+secrets:
+  - name: helix-minio
+---
+# Source: helix-backend-helm/charts/app/charts/postgresql/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: idmc-pg
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/version: 17.2.0
+    helm.sh/chart: postgresql-16.4.5
+automountServiceAccountToken: false
+---
+# Source: helix-backend-helm/charts/app/charts/minio/templates/secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: helix-minio
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/version: 2024.12.18
+    helm.sh/chart: minio-14.10.5
+type: Opaque
+data:
+  root-user: "aGVsaXg="
+  root-password: "WFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFg="
+---
+# Source: helix-backend-helm/charts/app/charts/postgresql/templates/secrets.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: idmc-pg
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/version: 17.2.0
+    helm.sh/chart: postgresql-16.4.5
+type: Opaque
+data:
+  postgres-password: "WFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFg="
+  password: "WFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFg="
+  # We don't auto-generate LDAP password when it's not provided as we do for other passwords
+---
+# Source: helix-backend-helm/charts/app/templates/config/secret.yaml
+kind: Secret
+apiVersion: v1
+metadata:
+  name: helix-backend-1-secret
+  labels:
+    app: helix-backend-1
+    environment: ALPHA-1
+    release: release-name
+type: Opaque
+stringData:
+  # secrets
+  AWS_S3_ACCESS_KEY_ID: "helix"
+  AWS_S3_REGION: "us-east-1"
+  AWS_S3_SECRET_ACCESS_KEY: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  DJANGO_SECRET_KEY: "xyz"
+  HCAPTCHA_SECRET: "xyz"
+  POSTGRES_DB: "helix"
+  POSTGRES_HOST: "idmc-pg"
+  POSTGRES_PASSWORD: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: "postgres"
+  SENTRY_DSN: "https://xyz@sentry.local.example.com/14"
+---
+# Source: helix-backend-helm/charts/app/charts/minio/templates/provisioning-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helix-minio-provisioning
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/version: 2024.12.18
+    helm.sh/chart: minio-14.10.5
+    app.kubernetes.io/component: minio-provisioning
+data:
+---
+# Source: helix-backend-helm/charts/app/charts/postgresql/templates/primary/initialization-configmap.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: idmc-pg-init-scripts
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/version: 17.2.0
+    helm.sh/chart: postgresql-16.4.5
+data:
+  my_init_script.sh: |
+    #!/bin/sh -e
+  
+    DATABASE_DUMP_URL="$DUMP_REGISTRY_URL$DUMP_FILENAME"
+  
+    # Don't have curl here
+    /usr/lib/apt/apt-helper download-file -o "Acquire::https::Verify-Peer=false" "$DATABASE_DUMP_URL" /tmp/db.dump
+  
+    du -sh /tmp/db.dump
+  
+    PGPASSWORD="${POSTGRES_PASSWORD}" PGUSER=$POSTGRES_USER pg_restore -v --no-owner --no-privileges -d "$POSTGRES_DATABASE" < /tmp/db.dump
+---
+# Source: helix-backend-helm/charts/app/templates/config/configmap.yaml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: helix-backend-1-env-name
+  labels:
+    app: helix-backend-1
+    environment: ALPHA-1
+    release: release-name
+data:
+  # Configs
+  ADDITIONAL_TRUSTED_ORIGINS: "https://preview-idmc-website-components-1.idmc.local.example.com,https://release-idmc-website-components-1.idmc.local.example.com"
+  APP_DOMAIN: "helix-api-1.idmc.local.example.com"
+  APP_RELEASE: "develop.xxxxxxxx"
+  AWS_S3_AWS_ENDPOINT_URL: "https://helix-minio-1.idmc.local.example.com/"
+  BACKEND_BASE_URL: "https://helix-api-1.idmc.local.example.com"
+  CSRF_COOKIE_DOMAIN: ".example.com"
+  DJANGO_ALLOWED_HOST: "helix-1.idmc.local.example.com,helix-api-1.idmc.local.example.com"
+  DJANGO_DEBUG: "false"
+  EXTERNAL_S3_BUCKET_NAME: "helix-external-data"
+  FRONTEND_BASE_URL: "https://helix-1.idmc.local.example.com"
+  HELIX_ENVIRONMENT: "ALPHA-1"
+  S3_BUCKET_NAME: "helix-data"
+  SENTRY_MONITOR_CELERY_BEAT_TASKS: "true"
+  SENTRY_PROFILES_SAMPLE_RATE: "0.8"
+  SENTRY_SAMPLE_RATE: "0.8"
+  SESSION_COOKIE_DOMAIN: ".example.com"
+  USE_S3_BUCKET: "true"
+---
+# Source: helix-backend-helm/charts/app/charts/minio/templates/pvc.yaml
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: helix-minio
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/version: 2024.12.18
+    helm.sh/chart: minio-14.10.5
+spec:
+  accessModes:
+    - "ReadWriteOnce"
+  resources:
+    requests:
+      storage: "0.5Gi"
+  storageClassName: local-path
+---
+# Source: helix-backend-helm/charts/app/charts/minio/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: helix-minio
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/version: 2024.12.18
+    helm.sh/chart: minio-14.10.5
+spec:
+  type: ClusterIP
+  ports:
+    - name: minio-api
+      port: 9000
+      targetPort: minio-api
+      nodePort: null
+    - name: minio-console
+      port: 9001
+      targetPort: minio-console
+      nodePort: null
+  selector:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/name: minio
+---
+# Source: helix-backend-helm/charts/app/charts/postgresql/templates/primary/svc-headless.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: idmc-pg-hl
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/version: 17.2.0
+    helm.sh/chart: postgresql-16.4.5
+    app.kubernetes.io/component: primary
+  annotations:
+spec:
+  type: ClusterIP
+  clusterIP: None
+  # We want all pods in the StatefulSet to have their addresses published for
+  # the sake of the other Postgresql pods even before they're ready, since they
+  # have to be able to talk to each other in order to become ready.
+  publishNotReadyAddresses: true
+  ports:
+    - name: tcp-postgresql
+      port: 5432
+      targetPort: tcp-postgresql
+  selector:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/component: primary
+---
+# Source: helix-backend-helm/charts/app/charts/postgresql/templates/primary/svc.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: idmc-pg
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/version: 17.2.0
+    helm.sh/chart: postgresql-16.4.5
+    app.kubernetes.io/component: primary
+spec:
+  type: ClusterIP
+  sessionAffinity: None
+  ports:
+    - name: tcp-postgresql
+      port: 5432
+      targetPort: tcp-postgresql
+      nodePort: null
+  selector:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/component: primary
+---
+# Source: helix-backend-helm/charts/app/templates/api/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: helix-backend-1-api
+  labels:
+    app: helix-backend-1
+    component: api
+    environment: ALPHA-1
+    release: release-name
+spec:
+  type: ClusterIP
+  selector:
+    app: helix-backend-1
+    component: api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+---
+# Source: helix-backend-helm/charts/app/charts/minio/templates/standalone/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helix-minio
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/version: 2024.12.18
+    helm.sh/chart: minio-14.10.5
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: release-name
+      app.kubernetes.io/name: minio
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: release-name
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: minio
+        app.kubernetes.io/version: 2024.12.18
+        helm.sh/chart: minio-14.10.5
+      annotations:
+        checksum/credentials-secret: 159800859c914ff2217bab8997e6ea827669a4e7647c3ea66097f384c34e7679
+    spec:
+      
+      serviceAccountName: helix-minio
+      affinity:
+        podAffinity:
+          
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/instance: release-name
+                    app.kubernetes.io/name: minio
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+        nodeAffinity:
+          
+      nodeSelector:
+        kubernetes.io/hostname: gpu-desktop-01
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 1001
+        fsGroupChangePolicy: OnRootMismatch
+        supplementalGroups: []
+        sysctls: []
+      containers:
+        - name: minio
+          image: docker.io/bitnamilegacy/minio:2024.12.18-debian-12-r1
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 1001
+            runAsNonRoot: true
+            runAsUser: 1001
+            seLinuxOptions: {}
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            - name: BITNAMI_DEBUG
+              value: "false"
+            - name: MINIO_SCHEME
+              value: "http"
+            - name: MINIO_FORCE_NEW_KEYS
+              value: "yes"
+            - name: MINIO_API_PORT_NUMBER
+              value: "9000"
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: helix-minio
+                  key: root-user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: helix-minio
+                  key: root-password
+            - name: MINIO_DEFAULT_BUCKETS
+              value: helix-data,helix-external-data
+            - name: MINIO_BROWSER
+              value: "off"
+            - name: MINIO_PROMETHEUS_AUTH_TYPE
+              value: "public"
+            - name: MINIO_CONSOLE_PORT_NUMBER
+              value: "9001"
+            - name: MINIO_DATA_DIR
+              value: "/bitnami/minio/data"
+          envFrom:
+          ports:
+            - name: minio-api
+              containerPort: 9000
+              protocol: TCP
+            - name: minio-console
+              containerPort: 9001
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /minio/health/live
+              port: minio-api
+              scheme: "HTTP"
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 5
+            successThreshold: 1
+            failureThreshold: 5
+          readinessProbe:
+            tcpSocket:
+              port: minio-api
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 5
+          resources:
+            limits:
+              cpu: 375m
+              ephemeral-storage: 2Gi
+              memory: 384Mi
+            requests:
+              cpu: 250m
+              ephemeral-storage: 50Mi
+              memory: 256Mi
+          volumeMounts:
+            - name: empty-dir
+              mountPath: /tmp
+              subPath: tmp-dir
+            - name: empty-dir
+              mountPath: /opt/bitnami/minio/tmp
+              subPath: app-tmp-dir
+            - name: empty-dir
+              mountPath: /.mc
+              subPath: app-mc-dir
+            - name: data
+              mountPath: /bitnami/minio/data
+      volumes:
+        - name: empty-dir
+          emptyDir: {}
+        - name: data
+          persistentVolumeClaim:
+            claimName: helix-minio
+---
+# Source: helix-backend-helm/charts/app/templates/api/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helix-backend-1-api
+  annotations:
+    reloader.stakater.com/auto: "true"
+  labels:
+    app: helix-backend-1
+    component: api
+    environment: ALPHA-1
+    release: release-name
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: helix-backend-1
+      component: api
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
+        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+      labels:
+        app: helix-backend-1
+        component: api
+    spec:
+      containers:
+        - name: api
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /code/deploy/scripts/run_prod.sh
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          # TODO: livenessProbe
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 2Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "web"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+---
+# Source: helix-backend-helm/charts/app/templates/worker-beat/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helix-backend-1-worker-beat
+  annotations:
+    reloader.stakater.com/auto: "true"
+  labels:
+    app: helix-backend-1
+    component: worker-beat
+    environment: ALPHA-1
+    release: release-name
+spec:
+  replicas: 1  # This should only 1
+  selector:
+    matchLabels:
+      app: helix-backend-1
+      component: worker-beat
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
+        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+      labels:
+        app: helix-backend-1
+        component: worker-beat
+    spec:
+      containers:
+        - name: worker-beat
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command:
+            - celery
+            - -A
+            - helix
+            - beat
+            - -l
+            - INFO
+          # TODO: livenessProbe
+          resources:
+            limits:
+              cpu: "4"
+              memory: 1Gi
+            requests:
+              cpu: "1"
+              memory: 0.5Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "worker"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+---
+# Source: helix-backend-helm/charts/app/templates/worker/deployment.yaml
+# Queue: default
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helix-backend-1-worker-default
+  annotations:
+    reloader.stakater.com/auto: "true"
+  labels:
+    app: helix-backend-1
+    component: worker
+    queue: default
+    environment: ALPHA-1
+    release: release-name
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: helix-backend-1
+      component: worker
+      queue: default
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
+        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+      labels:
+        app: helix-backend-1
+        component: worker
+        queue: default
+    spec:
+      containers:
+        - name: worker
+          command:
+            - celery
+            - -A
+            - helix
+            - worker
+            - -l
+            - INFO
+            - -Q
+            - celery
+            - --concurrency
+            - "4"
+            - --max-tasks-per-child
+            - "10"
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          # TODO: livenessProbe
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 2Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "worker"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+---
+# Source: helix-backend-helm/charts/app/charts/postgresql/templates/primary/statefulset.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: idmc-pg
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/version: 17.2.0
+    helm.sh/chart: postgresql-16.4.5
+    app.kubernetes.io/component: primary
+spec:
+  replicas: 1
+  serviceName: idmc-pg-hl
+  updateStrategy:
+    rollingUpdate: {}
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: release-name
+      app.kubernetes.io/name: postgresql
+      app.kubernetes.io/component: primary
+  template:
+    metadata:
+      name: idmc-pg
+      labels:
+        app.kubernetes.io/instance: release-name
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: postgresql
+        app.kubernetes.io/version: 17.2.0
+        helm.sh/chart: postgresql-16.4.5
+        app.kubernetes.io/component: primary
+    spec:
+      serviceAccountName: idmc-pg
+      
+      automountServiceAccountToken: false
+      affinity:
+        podAffinity:
+          
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app.kubernetes.io/instance: release-name
+                    app.kubernetes.io/name: postgresql
+                    app.kubernetes.io/component: primary
+                topologyKey: kubernetes.io/hostname
+              weight: 1
+        nodeAffinity:
+          
+      nodeSelector:
+        kubernetes.io/hostname: gpu-desktop-01
+      securityContext:
+        fsGroup: 1001
+        fsGroupChangePolicy: Always
+        supplementalGroups: []
+        sysctls: []
+      hostNetwork: false
+      hostIPC: false
+      containers:
+        - name: postgresql
+          image: docker.io/bitnamilegacy/postgresql:17.2.0-debian-12-r8
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 1001
+            runAsNonRoot: true
+            runAsUser: 1001
+            seLinuxOptions: {}
+            seccompProfile:
+              type: RuntimeDefault
+          env:
+            - name: BITNAMI_DEBUG
+              value: "false"
+            - name: POSTGRESQL_PORT_NUMBER
+              value: "5432"
+            - name: POSTGRESQL_VOLUME_DIR
+              value: "/bitnami/postgresql"
+            - name: PGDATA
+              value: "/bitnami/postgresql/data"
+            # Authentication
+            - name: POSTGRES_USER
+              value: "helix"
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: idmc-pg
+                  key: password
+            - name: POSTGRES_POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: idmc-pg
+                  key: postgres-password
+            - name: POSTGRES_DATABASE
+              value: "helix"
+            # LDAP
+            - name: POSTGRESQL_ENABLE_LDAP
+              value: "no"
+            # TLS
+            - name: POSTGRESQL_ENABLE_TLS
+              value: "no"
+            # Audit
+            - name: POSTGRESQL_LOG_HOSTNAME
+              value: "false"
+            - name: POSTGRESQL_LOG_CONNECTIONS
+              value: "false"
+            - name: POSTGRESQL_LOG_DISCONNECTIONS
+              value: "false"
+            - name: POSTGRESQL_PGAUDIT_LOG_CATALOG
+              value: "off"
+            # Others
+            - name: POSTGRESQL_CLIENT_MIN_MESSAGES
+              value: "error"
+            - name: POSTGRESQL_SHARED_PRELOAD_LIBRARIES
+              value: "pgaudit"
+            - name: DUMP_REGISTRY_URL
+              value: https://user:password@secure-dump.com
+            - name: DUMP_FILENAME
+              value: /helix/k8s-alpha-init-db.dump
+          ports:
+            - name: tcp-postgresql
+              containerPort: 5432
+          livenessProbe:
+            failureThreshold: 6
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - exec pg_isready -U "helix" -d "dbname=helix" -h 127.0.0.1 -p 5432
+          readinessProbe:
+            failureThreshold: 6
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+            exec:
+              command:
+                - /bin/sh
+                - -c
+                - -e
+                - |
+                  exec pg_isready -U "helix" -d "dbname=helix" -h 127.0.0.1 -p 5432
+          resources:
+            limits:
+              cpu: "4"
+            requests:
+              cpu: "0.2"
+              memory: 1Gi
+          volumeMounts:
+            - name: empty-dir
+              mountPath: /tmp
+              subPath: tmp-dir
+            - name: empty-dir
+              mountPath: /opt/bitnami/postgresql/conf
+              subPath: app-conf-dir
+            - name: empty-dir
+              mountPath: /opt/bitnami/postgresql/tmp
+              subPath: app-tmp-dir
+            - name: custom-init-scripts
+              mountPath: /docker-entrypoint-initdb.d/
+            - name: dshm
+              mountPath: /dev/shm
+            - name: data
+              mountPath: /bitnami/postgresql
+      volumes:
+        - name: empty-dir
+          emptyDir: {}
+        - name: custom-init-scripts
+          configMap:
+            name: idmc-pg-init-scripts
+        - name: dshm
+          emptyDir:
+            medium: Memory
+  volumeClaimTemplates:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        name: data
+      spec:
+        accessModes:
+          - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: "2Gi"
+        storageClassName: local-path
+---
+# Source: helix-backend-helm/charts/app/templates/argo-hooks/hook-job.yaml
+# Hook: collect-static
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: helix-backend-1-collect-static
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+spec:
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
+        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+      labels:
+        app: helix-backend-1
+        component: argo-hooks
+    spec:
+      restartPolicy: "Never"
+      containers:
+        - name: collect-static
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command: 
+            - /bin/bash
+            - -c
+          args: 
+            - ./manage.py wait_for_resources --minio && ./manage.py collectstatic --noinput
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 1Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "hook"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+---
+# Source: helix-backend-helm/charts/app/templates/argo-hooks/hook-job.yaml
+# Hook: create-users
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: helix-backend-1-create-users
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+spec:
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
+        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+      labels:
+        app: helix-backend-1
+        component: argo-hooks
+    spec:
+      restartPolicy: "Never"
+      containers:
+        - name: create-users
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command: 
+            - ./manage.py
+            - shell
+            - -c
+            - |
+              import os
+              from apps.users.models import User;
+              from apps.users.enums import USER_ROLE;
+              from apps.users.models import Portfolio;
+            
+              from django.db import transaction;
+              from django.core.management import call_command;
+            
+              call_command("wait_for_resources", "--redis", "--db");
+            
+              set_as_admin_user_emails = [
+                email.strip(" ")
+                for email in os.environ["SET_AS_ADMIN_USER_EMAILS"].split(",")
+                if email is not None and email.strip(" ") != ""
+              ]
+            
+              @transaction.atomic
+              def create_initial_users():
+                for email in set_as_admin_user_emails:
+                    user = User.objects.filter(email=email).first();
+                    if user is None:
+                        print(f"Failed to process user {email=}. Doesn't exists");
+            
+                    user.username = user.email = email;
+                    user.is_superuser = True;
+                    user.is_staff = True;
+                    user.is_active = True;
+                    user.save();
+                    print(f"Successfully updated user {email=} as superuser");
+            
+                    role = USER_ROLE.ADMIN
+                    Portfolio.objects.get_or_create(
+                        user=user,
+                        role=role,
+                    );
+                    print(f"\tSuccessfully updated user portfolio {role=}");
+            
+              create_initial_users();
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 1Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "hook"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+            - name: SET_AS_ADMIN_USER_EMAILS
+              value: "xyz@example.com,abc@example.com"
+---
+# Source: helix-backend-helm/charts/app/templates/argo-hooks/hook-job.yaml
+# Hook: db-migrate
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: helix-backend-1-db-migrate-
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+spec:
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
+        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+      labels:
+        app: helix-backend-1
+        component: argo-hooks
+    spec:
+      restartPolicy: "Never"
+      containers:
+        - name: db-migrate
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command: 
+            - /bin/bash
+            - -c
+          args: 
+            - ./manage.py wait_for_resources --db && ./manage.py migrate
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 1Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "hook"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+---
+# Source: helix-backend-helm/charts/app/templates/argo-hooks/hook-job.yaml
+# Hook: init-fix-script
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: helix-backend-1-init-fix-script
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+spec:
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
+        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+      labels:
+        app: helix-backend-1
+        component: argo-hooks
+    spec:
+      restartPolicy: "Never"
+      containers:
+        - name: init-fix-script
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command: 
+            - ./manage.py
+            - shell
+            - -c
+            - |
+              # NOTE: This will trigger client-redis sync
+              from apps.contrib.models import Client;
+              from django.core.management import call_command;
+            
+              call_command("wait_for_resources", "--redis", "--db");
+              Client.objects.first().save();
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 1Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "hook"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+---
+# Source: helix-backend-helm/charts/app/templates/argo-hooks/hook-job.yaml
+# Hook: load-geojson
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: helix-backend-1-load-geojson
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+spec:
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
+        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+      labels:
+        app: helix-backend-1
+        component: argo-hooks
+    spec:
+      restartPolicy: "Never"
+      containers:
+        - name: load-geojson
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command: 
+            - /bin/bash
+            - -c
+          args: 
+            - ./manage.py wait_for_resources --db --minio && ./manage.py split_geojson
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 1Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "hook"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+---
+# Source: helix-backend-helm/charts/app/charts/minio/templates/api-ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: helix-minio-api
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/version: 2024.12.18
+    helm.sh/chart: minio-14.10.5
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+spec:
+  ingressClassName: "default"
+  rules:
+    - host: helix-minio-1.idmc.local.example.com
+      http:
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: helix-minio
+                port:
+                  name: minio-api
+---
+# Source: helix-backend-helm/charts/app/templates/api/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: helix-backend-1-api
+  labels:
+    app: helix-backend-1
+    component: api
+    environment: ALPHA-1
+    release: release-name
+spec:
+  ingressClassName: "default"
+  rules:
+    - host: "helix-api-1.idmc.local.example.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: helix-backend-1-api
+                port:
+                  number: 80
+---
+# Source: helix-backend-helm/charts/app/templates/extraManifests.yaml
+# Manifest: dragonflydb-cluster
+apiVersion: dragonflydb.io/v1alpha1
+kind: Dragonfly
+metadata:
+  labels:
+    app.kubernetes.io/name: dragonfly
+  name: idmc-helix-dragonfly
+spec:
+  args:
+  - --dbfilename=mainSnapshot
+  replicas: 1
+  resources:
+    limits:
+      cpu: "1"
+      memory: 750Mi
+    requests:
+      cpu: "0.1"
+      memory: 500Mi
+  snapshot:
+    cron: '*/5 * * * *'
+    persistentVolumeClaimSpec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 0.5Gi
+      storageClassName: local-path
+---
+# Source: helix-backend-helm/charts/app/charts/minio/templates/provisioning-job.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: helix-minio-provisioning
+  namespace: "default"
+  labels:
+    app.kubernetes.io/instance: release-name
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: minio
+    app.kubernetes.io/version: 2024.12.18
+    helm.sh/chart: minio-14.10.5
+    app.kubernetes.io/component: minio-provisioning
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    helm.sh/hook-delete-policy: before-hook-creation
+spec: 
+  ttlSecondsAfterFinished: 600 
+  parallelism: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/version: 2024.12.18
+        helm.sh/chart: minio-14.10.5
+        app.kubernetes.io/component: minio-provisioning
+    spec:
+      
+      restartPolicy: OnFailure
+      terminationGracePeriodSeconds: 0
+      securityContext:
+        fsGroup: 1001
+        fsGroupChangePolicy: Always
+        supplementalGroups: []
+        sysctls: []
+      serviceAccountName: helix-minio
+      initContainers:
+        - name: wait-for-available-minio
+          image: docker.io/bitnami/os-shell:12-debian-12-r35
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 1001
+            runAsNonRoot: true
+            runAsUser: 1001
+            seLinuxOptions: {}
+            seccompProfile:
+              type: RuntimeDefault
+          command:
+            - /bin/bash
+            - -c
+            - |-
+              set -e;
+              echo "Waiting for Minio";
+              wait-for-port \
+                --host=helix-minio \
+                --state=inuse \
+                --timeout=120 \
+                9000;
+              echo "Minio is available";
+          resources:
+            limits:
+              cpu: 150m
+              ephemeral-storage: 2Gi
+              memory: 192Mi
+            requests:
+              cpu: 100m
+              ephemeral-storage: 50Mi
+              memory: 128Mi
+      containers:
+        - name: minio
+          image: docker.io/bitnamilegacy/minio:2024.12.18-debian-12-r1
+          imagePullPolicy: "IfNotPresent"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsGroup: 1001
+            runAsNonRoot: true
+            runAsUser: 1001
+            seLinuxOptions: {}
+            seccompProfile:
+              type: RuntimeDefault
+          command:
+            - /bin/bash
+            - -c
+            - |-
+              set -e;
+              echo "Start Minio provisioning";
+
+              retry_while() {
+                local -r cmd="${1:?cmd is missing}"
+                local -r retries="${2:-12}"
+                local -r sleep_time="${3:-5}"
+                local return_value=1
+
+                read -r -a command <<< "$cmd"
+                for ((i = 1 ; i <= retries ; i+=1 )); do
+                    "${command[@]}" && return_value=0 && break
+                    sleep "$sleep_time"
+                done
+                return $return_value
+              }
+
+              function attachPolicy() {
+                local tmp=$(mc admin $1 info provisioning $2 | sed -n -e 's/^Policy.*: \(.*\)$/\1/p');
+                IFS=',' read -r -a CURRENT_POLICIES <<< "$tmp";
+                if [[ ! "${CURRENT_POLICIES[*]}" =~ "$3" ]]; then
+                  mc admin policy attach provisioning $3 --$1=$2;
+                fi;
+              };
+
+              function detachDanglingPolicies() {
+                local tmp=$(mc admin $1 info provisioning $2 | sed -n -e 's/^Policy.*: \(.*\)$/\1/p');
+                IFS=',' read -r -a CURRENT_POLICIES <<< "$tmp";
+                IFS=',' read -r -a DESIRED_POLICIES <<< "$3";
+                for current in "${CURRENT_POLICIES[@]}"; do
+                  if [[ ! "${DESIRED_POLICIES[*]}" =~ "${current}" ]]; then
+                    mc admin policy detach provisioning $current --$1=$2;
+                  fi;
+                done;
+              }
+
+              function addUsersFromFile() {
+                local username=$(grep -oP '^username=\K.+' $1);
+                local password=$(grep -oP '^password=\K.+' $1);
+                local disabled=$(grep -oP '^disabled=\K.+' $1);
+                local policies_list=$(grep -oP '^policies=\K.+' $1);
+                local set_policies=$(grep -oP '^setPolicies=\K.+' $1);
+
+                mc admin user add provisioning "${username}" "${password}";
+
+                IFS=',' read -r -a POLICIES <<< "${policies_list}";
+                for policy in "${POLICIES[@]}"; do
+                  attachPolicy user "${username}" "${policy}";
+                done;
+                if [ "${set_policies}" == "true" ]; then
+                  detachDanglingPolicies user "${username}" "${policies_list}";
+                fi;
+
+                local user_status="enable";
+                if [[ "${disabled}" != "" && "${disabled,,}" == "true" ]]; then
+                  user_status="disable";
+                fi;
+
+                mc admin user "${user_status}" provisioning "${username}";
+              };
+              mc alias set provisioning $MINIO_SCHEME://helix-minio:9000 $MINIO_ROOT_USER $MINIO_ROOT_PASSWORD;
+
+              mc admin service restart provisioning --wait --json;
+
+              # Adding a sleep to ensure that the check below does not cause
+              # a race condition. We check for the MinIO port because the
+              # "mc admin service restart --wait" command is not working as expected
+              sleep 5;
+              echo "Waiting for Minio to be available after restart";
+              if ! retry_while "mc admin info provisioning"; then
+                  echo "Error connecting to Minio"
+                  exit 1
+              fi
+              echo "Minio is available. Executing provisioning commands";
+              
+              mc anonymous set download provisioning/helix-data;mc anonymous set download provisioning/helix-external-data;mc ilm rule add --prefix "external-media/" provisioning/helix-external-data --expire-days "2";
+
+              echo "End Minio provisioning";
+          env:
+            - name: MINIO_SCHEME
+              value: "http"
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: helix-minio
+                  key: root-user
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: helix-minio
+                  key: root-password
+          envFrom:
+          resources:
+            limits:
+              cpu: 150m
+              ephemeral-storage: 2Gi
+              memory: 192Mi
+            requests:
+              cpu: 100m
+              ephemeral-storage: 50Mi
+              memory: 128Mi
+          volumeMounts:
+            - name: empty-dir
+              mountPath: /.mc
+              subPath: app-mc-dir
+            - name: empty-dir
+              mountPath: /opt/bitnami/minio/tmp
+              subPath: app-tmp-dir
+            - name: empty-dir
+              mountPath: /tmp
+              subPath: tmp-dir
+            - name: minio-provisioning
+              mountPath: /etc/ilm
+      volumes:
+        - name: empty-dir
+          emptyDir: {}
+        - name: minio-provisioning
+          configMap:
+            name: helix-minio-provisioning

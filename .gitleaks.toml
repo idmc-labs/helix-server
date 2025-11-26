@@ -1,0 +1,9 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Ignore checksums in Helm snapshots"
+condition = "AND"
+paths = ['''helm/snapshots/.*\.yaml''']
+regexTarget = "line"
+regexes = ['''checksum/.*''']

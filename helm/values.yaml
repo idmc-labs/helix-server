@@ -12,16 +12,7 @@ app:
     host:
 
   redis:
-    enabled: true
-    architecture: standalone
-    fullnameOverride: idmc-redis
-    auth:
-      enabled: false
-    master:
-      persistence:
-        enabled: true
-        size: .5Gi
-        storageClass:
+    enabled: false
 
   postgresql:
     enabled: false
@@ -69,6 +60,7 @@ app:
       extraCommands:
         - "mc anonymous set download provisioning/helix-data"
         - "mc anonymous set download provisioning/helix-external-data"
+        - 'mc ilm rule add --prefix "external-media/" provisioning/helix-external-data --expire-days "2"'
 
   api:
     enabled: true
@@ -188,11 +180,7 @@ app:
     POSTGRES_PASSWORD: "{{ $.Values.postgresql.auth.postgresPassword }}"
     POSTGRES_HOST: "{{ include \"postgresql.v1.primary.fullname\" $.Subcharts.postgresql }}"
     POSTGRES_PORT: "{{ include \"postgresql.v1.service.port\" $.Subcharts.postgresql }}"
-    # Redis
-    CELERY_BROKER_URL: "redis://{{ printf \"%s-master\" (include \"common.names.fullname\" $.Subcharts.redis) }}:6379/0"
-    DJANGO_CACHE_REDIS_URL: "redis://{{ printf \"%s-master\" (include \"common.names.fullname\" $.Subcharts.redis) }}:6379/1"
-    CELERY_RESULT_BACKEND_URL: "redis://{{ printf \"%s-master\" (include \"common.names.fullname\" $.Subcharts.redis) }}:6379/2"
-    DJANGO_EXTERNAL_API_CACHE_REDIS_URL: "redis://{{ printf \"%s-master\" (include \"common.names.fullname\" $.Subcharts.redis) }}:6379/3"
+    # Redis (using extraEnvVars)
     # Minio (S3)
     AWS_S3_ACCESS_KEY_ID: "{{ required \".app.minio.auth.rootUser\" $.Values.minio.auth.rootUser }}"
     AWS_S3_SECRET_ACCESS_KEY: "{{ required \".app.minio.auth.rootPassword\" $.Values.minio.auth.rootPassword }}"
@@ -200,3 +188,42 @@ app:
     # Misc
     SENTRY_DSN: "{{ required \".app.secrets.SENTRY_DSN\" nil }}"
     HCAPTCHA_SECRET: "{{ required \".app.secrets.HCAPTCHA_SECRET\" nil }}"
+
+  extraEnvVars:
+    # Checkout the resources defined by extraManifests
+    - name: CELERY_BROKER_URL
+      value: redis://idmc-helix-dragonfly:6379/0
+    - name: CELERY_RESULT_BACKEND_URL
+      value: redis://idmc-helix-dragonfly:6379/1
+    - name: DJANGO_CACHE_REDIS_URL
+      value: redis://idmc-helix-dragonfly:6379/2
+    - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+      value: redis://idmc-helix-dragonfly:6379/3
+
+  extraManifests:
+    dragonflydb-cluster:
+      apiVersion: dragonflydb.io/v1alpha1
+      kind: Dragonfly
+      metadata:
+        labels:
+          app.kubernetes.io/name: dragonfly
+        name: idmc-helix-dragonfly  # NOTE: this will be the service name
+      spec:
+        replicas: 1
+        args: ["--dbfilename=mainSnapshot"]  # NOTE: Only maintains 1 last snapshot
+        resources:
+          requests:
+            cpu: "0.1"
+            memory: 500Mi
+          limits:
+            cpu: "1"
+            memory: 750Mi
+        snapshot:
+          cron: "*/5 * * * *"
+          persistentVolumeClaimSpec:
+            # storageClassName:
+            accessModes:
+            - ReadWriteOnce
+            resources:
+              requests:
+                storage: 0.5Gi
