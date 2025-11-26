@@ -1,0 +1,90 @@
+app:
+  environment: TEST
+  fullnameOverride: helix-test
+
+  image:
+    name: test-image
+    tag: random-hash
+
+  ingress:
+    enabled: true
+    host: dummy-api.com
+    className: "nginx"
+
+  postgresql:
+    enabled: true
+    auth:
+      postgresPassword: "strong-password"
+      username: "helix"
+      password: "strong-password"
+      database: "helix"
+
+  minio:
+    enabled: true
+    apiIngress:
+      enabled: true
+      ingressClassName: nginx
+      hostname: test-minio.com
+    auth:
+      enabled: true
+      forceNewKeys: True
+      rootUser: helix
+      rootPassword: helix
+
+  envConfigMapName: "helix-config-map"
+  env:
+    # DJANGO_APP_ENVIRONMENT: using .environment
+    # APP_RELEASE: using .image.tag
+    DJANGO_DEBUG: "false"
+    DJANGO_TIME_ZONE: UTC
+    # App Domain
+    APP_DOMAIN: dummy.com
+    APP_HTTP_PROTOCOL: https
+    FRONTEND_BASE_URL: https://dummy.com
+    BACKEND_BASE_URL: https://dummy-api.com
+    DJANGO_ALLOWED_HOST: "*"
+    SESSION_COOKIE_DOMAIN: .dummy.com
+    CSRF_COOKIE_DOMAIN: .dummy.com
+    # CORS
+    CORS_ALLOWED_ORIGINS: dummy.com
+    # Misc
+    DEFAULT_FROM_EMAIL: dummy@dummy.com
+
+  secretsName: "helix-secrets-map"
+  secrets:
+    DJANGO_SECRET_KEY: dummy-secret-key
+    # Sentry
+    SENTRY_DSN: dummy.com/dummy-id
+    # Hcaptcha
+    HCAPTCHA_SITEKEY: "10000000-ffff-ffff-ffff-000000000001"
+    HCAPTCHA_SECRET: "0x0000000000000000000000000000000000000000"
+
+  argoHook:
+    hooks:
+      db-migrate:
+        preserveHistory: false
+      custom-python-script-01:
+        enabled: true
+        hook: PostSync
+        command:
+          - ./manage.py
+          - shell
+          - -c
+          - |
+            from apps.user.models import User;
+            from django.db import transaction;
+
+            @transaction.atomic
+            def create_initial_users(user_data):
+                user, _ = User.objects.update_or_create(
+                    email=email,
+                    defaults={
+                      "first_name": "Hi"
+                      "last_name": "there"
+                      "is_superuser": False,
+                      "is_staff": False,
+                      "password": "not-working-password-hash",
+                    },
+                )
+                print(f"Successfully created/update user {email=}");
+            create_initial_users(user_data);

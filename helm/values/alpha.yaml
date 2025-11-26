@@ -1,0 +1,83 @@
+app:
+  environment: PROD
+  # Global Image
+  image:
+    name: SET-BY-CICD-IMAGE
+    tag: SET-BY-CICD-TAG
+    imagePullPolicy: IfNotPresent
+
+  ingress:
+    enabled: true
+
+  redis:
+    enabled: true
+    architecture: standalone
+    fullnameOverride: idmc-redis
+    auth:
+      enabled: false
+    master:
+      persistence:
+        enabled: true
+        size: .5Gi
+        storageClass:
+
+  api:
+    resources:
+      requests:
+        memory: 0.5Gi
+      limits:
+        memory: 1Gi
+
+  worker:
+    beat:
+      resources:
+        requests:
+          memory: 1Gi
+    queues:
+      # NOTE: Make sure keys are lowercase
+      default:
+        enabled: true
+        replicaCount: 1
+        resources:
+          requests:
+            memory: 1Gi
+          limits:
+            memory: 2Gi
+
+  # NOTE: Check main/settings.py for all available options
+  env:
+    APP_RELEASE: "{{ $.Values.image.tag }}"
+    HELIX_ENVIRONMENT: "{{ $.Values.environment }}"
+    DJANGO_DEBUG: "false"
+    # App Domain
+    APP_DOMAIN: "{{ required \".app.env.APP_DOMAIN\" nil }}"
+    DJANGO_ALLOWED_HOST: "{{ required \".app.env.DJANGO_ALLOWED_HOST\" nil }}"
+    BACKEND_BASE_URL: "{{ required \".app.env.BACKEND_BASE_URL\" nil }}"
+    FRONTEND_BASE_URL: "{{ required \".app.env.FRONTEND_BASE_URL\" nil }}"
+    SESSION_COOKIE_DOMAIN: "{{ required \".app.env.SESSION_COOKIE_DOMAIN\" nil }}"
+    CSRF_COOKIE_DOMAIN: "{{ required \".app.env.CSRF_COOKIE_DOMAIN\" nil }}"
+    # Sentry
+    SENTRY_MONITOR_CELERY_BEAT_TASKS: "true"
+    SENTRY_SAMPLE_RATE: "0.2"
+    SENTRY_PROFILES_SAMPLE_RATE: "0.2"
+
+  # NOTE: Check main/settings.py for all available options
+  secrets:
+    # Postgres
+    POSTGRES_DB: "{{ $.Values.postgresql.auth.database }}"
+    POSTGRES_USER: "postgres"
+    POSTGRES_PASSWORD: "{{ $.Values.postgresql.auth.postgresPassword }}"
+    POSTGRES_HOST: "{{ include \"postgresql.v1.primary.fullname\" $.Subcharts.postgresql }}"
+    POSTGRES_PORT: "{{ include \"postgresql.v1.service.port\" $.Subcharts.postgresql }}"
+    # Redis
+    CELERY_BROKER_URL: "redis://{{ printf \"%s-master\" (include \"common.names.fullname\" $.Subcharts.redis) }}:6379/0"
+    DJANGO_CACHE_REDIS_URL: "redis://{{ printf \"%s-master\" (include \"common.names.fullname\" $.Subcharts.redis) }}:6379/1"
+    CELERY_RESULT_BACKEND_URL: "redis://{{ printf \"%s-master\" (include \"common.names.fullname\" $.Subcharts.redis) }}:6379/2"
+    DJANGO_EXTERNAL_API_CACHE_REDIS_URL: "redis://{{ printf \"%s-master\" (include \"common.names.fullname\" $.Subcharts.redis) }}:6379/3"
+    # Minio (S3)
+    AWS_S3_ACCESS_KEY_ID: "{{ required \".app.minio.auth.rootUser\" $.Values.minio.auth.rootUser }}"
+    AWS_S3_SECRET_ACCESS_KEY: "{{ required \".app.minio.auth.rootPassword\" $.Values.minio.auth.rootPassword }}"
+    AWS_S3_REGION: "us-east-1"
+    # Misc
+    SENTRY_DSN: "{{ required \".app.secrets.SENTRY_DSN\" nil }}"
+    HCAPTCHA_SECRET: "{{ required \".app.secrets.HCAPTCHA_SECRET\" nil }}"

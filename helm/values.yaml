@@ -12,34 +12,9 @@ app:
     host:
 
   redis:
-    enabled: true
-    architecture: standalone
-    fullnameOverride: idmc-redis
-    auth:
-      enabled: false
-    master:
-      persistence:
-        enabled: true
-        size: .5Gi
-        storageClass:
-
-  postgresql:
     enabled: false
     fullnameOverride: "idmc-pg"
-    architecture: standalone
-    auth:
-      postgresPassword: ""
-      username: ""
-      password: ""
-      database: ""
-    primary:
-      persistence:
-        enabled: true
-        storageClass: ""
-        size: 8Gi
 
-  # https://artifacthub.io/packages/helm/bitnami/minio
-  # extraEnvVars: https://github.com/bitnami/containers/blob/main/bitnami/minio/README.md#environment-variables
   minio:
     enabled: false
     disableWebUI: true
@@ -159,35 +134,14 @@ app:
 
   # NOTE: Check main/settings.py for all available options
   env:
-    APP_RELEASE: "{{ $.Values.image.tag }}"
-    HELIX_ENVIRONMENT: "{{ $.Values.environment }}"
-    DJANGO_DEBUG: "false"
     # AWS
     USE_S3_BUCKET: "true"
     AWS_S3_AWS_ENDPOINT_URL: "https://{{ $.Values.minio.apiIngress.hostname }}/"
     S3_BUCKET_NAME: "helix-data"
     EXTERNAL_S3_BUCKET_NAME: "helix-external-data"
-    # App Domain
-    APP_DOMAIN: "{{ required \".app.env.APP_DOMAIN\" nil }}"
-    DJANGO_ALLOWED_HOST: "{{ required \".app.env.DJANGO_ALLOWED_HOST\" nil }}"
-    BACKEND_BASE_URL: "{{ required \".app.env.BACKEND_BASE_URL\" nil }}"
-    FRONTEND_BASE_URL: "{{ required \".app.env.FRONTEND_BASE_URL\" nil }}"
-    SESSION_COOKIE_DOMAIN: "{{ required \".app.env.SESSION_COOKIE_DOMAIN\" nil }}"
-    CSRF_COOKIE_DOMAIN: "{{ required \".app.env.CSRF_COOKIE_DOMAIN\" nil }}"
-    # Sentry
-    SENTRY_MONITOR_CELERY_BEAT_TASKS: "true"
-    SENTRY_SAMPLE_RATE: "0.2"
-    SENTRY_PROFILES_SAMPLE_RATE: "0.2"
-
   # NOTE: Check main/settings.py for all available options
   secrets:
     DJANGO_SECRET_KEY: "{{ required \".app.secrets.DJANGO_SECRET_KEY\" nil }}"
-    # Postgres
-    POSTGRES_DB: "{{ $.Values.postgresql.auth.database }}"
-    POSTGRES_USER: "postgres"
-    POSTGRES_PASSWORD: "{{ $.Values.postgresql.auth.postgresPassword }}"
-    POSTGRES_HOST: "{{ include \"postgresql.v1.primary.fullname\" $.Subcharts.postgresql }}"
-    POSTGRES_PORT: "{{ include \"postgresql.v1.service.port\" $.Subcharts.postgresql }}"
     # Redis
     CELERY_BROKER_URL: "redis://{{ printf \"%s-master\" (include \"common.names.fullname\" $.Subcharts.redis) }}:6379/0"
     DJANGO_CACHE_REDIS_URL: "redis://{{ printf \"%s-master\" (include \"common.names.fullname\" $.Subcharts.redis) }}:6379/1"
