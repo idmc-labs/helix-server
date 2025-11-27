@@ -1,0 +1,71 @@
+app:
+  environment: ALPHA-1
+  fullnameOverride: helix-backend-1
+
+  image:
+    name: local.git.com/idmc/helix-backend
+    tag: develop.xxxxxxxx
+
+  ingress:
+    host: helix-api-1.idmc.local.example.com
+
+  postgresql:
+    auth:
+      postgresPassword: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+      password: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    primary:
+      nodeSelector:
+        kubernetes.io/hostname: "gpu-desktop-01"
+      persistence:
+        storageClass: "local-path"
+        size: 2Gi
+      extraEnvVars:
+        - name: DUMP_REGISTRY_URL
+          value: https://user:password@secure-dump.com
+        - name: DUMP_FILENAME
+          value: /helix/k8s-alpha-init-db.dump
+
+  minio:
+    nodeSelector:
+      kubernetes.io/hostname: "gpu-desktop-01"
+    global:
+      defaultStorageClass: "local-path"
+    apiIngress:
+      hostname: helix-minio-1.idmc.local.example.com
+    auth:
+      rootPassword: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+    persistence:
+      size: 0.5Gi
+
+  env:
+    # App Domain
+    APP_DOMAIN: "helix-api-1.idmc.local.example.com"
+    DJANGO_ALLOWED_HOST: "helix-1.idmc.local.example.com,helix-api-1.idmc.local.example.com"
+    BACKEND_BASE_URL: "https://helix-api-1.idmc.local.example.com"
+    FRONTEND_BASE_URL: "https://helix-1.idmc.local.example.com"
+    ADDITIONAL_TRUSTED_ORIGINS: "https://preview-idmc-website-components-1.idmc.local.example.com,https://release-idmc-website-components-1.idmc.local.example.com"
+    # App Domain
+    SESSION_COOKIE_DOMAIN: ".example.com"
+    CSRF_COOKIE_DOMAIN: ".example.com"
+
+  secrets:
+    DJANGO_SECRET_KEY: xyz
+    SENTRY_DSN: https://xyz@sentry.local.example.com/14
+    HCAPTCHA_SECRET: "xyz"
+
+  argoHook:
+    enabled: true
+    hooks:
+      # NOTE: Make sure keys are lowercase
+      create-users:
+        enabled: true
+        hook: PostSync
+        env:
+          SET_AS_ADMIN_USER_EMAILS: "xyz@example.com,abc@example.com"
+
+  extraManifests:
+    dragonflydb-cluster:
+      spec:
+        snapshot:
+          persistentVolumeClaimSpec:
+            storageClassName: local-path

@@ -20,6 +20,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@main
+        with:
+          submodules: true
 
       - name: 🐳 Prepare Docker
         id: prep
@@ -96,3 +98,23 @@ jobs:
           cat ./test-coverage.md >> $GITHUB_STEP_SUMMARY
           echo '' >> $GITHUB_STEP_SUMMARY
           echo '</details>' >> $GITHUB_STEP_SUMMARY
+
+  validate_helm:
+    name: Validate Helm
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@main
+        with:
+          submodules: true
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: 🐳 Helm dependency
+        run: |
+          yq --indent 0 '.dependencies | map(select(.repository | test("^oci:") | not)) | map(["helm", "repo", "add", .name, .repository] | join(" ")) | .[]' ./helm/Chart.lock | sh --
+          helm dependency build ./helm
+
+      - name: 🐳 Helm template (snapshot)
+        run: ./helm/update-snapshots.sh --check-diff-only

@@ -1,0 +1,6 @@
+tests:
+  alpha-1.yaml:
+    - values/alpha.yaml
+  alpha-2-as-prod.yaml:
+    - values/alpha.yaml
+    - tests/alpha-1.yaml

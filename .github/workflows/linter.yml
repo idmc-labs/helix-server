@@ -17,6 +17,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@main
+        with:
+          submodules: true
       - uses: astral-sh/setup-uv@v5
         with:
           enable-cache: true
