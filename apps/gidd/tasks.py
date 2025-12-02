@@ -28,9 +28,7 @@ from utils.db import Array
 
 from .models import (
     Conflict,
-    ConflictLegacy,
     Disaster,
-    DisasterLegacy,
     DisplacementData,
     GiddEvent,
     GiddFigure,
@@ -74,81 +72,6 @@ def annotate_conflict(qs, year):
             country=F("country"),
         )
         .order_by("year")
-    )
-
-
-def update_gidd_legacy_data():
-    iso3_to_country_id_map = {country["iso3"]: country["id"] for country in Country.objects.values("iso3", "id")}
-    iso3_to_country_name_map = {
-        country["iso3"]: country["idmc_short_name"] for country in Country.objects.values("iso3", "idmc_short_name")
-    }
-
-    # Bulk create conflict legacy data
-    Conflict.objects.bulk_create(
-        [
-            Conflict(
-                total_displacement=item["total_displacement"],
-                new_displacement=item["new_displacement"],
-                total_displacement_rounded=round_and_remove_zero(item["total_displacement"]),
-                new_displacement_rounded=round_and_remove_zero(item["new_displacement"]),
-                year=item["year"],
-                iso3=item["iso3"],
-                country_id=iso3_to_country_id_map[item["iso3"]],
-                country_name=iso3_to_country_name_map[item["iso3"]],
-            )
-            for item in ConflictLegacy.objects.values(
-                "total_displacement",
-                "new_displacement",
-                "year",
-                "iso3",
-            )
-        ]
-    )
-
-    # Bulk create legacy disaster data
-    Disaster.objects.bulk_create(
-        [
-            Disaster(
-                event_name=item["event_name"],
-                year=item["year"],
-                start_date=item["start_date"],
-                start_date_accuracy=item["start_date_accuracy"],
-                end_date=item["end_date"],
-                end_date_accuracy=item["end_date_accuracy"],
-                hazard_category_id=item["hazard_category"],
-                hazard_sub_category_id=item["hazard_sub_category"],
-                hazard_type_id=item["hazard_type"],
-                hazard_sub_type_id=item["hazard_sub_type"],
-                # FIXME: we should get this from database
-                hazard_category_name=item["hazard_category__name"],
-                hazard_sub_category_name=item["hazard_sub_category__name"],
-                hazard_type_name=item["hazard_type__name"],
-                hazard_sub_type_name=item["hazard_sub_type__name"],
-                new_displacement=item["new_displacement"],
-                new_displacement_rounded=round_and_remove_zero(item["new_displacement"]),
-                iso3=item["iso3"],
-                country_id=iso3_to_country_id_map[item["iso3"]],
-                country_name=iso3_to_country_name_map[item["iso3"]],
-            )
-            for item in DisasterLegacy.objects.values(
-                "event_name",
-                "year",
-                "start_date",
-                "start_date_accuracy",
-                "end_date",
-                "end_date_accuracy",
-                "hazard_category",
-                "hazard_sub_category",
-                "hazard_type",
-                "hazard_sub_type",
-                "hazard_category__name",
-                "hazard_sub_category__name",
-                "hazard_type__name",
-                "hazard_sub_type__name",
-                "new_displacement",
-                "iso3",
-            )
-        ]
     )
 
 
@@ -258,9 +181,6 @@ def update_conflict_and_disaster_data():
                     distinct=True,
                     filter=Q(displacement_occurred__isnull=False),
                 ),
-            )
-            .filter(
-                year__gte=2016,
             )
         )
 
@@ -775,7 +695,6 @@ def update_gidd_data(log_id):
             GiddEvent.objects.all().delete()
 
             # Create new data for GIDD
-            update_gidd_legacy_data()
             update_conflict_and_disaster_data()
             update_public_figure_analysis()
             update_displacement_data()
