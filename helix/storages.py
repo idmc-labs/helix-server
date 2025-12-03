@@ -22,6 +22,7 @@ class FileSystemExternalMediaStorage(FileSystemStorage):
 # S3
 class S3StaticStorage(S3Boto3Storage):
     default_acl = "public-read"
+    location = settings.STATIC_ROOT
 
     def get_default_settings(self):
         return {
@@ -31,6 +32,8 @@ class S3StaticStorage(S3Boto3Storage):
 
 
 class S3MediaStorage(S3Boto3Storage):
+    location = settings.MEDIA_ROOT
+
     def get_default_settings(self):
         return {
             **super().get_default_settings(),
@@ -40,6 +43,7 @@ class S3MediaStorage(S3Boto3Storage):
 
 class S3ExternalMediaStorage(S3Boto3Storage):
     default_acl = "public-read"
+    location = settings.EXTERNAL_MEDIA_ROOT    
 
     def get_default_settings(self):
         return {
