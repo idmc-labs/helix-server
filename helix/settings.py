@@ -142,6 +142,7 @@ LOCAL_APPS = [
     "report",
     "notification",
     "gidd",
+    "common",
 ]
 
 THIRD_PARTY_APPS = [
