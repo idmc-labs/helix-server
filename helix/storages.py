@@ -43,7 +43,7 @@ class S3MediaStorage(S3Boto3Storage):
 
 class S3ExternalMediaStorage(S3Boto3Storage):
     default_acl = "public-read"
-    location = settings.EXTERNAL_MEDIA_ROOT    
+    location = settings.EXTERNAL_MEDIA_ROOT
 
     def get_default_settings(self):
         return {
