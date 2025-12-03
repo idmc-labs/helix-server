@@ -1,4 +1,5 @@
 import typing
+import django_cte as cte
 
 REDIS_SEPARATOR = ":"
 INTERNAL_SEPARATOR = ":"
@@ -314,3 +315,12 @@ def extract_tag_raw_data_list(data: typing.List[typing.Tuple[str, str]]):
         "ids": ids,
         "tags": tags,
     }
+
+
+def make_cte_queryset(instance):
+    if not isinstance(instance.query, cte.query.CTEQuery):
+        instance.query.__class__ = cte.query.CTEQuery
+        instance = cte.CTEQuerySet(instance.model, query=instance.query)
+
+    instance.query._with_ctes = []
+    return instance

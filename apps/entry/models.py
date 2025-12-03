@@ -12,6 +12,8 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import (
     Case,
+    CharField,
+    TextField,
     ExpressionWrapper,
     F,
     JSONField,
@@ -23,14 +25,17 @@ from django.db.models import (
     fields,
 )
 from django.db.models.expressions import RawSQL
-from django.db.models.functions import Cast, Concat, ExtractYear
+from django.db.models.functions import Cast, Concat, ExtractYear, Coalesce
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
+from django_cte import With, CTEManager
 from django_enumfield import enum
 
+from apps.common.decorators.profiler import timeprofiler
+from apps.common.utils import make_cte_queryset
 from apps.common.enums import GENDER_TYPE
 from apps.common.utils import (
     EXTERNAL_ARRAY_SEPARATOR,
@@ -50,7 +55,7 @@ from apps.parking_lot.models import ParkedItem
 from apps.review.models import Review
 from helix.settings import FIGURE_NUMBER
 from helix.storages import get_external_storage
-from utils.common import get_string_from_list
+from utils.common import get_string_from_list, QueryCastArrayField
 from utils.db import Array
 from utils.fields import CachedFileField, generate_full_media_url
 
@@ -195,7 +200,7 @@ class DisaggregatedAge(models.Model):
 
 class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisaggregationAbstractModel, models.Model):
     from apps.crisis.models import Crisis
-
+    objects = CTEManager()
     class QUANTIFIER(enum.Enum):
         MORE_THAN_OR_EQUAL = 0
         LESS_THAN_OR_EQUAL = 1
@@ -979,6 +984,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         return cls.get_figure_excel_sheets_data(qs)
 
     @classmethod
+    @timeprofiler()
     def get_figure_excel_sheets_data(cls, figures: models.QuerySet):
         from apps.crisis.models import Crisis
 
@@ -1068,23 +1074,240 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         )
         exclude_headers = ["location_display_name", "loc_lat_lon", "accuracy", "type_of_points"]
 
+        figures = make_cte_queryset(instance=figures)
+
+        figures.annotate(
+            **Figure.annotate_stock_and_flow_dates(),
+            **Figure.annotate_sources_reliability(),
+            centroid_lat=RawSQL("country_country.centroid[2]", params=()),
+            centroid_lon=RawSQL("country_country.centroid[1]", params=()),
+            entry_url_or_document_url=models.Case(
+                models.When(entry__document__isnull=False, then=F("entry__document_url")),
+                models.When(entry__document__isnull=True, then=F("entry__url")),
+                output_field=models.CharField(),
+            ),
+            source_document=models.Case(
+                models.When(entry__document__isnull=False, then=F("entry__document__attachment")),
+                output_field=models.CharField(),
+            ),
+            entry_link=Concat(
+                Value(settings.FRONTEND_BASE_URL), Value("/entries/"), F("entry__id"), output_field=models.CharField()
+            ),
+            figure_link=Concat(
+                Value(settings.FRONTEND_BASE_URL),
+                Value("/entries/"),
+                F("entry__id"),
+                Value("/?id="),
+                F("id"),
+                Value("#/figures-and-analysis"),
+                output_field=models.CharField(),
+            ),
+            publishers_name=StringAgg(
+                "entry__publishers__name",
+                EXTERNAL_ARRAY_SEPARATOR,
+                filter=~Q(entry__publishers__name=""),
+                distinct=True,
+                output_field=models.CharField(),
+            ),
+            year=ExtractYear("end_date"),
+            context_of_violences=StringAgg(
+                "context_of_violence__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()
+            ),
+            tags_name=StringAgg("tags__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()),
+            sources_name=StringAgg(
+                "sources__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()
+            ),
+            sources_type=StringAgg(
+                "sources__organization_kind__name",
+                EXTERNAL_ARRAY_SEPARATOR,
+                distinct=True,
+                output_field=models.CharField(),
+            ),
+            sources_methodology=StringAgg(
+                "sources__methodology", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()
+            ),
+            centroid=Concat(
+                F("centroid_lat"), Value(EXTERNAL_TUPLE_SEPARATOR), F("centroid_lon"), output_field=models.CharField()
+            ),
+            event_main_trigger=Case(
+                When(event__event_type=Crisis.CRISIS_TYPE.CONFLICT, then=F("event__violence_sub_type__name")),
+                When(event__event_type=Crisis.CRISIS_TYPE.DISASTER, then=F("event__disaster_sub_type__name")),
+                When(event__event_type=Crisis.CRISIS_TYPE.OTHER, then=F("event__other_sub_type__name")),
+                output_field=models.CharField(),
+            ),
+            event_codes=ArrayAgg(
+                Array(
+                    F("event__event_code__event_code"),
+                    Cast(F("event__event_code__event_code_type"), models.CharField()),
+                    output_field=ArrayField(models.CharField()),
+                ),
+                distinct=True,
+                filter=models.Q(event__event_code__country__id=F("country__id")),
+            ),
+            locations=ArrayAgg(
+                Array(
+                    F("geo_locations__display_name"),
+                    Concat(
+                        F("geo_locations__lat"),
+                        Value(EXTERNAL_TUPLE_SEPARATOR),
+                        F("geo_locations__lon"),
+                        output_field=models.CharField(),
+                    ),
+                    Cast("geo_locations__accuracy", models.CharField()),
+                    Cast("geo_locations__identifier", models.CharField()),
+                    output_field=ArrayField(models.CharField()),
+                ),
+                distinct=True,
+                filter=~Q(Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name="")),
+            ),
+        ).order_by(
+            "created_at",
+        ).values(*[header for header in headers.keys() if header not in exclude_headers])
+        
+        locations_cte = With(
+            figures.values("id")
+            .annotate(
+                cte_locations=Coalesce(
+                    ArrayAgg(
+                        QueryCastArrayField(
+                            F("geo_locations__display_name"),
+                            Concat(
+                                F("geo_locations__lat"),
+                                Value(EXTERNAL_TUPLE_SEPARATOR),
+                                F("geo_locations__lon"),
+                                output_field=CharField(),
+                            ),
+                            Cast("geo_locations__accuracy", CharField()),
+                            Cast("geo_locations__identifier", CharField()),
+                        ),
+                        distinct=True,
+                        filter=~Q(Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name="")),
+                    ),
+                    Value([], output_field=ArrayField(TextField()))
+                )
+            ),
+            name='locations_cte'
+        )
+
+        sources_cte = With(
+            figures.values("id")
+            .annotate(
+                cte_sources_name=StringAgg(
+                    "sources__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()
+                ),
+                cte_sources_type=StringAgg(
+                    "sources__organization_kind__name",
+                    EXTERNAL_ARRAY_SEPARATOR,
+                    distinct=True,
+                    output_field=CharField(),
+                ),
+                cte_sources_methodology=StringAgg(
+                    "sources__methodology", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()
+                ),
+            ),
+            name='sources_cte'
+        )
+
+        event_codes_cte = With(
+        figures.values("id")
+        .annotate(
+            cte_event_codes=Coalesce(
+                ArrayAgg(
+                    QueryCastArrayField(
+                        F("event__event_code__event_code"),
+                        Cast(F("event__event_code__event_code_type"), CharField())
+                    ),
+                    distinct=True,
+                    filter=Q(event__event_code__country__id=F("country__id"))
+                ),
+                Value([], output_field=ArrayField(TextField()))
+                )
+            ),
+            name='event_codes_cte',
+        )
+        publishers_cte = With(
+            figures.values("id")
+            .annotate(
+                cte_publishers_name=StringAgg(
+                    "entry__publishers__name",
+                    EXTERNAL_ARRAY_SEPARATOR,
+                    filter=~Q(entry__publishers__name=""),
+                    distinct=True,
+                    output_field=CharField(),
+                )
+            ),
+            name='publishers_cte'
+        )
+        context_tags_cte = With(
+            figures.values("id")
+            .annotate(
+                cte_context_of_violences=StringAgg(
+                    "context_of_violence__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()
+                ),
+                cte_tags_name=StringAgg(
+                    "tags__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()
+                ),
+            ),
+            name='context_tags_cte'
+        )
+        figures_with_cte_joins = figures
+
+        figures_with_cte_joins = context_tags_cte.join(
+            figures_with_cte_joins, 
+            id=context_tags_cte.col.id
+        )
+        
+        figures_with_cte_joins = publishers_cte.join(
+            figures_with_cte_joins, 
+            id=publishers_cte.col.id
+        )
+
+        figures_with_cte_joins = event_codes_cte.join(
+            figures_with_cte_joins, 
+            id=event_codes_cte.col.id
+        )
+
+        figures_with_cte_joins = sources_cte.join(
+            figures_with_cte_joins, 
+            id=sources_cte.col.id
+        )
+        
+        figures_with_cte_joins = locations_cte.join(
+            figures_with_cte_joins, 
+            id=locations_cte.col.id
+        )
         values = (
-            figures.annotate(
+            figures_with_cte_joins
+            # locations_cte.join(
+            #     sources_cte.join(
+            #         event_codes_cte.join(figures, id=event_codes_cte.col.id),
+            #         id=sources_cte.col.id
+            #     ),
+            #     id=locations_cte.col.id
+            # )
+            .with_cte(locations_cte)
+            .with_cte(sources_cte)
+            .with_cte(event_codes_cte)
+            .with_cte(publishers_cte)
+            .with_cte(context_tags_cte)
+            .annotate(
                 **Figure.annotate_stock_and_flow_dates(),
                 **Figure.annotate_sources_reliability(),
                 centroid_lat=RawSQL("country_country.centroid[2]", params=()),
                 centroid_lon=RawSQL("country_country.centroid[1]", params=()),
-                entry_url_or_document_url=models.Case(
-                    models.When(entry__document__isnull=False, then=F("entry__document_url")),
-                    models.When(entry__document__isnull=True, then=F("entry__url")),
-                    output_field=models.CharField(),
+                
+                entry_url_or_document_url=Case(
+                    When(entry__document__isnull=False, then=F("entry__document_url")),
+                    When(entry__document__isnull=True, then=F("entry__url")),
+                    output_field=CharField(),
                 ),
-                source_document=models.Case(
-                    models.When(entry__document__isnull=False, then=F("entry__document__attachment")),
-                    output_field=models.CharField(),
+                source_document=Case(
+                    When(entry__document__isnull=False, then=F("entry__document__attachment")),
+                    output_field=CharField(),
                 ),
+                
                 entry_link=Concat(
-                    Value(settings.FRONTEND_BASE_URL), Value("/entries/"), F("entry__id"), output_field=models.CharField()
+                    Value(settings.FRONTEND_BASE_URL), Value("/entries/"), F("entry__id"), output_field=CharField()
                 ),
                 figure_link=Concat(
                     Value(settings.FRONTEND_BASE_URL),
@@ -1093,70 +1316,30 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     Value("/?id="),
                     F("id"),
                     Value("#/figures-and-analysis"),
-                    output_field=models.CharField(),
-                ),
-                publishers_name=StringAgg(
-                    "entry__publishers__name",
-                    EXTERNAL_ARRAY_SEPARATOR,
-                    filter=~Q(entry__publishers__name=""),
-                    distinct=True,
-                    output_field=models.CharField(),
+                    output_field=CharField(),
                 ),
                 year=ExtractYear("end_date"),
-                context_of_violences=StringAgg(
-                    "context_of_violence__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()
-                ),
-                tags_name=StringAgg("tags__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()),
-                sources_name=StringAgg(
-                    "sources__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()
-                ),
-                sources_type=StringAgg(
-                    "sources__organization_kind__name",
-                    EXTERNAL_ARRAY_SEPARATOR,
-                    distinct=True,
-                    output_field=models.CharField(),
-                ),
-                sources_methodology=StringAgg(
-                    "sources__methodology", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()
-                ),
                 centroid=Concat(
-                    F("centroid_lat"), Value(EXTERNAL_TUPLE_SEPARATOR), F("centroid_lon"), output_field=models.CharField()
+                    F("centroid_lat"), Value(EXTERNAL_TUPLE_SEPARATOR), F("centroid_lon"), output_field=CharField()
                 ),
+                
                 event_main_trigger=Case(
                     When(event__event_type=Crisis.CRISIS_TYPE.CONFLICT, then=F("event__violence_sub_type__name")),
                     When(event__event_type=Crisis.CRISIS_TYPE.DISASTER, then=F("event__disaster_sub_type__name")),
                     When(event__event_type=Crisis.CRISIS_TYPE.OTHER, then=F("event__other_sub_type__name")),
-                    output_field=models.CharField(),
+                    output_field=CharField(),
                 ),
-                event_codes=ArrayAgg(
-                    Array(
-                        F("event__event_code__event_code"),
-                        Cast(F("event__event_code__event_code_type"), models.CharField()),
-                        output_field=ArrayField(models.CharField()),
-                    ),
-                    distinct=True,
-                    filter=models.Q(event__event_code__country__id=F("country__id")),
-                ),
-                locations=ArrayAgg(
-                    Array(
-                        F("geo_locations__display_name"),
-                        Concat(
-                            F("geo_locations__lat"),
-                            Value(EXTERNAL_TUPLE_SEPARATOR),
-                            F("geo_locations__lon"),
-                            output_field=models.CharField(),
-                        ),
-                        Cast("geo_locations__accuracy", models.CharField()),
-                        Cast("geo_locations__identifier", models.CharField()),
-                        output_field=ArrayField(models.CharField()),
-                    ),
-                    distinct=True,
-                    filter=~Q(Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name="")),
-                ),
+
+                locations=locations_cte.col.cte_locations,
+                sources_name=sources_cte.col.cte_sources_name,
+                sources_type=sources_cte.col.cte_sources_type,
+                sources_methodology=sources_cte.col.cte_sources_methodology,
+                event_codes=event_codes_cte.col.cte_event_codes,
+                publishers_name=publishers_cte.col.cte_publishers_name,
+                context_of_violences=context_tags_cte.col.cte_context_of_violences,
+                tags_name=context_tags_cte.col.cte_tags_name,
             )
-            .order_by(
-                "created_at",
-            )
+            .order_by("created_at")
             .values(*[header for header in headers.keys() if header not in exclude_headers])
         )
 
