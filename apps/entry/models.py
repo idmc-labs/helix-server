@@ -34,7 +34,6 @@ from django.utils.translation import gettext_lazy as _
 from django_cte import With, CTEManager
 from django_enumfield import enum
 
-from apps.common.decorators.profiler import timeprofiler
 from apps.common.utils import make_cte_queryset
 from apps.common.enums import GENDER_TYPE
 from apps.common.utils import (
@@ -984,7 +983,6 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         return cls.get_figure_excel_sheets_data(qs)
 
     @classmethod
-    @timeprofiler()
     def get_figure_excel_sheets_data(cls, figures: models.QuerySet):
         from apps.crisis.models import Crisis
 
