@@ -13,28 +13,27 @@ from django.db import models
 from django.db.models import (
     Case,
     CharField,
-    TextField,
     ExpressionWrapper,
     F,
     JSONField,
     Max,
     Min,
     Q,
+    TextField,
     Value,
     When,
     fields,
 )
 from django.db.models.expressions import RawSQL
-from django.db.models.functions import Cast, Concat, ExtractYear, Coalesce
+from django.db.models.functions import Cast, Coalesce, Concat, ExtractYear
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
-from django_cte import With, CTEManager
+from django_cte import CTEManager, With
 from django_enumfield import enum
 
-from apps.common.utils import make_cte_queryset
 from apps.common.enums import GENDER_TYPE
 from apps.common.utils import (
     EXTERNAL_ARRAY_SEPARATOR,
@@ -42,6 +41,7 @@ from apps.common.utils import (
     extract_location_data,
     format_event_codes_as_string,
     format_locations_as_string,
+    make_cte_queryset,
 )
 from apps.contrib.commons import DATE_ACCURACY
 from apps.contrib.models import (
@@ -54,8 +54,7 @@ from apps.parking_lot.models import ParkedItem
 from apps.review.models import Review
 from helix.settings import FIGURE_NUMBER
 from helix.storages import get_external_storage
-from utils.common import get_string_from_list, QueryCastArrayField
-from utils.db import Array
+from utils.common import QueryCastArrayField, get_string_from_list
 from utils.fields import CachedFileField, generate_full_media_url
 
 from .documents import README_DATA
@@ -199,7 +198,9 @@ class DisaggregatedAge(models.Model):
 
 class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisaggregationAbstractModel, models.Model):
     from apps.crisis.models import Crisis
+
     objects = CTEManager()
+
     class QUANTIFIER(enum.Enum):
         MORE_THAN_OR_EQUAL = 0
         LESS_THAN_OR_EQUAL = 1
@@ -1075,8 +1076,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         figures = make_cte_queryset(qs=figures)
 
         locations_cte = With(
-            figures.values("id")
-            .annotate(
+            figures.values("id").annotate(
                 cte_locations=Coalesce(
                     ArrayAgg(
                         QueryCastArrayField(
@@ -1093,16 +1093,15 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                         distinct=True,
                         filter=~Q(Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name="")),
                     ),
-                    Value([], output_field=ArrayField(TextField()))
+                    Value([], output_field=ArrayField(TextField())),
                 )
             ),
-            name='locations_cte',
-            materialized=False
+            name="locations_cte",
+            materialized=False,
         )
 
         sources_cte = With(
-            figures.values("id")
-            .annotate(
+            figures.values("id").annotate(
                 cte_sources_name=StringAgg(
                     "sources__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()
                 ),
@@ -1116,31 +1115,28 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     "sources__methodology", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()
                 ),
             ),
-            name='sources_cte',
-            materialized=False
+            name="sources_cte",
+            materialized=False,
         )
 
         event_codes_cte = With(
-        figures.values("id")
-        .annotate(
-            cte_event_codes=Coalesce(
-                ArrayAgg(
-                    QueryCastArrayField(
-                        F("event__event_code__event_code"),
-                        Cast(F("event__event_code__event_code_type"), CharField())
+            figures.values("id").annotate(
+                cte_event_codes=Coalesce(
+                    ArrayAgg(
+                        QueryCastArrayField(
+                            F("event__event_code__event_code"), Cast(F("event__event_code__event_code_type"), CharField())
+                        ),
+                        distinct=True,
+                        filter=Q(event__event_code__country__id=F("country__id")),
                     ),
-                    distinct=True,
-                    filter=Q(event__event_code__country__id=F("country__id"))
-                ),
-                Value([], output_field=ArrayField(TextField()))
+                    Value([], output_field=ArrayField(TextField())),
                 )
             ),
-            name='event_codes_cte',
-            materialized=False
+            name="event_codes_cte",
+            materialized=False,
         )
         publishers_cte = With(
-            figures.values("id")
-            .annotate(
+            figures.values("id").annotate(
                 cte_publishers_name=StringAgg(
                     "entry__publishers__name",
                     EXTERNAL_ARRAY_SEPARATOR,
@@ -1149,51 +1145,32 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     output_field=CharField(),
                 )
             ),
-            name='publishers_cte',
-            materialized=False
+            name="publishers_cte",
+            materialized=False,
         )
         context_tags_cte = With(
-            figures.values("id")
-            .annotate(
+            figures.values("id").annotate(
                 cte_context_of_violences=StringAgg(
                     "context_of_violence__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()
                 ),
-                cte_tags_name=StringAgg(
-                    "tags__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()
-                ),
+                cte_tags_name=StringAgg("tags__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()),
             ),
-            name='context_tags_cte',
-            materialized=False
+            name="context_tags_cte",
+            materialized=False,
         )
         figures_with_cte_joins = figures
 
-        figures_with_cte_joins = context_tags_cte.join(
-            figures_with_cte_joins, 
-            id=context_tags_cte.col.id
-        )
-        
-        figures_with_cte_joins = publishers_cte.join(
-            figures_with_cte_joins, 
-            id=publishers_cte.col.id
-        )
+        figures_with_cte_joins = context_tags_cte.join(figures_with_cte_joins, id=context_tags_cte.col.id)
 
-        figures_with_cte_joins = event_codes_cte.join(
-            figures_with_cte_joins, 
-            id=event_codes_cte.col.id
-        )
+        figures_with_cte_joins = publishers_cte.join(figures_with_cte_joins, id=publishers_cte.col.id)
 
-        figures_with_cte_joins = sources_cte.join(
-            figures_with_cte_joins, 
-            id=sources_cte.col.id
-        )
-        
-        figures_with_cte_joins = locations_cte.join(
-            figures_with_cte_joins, 
-            id=locations_cte.col.id
-        )
+        figures_with_cte_joins = event_codes_cte.join(figures_with_cte_joins, id=event_codes_cte.col.id)
+
+        figures_with_cte_joins = sources_cte.join(figures_with_cte_joins, id=sources_cte.col.id)
+
+        figures_with_cte_joins = locations_cte.join(figures_with_cte_joins, id=locations_cte.col.id)
         values = (
-            figures_with_cte_joins
-            .with_cte(locations_cte)
+            figures_with_cte_joins.with_cte(locations_cte)
             .with_cte(sources_cte)
             .with_cte(event_codes_cte)
             .with_cte(publishers_cte)
@@ -1203,7 +1180,6 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 **Figure.annotate_sources_reliability(),
                 centroid_lat=RawSQL("country_country.centroid[2]", params=()),
                 centroid_lon=RawSQL("country_country.centroid[1]", params=()),
-                
                 entry_url_or_document_url=Case(
                     When(entry__document__isnull=False, then=F("entry__document_url")),
                     When(entry__document__isnull=True, then=F("entry__url")),
@@ -1213,7 +1189,6 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     When(entry__document__isnull=False, then=F("entry__document__attachment")),
                     output_field=CharField(),
                 ),
-                
                 entry_link=Concat(
                     Value(settings.FRONTEND_BASE_URL), Value("/entries/"), F("entry__id"), output_field=CharField()
                 ),
@@ -1230,14 +1205,12 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 centroid=Concat(
                     F("centroid_lat"), Value(EXTERNAL_TUPLE_SEPARATOR), F("centroid_lon"), output_field=CharField()
                 ),
-                
                 event_main_trigger=Case(
                     When(event__event_type=Crisis.CRISIS_TYPE.CONFLICT, then=F("event__violence_sub_type__name")),
                     When(event__event_type=Crisis.CRISIS_TYPE.DISASTER, then=F("event__disaster_sub_type__name")),
                     When(event__event_type=Crisis.CRISIS_TYPE.OTHER, then=F("event__other_sub_type__name")),
                     output_field=CharField(),
                 ),
-
                 locations=locations_cte.col.cte_locations,
                 sources_name=sources_cte.col.cte_sources_name,
                 sources_type=sources_cte.col.cte_sources_type,

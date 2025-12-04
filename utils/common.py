@@ -8,9 +8,10 @@ import traceback
 import typing
 from datetime import timedelta
 from xml.sax.saxutils import escape as xml_escape
-from django.db import models
-from django.contrib.postgres.fields import ArrayField
+
 from django.conf import settings
+from django.contrib.postgres.fields import ArrayField
+from django.db import models
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import viewsets
@@ -244,9 +245,10 @@ client_id = extend_schema(
     ],
 )
 
+
 class QueryCastArrayField(models.Func):
-    """ casts the query values in python-friendly array
-    """
-    function = 'ARRAY'
-    template = '%(function)s[%(expressions)s]'
+    """casts the query values in python-friendly array"""
+
+    function = "ARRAY"
+    template = "%(function)s[%(expressions)s]"
     output_field = ArrayField(models.CharField())

@@ -1,4 +1,5 @@
 import typing
+
 import django_cte as cte
 from django.db import models
 
