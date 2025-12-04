@@ -1096,7 +1096,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     Value([], output_field=ArrayField(TextField()))
                 )
             ),
-            name='locations_cte'
+            name='locations_cte',
+            materialized=False
         )
 
         sources_cte = With(
@@ -1115,7 +1116,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     "sources__methodology", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()
                 ),
             ),
-            name='sources_cte'
+            name='sources_cte',
+            materialized=False
         )
 
         event_codes_cte = With(
@@ -1134,6 +1136,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 )
             ),
             name='event_codes_cte',
+            materialized=False
         )
         publishers_cte = With(
             figures.values("id")
@@ -1146,7 +1149,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     output_field=CharField(),
                 )
             ),
-            name='publishers_cte'
+            name='publishers_cte',
+            materialized=False
         )
         context_tags_cte = With(
             figures.values("id")
@@ -1158,7 +1162,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     "tags__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()
                 ),
             ),
-            name='context_tags_cte'
+            name='context_tags_cte',
+            materialized=False
         )
         figures_with_cte_joins = figures
 
