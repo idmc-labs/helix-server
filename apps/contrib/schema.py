@@ -83,6 +83,7 @@ class ClientType(DjangoObjectType):
             "opted_out_of_emails",
             "last_modified_by",
             "modified_at",
+            "share_source",
         )
 
     def resolve_use_cases_display(self, info):

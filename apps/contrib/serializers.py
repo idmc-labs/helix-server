@@ -165,6 +165,7 @@ class ClientSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
             "use_cases",
             "other_notes",
             "opted_out_of_emails",
+            "share_source",
         )
 
     def validate(self, attrs):
