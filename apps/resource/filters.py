@@ -1,15 +1,17 @@
-import django_filters as df
-
 from apps.resource.models import Resource, ResourceGroup
-from utils.filters import StringListFilter
+from utils.filters import MultiWordSearchFilterSet, StringListFilter
 
 
-class ResourceFilter(df.FilterSet):
+class ResourceFilter(MultiWordSearchFilterSet):
     countries = StringListFilter(method="filter_countries")
 
     class Meta:
         model = Resource
-        fields = {"name": ["unaccent__icontains"]}
+        fields = {}
+
+    @property
+    def searchable_fields(self):
+        return ["name"]
 
     @property
     def qs(self):
@@ -23,10 +25,14 @@ class ResourceFilter(df.FilterSet):
         return qs.filter(countries__in=value).distinct()
 
 
-class ResourceGroupFilter(df.FilterSet):
+class ResourceGroupFilter(MultiWordSearchFilterSet):
     class Meta:
         model = ResourceGroup
-        fields = {"name": ["unaccent__icontains"]}
+        fields = {}
+
+    @property
+    def searchable_fields(self):
+        return ["name"]
 
     @property
     def qs(self):

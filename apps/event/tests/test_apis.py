@@ -408,8 +408,8 @@ class TestDeleteEvent(HelixGraphQLTestCase):
 class TestEventListQuery(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.q = """
-            query EventList($crisisByIds: [ID!], $name: String, $qaRule: String){
-              eventList(filters: {crisisByIds: $crisisByIds, name: $name, qaRule: $qaRule}) {
+            query EventList($crisisByIds: [ID!], $search: String, $qaRule: String){
+              eventList(filters: {crisisByIds: $crisisByIds, search: $search, qaRule: $qaRule}) {
                 results {
                   id
                 }
@@ -437,7 +437,7 @@ class TestEventListQuery(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertEqual([int(each["id"]) for each in content["data"]["eventList"]["results"]], expected)
 
-        variables = {"name": "random event2"}
+        variables = {"search": "random event2"}
         response = self.query(self.q, variables=variables)
         content = response.json()
 

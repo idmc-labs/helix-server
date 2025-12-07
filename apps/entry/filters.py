@@ -6,6 +6,7 @@ from apps.entry.models import (
     FigureLocation,
     FigureTag,
 )
+from utils.filters import MultiWordSearchFilterSet
 
 
 class FigureLocationFilter(df.FilterSet):
@@ -31,9 +32,11 @@ class FigureFilter(df.FilterSet):
         }
 
 
-class FigureTagFilter(df.FilterSet):
+class FigureTagFilter(MultiWordSearchFilterSet):
     class Meta:
         model = FigureTag
-        fields = {
-            "name": ("unaccent__icontains",),
-        }
+        fields = []
+
+    @property
+    def searchable_fields(self):
+        return ["name"]

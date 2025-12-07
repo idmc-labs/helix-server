@@ -20,7 +20,7 @@ class TestCrisisFilter(HelixTestCase):
         CrisisFactory.create(name="one")
         c2 = CrisisFactory.create(name="two")
         c3 = CrisisFactory.create(name="towo")
-        obtained = self.filter_class(data=dict(name="w")).qs
+        obtained = self.filter_class(data=dict(search="w")).qs
         expected = [c2, c3]
         self.assertEqual(expected, list(obtained))
 

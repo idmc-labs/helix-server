@@ -33,6 +33,7 @@ from utils.figure_filter import (
 )
 from utils.filters import (
     IDListFilter,
+    MultiWordSearchFilterSet,
     NameFilterMixin,
     SimpleInputFilter,
     StringListFilter,
@@ -40,8 +41,7 @@ from utils.filters import (
 )
 
 
-class EventFilter(NameFilterMixin, django_filters.FilterSet):
-    name = django_filters.CharFilter(method="filter_name")
+class EventFilter(NameFilterMixin, MultiWordSearchFilterSet):
     crisis_by_ids = IDListFilter(method="filter_crises")
     event_types = StringListFilter(method="filter_event_types")
     countries = IDListFilter(method="filter_countries")
@@ -71,6 +71,12 @@ class EventFilter(NameFilterMixin, django_filters.FilterSet):
             "end_date": ["lte", "lt", "gte", "gt"],
             "ignore_qa": ["exact"],
         }
+
+    @property
+    def searchable_fields(self):
+        return [
+            "name",
+        ]
 
     def noop(self, qs, name, value):
         return qs
@@ -145,11 +151,6 @@ class EventFilter(NameFilterMixin, django_filters.FilterSet):
                 ]
             ).distinct()
         return qs
-
-    def filter_name(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(Q(name__unaccent__icontains=value) | Q(event_code__event_code__iexact=value)).distinct()
 
     def filter_osv_sub_types(self, qs, name, value):
         if value:
