@@ -155,3 +155,128 @@ class ParkedItemAPITestCase(HelixAPITestCase):
         self.authenticate()
         response = self.client.post(self.url, data)
         assert response.status_code == 201
+
+    def test_multiword_diacritics_search(self):
+        list_query = """
+            query MyQuery($search: String!) {
+                parkedItemList(filters: {search: $search}) {
+                    totalCount
+                    results {
+                        comments
+                        url
+                        title
+                    }
+                }
+            }
+        """
+
+        title1 = "ženg_prøtest"
+        url1 = "http://youba.com"
+        self.country1 = CountryFactory.create(iso3="NPL")
+        self.assigned_to1 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+
+        self.country2 = CountryFactory.create(iso3="USA")
+        self.assigned_to2 = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        title2 = "Bangladesh flood"
+        url2 = "http://bangali.com"
+        data = [
+            {
+                "title": title1,
+                "url": url1,
+                "country_iso3": self.country1.iso3,
+                "assignedTo": self.assigned_to1.id,
+            },
+            {
+                "title": title2,
+                "url": url2,
+                "country_iso3": self.country2.iso3,
+                "assignedTo": self.assigned_to2.id,
+                "comments": "Many people participated in the protest here.",
+            },
+        ]
+
+        self.authenticate()
+
+        response = self.client.post(self.url, json.dumps(data), content_type="application/json")
+
+        assert response.status_code == 201
+
+        response = self.client.post(
+            "/graphql/",
+            data=json.dumps(
+                {
+                    "query": list_query,
+                    "variables": {
+                        "search": "protest",
+                    },
+                }
+            ),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+
+        content = json.loads(response.content)
+        print(content)
+        results = content["data"]["parkedItemList"]["results"]
+        self.assertEqual(len(results), 2)
+
+        returned_titles = [item["title"] for item in results]
+        self.assertIn(title1, returned_titles)
+        self.assertIn(title2, returned_titles)
+
+        response = self.client.post(
+            "/graphql/",
+            data=json.dumps(
+                {
+                    "query": list_query,
+                    "variables": {"search": "pařti"},  # participated
+                }
+            ),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+
+        content = json.loads(response.content)
+
+        results = content["data"]["parkedItemList"]["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["title"], title2)
+
+        response = self.client.post(
+            "/graphql/",
+            data=json.dumps(
+                {
+                    "query": list_query,
+                    "variables": {"search": "youba"},
+                }
+            ),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+
+        content = json.loads(response.content)
+
+        results = content["data"]["parkedItemList"]["results"]
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["url"], url1)
+
+        response = self.client.post(
+            "/graphql/",
+            data=json.dumps(
+                {
+                    "query": list_query,
+                    "variables": {"search": "nonexistent content"},
+                }
+            ),
+            content_type="application/json",
+        )
+
+        assert response.status_code == 200
+
+        content = json.loads(response.content)
+
+        results = content["data"]["parkedItemList"]["results"]
+        self.assertEqual(len(results), 0)

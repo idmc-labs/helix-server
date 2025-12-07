@@ -12,10 +12,10 @@ from django.db.models import (
 from django_filters import rest_framework as df
 
 from apps.report.models import Report, ReportApproval, ReportComment, ReportGeneration
-from utils.filters import IDListFilter, StringListFilter, generate_type_for_filter_set
+from utils.filters import IDListFilter, MultiWordSearchFilterSet, StringListFilter, generate_type_for_filter_set
 
 
-class ReportFilter(df.FilterSet):
+class ReportFilter(MultiWordSearchFilterSet):
     filter_figure_countries = IDListFilter(method="filter_countries")
     review_status = StringListFilter(method="filter_by_review_status")
     start_date_after = df.DateFilter(method="filter_date_after")
@@ -27,12 +27,15 @@ class ReportFilter(df.FilterSet):
     class Meta:
         model = Report
         fields = {
-            "name": ["unaccent__icontains"],
             "change_in_source": ["exact"],
             "change_in_methodology": ["exact"],
             "change_in_data_availability": ["exact"],
             "retroactive_change": ["exact"],
         }
+
+    @property
+    def searchable_fields(self):
+        return ["name"]
 
     def filter_countries(self, qs, name, value):
         if value:

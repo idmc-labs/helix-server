@@ -14,15 +14,15 @@ class TestUserFilter(HelixTestCase):
         UserFactory.create(first_name="bcd", last_name="efa")
         u3 = UserFactory.create(first_name="abc", last_name="dzy")
 
-        data = dict(full_name="abc d")
+        data = dict(search="abc d")
         filtered = UserFilter(data).qs
         self.assertEqual([each for each in filtered], [u1, u3])
 
-        data = dict(full_name="def")
+        data = dict(search="def")
         filtered = UserFilter(data).qs
         self.assertEqual([each for each in filtered], [u1])
 
-        data = dict(full_name="zy")
+        data = dict(search="zy")
         filtered = UserFilter(data).qs
         self.assertEqual([each for each in filtered], [u3])
 
