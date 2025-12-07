@@ -1,17 +1,75 @@
+import abc
+import re
 import typing
+import unicodedata
 from functools import partial
 
 import django_filters
 import graphene
 from django import forms
-from django.db.models import Value
+from django.db.models import Q, Value
 from django.db.models.functions import Lower, StrIndex
 from django.db.models.query import QuerySet
+from django_filters import rest_framework as df
 from graphene.types.generic import GenericScalar
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django.forms.converter import convert_form_field
 
 from utils.mutation import compare_input_output_type_fields, generate_object_field_from_input_type
+
+
+class MultiWordSearchFilterSet(df.FilterSet):
+    """
+    Search baseclass to implement multi-word query logic to any FilterSet.
+    """
+
+    search = django_filters.CharFilter(method="multi_word_search")
+
+    @property
+    @abc.abstractmethod
+    def searchable_fields(self) -> typing.List[str]:
+        """
+        Defines the fields to be included in the multi_word_search logic.
+        Keeping redundant fields in Meta.fields should be avoided for performance reasons.
+        """
+        raise NotImplementedError
+
+    @staticmethod
+    def normalize_search_value(value):
+        # For uniformity between application and the backend
+        # https://docs.python.org/3/library/unicodedata.html#unicodedata.normalize
+        value = unicodedata.normalize("NFKC", value)
+
+        # Removes special characters except underscore
+        value = re.sub(r"[^\w\s]", " ", value)
+        # Collapse multiple spaces into one
+        value = re.sub(r"\s+", " ", value)
+
+        return value.strip()
+
+    def multi_word_search(self, queryset, name, value):
+        if not value:
+            return queryset
+
+        search_fields = self.searchable_fields
+        if not search_fields:
+            return queryset
+
+        if not isinstance(search_fields, (list, tuple)):
+            search_fields = [search_fields]
+
+        value = MultiWordSearchFilterSet.normalize_search_value(value)
+        words = list(dict.fromkeys(value.lower().split()))
+
+        total_q_objects = Q()
+        for word in words:
+            word_q_objects = Q()
+            for field in search_fields:
+                lookup = f"{field}__unaccent__icontains"
+                word_q_objects |= Q(**{lookup: word})
+            total_q_objects &= word_q_objects
+
+        return queryset.filter(total_q_objects)
 
 
 class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):

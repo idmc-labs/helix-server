@@ -2,23 +2,17 @@ import django_filters
 from django.contrib.auth.models import Permission
 from django.db import models
 from django.db.models import Min
-from django.db.models.functions import Coalesce, Concat, Lower, StrIndex
 
 from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio, User
-from utils.filters import (
-    IDListFilter,
-    StringListFilter,
-    generate_type_for_filter_set,
-)
+from utils.filters import IDListFilter, MultiWordSearchFilterSet, StringListFilter, generate_type_for_filter_set
 
 
-class UserFilter(django_filters.FilterSet):
+class UserFilter(MultiWordSearchFilterSet):
     role_in = StringListFilter(method="filter_role_in")
     role_not_in = StringListFilter(method="filter_role_not_in")
     monitoring_sub_region_in = IDListFilter(method="filter_monitoring_sub_region_in")
     monitoring_sub_region_not_in = IDListFilter(method="filter_monitoring_sub_region_not_in")
-    full_name = django_filters.CharFilter(method="filter_full_name")
     include_inactive = django_filters.BooleanFilter(method="filter_include_inactive")
     id = django_filters.CharFilter(field_name="id", lookup_expr="iexact")
     permissions = StringListFilter(method="filter_permissions")
@@ -26,6 +20,10 @@ class UserFilter(django_filters.FilterSet):
     class Meta:
         model = User
         fields = ["email", "is_active"]
+
+    @property
+    def searchable_fields(self):
+        return ["first_name", "full_name", "last_name"]
 
     def filter_role_not_in(self, queryset, name, value):
         roles = [USER_ROLE[role].value for role in value]
@@ -40,21 +38,6 @@ class UserFilter(django_filters.FilterSet):
     def filter_role_in(self, queryset, name, value):
         roles = [USER_ROLE[role].value for role in value]
         return queryset.annotate(highest_user_role=Min("portfolios__role")).filter(highest_user_role__in=roles)
-
-    def filter_full_name(self, queryset, name, value):
-        if not value:
-            return queryset
-        return (
-            queryset.annotate(
-                full=Coalesce(
-                    Lower("full_name"),
-                    Concat(Lower("first_name"), models.Value(" "), Lower("last_name")),
-                )
-            )
-            .annotate(idx=StrIndex("full", models.Value(value.lower())))
-            .filter(full__unaccent__icontains=value)
-            .order_by("idx")
-        )
 
     def filter_include_inactive(self, queryset, name, value):
         if value is False:

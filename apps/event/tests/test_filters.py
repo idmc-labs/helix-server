@@ -33,7 +33,7 @@ class TestEventFilter(HelixTestCase):
             name="two",
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
-        obtained = self.filter_class(data=dict(name="w")).qs
+        obtained = self.filter_class(data=dict(search="w")).qs
         expected = [e2]
         self.assertQuerySetEqual(expected, obtained)
 

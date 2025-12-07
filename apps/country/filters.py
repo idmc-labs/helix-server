@@ -28,31 +28,35 @@ from utils.figure_filter import (
 )
 from utils.filters import (
     IDListFilter,
-    NameFilterMixin,
+    MultiWordSearchFilterSet,
     SimpleInputFilter,
     StringListFilter,
     generate_type_for_filter_set,
 )
 
 
-class GeographicalGroupFilter(NameFilterMixin, django_filters.FilterSet):
-    name = django_filters.CharFilter(method="_filter_name")
-
+class GeographicalGroupFilter(MultiWordSearchFilterSet):
     class Meta:
         model = GeographicalGroup
         fields = {
             "id": ["iexact"],
         }
 
+    @property
+    def searchable_fields(self):
+        return ["name"]
 
-class CountryRegionFilter(NameFilterMixin, django_filters.FilterSet):
-    name = django_filters.CharFilter(method="_filter_name")
 
+class CountryRegionFilter(MultiWordSearchFilterSet):
     class Meta:
         model = CountryRegion
         fields = {
             "id": ["iexact"],
         }
+
+    @property
+    def searchable_fields(self):
+        return ["name"]
 
 
 class CountryFilter(django_filters.FilterSet):

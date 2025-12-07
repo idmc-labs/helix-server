@@ -272,7 +272,7 @@ input ClientCreateInputType {
 }
 
 input ClientFilterDataInputType {
-  name: String
+  search: String
   isActive: Boolean
   useCases: [String!]
   shareSource: Boolean
@@ -454,10 +454,8 @@ input ContactCreateInputType {
 
 input ContactFilterDataInputType {
   country: ID
+  search: String
   id: String
-  firstNameContains: String
-  lastNameContains: String
-  nameContains: String
   countriesOfOperation: [String!]
 }
 
@@ -702,7 +700,7 @@ type CountryListType {
 
 input CountryRegionFilterDataInputType {
   id_Iexact: Float
-  name: String
+  search: String
 }
 
 type CountryRegionListType {
@@ -986,7 +984,7 @@ input CrisisFilterDataInputType {
   endDate_Lte: Date
   endDate_Gt: Date
   endDate_Gte: Date
-  name: String
+  search: String
   countries: [ID!]
   crisisTypes: [String!]
   events: [ID!]
@@ -1281,8 +1279,8 @@ type DisasterCategoryType {
 input DisasterFilterDataInputType {
   id_Iexact: Float
   releaseEnvironment: String
+  search: String
   hazardTypes: [ID!]
-  eventName: String
   startYear: Float
   endYear: Float
   countriesIso3: [String!]
@@ -1568,7 +1566,7 @@ input EventFilterDataInputType {
   endDate_Gte: Date
   endDate_Gt: Date
   ignoreQa: Boolean
-  name: String
+  search: String
   crisisByIds: [ID!]
   eventTypes: [String!]
   countries: [ID!]
@@ -2156,7 +2154,7 @@ input FigureTagCreateInputType {
 }
 
 input FigureTagFilterDataInputType {
-  name_Unaccent_Icontains: String
+  search: String
 }
 
 type FigureTagListType {
@@ -2381,7 +2379,7 @@ scalar GenericScalar
 
 input GeographicalGroupFilterDataInputType {
   id_Iexact: Float
-  name: String
+  search: String
 }
 
 type GeographicalGroupListType {
@@ -2873,8 +2871,7 @@ input OrganizationCreateInputType {
 }
 
 input OrganizationFilterDataInputType {
-  name_Unaccent_Icontains: String
-  shortName_Unaccent_Icontains: String
+  search: String
   countries: [ID!]
   categories: [String!]
   organizationKinds: [ID!]
@@ -3134,8 +3131,8 @@ input ParkedItemUpdateInputType {
 }
 
 input ParkingLotFilterDataInputType {
-  title_Unaccent_Icontains: String
   createdBy: ID
+  search: String
   statusIn: [String!]
   assignedToIn: [String!]
 }
@@ -3452,11 +3449,11 @@ input ReportCreateInputType {
 }
 
 input ReportFilterDataInputType {
-  name_Unaccent_Icontains: String
   changeInSource: Boolean
   changeInMethodology: Boolean
   changeInDataAvailability: Boolean
   retroactiveChange: Boolean
+  search: String
   filterFigureCountries: [ID!]
   reviewStatus: [String!]
   startDateAfter: Date
@@ -4082,11 +4079,11 @@ scalar Upload
 input UserFilterDataInputType {
   email: String
   isActive: Boolean
+  search: String
   roleIn: [String!]
   roleNotIn: [String!]
   monitoringSubRegionIn: [ID!]
   monitoringSubRegionNotIn: [ID!]
-  fullName: String
   includeInactive: Boolean
   id: String
   permissions: [String!]
