@@ -794,3 +794,11 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
             "displacement_occurred",
             "created_at",
         )
+
+
+class FigureReadOnlySerializerSourceLess(FigureReadOnlySerializer):
+    def get_fields(self):
+        fields = super().get_fields()
+        fields.pop("sources", None)
+        fields.pop("source_url", None)
+        return fields
