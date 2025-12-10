@@ -308,6 +308,10 @@ class FigureTagListType(CustomDjangoListObjectType):
         filterset_class = FigureTagFilter
 
 
+class GenerateIDUInputType(graphene.InputObjectType):
+    data = graphene.String(required=False)
+
+
 class Query:
     figure_tag = DjangoObjectField(FigureTagType)
     figure_tag_list = DjangoPaginatedListObjectField(

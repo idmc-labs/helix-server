@@ -1,9 +1,42 @@
+import random
 import typing
 
 from apps.entry.models import Figure
 from apps.event.models import Event
 from apps.notification.models import Notification
 from apps.users.models import User
+
+
+def generate_idu_from_figure_data(figure_data: typing.Dict) -> str:
+    # TODO: Improve IDU generation logic, take appropiriate data from UI
+    cause_field = figure_data.get("main_trigger") or "(Main trigger)"
+    source_type = figure_data.get("source_type") or "(Source Type)"
+    location_field = figure_data.get("location") or "(Location)"
+    start_date_field = figure_data.get("start_date") or "(Start Date of Event DD/MM/YYY)"
+    unit_field = figure_data.get("unit") or "(People or Household)"
+    quantifier_field = figure_data.get("quantifier") or "Quantifier: More than, Around, Less than, At least..."
+    displacement_field = figure_data.get("displacement_term") or "(Displacement term: Displaced, ...)"
+    figure_field = figure_data.get("figure") or "(Figure)"
+
+    idu = ""
+    rand = random.randint(0, 2)
+    if rand == 0:
+        idu = (
+            f"According to {source_type}, {quantifier_field} {figure_field} {unit_field}"
+            f"were {displacement_field} in {location_field} due to {cause_field} on {start_date_field}."
+        )
+    elif rand == 1:
+        idu = (
+            f"{quantifier_field} {figure_field} {unit_field}"
+            f"were {displacement_field} due to {cause_field} on {start_date_field} in {location_field}, "
+            f"according to {source_type}."
+        )
+    else:
+        idu = (
+            f"{cause_field} resulted in {quantifier_field} {figure_field} {unit_field}"
+            f"being {displacement_field} in {location_field} on {start_date_field}, according to {source_type}."
+        )
+    return idu.capitalize()
 
 
 def get_figure_notification_type(event, is_deleted=False, is_new=False):

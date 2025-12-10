@@ -384,3 +384,41 @@ class TestEntryTypeFields(HelixTestCase):
         from apps.entry.schema import EntryType
 
         self.assertNotIn("figures", EntryType._meta.fields)
+
+
+class TestGenerateIDU(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.force_login(self.editor)
+        self.mutation = """
+            mutation MyMutation($data: GenerateIDUInputType!) {
+                generateIdu(data: $data) {
+                    ok
+                    result
+                }
+            }
+        """
+        self.variables = {
+            "data": {
+                "mainTrigger": "Flood",
+                "sourceType": "News Report",
+                "location": "Jakarta",
+                "startDate": "2023-01-15",
+                "unit": "People",
+                "quantifier": "Around",
+                "displacementTerm": "Displaced",
+                "figure": 5000,
+            }
+        }
+
+    def test_generate_idu_using_figure_data(self):
+        response = self.query(self.mutation, variables=self.variables)
+        self.assertResponseNoErrors(response)
+
+        content = response.json()
+
+        result_string = content["data"]["generateIdu"]["result"].lower()
+        expected_string = self.variables["data"]["mainTrigger"].lower()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(content["data"]["generateIdu"]["ok"])
+        self.assertIn(expected_string, result_string)

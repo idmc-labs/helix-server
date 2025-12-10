@@ -25,6 +25,7 @@ from apps.entry.models import (
     FigureLocation,
     FigureTag,
 )
+from apps.entry.utils import generate_idu_from_figure_data
 from apps.review.models import UnifiedReviewComment
 from utils.common import round_half_up
 from utils.validations import (
@@ -938,3 +939,19 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
             "displacement_occurred",
             "created_at",
         )
+
+
+class IDUFromFigureParamsSerializer(serializers.Serializer):
+    main_trigger = serializers.CharField()
+    quantifier = serializers.CharField()
+    figure = serializers.IntegerField()
+    unit = serializers.CharField()
+    displacement_term = serializers.CharField()
+    location = serializers.CharField()
+    start_date = serializers.CharField()
+    source_type = serializers.CharField()
+
+    def create(self, validated_data):
+        self.idu = generate_idu_from_figure_data(validated_data)
+
+        return self
