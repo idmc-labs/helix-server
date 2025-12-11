@@ -26,6 +26,7 @@ from apps.common.utils import (
     EXTERNAL_FIELD_SEPARATOR,
 )
 from apps.contrib.commons import DATE_ACCURACY
+from apps.contrib.models import Client
 from apps.country.models import Country
 from apps.crisis.models import Crisis
 from apps.entry.models import ExternalApiDump, Figure, FigureLocation
@@ -1065,6 +1066,9 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         return [[loc[0], _get_event_code_label(loc[1])] for loc in transposed_components if loc[2] == filter_iso3]
 
     def _export_disaggregated_geojson(self, qs):
+        client_id = self.request.GET.get("client_id")
+        client = Client.objects.filter(code=client_id).first()
+
         def format_coordinate(coordinate: str) -> typing.Tuple[float, float]:
             lat, lng = coordinate.split(", ")
             return (float(lng), float(lat))
@@ -1322,6 +1326,9 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                     }
                 ),
             }
+            if client and not client.share_source:
+                feature.get("properties").pop("Sources", None)
+                feature.get("properties").pop("Sources type", None)
             feature_collection["features"].append(feature)
 
         feature_collection = json.dumps(feature_collection, cls=DjangoJSONEncoder)
@@ -1330,6 +1337,8 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         return response
 
     def _export_disaggregated_excel(self, qs):
+        client_id = self.request.GET.get("client_id")
+        client = Client.objects.filter(code=client_id).first()
         wb = Workbook(write_only=True)
 
         # Determine the filename based on filters
@@ -1341,52 +1350,57 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         filename = filename_map.get(filter_cause, "IDMC_GIDD_Internal_Displacement_Disaggregated")
 
         ws = wb.create_sheet("1_Disaggregated_Data")
-        ws.append(
-            [
-                "ID",
-                "ISO3",
-                "Country",
-                "Geographical region",
-                "Figure cause",
-                "Year",
-                "Figure category",
-                "Figure unit",
-                "Reported figures",
-                "Household size",
-                "Total figures",
-                "Hazard category",
-                "Hazard sub category",
-                "Hazard type",
-                "Hazard sub type",
-                "Violence type",
-                "Other event sub type",
-                "Start date",
-                "Start date accuracy",
-                "End date",
-                "End date accuracy",
-                "Stock date",
-                "Stock date accuracy",
-                "Stock reporting date",
-                "Publishers",
-                "Sources",
-                "Sources type",
-                "Event ID",
-                "Event name",
-                "Event cause",
-                "Event main trigger",
-                "Event start date",
-                "Event end date",
-                "Event start date accuracy",
-                "Event end date accuracy",
-                "Is housing destruction",
-                "Event codes (Code:Type)",
-                "Locations coordinates",
-                "Locations name",
-                "Locations accuracy",
-                "Locations type",
-                "Displacement occurred",
-            ]
-        )
+        headers_1 = [
+            "ID",
+            "ISO3",
+            "Country",
+            "Geographical region",
+            "Figure cause",
+            "Year",
+            "Figure category",
+            "Figure unit",
+            "Reported figures",
+            "Household size",
+            "Total figures",
+            "Hazard category",
+            "Hazard sub category",
+            "Hazard type",
+            "Hazard sub type",
+            "Violence type",
+            "Other event sub type",
+            "Start date",
+            "Start date accuracy",
+            "End date",
+            "End date accuracy",
+            "Stock date",
+            "Stock date accuracy",
+            "Stock reporting date",
+            "Publishers",
+            "Sources",
+            "Sources type",
+        ]
+        if client and not client.share_source:
+            headers_1.remove("Sources")
+            headers_1.remove("Sources type")
+        headers = headers_1 + [
+            "Event ID",
+            "Event name",
+            "Event cause",
+            "Event main trigger",
+            "Event start date",
+            "Event end date",
+            "Event start date accuracy",
+            "Event end date accuracy",
+            "Is housing destruction",
+            "Event codes (Code:Type)",
+            "Locations coordinates",
+            "Locations name",
+            "Locations accuracy",
+            "Locations type",
+            "Displacement occurred",
+        ]
+
+        ws.append(headers)
 
         # Tab 2
         ws2 = wb.create_sheet("2_Context_Displacement_data")
@@ -1839,57 +1853,63 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
         )
 
         for item in qs:
-            ws.append(
-                [
-                    item.figure_raw_id,
-                    item.iso3,
-                    item.country_name,
-                    item.geographical_region_name,
-                    self._get_cause(item.cause),
-                    item.year,
-                    self._get_category(item.category),
-                    self._get_unit(item.unit),
-                    item.reported,
-                    item.household_size,
-                    item.total_figures,
-                    item.disaster_category_name,
-                    item.disaster_sub_category_name,
-                    item.disaster_type_name,
-                    item.disaster_sub_type_name,
-                    item.violence_name,
-                    item.other_sub_type_name,
-                    item.start_date,
-                    self._get_date_accuracy(item.start_date_accuracy),
-                    item.end_date,
-                    self._get_date_accuracy(item.end_date_accuracy),
-                    item.stock_date,
-                    self._get_date_accuracy(item.stock_date_accuracy),
-                    item.stock_reporting_date,
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item.publishers),
+            column_data_1 = [
+                item.figure_raw_id,
+                item.iso3,
+                item.country_name,
+                item.geographical_region_name,
+                self._get_cause(item.cause),
+                item.year,
+                self._get_category(item.category),
+                self._get_unit(item.unit),
+                item.reported,
+                item.household_size,
+                item.total_figures,
+                item.disaster_category_name,
+                item.disaster_sub_category_name,
+                item.disaster_type_name,
+                item.disaster_sub_type_name,
+                item.violence_name,
+                item.other_sub_type_name,
+                item.start_date,
+                self._get_date_accuracy(item.start_date_accuracy),
+                item.end_date,
+                self._get_date_accuracy(item.end_date_accuracy),
+                item.stock_date,
+                self._get_date_accuracy(item.stock_date_accuracy),
+                item.stock_reporting_date,
+                string_join(EXTERNAL_ARRAY_SEPARATOR, item.publishers),
+            ]
+            if client and client.share_source:
+                column_data_1 += [
                     string_join(EXTERNAL_ARRAY_SEPARATOR, item.sources),
                     string_join(EXTERNAL_ARRAY_SEPARATOR, item.sources_type),
-                    item.gidd_event.event_raw_id,
-                    item.gidd_event.name,
-                    self._get_cause(item.gidd_event.cause),
-                    item.event_main_trigger,
-                    item.gidd_event.start_date,
-                    item.gidd_event.end_date,
-                    self._get_date_accuracy(item.gidd_event.start_date_accuracy),
-                    self._get_date_accuracy(item.gidd_event.end_date_accuracy),
-                    "Yes" if item.is_housing_destruction else "No",
-                    self.extract_event_data(
-                        item.gidd_event.event_codes,
-                        item.gidd_event.event_codes_type,
-                        item.gidd_event.event_codes_iso3,
-                        item.iso3,
-                    ),
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item.locations_coordinates),
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item.locations_names),
-                    _get_location_accuracy_labels(item.locations_accuracy),
-                    _get_location_type_labels(item.locations_type),
-                    self._get_displacement_occurred(item.displacement_occurred),
                 ]
-            )
+
+            column_data = column_data_1 + [
+                item.gidd_event.event_raw_id,
+                item.gidd_event.name,
+                self._get_cause(item.gidd_event.cause),
+                item.event_main_trigger,
+                item.gidd_event.start_date,
+                item.gidd_event.end_date,
+                self._get_date_accuracy(item.gidd_event.start_date_accuracy),
+                self._get_date_accuracy(item.gidd_event.end_date_accuracy),
+                "Yes" if item.is_housing_destruction else "No",
+                self.extract_event_data(
+                    item.gidd_event.event_codes,
+                    item.gidd_event.event_codes_type,
+                    item.gidd_event.event_codes_iso3,
+                    item.iso3,
+                ),
+                string_join(EXTERNAL_ARRAY_SEPARATOR, item.locations_coordinates),
+                string_join(EXTERNAL_ARRAY_SEPARATOR, item.locations_names),
+                _get_location_accuracy_labels(item.locations_accuracy),
+                _get_location_type_labels(item.locations_type),
+                self._get_displacement_occurred(item.displacement_occurred),
+            ]
+
+            ws.append(column_data)
 
         response = HttpResponse(
             content=save_virtual_workbook(wb),
