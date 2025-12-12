@@ -173,6 +173,7 @@ def track_gidd(client_id, endpoint_type, viewset: viewsets.GenericViewSet = None
         endpoint_type,
         client_id,
     )
+    return client
 
 
 class RuntimeProfile:

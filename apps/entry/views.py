@@ -17,7 +17,6 @@ from apps.common.utils import (
     extract_event_code_data,
     extract_location_data,
 )
-from apps.contrib.models import Client
 from apps.entry.models import ExternalApiDump, Figure
 from apps.entry.serializers import FigureReadOnlySerializer
 from apps.gidd.views import client_id
@@ -26,9 +25,6 @@ from utils.db import Array
 
 
 def get_idu_data(filters=None):
-    include_sources = True
-    if filters:
-        include_sources = filters.pop("include_sources", True)
     base_query = (
         Figure.objects.annotate(
             displacement_date=Coalesce("end_date", "start_date"),
@@ -112,15 +108,7 @@ def get_idu_data(filters=None):
             total_figures_text=Func(
                 F("total_figures"), Value("999G999G999G990D"), function="to_char", output_field=CharField()
             ),
-            **(
-                {
-                    "sources_name": StringAgg(
-                        "sources__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()
-                    )
-                }
-                if include_sources
-                else {}
-            ),
+            sources_name=StringAgg("sources__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()),
             entry_url_or_document_url=Case(
                 When(entry__document__isnull=False, then=F("entry__document_url")),
                 When(entry__document__isnull=True, then=F("entry__url")),
@@ -267,7 +255,6 @@ def get_idu_data(filters=None):
 
     # Apply filters if provided
     if filters:
-        filters.pop("include_sources", None)
         base_query = base_query.filter(**filters)
 
     for figure_data in base_query.values():
@@ -305,15 +292,11 @@ class ExternalEndpointBaseCachedViewMixin:
         # Check if request is comming from valid client
         client_id = request.GET.get("client_id", None)
         # Track client
-        track_gidd(
+        client = track_gidd(
             client_id,
             self.ENDPOINT_TYPE,
         )
-        client = Client.objects.filter(code=client_id).first()
-        if client and client.share_source:
-            api_dump = ExternalApiDump.objects.filter(api_type=self.ENDPOINT_TYPE, include_source_in_dump=True).first()
-        else:
-            api_dump = ExternalApiDump.objects.filter(api_type=self.ENDPOINT_TYPE, include_source_in_dump=False).first()
+        api_dump = ExternalApiDump.objects.filter(api_type=self.ENDPOINT_TYPE, include_sources=client.share_source).first()
         # NOTE: Sending empty array so client don't break.
         _empty_response = []
 
