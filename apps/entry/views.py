@@ -25,6 +25,9 @@ from utils.db import Array
 
 
 def get_idu_data(filters=None):
+    include_source = False
+    if filters:
+        include_source = filters.pop("include_source", False)
     base_query = (
         Figure.objects.annotate(
             displacement_date=Coalesce("end_date", "start_date"),
@@ -253,6 +256,21 @@ def get_idu_data(filters=None):
         .order_by("-start_date", "-end_date")
     )
 
+    if not include_source:
+        base_query = base_query.annotate(
+            entry_url_or_document_url=Value("", output_field=CharField()),
+            custom_link_text=Value("", output_field=CharField()),
+            standard_popup_text=Concat(
+                Value("<b> "),
+                F("custom_figure_text"),
+                Value(" </b> <br> "),
+                F("excerpt_idu"),
+                Value(" <br> "),
+                F("custom_link_text"),
+                output_field=CharField(),
+            ),
+        )
+
     # Apply filters if provided
     if filters:
         base_query = base_query.filter(**filters)
@@ -299,7 +317,6 @@ class ExternalEndpointBaseCachedViewMixin:
         api_dump = ExternalApiDump.objects.filter(api_type=self.ENDPOINT_TYPE, include_sources=client.share_source).first()
         # NOTE: Sending empty array so client don't break.
         _empty_response = []
-
         if not api_dump:
             return Response(_empty_response, status=status.HTTP_404_NOT_FOUND)
         if api_dump.status == ExternalApiDump.Status.COMPLETED:

@@ -1,4 +1,3 @@
-import re
 from collections import OrderedDict
 from copy import copy
 from decimal import Decimal
@@ -795,11 +794,3 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
             "displacement_occurred",
             "created_at",
         )
-
-
-class FigureReadOnlySerializerSourceLess(FigureReadOnlySerializer):
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        data["source_url"] = ""
-        data["standard_popup_text"] = re.sub(r"<a[^>]*>.*?</a>", "", data["standard_popup_text"], flags=re.DOTALL)
-        return data

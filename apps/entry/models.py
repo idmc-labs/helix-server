@@ -1899,7 +1899,7 @@ class ExternalApiDump(models.Model):
         max_length=40,
         choices=ExternalApiType.choices,
     )
-    include_sources = models.BooleanField(default=True)
+    include_sources = models.BooleanField(default=False)
     status = models.IntegerField(choices=Status.choices, default=Status.PENDING)
 
     def __str__(self):
