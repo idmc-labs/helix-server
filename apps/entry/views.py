@@ -28,6 +28,7 @@ def get_idu_data(filters=None):
     include_source = False
     if filters:
         include_source = filters.pop("include_source", False)
+
     base_query = (
         Figure.objects.annotate(
             displacement_date=Coalesce("end_date", "start_date"),
@@ -112,11 +113,6 @@ def get_idu_data(filters=None):
                 F("total_figures"), Value("999G999G999G990D"), function="to_char", output_field=CharField()
             ),
             sources_name=StringAgg("sources__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()),
-            entry_url_or_document_url=Case(
-                When(entry__document__isnull=False, then=F("entry__document_url")),
-                When(entry__document__isnull=True, then=F("entry__url")),
-                output_field=CharField(),
-            ),
             locations=ArrayAgg(
                 Array(
                     F("geo_locations__display_name"),
@@ -224,6 +220,41 @@ def get_idu_data(filters=None):
                     ),
                 ),
             ),
+            standard_info_text=Concat(
+                Value("<b> "),
+                F("custom_figure_text"),
+                Value(" </b>"),
+            ),
+        )
+        .order_by("-start_date", "-end_date")
+    )
+
+    if not include_source:
+        base_query = base_query.annotate(
+            entry_url_or_document_url=Value("", output_field=CharField()),
+            custom_link_text=Concat(
+                StringAgg("entry__publishers__name", " ", distinct=True),
+                Value(" - "),
+                Func(F("entry__publish_date"), Value("DD Month YYYY"), function="to_char", output_field=CharField()),
+                output_field=CharField(),
+            ),
+            standard_popup_text=Concat(
+                Value("<b> "),
+                F("custom_figure_text"),
+                Value(" </b> <br> "),
+                F("excerpt_idu"),
+                Value(" <br> "),
+                F("custom_link_text"),
+                output_field=CharField(),
+            ),
+        )
+    else:
+        base_query = base_query.annotate(
+            entry_url_or_document_url=Case(
+                When(entry__document__isnull=False, then=F("entry__document_url")),
+                When(entry__document__isnull=True, then=F("entry__url")),
+                output_field=CharField(),
+            ),
             custom_link_text=Concat(
                 Value('<a href="'),
                 Case(
@@ -238,28 +269,6 @@ def get_idu_data(filters=None):
                 Value("</a>"),
                 output_field=CharField(),
             ),
-            standard_popup_text=Concat(
-                Value("<b> "),
-                F("custom_figure_text"),
-                Value(" </b> <br> "),
-                F("excerpt_idu"),
-                Value(" <br> "),
-                F("custom_link_text"),
-                output_field=CharField(),
-            ),
-            standard_info_text=Concat(
-                Value("<b> "),
-                F("custom_figure_text"),
-                Value(" </b>"),
-            ),
-        )
-        .order_by("-start_date", "-end_date")
-    )
-
-    if not include_source:
-        base_query = base_query.annotate(
-            entry_url_or_document_url=Value("", output_field=CharField()),
-            custom_link_text=Value("", output_field=CharField()),
             standard_popup_text=Concat(
                 Value("<b> "),
                 F("custom_figure_text"),

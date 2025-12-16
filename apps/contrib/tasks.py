@@ -225,7 +225,7 @@ def _generate_idus_dump_file(api_type):
             ExternalApiDump.ExternalApiType.IDUS_ALL,
             FigureReadOnlySerializer,
             lambda: get_idu_data(filters={"include_source": True}),
-            "idus_all.json",
+            "idus_all_with_source.json",
             True,
         )
     if api_type == ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER:
@@ -241,7 +241,7 @@ def _generate_idus_dump_file(api_type):
             ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER,
             FigureReadOnlySerializer,
             lambda: get_idu_data(filters={"figure_cause": Crisis.CRISIS_TYPE.DISASTER, "include_source": True}),
-            "idus_all_disaster.json",
+            "idus_all_disaster_with_source.json",
             True,
         )
     idu_date_from = timezone.now() - timedelta(days=180)
@@ -257,7 +257,7 @@ def _generate_idus_dump_file(api_type):
         ExternalApiDump.ExternalApiType.IDUS,
         FigureReadOnlySerializer,
         lambda: get_idu_data(filters={"displacement_date__gte": idu_date_from, "include_source": True}),
-        "idus.json",
+        "idus_with_source.json",
         True,
     )
 
