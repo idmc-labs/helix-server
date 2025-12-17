@@ -1705,6 +1705,11 @@ class ExternalApiDump(models.Model):
         COMPLETED = 1, "Completed"
         FAILED = 2, "Failed"
 
+    class Format(models.IntegerChoices):
+        JSON = 0, "Json"
+        GEOJSON = 1, "Geojson"
+        EXCEL = 2, "Excel"
+
     @dataclass
     class Metadata:
         response_type: str  # Use Enum GraphQL - JSON/REST
@@ -1931,8 +1936,9 @@ class ExternalApiDump(models.Model):
         max_length=40,
         choices=ExternalApiType.choices,
     )
+    format = models.IntegerField(choices=Format.choices, default=Format.JSON)
     include_sources = models.BooleanField(default=False)
     status = models.IntegerField(choices=Status.choices, default=Status.PENDING)
 
     def __str__(self):
-        return self.api_type
+        return f"{self.api_type}-{self.get_format_display()}"

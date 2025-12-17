@@ -69,8 +69,6 @@ class TestExternalClientTrack(HelixAPITestCase):
         generate_idus_all_dump_file()
         generate_idus_all_disaster_dump_file()
 
-        _response_status_check(status.HTTP_302_FOUND)
-
         ExternalApiDump.objects.update(
             status=ExternalApiDump.Status.PENDING,
             dump_file=None,

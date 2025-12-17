@@ -30,7 +30,33 @@ router.register("public-figure-analyses", PublicFigureAnalysisViewSet, "public-f
 
 urlpatterns = [
     path("idus/last-180-days/", IdusFlatCachedView.as_view()),
-    path("idus/all/", IdusAllFlatCachedView.as_view()),
+    path(
+        "idus/all/",
+        IdusAllFlatCachedView.as_view(
+            {
+                "get": "export_json",
+            }
+        ),
+        name="idus-json-view",
+    ),
+    path(
+        "idus/all/excel-export/",
+        IdusAllFlatCachedView.as_view(
+            {
+                "get": "export_excel",
+            }
+        ),
+        name="idus-excel-view",
+    ),
+    path(
+        "idus/all/geojson-export/",
+        IdusAllFlatCachedView.as_view(
+            {
+                "get": "export_geojson",
+            }
+        ),
+        name="idus-geojson-view",
+    ),
     path("idus/all/disaster/", IdusAllDisasterCachedView.as_view()),
     path("gidd/", include(router.urls)),
     # NOTE: If we do not add these manually, the are not visible in GIDD

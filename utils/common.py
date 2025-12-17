@@ -240,6 +240,6 @@ client_id = extend_schema(
             location=OpenApiParameter.QUERY,
             required=True,
             description="Your API key",
-        )
+        ),
     ],
 )
