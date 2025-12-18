@@ -83,6 +83,7 @@ class Command(BaseReportCommand):
                 "filterFigureCountries": [int(country["id"])],
                 "filterFigureCategories": [self.REPORT_CANDIDATES[candidate]],
                 "filterFigureRoles": ["RECOMMENDED"],
+                "isPublic": True,
             }
         }
         try:
