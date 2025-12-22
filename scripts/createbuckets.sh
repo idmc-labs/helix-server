@@ -2,23 +2,29 @@
 
 set -e
 
+# minio might still be starting
 until /usr/bin/mc alias set myminio http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" 2>/dev/null;
 do
   echo "Waiting for MinIO to be ready..."
-  sleep 2
+  sleep 1
 done
 
-echo "Creating buckets..."
-if [ -n "$AWS_S3_BUCKET_NAME_STATIC" ]; then
-  /usr/bin/mc mb --quiet myminio/"$AWS_S3_BUCKET_NAME_STATIC" 2>/dev/null || true
-  /usr/bin/mc anonymous set none myminio/"$AWS_S3_BUCKET_NAME_STATIC" 2>/dev/null || true
-fi
-if [ -n "$AWS_S3_BUCKET_NAME_MEDIA" ]; then
-  /usr/bin/mc mb --quiet myminio/"$AWS_S3_BUCKET_NAME_MEDIA" 2>/dev/null || true
-  /usr/bin/mc anonymous set none myminio/"$AWS_S3_BUCKET_NAME_MEDIA" 2>/dev/null || true
-fi
-if [ -n "$EXTERNAL_S3_BUCKET_NAME" ]; then
-  /usr/bin/mc mb --quiet myminio/"$EXTERNAL_S3_BUCKET_NAME" 2>/dev/null || true
-  /usr/bin/mc anonymous set none myminio/"$EXTERNAL_S3_BUCKET_NAME" 2>/dev/null || true
-fi
+check_create_bucket() {
+    local BUCKET=$1
+    if [ -z "$BUCKET" ]; then return; fi
+
+    if /usr/bin/mc ls "myminio/$BUCKET" > /dev/null 2>&1; then
+        echo "Bucket '$BUCKET' already exists."
+    else
+        echo "Creating bucket '$BUCKET'."
+        /usr/bin/mc mb "myminio/$BUCKET"
+        /usr/bin/mc anonymous set download "myminio/$BUCKET"
+        echo "Bucket '$BUCKET' created successfully."
+    fi
+}
+
+check_create_bucket "$AWS_S3_BUCKET_NAME_STATIC"
+check_create_bucket "$AWS_S3_BUCKET_NAME_MEDIA"
+check_create_bucket "$EXTERNAL_S3_BUCKET_NAME"
+
 echo "Completed creating buckets."

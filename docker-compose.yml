@@ -6,12 +6,12 @@ x-s3: &s3-env
   AWS_S3_REGION: ${AWS_S3_REGION:-us-east-1}
   EXTERNAL_S3_BUCKET_NAME: ${EXTERNAL_S3_BUCKET_NAME:-helix-data}
   S3_BUCKET_NAME : ${S3_BUCKET_NAME:-helix-data}
-  AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-http://minio:9000}
-  AWS_S3_BUCKET_NAME_STATIC: ${AWS_S3_BUCKET_NAME_STATIC:-my-static-bucket}
-  AWS_S3_BUCKET_NAME_MEDIA: ${AWS_S3_BUCKET_NAME_MEDIA:-my-media-bucket}
-  AWS_S3_ADDRESSING_STYLE: ${AWS_S3_ADDRESSING_STYLE:-path}
-  AWS_S3_SIGNATURE_VERSION: ${AWS_S3_SIGNATURE_VERSION:-s3v4}
-  S3_OBJECT_PRESIGNED_URL_TTL: ${S3_OBJECT_PRESIGNED_URL_TTL:-3600}
+  AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-http://localhost:9002}
+  AWS_S3_BUCKET_NAME_STATIC: ${AWS_S3_BUCKET_NAME_STATIC:-helix-data}
+  AWS_S3_BUCKET_NAME_MEDIA: ${AWS_S3_BUCKET_NAME_MEDIA:-helix-data}
+  # required for presigned url generation
+  AWS_S3_ADDRESSING_STYLE: path
+  AWS_S3_SIGNATURE_VERSION: s3v4
 
 x-minio: &minio-env
   MINIO_ROOT_USER: ${AWS_S3_ACCESS_KEY_ID:-dev_user}
@@ -50,6 +50,9 @@ x-server: &base_server_setup
     - ./:/code
     - ipython_data_local:/root/.ipython/profile_default   # persist ipython data, including ipython history
   # restart: 'on-failure'
+  env_file:
+    - path: .env
+      required: false
   depends_on:
     db:
       condition: service_healthy
@@ -67,15 +70,13 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_HOST: db
     command: postgres -c log_statement=all
     volumes:
       - helix-db-17-data:/var/lib/postgresql/data
     ports:
       - '127.0.0.1:6050:5432'
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -h localhost -p $$POSTGRES_PORT"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB -h localhost -p 5432"]
       interval: 10s
       timeout: 5s
       retries: 5

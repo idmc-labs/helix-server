@@ -1,6 +1,7 @@
 from collections import OrderedDict
 
 from django.utils.translation import gettext
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from apps.contextualupdate.models import ContextualUpdate
@@ -22,7 +23,7 @@ class ContextualUpdateSerializer(MetaInformationSerializerMixin, serializers.Mod
 
     def validate_document(self, document) -> dict:
         if document and not document.is_file_uploaded:
-            return serializers.ValidationError("Document must be uploaded before linking to contextual update.")
+            return serializers.ValidationError(_("Document must be uploaded before linking to contextual update."))
         return document
 
     def validate(self, attrs) -> dict:

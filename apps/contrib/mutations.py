@@ -1,6 +1,7 @@
 import typing
 
 import graphene
+from django.core.exceptions import PermissionDenied
 from django.utils.translation import gettext
 from graphene_file_upload.scalars import Upload
 
@@ -14,16 +15,16 @@ from apps.contrib.models import (
 from apps.contrib.schema import AttachmentType, BulkApiOperationObjectType, ClientType
 from apps.contrib.serializers import (
     AttachmentSerializer,
-    BigFileUploadAttachmentSerializer,
+    BigAttachmentSerializer,
     ClientSerializer,
     ClientUpdateSerializer,
     ExcelDownloadSerializer,
-    MarkBigFileUploadedSerializer,
+    MarkBigAttachmentFileUploadedSerializer,
 )
 from utils.common import convert_date_object_to_string_in_dict
 from utils.error_types import CustomErrorType, mutation_is_not_valid
 from utils.mutation import generate_input_type_for_serializer
-from utils.permissions import is_authenticated, permission_checker
+from utils.permissions import PERMISSION_DENIED_MESSAGE, is_authenticated, permission_checker
 
 from .filters import ClientTrackInfoFilterDataInputType
 
@@ -38,7 +39,7 @@ class AttachmentCreateInputType(graphene.InputObjectType):
     attachment_for = graphene.String(required=True)
 
 
-class BigFileUploadAttachmentCreateInputType(graphene.InputObjectType):
+class BigAttachmentCreateInputType(graphene.InputObjectType):
     file_name = graphene.String(required=True)
     attachment_for = graphene.String(required=True)
     mimetype = graphene.String(required=True)
@@ -62,26 +63,31 @@ class CreateAttachment(graphene.Mutation):
         return CreateAttachment(result=instance, errors=None, ok=True)
 
 
-class CreateBigFileAttachment(graphene.Mutation):
+class CreateBigAttachment(graphene.Mutation):
     class Arguments:
-        data = BigFileUploadAttachmentCreateInputType(required=True)
+        data = BigAttachmentCreateInputType(required=True)
 
     errors = graphene.List(CustomErrorType)
     ok = graphene.Boolean()
     result = graphene.Field(AttachmentType)
+    s3_presigned_upload_url = graphene.String(required=False)
 
     @staticmethod
     @is_authenticated()
     def mutate(root, info, data):
-        serializer = BigFileUploadAttachmentSerializer(data=data, context={"request": info.context.request})
+        serializer = BigAttachmentSerializer(data=data, context={"request": info.context.request})
         if errors := mutation_is_not_valid(serializer):
-            return CreateBigFileAttachment(errors=errors, ok=False)
+            return CreateBigAttachment(errors=errors, ok=False)
         instance = serializer.save()
+        return CreateBigAttachment(
+            result=instance,
+            s3_presigned_upload_url=serializer.data.get("s3_presigned_upload_url"),
+            errors=None,
+            ok=True,
+        )
 
-        return CreateBigFileAttachment(result=instance, errors=None, ok=True)
 
-
-class MarkFileAttachmentAsUploaded(graphene.Mutation):
+class MarkBigAttachmentFileAsUploaded(graphene.Mutation):
     class Arguments:
         attachment_id = graphene.ID(required=True)
 
@@ -92,13 +98,21 @@ class MarkFileAttachmentAsUploaded(graphene.Mutation):
     @staticmethod
     @is_authenticated()
     def mutate(root, info, attachment_id):
-        attachment = Attachment.objects.get(id=attachment_id)
-        serializer = MarkBigFileUploadedSerializer(instance=attachment, data={}, context={"request": info.context.request})
+        attachment = Attachment.objects.filter(id=attachment_id).first()
+        if not attachment:
+            return MarkBigAttachmentFileAsUploaded(
+                errors=[dict(field="nonFieldErrors", messages=gettext("Attachment does not exist."))]
+            )
+        if attachment.created_by != info.context.request.user:
+            raise PermissionDenied(gettext(PERMISSION_DENIED_MESSAGE))
+        serializer = MarkBigAttachmentFileUploadedSerializer(
+            instance=attachment, data={}, context={"request": info.context.request}
+        )
         if errors := mutation_is_not_valid(serializer):
-            return MarkFileAttachmentAsUploaded(errors=errors, ok=False)
+            return MarkBigAttachmentFileAsUploaded(errors=errors, ok=False)
         instance = serializer.save()
 
-        return MarkFileAttachmentAsUploaded(result=instance, errors=None, ok=True)
+        return MarkBigAttachmentFileAsUploaded(result=instance, errors=None, ok=True)
 
 
 ClientCreateInputType = generate_input_type_for_serializer(
@@ -228,8 +242,8 @@ class TriggerBulkOperation(graphene.Mutation):
 
 class Mutation:
     create_attachment = CreateAttachment.Field()
-    create_big_file_attachment = CreateBigFileAttachment.Field()
-    mark_attachment_as_uploaded = MarkFileAttachmentAsUploaded.Field()
+    create_big_attachment = CreateBigAttachment.Field()
+    mark_big_attachment_file_as_uploaded = MarkBigAttachmentFileAsUploaded.Field()
     create_client = CreateClient.Field()
     update_client = UpdateClient.Field()
     export_tracking_data = ExportTrackingData.Field()

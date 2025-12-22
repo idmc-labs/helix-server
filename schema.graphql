@@ -96,7 +96,6 @@ type AttachmentType {
   encoding: String
   filetypeDetail: String
   attachmentForDisplay: EnumDescription
-  s3PresignedUrl: String
 }
 
 enum BULK_OPERATION_ACTION {
@@ -112,7 +111,7 @@ enum BULK_OPERATION_STATUS {
   KILLED
 }
 
-input BigFileUploadAttachmentCreateInputType {
+input BigAttachmentCreateInputType {
   fileName: String!
   attachmentFor: String!
   mimetype: String!
@@ -786,10 +785,11 @@ type CreateAttachment {
   result: AttachmentType
 }
 
-type CreateBigFileAttachment {
+type CreateBigAttachment {
   errors: [GenericScalar]
   ok: Boolean
   result: AttachmentType
+  s3PresignedUploadUrl: String
 }
 
 type CreateClient {
@@ -2666,7 +2666,7 @@ type Logout {
   ok: Boolean
 }
 
-type MarkFileAttachmentAsUploaded {
+type MarkBigAttachmentFileAsUploaded {
   errors: [GenericScalar]
   ok: Boolean
   result: AttachmentType
@@ -2784,8 +2784,8 @@ type Mutation {
   exportCountries(filters: CountryFilterDataInputType!): ExportCountries
   exportMonitoringSubRegions(filters: MonitoringSubRegionFilterDataInputType!): ExportMonitoringSubRegions
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
-  createBigFileAttachment(data: BigFileUploadAttachmentCreateInputType!): CreateBigFileAttachment
-  markAttachmentAsUploaded(attachmentId: ID!): MarkFileAttachmentAsUploaded
+  createBigAttachment(data: BigAttachmentCreateInputType!): CreateBigAttachment
+  markBigAttachmentFileAsUploaded(attachmentId: ID!): MarkBigAttachmentFileAsUploaded
   createClient(data: ClientCreateInputType!): CreateClient
   updateClient(data: ClientUpdateInputType!): UpdateClient
   exportTrackingData(filters: ClientTrackInfoFilterDataInputType!): ExportTrackingData

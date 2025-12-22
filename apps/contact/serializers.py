@@ -1,3 +1,4 @@
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
 from apps.contact.models import Communication, Contact
@@ -11,7 +12,7 @@ class CommunicationSerializer(serializers.ModelSerializer, MetaInformationSerial
 
     def validate_document(self, document) -> dict:
         if document and not document.is_file_uploaded:
-            return serializers.ValidationError("Document must be uploaded before linking to communication.")
+            return serializers.ValidationError(_("Document must be uploaded before linking to communication."))
         return document
 
 

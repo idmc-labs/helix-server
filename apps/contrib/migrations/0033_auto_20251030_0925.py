@@ -13,11 +13,21 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='attachment',
             name='file_size',
-            field=models.IntegerField(blank=True, null=True, verbose_name='File Size'),
+            field=models.BigIntegerField(default=1, blank=True, null=True, verbose_name='File Size'),
+        ),
+        migrations.AlterField(
+            model_name='attachment',
+            name='file_size',
+            field=models.BigIntegerField(blank=True, null=True, verbose_name='File Size'),
         ),
         migrations.AddField(
             model_name='attachment',
             name='is_file_uploaded',
             field=models.BooleanField(default=True, verbose_name='Is file uploaded?'),
+        ),
+        migrations.AlterField(
+            model_name='attachment',
+            name='is_file_uploaded',
+            field=models.BooleanField(default=False, verbose_name='Is file uploaded?'),
         ),
     ]

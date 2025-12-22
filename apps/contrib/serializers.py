@@ -1,3 +1,4 @@
+import logging
 import random
 import string
 from datetime import timedelta
@@ -18,7 +19,10 @@ from apps.contrib.models import (
 )
 from apps.contrib.utils import AttachmentBoto3ConnectorService
 from apps.entry.tasks import PDF_TASK_TIMEOUT
+from helix.exceptions import BigFileUploadVerificationException
 from utils.serializers import IntegerIDField
+
+logger = logging.getLogger(__name__)
 
 
 class MetaInformationSerializerMixin(serializers.Serializer):
@@ -42,25 +46,51 @@ class MetaInformationSerializerMixin(serializers.Serializer):
         return attrs
 
 
-class MarkBigFileUploadedSerializer(serializers.ModelSerializer):
+class MarkBigAttachmentFileUploadedSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Attachment
         fields = []
 
     def create(self, validated_data):
-        raise serializers.ValidationError("This is a update-only serializer.")
+        raise serializers.ValidationError(gettext("Creating attachment is disallowed, please use the upload endpoint."))
+
+    def validate(self, attrs):
+        try:
+            verified_attachment_meta = AttachmentBoto3ConnectorService(
+                instance=self.instance, context=self.context
+            ).verify_uploaded()
+        except BigFileUploadVerificationException as e:
+            logger.error("Big attachment upload: unable to verify uploaded file", exc_info=True)
+            raise serializers.ValidationError(gettext(str(e))) from e
+        except Exception as e:
+            logger.error(
+                "Big attachment upload: unexpected error while verifying big file upload for attachment id", exc_info=True
+            )
+            raise serializers.ValidationError(gettext("Unexpected error occured")) from e
+
+        attrs["mimetype"] = verified_attachment_meta["mimetype"]
+        attrs["file_size"] = verified_attachment_meta["file_size"]
+
+        return attrs
 
     def update(self, instance, validated_data):
-        try:
-            return AttachmentBoto3ConnectorService(instance=instance).verify_uploaded()
-        except Exception as e:
-            raise serializers.ValidationError(str(e))
+        instance.mimetype = validated_data["mimetype"]
+        instance.is_file_uploaded = True
+        instance.file_size = validated_data["file_size"]
+        instance.save(
+            update_fields=[
+                "file_size",
+                "mimetype",
+                "is_file_uploaded",
+            ],
+        )
+        return instance
 
 
-class BigFileUploadAttachmentSerializer(serializers.ModelSerializer):
-    file_name = serializers.CharField(required=True)
-    mimetype = serializers.CharField(required=True)
-    s3_presigned_url = serializers.SerializerMethodField(read_only=True)
+class BigAttachmentSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
+    file_name = serializers.CharField(required=True, write_only=True)
+    mimetype = serializers.CharField(required=True, write_only=True)
+    s3_presigned_upload_url = serializers.SerializerMethodField(read_only=True)
 
     class Meta:
         model = Attachment
@@ -74,20 +104,19 @@ class BigFileUploadAttachmentSerializer(serializers.ModelSerializer):
             "created_at",
         )
 
-    def get_s3_presigned_url(self, obj):
-        return getattr(obj, "s3_presigned_url", None)
+    def get_s3_presigned_upload_url(self, obj):
+        return AttachmentBoto3ConnectorService(instance=obj).get_attachment_presigned_url()
 
     def create(self, validated_data):
         file_name = validated_data.pop("file_name")
         instance = Attachment(
-            attachment_for=validated_data.get("attachment_for"), is_file_uploaded=False, mimetype=validated_data["mimetype"]
+            attachment_for=validated_data.get("attachment_for"),
+            is_file_uploaded=False,
+            mimetype=validated_data["mimetype"],
+            created_by=validated_data["created_by"],
         )
-        instance.attachment.name = global_upload_to(
-            instance,
-            file_name,
-        )
+        instance.attachment.name = global_upload_to(instance, file_name)
         instance.save()
-        instance.s3_presigned_url = AttachmentBoto3ConnectorService(instance=instance).get_attachment_presigned_url()  # type: ignore temporary
 
         return instance
 
@@ -99,11 +128,11 @@ class AttachmentSerializer(serializers.ModelSerializer):
 
     def _validate_file_size(self, validated_data, file_content) -> None:
         file_size = file_content.size
-        if file_size > Attachment.MAX_FILE_SIZE:
+        if file_size > settings.DJANGO_MAX_UPLOAD_SIZE:
             raise serializers.ValidationError(
                 gettext("Filesize should be less than: %s. Current is: %s")
                 % (
-                    filesizeformat(Attachment.MAX_FILE_SIZE),
+                    filesizeformat(settings.DJANGO_MAX_UPLOAD_SIZE),
                     filesizeformat(file_size),
                 )
             )
@@ -111,12 +140,12 @@ class AttachmentSerializer(serializers.ModelSerializer):
 
     def _validate_mimetype(self, mimetype):
         if mimetype not in Attachment.ALLOWED_MIMETYPES:
-            raise serializers.ValidationError(gettext("Filetype not allowed: %s") % mimetype)
+            raise serializers.ValidationError({"nonFieldErrors": f"Invalid attachment type, {mimetype}"})
 
     def validate(self, attrs) -> dict:
         attachment = attrs["attachment"]
         self._validate_file_size(attrs, attachment)
-        byte_stream = attachment.file.read(2048)
+        byte_stream = attachment.file.read()
         with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
             attrs["mimetype"] = m.id_buffer(byte_stream)
             self._validate_mimetype(attrs["mimetype"])
@@ -125,6 +154,11 @@ class AttachmentSerializer(serializers.ModelSerializer):
         with magic.Magic() as m:
             attrs["filetype_detail"] = m.id_buffer(byte_stream)
         return attrs
+
+    def create(self, validated_data):
+        validated_data["is_file_uploaded"] = True
+
+        return super().create(validated_data)
 
 
 class SourcePreviewSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
