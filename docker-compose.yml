@@ -16,6 +16,7 @@ x-s3: &s3-env
 x-minio: &minio-env
   MINIO_ROOT_USER: ${AWS_S3_ACCESS_KEY_ID:-dev_user}
   MINIO_ROOT_PASSWORD: ${AWS_S3_SECRET_ACCESS_KEY:-dev_pass}
+  AWS_S3_PROXY: ${AWS_S3_PROXY:-http://minio:9000}
 
 x-server: &base_server_setup
   environment: &base_server_environment
@@ -121,8 +122,8 @@ services:
     command: minio server /data --console-address ":9001"
     restart: on-failure
     ports:
-      - "9002:9001"
-      - "9003:9000"
+      - "9001:9001" # console
+      - "9002:9000" # api
     environment:
       <<: *minio-env
     volumes:

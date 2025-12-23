@@ -3,9 +3,11 @@ import json
 import typing
 from io import BytesIO
 from unittest.mock import patch
+from urllib.parse import urlparse, urlunparse
 
 import magic
 import requests
+from django.conf import settings
 from django.core.files.temp import NamedTemporaryFile
 from django.test import override_settings
 
@@ -19,12 +21,7 @@ from utils.factories import (
     FigureFactory,
     FigureLocationFactory,
 )
-
-# from rest_framework import serializers
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
-
-# def _raise(expection: Exception):
-#     raise expection
 
 
 class TestAttachment(HelixGraphQLTestCase):
@@ -509,6 +506,9 @@ class TestBigFileUploadAttachment(HelixGraphQLTestCase):
         attachment_id = response_content["data"]["createBigAttachment"]["result"]["id"]
         s3_pre_signed_url = response_content["data"]["createBigAttachment"]["s3PresignedUploadUrl"]
         mimetype = response_content["data"]["createBigAttachment"]["result"]["mimetype"]
+
+        replace_netloc = urlparse(settings.AWS_S3_PROXIES["http"]).netloc
+        s3_pre_signed_url = urlunparse(urlparse(s3_pre_signed_url)._replace(netloc=replace_netloc))
 
         put_response = requests.put(
             s3_pre_signed_url, data=BytesIO(b"a big file content").getvalue(), headers={"Content-Type": mimetype}
