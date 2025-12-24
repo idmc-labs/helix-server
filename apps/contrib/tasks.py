@@ -182,10 +182,11 @@ def generate_external_endpoint_dump_file(
     serializer,
     get_data,
     filename,
+    include_sources=False,
 ):
     from apps.entry.models import ExternalApiDump
 
-    external_api_dump, _ = ExternalApiDump.objects.get_or_create(api_type=endpoint_type)
+    external_api_dump, _ = ExternalApiDump.objects.get_or_create(api_type=endpoint_type, include_sources=include_sources)
     try:
         data = get_data()
         serializer = serializer(data, many=True)
@@ -212,25 +213,52 @@ def _generate_idus_dump_file(api_type):
     from apps.entry.views import get_idu_data
 
     if api_type == ExternalApiDump.ExternalApiType.IDUS_ALL:
-        return generate_external_endpoint_dump_file(
+        # generate dump file with out source
+        generate_external_endpoint_dump_file(
             ExternalApiDump.ExternalApiType.IDUS_ALL,
             FigureReadOnlySerializer,
             get_idu_data,
             "idus_all.json",
         )
+        # generate dump file with source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data(filters={"include_source": True}),
+            "idus_all_with_source.json",
+            True,
+        )
     if api_type == ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER:
-        return generate_external_endpoint_dump_file(
+        # generate dump file with out source
+        generate_external_endpoint_dump_file(
             ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER,
             FigureReadOnlySerializer,
             lambda: get_idu_data(filters={"figure_cause": Crisis.CRISIS_TYPE.DISASTER}),
             "idus_all_disaster.json",
         )
+        # generate dump file with source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data(filters={"figure_cause": Crisis.CRISIS_TYPE.DISASTER, "include_source": True}),
+            "idus_all_disaster_with_source.json",
+            True,
+        )
     idu_date_from = timezone.now() - timedelta(days=180)
-    return generate_external_endpoint_dump_file(
+    # generate dump file with out source
+    generate_external_endpoint_dump_file(
         ExternalApiDump.ExternalApiType.IDUS,
         FigureReadOnlySerializer,
         lambda: get_idu_data(filters={"displacement_date__gte": idu_date_from}),
         "idus.json",
+    )
+    # generate dump file with source
+    generate_external_endpoint_dump_file(
+        ExternalApiDump.ExternalApiType.IDUS,
+        FigureReadOnlySerializer,
+        lambda: get_idu_data(filters={"displacement_date__gte": idu_date_from, "include_source": True}),
+        "idus_with_source.json",
+        True,
     )
 
 

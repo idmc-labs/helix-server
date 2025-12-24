@@ -260,12 +260,14 @@ input ClientCreateInputType {
   useCases: [USE_CASE_TYPES!]!
   otherNotes: String
   optedOutOfEmails: Boolean
+  shareSource: Boolean
 }
 
 input ClientFilterDataInputType {
   name: String
   isActive: Boolean
   useCases: [String!]
+  shareSource: Boolean
 }
 
 type ClientListType {
@@ -318,6 +320,7 @@ type ClientType {
   optedOutOfEmails: Boolean!
   otherNotes: String
   isActive: Boolean!
+  shareSource: Boolean!
   useCases: [USE_CASE_TYPES!]
   useCasesDisplay: [String]
 }
@@ -333,6 +336,7 @@ input ClientUpdateInputType {
   useCases: [USE_CASE_TYPES!]
   otherNotes: String
   optedOutOfEmails: Boolean
+  shareSource: Boolean
 }
 
 type CloneEvent {

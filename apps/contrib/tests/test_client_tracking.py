@@ -30,8 +30,8 @@ class TestExternalClientTrack(HelixAPITestCase):
         self.displacements_url = "/external-api/gidd/displacements/"
         self.public_figure_analysis_url = "/external-api/gidd/public-figure-analyses/"
 
-        self.client1 = ClientFactory.create(code="random-code-1", is_active=True)
-        self.client2 = ClientFactory.create(code="random-code-2", is_active=True)
+        self.client1 = ClientFactory.create(code="random-code-1", is_active=True, share_source=True)
+        self.client2 = ClientFactory.create(code="random-code-2", is_active=True, share_source=True)
 
     def test_should_raise_permission_denied_if_client_is_not_registered(self):
         for endpoint in [self.idus_url, self.idus_all_url]:
