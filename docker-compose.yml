@@ -4,7 +4,7 @@ x-s3: &s3-env
   AWS_S3_ACCESS_KEY_ID: ${AWS_S3_ACCESS_KEY_ID:-dev_user}
   AWS_S3_SECRET_ACCESS_KEY: ${AWS_S3_SECRET_ACCESS_KEY:-dev_pass}
   AWS_S3_REGION: ${AWS_S3_REGION:-us-east-1}
-  EXTERNAL_S3_BUCKET_NAME: ${EXTERNAL_S3_BUCKET_NAME:-helix-data}
+  EXTERNAL_S3_BUCKET_NAME: ${EXTERNAL_S3_BUCKET_NAME:-helix-external-data}
   S3_BUCKET_NAME : ${S3_BUCKET_NAME:-helix-data}
   AWS_S3_ENDPOINT_URL: ${AWS_S3_ENDPOINT_URL:-http://localhost:9002}
   AWS_S3_BUCKET_NAME_STATIC: ${AWS_S3_BUCKET_NAME_STATIC:-helix-data}
@@ -129,7 +129,7 @@ services:
     volumes:
       - miniodata:/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://minio:9001/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://localhost:9001/minio/health/live"]
       start_period: 2s
       interval: 30s
       timeout: 20s
