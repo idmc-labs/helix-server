@@ -74,6 +74,12 @@ app:
       limits:
         cpu: "2"
         memory: 1Gi
+    apiIngress:
+      enabled: true
+      ingressClassName:
+      hostname:
+      annotations:
+        nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 
   worker:
     enabled: true
