@@ -10,6 +10,8 @@ app:
     enabled: true
     className:
     host:
+    annotations:
+        nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 
   redis:
     enabled: false
@@ -74,13 +76,6 @@ app:
       limits:
         cpu: "2"
         memory: 1Gi
-    apiIngress:
-      enabled: true
-      ingressClassName:
-      hostname:
-      annotations:
-        nginx.ingress.kubernetes.io/proxy-body-size: "50m"
-
   worker:
     enabled: true
     beat:
