@@ -76,6 +76,7 @@ app:
       limits:
         cpu: "2"
         memory: 1Gi
+
   worker:
     enabled: true
     beat:
