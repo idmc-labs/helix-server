@@ -1293,6 +1293,8 @@ metadata:
     component: api
     environment: ALPHA-1
     release: release-name
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
 spec:
   ingressClassName: "default"
   rules:

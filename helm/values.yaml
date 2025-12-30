@@ -10,6 +10,8 @@ app:
     enabled: true
     className:
     host:
+    annotations:
+        nginx.ingress.kubernetes.io/proxy-body-size: "50m"
 
   redis:
     enabled: false
