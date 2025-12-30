@@ -35,9 +35,7 @@ from apps.common.enums import GENDER_TYPE
 from apps.common.utils import (
     EXTERNAL_ARRAY_SEPARATOR,
     EXTERNAL_TUPLE_SEPARATOR,
-    extract_location_data,
     format_event_codes_as_string,
-    format_locations_as_string,
 )
 from apps.contrib.commons import DATE_ACCURACY
 from apps.contrib.models import (
@@ -1060,14 +1058,12 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             created_by__full_name="Created by",
             last_modified_by__full_name="Updated by",
             event_codes="Event codes (Code:Type)",
-            location_display_name="Locations name",
-            loc_lat_lon="Locations coordinates",
-            accuracy="Locations accuracy",
-            type_of_points="Locations type",
-            locations="Locations (Name:Lat, Lon:Accuracy:Type)",
+            geo_locations__display_name="Location name",
+            geo_locations__lat="Latitude",
+            geo_locations__lon="Longitude",
+            geo_locations__accuracy="Location accuracy",
+            geo_locations__identifier="Location type",
         )
-        exclude_headers = ["location_display_name", "loc_lat_lon", "accuracy", "type_of_points"]
-
         values = (
             figures.annotate(
                 **Figure.annotate_stock_and_flow_dates(),
@@ -1137,36 +1133,19 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     distinct=True,
                     filter=models.Q(event__event_code__country__id=F("country__id")),
                 ),
-                locations=ArrayAgg(
-                    Array(
-                        F("geo_locations__display_name"),
-                        Concat(
-                            F("geo_locations__lat"),
-                            Value(EXTERNAL_TUPLE_SEPARATOR),
-                            F("geo_locations__lon"),
-                            output_field=models.CharField(),
-                        ),
-                        Cast("geo_locations__accuracy", models.CharField()),
-                        Cast("geo_locations__identifier", models.CharField()),
-                        output_field=ArrayField(models.CharField()),
-                    ),
-                    distinct=True,
-                    filter=~Q(Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name="")),
-                ),
             )
             .order_by(
                 "created_at",
             )
-            .values(*[header for header in headers.keys() if header not in exclude_headers])
+            .values(*headers.keys())
         )
 
         def transformer(datum):
             def get_enum_label(key, Enum):
                 val = datum[key]
                 obj = Enum.get(val)
+                logger.warning(f"Enum {Enum}, Key: {key}, Val:{val}")
                 return getattr(obj, "label", val)
-
-            location_data = extract_location_data(datum["locations"])
 
             return {
                 **datum,
@@ -1192,11 +1171,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 "review_status": get_enum_label("review_status", Figure.FIGURE_REVIEW_STATUS),
                 "is_disaggregated": "Yes" if datum["is_disaggregated"] else "No",
                 "event_codes": format_event_codes_as_string(datum["event_codes"]),
-                "locations": format_locations_as_string(datum["locations"]),
-                "location_display_name": location_data["display_name"],
-                "loc_lat_lon": location_data["lat_lon"],
-                "accuracy": location_data["accuracy"],
-                "type_of_points": location_data["type_of_points"],
+                "geo_locations__accuracy": get_enum_label("geo_locations__accuracy", FigureLocation.ACCURACY),
+                "geo_locations__identifier": get_enum_label("geo_locations__identifier", FigureLocation.IDENTIFIER),
             }
 
         readme_data = [
