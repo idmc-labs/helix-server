@@ -1268,7 +1268,7 @@ metadata:
     app.kubernetes.io/version: 2024.12.18
     helm.sh/chart: minio-14.10.5
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+    nginx.ingress.kubernetes.io/proxy-body-size: 5g
 spec:
   ingressClassName: "default"
   rules:
