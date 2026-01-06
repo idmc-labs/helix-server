@@ -83,8 +83,8 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(f"Redis is available after {retry_helper.total_time()} seconds"))
 
-    def wait_for_minio(self):
-        self.stdout.write("Waiting for Minio...")
+    def wait_for_rustfs(self):
+        self.stdout.write("Waiting for Rustfs...")
         endpoint_url = getattr(settings, "AWS_S3_PROXIES", {}).get("http") or getattr(settings, "AWS_S3_ENDPOINT_URL", None)
         if endpoint_url is None:
             self.stdout.write(self.style.WARNING("No endpoint_url is provided. Skipping wait"))
@@ -93,16 +93,16 @@ class Command(BaseCommand):
         retry_helper = RetryHelper()
         while True:
             try:
-                response = requests.get(urljoin(endpoint_url, "/minio/health/live"), timeout=5)
+                response = requests.get(urljoin(endpoint_url, "/health"), timeout=5)
                 if response.status_code == 200:
                     break
             except requests.exceptions.RequestException:
                 ...
             # Try again
-            self.stdout.write(self.style.WARNING(retry_helper.try_again_message("Minio not available")))
+            self.stdout.write(self.style.WARNING(retry_helper.try_again_message("Rustfs not available")))
             retry_helper.wait()
 
-        self.stdout.write(self.style.SUCCESS(f"Minio is available after {retry_helper.total_time()} seconds"))
+        self.stdout.write(self.style.SUCCESS(f"Rustfs is available after {retry_helper.total_time()} seconds"))
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -113,7 +113,7 @@ class Command(BaseCommand):
         )
         parser.add_argument("--db", action="store_true", help="Wait for DB to be available")
         parser.add_argument("--redis", action="store_true", help="Wait for Redis to be available")
-        parser.add_argument("--minio", action="store_true", help="Wait for MinIO (S3) storage to be available")
+        parser.add_argument("--rustfs", action="store_true", help="Wait for Rustfs (S3) storage to be available")
         parser.add_argument("--all", action="store_true", help="Wait for all to be available")
 
     def handle(self, **kwargs):
@@ -126,8 +126,8 @@ class Command(BaseCommand):
         try:
             if _all or kwargs["db"]:
                 self.wait_for_db()
-            if _all or kwargs["minio"]:
-                self.wait_for_minio()
+            if _all or kwargs["rustfs"]:
+                self.wait_for_rustfs()
             if _all or kwargs["redis"]:
                 self.wait_for_redis()
         except TimeoutException:

@@ -6,6 +6,6 @@ services:
       USE_S3_BUCKET: ${USE_S3_BUCKET:-true}
       PYTEST_ADDOPTS: "--color=yes"
       HELIX_ENVIRONMENT: development
-  minio:
+  rustfs:
       volumes:
         - /data

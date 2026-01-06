@@ -2,10 +2,10 @@
 
 set -e
 
-# minio might still be starting
-until /usr/bin/mc alias set myminio http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" 2>/dev/null;
+# minio client might still be starting
+until /usr/bin/mc alias set myrustfs http://rustfs:9000 "$RUSTFS_ACCESS_KEY" "$RUSTFS_SECRET_KEY" 2>/dev/null;
 do
-  echo "Waiting for MinIO to be ready..."
+  echo "Waiting for MinIO client to be ready..."
   sleep 1
 done
 
@@ -13,12 +13,12 @@ check_create_bucket() {
     local BUCKET=$1
     if [ -z "$BUCKET" ]; then return; fi
 
-    if /usr/bin/mc ls "myminio/$BUCKET" > /dev/null 2>&1; then
+    if /usr/bin/mc ls "myrustfs/$BUCKET" > /dev/null 2>&1; then
         echo "Bucket '$BUCKET' already exists."
     else
         echo "Creating bucket '$BUCKET'."
-        /usr/bin/mc mb "myminio/$BUCKET"
-        /usr/bin/mc anonymous set download "myminio/$BUCKET"
+        /usr/bin/mc mb "myrustfs/$BUCKET"
+        /usr/bin/mc anonymous set download "myrustfs/$BUCKET"
         echo "Bucket '$BUCKET' created successfully."
     fi
 }

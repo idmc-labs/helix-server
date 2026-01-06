@@ -429,7 +429,7 @@ if env("USE_S3_BUCKET"):
     AWS_STORAGE_EXTERNAL_BUCKET_NAME = env("EXTERNAL_S3_BUCKET_NAME")
     AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL")
 
-    # proxy to minio
+    # proxy to S3 endpoint if provided
     if env("AWS_S3_PROXY"):
         AWS_S3_PROXIES = {"http": env("AWS_S3_PROXY")}
 
