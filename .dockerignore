@@ -1,4 +1,6 @@
-media
+media/
+.venv/
+external-media/
 postgres-data
 redis-data
 
