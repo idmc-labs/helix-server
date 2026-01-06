@@ -15,6 +15,9 @@ DOCKER_TAG="$BRANCH_NAME.c$(echo $GIT_HASH)"
 
 set -x
 
+# Buid for linux/amd64 by default
+export DOCKER_DEFAULT_PLATFORM=${DOCKER_DEFAULT_PLATFORM:-linux/amd64}
+
 docker compose build celery
 
 docker tag helix/helix-worker:latest $DOCKER_IMAGE:$DOCKER_TAG
