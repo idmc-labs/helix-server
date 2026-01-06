@@ -1,45 +1,11 @@
 services:
-  db:
-    image: postgres:17.5
-    environment:
-      POSTGRES_PASSWORD: postgres
-
-  redis:
-    image: redis:latest
-
   server:
     image: $DOCKER_IMAGE_SERVER
     environment:
       CI: "true"
-      # https://github.com/pytest-dev/pytest/issues/7443
+      USE_S3_BUCKET: ${USE_S3_BUCKET:-true}
       PYTEST_ADDOPTS: "--color=yes"
       HELIX_ENVIRONMENT: development
-      DJANGO_DEBUG: "true"
-      ENABLE_DEBUG_TOOLBAR: "true"
-      DJANGO_SECRET_KEY: STATIC-INSECURE-KEY-PLEASE-DONT-USE-IN-PRODUCTION
-      DJANGO_ALLOWED_HOST: localhost
-      BACKEND_BASE_URL: http://localhost:9000
-      FRONTEND_BASE_URL: http://localhost:3080
-      # Database (Default from db container)
-      POSTGRES_HOST: db
-      POSTGRES_DB: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: postgres
-      # REDIS (Default from redis container)
-      DJANGO_CACHE_REDIS_URL: redis://redis:6379/1
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND_URL: redis://redis:6379/2
-      DJANGO_EXTERNAL_API_CACHE_REDIS_URL: redis://redis:6379/3
-
-      # Cookie config
-      SESSION_COOKIE_DOMAIN: localhost
-      CSRF_COOKIE_DOMAIN: localhost
-      CORS_ORIGIN_REGEX_WHITELIST: ^http://localhost:[\d\-]+$$|^http://localhost$$
-      # MISC
-      HCAPTCHA_SECRET: 0x0000000000000000000000000000000000000000
-    volumes:
-      - ./:/code
-    depends_on:
-      - db
-      - redis
+  minio:
+      volumes:
+        - /data

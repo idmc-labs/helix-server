@@ -22,7 +22,6 @@ from utils.factories import CountryFactory, MonitoringSubRegionFactory, UserFact
 User = get_user_model()
 TEST_MEDIA_ROOT = "media-temp"
 TEST_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-TEST_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
 BROKER_BACKEND = "memory"
 CELERY_TASK_ALWAYS_EAGER = True
 CELERY_EAGER_PROPAGATES = True
@@ -73,15 +72,15 @@ class CommonSetupClassMixin:
 
 COMMON_OVERRIDE_SETTINGS = dict(
     SENTRY_DSN=None,
-    USE_S3_BUCKET=False,
+    USE_S3_BUCKET=True,
     EMAIL_BACKEND=TEST_EMAIL_BACKEND,
     MEDIA_ROOT=TEST_MEDIA_ROOT,
-    DEFAULT_FILE_STORAGE=TEST_FILE_STORAGE,
     CACHES=TEST_CACHES,
     AUTH_PASSWORD_VALIDATORS=TEST_AUTH_PASSWORD_VALIDATORS,
     BROKER_BACKEND=BROKER_BACKEND,
     CELERY_TASK_ALWAYS_EAGER=CELERY_TASK_ALWAYS_EAGER,
     CELERY_EAGER_PROPAGATES=CELERY_EAGER_PROPAGATES,
+    AWS_S3_ENDPOINT_URL=getattr(settings, "AWS_S3_PROXIES", {}).get("http", getattr(settings, "AWS_S3_ENDPOINT_URL", None)),
 )
 
 

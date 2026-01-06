@@ -599,6 +599,11 @@ class EntryCreateSerializer(
             raise serializers.ValidationError(_("This field is required"))
         return value
 
+    def validate_document(self, document):
+        if document and not document.is_file_uploaded:
+            raise serializers.ValidationError(_("Document must be uploaded before linking to entry."))
+        return document
+
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
         errors = OrderedDict()
