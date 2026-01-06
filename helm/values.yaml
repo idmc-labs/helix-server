@@ -158,7 +158,7 @@ app:
     DJANGO_DEBUG: "false"
     # AWS
     USE_S3_BUCKET: "true"
-    AWS_S3_AWS_ENDPOINT_URL: "https://{{ $.Values.minio.apiIngress.hostname }}/"
+    AWS_S3_ENDPOINT_URL: "https://{{ $.Values.minio.apiIngress.hostname }}/"
     S3_BUCKET_NAME: "helix-data"
     EXTERNAL_S3_BUCKET_NAME: "helix-external-data"
     # App Domain
