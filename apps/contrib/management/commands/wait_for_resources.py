@@ -85,7 +85,7 @@ class Command(BaseCommand):
 
     def wait_for_minio(self):
         self.stdout.write("Waiting for Minio...")
-        endpoint_url = getattr(settings, "AWS_S3_ENDPOINT_URL", None)
+        endpoint_url = getattr(settings, "AWS_S3_PROXIES", {}).get("http") or getattr(settings, "AWS_S3_ENDPOINT_URL", None)
         if endpoint_url is None:
             self.stdout.write(self.style.WARNING("No endpoint_url is provided. Skipping wait"))
             return

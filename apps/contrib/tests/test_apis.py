@@ -1,10 +1,15 @@
 import datetime
 import json
 import typing
+from io import BytesIO
 from unittest.mock import patch
+from urllib.parse import urlparse, urlunparse
 
 import magic
+import requests
+from django.conf import settings
 from django.core.files.temp import NamedTemporaryFile
+from django.test import override_settings
 
 from apps.contrib.bulk_operations.tasks import run_bulk_api_operation
 from apps.contrib.models import Attachment, BulkApiOperation
@@ -16,12 +21,7 @@ from utils.factories import (
     FigureFactory,
     FigureLocationFactory,
 )
-
-# from rest_framework import serializers
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
-
-# def _raise(expection: Exception):
-#     raise expection
 
 
 class TestAttachment(HelixGraphQLTestCase):
@@ -410,3 +410,153 @@ class TestBulkOperation(HelixGraphQLTestCase):
         # This shouldn't change at all
         assert figure_qs.filter(role=Figure.ROLE.TRIANGULATION).count() == 2
         assert figure_qs.filter(role=Figure.ROLE.RECOMMENDED).count() == 2
+
+
+@override_settings(
+    AWS_S3_ATTACHMENT_SIZE_UPPER_LIMIT=10 * 1024 * 1024,  # 10 MB
+    AWS_S3_ATTACHMENT_SIZE_LOWER_LIMIT=1,  # 1 Byte
+)
+class TestBigFileUploadAttachment(HelixGraphQLTestCase):
+    big_file_attachment_mutation = """
+        mutation ($data: BigAttachmentCreateInputType!) {
+            createBigAttachment(data: $data) {
+            ok
+            errors
+            s3PresignedUploadUrl
+            result {
+                id
+                attachmentFor
+                mimetype
+                isFileUploaded
+            }
+            }
+        }
+    """
+
+    mark_attachment_uploaded_mutation = """
+        mutation ($attachmentId: ID!) {
+            markBigAttachmentFileAsUploaded(attachmentId: $attachmentId) {
+            ok
+            errors
+            result {
+                id
+                isFileUploaded
+            }
+            }
+        }
+    """
+
+    attachment_query = """
+        query ($id: ID!) {
+            attachment(id: $id) {
+            id
+            isFileUploaded
+            }
+        }
+    """
+    logout_query = """
+        mutation Logout {
+            logout {
+                ok
+            }
+        }
+    """
+
+    variables = {"data": {"attachmentFor": Attachment.FOR_CHOICES.ENTRY, "fileName": "test.txt", "mimetype": "text/plain"}}
+
+    def setUp(self) -> None:
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.force_login(self.editor)
+
+    def test_create_bigfile_attachment(self):
+        response = self.query(self.big_file_attachment_mutation, variables=self.variables)
+        self.assertResponseNoErrors(response)
+        content = response.json()
+        self.assertTrue(content["data"]["createBigAttachment"]["ok"], content)
+
+        self.assertIsNotNone(content["data"]["createBigAttachment"]["s3PresignedUploadUrl"])
+        self.assertFalse(content["data"]["createBigAttachment"]["result"]["isFileUploaded"])
+
+    def test_check_attachment_for_should_be_404_not_found(self):
+        invalid_vars = {"data": {"attachmentFor": "INVALID_FOR", "fileName": "test.txt", "mimetype": "text/plain"}}
+        response = self.query(self.big_file_attachment_mutation, variables=invalid_vars)
+        self.assertResponseNoErrors(response)
+        response_content = response.json()
+
+        self.assertFalse(response_content["data"]["createBigAttachment"]["ok"], response_content)
+        self.assertIsNotNone(response_content["data"]["createBigAttachment"]["errors"])
+
+    def test_check_attachment_uploaded_should_be_false(self):
+        response = self.query(self.big_file_attachment_mutation, variables=self.variables)
+        self.assertResponseNoErrors(response)
+        response_content = response.json()
+        self.assertTrue(response_content["data"]["createBigAttachment"]["ok"], response_content)
+        attachment_id = response_content["data"]["createBigAttachment"]["result"]["id"]
+
+        response = self.query(self.attachment_query, variables={"id": attachment_id})
+        self.assertResponseNoErrors(response)
+        content = response.json()["data"]["attachment"]
+        self.assertFalse(content["isFileUploaded"])
+
+    def test_attachment_uploaded_should_be_successful(self):
+        response = self.query(self.big_file_attachment_mutation, variables=self.variables)
+        self.assertResponseNoErrors(response)
+        response_content = response.json()
+        self.assertTrue(response_content["data"]["createBigAttachment"]["ok"], response_content)
+        attachment_id = response_content["data"]["createBigAttachment"]["result"]["id"]
+        s3_pre_signed_url = response_content["data"]["createBigAttachment"]["s3PresignedUploadUrl"]
+        mimetype = response_content["data"]["createBigAttachment"]["result"]["mimetype"]
+
+        replace_netloc = urlparse(settings.AWS_S3_PROXIES["http"]).netloc
+        s3_pre_signed_url = urlunparse(urlparse(s3_pre_signed_url)._replace(netloc=replace_netloc))
+
+        put_response = requests.put(
+            s3_pre_signed_url, data=BytesIO(b"a big file content").getvalue(), headers={"Content-Type": mimetype}
+        )
+        self.assertEqual(put_response.status_code, 200)
+        response = self.query(self.mark_attachment_uploaded_mutation, variables={"attachmentId": attachment_id})
+
+        self.assertResponseNoErrors(response)
+        content = response.json()
+        self.assertTrue(content["data"]["markBigAttachmentFileAsUploaded"]["ok"], content)
+
+        response = self.query(self.attachment_query, variables={"id": attachment_id})
+        self.assertResponseNoErrors(response)
+        content = response.json()["data"]["attachment"]
+        self.assertTrue(content["isFileUploaded"])
+
+    def test_mark_attachment_uploaded_only_once_by_creator_only(self):
+        response = self.query(self.big_file_attachment_mutation, variables=self.variables)
+        self.assertResponseNoErrors(response)
+        response_content = response.json()
+        self.assertTrue(response_content["data"]["createBigAttachment"]["ok"], response_content)
+        attachment_id = response_content["data"]["createBigAttachment"]["result"]["id"]
+        s3_pre_signed_url = response_content["data"]["createBigAttachment"]["s3PresignedUploadUrl"]
+        mimetype = response_content["data"]["createBigAttachment"]["result"]["mimetype"]
+
+        put_response = requests.put(
+            s3_pre_signed_url, data=BytesIO(b"a big file content").getvalue(), headers={"Content-Type": mimetype}
+        )
+        self.assertEqual(put_response.status_code, 200)
+
+        # anonymous user should be disallowed
+        self.query(self.logout_query)
+        response = self.query(self.mark_attachment_uploaded_mutation, variables={"attachmentId": attachment_id})
+        self.assertResponseErrors(response)
+
+        # even if the role is same, the user is different
+        user_monitoring_expert = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.force_login(user_monitoring_expert)
+        response = self.query(self.mark_attachment_uploaded_mutation, variables={"attachmentId": attachment_id})
+        self.assertResponseErrors(response)
+
+        # creator should be allowed
+        self.force_login(self.editor)
+        response = self.query(self.mark_attachment_uploaded_mutation, variables={"attachmentId": attachment_id})
+        self.assertResponseNoErrors(response)
+        self.assertTrue(response.json()["data"]["markBigAttachmentFileAsUploaded"]["result"]["isFileUploaded"])
+
+        # updates should be idempotent
+        response = self.query(self.mark_attachment_uploaded_mutation, variables={"attachmentId": attachment_id})
+        self.assertResponseNoErrors(response)
+        self.assertIsNotNone(response.json()["data"]["markBigAttachmentFileAsUploaded"]["errors"])

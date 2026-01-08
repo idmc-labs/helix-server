@@ -261,7 +261,7 @@ data:
   ADDITIONAL_TRUSTED_ORIGINS: "https://preview-idmc-website-components-1.idmc.local.example.com,https://release-idmc-website-components-1.idmc.local.example.com"
   APP_DOMAIN: "helix-api-1.idmc.local.example.com"
   APP_RELEASE: "develop.xxxxxxxx"
-  AWS_S3_AWS_ENDPOINT_URL: "https://helix-minio-1.idmc.local.example.com/"
+  AWS_S3_ENDPOINT_URL: "https://helix-minio-1.idmc.local.example.com/"
   BACKEND_BASE_URL: "https://helix-api-1.idmc.local.example.com"
   CSRF_COOKIE_DOMAIN: ".example.com"
   DJANGO_ALLOWED_HOST: "helix-1.idmc.local.example.com,helix-api-1.idmc.local.example.com"
@@ -575,7 +575,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
-        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+        checksum/configmap: d1c867373b506698f22bd1f3e3bc414b809ffad19cb5411d0f74ac83d948a134
       labels:
         app: helix-backend-1
         component: api
@@ -637,7 +637,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
-        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+        checksum/configmap: d1c867373b506698f22bd1f3e3bc414b809ffad19cb5411d0f74ac83d948a134
       labels:
         app: helix-backend-1
         component: worker-beat
@@ -703,7 +703,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
-        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+        checksum/configmap: d1c867373b506698f22bd1f3e3bc414b809ffad19cb5411d0f74ac83d948a134
       labels:
         app: helix-backend-1
         component: worker
@@ -962,7 +962,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
-        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+        checksum/configmap: d1c867373b506698f22bd1f3e3bc414b809ffad19cb5411d0f74ac83d948a134
       labels:
         app: helix-backend-1
         component: argo-hooks
@@ -1014,7 +1014,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
-        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+        checksum/configmap: d1c867373b506698f22bd1f3e3bc414b809ffad19cb5411d0f74ac83d948a134
       labels:
         app: helix-backend-1
         component: argo-hooks
@@ -1106,7 +1106,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
-        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+        checksum/configmap: d1c867373b506698f22bd1f3e3bc414b809ffad19cb5411d0f74ac83d948a134
       labels:
         app: helix-backend-1
         component: argo-hooks
@@ -1158,7 +1158,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
-        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+        checksum/configmap: d1c867373b506698f22bd1f3e3bc414b809ffad19cb5411d0f74ac83d948a134
       labels:
         app: helix-backend-1
         component: argo-hooks
@@ -1216,7 +1216,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 39d2cac5daf723f38a23cea87d066b299ac85c08ea9f2272f875b64c15cca089
-        checksum/configmap: 781b6a666b747ffa549b1e18c9fd5ccaf4b2eaef40eb605064ccbc387e3ee708
+        checksum/configmap: d1c867373b506698f22bd1f3e3bc414b809ffad19cb5411d0f74ac83d948a134
       labels:
         app: helix-backend-1
         component: argo-hooks
@@ -1268,7 +1268,7 @@ metadata:
     app.kubernetes.io/version: 2024.12.18
     helm.sh/chart: minio-14.10.5
   annotations:
-    nginx.ingress.kubernetes.io/proxy-body-size: 100m
+    nginx.ingress.kubernetes.io/proxy-body-size: 5g
 spec:
   ingressClassName: "default"
   rules:
@@ -1293,6 +1293,8 @@ metadata:
     component: api
     environment: ALPHA-1
     release: release-name
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 50m
 spec:
   ingressClassName: "default"
   rules:

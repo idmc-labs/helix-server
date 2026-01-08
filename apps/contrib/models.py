@@ -101,7 +101,6 @@ class Attachment(MetaInformationAbstractModel):
         "image/bmp",
         "image/vnd.microsoft.icon",
     )
-    MAX_FILE_SIZE = 100 * 1024 * 1024  # MB
 
     class FOR_CHOICES(enum.Enum):
         ENTRY = 0
@@ -122,6 +121,8 @@ class Attachment(MetaInformationAbstractModel):
         blank=True,
         help_text=_("The type of instance for which attachment was uploaded for"),
     )
+    file_size = models.BigIntegerField(verbose_name=_("File Size"), blank=True, null=True)
+    is_file_uploaded = models.BooleanField(verbose_name=_("Is file uploaded?"), default=False)
     mimetype = models.CharField(verbose_name=_("Mimetype"), max_length=256, blank=True, null=True)
     encoding = models.CharField(verbose_name=_("Encoding"), max_length=256, blank=True, null=True)
     filetype_detail = models.CharField(verbose_name=_("File type detail"), max_length=2000, blank=True, null=True)
@@ -366,6 +367,7 @@ class Client(MetaInformationAbstractModel):
     use_cases = ArrayField(base_field=enum.EnumField(USE_CASE_TYPES, verbose_name=_("Use case")), null=False, default=list)
     other_notes = models.CharField(max_length=255, null=True, blank=True)
     is_active = models.BooleanField(verbose_name=_("Is active?"), default=False)
+    share_source = models.BooleanField(verbose_name=_("Share source?"), default=False)
 
     def __str__(self):
         return self.code

@@ -8,6 +8,7 @@ from datetime import timedelta
 
 from django.conf import settings
 from django.core.files import File
+from django.db import transaction
 from django.db.models import CharField, F, Value
 from django.db.models.functions import Concat
 from django.utils import timezone
@@ -182,10 +183,11 @@ def generate_external_endpoint_dump_file(
     serializer,
     get_data,
     filename,
+    include_sources=False,
 ):
     from apps.entry.models import ExternalApiDump
 
-    external_api_dump, _ = ExternalApiDump.objects.get_or_create(api_type=endpoint_type)
+    external_api_dump, _ = ExternalApiDump.objects.get_or_create(api_type=endpoint_type, include_sources=include_sources)
     try:
         data = get_data()
         serializer = serializer(data, many=True)
@@ -194,17 +196,21 @@ def generate_external_endpoint_dump_file(
             external_api_dump.dump_file.save(
                 filename,
                 File(tmp),
+                save=False,
             )
         external_api_dump.status = ExternalApiDump.Status.COMPLETED
-        logger.info(f"{endpoint_type}: file dump created")
+        logger.info(f"{endpoint_type}: file dump created ({include_sources=})")
     except Exception:
         external_api_dump.status = ExternalApiDump.Status.FAILED
-        logger.error(f"{endpoint_type}: file dump generation failed", exc_info=True)
-        return False
+        logger.error(
+            f"{endpoint_type}: file dump generation failed ({include_sources=})",
+            exc_info=True,
+        )
     external_api_dump.save()
     return True
 
 
+@transaction.atomic
 def _generate_idus_dump_file(api_type):
     from apps.crisis.models import Crisis
     from apps.entry.models import ExternalApiDump
@@ -212,26 +218,61 @@ def _generate_idus_dump_file(api_type):
     from apps.entry.views import get_idu_data
 
     if api_type == ExternalApiDump.ExternalApiType.IDUS_ALL:
-        return generate_external_endpoint_dump_file(
+        # generate dump file with out source
+        generate_external_endpoint_dump_file(
             ExternalApiDump.ExternalApiType.IDUS_ALL,
             FigureReadOnlySerializer,
             get_idu_data,
             "idus_all.json",
         )
+        # generate dump file with source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data(filters={"include_source": True}),
+            "idus_all_with_source.json",
+            True,
+        )
+        return
+
     if api_type == ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER:
-        return generate_external_endpoint_dump_file(
+        # generate dump file with out source
+        generate_external_endpoint_dump_file(
             ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER,
             FigureReadOnlySerializer,
             lambda: get_idu_data(filters={"figure_cause": Crisis.CRISIS_TYPE.DISASTER}),
             "idus_all_disaster.json",
         )
-    idu_date_from = timezone.now() - timedelta(days=180)
-    return generate_external_endpoint_dump_file(
-        ExternalApiDump.ExternalApiType.IDUS,
-        FigureReadOnlySerializer,
-        lambda: get_idu_data(filters={"displacement_date__gte": idu_date_from}),
-        "idus.json",
-    )
+        # generate dump file with source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data(filters={"figure_cause": Crisis.CRISIS_TYPE.DISASTER, "include_source": True}),
+            "idus_all_disaster_with_source.json",
+            True,
+        )
+        return
+
+    if api_type == ExternalApiDump.ExternalApiType.IDUS:
+        idu_date_from = timezone.now() - timedelta(days=180)
+        # generate dump file with out source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data(filters={"displacement_date__gte": idu_date_from}),
+            "idus.json",
+        )
+        # generate dump file with source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data(filters={"displacement_date__gte": idu_date_from, "include_source": True}),
+            "idus_with_source.json",
+            True,
+        )
+        return
+
+    raise ValueError(f"Invalid api type: {api_type}")
 
 
 @celery_app.task

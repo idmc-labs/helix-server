@@ -90,6 +90,8 @@ type AttachmentType {
   versionId: String
   attachment: String!
   attachmentFor: FOR_CHOICES
+  fileSize: Int
+  isFileUploaded: Boolean!
   mimetype: String
   encoding: String
   filetypeDetail: String
@@ -107,6 +109,12 @@ enum BULK_OPERATION_STATUS {
   COMPLETED
   FAILED
   KILLED
+}
+
+input BigAttachmentCreateInputType {
+  fileName: String!
+  attachmentFor: String!
+  mimetype: String!
 }
 
 type BulkApiOperationFailureType {
@@ -260,12 +268,14 @@ input ClientCreateInputType {
   useCases: [USE_CASE_TYPES!]!
   otherNotes: String
   optedOutOfEmails: Boolean
+  shareSource: Boolean
 }
 
 input ClientFilterDataInputType {
   name: String
   isActive: Boolean
   useCases: [String!]
+  shareSource: Boolean
 }
 
 type ClientListType {
@@ -318,6 +328,7 @@ type ClientType {
   optedOutOfEmails: Boolean!
   otherNotes: String
   isActive: Boolean!
+  shareSource: Boolean!
   useCases: [USE_CASE_TYPES!]
   useCasesDisplay: [String]
 }
@@ -333,6 +344,7 @@ input ClientUpdateInputType {
   useCases: [USE_CASE_TYPES!]
   otherNotes: String
   optedOutOfEmails: Boolean
+  shareSource: Boolean
 }
 
 type CloneEvent {
@@ -771,6 +783,13 @@ type CreateAttachment {
   errors: [GenericScalar]
   ok: Boolean
   result: AttachmentType
+}
+
+type CreateBigAttachment {
+  errors: [GenericScalar]
+  ok: Boolean
+  result: AttachmentType
+  s3PresignedUploadUrl: String
 }
 
 type CreateClient {
@@ -2647,6 +2666,12 @@ type Logout {
   ok: Boolean
 }
 
+type MarkBigAttachmentFileAsUploaded {
+  errors: [GenericScalar]
+  ok: Boolean
+  result: AttachmentType
+}
+
 input MonitoringExpertPortfolioInputType {
   user: ID!
   country: ID!
@@ -2759,6 +2784,8 @@ type Mutation {
   exportCountries(filters: CountryFilterDataInputType!): ExportCountries
   exportMonitoringSubRegions(filters: MonitoringSubRegionFilterDataInputType!): ExportMonitoringSubRegions
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
+  createBigAttachment(data: BigAttachmentCreateInputType!): CreateBigAttachment
+  markBigAttachmentFileAsUploaded(attachmentId: ID!): MarkBigAttachmentFileAsUploaded
   createClient(data: ClientCreateInputType!): CreateClient
   updateClient(data: ClientUpdateInputType!): UpdateClient
   exportTrackingData(filters: ClientTrackInfoFilterDataInputType!): ExportTrackingData

@@ -34,6 +34,7 @@ class ClientFilter(django_filters.FilterSet):
     name = django_filters.CharFilter(method="filter_name")
     is_active = django_filters.BooleanFilter()
     use_cases = StringListFilter(method="filter_use_cases")
+    share_source = django_filters.BooleanFilter()
 
     class Meta:
         model = Client

@@ -90,3 +90,9 @@ There are custom management commands available to facilitate specific tasks.
 ./manage.py force_update_gidd_data
 ```
 > NOTE: This command forces an update of GIDD data. It's important to note that this command is intended for local development purposes only, so it should be used with caution.
+
+### Testing in development machine
+Feel free to test in your style. Here, the ```test-docker-compose.yml``` doesn't persist data from test.
+```
+docker compose -f docker-compose.yml -f test-docker-compose.yml run --rm server pytest --reuse-db
+```

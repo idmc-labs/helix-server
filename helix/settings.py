@@ -42,9 +42,10 @@ env = environ.Env(
     AWS_S3_ACCESS_KEY_ID=(str, None),
     AWS_S3_SECRET_ACCESS_KEY=(str, None),
     AWS_S3_REGION=str,
-    AWS_S3_AWS_ENDPOINT_URL=(str, None),
+    AWS_S3_ENDPOINT_URL=(str, None),
     S3_BUCKET_NAME=str,
     EXTERNAL_S3_BUCKET_NAME=str,
+    AWS_S3_PROXY=(str, None),
     # Redis URL
     DJANGO_CACHE_REDIS_URL=str,  # redis://redis:6379/1
     DJANGO_EXTERNAL_API_CACHE_REDIS_URL=str,  # redis://redis:6379/1
@@ -86,6 +87,10 @@ env = environ.Env(
     PYTEST_XDIST_WORKER=(str, None),
 )
 
+# Attachment Size Limits
+DJANGO_MAX_UPLOAD_SIZE = 20971520  # Size defined in bytes (20 MB)
+
+S3_OBJECT_PRESIGNED_URL_TTL = 3600  # Size defined in seconds (60 Minutes)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
@@ -422,7 +427,11 @@ if env("USE_S3_BUCKET"):
     # Set bucket Names
     AWS_STORAGE_MEDIA_BUCKET_NAME = AWS_STORAGE_STATIC_BUCKET_NAME = env("S3_BUCKET_NAME")
     AWS_STORAGE_EXTERNAL_BUCKET_NAME = env("EXTERNAL_S3_BUCKET_NAME")
-    AWS_S3_ENDPOINT_URL = env("AWS_S3_AWS_ENDPOINT_URL")
+    AWS_S3_ENDPOINT_URL = env("AWS_S3_ENDPOINT_URL")
+
+    # proxy to minio
+    if env("AWS_S3_PROXY"):
+        AWS_S3_PROXIES = {"http": env("AWS_S3_PROXY")}
 
     # Set Default storages
     DEFAULT_FILE_STORAGE = "helix.storages.S3MediaStorage"
