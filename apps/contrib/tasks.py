@@ -206,7 +206,6 @@ def generate_external_endpoint_dump_file(
             f"{endpoint_type}: file dump generation failed ({include_sources=})",
             exc_info=True,
         )
-        return False
     external_api_dump.save()
     return True
 
