@@ -1,5 +1,20 @@
 # Changelog
 
+## [v2025.12.31-dev1](https://github.com/idmc-labs/helix-server/compare/v2025.12.31..v2025.12.31-dev1) - 2026-01-12
+### Changes:
+
+#### 🚀  Features
+
+- *(ci)* Add commit lint - ([46e7f1a](https://github.com/idmc-labs/helix-server/commit/46e7f1a05c58d30ecab3883956a13419a92689de))
+
+#### 🐛 Bug Fixes
+
+- *(markuploaded)* Use s3 get_object to read file's first 4KB - ([f7e18d6](https://github.com/idmc-labs/helix-server/commit/f7e18d6a82fe61cc616356097a3d0e890a2c5d6f))
+
+### 🍻 Pull Requests (1)
+- (#702) [Fix(markuploaded): Reads a chunk of file to determine mimetype of the…](https://github.com/idmc-labs/helix-server/pull/702)
+
+
 ## [v2025.12.31](https://github.com/idmc-labs/helix-server/compare/sprint3.0.0..v2025.12.31) - 2026-01-08
 ### Changes:
 
