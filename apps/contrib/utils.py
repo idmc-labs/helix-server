@@ -1,6 +1,7 @@
 import magic
 from botocore.exceptions import ClientError
 from django.conf import settings
+from django.db.models import FileField
 from django.utils.translation import gettext
 from storages.utils import clean_name
 
@@ -18,6 +19,13 @@ class AttachmentBoto3ConnectorService(object):
         self.storage: S3MediaStorage = self.instance.attachment.storage
         assert isinstance(self.storage, S3MediaStorage), f"Storage should be S3MediaStorage, not {self.storage}"
 
+    def get_bucket_name(self) -> str:
+        return self.storage.bucket.name
+
+    def generate_s3_key_for_file(self, file: FileField) -> str:
+        # https://github.com/jschneier/django-storages/blob/ca89a94a7462a2423df460e7bfd5f847457042ca/storages/backends/s3.py#L530
+        return self.storage._normalize_name(clean_name(file.name))
+
     def verify_uploaded(self) -> dict:
         if self.instance.created_by != self.context["request"].user:
             raise BigFileUploadVerificationException(gettext(PERMISSION_DENIED_MESSAGE))
@@ -26,9 +34,16 @@ class AttachmentBoto3ConnectorService(object):
             raise BigFileUploadVerificationException(gettext("Attachment is already marked as uploaded."))
         try:
             file_size = self.instance.attachment.size
-            byte_stream = self.instance.attachment.file.read(4096)
+            obj = self.storage.bucket.meta.client.get_object(
+                Bucket=self.get_bucket_name(),
+                Key=self.generate_s3_key_for_file(self.instance.attachment),
+                Range="bytes=0-4095",  # only first 4KB
+            )
+
+            data = obj["Body"].read()
+
             with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
-                mime_type = m.id_buffer(byte_stream)
+                mime_type = m.id_buffer(data)
                 if mime_type not in Attachment.ALLOWED_MIMETYPES:
                     raise BigFileUploadVerificationException(f"Invalid attachment type, {mime_type}")
             return dict(file_size=file_size, mimetype=mime_type)
@@ -38,15 +53,12 @@ class AttachmentBoto3ConnectorService(object):
     def get_attachment_presigned_url(self) -> str:
         presigned_url = None
         try:
-            # https://github.com/jschneier/django-storages/blob/ca89a94a7462a2423df460e7bfd5f847457042ca/storages/backends/s3.py#L530
-            s3_file_key = self.storage._normalize_name(clean_name(self.instance.attachment.name))
-
             presigned_url = self.storage.bucket.meta.client.generate_presigned_url(
                 ClientMethod="put_object",
                 HttpMethod="PUT",
                 Params={
-                    "Bucket": self.storage.bucket.name,
-                    "Key": s3_file_key,
+                    "Bucket": self.get_bucket_name(),
+                    "Key": self.generate_s3_key_for_file(self.instance.attachment),
                     "ContentType": self.instance.mimetype,
                 },
                 ExpiresIn=settings.S3_OBJECT_PRESIGNED_URL_TTL,
