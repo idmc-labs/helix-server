@@ -513,7 +513,8 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
 
     data_source_category = models.CharField(verbose_name=_("Data Source Category"), max_length=255)
     source = models.CharField(verbose_name=_("Source"), max_length=255)
-    source_link = models.CharField(verbose_name=_("Source Link"), max_length=255)
+    # FIXME: use the correct field type :: models.URLField()
+    source_link = models.CharField(verbose_name=_("Source Link"), max_length=2000)
     notes = models.TextField(verbose_name=_("Notes"), blank=True, null=True)
     is_active = models.BooleanField(verbose_name=_("Is active?"), default=False)
 
