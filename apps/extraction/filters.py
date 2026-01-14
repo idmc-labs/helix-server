@@ -15,6 +15,7 @@ from apps.entry.models import (
 from apps.event.constants import OSV
 from apps.extraction.models import ExtractionQuery
 from apps.report.models import Report
+from utils.common import RuntimeProfile
 from utils.filters import (
     IDFilter,
     IDListFilter,
@@ -266,6 +267,7 @@ class EntryExtractionFilterSet(df.FilterSet):
         return qs.filter(Q(figures__role=Figure.ROLE.RECOMMENDED) | Q(figures__event__include_triangulation_in_qa=True))
 
     @property
+    @RuntimeProfile("entry-qs")
     def qs(self):
         return super().qs.distinct()
 
@@ -521,6 +523,7 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         return qs
 
     @property
+    @RuntimeProfile("figure-qs")
     def qs(self):
         queryset = super().qs.annotate(
             **Figure.annotate_stock_and_flow_dates(),

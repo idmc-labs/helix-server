@@ -12,6 +12,7 @@ from django.db.models import (
 from django_filters import rest_framework as df
 
 from apps.report.models import Report, ReportApproval, ReportComment, ReportGeneration
+from utils.common import RuntimeProfile
 from utils.filters import IDListFilter, StringListFilter, generate_type_for_filter_set
 
 
@@ -111,6 +112,7 @@ class ReportFilter(df.FilterSet):
         return qs
 
     @property
+    @RuntimeProfile("report-qs")
     def qs(self):
         # Return private reports by default if filter is not applied
         is_public = self.data.get("is_public")

@@ -26,6 +26,7 @@ from apps.extraction.filters import (
     FigureExtractionFilterDataInputType,
     FigureExtractionFilterDataType,
 )
+from utils.common import RuntimeProfile
 from utils.figure_filter import (
     FigureAggregateFilterDataInputType,
     FigureAggregateFilterDataType,
@@ -225,6 +226,7 @@ class EventFilter(NameFilterMixin, django_filters.FilterSet):
         return qs.filter(created_by__in=value)
 
     @property
+    @RuntimeProfile("event-qs")
     def qs(self):
         figure_qs, reference_date = FigureFilterHelper.aggregate_data_generate(
             self.data.get("aggregate_figures"),
