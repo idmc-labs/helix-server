@@ -5,6 +5,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Max, Min, Q
 from django.utils.translation import gettext
 from rest_framework import serializers
+from typing_extensions import assert_never
 
 from apps.contrib.serializers import (
     IntegerIDField,
@@ -69,6 +70,10 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
             "version_id",
             "violence",
         )
+        extra_kwargs = {
+            "countries": {"required": True, "allow_empty": False},
+            "event_narrative": {"required": True, "allow_null": False},
+        }
 
     def validate_violence_sub_type_and_type(self, attrs):
         errors = OrderedDict()
@@ -220,10 +225,25 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
             )
 
         errors.update(self.validate_event_type_with_crisis_type(attrs))
-        if attrs.get("event_type") == Crisis.CRISIS_TYPE.DISASTER:
+        event_type = attrs.get("event_type", getattr(self.instance, "event_type", None))
+        if event_type == Crisis.CRISIS_TYPE.DISASTER:
             errors.update(self.validate_disaster_disaster_sub_type(attrs))
-        if attrs.get("event_type") == Crisis.CRISIS_TYPE.CONFLICT:
+            attrs["violence_sub_type"] = None
+            attrs["osv_sub_type"] = None
+            attrs["actor"] = None
+            attrs["context_of_violence"] = []
+        elif event_type == Crisis.CRISIS_TYPE.CONFLICT:
             errors.update(self.validate_violence_sub_type_and_type(attrs))
+            attrs["disaster_sub_type"] = None
+            attrs["other_sub_type"] = None
+        elif event_type == Crisis.CRISIS_TYPE.OTHER:
+            attrs["disaster_sub_type"] = None
+            attrs["violence_sub_type"] = None
+            attrs["context_of_violence"] = []
+            attrs["osv_sub_type"] = None
+            attrs["actor"] = None
+        else:
+            assert_never(event_type)
 
         if self.instance:
             errors.update(self.validate_figures_countries(attrs))
@@ -307,6 +327,7 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
 
             Figure.update_event_status_and_send_notifications(instance.id)
             instance.refresh_from_db()
+
         return instance
 
 
