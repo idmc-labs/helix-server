@@ -15,17 +15,8 @@ x-s3: &s3-env
 
 x-rustfs: &rustfs-env
   AWS_S3_PROXY: ${AWS_S3_PROXY:-http://rustfs:9000}
-  RUSTFS_VOLUMES: /data
-  RUSTFS_ADDRESS: 0.0.0.0:9000
-  RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
-  RUSTFS_EXTERNAL_ADDRESS: :9002
-  RUSTFS_CORS_ALLOWED_ORIGINS: "*"
-  RUSTFS_CONSOLE_ENABLE: "true"
-  RUSTFS_CONSOLE_CORS_ALLOWED_ORIGINS: "*"
   RUSTFS_ACCESS_KEY: ${AWS_S3_ACCESS_KEY_ID:-dev_user}
   RUSTFS_SECRET_KEY: ${AWS_S3_SECRET_ACCESS_KEY:-dev_pass}
-  RUSTFS_OBS_LOGGER_LEVEL: "info"
-
 
 x-server: &base_server_setup
   environment: &base_server_environment
@@ -133,7 +124,16 @@ services:
       - 9002:9000 # Api
       - 9001:9001 # Console
     environment:
-      <<: *rustfs-env
+      <<: [*s3-env, *rustfs-env]
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ADDRESS: 0.0.0.0:9001
+      RUSTFS_EXTERNAL_ADDRESS: :9002
+      RUSTFS_CORS_ALLOWED_ORIGINS: "*"
+      RUSTFS_CONSOLE_ENABLE: "true"
+      RUSTFS_CONSOLE_CORS_ALLOWED_ORIGINS: "*"
+      RUSTFS_OBS_LOGGER_LEVEL: "info"
+
     volumes:
       - rustfsdata:/data
     restart: on-failure

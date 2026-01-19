@@ -2,10 +2,10 @@
 
 set -e
 
-# minio client might still be starting
+# S3 server might still be starting
 until /usr/bin/mc alias set myrustfs http://rustfs:9000 "$RUSTFS_ACCESS_KEY" "$RUSTFS_SECRET_KEY" 2>/dev/null;
 do
-  echo "Waiting for MinIO client to be ready..."
+  echo "Waiting for s3 server(RustFS) to be ready..."
   sleep 1
 done
 
