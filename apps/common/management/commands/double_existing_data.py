@@ -14,6 +14,181 @@ from apps.report.models import Report
 logger = logging.getLogger(__name__)
 
 
+def double_data(Model, queryset, mutate=None):
+    logger.info(f"Copying {Model.__name__} data")
+
+    new_entities_with_old_entity_id = []
+
+    for old_entity in queryset:
+        old_entity_id = old_entity.pk
+        new_entity = Model(
+            **{field.name: getattr(old_entity, field.name) for field in old_entity._meta.fields if field.name != "id"}
+        )
+        if mutate:
+            mutate(new_entity, old_entity)
+        new_entities_with_old_entity_id.append((old_entity_id, new_entity))
+
+    new_entities = [item[1] for item in new_entities_with_old_entity_id]
+    created_entities_count = 0
+
+    created_objects = []
+    for i in range(0, len(new_entities), 1000):
+        batch = new_entities[i : i + 1000]
+        objects = Model.objects.bulk_create(batch)
+        created_entities_count += len(objects)
+        created_objects.extend(objects)
+
+    # # FIXME: Do we need to read from created_entities instead?
+    mapping = {}
+    for (old_id, _), created in zip(new_entities_with_old_entity_id, created_objects):
+        mapping[old_id] = created.id
+
+    logger.info(f"Created {created_entities_count} {Model.__name__} items")
+
+    return mapping
+
+
+def double_crisis():
+    def mutate_new_crisis(new_crisis, old_crisis=None):
+        if new_crisis.start_date and new_crisis.end_date:
+            new_crisis.start_date -= relativedelta(years=8)
+            new_crisis.end_date -= relativedelta(years=8)
+
+    crisis_queryset = Crisis.objects.iterator(chunk_size=1000)
+    old_to_new_crisis_map = double_data(Crisis, crisis_queryset, mutate_new_crisis)
+
+    return old_to_new_crisis_map
+
+
+def double_event(old_to_new_crisis_map):
+    def mutate_new_event(new_event, old_event=None):
+        new_event.start_date -= relativedelta(years=8)
+        new_event.end_date -= relativedelta(years=8)
+        # NOTE: Attach new crisis to new event
+        new_event_crisis_id = old_to_new_crisis_map.get(new_event.crisis_id)
+        new_event.crisis = Crisis.objects.filter(id=new_event_crisis_id).first()
+
+    event_queryset = Event.objects.iterator(chunk_size=1000)
+    old_to_new_event_map = double_data(Event, event_queryset, mutate_new_event)
+
+    return old_to_new_event_map
+
+
+def double_source_preview():
+    preview_queryset = SourcePreview.objects.filter(entry__isnull=False).iterator(chunk_size=1000)
+    old_to_new_preview_map = double_data(SourcePreview, preview_queryset)
+
+    return old_to_new_preview_map
+
+
+def double_attachment():
+    entry_attachments_ids = Entry.objects.filter(document__isnull=False).values_list("document__id", flat=True)
+    attachment_queryset = Attachment.objects.filter(id__in=entry_attachments_ids).iterator(chunk_size=1000)
+    old_to_new_attachment_map = double_data(Attachment, attachment_queryset)
+
+    return old_to_new_attachment_map
+
+
+def double_entry(old_to_new_preview_map, old_to_new_attachment_map):
+    def mutate_entry(new_entry, old_entry):
+        new_entry.associated_parked_item = None
+        if old_entry.preview:
+            new_entry_preview_id = old_to_new_preview_map.get(old_entry.preview.id)
+            new_entry.preview = SourcePreview.objects.filter(id=new_entry_preview_id).first()
+        else:
+            new_entry.preview = None
+        if old_entry.document:
+            new_entry_document_id = old_to_new_attachment_map.get(old_entry.document.id)
+            new_entry.document = Attachment.objects.filter(id=new_entry_document_id).first()
+        else:
+            new_entry.document = None
+
+    entry_queryset = Entry.objects.filter(figures__isnull=False).distinct().order_by("id").iterator(chunk_size=1000)
+    old_to_new_entry_map = double_data(Entry, entry_queryset, mutate_entry)
+
+    return old_to_new_entry_map
+
+
+def double_figure_location():
+    figure_location_queryset = FigureLocation.objects.iterator(chunk_size=1000)
+    old_to_new_location_map = double_data(FigureLocation, figure_location_queryset)
+
+    return old_to_new_location_map
+
+
+def double_report():
+    def mutate_new_report(new_report, old_report=None):
+        if new_report.filter_figure_start_after and new_report.filter_figure_end_before:
+            new_report.filter_figure_start_after -= relativedelta(years=8)
+            new_report.filter_figure_end_before -= relativedelta(years=8)
+
+        if new_report.gidd_report_year:
+            if new_report.gidd_report_year >= 2024:
+                new_report.gidd_report_year = None
+            else:
+                new_report.gidd_report_year -= 8
+
+        if new_report.gidd_published_date:
+            new_report.gidd_published_date -= relativedelta(years=8)
+
+    report_queryset = Report.objects.iterator(chunk_size=1000)
+    double_data(Report, report_queryset, mutate_new_report)
+
+
+def double_figure_data(old_to_new_entry_map, old_to_new_location_map, old_to_new_event_map):
+    def chunked_queryset(qs, chunk_size):
+        last_id = 0
+        while True:
+            chunk = list(qs.filter(id__gt=last_id).order_by("id")[:chunk_size])
+            if not chunk:
+                break
+            yield chunk
+            last_id = chunk[-1].id
+
+    # Double Figure data
+    logger.info("Copying Figure data")
+    figure_location_map = []  # [(new_figure_obj, new_locations),]
+    figure_qs = Figure.objects.all()
+    new_figure_count = 0
+    for figure_chunk in chunked_queryset(figure_qs, 1000):
+        new_figure_objects = []
+        for figure in figure_chunk:
+            old_entry_id = figure.entry.id
+
+            new_figure_obj = Figure(
+                **{field.name: getattr(figure, field.name) for field in figure._meta.fields if field.name != "id"}
+            )
+            new_entry_id = old_to_new_entry_map.get(old_entry_id)
+            new_figure_obj.entry = Entry.objects.filter(id=new_entry_id).first()
+            if not new_figure_obj.entry:
+                continue
+
+            old_figure_event_id = figure.event.id
+            new_event_id = old_to_new_event_map.get(old_figure_event_id)
+            new_figure_obj.event = Event.objects.filter(id=new_event_id).first()
+            if not new_figure_obj.event:
+                continue
+
+            new_figure_obj.start_date -= relativedelta(years=8)
+            new_figure_obj.end_date -= relativedelta(years=8)
+            new_figure_objects.append(new_figure_obj)
+
+            # map new figure and new locations
+            old_locations = figure.geo_locations.all()
+            new_locations_uuids = [old_to_new_location_map.get(old_loc.id) for old_loc in old_locations]
+            figure_location_map.append((new_figure_obj, new_locations_uuids))
+
+        objects = Figure.objects.bulk_create(new_figure_objects, batch_size=1000)
+        new_figure_count += len(objects)
+
+    # set new locations to new figures
+    for new_figure, locations_uuids in figure_location_map:
+        locations = FigureLocation.objects.filter(uuid__in=locations_uuids)
+        new_figure.geo_locations.set(locations)
+
+    logger.info(f"Created {new_figure_count} Figure items")
+
+
 class Command(BaseCommand):
     help = "Generate IDUS dump files"
 
@@ -22,168 +197,36 @@ class Command(BaseCommand):
         if not settings.ENABLE_DANGER_MODE:
             logger.warning("ENABLE_DANGER_MODE needs to be enabled to use this command")
             return
-        logger.info("Generating double data")
 
-        # Double crisis data
-        logger.info("Generating Crisis data")
-        new_crisis_objects = []
-        old_to_new_crisis_map = {}
-        for crisis in Crisis.objects.all():
-            copy_of_old_crisis_id = crisis.pk
-            new_crisis = Crisis(
-                **{field.name: getattr(crisis, field.name) for field in crisis._meta.fields if field.name != "id"}
-            )
-            if crisis.start_date and crisis.end_date:
-                new_crisis.start_date = crisis.start_date - relativedelta(years=8)
-                new_crisis.end_date = crisis.end_date - relativedelta(years=8)
-            new_crisis_objects.append((copy_of_old_crisis_id, new_crisis))
+        # Crisis
+        old_to_new_crisis_map = double_crisis()
 
-        crisis_instances_to_create = [item[1] for item in new_crisis_objects]
-        Crisis.objects.bulk_create(crisis_instances_to_create)
+        # Event
+        old_to_new_event_map = double_event(old_to_new_crisis_map)
+        del old_to_new_crisis_map
 
-        for copy_of_old_id, new_crisis in zip([item[0] for item in new_crisis_objects], crisis_instances_to_create):
-            old_to_new_crisis_map[copy_of_old_id] = new_crisis
+        # Source preview
+        old_to_new_preview_map = double_source_preview()
 
-        # Double Event data and attach the new crisis with new events
-        logger.info("Generating Event data")
-        new_event_input_data = []
-        for event in Event.objects.all():
-            old_crisis_id = event.crisis_id
-            new_crisis = old_to_new_crisis_map.get(old_crisis_id)
-            new_event_obj = Event(
-                **{field.name: getattr(event, field.name) for field in event._meta.fields if field.name != "id"}
-            )
-            new_event_obj.start_date = event.start_date - relativedelta(years=8)
-            new_event_obj.end_date = event.end_date - relativedelta(years=8)
-            new_event_obj.crisis = new_crisis
-            new_event_input_data.append(new_event_obj)
+        # Document
+        old_to_new_attachment_map = double_attachment()
 
-        Event.objects.bulk_create(new_event_input_data)
+        # Entry
+        old_to_new_entry_map = double_entry(old_to_new_preview_map, old_to_new_attachment_map)
 
-        # Double Source preview data
-        logger.info("Generating Source preview data")
-        new_preview_objects = []
-        old_to_new_preview_map = {}
-        entry_previews = SourcePreview.objects.filter(entry__isnull=False)
-        for preview in entry_previews:
-            copy_of_old_preview_id = preview.pk
-            new_preview = SourcePreview(
-                **{field.name: getattr(preview, field.name) for field in preview._meta.fields if field.name != "id"}
-            )
-            new_preview_objects.append((copy_of_old_preview_id, new_preview))
+        del old_to_new_preview_map
+        del old_to_new_attachment_map
 
-        preview_instance_to_create = [item[1] for item in new_preview_objects]
-        SourcePreview.objects.bulk_create(preview_instance_to_create)
-        for copy_of_old_id, new_preview in zip([item[0] for item in new_preview_objects], preview_instance_to_create):
-            old_to_new_preview_map[copy_of_old_id] = new_preview
+        # FiugreLocation
+        old_to_new_location_map = double_figure_location()
 
-        # Double Document data
-        logger.info("Generating Attachment data")
-        new_attachment_objects = []
-        old_to_new_attachment_map = {}
-        entry_attachments_ids = Entry.objects.filter(document__isnull=False).values_list("document__id", flat=True)
-        for attachment in Attachment.objects.filter(id__in=entry_attachments_ids):
-            copy_of_old_attachment_id = attachment.pk
-            new_attachment = Attachment(
-                **{field.name: getattr(attachment, field.name) for field in attachment._meta.fields if field.name != "id"}
-            )
-            new_attachment_objects.append((copy_of_old_attachment_id, new_attachment))
+        # Figure
+        double_figure_data(old_to_new_entry_map, old_to_new_location_map, old_to_new_event_map)
+        del old_to_new_entry_map
+        del old_to_new_location_map
+        del old_to_new_event_map
 
-        attachment_instance_to_create = [item[1] for item in new_attachment_objects]
-        Attachment.objects.bulk_create(attachment_instance_to_create)
-
-        # map old attachment with new attachment
-        for copy_of_old_id, new_attachment in zip(
-            [item[0] for item in new_attachment_objects], attachment_instance_to_create
-        ):
-            old_to_new_attachment_map[copy_of_old_id] = new_attachment
-
-        # Double Entry data attach the new entry with new parked items
-        logger.info("Generating Entry data")
-        new_entry_objects = []
-        old_to_new_entry_map = {}
-        for entry in Entry.objects.all():
-            copy_of_old_entry_id = entry.pk
-            new_entry = Entry(
-                **{field.name: getattr(entry, field.name) for field in entry._meta.fields if field.name != "id"}
-            )
-            new_entry.associated_parked_item = None
-            if entry.preview:
-                new_entry.preview = old_to_new_preview_map.get(entry.preview.id)
-            else:
-                new_entry.preview = None
-            if entry.document:
-                new_entry.document = old_to_new_attachment_map.get(entry.document.id)
-            else:
-                new_entry.document = None
-            new_entry_objects.append((copy_of_old_entry_id, new_entry))
-
-        entry_instances_to_create = [item[1] for item in new_entry_objects]
-        Entry.objects.bulk_create(entry_instances_to_create)
-
-        # match old entry with new entry
-        for copy_of_old_id, new_entry in zip([item[0] for item in new_entry_objects], entry_instances_to_create):
-            old_to_new_entry_map[copy_of_old_id] = new_entry
-
-        # Double Fiugre Location data
-        logger.info("Generating Figure Location data")
-        new_location_objects = []
-        old_to_new_location_map = {}
-        for location in FigureLocation.objects.all():
-            copy_of_old_location_id = location.pk
-            new_location = FigureLocation(
-                **{field.name: getattr(location, field.name) for field in location._meta.fields if field.name != "id"}
-            )
-            new_attachment_objects.append((copy_of_old_location_id, new_location))
-
-        location_instance_to_create = [item[1] for item in new_location_objects]
-        FigureLocation.objects.bulk_create(location_instance_to_create)
-
-        # match old location with new location
-        for copy_of_old_id, new_location in zip([item[0] for item in new_location_objects], location_instance_to_create):
-            old_to_new_location_map[copy_of_old_id] = new_location
-
-        # Double Figure data
-        logger.info("Generating Figure data")
-        new_figure_objects = []
-        figure_location_map = []  # [(new_figure_obj, new_locations),]
-        for figure in Figure.objects.all():
-            old_entry_id = figure.entry.id
-
-            new_figure_obj = Figure(
-                **{field.name: getattr(figure, field.name) for field in figure._meta.fields if field.name != "id"}
-            )
-            new_entry = old_to_new_entry_map.get(old_entry_id)
-            new_figure_obj.entry = new_entry
-            new_figure_obj.start_date = figure.start_date - relativedelta(years=8)
-            new_figure_obj.end_date = figure.end_date - relativedelta(years=8)
-            new_figure_objects.append(new_figure_obj)
-
-            # map new figure and new locations
-            old_locations = figure.geo_locations.all()
-            new_location_ids = [old_to_new_location_map.get(old_loc.id) for old_loc in old_locations]
-            new_locations = FigureLocation.objects.filter(id__in=new_location_ids)
-            figure_location_map.append((new_figure_obj, new_locations))
-
-        Figure.objects.bulk_create(new_figure_objects)
-        # set new locations to new figures
-        for new_figure, locations in figure_location_map:
-            new_figure.geo_locations.set(locations)
-
-        # Double Report Data
-        logger.info("Generating Report data")
-        new_reports = []
-        for report in Report.objects.all():
-            data = {field.name: getattr(report, field.name) for field in report._meta.fields if field.name != "id"}
-            new_report = Report(**data)
-            # generate report for year 2008 to 2016
-            if report.gidd_report_year:
-                if report.gidd_report_year >= 2024:
-                    continue
-                new_report.gidd_report_year = report.gidd_report_year - 8
-            else:
-                new_report.gidd_report_year = None
-            new_reports.append(new_report)
-        Report.objects.bulk_create(new_reports)
+        # Report
+        double_report()
 
         logger.info("Generating double data SUCCESS")
