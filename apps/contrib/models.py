@@ -358,6 +358,7 @@ class Client(MetaInformationAbstractModel):
         null=True,
     )
     contact_website = models.URLField(
+        max_length=2000,
         verbose_name=_("Client Contact Website"),
         help_text=_("Client Contact Website: link to the website (IDMC application)"),
         blank=True,
