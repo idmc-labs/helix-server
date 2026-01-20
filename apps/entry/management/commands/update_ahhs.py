@@ -32,7 +32,6 @@ class Command(BaseCommand):
         parser.add_argument("csv_file_path", type=str, help="Path to the CSV file containing the data.")
         parser.add_argument(
             "year",
-            nargs="+",
             type=int,
             help="AHHS year to be updated",
         )
@@ -106,7 +105,7 @@ class Command(BaseCommand):
             return
 
         created_at = format_date(row["Reference date"])
-        modified_at = format_date(row["IDMC update date"]) or created_at
+        modified_at = format_date(row["IDMC update date"]) if row.get("IDMC update date") else created_at
         return {
             # Data from csv
             **extract_data,
