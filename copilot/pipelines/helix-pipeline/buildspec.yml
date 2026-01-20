@@ -12,10 +12,9 @@ env:
 
 phases:
   install:
-    runtime-versions:
-      ruby: 3.3.4
-
     commands:
+      - docker version
+      - docker-compose version
       - echo "cd into $CODEBUILD_SRC_DIR"
       - cd $CODEBUILD_SRC_DIR
       # Download the copilot linux binary. You can update this version.
