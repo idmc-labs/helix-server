@@ -34,9 +34,16 @@ Resources:
               - GET
               - HEAD
             AllowedOrigins:
-              # TODO: Make sure this works.
-              - "https://*.idmcdb.org"
-            MaxAge: 3600
+              - "*"
+            MaxAgeSeconds: 3600
+          - AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - PUT
+            AllowedOrigins:
+            # Wildcard with only one '*' is supported: https://docs.aws.amazon.com/AmazonS3/latest/userguide/ManageCorsUsing.html#cors-allowed-origin
+              - 'https://*.idmcdb.org'
+            MaxAgeSeconds: 3600
 
   S3MediaBucketPolicy:
     Metadata:
