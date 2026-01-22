@@ -1,17 +1,20 @@
 import csv
 import datetime
 import os
+import re
 import typing
 from decimal import Decimal
 from functools import cached_property
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.models import Exists, OuterRef
 from requests.structures import CaseInsensitiveDict
 
 from apps.country.models import Country, HouseholdSize
 from apps.country.serializers import HouseholdSizeCliImportSerializer
 from apps.entry.models import Figure
+from apps.report.models import Report
 from apps.users.models import User
 from apps.users.utils import HelixInternalBot
 from helix.managers import BulkUpdateManager
@@ -27,6 +30,16 @@ def format_date(date: str) -> typing.Union[datetime.datetime, str]:
 
 class Command(BaseCommand):
     help = "Update AHHS based on new household size data."
+    required_csv_headers = {
+        "Year",
+        "AHHS",
+        "Data source category",
+        "Source",
+        "Source link",
+        "Notes",
+        "ISO3",
+        "Reference date",
+    }
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -84,8 +97,8 @@ class Command(BaseCommand):
                 last_modified_by=item["last_modified_by"],
                 modified_at=item["modified_at"],
             )
-        self.stdout.write(self.style.SUCCESS(f"Created {len(validated_data)} AHHS items."))
         self.stdout.write(self.style.SUCCESS(f"Deactivated {updated_count} previous AHHS items."))
+        self.stdout.write(self.style.SUCCESS(f"Created {len(validated_data)} AHHS items."))
 
     def process_household_size_row(self, row: dict, year: int) -> typing.Optional[dict]:
         """
@@ -101,7 +114,7 @@ class Command(BaseCommand):
         extract_data = {
             "size": row["AHHS"],
             "data_source_category": row["Data source category"],
-            "source": row["Source"],
+            "source": row["Source"] or "No Data",
             "source_link": row["Source link"],
         }
         if not all(extract_data.values()):
@@ -128,17 +141,28 @@ class Command(BaseCommand):
             "is_active": True,
         }
 
-    def update_household_sizes_from_csv(self, file_path: str, year: int):
+    def update_household_sizes_from_csv(self, file_path: str, year: int) -> tuple:
         """
         Processes the CSV file and updates the database.
         """
         with open(file_path, "r") as file:
             reader = csv.DictReader(file)
+            csv_headers = set(reader.fieldnames or [])
+
+            missing_headers = self.required_csv_headers.difference(csv_headers)
+            if missing_headers:
+                raise ValueError(f"Missing required columns in CSV: {', '.join(missing_headers)}")
+
             processed_rows = []
+            missing_ahhs_countries = []
             total = 0
             for row in reader:
                 total += 1
                 if processed_row := self.process_household_size_row(row, year):
+                    size = processed_row.get("size")
+                    if size is None or size == "":
+                        processed_row["size"] = 0
+                        missing_ahhs_countries.append(processed_row["country"])
                     processed_rows.append(processed_row)
             if len(processed_rows) != total:
                 self.stdout.write(self.style.NOTICE(f"Processed {len(processed_rows)} out of {total} AHHS items from CSV"))
@@ -146,6 +170,7 @@ class Command(BaseCommand):
                 self.stdout.write(f"Processed {len(processed_rows)} out of {total} AHHS items from CSV")
 
             household_values = []
+
             serializer = HouseholdSizeCliImportSerializer(data=processed_rows, many=True)
             if serializer.is_valid():
                 household_values = serializer.validated_data
@@ -158,7 +183,7 @@ class Command(BaseCommand):
                     for field, error in errors.items():
                         self.stdout.write(self.style.ERROR(f"'{field}': {error}"))
                 raise Exception("Import failed")
-            return household_values
+            return household_values, missing_ahhs_countries
 
     def update_figure(
         self,
@@ -166,6 +191,7 @@ class Command(BaseCommand):
         figure: Figure,
         old_household_sizes: CaseInsensitiveDict,
         new_household_sizes: CaseInsensitiveDict,
+        dt: datetime.datetime,
     ):
         """
         Updates the household size of a figure if it differs from the current size stored.
@@ -188,13 +214,13 @@ class Command(BaseCommand):
         if new_household_size is None:
             self.stdout.write(
                 self.style.WARNING(
-                    f"In figure<{figure.pk}>, new household size not found for country {figure.country.iso3}. Skipping."
+                    f"In figure <{figure.pk}>, new household size not found for country {figure.country.iso3}. Skipping."
                 )
             )
             return
 
         if old_household_size == new_household_size.size:
-            self.stdout.write(f"In figure <{figure.pk}, household size has not changed {old_household_size}.")
+            self.stdout.write(f"In figure <{figure.pk}>, household size has not changed {old_household_size}.")
             return
 
         self.stdout.write(
@@ -210,7 +236,28 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"In figure <{figure.pk}>, updating total figures from {old_total_figures} to {new_total_figures}"
             )
+            if figure.excerpt_idu:
+                # Match the figure value at a word boundary
+                # We are adding a hack so that 1000 becomes 1,?0,?0,?0 and it matches any kind of comma separators
+                excerpt_regex = re.compile("\\b" + ",?".join(list(str(old_total_figures))) + "\\b")
+                new_excerpt_idu = re.sub(excerpt_regex, str(new_total_figures), figure.excerpt_idu)
+                self.stdout.write(f"Old excerpt idu ({figure.excerpt_idu}) is changed to ({new_excerpt_idu})")
+                figure.excerpt_idu = new_excerpt_idu
+
         figure.total_figures = new_total_figures
+
+        if figure.has_old_report:  # type: ignore an annotation
+            append_calculation_logic = (
+                f"On {dt.day} of {dt.strftime('%B')} {dt.year}, there was a retrospective update in AHHS; "
+                f"The household size changed from {old_household_size} to {figure.household_size}, "
+                f"and the total figure changed from {old_total_figures} to {figure.total_figures}. "
+                "Therefore, the text in the analysis may reflect old value."
+            )
+            self.stdout.write(
+                f"Appending ({append_calculation_logic}) to 'Analysis, Caveats and Calculation Logic' field in report"
+            )
+
+            figure.calculation_logic = f"{figure.calculation_logic}\n {append_calculation_logic}"
 
         bulk_mgr.add(figure)
 
@@ -221,19 +268,31 @@ class Command(BaseCommand):
         new_household_sizes: CaseInsensitiveDict,
         filter_countries: typing.Set[str],
     ):
-        bulk_mgr = BulkUpdateManager(["household_size", "total_figures"], chunk_size=1000)
+        bulk_mgr = BulkUpdateManager([
+            "household_size", "total_figures", "excerpt_idu", "calculation_logic"], chunk_size=1000
+        )
+
+        current_datetime = datetime.datetime.now()
+        # Prevent queries inside the loop
+        old_reports = Report.objects.filter(
+            figures=OuterRef("pk"),
+            gidd_report_year__lt=current_datetime.year,
+        )
+
         figures = Figure.objects.filter(
             unit=Figure.UNIT.HOUSEHOLD,
             # Year can be calculated from the end_date (for both flow and stock figures)
             end_date__year=year,
             country__in=filter_countries,
-        )
+        ).annotate(has_old_report=Exists(old_reports))
         for figure in figures:
             self.update_figure(
                 bulk_mgr,
                 figure,
                 old_household_sizes,
                 new_household_sizes,
+                # The command can finish execution next year
+                current_datetime,
             )
 
         bulk_mgr.done()
@@ -253,8 +312,10 @@ class Command(BaseCommand):
 
         old_household_sizes_map = self.iso3_to_household_sizes(year)
 
-        new_household_sizes = self.update_household_sizes_from_csv(csv_file_path, year)
-        countries_set = set([x["country"].pk for x in new_household_sizes])
+        new_household_sizes, skip_countries = self.update_household_sizes_from_csv(csv_file_path, year)
+
+        # We don't update figures with missing AHHS in the CSV.
+        countries_set = set([x["country"].pk for x in new_household_sizes if x["country"] not in skip_countries])
 
         # FIXME: We may need to clear cache
         new_household_sizes_map = self.iso3_to_household_sizes(year)
