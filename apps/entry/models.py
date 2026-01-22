@@ -1623,6 +1623,10 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         if not url and not document:
             errors["url"] = gettext("Please fill the URL or upload a document.")
             errors["document"] = gettext("Please fill the URL or upload a document.")
+        if document and getattr(document, "is_file_uploaded", False):
+            values["url"] = None
+        if url:
+            values["document_url"] = None
         return errors
 
     # Methods
