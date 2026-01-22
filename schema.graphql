@@ -1438,7 +1438,7 @@ input EntryCreateInputType {
   associatedParkedItem: ID
   preview: ID
   document: ID
-  publishers: [ID!]
+  publishers: [ID!]!
 }
 
 input EntryExtractionFilterDataInputType {
@@ -1552,14 +1552,13 @@ input EventCodeUpdateInputType {
 
 input EventCreateInputType {
   eventCodes: [EventCodeInputType!]
-  countries: [ID!]!
-  eventNarrative: String!
   name: String!
   eventType: CRISIS_TYPE!
   startDate: Date!
   startDateAccuracy: DATE_ACCURACY
   endDate: Date!
   endDateAccuracy: DATE_ACCURACY
+  eventNarrative: String!
   includeTriangulationInQa: Boolean
   crisis: ID
   otherSubType: ID
@@ -1568,6 +1567,7 @@ input EventCreateInputType {
   disasterSubCategory: ID
   disasterSubType: ID
   osvSubType: ID
+  countries: [ID!]!
   contextOfViolence: [ID!]
 }
 
@@ -1677,14 +1677,13 @@ type EventType {
 input EventUpdateInputType {
   id: ID!
   eventCodes: [EventCodeUpdateInputType!]
-  countries: [ID!]
-  eventNarrative: String
   name: String
   eventType: CRISIS_TYPE
   startDate: Date
   startDateAccuracy: DATE_ACCURACY
   endDate: Date
   endDateAccuracy: DATE_ACCURACY
+  eventNarrative: String
   includeTriangulationInQa: Boolean
   crisis: ID
   otherSubType: ID
@@ -1693,6 +1692,7 @@ input EventUpdateInputType {
   disasterSubCategory: ID
   disasterSubType: ID
   osvSubType: ID
+  countries: [ID!]
   contextOfViolence: [ID!]
 }
 
