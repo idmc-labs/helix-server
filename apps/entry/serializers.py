@@ -1,5 +1,6 @@
 from collections import OrderedDict
 from copy import copy
+from datetime import datetime
 from decimal import Decimal
 
 from django.core.exceptions import ValidationError
@@ -16,10 +17,12 @@ from apps.contrib.serializers import (
     UpdateSerializerMixin,
 )
 from apps.country.models import Country
+from apps.crisis.models import Crisis
 from apps.entry.models import (
     DisaggregatedAge,
     Entry,
     Figure,
+    FigureDisaggregationAbstractModel,
     FigureLocation,
     FigureTag,
 )
@@ -108,6 +111,25 @@ class FigureLocationSerializer(serializers.ModelSerializer):
 
 
 class CommonFigureValidationMixin:
+    def _validate_is_disaggregated(self, instance, attrs):
+        errors = OrderedDict()
+        is_disaggregated = attrs.get(
+            "is_disaggregated",
+            getattr(instance, "is_disaggregated", False),
+        )
+        disaggregation_age = attrs.get("disaggregation_age", [])
+        if disaggregation_age and not is_disaggregated:
+            errors.update(
+                {"disaggregation_age": "is_disaggregated must be enabled when disaggregation_age fields are provided."}
+            )
+        disaggregation_abstract_fields = [
+            field.name for field in FigureDisaggregationAbstractModel._meta.fields if field.name != "id"
+        ]
+        has_disaggregation_data = any(attrs.get(field) is not None for field in disaggregation_abstract_fields)
+        if not is_disaggregated and has_disaggregation_data:
+            errors.update({"is_disaggregated": "is_disaggregated must be enabled when disaggregation fields are provided."})
+        return errors
+
     def validate_disaggregation_age(self, age_groups):
         age_groups = age_groups or []
         values = []
@@ -249,10 +271,43 @@ class CommonFigureValidationMixin:
 
         event = attrs.get("event", getattr(instance, "event", None))
         figure_cause = attrs.get("figure_cause", getattr(instance, "figure_cause", None))
+        if figure_cause == Crisis.CRISIS_TYPE.CONFLICT:
+            violence_sub_type = attrs.get("violence_sub_type", getattr(instance, "violence_sub_type", None))
+            if not violence_sub_type:
+                errors.update({"violence_sub_type": "violence sub type is required"})
+        if figure_cause == Crisis.CRISIS_TYPE.DISASTER:
+            disaster_sub_type = attrs.get("disaster_sub_type", getattr(instance, "disaster_sub_type", None))
+            if not disaster_sub_type:
+                errors.update({"disaster_sub_type": "disaster sub type is required"})
 
         if figure_cause and event and event.event_type.value != figure_cause:
             errors.update({"figure_cause": f"Figure cause should be {event.event_type.label}"})
         return errors
+
+    def clean_figure_cause(self, instance, attrs):
+        figure_cause = attrs.get("figure_cause", getattr(instance, "figure_cause", None))
+        fields_to_clear = {
+            "violence_sub_type",
+            "context_of_violence",
+            "osv_sub_type",
+            "disaster_sub_type",
+            "other_sub_type",
+        }
+        if figure_cause == Crisis.CRISIS_TYPE.CONFLICT:
+            fields_to_clear -= {
+                "violence_sub_type",
+                "context_of_violence",
+                "osv_sub_type",
+            }
+        elif figure_cause == Crisis.CRISIS_TYPE.DISASTER:
+            fields_to_clear -= {"disaster_sub_type"}
+        # Clear remaining fields
+        for field in fields_to_clear:
+            if field == "context_of_violence":
+                attrs[field] = []
+            else:
+                attrs[field] = None
+        return attrs
 
     def clean_total_figures(self, instance, attrs):
         _attrs = copy(attrs)
@@ -278,9 +333,35 @@ class CommonFigureValidationMixin:
         _attrs = copy(attrs)
 
         term = _attrs.get("term", getattr(instance, "term", None))
-        if term is None or term not in Figure.displacement_occur_list():
+        if term in Figure.housing_list():
             _attrs["displacement_occurred"] = None
+        elif term in Figure.displacement_occur_list():
+            _attrs["is_housing_destruction"] = None
+        else:
+            _attrs["is_housing_destruction"] = None
+            _attrs["displacement_occurred"] = None
+
         return _attrs
+
+    def clean_category(self, instance, attrs):
+        _attrs = copy(attrs)
+        category = _attrs.get("category", getattr(instance, "category", None))
+        if category in Figure.stock_list():
+            _attrs["end_date_accuracy"] = None
+        return _attrs
+
+    def _validate_category(self, instance, attrs):
+        errors = OrderedDict()
+        _attrs = copy(attrs)
+
+        category = _attrs.get("category", getattr(instance, "category", None))
+        end_date = _attrs.get("end_date", getattr(instance, "end_date", None))
+        if not end_date:
+            errors.update({"end_date": "end_date is required"})
+        if category in Figure.flow_list():
+            if end_date > datetime.today().date():
+                errors.update({"end_date": "end_date must be past date"})
+        return errors
 
     def _update_parent_fields(self, attrs):
         disaster_sub_type = attrs.get("disaster_sub_type", self.instance and self.instance.disaster_sub_type)
@@ -315,6 +396,8 @@ class CommonFigureValidationMixin:
         # NOTE: calculate attributes
         attrs = self.clean_total_figures(instance, attrs)
         attrs = self.clean_term_with_displacement_occur(instance, attrs)
+        attrs = self.clean_category(instance, attrs)
+        attrs = self.clean_figure_cause(instance, attrs)
 
         errors.update(self._validate_idu(instance, attrs))
         errors.update(self._validate_unit_and_household_size(instance, attrs))
@@ -322,6 +405,9 @@ class CommonFigureValidationMixin:
         errors.update(self._validate_dates(instance, attrs))
         errors.update(self._validate_figure_country(instance, attrs))
         errors.update(self._validate_figure_geo_locations(instance, attrs))
+        errors.update(self._validate_is_disaggregated(instance, attrs))
+        errors.update(self._validate_category(instance, attrs))
+        errors.update(self._validate_figure_cause(instance, attrs))
         errors.update(
             self._validate_disaggregated_sum_against_total_figures(
                 instance, attrs, ["disaggregation_location_camp", "disaggregation_location_non_camp"], "camp and non-camp"
@@ -435,12 +521,17 @@ class FigureSerializer(
             "disaggregation_conflict_criminal",
             "disaggregation_conflict_communal",
             "disaggregation_conflict_other",
-            "disaggregation_age",
             "geo_locations",
         ]
         extra_kwargs = {
             "uuid": {"validators": [], "required": True},
             "entry": {"validators": [], "required": True},
+            "calculation_logic": {"required": True, "allow_null": False},
+            "start_date": {"required": True, "allow_null": False},
+            "sources": {"required": True, "allow_empty": False},
+            "country": {"required": True, "allow_empty": False},
+            "term": {"required": True, "allow_null": False},
+            "category": {"required": True, "allow_null": False},
         }
 
     def create(self, validated_data: dict) -> Figure:
@@ -575,6 +666,9 @@ class EntryCreateSerializer(
             "old_id",
             "version_id",
         )
+        extra_kwargs = {
+            "publishers": {"required": True, "allow_empty": False},
+        }
 
     def validate_figures(self, figures):
         if len(figures) > Entry.FIGURES_PER_ENTRY:
