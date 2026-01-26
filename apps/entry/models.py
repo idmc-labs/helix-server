@@ -746,6 +746,17 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         "ZW",
     }
 
+    # NOTE: This always return year from end_date (logically)
+    def gidd_year(self) -> Union[int, None]:
+        if self.category in Figure.flow_list():
+            if self.start_date.year < self.end_date.year:
+                return self.end_date.year
+            else:
+                return self.start_date.year
+        elif self.category in Figure.stock_list():
+            return self.end_date.year
+        return None
+
     # methods
     @classmethod
     def _filtered_nd_figures(
