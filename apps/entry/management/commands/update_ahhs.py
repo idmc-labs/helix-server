@@ -226,16 +226,18 @@ class Command(BaseCommand):
         if old_household_size == new_household_size.size:
             return
 
+        if new_household_size.size == 0:
+            return
+
         self.stdout.write(
             f"In figure <{figure.pk}>, updating household size from {old_household_size} to {new_household_size.size}"
         )
         figure.household_size = new_household_size.size
 
-        if new_household_size.size == 0:
-            return
-
         old_total_figures = figure.total_figures
         new_total_figures = int(round_half_up(figure.reported * Decimal(str(figure.household_size))))
+        figure.total_figures = new_total_figures
+
         if old_total_figures != new_total_figures:
             self.stdout.write(
                 f"In figure <{figure.pk}>, updating total figures from {old_total_figures} to {new_total_figures}"
@@ -259,18 +261,19 @@ class Command(BaseCommand):
 
                 figure.excerpt_idu = new_excerpt_idu
 
-        figure.total_figures = new_total_figures
-
-        figure_year = figure.gidd_year()
-        if figure_year and figure_year < retroactive_notes_cutoff_year:
-            append_calculation_logic = (
-                f"On {retroactive_update_date.day} of {retroactive_update_date.strftime('%B')} "
-                f"{retroactive_update_date.year}, there was a retrospective update in AHHS; "
-                f"the value changed from {old_household_size} to {new_household_size.size} and "
-                f"the total figure changed from {old_total_figures} to {new_total_figures}. "
-                "Therefore, the text in the analysis may reflect old value."
-            )
-            figure.calculation_logic = f"{figure.calculation_logic}\n\n{append_calculation_logic}"
+            figure_year = figure.gidd_year()
+            if figure_year and figure_year < retroactive_notes_cutoff_year:
+                append_calculation_logic = (
+                    f"On {retroactive_update_date.day} of {retroactive_update_date.strftime('%B')} "
+                    f"{retroactive_update_date.year}, there was a retrospective update in AHHS; "
+                    f"the value changed from {old_household_size} to {new_household_size.size} and "
+                    f"the total figure changed from {old_total_figures} to {new_total_figures}. "
+                    "Therefore, the text in the analysis may reflect old value."
+                )
+                if figure.calculation_logic:
+                    figure.calculation_logic = f"{figure.calculation_logic}\n\n{append_calculation_logic}"
+                else:
+                    figure.calculation_logic = append_calculation_logic
 
         bulk_mgr.add(figure)
 
