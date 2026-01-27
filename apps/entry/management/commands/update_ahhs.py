@@ -224,7 +224,6 @@ class Command(BaseCommand):
             return
 
         if old_household_size == new_household_size.size:
-            self.stdout.write(f"In figure <{figure.pk}>, household size has not changed {old_household_size}.")
             return
 
         self.stdout.write(
@@ -237,9 +236,7 @@ class Command(BaseCommand):
 
         old_total_figures = figure.total_figures
         new_total_figures = int(round_half_up(figure.reported * Decimal(str(figure.household_size))))
-        if old_total_figures == new_total_figures:
-            self.stdout.write(f"In figure <{figure.pk}>, total figures has not changed {old_total_figures}")
-        else:
+        if old_total_figures != new_total_figures:
             self.stdout.write(
                 f"In figure <{figure.pk}>, updating total figures from {old_total_figures} to {new_total_figures}"
             )
@@ -248,7 +245,18 @@ class Command(BaseCommand):
                 # We are adding a hack so that 1000 becomes 1,?0,?0,?0 and it matches any kind of comma separators
                 excerpt_regex = re.compile("\\b" + ",?".join(list(str(old_total_figures))) + "\\b")
                 new_excerpt_idu = re.sub(excerpt_regex, str(new_total_figures), figure.excerpt_idu)
-                self.stdout.write(f"Old excerpt idu ({figure.excerpt_idu}) is changed to ({new_excerpt_idu})")
+
+                if figure.excerpt_idu == new_excerpt_idu:
+                    self.stdout.write(
+                        self.style.WARNING(f"In figure <{figure.pk}>, excerpt idu ({figure.excerpt_idu}) is unchanged")
+                    )
+                else:
+                    self.stdout.write(
+                        self.style.SUCCESS(
+                            f"In figure <{figure.pk}>, excerpt idu ({figure.excerpt_idu}) is changed to ({new_excerpt_idu})"
+                        )
+                    )
+
                 figure.excerpt_idu = new_excerpt_idu
 
         figure.total_figures = new_total_figures
@@ -261,9 +269,6 @@ class Command(BaseCommand):
                 f"the value changed from {old_household_size} to {new_household_size.size} and "
                 f"the total figure changed from {old_total_figures} to {new_total_figures}. "
                 "Therefore, the text in the analysis may reflect old value."
-            )
-            self.stdout.write(
-                f"Appending ({append_calculation_logic}) to 'Analysis, Caveats and Calculation Logic' field in report"
             )
             figure.calculation_logic = f"{figure.calculation_logic}\n\n{append_calculation_logic}"
 
