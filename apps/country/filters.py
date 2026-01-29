@@ -3,8 +3,6 @@ import datetime
 import django_filters
 import graphene
 from django.core.exceptions import ValidationError
-from django.db.models import Value
-from django.db.models.functions import Lower, StrIndex
 from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext
@@ -27,6 +25,7 @@ from utils.figure_filter import (
     FigureFilterHelper,
 )
 from utils.filters import (
+    IDFilter,
     IDListFilter,
     MultiWordSearchFilterSet,
     SimpleInputFilter,
@@ -36,33 +35,25 @@ from utils.filters import (
 
 
 class GeographicalGroupFilter(MultiWordSearchFilterSet):
+    id = IDFilter(field_name="id", lookup_expr="exact")
+
     class Meta:
         model = GeographicalGroup
-        fields = {
-            "id": ["iexact"],
-        }
-
-    @property
-    def searchable_fields(self):
-        return ["name"]
+        fields = []
+        search_fields = ["name"]
 
 
 class CountryRegionFilter(MultiWordSearchFilterSet):
+    id = IDFilter(field_name="id", lookup_expr="exact")
+
     class Meta:
         model = CountryRegion
-        fields = {
-            "id": ["iexact"],
-        }
-
-    @property
-    def searchable_fields(self):
-        return ["name"]
+        fields = []
+        search_fields = ["name"]
 
 
-class CountryFilter(django_filters.FilterSet):
-    country_name = django_filters.CharFilter(method="_filter_name")
-    region_name = django_filters.CharFilter(method="filter_region_name")
-    geographical_group_name = django_filters.CharFilter(method="filter_geo_group_name")
+class CountryFilter(MultiWordSearchFilterSet):
+    id = IDFilter(field_name="id", lookup_expr="exact")
     region_by_ids = StringListFilter(method="filter_regions")
     geo_group_by_ids = StringListFilter(method="filter_geo_groups")
 
@@ -77,10 +68,8 @@ class CountryFilter(django_filters.FilterSet):
 
     class Meta:
         model = Country
-        fields = {
-            "iso3": ["unaccent__icontains"],
-            "id": ["iexact"],
-        }
+        fields = []
+        search_fields = ["idmc_short_name", "iso3"]
 
     def noop(self, qs, name, value):
         return qs
@@ -97,38 +86,6 @@ class CountryFilter(django_filters.FilterSet):
         if not value:
             return qs
         return qs.filter(id__in=Country.objects.filter(crises__in=value).values("id"))
-
-    def _filter_name(self, queryset, name, value):
-        if not value:
-            return queryset
-        return (
-            queryset.annotate(lname=Lower("idmc_short_name"))
-            .annotate(idx=StrIndex("lname", Value(value.lower())))
-            .filter(idx__gt=0)
-            .order_by("idx", "idmc_short_name")
-        )
-
-    def filter_geo_group_name(self, queryset, name, value):
-        if not value:
-            return queryset
-        return (
-            queryset.select_related("geographical_group")
-            .annotate(geo_name=Lower("geographical_group__name"))
-            .annotate(idx=StrIndex("geo_name", Value(value.lower())))
-            .filter(idx__gt=0)
-            .order_by("idx", "geo_name")
-        )
-
-    def filter_region_name(self, queryset, name, value):
-        if not value:
-            return queryset
-        return (
-            queryset.select_related("region")
-            .annotate(region_name=Lower("region__name"))
-            .annotate(idx=StrIndex("region_name", Value(value.lower())))
-            .filter(idx__gt=0)
-            .order_by("idx", "region_name")
-        )
 
     def filter_regions(self, qs, name, value):
         if not value:
@@ -171,22 +128,14 @@ class CountryFilter(django_filters.FilterSet):
         )
 
 
-class MonitoringSubRegionFilter(django_filters.FilterSet):
+class MonitoringSubRegionFilter(MultiWordSearchFilterSet):
+    id = IDFilter(field_name="id", lookup_expr="exact")
     name = django_filters.CharFilter(method="_filter_name")
 
     class Meta:
         model = MonitoringSubRegion
-        fields = ["id"]
-
-    def _filter_name(self, queryset, name, value):
-        if not value:
-            return queryset
-        return (
-            queryset.annotate(lname=Lower("name"))
-            .annotate(idx=StrIndex("lname", Value(value.lower())))
-            .filter(idx__gt=0)
-            .order_by("idx", "name")
-        )
+        fields = []
+        search_fields = ["name"]
 
 
 class CountrySummaryFilter(django_filters.FilterSet):

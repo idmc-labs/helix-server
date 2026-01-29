@@ -35,6 +35,8 @@ class TestEventFilter(HelixTestCase):
         )
         obtained = self.filter_class(data=dict(search="w")).qs
         expected = [e2]
+        print(obtained)
+
         self.assertQuerySetEqual(expected, obtained)
 
     def test_crisis_filter(self):

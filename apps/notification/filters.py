@@ -11,6 +11,17 @@ class NotificationFilter(df.FilterSet):
     created_at_after = df.DateFilter(method="filter_created_at_after")
     created_at_before = df.DateFilter(method="filter_created_at_before")
 
+    class Meta:
+        model = Notification
+        fields = {
+            "recipient": [
+                "exact",
+            ],
+            "is_read": [
+                "exact",
+            ],
+        }
+
     def filter_events(self, qs, name, value):
         if not value:
             return qs
@@ -37,14 +48,3 @@ class NotificationFilter(df.FilterSet):
         if value:
             return qs.filter(created_at__lte=value)
         return qs
-
-    class Meta:
-        model = Notification
-        fields = {
-            "recipient": [
-                "exact",
-            ],
-            "is_read": [
-                "exact",
-            ],
-        }

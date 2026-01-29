@@ -7,8 +7,7 @@ from functools import partial
 import django_filters
 import graphene
 from django import forms
-from django.db.models import Q, Value
-from django.db.models.functions import Lower, StrIndex
+from django.db.models import Q
 from django.db.models.query import QuerySet
 from django_filters import rest_framework as df
 from graphene.types.generic import GenericScalar
@@ -229,18 +228,3 @@ DateTimeLteFilter = partial(
 
 DateGteFilter = partial(django_filters.DateFilter, lookup_expr="gte")
 DateLteFilter = partial(django_filters.DateFilter, lookup_expr="lte")
-
-
-class NameFilterMixin:
-    # NOTE: add a `name` django_filter as follows in the child filters
-    # name = django_filters.CharFilter(method='_filter_name')
-
-    def _filter_name(self, queryset, name, value):
-        if not value:
-            return queryset
-        return (
-            queryset.annotate(lname=Lower("name"))
-            .annotate(idx=StrIndex("lname", Value(value.lower())))
-            .filter(idx__gt=0)
-            .order_by("idx", "name")
-        )

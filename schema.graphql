@@ -29,7 +29,7 @@ input ActorCreateInputType {
 }
 
 input ActorFilterDataInputType {
-  name_Unaccent_Icontains: String
+  search: String
 }
 
 type ActorListType {
@@ -372,8 +372,8 @@ input CommunicationCreateInputType {
 input CommunicationFilterDataInputType {
   contact: ID
   country: ID
-  id: String
-  subjectContains: String
+  search: String
+  id: ID
 }
 
 type CommunicationListType {
@@ -455,7 +455,7 @@ input ContactCreateInputType {
 input ContactFilterDataInputType {
   country: ID
   search: String
-  id: String
+  id: ID
   countriesOfOperation: [String!]
 }
 
@@ -517,7 +517,7 @@ input ContextOfViolenceCreateInputType {
 }
 
 input ContextOfViolenceFilterDataInputType {
-  name_Icontains: String
+  search: String
 }
 
 type ContextOfViolenceListType {
@@ -599,7 +599,7 @@ input ContextualUpdateCreateInputType {
 input ContextualUpdateFilterDataInputType {
   publishDate_Lte: DateTime
   publishDate_Gte: DateTime
-  articleTitle: String
+  search: String
   countries: [String!]
   sources: [String!]
   publishers: [String!]
@@ -660,11 +660,8 @@ input CountryFigureAggregateFilterDataInputType {
 }
 
 input CountryFilterDataInputType {
-  iso3_Unaccent_Icontains: String
-  id_Iexact: Float
-  countryName: String
-  regionName: String
-  geographicalGroupName: String
+  search: String
+  id: ID
   regionByIds: [String!]
   geoGroupByIds: [String!]
   filterFigures: FigureExtractionFilterDataInputType
@@ -699,8 +696,8 @@ type CountryListType {
 }
 
 input CountryRegionFilterDataInputType {
-  id_Iexact: Float
   search: String
+  id: ID
 }
 
 type CountryRegionListType {
@@ -1256,7 +1253,7 @@ type DisaggregatedStratumType {
 }
 
 input DisasterCategoryFilterDataInputType {
-  name_Unaccent_Icontains: String
+  search: String
 }
 
 type DisasterCategoryListType {
@@ -1287,7 +1284,7 @@ input DisasterFilterDataInputType {
 }
 
 input DisasterSubCategoryFilterDataInputType {
-  name_Unaccent_Icontains: String
+  search: String
 }
 
 type DisasterSubCategoryListType {
@@ -1324,11 +1321,11 @@ type DisasterSubObjectType {
 }
 
 input DisasterSubTypeFilterDataInputType {
-  name_Unaccent_Icontains: String
+  search: String
 }
 
 input DisasterTypeFilterDataInputType {
-  name_Unaccent_Icontains: String
+  search: String
 }
 
 type DisasterTypeObjectListType {
@@ -1824,8 +1821,8 @@ enum ExternalApiType {
 }
 
 input ExtractionQueryFilterDataInputType {
-  id: Float
-  name_Unaccent_Icontains: String
+  search: String
+  id: ID
 }
 
 type ExtractionQueryListType {
@@ -2378,8 +2375,8 @@ type GenericNotificationType {
 scalar GenericScalar
 
 input GeographicalGroupFilterDataInputType {
-  id_Iexact: Float
   search: String
+  id: ID
 }
 
 type GeographicalGroupListType {
@@ -2676,7 +2673,8 @@ input MonitoringExpertPortfolioInputType {
 }
 
 input MonitoringSubRegionFilterDataInputType {
-  id: Float
+  search: String
+  id: ID
   name: String
 }
 
@@ -2978,7 +2976,7 @@ type OsvSubObjectType {
 }
 
 input OsvSubTypeFilterDataInputType {
-  name_Icontains: String
+  search: String
 }
 
 type OsvSubTypeList {
@@ -2989,7 +2987,7 @@ type OsvSubTypeList {
 }
 
 input OtherSubTypeFilterDataInputType {
-  name_Icontains: String
+  search: String
 }
 
 type OtherSubTypeList {
@@ -4077,15 +4075,14 @@ type UpdateUser {
 scalar Upload
 
 input UserFilterDataInputType {
-  email: String
   isActive: Boolean
   search: String
+  id: ID
   roleIn: [String!]
   roleNotIn: [String!]
   monitoringSubRegionIn: [ID!]
   monitoringSubRegionNotIn: [ID!]
   includeInactive: Boolean
-  id: String
   permissions: [String!]
 }
 
@@ -4135,7 +4132,7 @@ input UserUpdateInputType {
 }
 
 input ViolenceFilterDataInputType {
-  id_Iexact: Float
+  id: ID
 }
 
 type ViolenceListType {
@@ -4161,7 +4158,7 @@ type ViolenceSubObjectType {
 }
 
 input ViolenceSubTypeFilterDataInputType {
-  id_Iexact: Float
+  id: ID
 }
 
 type ViolenceType {
