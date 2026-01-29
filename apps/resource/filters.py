@@ -8,10 +8,7 @@ class ResourceFilter(MultiWordSearchFilterSet):
     class Meta:
         model = Resource
         fields = {}
-
-    @property
-    def searchable_fields(self):
-        return ["name"]
+        search_fields = ["name"]
 
     @property
     def qs(self):
@@ -29,10 +26,7 @@ class ResourceGroupFilter(MultiWordSearchFilterSet):
     class Meta:
         model = ResourceGroup
         fields = {}
-
-    @property
-    def searchable_fields(self):
-        return ["name"]
+        search_fields = ["name"]
 
     @property
     def qs(self):

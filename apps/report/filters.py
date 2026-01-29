@@ -32,10 +32,7 @@ class ReportFilter(MultiWordSearchFilterSet):
             "change_in_data_availability": ["exact"],
             "retroactive_change": ["exact"],
         }
-
-    @property
-    def searchable_fields(self):
-        return ["name"]
+        search_fields = ["name"]
 
     def filter_countries(self, qs, name, value):
         if value:

@@ -2,20 +2,17 @@ import django_filters
 
 from apps.contact.models import Communication, CommunicationMedium, Contact
 from apps.users.roles import USER_ROLE
-from utils.filters import IDListFilter, MultiWordSearchFilterSet, StringListFilter, generate_type_for_filter_set
+from utils.filters import IDFilter, IDListFilter, MultiWordSearchFilterSet, StringListFilter, generate_type_for_filter_set
 
 
 class ContactFilter(MultiWordSearchFilterSet):
-    id = django_filters.CharFilter(field_name="id", lookup_expr="iexact")
+    id = IDFilter(field_name="id", lookup_expr="exact")
     countries_of_operation = StringListFilter(method="filter_countries")
 
     class Meta:
         model = Contact
         fields = ["country"]
-
-    @property
-    def searchable_fields(self):
-        return ["first_name", "last_name"]
+        search_fields = ["first_name", "last_name"]
 
     def filter_countries(self, qs, name, value):
         if not value:
@@ -29,13 +26,13 @@ class ContactFilter(MultiWordSearchFilterSet):
         return super().qs.distinct()
 
 
-class CommunicationFilter(django_filters.FilterSet):
-    id = django_filters.CharFilter(field_name="id", lookup_expr="iexact")
-    subject_contains = django_filters.CharFilter(field_name="subject", lookup_expr="unaccent__icontains")
+class CommunicationFilter(MultiWordSearchFilterSet):
+    id = IDFilter(field_name="id", lookup_expr="exact")
 
     class Meta:
         model = Communication
         fields = ["contact", "country"]
+        search_fields = ["subject"]
 
     @property
     def qs(self):

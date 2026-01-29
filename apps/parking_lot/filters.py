@@ -11,14 +11,7 @@ class ParkingLotFilter(MultiWordSearchFilterSet):
         fields = {
             "created_by": ["exact"],
         }
-
-    @property
-    def searchable_fields(self):
-        return [
-            "title",
-            "comments",
-            "url",
-        ]
+        search_fields = ["title"]
 
     def filter_status_in(self, queryset, name, value):
         if value:

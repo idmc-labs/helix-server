@@ -42,10 +42,7 @@ class ClientFilter(MultiWordSearchFilterSet):
     class Meta:
         model = Client
         fields = ()
-
-    @property
-    def searchable_fields(self):
-        return ["name", "acronym", "contact_name", "contact_email"]
+        search_fields = ["name", "acronym", "contact_name", "contact_email"]
 
     def filter_use_cases(self, qs, name, value):
         enum_values = [Client.USE_CASE_TYPES[use_case].value for use_case in value]
