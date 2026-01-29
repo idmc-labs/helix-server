@@ -688,7 +688,7 @@ type CountryHouseholdSizeType {
   size: Float!
   dataSourceCategory: String!
   source: String!
-  sourceLink: String!
+  sourceLink: String
   notes: String
   isActive: Boolean!
 }
