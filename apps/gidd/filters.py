@@ -70,6 +70,7 @@ class ConflictFilter(ReleaseMetadataFilter):
         fields = {"id": ["iexact"]}
 
 
+# FIXME: We cannot update this API filter. This is external
 class DisasterFilter(ReleaseMetadataFilter, MultiWordSearchFilterSet):
     hazard_types = IDListFilter(method="filter_hazard_types")
     start_year = django_filters.NumberFilter(method="filter_start_year")

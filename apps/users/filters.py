@@ -5,25 +5,22 @@ from django.db.models import Min
 
 from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio, User
-from utils.filters import IDListFilter, MultiWordSearchFilterSet, StringListFilter, generate_type_for_filter_set
+from utils.filters import IDFilter, IDListFilter, MultiWordSearchFilterSet, StringListFilter, generate_type_for_filter_set
 
 
 class UserFilter(MultiWordSearchFilterSet):
+    id = IDFilter(field_name="id", lookup_expr="exact")
     role_in = StringListFilter(method="filter_role_in")
     role_not_in = StringListFilter(method="filter_role_not_in")
     monitoring_sub_region_in = IDListFilter(method="filter_monitoring_sub_region_in")
     monitoring_sub_region_not_in = IDListFilter(method="filter_monitoring_sub_region_not_in")
     include_inactive = django_filters.BooleanFilter(method="filter_include_inactive")
-    id = django_filters.CharFilter(field_name="id", lookup_expr="iexact")
     permissions = StringListFilter(method="filter_permissions")
 
     class Meta:
         model = User
-        fields = ["email", "is_active"]
-
-    @property
-    def searchable_fields(self):
-        return ["first_name", "full_name", "last_name"]
+        fields = ["is_active"]
+        search_fields = ["first_name", "last_name", "email"]
 
     def filter_role_not_in(self, queryset, name, value):
         roles = [USER_ROLE[role].value for role in value]
