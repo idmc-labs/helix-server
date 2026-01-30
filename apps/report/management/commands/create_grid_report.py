@@ -2,20 +2,23 @@ from apps.report.management.common_helper import BaseReportCommand
 
 
 class Command(BaseReportCommand):
-    help = "Generate GRID report for a specified year(s)."
+    help = """
+        Generate GRID report for a specified year(s).
+        Example usage: python manage.py create_grid_report
+            --report-years 2023 2024
+        """
 
     def add_arguments(self, parser):
         parser.add_argument(
-            "--grid-report-year",
-            "-y",
+            "--report-years",
             nargs="+",
             type=int,
             required=True,
-            help="Space separated list of years, e.g. -y 2023 2024",
+            help="Space separated list of years. E.g. to create GRID 2024 and GRID 2025, use '--report-year 2023 2024'",
         )
 
     def handle(self, *args, **options):
-        grid_report_years = sorted(set(options["grid_report_year"]))
+        grid_report_years = sorted(set(options["report_years"]))
         for year in grid_report_years:
             variables = {
                 "report": {
@@ -24,4 +27,7 @@ class Command(BaseReportCommand):
                     "giddReportYear": year,
                 }
             }
-            self.handle_report_generation(variables, "generic_grid_report")
+            try:
+                self.handle_report_generation(variables, "generic_grid_report")
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f"Report generation failed variables: {variables}, error: {e}"))
