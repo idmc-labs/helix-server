@@ -22,8 +22,8 @@ class TestCountryFilter(HelixTestCase):
 
     def test_country_name_filter(self):
         QUERY = "ne"
-        obtained = self.filter_class(data=dict(country_name=QUERY), queryset=Country.objects.all()).qs
-        expected = [self.c2, self.c1, self.c3, self.c4]
+        obtained = self.filter_class(data=dict(search=QUERY), queryset=Country.objects.all()).qs
+        expected = [self.c1, self.c2, self.c3, self.c4]
         self.assertEqual(expected, list(obtained))
 
     def test_events_filters(self):
@@ -71,7 +71,7 @@ class TestCountryFilter(HelixTestCase):
         self.c2.save()
         self.c3.region = reg2
         self.c3.save()
-        obtained = self.filter_class(data=dict(region_name=reg.name), queryset=Country.objects.all()).qs
+        obtained = self.filter_class(data=dict(search=reg.name), queryset=Country.objects.all()).qs
         expected = [self.c1, self.c2]
         self.assertEqual(sorted([each.id for each in expected]), sorted([each.id for each in obtained]))
         obtained = self.filter_class(data=dict(region_by_ids=[str(reg2.id)]), queryset=Country.objects.all()).qs
