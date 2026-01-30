@@ -1,4 +1,5 @@
 import logging
+import typing
 
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
@@ -14,59 +15,65 @@ from apps.report.models import Report
 logger = logging.getLogger(__name__)
 
 
-def double_data(Model, queryset, mutate=None):
+YEAR_DIFF = 9
+
+
+def double_data(Model, queryset, mutate=None, post_mutate=None):
     logger.info(f"Copying {Model.__name__} data")
 
-    new_entities_with_old_entity_id = []
+    old_entities_with_new_entities: typing.List[typing.Tuple[typing.Any, typing.Any]] = []
 
     for old_entity in queryset:
-        old_entity_id = old_entity.pk
         new_entity = Model(
             **{field.name: getattr(old_entity, field.name) for field in old_entity._meta.fields if field.name != "id"}
         )
         if mutate:
             mutate(new_entity, old_entity)
-        new_entities_with_old_entity_id.append((old_entity_id, new_entity))
 
-    new_entities = [item[1] for item in new_entities_with_old_entity_id]
-    created_entities_count = 0
+        old_entities_with_new_entities.append((old_entity, new_entity))
 
-    created_objects = []
-    for i in range(0, len(new_entities), 1000):
-        batch = new_entities[i : i + 1000]
-        objects = Model.objects.bulk_create(batch)
-        created_entities_count += len(objects)
-        created_objects.extend(objects)
+    new_entities = [item[1] for item in old_entities_with_new_entities]
 
-    # # FIXME: Do we need to read from created_entities instead?
-    mapping = {}
-    for (old_id, _), created in zip(new_entities_with_old_entity_id, created_objects):
-        mapping[old_id] = created.id
+    created_entities: typing.List[typing.Any] = Model.objects.bulk_create(
+        new_entities,
+        batch_size=1000,
+    )
 
-    logger.info(f"Created {created_entities_count} {Model.__name__} items")
+    assert len(new_entities) == len(created_entities), f"All {Model.__name__} items must be created."
 
+    # NOTE: We can use bulk update here.
+    if post_mutate:
+        logger.info(f"Adding relationship for {Model.__name__}")
+        for (old_entity, _), created_entity in zip(old_entities_with_new_entities, created_entities):
+            post_mutate(created_entity, old_entity)
+
+    mapping: typing.Dict[int, int] = {}
+    for (old_entity, _), created_entity in zip(old_entities_with_new_entities, created_entities):
+        mapping[old_entity.pk] = created_entity.pk
+
+    logger.info(f"Created {len(created_entities)} {Model.__name__} items")
     return mapping
 
 
 def double_crisis():
-    def mutate_new_crisis(new_crisis, old_crisis=None):
+    def mutate_new_crisis(new_crisis, old_crisis):
         if new_crisis.start_date and new_crisis.end_date:
-            new_crisis.start_date -= relativedelta(years=8)
-            new_crisis.end_date -= relativedelta(years=8)
+            new_crisis.start_date -= relativedelta(years=YEAR_DIFF)
+            new_crisis.end_date -= relativedelta(years=YEAR_DIFF)
 
-    crisis_queryset = Crisis.objects.iterator(chunk_size=1000)
-    old_to_new_crisis_map = double_data(Crisis, crisis_queryset, mutate_new_crisis)
+    crisis_qs = Crisis.objects.iterator(chunk_size=1000)
+    old_to_new_crisis_map = double_data(Crisis, crisis_qs, mutate_new_crisis)
 
     return old_to_new_crisis_map
 
 
 def double_event(old_to_new_crisis_map):
-    def mutate_new_event(new_event, old_event=None):
-        new_event.start_date -= relativedelta(years=8)
-        new_event.end_date -= relativedelta(years=8)
+    def mutate_new_event(new_event, old_event):
+        # FIXME: Currently, we are not duplicating event codes.
+        new_event.start_date -= relativedelta(years=YEAR_DIFF)
+        new_event.end_date -= relativedelta(years=YEAR_DIFF)
         # NOTE: Attach new crisis to new event
-        new_event_crisis_id = old_to_new_crisis_map.get(new_event.crisis_id)
-        new_event.crisis = Crisis.objects.filter(id=new_event_crisis_id).first()
+        new_event.crisis_id = old_to_new_crisis_map.get(new_event.crisis_id)
 
     event_queryset = Event.objects.iterator(chunk_size=1000)
     old_to_new_event_map = double_data(Event, event_queryset, mutate_new_event)
@@ -91,19 +98,19 @@ def double_attachment():
 
 def double_entry(old_to_new_preview_map, old_to_new_attachment_map):
     def mutate_entry(new_entry, old_entry):
-        new_entry.associated_parked_item = None
-        if old_entry.preview:
-            new_entry_preview_id = old_to_new_preview_map.get(old_entry.preview.id)
-            new_entry.preview = SourcePreview.objects.filter(id=new_entry_preview_id).first()
-        else:
-            new_entry.preview = None
-        if old_entry.document:
-            new_entry_document_id = old_to_new_attachment_map.get(old_entry.document.id)
-            new_entry.document = Attachment.objects.filter(id=new_entry_document_id).first()
-        else:
-            new_entry.document = None
+        new_entry.associated_parked_item_id = None
 
-    entry_queryset = Entry.objects.filter(figures__isnull=False).distinct().order_by("id").iterator(chunk_size=1000)
+        if old_entry.preview:
+            new_entry.preview_id = old_to_new_preview_map.get(old_entry.preview.id)
+        else:
+            new_entry.preview_id = None
+
+        if old_entry.document:
+            new_entry.document_id = old_to_new_attachment_map.get(old_entry.document.id)
+        else:
+            new_entry.document_id = None
+
+    entry_queryset = Entry.objects.iterator(chunk_size=1000)
     old_to_new_entry_map = double_data(Entry, entry_queryset, mutate_entry)
 
     return old_to_new_entry_map
@@ -116,94 +123,54 @@ def double_figure_location():
     return old_to_new_location_map
 
 
+def double_figure(
+    old_to_new_entry_map,
+    old_to_new_location_map,
+    old_to_new_event_map,
+):
+    def mutate_figure(new_figure_obj, old_figure):
+        new_figure_obj.start_date -= relativedelta(years=YEAR_DIFF)
+        new_figure_obj.end_date -= relativedelta(years=YEAR_DIFF)
+
+        old_entry_id = new_figure_obj.entry_id
+        new_figure_obj.entry_id = old_to_new_entry_map.get(old_entry_id)
+
+        old_event_id = new_figure_obj.event_id
+        new_figure_obj.event_id = old_to_new_event_map.get(old_event_id)
+
+    def post_mutate_figure(new_figure, old_figure):
+        old_location_ids = old_figure.geo_locations.values_list("id", flat=True)
+        new_location_ids = [old_to_new_location_map.get(old_location_id) for old_location_id in old_location_ids]
+        new_figure.geo_locations.set(new_location_ids)
+
+    figure_qs = Figure.objects.iterator(chunk_size=1000)
+    double_data(Figure, figure_qs, mutate_figure, post_mutate_figure)
+
+
 def double_report():
     def mutate_new_report(new_report, old_report=None):
         if new_report.filter_figure_start_after and new_report.filter_figure_end_before:
-            new_report.filter_figure_start_after -= relativedelta(years=8)
-            new_report.filter_figure_end_before -= relativedelta(years=8)
+            new_report.filter_figure_start_after -= relativedelta(years=YEAR_DIFF)
+            new_report.filter_figure_end_before -= relativedelta(years=YEAR_DIFF)
 
         if new_report.gidd_report_year:
-            if new_report.gidd_report_year >= 2024:
-                new_report.gidd_report_year = None
-            else:
-                new_report.gidd_report_year -= 8
+            new_report.gidd_report_year -= YEAR_DIFF
 
         if new_report.gidd_published_date:
-            new_report.gidd_published_date -= relativedelta(years=8)
+            new_report.gidd_published_date -= relativedelta(years=YEAR_DIFF)
 
     report_queryset = Report.objects.iterator(chunk_size=1000)
     double_data(Report, report_queryset, mutate_new_report)
 
 
-def double_figure_data(old_to_new_entry_map, old_to_new_location_map, old_to_new_event_map):
-    def chunked_queryset(qs, chunk_size):
-        last_id = 0
-        while True:
-            chunk = list(qs.filter(id__gt=last_id).order_by("id")[:chunk_size])
-            if not chunk:
-                break
-            yield chunk
-            last_id = chunk[-1].id
-
-    # Double Figure data
-    logger.info("Copying Figure data")
-    figure_location_map = []  # [(new_figure_obj, new_locations),]
-    figure_qs = Figure.objects.all()
-    new_figure_count = 0
-    for figure_chunk in chunked_queryset(figure_qs, 1000):
-        new_figure_objects = []
-        for figure in figure_chunk:
-            old_entry_id = figure.entry.id
-
-            new_figure_obj = Figure(
-                **{field.name: getattr(figure, field.name) for field in figure._meta.fields if field.name != "id"}
-            )
-            new_entry_id = old_to_new_entry_map.get(old_entry_id)
-            new_figure_obj.entry = Entry.objects.filter(id=new_entry_id).first()
-            if not new_figure_obj.entry:
-                continue
-
-            old_figure_event_id = figure.event.id
-            new_event_id = old_to_new_event_map.get(old_figure_event_id)
-            new_figure_obj.event = Event.objects.filter(id=new_event_id).first()
-            if not new_figure_obj.event:
-                continue
-
-            new_figure_obj.start_date -= relativedelta(years=8)
-            new_figure_obj.end_date -= relativedelta(years=8)
-            new_figure_objects.append(new_figure_obj)
-
-            # map new figure and new locations
-            old_locations = figure.geo_locations.all()
-            new_locations_uuids = [old_to_new_location_map.get(old_loc.id) for old_loc in old_locations]
-            figure_location_map.append((new_figure_obj, new_locations_uuids))
-
-        objects = Figure.objects.bulk_create(new_figure_objects, batch_size=1000)
-        new_figure_count += len(objects)
-
-    # set new locations to new figures
-    for new_figure, locations_uuids in figure_location_map:
-        locations = FigureLocation.objects.filter(uuid__in=locations_uuids)
-        new_figure.geo_locations.set(locations)
-
-    logger.info(f"Created {new_figure_count} Figure items")
-
-
 class Command(BaseCommand):
-    help = "Generate IDUS dump files"
+    help = "Clone the data in the system"
 
     @transaction.atomic
     def handle(self, *args, **options):
         if not settings.ENABLE_DANGER_MODE:
             logger.warning("ENABLE_DANGER_MODE needs to be enabled to use this command")
             return
-
-        # Crisis
-        old_to_new_crisis_map = double_crisis()
-
-        # Event
-        old_to_new_event_map = double_event(old_to_new_crisis_map)
-        del old_to_new_crisis_map
 
         # Source preview
         old_to_new_preview_map = double_source_preview()
@@ -213,15 +180,21 @@ class Command(BaseCommand):
 
         # Entry
         old_to_new_entry_map = double_entry(old_to_new_preview_map, old_to_new_attachment_map)
-
         del old_to_new_preview_map
         del old_to_new_attachment_map
 
-        # FiugreLocation
+        # Crisis
+        old_to_new_crisis_map = double_crisis()
+
+        # Event
+        old_to_new_event_map = double_event(old_to_new_crisis_map)
+        del old_to_new_crisis_map
+
+        # Figure Location
         old_to_new_location_map = double_figure_location()
 
         # Figure
-        double_figure_data(old_to_new_entry_map, old_to_new_location_map, old_to_new_event_map)
+        double_figure(old_to_new_entry_map, old_to_new_location_map, old_to_new_event_map)
         del old_to_new_entry_map
         del old_to_new_location_map
         del old_to_new_event_map
@@ -229,4 +202,4 @@ class Command(BaseCommand):
         # Report
         double_report()
 
-        logger.info("Generating double data SUCCESS")
+        logger.info("Generated data!")
