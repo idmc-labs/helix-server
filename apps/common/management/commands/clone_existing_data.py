@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 YEAR_DIFF = 9
 
 
-def double_data(Model, queryset, mutate=None, post_mutate=None):
+def clone_data(Model, queryset, mutate=None, post_mutate=None):
     logger.info(f"Copying {Model.__name__} data")
 
     old_entities_with_new_entities: typing.List[typing.Tuple[typing.Any, typing.Any]] = []
@@ -55,19 +55,19 @@ def double_data(Model, queryset, mutate=None, post_mutate=None):
     return mapping
 
 
-def double_crisis():
+def clone_crisis():
     def mutate_new_crisis(new_crisis, old_crisis):
         if new_crisis.start_date and new_crisis.end_date:
             new_crisis.start_date -= relativedelta(years=YEAR_DIFF)
             new_crisis.end_date -= relativedelta(years=YEAR_DIFF)
 
     crisis_qs = Crisis.objects.iterator(chunk_size=1000)
-    old_to_new_crisis_map = double_data(Crisis, crisis_qs, mutate_new_crisis)
+    old_to_new_crisis_map = clone_data(Crisis, crisis_qs, mutate_new_crisis)
 
     return old_to_new_crisis_map
 
 
-def double_event(old_to_new_crisis_map):
+def clone_event(old_to_new_crisis_map):
     def mutate_new_event(new_event, old_event):
         # FIXME: Currently, we are not duplicating event codes.
         new_event.start_date -= relativedelta(years=YEAR_DIFF)
@@ -76,27 +76,27 @@ def double_event(old_to_new_crisis_map):
         new_event.crisis_id = old_to_new_crisis_map.get(new_event.crisis_id)
 
     event_queryset = Event.objects.iterator(chunk_size=1000)
-    old_to_new_event_map = double_data(Event, event_queryset, mutate_new_event)
+    old_to_new_event_map = clone_data(Event, event_queryset, mutate_new_event)
 
     return old_to_new_event_map
 
 
-def double_source_preview():
+def clone_source_preview():
     preview_queryset = SourcePreview.objects.filter(entry__isnull=False).iterator(chunk_size=1000)
-    old_to_new_preview_map = double_data(SourcePreview, preview_queryset)
+    old_to_new_preview_map = clone_data(SourcePreview, preview_queryset)
 
     return old_to_new_preview_map
 
 
-def double_attachment():
+def clone_attachment():
     entry_attachments_ids = Entry.objects.filter(document__isnull=False).values_list("document__id", flat=True)
     attachment_queryset = Attachment.objects.filter(id__in=entry_attachments_ids).iterator(chunk_size=1000)
-    old_to_new_attachment_map = double_data(Attachment, attachment_queryset)
+    old_to_new_attachment_map = clone_data(Attachment, attachment_queryset)
 
     return old_to_new_attachment_map
 
 
-def double_entry(old_to_new_preview_map, old_to_new_attachment_map):
+def clone_entry(old_to_new_preview_map, old_to_new_attachment_map):
     def mutate_entry(new_entry, old_entry):
         new_entry.associated_parked_item_id = None
 
@@ -111,19 +111,19 @@ def double_entry(old_to_new_preview_map, old_to_new_attachment_map):
             new_entry.document_id = None
 
     entry_queryset = Entry.objects.iterator(chunk_size=1000)
-    old_to_new_entry_map = double_data(Entry, entry_queryset, mutate_entry)
+    old_to_new_entry_map = clone_data(Entry, entry_queryset, mutate_entry)
 
     return old_to_new_entry_map
 
 
-def double_figure_location():
+def clone_figure_location():
     figure_location_queryset = FigureLocation.objects.iterator(chunk_size=1000)
-    old_to_new_location_map = double_data(FigureLocation, figure_location_queryset)
+    old_to_new_location_map = clone_data(FigureLocation, figure_location_queryset)
 
     return old_to_new_location_map
 
 
-def double_figure(
+def clone_figure(
     old_to_new_entry_map,
     old_to_new_location_map,
     old_to_new_event_map,
@@ -144,10 +144,10 @@ def double_figure(
         new_figure.geo_locations.set(new_location_ids)
 
     figure_qs = Figure.objects.iterator(chunk_size=1000)
-    double_data(Figure, figure_qs, mutate_figure, post_mutate_figure)
+    clone_data(Figure, figure_qs, mutate_figure, post_mutate_figure)
 
 
-def double_report():
+def clone_report():
     def mutate_new_report(new_report, old_report=None):
         if new_report.filter_figure_start_after and new_report.filter_figure_end_before:
             new_report.filter_figure_start_after -= relativedelta(years=YEAR_DIFF)
@@ -160,7 +160,7 @@ def double_report():
             new_report.gidd_published_date -= relativedelta(years=YEAR_DIFF)
 
     report_queryset = Report.objects.iterator(chunk_size=1000)
-    double_data(Report, report_queryset, mutate_new_report)
+    clone_data(Report, report_queryset, mutate_new_report)
 
 
 class Command(BaseCommand):
@@ -173,33 +173,33 @@ class Command(BaseCommand):
             return
 
         # Source preview
-        old_to_new_preview_map = double_source_preview()
+        old_to_new_preview_map = clone_source_preview()
 
         # Document
-        old_to_new_attachment_map = double_attachment()
+        old_to_new_attachment_map = clone_attachment()
 
         # Entry
-        old_to_new_entry_map = double_entry(old_to_new_preview_map, old_to_new_attachment_map)
+        old_to_new_entry_map = clone_entry(old_to_new_preview_map, old_to_new_attachment_map)
         del old_to_new_preview_map
         del old_to_new_attachment_map
 
         # Crisis
-        old_to_new_crisis_map = double_crisis()
+        old_to_new_crisis_map = clone_crisis()
 
         # Event
-        old_to_new_event_map = double_event(old_to_new_crisis_map)
+        old_to_new_event_map = clone_event(old_to_new_crisis_map)
         del old_to_new_crisis_map
 
         # Figure Location
-        old_to_new_location_map = double_figure_location()
+        old_to_new_location_map = clone_figure_location()
 
         # Figure
-        double_figure(old_to_new_entry_map, old_to_new_location_map, old_to_new_event_map)
+        clone_figure(old_to_new_entry_map, old_to_new_location_map, old_to_new_event_map)
         del old_to_new_entry_map
         del old_to_new_location_map
         del old_to_new_event_map
 
         # Report
-        double_report()
+        clone_report()
 
-        logger.info("Generated data!")
+        logger.info("Successfully cloned data!")
