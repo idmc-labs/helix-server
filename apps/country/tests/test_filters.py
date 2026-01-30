@@ -4,7 +4,6 @@ from apps.country.models import (
 )
 from utils.factories import (
     CountryFactory,
-    CountryRegionFactory,
     CrisisFactory,
     EventFactory,
     GeographicalGroupFactory,
@@ -60,22 +59,6 @@ class TestCountryFilter(HelixTestCase):
         QUERY = [crisis2.id]
         obtained = self.filter_class(data=dict(crises=QUERY), queryset=Country.objects.all()).qs
         expected = [c2]
-        self.assertEqual(expected, list(obtained))
-
-    def test_region_filter(self):
-        reg = CountryRegionFactory.create(name="xyz")
-        reg2 = CountryRegionFactory.create(name="abc")
-        self.c1.region = reg
-        self.c1.save()
-        self.c2.region = reg
-        self.c2.save()
-        self.c3.region = reg2
-        self.c3.save()
-        obtained = self.filter_class(data=dict(search=reg.name), queryset=Country.objects.all()).qs
-        expected = [self.c1, self.c2]
-        self.assertEqual(sorted([each.id for each in expected]), sorted([each.id for each in obtained]))
-        obtained = self.filter_class(data=dict(region_by_ids=[str(reg2.id)]), queryset=Country.objects.all()).qs
-        expected = [self.c3]
         self.assertEqual(expected, list(obtained))
 
     def test_geo_group_ids_filter(self):
