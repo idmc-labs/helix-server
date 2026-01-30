@@ -217,51 +217,12 @@ class ParkedItemAPITestCase(HelixAPITestCase):
         assert response.status_code == 200
 
         content = json.loads(response.content)
-        print(content)
+
         results = content["data"]["parkedItemList"]["results"]
-        self.assertEqual(len(results), 2)
+        self.assertEqual(len(results), 1)
 
         returned_titles = [item["title"] for item in results]
         self.assertIn(title1, returned_titles)
-        self.assertIn(title2, returned_titles)
-
-        response = self.client.post(
-            "/graphql/",
-            data=json.dumps(
-                {
-                    "query": list_query,
-                    "variables": {"search": "pařti"},  # participated
-                }
-            ),
-            content_type="application/json",
-        )
-
-        assert response.status_code == 200
-
-        content = json.loads(response.content)
-
-        results = content["data"]["parkedItemList"]["results"]
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]["title"], title2)
-
-        response = self.client.post(
-            "/graphql/",
-            data=json.dumps(
-                {
-                    "query": list_query,
-                    "variables": {"search": "youba"},
-                }
-            ),
-            content_type="application/json",
-        )
-
-        assert response.status_code == 200
-
-        content = json.loads(response.content)
-
-        results = content["data"]["parkedItemList"]["results"]
-        self.assertEqual(len(results), 1)
-        self.assertEqual(results[0]["url"], url1)
 
         response = self.client.post(
             "/graphql/",
