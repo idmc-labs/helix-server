@@ -85,7 +85,10 @@ env = environ.Env(
     COPILOT_SERVICE_NAME=(str, None),
     # Pytest
     PYTEST_XDIST_WORKER=(str, None),
+    ENABLE_DANGER_MODE=(bool, False),
 )
+
+ENABLE_DANGER_MODE = env("ENABLE_DANGER_MODE")
 
 # Attachment Size Limits
 DJANGO_MAX_UPLOAD_SIZE = 20971520  # Size defined in bytes (20 MB)
@@ -147,6 +150,7 @@ LOCAL_APPS = [
     "report",
     "notification",
     "gidd",
+    "common",
 ]
 
 THIRD_PARTY_APPS = [
