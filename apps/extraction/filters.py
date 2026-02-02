@@ -314,7 +314,7 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
     class Meta:
         model = Figure
         fields = []
-        search_fields = ["entry_article_title"]
+        search_fields = ["entry__article_title"]
 
     def filter_filter_figure_created_by(self, qs, name, value):
         if value:
