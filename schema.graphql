@@ -1276,8 +1276,8 @@ type DisasterCategoryType {
 input DisasterFilterDataInputType {
   id_Iexact: Float
   releaseEnvironment: String
-  search: String
   hazardTypes: [ID!]
+  eventName: String
   startYear: Float
   endYear: Float
   countriesIso3: [String!]

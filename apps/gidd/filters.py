@@ -6,7 +6,7 @@ from rest_framework import serializers
 
 from apps.crisis.models import Crisis
 from apps.entry.models import ExternalApiDump
-from utils.filters import IDListFilter, MultiWordSearchFilterSet, StringListFilter
+from utils.filters import IDListFilter, StringListFilter
 
 from .enums import CRISIS_TYPE_PUBLIC
 from .models import (
@@ -70,9 +70,9 @@ class ConflictFilter(ReleaseMetadataFilter):
         fields = {"id": ["iexact"]}
 
 
-# FIXME: We cannot update this API filter. This is external
-class DisasterFilter(ReleaseMetadataFilter, MultiWordSearchFilterSet):
+class DisasterFilter(ReleaseMetadataFilter):
     hazard_types = IDListFilter(method="filter_hazard_types")
+    event_name = django_filters.CharFilter(method="filter_event_name")
     start_year = django_filters.NumberFilter(method="filter_start_year")
     end_year = django_filters.NumberFilter(method="filter_end_year")
     countries_iso3 = StringListFilter(method="filter_countries_iso3")
@@ -81,9 +81,8 @@ class DisasterFilter(ReleaseMetadataFilter, MultiWordSearchFilterSet):
         model = Disaster
         fields = {"id": ["iexact"]}
 
-    @property
-    def searchable_fields(self):
-        return ["event_name"]
+    def filter_event_name(self, queryset, name, value):
+        return queryset.filter(event_name__icontains=value)
 
     def filter_hazard_types(self, queryset, name, value):
         return queryset.filter(hazard_type__in=value)
