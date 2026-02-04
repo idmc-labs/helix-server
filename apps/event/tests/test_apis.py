@@ -42,6 +42,8 @@ class TestDataMigrationTestCase(HelixGraphQLTestCase):
             "entry": entry1,
             "country": country1,
             "category": Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
+            "start_date": "2020-01-01",
+            "end_date": "2020-01-30",
         }
         FigureFactory.create_batch(10, event=self.event1, **figure_kwargs)
         FigureFactory.create_batch(15, event=self.event2, **figure_kwargs)
@@ -52,7 +54,9 @@ class TestDataMigrationTestCase(HelixGraphQLTestCase):
         UnifiedReviewCommentFactory.create_batch(3, event=self.event2)
 
         # to arise validation error : Choose your start date after event start date
-        FigureFactory.create(event=self.event3, start_date=self.event2.start_date - timedelta(days=2), **figure_kwargs)
+        figure = FigureFactory.create(event=self.event3, **figure_kwargs)
+        figure.start_date = self.event2.start_date - timedelta(days=2)
+        figure.save()
 
     def test_event_merge(self):
         data = {self.event1.id: [self.event2.id, self.event3.id]}
@@ -209,6 +213,20 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         self.assertFalse(content["data"]["createEvent"]["ok"], content)
         self.assertIn("countries", [item["field"] for item in content["data"]["createEvent"]["errors"]], content)
 
+    def test_event_validation(self) -> None:
+        input_data = self.input
+        response = self.query(self.mutation, input_data=input_data.pop("countries"))
+        self.assertResponseErrors(response)
+
+        input_data["countries"] = None
+        response = self.query(self.mutation, input_data=input_data)
+        self.assertResponseErrors(response)
+
+        input_data["countries"] = []
+        response = self.query(self.mutation, input_data=input_data)
+        content = json.loads(response.content)
+        assert not content["data"]["createEvent"]["ok"]
+
 
 class TestUpdateEvent(HelixGraphQLTestCase):
     def setUp(self) -> None:
@@ -256,7 +274,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         EventCodeFactory.create(
             event=self.event, country=country1, event_code_type=EventCode.EVENT_CODE_TYPE.ACLED_ID, event_code="Code-1"
         )
-        v_sub_type = ViolenceSubTypeFactory.create()
+        self.v_sub_type = ViolenceSubTypeFactory.create()
         self.input = {
             "id": self.event.id,
             "endDate": "2020-10-29",
@@ -264,7 +282,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
             "eventType": "CONFLICT",
             "name": "xyz",
             "startDate": "2020-10-20",
-            "violenceSubType": v_sub_type.id,
+            "violenceSubType": self.v_sub_type.id,
             "eventCodes": [
                 {
                     "id": self.event_code1.id,
@@ -302,7 +320,34 @@ class TestUpdateEvent(HelixGraphQLTestCase):
 
     def test_valid_event_update(self) -> None:
         country1 = CountryFactory.create()
-        response = self.query(self.mutation, input_data=self.input)
+        input = {
+            "id": self.event.id,
+            "endDate": "2020-10-29",
+            "eventNarrative": "event narrative",
+            "eventType": "CONFLICT",
+            "name": "xyz",
+            "startDate": "2020-10-20",
+            "violenceSubType": self.v_sub_type.id,
+            "countries": [
+                country1.id,
+            ],
+            "eventCodes": [
+                {
+                    "id": self.event_code1.id,
+                    "uuid": str(uuid4()),
+                    "country": country1.id,
+                    "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
+                    "eventCode": "NEP-2021-AAA",
+                },
+                {
+                    "country": country1.id,
+                    "uuid": str(uuid4()),
+                    "eventCodeType": "IFRC_APPEAL_ID",
+                    "eventCode": "NEP-2021-CCC",
+                },
+            ],
+        }
+        response = self.query(self.mutation, input_data=input)
         content = json.loads(response.content)
 
         self.assertResponseNoErrors(response)

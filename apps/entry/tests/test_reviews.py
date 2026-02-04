@@ -10,7 +10,10 @@ from utils.factories import (
     EntryFactory,
     EventFactory,
     FigureFactory,
+    OrganizationFactory,
     UnifiedReviewCommentFactory,
+    ViolenceFactory,
+    ViolenceSubTypeFactory,
 )
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
@@ -18,6 +21,9 @@ from utils.tests import HelixGraphQLTestCase, create_user_with_role
 class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.event = EventFactory.create()
+        self.source = OrganizationFactory.create()
+        self.violence = ViolenceFactory.create()
+        self.violence_sub_type = ViolenceSubTypeFactory.create(violence=self.violence)
         self.regional_coordinator = create_user_with_role(USER_ROLE.REGIONAL_COORDINATOR.name)
         self.monitoring_expert = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
@@ -275,6 +281,7 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.name,
                 "role": Figure.ROLE.RECOMMENDED.name,
                 "startDate": "2020-10-10",
+                "endDate": "2020-10-15",
                 "includeIdu": True,
                 "excerptIdu": "excerpt abc",
                 "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
@@ -285,8 +292,11 @@ class TestEventReviewGraphQLTestCase(HelixGraphQLTestCase):
                 "householdSize": 20,
                 "tags": [],
                 "contextOfViolence": [],
-                "sources": [],
+                "sources": [
+                    self.source.id,
+                ],
                 "entry": entry.id,
+                "violenceSubType": self.violence_sub_type.id,
             },
         ]
 
