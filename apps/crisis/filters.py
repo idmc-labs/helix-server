@@ -41,7 +41,7 @@ class CrisisFilter(MultiWordSearchFilterSet):
             "start_date": ["lt", "lte", "gt", "gte"],
             "end_date": ["lt", "lte", "gt", "gte"],
         }
-        search_fields = ["name", "events__name"]
+        multi_word_search_fields = ["name", "events__name"]
 
     def noop(self, qs, name, value):
         return qs

@@ -14,7 +14,7 @@ class ContextualUpdateFilter(MultiWordSearchFilterSet):
         fields = {
             "publish_date": ["lte", "gte"],
         }
-        search_fields = ["article_title"]
+        multi_word_search_fields = ["article_title"]
 
     def filter_m2m(self, qs, field_name, value):
         if not value:

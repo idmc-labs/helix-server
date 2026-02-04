@@ -31,10 +31,10 @@ class MultiWordSearchFilterSet(df.FilterSet):
     @property
     def searchable_fields(self) -> typing.List[str]:
         """
-        Defines the fields to be included in the multi_word_search logic in Meta.search_fields.
+        Defines the fields to be included in the multi_word_search logic in Meta.multi_word_search_fields.
         """
 
-        return getattr(self.Meta, "search_fields", [])  # type:ignore child class has a Meta
+        return getattr(self.Meta, "multi_word_search_fields", [])  # type:ignore child class has a Meta
 
     def traverse_field_path(
         self,
@@ -50,11 +50,7 @@ class MultiWordSearchFilterSet(df.FilterSet):
         parts = field_path.split("__")
 
         for part in parts:
-            try:
-                field = model._meta.get_field(part)
-            except Exception:
-                # field is not of the model
-                continue
+            field = model._meta.get_field(part)
 
             yield field
 
