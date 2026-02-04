@@ -157,6 +157,8 @@ class TestBulkOperation(HelixGraphQLTestCase):
             created_by=self.editor,
             category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
             geo_locations=FigureLocationFactory.create_batch(3),
+            start_date="2020-01-01",
+            end_date="2020-01-30",
         )
         self.force_login(self.editor)
 

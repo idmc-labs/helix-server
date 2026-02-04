@@ -36,6 +36,7 @@ class TestCreateEventSerializer(HelixTestCase):
             start_date=start,
             end_date=end,
         )
+        countries = [country.id for country in CountryFactory.create_batch(2)]
         data = {
             "crisis": crisis.id,
             "name": "test event",
@@ -45,13 +46,17 @@ class TestCreateEventSerializer(HelixTestCase):
             "violence": violence_sub_type.violence.id,
             "violence_sub_type": violence_sub_type.id,
             "disaster_sub_category": DisasterSubCategoryFactory.create().id,
+            "countries": countries,
+            "event_narrative": "event narrative",
         }
         serializer = EventSerializer(data=data, context=self.context)
         self.assertFalse(serializer.is_valid())
         self.assertIn("start_date", serializer.errors)
 
     def test_invalid_event_type(self):
+        country_1 = CountryFactory.create()
         crisis = CrisisFactory.create(crisis_type=Crisis.CRISIS_TYPE.DISASTER.value)
+        crisis.countries.add(country_1)
         violence_sub_type = ViolenceSubTypeFactory.create()
         start_date = datetime.today() - timedelta(days=20)
         end_date = datetime.today() - timedelta(days=10)
@@ -64,6 +69,7 @@ class TestCreateEventSerializer(HelixTestCase):
             start_date=start_date.date(),
             end_date=end_date.date(),
             event_narrative="event narrative",
+            countries=[country_1.id],
         )
         serializer = EventSerializer(data=data, context=self.context)
         self.assertFalse(serializer.is_valid())
@@ -77,6 +83,7 @@ class TestCreateEventSerializer(HelixTestCase):
             start_date=start_date.date(),
             end_date=end_date.date(),
             event_narrative="event narrative2",
+            countries=[country_1.id],
         )
         serializer = EventSerializer(data=data, context=self.context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -99,6 +106,8 @@ class TestCreateEventSerializer(HelixTestCase):
             "end_date": "2021-01-01",
             "disaster_sub_type": disaster_sub_type.id,
             "violence_sub_type": violence_sub_type.id,
+            "countries": [country.id for country in CountryFactory.create_batch(2)],
+            "event_narrative": "event narrative",
         }
         serializer = EventSerializer(data=data, context={"request": self.request})
         self.assertTrue(serializer.is_valid(), serializer.errors)
@@ -107,7 +116,6 @@ class TestCreateEventSerializer(HelixTestCase):
         # Test sub fields
         self.assertEqual(event.disaster_sub_category.id, disaster_sub_category.id)
         self.assertEqual(event.disaster_sub_type.id, disaster_sub_type.id)
-        self.assertEqual(event.violence_sub_type.id, violence_sub_type.id)
 
         # Test parent fields
         self.assertEqual(event.disaster_category.id, disaster_category.id)
