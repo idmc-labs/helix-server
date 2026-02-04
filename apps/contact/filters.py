@@ -12,7 +12,7 @@ class ContactFilter(MultiWordSearchFilterSet):
     class Meta:
         model = Contact
         fields = ["country"]
-        search_fields = ["first_name", "last_name"]
+        multi_word_search_fields = ["first_name", "last_name"]
 
     def filter_countries(self, qs, name, value):
         if not value:
@@ -32,7 +32,7 @@ class CommunicationFilter(MultiWordSearchFilterSet):
     class Meta:
         model = Communication
         fields = ["contact", "country"]
-        search_fields = ["subject"]
+        multi_word_search_fields = ["subject"]
 
     @property
     def qs(self):

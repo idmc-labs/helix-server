@@ -36,4 +36,4 @@ class FigureTagFilter(MultiWordSearchFilterSet):
     class Meta:
         model = FigureTag
         fields = []
-        search_fields = ["name"]
+        multi_word_search_fields = ["name"]

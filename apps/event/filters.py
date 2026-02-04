@@ -72,7 +72,7 @@ class EventFilter(MultiWordSearchFilterSet):
             "ignore_qa": ["exact"],
         }
         # NOTE: event_code__event_code is not using exact match
-        search_fields = ["name", "event_code__event_code"]
+        multi_word_search_fields = ["name", "event_code__event_code"]
 
     def noop(self, qs, name, value):
         return qs
@@ -252,56 +252,56 @@ class ActorFilter(MultiWordSearchFilterSet):
     class Meta:
         model = Actor
         fields = []
-        search_fields = ["name"]
+        multi_word_search_fields = ["name"]
 
 
 class DisasterSubTypeFilter(MultiWordSearchFilterSet):
     class Meta:
         model = DisasterSubType
         fields = []
-        search_fields = ["name"]
+        multi_word_search_fields = ["name"]
 
 
 class DisasterTypeFilter(MultiWordSearchFilterSet):
     class Meta:
         model = DisasterType
         fields = []
-        search_fields = ["name"]
+        multi_word_search_fields = ["name"]
 
 
 class DisasterCategoryFilter(MultiWordSearchFilterSet):
     class Meta:
         model = DisasterCategory
         fields = []
-        search_fields = ["name"]
+        multi_word_search_fields = ["name"]
 
 
 class DisasterSubCategoryFilter(MultiWordSearchFilterSet):
     class Meta:
         model = DisasterSubCategory
         fields = []
-        search_fields = ["name"]
+        multi_word_search_fields = ["name"]
 
 
 class OsvSubTypeFilter(MultiWordSearchFilterSet):
     class Meta:
         model = OsvSubType
         fields = []
-        search_fields = ["name"]
+        multi_word_search_fields = ["name"]
 
 
 class OtherSubTypeFilter(MultiWordSearchFilterSet):
     class Meta:
         model = OtherSubType
         fields = []
-        search_fields = ["name"]
+        multi_word_search_fields = ["name"]
 
 
 class ContextOfViolenceFilter(MultiWordSearchFilterSet):
     class Meta:
         model = ContextOfViolence
         fields = []
-        search_fields = ["name"]
+        multi_word_search_fields = ["name"]
 
 
 class ViolenceFilter(django_filters.FilterSet):

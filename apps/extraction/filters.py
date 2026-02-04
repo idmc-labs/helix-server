@@ -70,7 +70,7 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
     class Meta:
         model = Entry
         fields = {}
-        search_fields = ["article_title"]
+        multi_word_search_fields = ["article_title"]
 
     def filter_created_by(self, qs, name, value):
         if not value:
@@ -314,7 +314,7 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
     class Meta:
         model = Figure
         fields = []
-        search_fields = ["entry__article_title"]
+        multi_word_search_fields = ["entry__article_title"]
 
     def filter_filter_figure_created_by(self, qs, name, value):
         if value:
@@ -586,7 +586,7 @@ class ExtractionQueryFilter(MultiWordSearchFilterSet):
     class Meta:
         model = ExtractionQuery
         fields = []
-        search_fields = ["name"]
+        multi_word_search_fields = ["name"]
 
     @property
     def qs(self):
