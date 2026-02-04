@@ -16,6 +16,8 @@ from utils.factories import (
     EntryFactory,
     EventFactory,
     FigureFactory,
+    OrganizationFactory,
+    ViolenceSubTypeFactory,
 )
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
 
@@ -34,11 +36,15 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.country_1 = CountryFactory.create(iso2="JP", iso3="JPN")
         self.country_2 = CountryFactory.create(iso2="AF", iso3="AFC")
-        self.event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT.value)
+        self.event = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.CONFLICT.value, start_date="2015-01-01", end_date="2025-01-30"
+        )
         self.event.countries.add(self.country_1, self.country_2)
         self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.entry = EntryFactory.create(article_title="test", publish_date="2020-02-02")
+        self.source = OrganizationFactory.create()
+        self.violence_sub_type = ViolenceSubTypeFactory.create()
 
         self.f1, self.f2, self.f3 = FigureFactory.create_batch(3, event=self.event, entry=self.entry)
 
@@ -83,6 +89,9 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
             "geoLocations": [self.geo_location_1],
             "country": self.country_1.id,
+            "startDate": "2020-01-01",
+            "endDate": "2020-01-30",
+            "violenceSubType": self.violence_sub_type.id,
         }
 
         self.figure_bulk_mutation = """
@@ -135,6 +144,9 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
                 "event": self.event.id,
                 "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
                 "entry": self.entry.id,
+                "sources": [self.source.id],
+                "endDate": "2019-10-30",
+                "violenceSubType": self.violence_sub_type.id,
             },
             {
                 "uuid": str(uuid4()),
@@ -154,6 +166,9 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
                 "event": self.event.id,
                 "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
                 "entry": self.entry.id,
+                "sources": [self.source.id],
+                "endDate": "2020-10-30",
+                "violenceSubType": self.violence_sub_type.id,
             },
             {
                 "uuid": str(uuid4()),
@@ -173,6 +188,9 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
                 "event": self.event.id,
                 "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
                 "entry": self.entry.id,
+                "sources": [self.source.id],
+                "endDate": "2022-10-30",
+                "violenceSubType": self.violence_sub_type.id,
             },
         ]
 
@@ -224,6 +242,10 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
                 "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
                 "geoLocations": [self.geo_location_1],
                 "country": self.country_1.id,
+                "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.name,
+                "startDate": "2025-01-05",
+                "endDate": "2025-01-10",
+                "violenceSubType": self.violence_sub_type.id,
             },
             {
                 "id": self.f2.id,
@@ -236,6 +258,10 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
                 "figureCause": Crisis.CRISIS_TYPE.CONFLICT.name,
                 "geoLocations": [self.geo_location_1],
                 "country": self.country_1.id,
+                "category": Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.name,
+                "startDate": "2025-01-05",
+                "endDate": "2025-01-10",
+                "violenceSubType": self.violence_sub_type.id,
             },
         ]
         figure_ids = [self.f3.id]
@@ -281,6 +307,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         figure_item_input.update(
             {
                 "reported": 30,
+                "isDisaggregated": True,
                 "disaggregationLocationCamp": 200,
                 "disaggregationLocationNonCamp": 10,
             }
@@ -528,18 +555,8 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         figure_input_2 = copy(self.figure_item_input)
 
         # Test with correct event ids
-        figure_input_1.update(
-            {
-                "id": figure1.id,
-                "event": event1.id,
-            }
-        )
-        figure_input_2.update(
-            {
-                "id": figure2.id,
-                "event": event2.id,
-            }
-        )
+        figure_input_1.update({"id": figure1.id, "event": event1.id, "violenceSubType": self.violence_sub_type.id})
+        figure_input_2.update({"id": figure2.id, "event": event2.id, "violenceSubType": self.violence_sub_type.id})
         response = self.query(
             self.figure_bulk_mutation,
             variables={
