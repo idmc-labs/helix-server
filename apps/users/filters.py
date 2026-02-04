@@ -20,7 +20,7 @@ class UserFilter(MultiWordSearchFilterSet):
     class Meta:
         model = User
         fields = ["is_active"]
-        search_fields = ["first_name", "last_name", "email"]
+        multi_word_search_fields = ["first_name", "last_name", "email"]
 
     def filter_role_not_in(self, queryset, name, value):
         roles = [USER_ROLE[role].value for role in value]

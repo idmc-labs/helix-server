@@ -40,7 +40,7 @@ class GeographicalGroupFilter(MultiWordSearchFilterSet):
     class Meta:
         model = GeographicalGroup
         fields = []
-        search_fields = ["name"]
+        multi_word_search_fields = ["name"]
 
 
 class CountryRegionFilter(MultiWordSearchFilterSet):
@@ -49,7 +49,7 @@ class CountryRegionFilter(MultiWordSearchFilterSet):
     class Meta:
         model = CountryRegion
         fields = []
-        search_fields = ["name"]
+        multi_word_search_fields = ["name"]
 
 
 class CountryFilter(MultiWordSearchFilterSet):
@@ -69,7 +69,7 @@ class CountryFilter(MultiWordSearchFilterSet):
     class Meta:
         model = Country
         fields = []
-        search_fields = ["idmc_short_name", "iso3"]
+        multi_word_search_fields = ["idmc_short_name", "iso3"]
 
     def noop(self, qs, name, value):
         return qs
@@ -135,7 +135,7 @@ class MonitoringSubRegionFilter(MultiWordSearchFilterSet):
     class Meta:
         model = MonitoringSubRegion
         fields = []
-        search_fields = ["name"]
+        multi_word_search_fields = ["name"]
 
 
 class CountrySummaryFilter(django_filters.FilterSet):

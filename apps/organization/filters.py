@@ -19,7 +19,7 @@ class OrganizationFilter(MultiWordSearchFilterSet):
     class Meta:
         model = Organization
         fields = []
-        search_fields = ["name", "short_name"]
+        multi_word_search_fields = ["name", "short_name"]
 
     def filter_countries(self, qs, name, value):
         if not value:
