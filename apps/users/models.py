@@ -13,6 +13,8 @@ from django.db.models.query import QuerySet
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
+from utils import query_explanation_ops as ops
+
 from .roles import PERMISSIONS, USER_ROLE
 
 logger = logging.getLogger(__name__)
@@ -107,6 +109,14 @@ class User(AbstractUser):
         filtered_headers = [header for header in headers.keys() if header not in excluded_headers]
         filtered_headers.append("roles")
 
+        ops.persist(
+            users.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="users",
+        )
         return {
             "headers": headers,
             "data": users.values(*filtered_headers),

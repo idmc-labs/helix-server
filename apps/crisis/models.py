@@ -9,6 +9,7 @@ from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 from apps.contrib.commons import DATE_ACCURACY
 from apps.contrib.models import MetaInformationAbstractModel
 from apps.users.models import User
+from utils import query_explanation_ops as ops
 
 
 class Crisis(MetaInformationAbstractModel, models.Model):
@@ -160,6 +161,14 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                 ),
             }
 
+        ops.persist(
+            data.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="crisis",
+        )
         return {
             "headers": headers,
             "data": data.values(*[header for header in headers.keys()]),

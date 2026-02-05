@@ -9,6 +9,7 @@ from django_enumfield import enum
 from apps.common.enums import GENDER_TYPE
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 from apps.contrib.models import MetaInformationArchiveAbstractModel
+from utils import query_explanation_ops as ops
 
 User = get_user_model()
 
@@ -121,6 +122,14 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
                 ),
             }
 
+        ops.persist(
+            data.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="contact",
+        )
         return {
             "headers": headers,
             "data": data.values(*[header for header in headers.keys()]),

@@ -8,6 +8,7 @@ from django_enumfield import enum
 
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 from apps.contrib.models import MetaInformationArchiveAbstractModel, SoftDeleteModel
+from utils import query_explanation_ops as ops
 
 User = get_user_model()
 
@@ -118,6 +119,14 @@ class Organization(MetaInformationArchiveAbstractModel, SoftDeleteModel, models.
                 ),
             }
 
+        ops.persist(
+            data.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="organization",
+        )
         return {
             "headers": headers,
             "data": data.values(*[header for header in headers.keys()]),

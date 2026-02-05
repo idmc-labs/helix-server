@@ -42,6 +42,7 @@ from apps.report.utils import (
     report_stat_flow_country,
     report_stat_flow_region,
 )
+from utils import query_explanation_ops as ops
 from utils.common import get_string_from_list
 from utils.fields import CachedFileField
 
@@ -302,6 +303,14 @@ class Report(MetaInformationArchiveAbstractModel, QueryAbstractModel, FigureDisa
                 "retroactive_change": "Yes" if datum["retroactive_change"] else "No",
             }
 
+        ops.persist(
+            data.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="report",
+        )
         return {
             "headers": headers,
             "data": data.values(*[header for header in headers.keys()]),

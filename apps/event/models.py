@@ -19,6 +19,7 @@ from apps.contrib.models import (
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 from apps.users.models import USER_ROLE, User
+from utils import query_explanation_ops as ops
 from utils.common import add_clone_prefix
 from utils.db import Array
 
@@ -76,6 +77,14 @@ class ContextOfViolence(MetaInformationAbstractModel, NameAttributedModels):
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.order_by("created_at")
 
+        ops.persist(
+            data.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="context-of-violance",
+        )
         return {
             "headers": headers,
             "data": data.values(*[header for header in headers.keys()]),
@@ -123,6 +132,14 @@ class Actor(MetaInformationAbstractModel, NameAttributedModels):
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.order_by("id")
 
+        ops.persist(
+            data.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="actor",
+        )
         return {
             "headers": headers,
             "data": data.values(*[header for header in headers.keys()]),
@@ -532,6 +549,14 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 ),
             }
 
+        ops.persist(
+            data.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="event",
+        )
         return {
             "headers": headers,
             "data": data.values(*[header for header in headers.keys()]),

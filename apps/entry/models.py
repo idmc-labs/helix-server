@@ -52,6 +52,7 @@ from apps.parking_lot.models import ParkedItem
 from apps.review.models import Review
 from helix.settings import FIGURE_NUMBER
 from helix.storages import get_external_storage
+from utils import query_explanation_ops as ops
 from utils.common import get_string_from_list
 from utils.fields import CachedFileField, generate_full_media_url
 
@@ -1285,6 +1286,14 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 },
             }
         ]
+        ops.persist(
+            values.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="figure",
+        )
         return {
             "headers": headers,
             "data": values,
@@ -1401,6 +1410,14 @@ class FigureTag(MetaInformationAbstractModel):
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs.order_by("created_at")
 
+        ops.persist(
+            data.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="figure-tag",
+        )
         return {
             "headers": headers,
             "data": data.values(*[header for header in headers.keys()]),
@@ -1617,6 +1634,14 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                 "figure_causes": get_string_from_list([cause.label if cause else "" for cause in datum["categories"]]),
             }
 
+        ops.persist(
+            entries.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="entry",
+        )
         return {
             "headers": headers,
             "data": entries.values(*[header for header in headers.keys()]),

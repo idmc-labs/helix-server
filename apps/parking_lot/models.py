@@ -7,6 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
 from apps.contrib.models import MetaInformationAbstractModel
+from utils import query_explanation_ops as ops
 
 User = get_user_model()
 
@@ -95,6 +96,14 @@ class ParkedItem(MetaInformationAbstractModel):
 
             return {**datum, "status": get_enum_label("status", ParkedItem.PARKING_LOT_STATUS)}
 
+        ops.persist(
+            values.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="contact",
+        )
         return {
             "headers": headers,
             "data": values,

@@ -18,6 +18,7 @@ from apps.crisis.models import Crisis
 from apps.entry.models import Entry, Figure
 from apps.users.enums import USER_ROLE
 from apps.users.models import Portfolio, User
+from utils import query_explanation_ops as ops
 from utils.fields import generate_full_media_url
 
 
@@ -187,6 +188,14 @@ class MonitoringSubRegion(models.Model):
             )
         )
 
+        ops.persist(
+            portfolios.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="monitoring-region",
+        )
         return {
             "headers": headers,
             "data": portfolios.values(*[header for header in headers.keys()]),
@@ -430,6 +439,14 @@ class Country(models.Model):
             .order_by("idmc_short_name")
         )
 
+        ops.persist(
+            data.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="contact",
+        )
         return {
             "headers": headers,
             "data": data.values(*[header for header in headers.keys()]),

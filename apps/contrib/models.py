@@ -15,6 +15,7 @@ from django_enumfield import enum
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR
 from apps.contrib.redis_client_track import set_client_ids_in_redis
 from apps.users.models import User
+from utils import query_explanation_ops as ops
 from utils.fields import CachedFileField
 
 logger = logging.getLogger(__name__)
@@ -425,6 +426,14 @@ class Client(MetaInformationAbstractModel):
                 "opted_out_of_emails": "Yes" if datum["opted_out_of_emails"] else "No",
             }
 
+        ops.persist(
+            data.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="client",
+        )
         return {
             "headers": headers,
             "data": data.values(*[header for header in headers.keys()]),
@@ -514,6 +523,14 @@ class ClientTrackInfo(models.Model):
                 "api_description": metadata.description,
             }
 
+        ops.persist(
+            data.explain(
+                analyze=True,
+                format="json",
+                buffers=True,
+            ),
+            app_module="contact",
+        )
         return {
             "headers": OrderedDict(
                 **headers,
