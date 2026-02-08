@@ -102,7 +102,7 @@ class ParkedItem(MetaInformationAbstractModel):
                 format="json",
                 buffers=True,
             ),
-            app_module="contact",
+            app_module="parking_lot",
         )
         return {
             "headers": headers,

@@ -194,7 +194,7 @@ class MonitoringSubRegion(models.Model):
                 format="json",
                 buffers=True,
             ),
-            app_module="monitoring-region",
+            app_module="monitoring_sub_region",
         )
         return {
             "headers": headers,

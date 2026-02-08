@@ -115,7 +115,7 @@ class User(AbstractUser):
                 format="json",
                 buffers=True,
             ),
-            app_module="users",
+            app_module="user",
         )
         return {
             "headers": headers,

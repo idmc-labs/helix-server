@@ -1416,7 +1416,7 @@ class FigureTag(MetaInformationAbstractModel):
                 format="json",
                 buffers=True,
             ),
-            app_module="figure-tag",
+            app_module="figure_tag",
         )
         return {
             "headers": headers,
