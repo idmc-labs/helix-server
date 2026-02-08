@@ -62,6 +62,7 @@ class PERMISSION_ENTITY(enum.Enum):
     gidd = 21
     client = 22
     figuretag = 23
+    hulkbulkimport = 24
 
     __labels__ = {
         crisis: _("Crisis"),
@@ -88,6 +89,7 @@ class PERMISSION_ENTITY(enum.Enum):
         gidd: _("GIDD"),
         client: _("Client"),
         figuretag: _("Figure Tag"),
+        hulkbulkimport: _("Hulk Bulk Import"),
     }
 
 
