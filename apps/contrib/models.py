@@ -24,6 +24,7 @@ def global_upload_to(instance, filename: str) -> str:
     return f"contrib/{instance.__class__.__name__.lower()}/{uuid4()}/{uuid4()}/{filename}"
 
 
+# TODO: Either remove this or use this where uuid are used
 class UUIDAbstractModel(models.Model):
     uuid = models.UUIDField(verbose_name="UUID", unique=True, blank=True, default=uuid4)
 
