@@ -112,4 +112,3 @@ docker compose exec server python manage.py init_roles
 ## Adding new Role
 
 TODO
-

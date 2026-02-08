@@ -155,6 +155,7 @@ LOCAL_APPS = [
     "notification",
     "gidd",
     "common",
+    "hulk",
 ]
 
 THIRD_PARTY_APPS = [

@@ -3133,6 +3133,7 @@ enum PERMISSION_ENTITY {
   gidd
   client
   figuretag
+  hulkbulkimport
 }
 
 enum PREVIEW_STATUS {
