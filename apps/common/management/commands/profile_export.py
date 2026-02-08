@@ -3,6 +3,7 @@ import time
 from types import SimpleNamespace
 
 from django.conf import settings
+from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand
 from django.db.models import DurationField, ExpressionWrapper, F
 from django.utils import timezone
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 class Command(BaseCommand):
+    storage_folder = "profile-benchmark"
     bot = HelixInternalBot()
     context = SimpleNamespace(
         user=bot.user,
@@ -50,6 +52,23 @@ class Command(BaseCommand):
         microseconds = time_difference.microseconds
 
         return f"{hours}:{minutes:02}:{seconds:02}.{microseconds:06}"
+    def cleanup_profile_storage_folder(self):
+        def delete_recursive(path):
+            try:
+                directories, files = default_storage.listdir(path)
+            except Exception as e:
+                logger.exception("Exceptation", e)
+                return
+
+            for filename in files:
+                file_path = f"{path}/{filename}"
+                logger.info(f"Deleting file: {file_path}")
+                default_storage.delete(file_path)
+
+            for dirname in directories:
+                delete_recursive(f"{path}/{dirname}")
+
+        delete_recursive(self.storage_folder)
 
     def parse_response_and_get_export_counts(self, response: ExecutionResult):
         result_data = response.data or {}
@@ -153,6 +172,9 @@ class Command(BaseCommand):
         assert pending_exports == 0
 
         datetime_now = timezone.now()
+
+        logger.info("Cleaning the storage used by profiler")
+        self.cleanup_profile_storage_folder()
 
         logger.info("Starting export")
         with RuntimeProfile("profile export"):
