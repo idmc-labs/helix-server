@@ -12,6 +12,8 @@ ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
 
 WORKDIR /code
 
+COPY libs ./libs
+
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
