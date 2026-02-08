@@ -1,20 +1,21 @@
+import json
 import logging
 import time
+import typing
 from types import SimpleNamespace
 
-from django.conf import settings
 from django.core.files.storage import default_storage
 from django.core.management.base import BaseCommand
 from django.db.models import DurationField, ExpressionWrapper, F
 from django.utils import timezone
 from graphql.execution import ExecutionResult
+from tabulate import tabulate
 from tqdm import tqdm
 
 from apps.contrib.models import ExcelDownload
 from apps.users.roles import USER_ROLE
 from apps.users.utils import HelixInternalBot
 from helix.schema import schema
-from utils.common import RuntimeProfile
 
 logger = logging.getLogger(__name__)
 
@@ -46,12 +47,8 @@ class Command(BaseCommand):
     export_timeout_seconds = 60 * 60
 
     def format_timedelta(self, time_difference: timezone.timedelta) -> str:
-        total_seconds = int(time_difference.total_seconds())
-        hours, remainder = divmod(total_seconds, 3600)
-        minutes, seconds = divmod(remainder, 60)
-        microseconds = time_difference.microseconds
+        return f"{time_difference.total_seconds():.3f}"
 
-        return f"{hours}:{minutes:02}:{seconds:02}.{microseconds:06}"
     def cleanup_profile_storage_folder(self):
         def delete_recursive(path):
             try:
@@ -110,7 +107,7 @@ class Command(BaseCommand):
             while True:
                 completed_ids = set(
                     ExcelDownload.objects.filter(
-                        status=2,
+                        status=ExcelDownload.EXCEL_GENERATION_STATUS.COMPLETED,
                         completed_at__isnull=False,
                         completed_at__gte=datetime_now,
                     ).values_list("id", flat=True)
@@ -121,7 +118,12 @@ class Command(BaseCommand):
                     pbar.update(len(new_ids))
                     counted_ids.update(new_ids)
 
-                pending_count = ExcelDownload.objects.filter(status__in=[0, 1]).count()
+                pending_count = ExcelDownload.objects.filter(
+                    status__in=[
+                        ExcelDownload.EXCEL_GENERATION_STATUS.IN_PROGRESS,
+                        ExcelDownload.EXCEL_GENERATION_STATUS.PENDING,
+                    ]
+                ).count()
 
                 pbar.set_postfix(completed=len(counted_ids), pending=pending_count, failed=failed_export_count)
 
@@ -134,9 +136,9 @@ class Command(BaseCommand):
 
                 time.sleep(0.5)
 
-    def show_export_time_profile(self, datetime_now: timezone.datetime):
+    def get_export_time_profiles(self, datetime_now: timezone.datetime) -> typing.Dict[str, str]:
         qs = ExcelDownload.objects.filter(
-            status=2,
+            status=ExcelDownload.EXCEL_GENERATION_STATUS.COMPLETED,
             completed_at__gte=datetime_now,
         )
 
@@ -151,21 +153,47 @@ class Command(BaseCommand):
             .values("download_type", "download_time")
         )
 
-        formatted_downloads = [
-            {d["download_type"].name.replace("_", " ").title(): self.format_timedelta(d["download_time"])} for d in downloads
-        ]
+        return {
+            download["download_type"].name.lower(): self.format_timedelta(download["download_time"])
+            for download in downloads
+        }
 
-        logger.info(formatted_downloads)
+    def show_query_explanation_time_profile(self, export_profile: typing.Dict[str, str]):
+        _, files = default_storage.listdir(self.storage_folder)
+
+        benchmarks = []
+
+        for name in files:
+            if not name.endswith(".json"):
+                continue
+
+            path = f"{self.storage_folder}/{name}"
+
+            with default_storage.open(path, "rb") as f:
+                payload = json.loads(f.read())
+
+            benchmarks.append(
+                [
+                    # BUG: the file extension can be of any length
+                    name[:-5],
+                    payload["context"]["execution_time_ms"],
+                    payload["context"]["planning_time_ms"],
+                    # BUG: query explanation time and excel generation can't always be directly linked
+                    export_profile.get(name[:-5]),
+                ]
+            )
+        headers = ["Module", "Planning Time(MS)", "Execution Time(MS)", "Excel Generation Time(S)"]
+        print(tabulate(benchmarks, headers=headers, tablefmt="github"))
 
     def handle(self, *args, **options):
-        assert getattr(settings, "DEBUG") is True, "This command should run in DEBUG=True mode."
-
         def generate_mutation(items):
             return "mutation MyMutation {" + "".join(f"{item}(filters: {{}}) {{ ok }}" for item in items) + "}"
 
         mutation_query = generate_mutation(self.export_endpoints)
 
-        pending_exports = ExcelDownload.objects.filter(status__in=[0, 1]).count()
+        pending_exports = ExcelDownload.objects.filter(
+            status__in=[ExcelDownload.EXCEL_GENERATION_STATUS.PENDING, ExcelDownload.EXCEL_GENERATION_STATUS.IN_PROGRESS]
+        ).count()
         logger.info(f"Pending exports before start: {pending_exports}")
 
         # wait the pending export to complete
@@ -177,13 +205,15 @@ class Command(BaseCommand):
         self.cleanup_profile_storage_folder()
 
         logger.info("Starting export")
-        with RuntimeProfile("profile export"):
-            with self.bot.temporary_role(USER_ROLE.ADMIN):
-                response = schema.execute(
-                    mutation_query,
-                    context_value=self.context,
-                )
-                total_exports, failed_exports = self.parse_response_and_get_export_counts(response)
-            self.handle_progress(datetime_now, total_exports, failed_exports)
+        with self.bot.temporary_role(USER_ROLE.ADMIN):
+            response = schema.execute(
+                mutation_query,
+                context_value=self.context,
+            )
+            total_exports, failed_exports = self.parse_response_and_get_export_counts(response)
+        self.handle_progress(datetime_now, total_exports, failed_exports)
 
-        self.show_export_time_profile(datetime_now)
+        export_profile = self.get_export_time_profiles(datetime_now)
+
+        logger.info("Showing query explanation time profile")
+        self.show_query_explanation_time_profile(export_profile)
