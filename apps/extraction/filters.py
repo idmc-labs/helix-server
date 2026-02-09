@@ -36,6 +36,7 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
     filter_figure_sources = IDListFilter(method="filter_sources")
     filter_entry_publishers = IDListFilter(method="filter_publishers")
     filter_entry_article_title = df.CharFilter(method="multi_word_search")
+    # NOTE: We want the multi_word_search to be filter_entry_article_title not search.
     search = None
     filter_figure_created_by = IDListFilter(method="filter_created_by")
 
@@ -288,6 +289,7 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
     filter_figure_end_before = df.DateFilter(method="filter_time_frame_before")
     filter_figure_roles = StringListFilter(method="filter_filter_figure_roles")
     filter_entry_article_title = df.CharFilter(method="multi_word_search")
+    # NOTE: We want the multi_word_search to be filter_entry_article_title not search.
     search = None
     filter_figure_tags = IDListFilter(method="filter_tags")
     filter_figure_crisis_types = StringListFilter(method="filter_crisis_types")
