@@ -4,7 +4,7 @@ import typing
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from django.db import transaction
+from django.db import models, transaction
 
 from apps.contrib.models import Attachment, SourcePreview
 from apps.crisis.models import Crisis
@@ -177,6 +177,17 @@ def clone_figure(
 
 
 def clone_report():
+    def get_many_to_many_field_names(model):
+        return [
+            field.name
+            for field in model._meta.get_fields()
+            if isinstance(field, models.ManyToManyField) and not field.auto_created
+        ]
+
+    def clone_many_to_many_field(new_report, old_report, field_name):
+        old_ids = getattr(old_report, field_name).values_list("id", flat=True)
+        getattr(new_report, field_name).set(old_ids)
+
     def mutate_new_report(new_report, old_report=None):
         if new_report.filter_figure_start_after and new_report.filter_figure_end_before:
             new_report.filter_figure_start_after -= relativedelta(years=YEAR_DIFF)
@@ -188,8 +199,12 @@ def clone_report():
         if new_report.gidd_published_date:
             new_report.gidd_published_date -= relativedelta(years=YEAR_DIFF)
 
+    def post_mutate_report(new_report, old_report):
+        for field in get_many_to_many_field_names(Report):
+            clone_many_to_many_field(new_report, old_report, field)
+
     report_queryset = Report.objects.iterator(chunk_size=1000)
-    clone_data(Report, report_queryset, mutate_new_report)
+    clone_data(Report, report_queryset, mutate_new_report, post_mutate_report)
 
 
 class Command(BaseCommand):
