@@ -29,7 +29,7 @@ class MultiWordSearchFilterSet(df.FilterSet):
     search = django_filters.CharFilter(method="multi_word_search")
 
     @property
-    def searchable_fields(self) -> typing.List[str]:
+    def multiword_searchable_fields(self) -> typing.List[str]:
         """
         Defines the fields to be included in the multi_word_search logic in Meta.multi_word_search_fields.
         """
@@ -85,7 +85,7 @@ class MultiWordSearchFilterSet(df.FilterSet):
         filter_condition = Q()
         for term in query_terms:
             search_term_filter_condition = Q()
-            for field in self.searchable_fields:
+            for field in self.multiword_searchable_fields:
                 lookup = f"{field}__unaccent__icontains"
                 # check in every searchable fields
                 search_term_filter_condition |= Q(**{lookup: term})
@@ -99,14 +99,14 @@ class MultiWordSearchFilterSet(df.FilterSet):
         return queryset
 
     def multi_word_search(self, queryset: QuerySet, name, search_query: str) -> QuerySet:
-        if not search_query or not self.searchable_fields:
+        if not search_query or not self.multiword_searchable_fields:
             return queryset
 
         normalized_search_query = self.normalize_search_value(search_query)
 
         search_query_terms = set(normalized_search_query.split())
 
-        results_should_be_distinct = self.search_should_be_distinct(self.searchable_fields)
+        results_should_be_distinct = self.search_should_be_distinct(self.multiword_searchable_fields)
 
         queryset = self.apply_search_filter(queryset, search_query_terms, results_should_be_distinct)
 
