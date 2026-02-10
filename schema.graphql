@@ -1223,9 +1223,9 @@ input DisaggregatedAgeInputType {
   id: ID
   sex: GENDER_TYPE!
   uuid: String!
-  value: Int
-  ageFrom: Int
-  ageTo: Int
+  value: Int!
+  ageFrom: Int!
+  ageTo: Int!
 }
 
 type DisaggregatedAgeListType {
@@ -2713,7 +2713,6 @@ input MonitoringExpertPortfolioInputType {
 input MonitoringSubRegionFilterDataInputType {
   search: String
   id: ID
-  name: String
 }
 
 type MonitoringSubRegionListType {
