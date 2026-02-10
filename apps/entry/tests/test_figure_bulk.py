@@ -357,18 +357,17 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         self.f3.household_size = None
         self.f3.save()
 
-        figure_item_input = copy(self.figure_item_input)
-        figure_item_input.update(
-            {
-                "unit": Figure.UNIT.HOUSEHOLD.name,  # missing household_size
-            }
-        )
         mock_bulk_update_figure_manager_add_event.assert_not_called()
         mock_bulk_update_figure_manager_exit.assert_not_called()
         response = self.query(
             self.figure_bulk_mutation,
             variables={
-                "items": [figure_item_input],
+                "items": [
+                    {
+                        **self.figure_item_input,
+                        "unit": Figure.UNIT.HOUSEHOLD.name,
+                    }
+                ],
                 "delete_ids": [],
             },
         )
@@ -385,6 +384,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         figure_item_input = copy(self.figure_item_input)
         figure_item_input.update(
             {
+                "isDisaggregated": True,
                 "disaggregationAge": [
                     # invalid: category and sex is duplicated
                     {"uuid": "e4857d07-736c-4ff3-a21f-51170f0551c9", "ageFrom": 10, "ageTo": 20, "sex": "MALE", "value": 5},
