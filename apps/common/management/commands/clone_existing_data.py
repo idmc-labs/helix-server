@@ -16,10 +16,14 @@ from utils.common import RuntimeProfile
 logger = logging.getLogger(__name__)
 
 
+ModelVar = typing.TypeVar("ModelVar", bound=models.Model)
+
+
+# NOTE: We already have data/report for year 2025 to 2017
 YEAR_DIFF = 9
 
 
-def get_many_to_many_field_names(model):
+def get_many_to_many_field_names(model: typing.Type[models.Model]):
     return [
         field.name
         for field in model._meta.get_fields()
@@ -27,18 +31,23 @@ def get_many_to_many_field_names(model):
     ]
 
 
-def clone_many_to_many_field(new_object, old_object, field_name):
+def clone_many_to_many_field(new_object: ModelVar, old_object: ModelVar, field_name: str):
     old_ids = getattr(old_object, field_name).values_list("id", flat=True)
     getattr(new_object, field_name).set(old_ids)
 
 
-def clone_data(Model, queryset, mutate=None, post_mutate=None):
-    logger.info(f"Copying {Model.__name__} data")
+def clone_data(
+    model: typing.Type[ModelVar],
+    queryset: typing.Iterator[ModelVar],
+    mutate: typing.Optional[typing.Callable[[ModelVar, ModelVar], None]] = None,
+    post_mutate: typing.Optional[typing.Callable[[ModelVar, ModelVar], None]] = None,
+):
+    logger.info(f"Copying {model.__name__} data")
 
-    old_entities_with_new_entities: typing.List[typing.Tuple[typing.Any, typing.Any]] = []
+    old_entities_with_new_entities: typing.List[typing.Tuple[ModelVar, ModelVar]] = []
 
     for old_entity in queryset:
-        new_entity = Model(
+        new_entity = model(
             **{field.name: getattr(old_entity, field.name) for field in old_entity._meta.fields if field.name != "id"}
         )
         if mutate:
@@ -48,16 +57,16 @@ def clone_data(Model, queryset, mutate=None, post_mutate=None):
 
     new_entities = [item[1] for item in old_entities_with_new_entities]
 
-    created_entities: typing.List[typing.Any] = Model.objects.bulk_create(
+    created_entities: typing.List[ModelVar] = model.objects.bulk_create(
         new_entities,
         batch_size=1000,
     )
 
-    assert len(new_entities) == len(created_entities), f"All {Model.__name__} items must be created."
+    assert len(new_entities) == len(created_entities), f"All {model.__name__} items must be created."
 
     # NOTE: We can use bulk update here.
     if post_mutate:
-        logger.info(f"Adding relationship for {Model.__name__}")
+        logger.info(f"Adding relationship for {model.__name__}")
         for (old_entity, _), created_entity in zip(old_entities_with_new_entities, created_entities):
             post_mutate(created_entity, old_entity)
 
@@ -65,17 +74,17 @@ def clone_data(Model, queryset, mutate=None, post_mutate=None):
     for (old_entity, _), created_entity in zip(old_entities_with_new_entities, created_entities):
         mapping[old_entity.pk] = created_entity.pk
 
-    logger.info(f"Created {len(created_entities)} {Model.__name__} items")
+    logger.info(f"Created {len(created_entities)} {model.__name__} items")
     return mapping
 
 
 def clone_crisis():
-    def mutate_new_crisis(new_crisis, old_crisis):
+    def mutate_new_crisis(new_crisis: Crisis, old_crisis: Crisis):
         if new_crisis.start_date and new_crisis.end_date:
             new_crisis.start_date -= relativedelta(years=YEAR_DIFF)
             new_crisis.end_date -= relativedelta(years=YEAR_DIFF)
 
-    def post_mutate_crisis(new_crisis, old_crisis):
+    def post_mutate_crisis(new_crisis: Crisis, old_crisis: Crisis):
         for field in get_many_to_many_field_names(Crisis):
             clone_many_to_many_field(new_crisis, old_crisis, field)
 
@@ -86,13 +95,13 @@ def clone_crisis():
 
 
 def clone_event(old_to_new_crisis_map):
-    def mutate_new_event(new_event, old_event):
+    def mutate_new_event(new_event: Event, old_event: Event):
         new_event.start_date -= relativedelta(years=YEAR_DIFF)
         new_event.end_date -= relativedelta(years=YEAR_DIFF)
         # NOTE: Attach new crisis to new event
         new_event.crisis_id = old_to_new_crisis_map.get(new_event.crisis_id)
 
-    def post_mutate_event(new_event, old_event):
+    def post_mutate_event(new_event: Event, old_event: Event):
         # FIXME: Currently, we are not duplicating event codes.
         for field in get_many_to_many_field_names(Event):
             clone_many_to_many_field(new_event, old_event, field)
@@ -119,7 +128,7 @@ def clone_attachment():
 
 
 def clone_entry(old_to_new_preview_map, old_to_new_attachment_map):
-    def mutate_entry(new_entry, old_entry):
+    def mutate_entry(new_entry: Entry, old_entry: Entry):
         new_entry.associated_parked_item_id = None
 
         if old_entry.preview:
@@ -132,7 +141,7 @@ def clone_entry(old_to_new_preview_map, old_to_new_attachment_map):
         else:
             new_entry.document_id = None
 
-    def post_mutate_entry(new_entry, old_entry):
+    def post_mutate_entry(new_entry: Entry, old_entry: Entry):
         for field in get_many_to_many_field_names(Entry):
             clone_many_to_many_field(new_entry, old_entry, field)
 
@@ -154,7 +163,7 @@ def clone_figure(
     old_to_new_location_map,
     old_to_new_event_map,
 ):
-    def mutate_figure(new_figure_obj, old_figure):
+    def mutate_figure(new_figure_obj: Figure, old_figure: Figure):
         new_figure_obj.start_date -= relativedelta(years=YEAR_DIFF)
         new_figure_obj.end_date -= relativedelta(years=YEAR_DIFF)
 
@@ -164,14 +173,17 @@ def clone_figure(
         old_event_id = new_figure_obj.event_id
         new_figure_obj.event_id = old_to_new_event_map.get(old_event_id)
 
-    def post_mutate_figure(new_figure, old_figure):
+    def post_mutate_figure(new_figure: Figure, old_figure: Figure):
         # FIXME: Currently, we are not cloning disaggregation_age
-        old_location_ids = old_figure.geo_locations.values_list("id", flat=True)
-        new_location_ids = [old_to_new_location_map.get(old_location_id) for old_location_id in old_location_ids]
-        new_figure.geo_locations.set(new_location_ids)
-
         for field in get_many_to_many_field_names(Figure):
-            if not field == "geo_locations":
+            if field == "geo_locations":
+                old_location_ids = old_figure.geo_locations.values_list("id", flat=True)
+                new_location_ids = [old_to_new_location_map.get(old_location_id) for old_location_id in old_location_ids]
+                new_figure.geo_locations.set(new_location_ids)
+            elif field == "disaggregation_age":
+                # NOTE: Currently, we are not cloning disaggregation_age
+                pass
+            else:
                 clone_many_to_many_field(new_figure, old_figure, field)
 
     figure_qs = Figure.objects.iterator(chunk_size=1000)
@@ -179,7 +191,7 @@ def clone_figure(
 
 
 def clone_report():
-    def mutate_new_report(new_report, old_report=None):
+    def mutate_new_report(new_report: Report, old_report: Report):
         if new_report.filter_figure_start_after and new_report.filter_figure_end_before:
             new_report.filter_figure_start_after -= relativedelta(years=YEAR_DIFF)
             new_report.filter_figure_end_before -= relativedelta(years=YEAR_DIFF)
@@ -190,7 +202,7 @@ def clone_report():
         if new_report.gidd_published_date:
             new_report.gidd_published_date -= relativedelta(years=YEAR_DIFF)
 
-    def post_mutate_report(new_report, old_report):
+    def post_mutate_report(new_report: Report, old_report: Report):
         for field in get_many_to_many_field_names(Report):
             clone_many_to_many_field(new_report, old_report, field)
 
