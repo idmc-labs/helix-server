@@ -29,7 +29,6 @@ from django.db.models.functions import Cast, Concat, ExtractYear
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.crypto import get_random_string
-from django.utils.translation import gettext
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
@@ -1611,23 +1610,6 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         return "\n\n".join(
             self.sources.filter(methodology__isnull=False).exclude(methodology="").values_list("methodology", flat=True)
         )
-
-    @staticmethod
-    def clean_url_and_document(values: dict, instance=None) -> OrderedDict:
-        errors = OrderedDict()
-        if instance:
-            # we wont allow updates to entry sources
-            return errors
-        url = values.get("url", getattr(instance, "url", None))
-        document = values.get("document", getattr(instance, "document", None))
-        if not url and not document:
-            errors["url"] = gettext("Please fill the URL or upload a document.")
-            errors["document"] = gettext("Please fill the URL or upload a document.")
-        if document and getattr(document, "is_file_uploaded", False):
-            values["url"] = None
-        if url:
-            values["document_url"] = None
-        return errors
 
     # Methods
 

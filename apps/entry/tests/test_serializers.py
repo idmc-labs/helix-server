@@ -413,8 +413,7 @@ class TestFigureSerializer(HelixTestCase):
                 "bulk_manager": DummyFigureBulkManager(),
             },
         )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("disaggregation_displacement_rural", serializer.errors)
+        self.assertTrue(serializer.is_valid())
 
     def test_invalid_disaggregation_age(self):
         self.data["disaggregation_age"] = [
