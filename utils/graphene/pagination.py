@@ -31,7 +31,7 @@ def nulls_last_order_queryset(qs, ordering_param, **kwargs):
         else:
             mod_ordering.append(F(o).asc(nulls_last=True))
 
-    return qs.distinct().order_by(*mod_ordering)
+    return qs.order_by(*mod_ordering)
 
 
 class NoOrderingPageGraphqlPagination(PageGraphqlPagination):
