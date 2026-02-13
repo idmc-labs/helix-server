@@ -469,6 +469,10 @@ class TestEventListQuery(HelixGraphQLTestCase):
         event1 = EventFactory.create(
             name="random event2",
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
+            crisis=CrisisFactory.create(
+                name="random crisis",
+                crisis_type=Crisis.CRISIS_TYPE.OTHER.value,
+            ),
         )
         EventFactory.create(
             name="blatwo",
@@ -617,6 +621,10 @@ class CloneEventTest(HelixGraphQLTestCase):
         self.event = EventFactory.create(
             name="test event",
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
+            crisis=CrisisFactory.create(
+                name="random crisis",
+                crisis_type=Crisis.CRISIS_TYPE.OTHER.value,
+            ),
         )
         self.country = CountryFactory.create()
         self.event.countries.add(self.country)
