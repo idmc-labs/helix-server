@@ -178,7 +178,7 @@ class EventFactory(DjangoModelFactory):
     class Meta:
         model = Event
 
-    crisis = factory.SubFactory(CrisisFactory)
+    # crisis = factory.SubFactory(CrisisFactory)
     event_type = factory.Iterator(Crisis.CRISIS_TYPE)
     start_date = factory.LazyFunction(lambda: date(2010, 1, 1))
     end_date = factory.LazyFunction(today().date)
