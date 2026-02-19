@@ -529,17 +529,35 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
 
     @property
     def qs(self):
-        queryset = super().qs.annotate(
-            **Figure.annotate_stock_and_flow_dates(),
-            geolocations=StringAgg("geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR),
-            **Figure.annotate_sources_reliability(),
-        )
+        queryset = super().qs
+
         start_date = self.data.get("filter_figure_start_after")
         end_date = self.data.get("filter_figure_end_before")
 
         flow_qs = Figure.filtered_nd_figures_for_listing(queryset, start_date, end_date)
         stock_qs = Figure.filtered_idp_figures_for_listing(queryset, start_date, end_date)
-        return flow_qs | stock_qs
+        # FIXME: avoid union
+        queryset = flow_qs | stock_qs
+
+        # NOTE: ordering_context was injected earlier in list_resolver.
+        if ordering := getattr(self, "ordering_context", {}).get("ordering", None):
+            # NOTE: expensive annotation for geolocations
+            if "geolocations" in ordering:
+                queryset = queryset.annotate(geolocations=StringAgg("geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR))
+
+            # NOTE: expensive annotation for ordering and filtering.
+            # we can't use elif here as ordering params can be multiple; is it practical?
+            if "sources_reliability" in ordering:
+                queryset = queryset.annotate(**Figure.annotate_sources_reliability())
+
+            stock_and_flow_annotations = Figure.annotate_stock_and_flow_dates()
+
+            # we can safely filter out the deselected fields unlike in sources reliability.
+            stock_and_flow_annotations = {key: value for key, value in stock_and_flow_annotations.items() if key in ordering}
+            if stock_and_flow_annotations:
+                queryset = queryset.annotate(**stock_and_flow_annotations)
+
+        return queryset
 
 
 class ReportFigureExtractionFilterSet(BaseFigureExtractionFilterSet):
