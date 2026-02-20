@@ -75,6 +75,14 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
             "event_narrative": {"required": True, "allow_blank": False, "allow_null": False},
         }
 
+    def _validate_event_codes(self, attrs):
+        errors = OrderedDict()
+        if "event_codes" in attrs:
+            event_codes = attrs.get("event_codes")
+            if event_codes and len(event_codes) > 50:
+                errors["event_codes"] = gettext("More than 50 event codes are not allowed")
+        return errors
+
     def _validate_violence(self, attrs):
         # clear disaster fields
         attrs["disaster_category"] = None
@@ -256,6 +264,7 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
         errors.update(self._validate_crisis(attrs))
 
         # TODO: Validate that more than 50 event_codes cannot be assigned
+        errors.update(self._validate_event_codes(attrs))
 
         # NOTE: we don't need to check with figures if we are just creating an event
         if self.instance:

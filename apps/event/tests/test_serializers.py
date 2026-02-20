@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
+from uuid import uuid4
 
 from django.test import RequestFactory
 
 from apps.crisis.models import Crisis
+from apps.event.models import EventCode
 from apps.event.serializers import EventSerializer
 from apps.users.enums import USER_ROLE
 from utils.factories import (
@@ -85,6 +87,50 @@ class TestCreateEventSerializer(HelixTestCase):
             event_narrative="event narrative2",
             countries=[country_1.id],
         )
+        serializer = EventSerializer(data=data, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+
+    def test_event_codes(self):
+        country_1 = CountryFactory.create()
+        crisis = CrisisFactory.create(crisis_type=Crisis.CRISIS_TYPE.CONFLICT.value)
+        crisis.countries.add(country_1)
+        violence_sub_type = ViolenceSubTypeFactory.create()
+        start_date = datetime.today() - timedelta(days=20)
+        end_date = datetime.today() - timedelta(days=10)
+        data = dict(
+            event_type=Crisis.CRISIS_TYPE.CONFLICT.value,
+            violence=violence_sub_type.violence.pk,
+            violence_sub_type=violence_sub_type.pk,
+            crisis=crisis.pk,
+            name="one",
+            start_date=start_date.date(),
+            end_date=end_date.date(),
+            event_narrative="event narrative",
+            countries=[country_1.id],
+            event_codes=[
+                {
+                    "country": country_1.id,
+                    "event_code": f"NEP-{n}",
+                    "uuid": uuid4(),
+                    "event_code_type": EventCode.EVENT_CODE_TYPE.GLIDE_NUMBER,
+                }
+                for n in range(51)
+            ],
+        )
+        serializer = EventSerializer(data=data, context=self.context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("event_codes", serializer.errors)
+        data["event_codes"] = [
+            {
+                "country": country_1.id,
+                "event_code": f"NEP-{n}",
+                "uuid": uuid4(),
+                "event_code_type": EventCode.EVENT_CODE_TYPE.GLIDE_NUMBER,
+            }
+            for n in range(50)
+        ]
+
         serializer = EventSerializer(data=data, context=self.context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
         serializer.save()
