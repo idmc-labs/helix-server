@@ -23,6 +23,12 @@ class OrganizationKind(MetaInformationArchiveAbstractModel, models.Model):
         ORGANIZATION_RELIABILITY, verbose_name=_("Reliability"), default=ORGANIZATION_RELIABILITY.LOW
     )
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["reliability"]),
+        ]
+
     def __str__(self):
         return self.name
 
@@ -70,6 +76,12 @@ class Organization(MetaInformationArchiveAbstractModel, SoftDeleteModel, models.
         on_delete=models.CASCADE,
         related_name="sub_organizations",
     )
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["short_name"]),
+        ]
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):

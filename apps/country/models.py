@@ -278,6 +278,12 @@ class Country(models.Model):
     contextual_analyses: models.QuerySet["ContextualAnalysis"]
     summaries: models.QuerySet["Summary"]
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["idmc_short_name"]),
+            models.Index(fields=["iso3"]),
+        ]
+
     @classmethod
     def _total_figure_disaggregation_subquery(
         cls, figures=None, ignore_dates=False, start_date=None, end_date=None, year=None
