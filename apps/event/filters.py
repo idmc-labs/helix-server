@@ -181,24 +181,21 @@ class EventFilter(MultiWordSearchFilterSet):
                     geo_locations__isnull=False,
                 )
                 .annotate(
-                    locations=models.Subquery(
-                        Figure.geo_locations.through.objects.filter(figure=models.OuterRef("pk"))
-                        .order_by()
-                        .values("figure")
-                        .annotate(
-                            locations=ArrayAgg("figurelocation__name", distinct=True, ordering="figurelocation__name"),
-                        )
-                        .values("locations")[:1],
-                        output_field=models.CharField(),
-                    ),
+                    location_ids=ArrayAgg(
+                        "geo_locations__id",
+                        distinct=True,
+                        ordering="geo_locations__id",
+                    )
                 )
-                .order_by()
-                .values("event", "category", "locations")
-                .annotate(
-                    count=Count("id", distinct=True),
-                )
+                .values("event", "category", "location_ids")
+                .annotate(count=Count("id", distinct=True))
+                .filter(count__gt=1)
+                .values_list("event", flat=True)
+                .distinct()
             )
-            return qs.filter(id__in=events_id_qs.filter(count__gt=1).values("event").distinct())
+
+            return qs.filter(id__in=events_id_qs)
+
         return qs
 
     def filter_context_of_violences(self, qs, name, value):
