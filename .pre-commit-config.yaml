@@ -33,10 +33,10 @@ repos:
 
   # Run the Ruff linter.
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.9.8
+    rev: v0.15.4
     hooks:
       # Linter
-      - id: ruff
+      - id: ruff-check
         types_or: [python, pyi, jupyter, toml]
         args: [--fix, --exit-non-zero-on-fix]
       # Formatter
