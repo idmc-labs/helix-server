@@ -39,10 +39,10 @@ repos:
       # Linter
       - id: ruff-check
         args: [ --fix ]
-        types_or: [python, pyi, jupyter, toml]
+        types_or: [python, pyi, jupyter, pyproject]
       # Formatter
       - id: ruff-format
-        types_or: [python, pyi, jupyter, toml]
+        types_or: [python, pyi, jupyter, pyproject]
 
   - repo: https://github.com/gitleaks/gitleaks
     rev: v8.29.1
