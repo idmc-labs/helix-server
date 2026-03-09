@@ -6,6 +6,7 @@ from typing import Callable, Dict, List, Optional, Union
 from urllib.parse import urljoin
 from uuid import uuid4
 
+from django.apps import apps
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.postgres.aggregates.general import ArrayAgg, StringAgg
@@ -13,18 +14,21 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import (
     Case,
+    CharField,
     ExpressionWrapper,
     F,
     JSONField,
     Max,
     Min,
+    OuterRef,
     Q,
+    Subquery,
     Value,
     When,
     fields,
 )
 from django.db.models.expressions import RawSQL
-from django.db.models.functions import Cast, Concat, ExtractYear
+from django.db.models.functions import Cast, Concat, ExtractYear, JSONObject
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -35,10 +39,8 @@ from django_enumfield import enum
 from apps.common.enums import GENDER_TYPE
 from apps.common.utils import (
     EXTERNAL_ARRAY_SEPARATOR,
+    EXTERNAL_FIELD_SEPARATOR,
     EXTERNAL_TUPLE_SEPARATOR,
-    extract_location_data,
-    format_event_codes_as_string,
-    format_locations_as_string,
 )
 from apps.contrib.commons import DATE_ACCURACY
 from apps.contrib.models import (
@@ -52,7 +54,6 @@ from apps.review.models import Review
 from helix.settings import FIGURE_NUMBER
 from helix.storages import get_external_storage
 from utils.common import get_string_from_list
-from utils.db import Array
 from utils.fields import CachedFileField, generate_full_media_url
 
 from .documents import README_DATA
@@ -1003,6 +1004,13 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
     def get_figure_excel_sheets_data(cls, figures: models.QuerySet):
         from apps.crisis.models import Crisis
 
+        def convert_boolean_field_to_human_readable_string_expression(field_name: str, true_value="Yes", false_value="No"):
+            return Case(
+                When(**{field_name: True}, then=Value(true_value)),
+                default=Value(false_value),
+                output_field=CharField(),
+            )
+
         headers = OrderedDict(
             id="ID",
             old_id="Old ID",
@@ -1025,9 +1033,9 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             unit="Unit",
             quantifier="Quantifier",
             household_size="Household size",
-            is_housing_destruction="Is housing destruction",
+            is_housing_destruction_label="Is housing destruction",
             displacement_occurred="Displacement occurred",
-            include_idu="Include in IDU",
+            include_idu_label="Include in IDU",
             excerpt_idu="Excerpt IDU",
             violence__name="Violence type",
             violence_sub_type__name="Violence sub type",
@@ -1077,7 +1085,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             event__crisis_id="Crisis ID",
             event__crisis__name="Crisis name",
             tags_name="Tags",
-            is_disaggregated="Has disaggregated data",
+            is_disaggregated_label="Has disaggregated data",
             review_status="Revision progress",
             event__assignee__full_name="Assignee",
             created_by__full_name="Created by",
@@ -1089,22 +1097,95 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             type_of_points="Locations type",
             locations="Locations (Name:Lat, Lon:Accuracy:Type)",
         )
+        # included in locations key
         exclude_headers = ["location_display_name", "loc_lat_lon", "accuracy", "type_of_points", "entry_link"]
 
+        EventCode = apps.get_model("event", "EventCode")
+        event_codes_subquery = (
+            EventCode.objects.filter(
+                event__figures__id=OuterRef("pk"),
+                country__id=OuterRef("country__id"),
+            )
+            .annotate(
+                formatted_code=Concat(
+                    F("event_code"),
+                    Value(EXTERNAL_FIELD_SEPARATOR),
+                    Cast(F("event_code_type"), CharField()),
+                    output_field=CharField(),
+                )
+            )
+            .annotate(
+                event_codes_agg=StringAgg(
+                    "formatted_code",
+                    EXTERNAL_ARRAY_SEPARATOR,
+                    distinct=True,
+                )
+            )
+            .values("event_codes_agg")
+        )
+
+        location_subquery = (
+            FigureLocation.objects.filter(figures__id=OuterRef("pk"))
+            .exclude(display_name__isnull=True)
+            .exclude(display_name="")
+            .annotate(
+                lat_lon=Concat(
+                    Cast("lat", CharField()),
+                    Value(EXTERNAL_TUPLE_SEPARATOR),
+                    Cast("lon", CharField()),
+                    output_field=CharField(),
+                ),
+                accuracy_str=Cast("accuracy", CharField()),
+                type_of_points_str=Cast("identifier", CharField()),
+            )
+            .values("figures__id")
+            .annotate(
+                display_name_agg=StringAgg(
+                    "display_name",
+                    EXTERNAL_ARRAY_SEPARATOR,
+                ),
+                lat_lon_agg=StringAgg(
+                    "lat_lon",
+                    EXTERNAL_ARRAY_SEPARATOR,
+                ),
+                accuracy_agg=StringAgg(
+                    "accuracy_str",
+                    EXTERNAL_ARRAY_SEPARATOR,
+                ),
+                type_of_points_agg=StringAgg(
+                    "type_of_points_str",
+                    EXTERNAL_ARRAY_SEPARATOR,
+                ),
+            )
+            .annotate(
+                location_json=JSONObject(
+                    location_display_name=F("display_name_agg"),
+                    loc_lat_lon=F("lat_lon_agg"),
+                    accuracy=F("accuracy_agg"),
+                    type_of_points=F("type_of_points_agg"),
+                )
+            )
+            .values("location_json")
+        )
         values = (
             figures.annotate(
                 **Figure.annotate_stock_and_flow_dates(),
                 **Figure.annotate_sources_reliability(),
                 centroid_lat=RawSQL("country_country.centroid[2]", params=()),
                 centroid_lon=RawSQL("country_country.centroid[1]", params=()),
-                entry_url_or_document_url=models.Case(
-                    models.When(entry__document__isnull=False, then=F("entry__document_url")),
-                    models.When(entry__document__isnull=True, then=F("entry__url")),
-                    output_field=models.CharField(),
+                include_idu_label=convert_boolean_field_to_human_readable_string_expression("include_idu"),
+                is_housing_destruction_label=convert_boolean_field_to_human_readable_string_expression(
+                    "is_housing_destruction"
                 ),
-                source_document=models.Case(
-                    models.When(entry__document__isnull=False, then=F("entry__document__attachment")),
-                    output_field=models.CharField(),
+                is_disaggregated_label=convert_boolean_field_to_human_readable_string_expression("is_disaggregated"),
+                entry_url_or_document_url=Case(
+                    When(entry__document__isnull=False, then=F("entry__document_url")),
+                    When(entry__document__isnull=True, then=F("entry__url")),
+                    output_field=CharField(),
+                ),
+                source_document=Case(
+                    When(entry__document__isnull=False, then=F("entry__document__attachment")),
+                    output_field=CharField(),
                 ),
                 figure_link=Concat(
                     Value(settings.FRONTEND_BASE_URL),
@@ -1113,7 +1194,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     Value("/?id="),
                     F("id"),
                     Value("#/figures-and-analysis"),
-                    output_field=models.CharField(),
+                    output_field=CharField(),
                 ),
                 publishers_name=StringAgg(
                     "entry__publishers__name",
@@ -1148,37 +1229,19 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     When(event__event_type=Crisis.CRISIS_TYPE.OTHER, then=F("event__other_sub_type__name")),
                     output_field=models.CharField(),
                 ),
-                event_codes=ArrayAgg(
-                    Array(
-                        F("event__event_code__event_code"),
-                        Cast(F("event__event_code__event_code_type"), models.CharField()),
-                        output_field=ArrayField(models.CharField()),
-                    ),
-                    distinct=True,
-                    filter=models.Q(event__event_code__country__id=F("country__id")),
-                ),
-                locations=ArrayAgg(
-                    Array(
-                        F("geo_locations__display_name"),
-                        Concat(
-                            F("geo_locations__lat"),
-                            Value(EXTERNAL_TUPLE_SEPARATOR),
-                            F("geo_locations__lon"),
-                            output_field=models.CharField(),
-                        ),
-                        Cast("geo_locations__accuracy", models.CharField()),
-                        Cast("geo_locations__identifier", models.CharField()),
-                        output_field=ArrayField(models.CharField()),
-                    ),
-                    distinct=True,
-                    filter=~Q(Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name="")),
-                ),
+                event_codes=Subquery(event_codes_subquery.values("event_codes_agg")[:1]),
+                # Locations
+                locations=Subquery(location_subquery[:1]),
             )
             .order_by(
                 "created_at",
             )
             .values(*[header for header in headers.keys() if header not in exclude_headers])
         )
+        # figure_location_accuracy_label_mapping
+        _acc_label_mapping = {str(e.value): e.label for e in FigureLocation.ACCURACY}
+        # figure_location_identifier_label_mapping
+        _idf_label_mapping = {str(e.value): e.label for e in FigureLocation.IDENTIFIER}
 
         def transformer(datum):
             def get_enum_label(key, Enum):
@@ -1186,11 +1249,20 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 obj = Enum.get(val)
                 return getattr(obj, "label", val)
 
-            location_data = extract_location_data(datum["locations"])
+            location_data = datum.pop("locations", {}) or {}
+            parts = [
+                location_data.get("location_display_name"),
+                location_data.get("loc_lat_lon"),
+                _acc_label_mapping.get(location_data.get("accuracy")),
+                _idf_label_mapping.get(location_data.get("type_of_points")),
+            ]
 
             return {
                 **datum,
-                "include_idu": "Yes" if datum["include_idu"] else "No",
+                **location_data,
+                "accuracy": _acc_label_mapping.get(location_data.get("accuracy")),
+                "type_of_points": _idf_label_mapping.get(location_data.get("type_of_points")),
+                "locations": ": ".join(filter(None, parts)),
                 "entry__preview__pdf": generate_full_media_url(datum["entry__preview__pdf"], absolute=True),
                 "entry__is_confidential": "Yes" if datum["entry__is_confidential"] else "No",
                 "is_housing_destruction": "Yes" if datum["is_housing_destruction"] else "No",
@@ -1212,13 +1284,6 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 "event__start_date_accuracy": get_enum_label("event__start_date_accuracy", DATE_ACCURACY),
                 "event__end_date_accuracy": get_enum_label("event__end_date_accuracy", DATE_ACCURACY),
                 "review_status": get_enum_label("review_status", Figure.FIGURE_REVIEW_STATUS),
-                "is_disaggregated": "Yes" if datum["is_disaggregated"] else "No",
-                "event_codes": format_event_codes_as_string(datum["event_codes"]),
-                "locations": format_locations_as_string(datum["locations"]),
-                "location_display_name": location_data["display_name"],
-                "loc_lat_lon": location_data["lat_lon"],
-                "accuracy": location_data["accuracy"],
-                "type_of_points": location_data["type_of_points"],
             }
 
         readme_data = [
