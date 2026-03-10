@@ -79,11 +79,21 @@ class FigureLocationSerializer(serializers.ModelSerializer):
     )
     country_code = serializers.CharField(required=True)
 
-    def validate_lat(self, lat):
-        return -90 <= lat <= 90
+    def validate_lat(self, value):
+        if value is None:
+            return value
 
-    def validate_lng(self, lat):
-        return -180 <= lat <= 180
+        if not (-90 <= value <= 90):
+            raise serializers.ValidationError("Latitude must be between -90 and 90.")
+        return value
+
+    def validate_lon(self, value):
+        if value is None:
+            return value
+
+        if not (-180 <= value <= 180):
+            raise serializers.ValidationError("Longitude must be between -180 and 180.")
+        return value
 
     def validate(self, attrs: dict) -> dict:
         """
@@ -136,6 +146,7 @@ class CommonFigureValidationMixin:
             attrs["disaggregation_sex_female"] = None
             attrs["disaggregation_sex_male"] = None
             attrs["disaggregation_lgbtiq"] = None
+            attrs["disaggregation_age"] = []
         else:
             errors.update(
                 self._validate_disaggregated_sum_against_total_figures(
