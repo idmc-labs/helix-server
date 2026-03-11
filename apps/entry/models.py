@@ -135,6 +135,12 @@ class FigureLocation(UUIDAbstractModel, models.Model):
     geocoder = enum.EnumField(enum=GEOCODER, verbose_name=_("Geocoder"), default=GEOCODER.CUSTOM_SOURCE)
     geocoder_metadata = models.JSONField(default=dict, null=True, blank=True)
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["display_name"]),
+        ]
+
 
 class FigureDisaggregationAbstractModel(models.Model):
     # disaggregation information
@@ -372,7 +378,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
     role = enum.EnumField(enum=ROLE, verbose_name=_("Role"), default=ROLE.RECOMMENDED)
 
     # start date is stock reporting date for stock figures
-    start_date = models.DateField(verbose_name=_("Start Date"), blank=False, null=True, db_index=True)
+    start_date = models.DateField(verbose_name=_("Start Date"), blank=False, null=True)
     start_date_accuracy = enum.EnumField(
         DATE_ACCURACY,
         verbose_name=_("Start Date Accuracy"),
@@ -509,10 +515,13 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         indexes = [
             models.Index(fields=["start_date"]),
             models.Index(fields=["end_date"]),
+            models.Index(fields=["start_date_accuracy"]),
+            models.Index(fields=["end_date_accuracy"]),
             models.Index(fields=["country"]),
             models.Index(fields=["category"]),
             models.Index(fields=["role"]),
             models.Index(fields=["event"]),
+            models.Index(fields=["figure_cause"]),
         ]
         permissions = (("approve_figure", "Can approve/unapprove figure"),)
 
@@ -1432,6 +1441,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         through_fields=("entry", "reviewer"),
     )
     review_status = enum.EnumField(enum=EntryReviewer.REVIEW_STATUS, verbose_name=_("Review Status"), null=True, blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["publish_date"]),
+            models.Index(fields=["review_status"]),
+        ]
 
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None):
