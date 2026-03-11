@@ -63,14 +63,7 @@ class UnifiedReviewComment(MetaInformationArchiveAbstractModel, models.Model):
     event = models.ForeignKey(
         "event.Event", verbose_name=_("Event"), related_name="event_reviews", on_delete=models.CASCADE, null=True, blank=True
     )
-    geo_location = models.ForeignKey(
-        "entry.FigureLocation",
-        verbose_name=_("Geo location"),
-        null=True,
-        blank=True,
-        related_name="geo_location_reviews",
-        on_delete=models.CASCADE,
-    )
+
     figure = models.ForeignKey(
         "entry.Figure",
         verbose_name=_("Figure"),
