@@ -6,7 +6,8 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
-from django.db.models import Count, OuterRef, Subquery
+from django.db.models import Case, CharField, Count, F, OuterRef, Subquery, Value, When
+from django.db.models.functions import ExtractYear
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -14,6 +15,7 @@ from django_enumfield import enum
 
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR, EXTERNAL_TUPLE_SEPARATOR
 from apps.contrib.models import ArchiveAbstractModel, MetaInformationAbstractModel, MetaInformationArchiveAbstractModel
+from apps.country.documents import README_DATA
 from apps.crisis.models import Crisis
 from apps.entry.models import Entry, Figure
 from apps.users.enums import USER_ROLE
@@ -558,3 +560,61 @@ class HouseholdSizeCarryOverTask(MetaInformationAbstractModel):
         from apps.country.tasks import carry_over_household_size
 
         transaction.on_commit(lambda: carry_over_household_size.delay(self.pk))
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.country.filters import HouseholdSizeFilterSet
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        qs = HouseholdSizeFilterSet(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs
+
+        headers = OrderedDict(
+            country__region__name="Region Name",
+            country__idmc_short_name="Country",
+            year="Year",
+            size="AHHS",
+            reference_year="Reference Year",
+            data_source_category="Data Source Category",
+            source="Source",
+            source_link="Source Link",
+            gap_filling_method="Gap Filling Method",
+            notes="Notes",
+        )
+        values = (
+            qs.annotate(
+                reference_year=ExtractYear("created_at"),
+                gap_filling_method=Case(
+                    When(reference_year__lt=F("year"), then=Value("Forward filling")),
+                    When(reference_year__gt=F("year"), then=Value("Backward filling")),
+                    default=Value("Exact"),
+                    output_field=CharField(),
+                ),
+            )
+            .order_by("country__region__name")
+            .values(*headers.keys())
+        )
+        readme_data = [
+            {
+                "title": "Readme",
+                "results": {
+                    "headers": OrderedDict(
+                        column_name="Column Name",
+                        description="Description",
+                    ),
+                    "data": README_DATA,
+                },
+            }
+        ]
+        return {
+            "headers": headers,
+            "data": values,
+            "formulae": None,
+            "transformer": None,
+            "readme_data": readme_data,
+        }

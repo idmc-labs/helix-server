@@ -242,6 +242,7 @@ class ExcelDownload(MetaInformationAbstractModel):
         CONTEXT_OF_VIOLENCE = 14
         MONITORING_SUB_REGION = 15
         CLIENT = 16
+        AHHS = 17
 
     started_at = models.DateTimeField(
         verbose_name=_("Started at"),
@@ -299,6 +300,7 @@ class ExcelDownload(MetaInformationAbstractModel):
             self.DOWNLOAD_TYPES.CONTEXT_OF_VIOLENCE: apps.get_model("event", "ContextOfViolence"),
             self.DOWNLOAD_TYPES.MONITORING_SUB_REGION: apps.get_model("country", "MonitoringSubRegion"),
             self.DOWNLOAD_TYPES.CLIENT: apps.get_model("contrib", "Client"),
+            self.DOWNLOAD_TYPES.AHHS: apps.get_model("country", "HouseholdSize"),
         }
         model = mapper.get(self.download_type)
         if not model:
