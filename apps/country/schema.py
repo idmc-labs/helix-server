@@ -12,6 +12,7 @@ from apps.country.filters import (
     CountryRegionFilter,
     CountrySummaryFilter,
     GeographicalGroupFilter,
+    HouseholdSizeFilterSet,
     MonitoringSubRegionFilter,
 )
 from apps.country.models import (
@@ -21,6 +22,7 @@ from apps.country.models import (
     CountrySubRegion,
     GeographicalGroup,
     HouseholdSize,
+    HouseholdSizeCarryOverTask,
     MonitoringSubRegion,
     Summary,
 )
@@ -212,6 +214,11 @@ class CountryType(DjangoObjectType):
         return info.context.request.build_absolute_uri(Country.geojson_url(root.iso3))
 
 
+class CarryOverHouseholdSizeType(DjangoObjectType):
+    class Meta:
+        model = HouseholdSizeCarryOverTask
+
+
 class CountryListType(CustomDjangoListObjectType):
     class Meta:
         model = Country
@@ -223,6 +230,12 @@ class CountryHouseholdSizeType(DjangoObjectType):
         model = HouseholdSize
 
 
+class HouseholdSizeListType(CustomDjangoListObjectType):
+    class Meta:
+        model = HouseholdSize
+        filterset_class = HouseholdSizeFilterSet
+
+
 class Query:
     country = DjangoObjectField(CountryType)
     country_list = DjangoPaginatedListObjectField(
@@ -232,6 +245,9 @@ class Query:
     geographical_group_list = DjangoPaginatedListObjectField(GeographicalGroupListType)
     household_size = graphene.Field(
         CountryHouseholdSizeType, country=graphene.ID(required=True), year=graphene.Int(required=True)
+    )
+    household_size_list = DjangoPaginatedListObjectField(
+        HouseholdSizeListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
     )
     monitoring_sub_region = DjangoObjectField(MonitoringSubRegionType)
     monitoring_sub_region_list = DjangoPaginatedListObjectField(
