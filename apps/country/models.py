@@ -14,6 +14,7 @@ from django_enumfield import enum
 
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR, EXTERNAL_TUPLE_SEPARATOR
 from apps.contrib.models import ArchiveAbstractModel, MetaInformationAbstractModel, MetaInformationArchiveAbstractModel
+from apps.country.documents import README_DATA
 from apps.crisis.models import Crisis
 from apps.entry.models import Entry, Figure
 from apps.users.enums import USER_ROLE
@@ -558,3 +559,50 @@ class HouseholdSizeCarryOverTask(MetaInformationAbstractModel):
         from apps.country.tasks import carry_over_household_size
 
         transaction.on_commit(lambda: carry_over_household_size.delay(self.pk))
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.country.filters import HouseholdSizeFilterSet
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        qs = HouseholdSizeFilterSet(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs
+
+        headers = OrderedDict(
+            # key="Key?", # this is not obvious
+            country__region__name="Region name",
+            country__idmc_short_name="Country",
+            year="Year",
+            size="AHHS",
+            # reference_year="Reference Year", # this is not obvious
+            data_source_category="Data Source Category",
+            source="Source",
+            source_link="Source Link",
+            # gap_filling_method="Gap Filling Method", # this is not obvious
+            notes="Note",
+        )
+        values = qs.values(*headers.keys())
+        readme_data = [
+            {
+                "title": "Readme",
+                "results": {
+                    "headers": OrderedDict(
+                        column_name="Column Name",
+                        description="Description",
+                    ),
+                    "data": README_DATA,
+                },
+            }
+        ]
+        return {
+            "headers": headers,
+            "data": values,
+            "formulae": None,
+            "transformer": None,
+            "readme_data": readme_data,
+        }
