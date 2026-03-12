@@ -240,6 +240,26 @@ enum CRISIS_TYPE {
   OTHER
 }
 
+type CarryOverHouseholdSize {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: CarryOverHouseholdSizeType
+}
+
+type CarryOverHouseholdSizeType {
+  id: ID!
+  createdAt: DateTime!
+  modifiedAt: DateTime!
+  createdBy: UserType
+  lastModifiedBy: UserType
+  versionId: String
+  startedAt: DateTime
+  completedAt: DateTime
+  status: HouseholdSizeCarryOverTaskStatus!
+  targetYear: Int!
+  failureReasons: JSONString!
+}
+
 type ChangeUserPassword {
   errors: [GenericScalar!]
   ok: Boolean
@@ -2635,6 +2655,29 @@ type GiddYearType {
   year: Int!
 }
 
+enum HouseholdSizeCarryOverTaskStatus {
+  A_0
+  A_1
+  A_2
+  A_3
+  A_4
+}
+
+type HouseholdSizeListType {
+  results: [CountryHouseholdSizeType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
+input HouseholdSizeSetFilterDataInputType {
+  search: String
+  filterIdmcReportingYear: Float
+  filterAhhsSize: Float
+  filterAhhsSource: String
+  filterAhhsDataSourceCategory: String
+}
+
 enum IDENTIFIER {
   ORIGIN
   DESTINATION
@@ -2775,6 +2818,7 @@ type Mutation {
   updateOrganizationKind(data: OrganizationKindUpdateInputType!): UpdateOrganizationKind
   deleteOrganizationKind(id: ID!): DeleteOrganizationKind
   exportOrganizations(filters: OrganizationFilterDataInputType!): ExportOrganizations
+  carryOverHouseholdSize: CarryOverHouseholdSize
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
   exportCountries(filters: CountryFilterDataInputType!): ExportCountries
@@ -3248,6 +3292,7 @@ type Query {
   countryRegionList(filters: CountryRegionFilterDataInputType, ordering: String): CountryRegionListType
   geographicalGroupList(filters: GeographicalGroupFilterDataInputType, ordering: String): GeographicalGroupListType
   householdSize(country: ID!, year: Int!): CountryHouseholdSizeType
+  householdSizeList(filters: HouseholdSizeSetFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): HouseholdSizeListType
   monitoringSubRegion(id: ID!): MonitoringSubRegionType
   monitoringSubRegionList(filters: MonitoringSubRegionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): MonitoringSubRegionListType
   organization(id: ID!): OrganizationType
