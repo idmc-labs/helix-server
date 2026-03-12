@@ -202,3 +202,10 @@ MonitoringSubRegionFilterDataType, MonitoringSubRegionFilterDataInputType = gene
     "MonitoringSubRegionFilterDataType",
     "MonitoringSubRegionFilterDataInputType",
 )
+
+HouseholdSizeFilterDataType, HouseholdSizeFilterDataTypeInputType = generate_type_for_filter_set(
+    HouseholdSizeFilterSet,
+    "country.schema.household_size_list",
+    "HouseholdSizeFilterDataType",
+    "HouseholdSizeFilterDataTypeInputType",
+)
