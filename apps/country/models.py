@@ -533,33 +533,6 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
     def __str__(self):
         return f"PK:{self.pk}-Country-ID:{self.country_id}-Year:{self.year}"
 
-
-class HouseholdSizeCarryOverTask(MetaInformationAbstractModel):
-    # FIXME: allow them configurable(?)
-    RETRY_COUNT_THRESHOLD = 5
-    HOUSEHOLDSIZE_CONCURRENT_COPY_LIMIT = 1
-
-    class AHHS_COPY_OPERATION_STATUS(enum.Enum):
-        PENDING = 0
-        IN_PROGRESS = 1
-        COMPLETED = 2
-        FAILED = 3
-        KILLED = 4
-
-    # Runtime information
-    started_at = models.DateTimeField(verbose_name=_("Started At"), null=True, blank=True)
-    completed_at = models.DateTimeField(verbose_name=_("Completed At"), null=True, blank=True)
-    status = enum.EnumField(enum=AHHS_COPY_OPERATION_STATUS, default=AHHS_COPY_OPERATION_STATUS.PENDING)
-
-    # target_year must be provided
-    target_year = models.SmallIntegerField(verbose_name="Target Year")
-    failure_reasons = models.JSONField(default=list)
-
-    def trigger_carry_over_household_size(self):
-        from apps.country.tasks import carry_over_household_size
-
-        transaction.on_commit(lambda: carry_over_household_size.delay(self.pk))
-
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
         from apps.country.filters import HouseholdSizeFilterSet
@@ -606,3 +579,30 @@ class HouseholdSizeCarryOverTask(MetaInformationAbstractModel):
             "transformer": None,
             "readme_data": readme_data,
         }
+
+
+class HouseholdSizeCarryOverTask(MetaInformationAbstractModel):
+    # FIXME: allow them configurable(?)
+    RETRY_COUNT_THRESHOLD = 5
+    HOUSEHOLDSIZE_CONCURRENT_COPY_LIMIT = 1
+
+    class AHHS_COPY_OPERATION_STATUS(enum.Enum):
+        PENDING = 0
+        IN_PROGRESS = 1
+        COMPLETED = 2
+        FAILED = 3
+        KILLED = 4
+
+    # Runtime information
+    started_at = models.DateTimeField(verbose_name=_("Started At"), null=True, blank=True)
+    completed_at = models.DateTimeField(verbose_name=_("Completed At"), null=True, blank=True)
+    status = enum.EnumField(enum=AHHS_COPY_OPERATION_STATUS, default=AHHS_COPY_OPERATION_STATUS.PENDING)
+
+    # target_year must be provided
+    target_year = models.SmallIntegerField(verbose_name="Target Year")
+    failure_reasons = models.JSONField(default=list)
+
+    def trigger_carry_over_household_size(self):
+        from apps.country.tasks import carry_over_household_size
+
+        transaction.on_commit(lambda: carry_over_household_size.delay(self.pk))

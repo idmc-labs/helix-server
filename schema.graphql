@@ -3303,6 +3303,7 @@ type Query {
   householdSizeList(filters: HouseholdSizeFilterDataTypeInputType, page: Int = 1, ordering: String, pageSize: Int): HouseholdSizeListType
   monitoringSubRegion(id: ID!): MonitoringSubRegionType
   monitoringSubRegionList(filters: MonitoringSubRegionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): MonitoringSubRegionListType
+  latestUpdateHouseholdSize: CountryHouseholdSizeType
   organization(id: ID!): OrganizationType
   organizationList(filters: OrganizationFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): OrganizationListType
   organizationKind(id: ID!): OrganizationKindObjectType

@@ -254,6 +254,14 @@ class Query:
         MonitoringSubRegionListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
     )
 
+    latest_update_household_size = graphene.Field(CountryHouseholdSizeType)
+
+    def resolve_latest_update_household_size(root, info, **_):
+        try:
+            return HouseholdSize.objects.filter(is_active=True).order_by("-year").first()
+        except HouseholdSize.DoesNotExist:
+            return None
+
     def resolve_household_size(root, info, country, year):
         try:
             # TODO: Update this query to support dynamic filtering of HouseholdSize in the future
