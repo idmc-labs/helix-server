@@ -72,6 +72,7 @@ class CarryOverHouseholdSize(graphene.Mutation):
     result = graphene.Field(CarryOverHouseholdSizeType)
 
     @staticmethod
+    @permission_checker(["country.carry_over_householdsize"])
     def mutate(root, info):
         serializer = CarryOverHouseholdSizeSerializer(data={}, context={"request": info.context.request})
         if errors := mutation_is_not_valid(serializer=serializer):

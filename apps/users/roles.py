@@ -43,6 +43,7 @@ ADMIN_MODELS = REGIONAL_COORDINATOR_MODELS | {
     PERMISSION_ENTITY.user,
     PERMISSION_ENTITY.portfolio,
     PERMISSION_ENTITY.client,
+    PERMISSION_ENTITY.householdsize,
 }
 
 # NOTE: To add custom permissions, add `bla_model` like `sign_off_model`.
@@ -60,6 +61,7 @@ PERMISSIONS = {
         PERMISSION_ACTION.update_pfa_visibility: {PERMISSION_ENTITY.report},
         PERMISSION_ACTION.update_gidd_data: {PERMISSION_ENTITY.gidd},
         PERMISSION_ACTION.update_release_meta_data: {PERMISSION_ENTITY.gidd},
+        PERMISSION_ACTION.carry_over: {PERMISSION_ENTITY.householdsize},
     },
     USER_ROLE.REGIONAL_COORDINATOR: {
         PERMISSION_ACTION.add: REGIONAL_COORDINATOR_MODELS,

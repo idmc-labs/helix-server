@@ -526,6 +526,9 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
 
     country_id: int
 
+    class Meta:
+        permissions = (("carry_over_householdsize", "Can carry over householdsize"),)
+
     def __str__(self):
         return f"PK:{self.pk}-Country-ID:{self.country_id}-Year:{self.year}"
 

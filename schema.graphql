@@ -3078,6 +3078,7 @@ enum PERMISSION_ACTION {
   update_pfa_visibility
   update_gidd_data
   update_release_meta_data
+  carry_over
 }
 
 enum PERMISSION_ENTITY {
@@ -3105,6 +3106,7 @@ enum PERMISSION_ENTITY {
   gidd
   client
   figuretag
+  householdsize
 }
 
 enum PREVIEW_STATUS {
