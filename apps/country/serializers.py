@@ -1,4 +1,3 @@
-from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 from django.utils.translation import gettext
 from rest_framework import serializers
@@ -6,8 +5,6 @@ from rest_framework import serializers
 from apps.contrib.serializers import MetaInformationSerializerMixin
 from apps.country.models import ContextualAnalysis, HouseholdSize, HouseholdSizeCarryOverTask, Summary
 from apps.users.models import User
-from apps.users.roles import USER_ROLE
-from utils.permissions import PERMISSION_DENIED_MESSAGE
 
 
 class CarryOverHouseholdSizeSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
@@ -41,10 +38,6 @@ class CarryOverHouseholdSizeSerializer(MetaInformationSerializerMixin, serialize
         return attrs
 
     def create(self, validated_data):
-        # TODO: create a permission and use it in mutatate method instead
-        if self.context["request"].user.highest_role != USER_ROLE.ADMIN.value:
-            raise PermissionDenied(gettext(PERMISSION_DENIED_MESSAGE))
-
         instance = super().create(validated_data)
         instance.trigger_carry_over_household_size()
 

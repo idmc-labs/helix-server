@@ -3105,6 +3105,7 @@ enum PERMISSION_ENTITY {
   gidd
   client
   figuretag
+  householdsize
 }
 
 enum PREVIEW_STATUS {

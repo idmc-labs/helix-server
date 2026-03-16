@@ -34,4 +34,8 @@ class Migration(migrations.Migration):
                 'abstract': False,
             },
         ),
+        migrations.AlterModelOptions(
+            name='householdsize',
+            options={'permissions': (('carry_over_householdsize', 'Can carry over householdsize'),)},
+        ),
     ]
