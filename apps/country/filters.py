@@ -13,6 +13,7 @@ from apps.country.models import (
     CountryRegion,
     GeographicalGroup,
     HouseholdSize,
+    HouseholdSizeCarryOverTask,
     MonitoringSubRegion,
     Summary,
 )
@@ -28,11 +29,29 @@ from utils.figure_filter import (
 from utils.filters import (
     IDFilter,
     IDListFilter,
+    MultipleInputFilter,
     MultiWordSearchFilterSet,
     SimpleInputFilter,
     StringListFilter,
     generate_type_for_filter_set,
 )
+
+from .enums import HouseholdSizeEnum
+
+
+class HouseholdSizeCarryoverFilterSet(MultiWordSearchFilterSet):
+    status = MultipleInputFilter(HouseholdSizeEnum)
+    target_year = django_filters.NumberFilter()
+
+    def filter_target_year(self, qs, name, value):
+        if not value:
+            return qs
+
+        return qs.filter(target_year=value)
+
+    class Meta:
+        model = HouseholdSizeCarryOverTask
+        fields = []
 
 
 class HouseholdSizeFilterSet(MultiWordSearchFilterSet):

@@ -12,12 +12,12 @@ class CarryOverHouseholdSizeSerializer(MetaInformationSerializerMixin, serialize
         model = HouseholdSizeCarryOverTask
         fields = []
 
-    def validate_concurrent_copy(self) -> None:
+    def validate_concurrent_copy(self, target_year) -> None:
         if (
             HouseholdSizeCarryOverTask.objects.filter(
                 status__in=[
-                    HouseholdSizeCarryOverTask.AHHS_COPY_OPERATION_STATUS.PENDING,
-                    HouseholdSizeCarryOverTask.AHHS_COPY_OPERATION_STATUS.IN_PROGRESS,
+                    HouseholdSizeCarryOverTask.AHHS_CARRYOVER_OPERATION_STATUS.PENDING,
+                    HouseholdSizeCarryOverTask.AHHS_CARRYOVER_OPERATION_STATUS.IN_PROGRESS,
                 ]
             ).count()
             >= HouseholdSizeCarryOverTask.HOUSEHOLDSIZE_CONCURRENT_COPY_LIMIT
@@ -28,12 +28,19 @@ class CarryOverHouseholdSizeSerializer(MetaInformationSerializerMixin, serialize
                 code="limited-at-a-time",
             )
 
+        if HouseholdSize.objects.filter(year=target_year).exists():
+            raise serializers.ValidationError(gettext("Household size for year(=%s) already exists" % target_year))
+
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
-        self.validate_concurrent_copy()
 
         # NOTE: we can't expect the target year from user
-        attrs["target_year"] = timezone.now().year
+        # target_year must be timezone aware
+        target_year = timezone.now().year
+
+        self.validate_concurrent_copy(target_year=target_year)
+
+        attrs["target_year"] = target_year
 
         return attrs
 

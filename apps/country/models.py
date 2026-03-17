@@ -598,7 +598,7 @@ class HouseholdSizeCarryOverTask(MetaInformationAbstractModel):
     RETRY_COUNT_THRESHOLD = 5
     HOUSEHOLDSIZE_CONCURRENT_COPY_LIMIT = 1
 
-    class AHHS_COPY_OPERATION_STATUS(enum.Enum):
+    class AHHS_CARRYOVER_OPERATION_STATUS(enum.Enum):
         PENDING = 0
         IN_PROGRESS = 1
         COMPLETED = 2
@@ -608,7 +608,7 @@ class HouseholdSizeCarryOverTask(MetaInformationAbstractModel):
     # Runtime information
     started_at = models.DateTimeField(verbose_name=_("Started At"), null=True, blank=True)
     completed_at = models.DateTimeField(verbose_name=_("Completed At"), null=True, blank=True)
-    status = enum.EnumField(enum=AHHS_COPY_OPERATION_STATUS, default=AHHS_COPY_OPERATION_STATUS.PENDING)
+    status = enum.EnumField(enum=AHHS_CARRYOVER_OPERATION_STATUS, default=AHHS_CARRYOVER_OPERATION_STATUS.PENDING)
 
     # target_year must be provided
     target_year = models.SmallIntegerField(verbose_name="Target Year")

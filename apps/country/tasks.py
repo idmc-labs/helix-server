@@ -22,7 +22,7 @@ def carry_over_household_size(ahhs_copy_id):
 
     ahhs_copy = HouseholdSizeCarryOverTask.objects.get(id=ahhs_copy_id)
     ahhs_copy.started_at = timezone.now()
-    ahhs_copy.status = HouseholdSizeCarryOverTask.AHHS_COPY_OPERATION_STATUS.IN_PROGRESS
+    ahhs_copy.status = HouseholdSizeCarryOverTask.AHHS_CARRYOVER_OPERATION_STATUS.IN_PROGRESS
     ahhs_copy.save()
 
     destination_year = ahhs_copy.target_year
@@ -45,13 +45,13 @@ def carry_over_household_size(ahhs_copy_id):
         logger.info(f"Total {len(resp)} HouseholdSize copied to {destination_year} from {source_year}")
 
         ahhs_copy.completed_at = timezone.now()
-        ahhs_copy.status = HouseholdSizeCarryOverTask.AHHS_COPY_OPERATION_STATUS.COMPLETED
+        ahhs_copy.status = HouseholdSizeCarryOverTask.AHHS_CARRYOVER_OPERATION_STATUS.COMPLETED
         ahhs_copy.save()
 
         logger.info(f"Completed copying household size; HouseholdSizeCarryOverTask={ahhs_copy_id}")
     except Exception as e:
         logger.error(f"Error copying household size; HouseholdSizeCarryOverTask={ahhs_copy_id}, {e}")
-        ahhs_copy.status = HouseholdSizeCarryOverTask.AHHS_COPY_OPERATION_STATUS.FAILED
+        ahhs_copy.status = HouseholdSizeCarryOverTask.AHHS_CARRYOVER_OPERATION_STATUS.FAILED
         current_reasons = ahhs_copy.failure_reasons or []
         current_reasons.append(str(e))
         ahhs_copy.completed_at = timezone.now()

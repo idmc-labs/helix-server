@@ -7,7 +7,7 @@ from apps.country.filters import (
     HouseholdSizeFilterDataTypeInputType,
     MonitoringSubRegionFilterDataInputType,
 )
-from apps.country.schema import CarryOverHouseholdSizeType, ContextualAnalysisType, SummaryType
+from apps.country.schema import ContextualAnalysisType, HouseholdSizeBulkOprationType, SummaryType
 from apps.country.serializers import CarryOverHouseholdSizeSerializer, ContextualAnalysisSerializer, SummarySerializer
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.error_types import CustomErrorType, mutation_is_not_valid
@@ -73,7 +73,7 @@ class CreateContextualAnalysis(graphene.Mutation):
 class CarryOverHouseholdSize(graphene.Mutation):
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
-    result = graphene.Field(CarryOverHouseholdSizeType)
+    result = graphene.Field(HouseholdSizeBulkOprationType)
 
     @staticmethod
     @permission_checker(["country.carry_over_householdsize"])

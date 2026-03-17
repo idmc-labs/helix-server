@@ -12,6 +12,7 @@ from apps.country.filters import (
     CountryRegionFilter,
     CountrySummaryFilter,
     GeographicalGroupFilter,
+    HouseholdSizeCarryoverFilterSet,
     HouseholdSizeFilterSet,
     MonitoringSubRegionFilter,
 )
@@ -214,7 +215,13 @@ class CountryType(DjangoObjectType):
         return info.context.request.build_absolute_uri(Country.geojson_url(root.iso3))
 
 
-class CarryOverHouseholdSizeType(DjangoObjectType):
+class HouseholdSizeBulkOprationListType(CustomDjangoListObjectType):
+    class Meta:
+        model = HouseholdSizeCarryOverTask
+        filterset_class = HouseholdSizeCarryoverFilterSet
+
+
+class HouseholdSizeBulkOprationType(DjangoObjectType):
     class Meta:
         model = HouseholdSizeCarryOverTask
 
@@ -254,13 +261,11 @@ class Query:
         MonitoringSubRegionListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
     )
 
-    latest_update_household_size = graphene.Field(CountryHouseholdSizeType)
+    household_size_bulk_operation_list = DjangoPaginatedListObjectField(
+        HouseholdSizeBulkOprationListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
+    )
 
-    def resolve_latest_update_household_size(root, info, **_):
-        try:
-            return HouseholdSize.objects.filter(is_active=True).order_by("-year").first()
-        except HouseholdSize.DoesNotExist:
-            return None
+    household_size_bulk_operation = DjangoObjectField(HouseholdSizeBulkOprationType)
 
     def resolve_household_size(root, info, country, year):
         try:

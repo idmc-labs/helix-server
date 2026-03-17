@@ -28,7 +28,7 @@ class Migration(migrations.Migration):
                 ('version_id', models.CharField(blank=True, max_length=16, null=True, verbose_name='Version')),
                 ('started_at', models.DateTimeField(blank=True, null=True, verbose_name='Started At')),
                 ('completed_at', models.DateTimeField(blank=True, null=True, verbose_name='Completed At')),
-                ('status', django_enumfield.db.fields.EnumField(default=0, enum=apps.country.models.HouseholdSizeCarryOverTask.AHHS_COPY_OPERATION_STATUS)),
+                ('status', django_enumfield.db.fields.EnumField(default=0, enum=apps.country.models.HouseholdSizeCarryOverTask.AHHS_CARRYOVER_OPERATION_STATUS)),
                 ('target_year', models.SmallIntegerField(verbose_name='Target Year')),
                 ('failure_reasons', models.JSONField(default=list)),
                 ('created_by', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='created_householdsizecarryovertask', to=settings.AUTH_USER_MODEL, verbose_name='Created By')),
