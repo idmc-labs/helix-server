@@ -33,6 +33,8 @@ from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 from utils.graphene.types import CustomDjangoListObjectType
 
+from .enums import HouseholdSizeEnum
+
 
 class MonitoringSubRegionType(DjangoObjectType):
     class Meta:
@@ -215,15 +217,18 @@ class CountryType(DjangoObjectType):
         return info.context.request.build_absolute_uri(Country.geojson_url(root.iso3))
 
 
+class HouseholdSizeBulkOprationType(DjangoObjectType):
+    class Meta:
+        model = HouseholdSizeCarryOverTask
+
+    status = graphene.Field(HouseholdSizeEnum)
+    status_display = EnumDescription(source="get_status_display")
+
+
 class HouseholdSizeBulkOprationListType(CustomDjangoListObjectType):
     class Meta:
         model = HouseholdSizeCarryOverTask
         filterset_class = HouseholdSizeCarryoverFilterSet
-
-
-class HouseholdSizeBulkOprationType(DjangoObjectType):
-    class Meta:
-        model = HouseholdSizeCarryOverTask
 
 
 class CountryListType(CustomDjangoListObjectType):

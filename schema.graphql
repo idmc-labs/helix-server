@@ -1059,8 +1059,6 @@ input CrisisUpdateInputType {
   countries: [ID!]
 }
 
-scalar CustomDateTime
-
 enum DATE_ACCURACY {
   DAY
   WEEK
@@ -2658,7 +2656,7 @@ type GiddYearType {
 }
 
 type HouseholdSizeBulkOprationListType {
-  results: [HouseholdSizeCarryOverTaskGenericType!]
+  results: [HouseholdSizeBulkOprationType!]
   totalCount: Int
   page: Int
   pageSize: Int
@@ -2673,37 +2671,10 @@ type HouseholdSizeBulkOprationType {
   versionId: String
   startedAt: DateTime
   completedAt: DateTime
-  status: HouseholdSizeCarryOverTaskStatus!
+  status: AHHS_CARRYOVER_OPERATION_STATUS
   targetYear: Int!
   failureReasons: JSONString!
-}
-
-type HouseholdSizeCarryOverTaskGenericType {
-  completedAt: CustomDateTime
-  createdAt: CustomDateTime
-  failureReasons: JSONString
-  id: ID!
-  modifiedAt: CustomDateTime
-  startedAt: CustomDateTime
-  status: HouseholdSizeCarryOverTaskStatusEnum
-  targetYear: Int
-  versionId: String
-}
-
-enum HouseholdSizeCarryOverTaskStatus {
-  A_0
-  A_1
-  A_2
-  A_3
-  A_4
-}
-
-enum HouseholdSizeCarryOverTaskStatusEnum {
-  A_0
-  A_1
-  A_2
-  A_3
-  A_4
+  statusDisplay: EnumDescription
 }
 
 input HouseholdSizeCarryoverSetFilterDataInputType {
