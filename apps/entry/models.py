@@ -1052,8 +1052,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             sources_methodology="Sources methodology",
             source_excerpt="Source excerpt",
             entry_url_or_document_url="Source url",
-            entry__preview__pdf_url="Source url snapshot",
-            source_document_url="Source document",
+            entry__preview__pdf="Source url snapshot",
+            source_document="Source document",
             entry__id="Entry ID",
             entry__old_id="Entry old ID",
             entry__article_title="Entry title",
@@ -1181,22 +1181,13 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     "is_housing_destruction"
                 ),
                 is_disaggregated_label=convert_boolean_field_to_human_readable_string_expression("is_disaggregated"),
-                entry_url_or_document_url=models.Case(
-                    models.When(entry__document__isnull=False, then=F("entry__document_url")),
-                    models.When(entry__document__isnull=True, then=F("entry__url")),
-                    output_field=models.CharField(),
+                entry_url_or_document_url=Case(
+                    When(entry__document__isnull=False, then=F("entry__document_url")),
+                    When(entry__document__isnull=True, then=F("entry__url")),
+                    output_field=CharField(),
                 ),
-                source_document_url=Case(
-                    When(
-                        entry__document__isnull=False,
-                        then=Concat(
-                            Value(settings.BACKEND_BASE_URL),
-                            Value(settings.MEDIA_URL),
-                            F("entry__document__attachment"),
-                            output_field=CharField(),
-                        ),
-                    ),
-                    default=Value(""),
+                source_document=Case(
+                    When(entry__document__isnull=False, then=F("entry__document__attachment")),
                     output_field=CharField(),
                 ),
                 entry_link=Concat(
@@ -1209,7 +1200,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     Value("/?id="),
                     F("id"),
                     Value("#/figures-and-analysis"),
-                    output_field=models.CharField(),
+                    output_field=CharField(),
                 ),
                 publishers_name=StringAgg(
                     "entry__publishers__name",
@@ -1234,12 +1225,6 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 ),
                 sources_methodology=StringAgg(
                     "sources__methodology", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()
-                ),
-                entry__preview__pdf_url=Concat(
-                    Value(settings.BACKEND_BASE_URL),
-                    Value(settings.MEDIA_URL),
-                    "entry__preview__pdf",
-                    output_field=CharField(),
                 ),
                 centroid=Concat(
                     F("centroid_lat"), Value(EXTERNAL_TUPLE_SEPARATOR), F("centroid_lon"), output_field=models.CharField()
@@ -1272,6 +1257,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
 
             return {
                 **datum,
+                "entry__preview__pdf": generate_full_media_url(datum["entry__preview__pdf"], absolute=True),
+                "source_document": generate_full_media_url(datum["source_document"], absolute=True),
                 "stock_date_accuracy": get_enum_label("stock_date_accuracy", DATE_ACCURACY),
                 "flow_start_date_accuracy": get_enum_label("flow_start_date_accuracy", DATE_ACCURACY),
                 "flow_end_date_accuracy": get_enum_label("flow_end_date_accuracy", DATE_ACCURACY),
