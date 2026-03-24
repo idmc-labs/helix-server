@@ -182,6 +182,7 @@ THIRD_PARTY_APPS = [
     "health_check.storage",
     "health_check.contrib.migrations",
     "health_check.contrib.redis",  # requires Redis broker
+    "banjo_utils",
 ]
 
 INSTALLED_APPS = (

@@ -48,7 +48,11 @@ dependencies = [
     "shapely==2.0.1",
     "turfpy==0.0.6",
     "uWSGI==2.0.31",
+    "banjo-utils",
 ]
+
+[tool.uv.sources]
+banjo-utils = { git = "https://github.com/toggle-corp/banjo-utils", tag = "v0.1.0" }
 
 [dependency-groups]
 dev = [
