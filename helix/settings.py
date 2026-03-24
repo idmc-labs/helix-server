@@ -718,6 +718,10 @@ SPECTACULAR_SETTINGS = {
             "name": "IDU",
             "description": "Internal Displacement Updates",
         },
+        {
+            "name": "AHHS",
+            "description": "Average Household Size",
+        },
     ],
     "SERVE_INCLUDE_SCHEMA": False,
     "PREPROCESSING_HOOKS": ["helix.openapi.preprocessing_filter_spec"],

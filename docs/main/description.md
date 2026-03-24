@@ -21,6 +21,7 @@ Through the API, users can retrieve datasets that include annual estimates, even
 - Endpoints
     - [GIDD](#operations-tag-GIDD)
     - [IDU](#operations-tag-IDU)
+    - [AHHS](#operations-tag-AHHS)
 - [Retroactive changes to GIDD data](#retroactive-changes)
 
 <h2 id="overview">Overview of IDMC's Core Datasets</h2>

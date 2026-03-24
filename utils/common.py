@@ -23,6 +23,10 @@ from helix.caches import external_api_cache
 logger = logging.getLogger(__name__)
 
 
+def get_name_choices(enum_class) -> typing.List[typing.Tuple[str, str]]:
+    return [(i.name, i.label) for i in enum_class]
+
+
 def convert_date_object_to_string_in_dict(dictionary):
     """
     Change date objects to string

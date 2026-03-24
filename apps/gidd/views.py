@@ -17,13 +17,14 @@ from drf_spectacular.utils import (
 from openpyxl import Workbook
 from openpyxl.cell import Cell as OpCell
 from openpyxl.writer.excel import save_virtual_workbook
-from rest_framework import filters, mixins, renderers, viewsets
+from rest_framework import filters, mixins, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 
 from apps.common.utils import (
     EXTERNAL_ARRAY_SEPARATOR,
     EXTERNAL_FIELD_SEPARATOR,
+    XlsxRenderer,
 )
 from apps.contrib.commons import DATE_ACCURACY
 from apps.country.models import Country
@@ -51,16 +52,6 @@ from .serializers import (
     DisplacementDataSerializer,
     PublicFigureAnalysisSerializer,
 )
-
-
-class XlsxRenderer(renderers.BaseRenderer):
-    media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    format = "xlsx"
-    charset = None
-    render_style = "binary"
-
-    def render(self, data, accepted_media_type=None, renderer_context=None):
-        return data
 
 
 def _get_location_accuracy_label(accuracy):

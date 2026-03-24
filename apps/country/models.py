@@ -513,6 +513,13 @@ class Summary(MetaInformationArchiveAbstractModel, models.Model):
 
 
 class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
+    class GAP_FILLING_METHOD(enum.Enum):
+        FORWARD_FILLING = 0
+        BACKWARD_FILLING = 1
+        EXACT = 2
+
+        __labels__ = {FORWARD_FILLING: _("Forward Filling"), BACKWARD_FILLING: _("Backward Filling"), EXACT: "Exact"}
+
     country = models.ForeignKey("Country", related_name="household_sizes", on_delete=models.CASCADE)
     year = models.PositiveSmallIntegerField(verbose_name=_("Year"))
     size = models.FloatField(

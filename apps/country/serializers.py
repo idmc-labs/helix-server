@@ -7,6 +7,12 @@ from apps.country.models import ContextualAnalysis, HouseholdSize, HouseholdSize
 from apps.users.models import User
 
 
+class HouseholdSizeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = HouseholdSize
+        fields = []
+
+
 class CarryOverHouseholdSizeSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = HouseholdSizeCarryOverTask

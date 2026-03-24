@@ -1,11 +1,24 @@
 import typing
 
+from rest_framework import renderers
+
 REDIS_SEPARATOR = ":"
 INTERNAL_SEPARATOR = ":"
 
 EXTERNAL_TUPLE_SEPARATOR = ", "
 EXTERNAL_ARRAY_SEPARATOR = "; "
 EXTERNAL_FIELD_SEPARATOR = ":"
+
+
+# Renderer type for API excel file response
+class XlsxRenderer(renderers.BaseRenderer):
+    media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    format = "xlsx"
+    charset = None
+    render_style = "binary"
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data
 
 
 def format_locations(

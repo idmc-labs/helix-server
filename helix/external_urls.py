@@ -2,6 +2,7 @@ from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 
+from apps.country.views import HouseholdSizeViewSet
 from apps.entry.views import (
     IdusAllDisasterCachedView,
     IdusAllFlatCachedView,
@@ -51,6 +52,12 @@ urlpatterns = [
             }
         ),
         name="disaggregations-export-view",
+    ),
+    # AHHS
+    path(
+        "ahhs/disaggregations/disaggregations-export/",
+        HouseholdSizeViewSet.as_view({"get": "export_householdsize"}),
+        name="householdsize-export-view",
     ),
     # OpenAPI
     path("api-schema/", SpectacularAPIView.as_view(), name="schema"),
