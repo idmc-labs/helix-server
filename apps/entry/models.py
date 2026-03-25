@@ -27,7 +27,7 @@ from django.db.models import (
     fields,
 )
 from django.db.models.expressions import RawSQL
-from django.db.models.functions import Cast, Concat, ExtractYear
+from django.db.models.functions import Cast, Concat, ExtractYear, JSONObject
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.crypto import get_random_string
@@ -1085,7 +1085,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             type_of_points="Locations type",
             locations="Locations (Name:Lat, Lon:Accuracy:Type)",
         )
-        exclude_headers = []
+        # included in locations key
+        exclude_headers = ["location_display_name", "loc_lat_lon", "type_of_points", "accuracy"]
 
         EventCode = apps.get_model("event", "EventCode")
         event_codes_subquery = (
@@ -1112,64 +1113,48 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         )
 
         location_subquery = (
-            FigureLocation.objects.filter(
-                figures__id=OuterRef("pk"),
-                display_name__isnull=False,
-            )
+            FigureLocation.objects.filter(figures__id=OuterRef("pk"))
+            .exclude(display_name__isnull=True)
             .exclude(display_name="")
-            .exclude(Q(lat__isnull=True) | Q(lon__isnull=True))
             .annotate(
                 lat_lon=Concat(
-                    F("lat"),
+                    Cast("lat", CharField()),
                     Value(EXTERNAL_TUPLE_SEPARATOR),
-                    F("lon"),
+                    Cast("lon", CharField()),
                     output_field=CharField(),
                 ),
                 accuracy_str=Cast("accuracy", CharField()),
                 type_of_points_str=Cast("identifier", CharField()),
             )
-            .annotate(
-                formatted_location=Concat(
-                    F("display_name"),
-                    Value(EXTERNAL_FIELD_SEPARATOR),
-                    F("lat_lon"),
-                    Value(EXTERNAL_FIELD_SEPARATOR),
-                    F("accuracy_str"),
-                    Value(EXTERNAL_FIELD_SEPARATOR),
-                    F("type_of_points_str"),
-                    output_field=CharField(),
-                )
-            )
             .values("figures__id")
             .annotate(
-                locations_agg=StringAgg(
-                    "formatted_location",
-                    EXTERNAL_ARRAY_SEPARATOR,
-                    ordering="id",
-                ),
                 display_name_agg=StringAgg(
                     "display_name",
                     EXTERNAL_ARRAY_SEPARATOR,
-                    ordering="id",
                 ),
                 lat_lon_agg=StringAgg(
                     "lat_lon",
                     EXTERNAL_ARRAY_SEPARATOR,
-                    ordering="id",
                 ),
                 accuracy_agg=StringAgg(
                     "accuracy_str",
                     EXTERNAL_ARRAY_SEPARATOR,
-                    ordering="id",
                 ),
                 type_of_points_agg=StringAgg(
                     "type_of_points_str",
                     EXTERNAL_ARRAY_SEPARATOR,
-                    ordering="id",
                 ),
             )
+            .annotate(
+                location_json=JSONObject(
+                    location_display_name=F("display_name_agg"),
+                    loc_lat_lon=F("lat_lon_agg"),
+                    accuracy=F("accuracy_agg"),
+                    type_of_points=F("type_of_points_agg"),
+                )
+            )
+            .values("location_json")
         )
-
         values = (
             figures.annotate(
                 **Figure.annotate_stock_and_flow_dates(),
@@ -1237,17 +1222,17 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 ),
                 event_codes=Subquery(event_codes_subquery.values("event_codes_agg")[:1]),
                 # Locations
-                locations=Subquery(location_subquery.values("locations_agg")[:1]),
-                location_display_name=Subquery(location_subquery.values("display_name_agg")[:1]),
-                loc_lat_lon=Subquery(location_subquery.values("lat_lon_agg")[:1]),
-                accuracy=Subquery(location_subquery.values("accuracy_agg")[:1]),
-                type_of_points=Subquery(location_subquery.values("type_of_points_agg")[:1]),
+                locations=Subquery(location_subquery[:1]),
             )
             .order_by(
                 "created_at",
             )
             .values(*[header for header in headers.keys() if header not in exclude_headers])
         )
+        # figure_location_accuracy_label_mapping
+        _acc_label_mapping = {str(e.value): e.label for e in FigureLocation.ACCURACY}
+        # figure_location_identifier_label_mapping
+        _idf_label_mapping = {str(e.value): e.label for e in FigureLocation.IDENTIFIER}
 
         def transformer(datum):
             def get_enum_label(key, Enum):
@@ -1255,8 +1240,20 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 obj = Enum.get(val)
                 return getattr(obj, "label", val)
 
+            location_data = datum.pop("locations", {}) or {}
+            parts = [
+                location_data.get("location_display_name"),
+                location_data.get("loc_lat_lon"),
+                _acc_label_mapping.get(location_data.get("accuracy")),
+                _idf_label_mapping.get(location_data.get("type_of_points")),
+            ]
+
             return {
                 **datum,
+                **location_data,
+                "accuracy": _acc_label_mapping.get(location_data.get("accuracy")),
+                "type_of_points": _idf_label_mapping.get(location_data.get("type_of_points")),
+                "locations": ": ".join(filter(None, parts)),
                 "entry__preview__pdf": generate_full_media_url(datum["entry__preview__pdf"], absolute=True),
                 "source_document": generate_full_media_url(datum["source_document"], absolute=True),
                 "stock_date_accuracy": get_enum_label("stock_date_accuracy", DATE_ACCURACY),
