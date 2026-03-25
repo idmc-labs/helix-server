@@ -80,6 +80,8 @@ readme_data_raw = [
     ("Entry ID", "Entry ID"),
     ("Entry old ID", "Legacy ID from Helix 1.0"),
     ("Entry title", "Entry name"),
+    ("Publication Date", "Entry publication date"),
+    ("Confidential", "Is the entry confidential (Yes/No)"),
     ("Entry link", "Entry link"),
     ("Disability", "Has the dataset describes populations with disabilities (Yes/No)"),
     ("Indigenous people", "Has the dataset describes indigenous populations (Yes/No)"),

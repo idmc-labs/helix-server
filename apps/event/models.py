@@ -1,6 +1,7 @@
 import typing
 from collections import OrderedDict
 
+from django.conf import settings
 from django.contrib.postgres.aggregates.general import ArrayAgg, StringAgg
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
@@ -518,6 +519,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             context_of_violences="Context of violences",
             event_codes="Event codes (Code:Type:ISO3)",
             event_narrative="Event description",
+            event_link="Event Link",
         )
 
         data = (
@@ -540,6 +542,12 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                         output_field=ArrayField(models.CharField()),
                     ),
                     distinct=True,
+                ),
+                event_link=models.functions.Concat(
+                    models.Value(settings.FRONTEND_BASE_URL),
+                    models.Value("/events/"),
+                    Cast(models.F("id"), models.CharField()),
+                    output_field=models.CharField(),
                 ),
             )
             .order_by("created_at")

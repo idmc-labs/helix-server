@@ -1059,6 +1059,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             entry__old_id="Entry old ID",
             entry__article_title="Entry title",
             entry_link="Entry link",
+            entry__publish_date="Publication Date",
+            entry__is_confidential="Confidential",
             disaggregation_disability="Disability",
             disaggregation_indigenous_people="Indigenous people",
             event__id="Event ID",
@@ -1192,6 +1194,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 **datum,
                 "include_idu": "Yes" if datum["include_idu"] else "No",
                 "entry__preview__pdf": generate_full_media_url(datum["entry__preview__pdf"], absolute=True),
+                "entry__is_confidential": "Yes" if datum["entry__is_confidential"] else "No",
                 "is_housing_destruction": "Yes" if datum["is_housing_destruction"] else "No",
                 "stock_date_accuracy": get_enum_label("stock_date_accuracy", DATE_ACCURACY),
                 "flow_start_date_accuracy": get_enum_label("flow_start_date_accuracy", DATE_ACCURACY),
@@ -1529,6 +1532,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             min_fig_end="Earliest figure end",
             max_fig_end="Latest figure end",
             context_of_violences="Context of violences",
+            entry_link="Entry Link",
         )
         entries = (
             EntryExtractionFilterSet(
@@ -1552,6 +1556,12 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                 figures_count=models.Count("figures", distinct=True),
                 context_of_violences=StringAgg(
                     "figures__context_of_violence__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True
+                ),
+                entry_link=models.functions.Concat(
+                    models.Value(settings.FRONTEND_BASE_URL),
+                    models.Value("/entries/"),
+                    Cast(models.F("id"), models.CharField()),
+                    output_field=models.CharField(),
                 ),
                 # **cls._total_figure_disaggregation_subquery(),
             )
