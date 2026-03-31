@@ -1,6 +1,9 @@
 import json
+import json5
 from datetime import datetime, timedelta
 from uuid import uuid4
+from pathlib import Path
+from typing import Dict, List, Optional
 
 from apps.common.enums import QA_RULE_TYPE
 from apps.contrib.migrate_commands import merge_events
@@ -27,6 +30,8 @@ from utils.factories import (
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role
+
+BASE_DIR = Path(__file__).parent.parent.parent.parent
 
 
 class TestDataMigrationTestCase(HelixGraphQLTestCase):
@@ -214,18 +219,20 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         self.assertIn("countries", [item["field"] for item in content["data"]["createEvent"]["errors"]], content)
 
     def test_event_validation(self) -> None:
-        input_data = self.input
-        response = self.query(self.mutation, input_data=input_data.pop("countries"))
-        self.assertResponseErrors(response)
+        def _get_input_data(input_file: str) -> Dict:
+            with open(
+                BASE_DIR / "assests" / input_file, "r", encoding="utf-8"
+            ) as f:
+                return json5.load(f)
 
-        input_data["countries"] = None
-        response = self.query(self.mutation, input_data=input_data)
-        self.assertResponseErrors(response)
+        country1 = CountryFactory.create()
 
-        input_data["countries"] = []
-        response = self.query(self.mutation, input_data=input_data)
-        content = json.loads(response.content)
-        assert not content["data"]["createEvent"]["ok"]
+        input_data = _get_input_data("event_input_data.json5")["create"]["other_validations"]
+        for input in input_data:
+            input["country"] = country1.id
+            response = self.query(self.mutation, input_data=input["payload"]["event"])
+            content = json.loads(response.content)
+            assert not content["data"]["createEvent"]["ok"]
 
 
 class TestUpdateEvent(HelixGraphQLTestCase):
