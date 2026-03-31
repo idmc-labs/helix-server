@@ -37,6 +37,7 @@ dependencies = [
     "graphene-file-upload==1.2.2",
     "graphene-graphiql-explorer==0.0.1",
     "ipython",
+    "json5>=0.14.0",
     "lxml==4.6.3",
     "openpyxl==3.0.6",
     "pdfkit==0.6.1",
