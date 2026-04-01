@@ -1,5 +1,7 @@
 import json
 import json5
+import pytest
+from snapshottest import TestCase
 from datetime import datetime, timedelta
 from uuid import uuid4
 from pathlib import Path
@@ -94,10 +96,10 @@ class TestDataMigrationTestCase(HelixGraphQLTestCase):
         self.assertEqual(UnifiedReviewComment.objects.filter(event=self.event2).count(), 0)
 
 
-class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
+class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase, TestCase):
     def setUp(self) -> None:
         countries = CountryFactory.create_batch(2)
-        country1 = CountryFactory.create()
+        self.country1 = CountryFactory.create()
         self.crisis = crisis = CrisisFactory.create()
         crisis.crisis_type = Crisis.CRISIS_TYPE.DISASTER
         crisis.save()
@@ -158,14 +160,14 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
             "eventCodes": [
                 {
                     "uuid": str(uuid4()),
-                    "country": country1.id,
+                    "country": self.country1.id,
                     "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
                     "eventCode": "NEP-2021-YYY",
                 },
-                {"uuid": str(uuid4()), "country": country1.id, "eventCodeType": "GLIDE_NUMBER", "eventCode": "NEP-2021-XXX"},
+                {"uuid": str(uuid4()), "country": self.country1.id, "eventCodeType": "GLIDE_NUMBER", "eventCode": "NEP-2021-XXX"},
                 {
                     "uuid": str(uuid4()),
-                    "country": country1.id,
+                    "country": self.country1.id,
                     "eventCodeType": "IFRC_APPEAL_ID",
                     "eventCode": "NEP-2021-ZZZ",
                 },
@@ -219,20 +221,45 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         self.assertIn("countries", [item["field"] for item in content["data"]["createEvent"]["errors"]], content)
 
     def test_event_validation(self) -> None:
-        def _get_input_data(input_file: str) -> Dict:
-            with open(
-                BASE_DIR / "assests" / input_file, "r", encoding="utf-8"
-            ) as f:
-                return json5.load(f)
+        # if eventType equals disaster disasterSubType is required
+        input_1 = self.input
+        input_1["disasterSubType"] = None
+        response = self.query(self.mutation, input_data=input_1)
+        content = json.loads(response.content)
+        self.assertMatchSnapshot(content)
+        assert not content["data"]["createEvent"]["ok"]
 
-        country1 = CountryFactory.create()
+        # if eventType equals conflict violenceSubType is required
+        crisis = self.crisis
+        crisis.crisis_type = Crisis.CRISIS_TYPE.CONFLICT
+        crisis.save()
 
-        input_data = _get_input_data("event_input_data.json5")["create"]["other_validations"]
-        for input in input_data:
-            input["country"] = country1.id
-            response = self.query(self.mutation, input_data=input["payload"]["event"])
-            content = json.loads(response.content)
-            assert not content["data"]["createEvent"]["ok"]
+        input_2 = self.input
+        input_2["eventType"] = "CONFLICT"
+        input_2["violenceSubType"] = None
+        response = self.query(self.mutation, input_data=input_2)
+        content = json.loads(response.content)
+        assert not content["data"]["createEvent"]["ok"]
+
+        # validate event codes
+        # event_codes max 50
+        input_3 = self.input
+        input_3["violenceSubType"] = ViolenceSubTypeFactory().id
+        event_codes = {
+            "uuid": str(uuid4()),
+            "country": self.country1.id,
+            "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
+            "eventCode": "NEP-2021-YYY",
+        }
+        input_3["eventCodes"] = [event_codes for _ in range(0, 55)]
+        response = self.query(self.mutation, input_data=input_3)
+        content = json.loads(response.content)
+        assert not content["data"]["createEvent"]["ok"]
+        # Accept up to 50 event codes
+        input_3["eventCodes"] = [event_codes for _ in range(0, 50)]
+        response = self.query(self.mutation, input_data=input_3)
+        content = json.loads(response.content)
+        assert content["data"]["createEvent"]["ok"]
 
 
 class TestUpdateEvent(HelixGraphQLTestCase):
@@ -265,6 +292,8 @@ class TestUpdateEvent(HelixGraphQLTestCase):
                 ok
                 }
             }"""
+        self.crisis = CrisisFactory.create()
+        self.country1 = CountryFactory.create()
         self.event = EventFactory.create(
             crisis=None,
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
@@ -407,6 +436,58 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         response = self.query(self.mutation, input_data=self.input)
         content = json.loads(response.content)
         self.assertIn(PERMISSION_DENIED_MESSAGE, content["errors"][0]["message"])
+
+    def test_event_update_validation(self) -> None:
+        # if eventType equals disaster disasterSubType is required
+        input_1 = self.input
+        input_1["eventType"] = "DISASTER"
+        input_1["disasterSubType"] = None
+        response = self.query(self.mutation, input_data=input_1)
+        content = json.loads(response.content)
+        print("RESP          ", content)
+        assert not content["data"]["updateEvent"]["ok"]
+
+        # if eventType equals conflict violenceSubType is required
+        crisis = self.crisis
+        crisis.crisis_type = Crisis.CRISIS_TYPE.CONFLICT
+        crisis.save()
+
+        input_2 = self.input
+        input_2["eventType"] = "CONFLICT"
+        input_2["violenceSubType"] = None
+        response = self.query(self.mutation, input_data=input_2)
+        content = json.loads(response.content)
+        print("RESP          ", content)
+        assert not content["data"]["updateEvent"]["ok"]
+
+        # validate event codes
+        # event_codes max 50
+        input_3 = self.input
+        input_3["violenceSubType"] = ViolenceSubTypeFactory().id
+        input_3["eventCodes"] = [
+            {
+                "uuid": str(uuid4()),
+                "country": self.country1.id,
+                "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
+                "eventCode": "NEP-2021-YYY",
+            } for _ in range(0, 55)
+        ]
+        response = self.query(self.mutation, input_data=input_3)
+        content = json.loads(response.content)
+        print("RESP          ", content)
+        assert not content["data"]["updateEvent"]["ok"]
+        # Accept up to 50 event codes
+        input_3["eventCodes"] = [
+            {
+                "uuid": str(uuid4()),
+                "country": self.country1.id,
+                "eventCodeType": "GOV_ASSIGNED_IDENTIFIER",
+                "eventCode": "NEP-2021-YYY",
+            } for _ in range(0, 50)
+        ]
+        response = self.query(self.mutation, input_data=input_3)
+        content = json.loads(response.content)
+        assert content["data"]["updateEvent"]["ok"]
 
 
 class TestDeleteEvent(HelixGraphQLTestCase):
