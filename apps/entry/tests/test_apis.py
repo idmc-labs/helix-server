@@ -1,4 +1,5 @@
 import json
+import pytest
 
 from apps.crisis.models import Crisis
 from apps.entry.models import (
@@ -13,9 +14,10 @@ from utils.factories import (
     FigureFactory,
     OrganizationFactory,
     TagFactory,
+    AttachmentFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
-from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from utils.tests import HelixGraphQLTestCase, create_user_with_role, snapshot_in_class
 
 
 class TestEntryQuery(HelixGraphQLTestCase):
@@ -108,6 +110,10 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     errors
                     result {
                         id
+                        url
+                        versionId
+                        articleTitle
+                        documentUrl
                         figures {
                             id
                             createdBy{
@@ -152,6 +158,25 @@ class TestEntryCreation(HelixGraphQLTestCase):
         response = self.query(self.mutation, input_data=self.input)
         content = json.loads(response.content)
         self.assertIn(PERMISSION_DENIED_MESSAGE, content["errors"][0]["message"])
+
+    @pytest.mark.usefixtures("snapshot_in_class")
+    def test_entry_validation(self) -> None:
+        input_1 = self.input
+        input_1["document"] = AttachmentFactory().id
+        response = self.query(self.mutation, input_data=input_1)
+        content = json.loads(response.content)
+        assert content == self.snapshot
+        assert not content["data"]["createEntry"]["ok"]
+
+        # both_url_and_document_cannot_be_set
+        input_2 = self.input
+        input_2["document"] = AttachmentFactory().id
+        input_2["documentUrl"] = "www.invalidurl.com",
+        response = self.query(self.mutation, input_data=input_2)
+        content = json.loads(response.content)
+        assert content == self.snapshot
+        assert not content["data"]["createEntry"]["ok"]
+
 
 
 class TestEntryUpdate(HelixGraphQLTestCase):
