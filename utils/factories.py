@@ -11,6 +11,11 @@ from apps.entry.models import Figure, FigureLocation
 from apps.event.models import Event, EventCode
 
 
+class AttachmentFactory(DjangoModelFactory):
+    class Meta:
+        model = "contrib.Attachment"
+
+
 class UserFactory(DjangoModelFactory):
     class Meta:
         model = "users.User"

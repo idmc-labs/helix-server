@@ -37,7 +37,6 @@ dependencies = [
     "graphene-file-upload==1.2.2",
     "graphene-graphiql-explorer==0.0.1",
     "ipython",
-    "json5>=0.14.0",
     "lxml==4.6.3",
     "openpyxl==3.0.6",
     "pdfkit==0.6.1",
@@ -47,10 +46,10 @@ dependencies = [
     "selenium==3.141.0",
     "sentry-sdk",
     "shapely==2.0.1",
-    "snapshottest>=0.6.0",
     "turfpy==0.0.6",
     "uWSGI==2.0.31",
     "banjo-utils",
+    "syrupy>=3.0.6",
 ]
 
 [tool.uv.sources]

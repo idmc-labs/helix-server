@@ -1,4 +1,5 @@
 import copy
+import pytest
 import datetime
 import os
 import shutil
@@ -36,6 +37,15 @@ TEST_CACHES = {
 
 
 TEST_AUTH_PASSWORD_VALIDATORS = []
+
+
+@pytest.fixture(scope="function")
+def snapshot_in_class(request, snapshot):
+    """
+    Wraps snapshot fixture to provide instance snapshot property for
+    unittest.TestCase tests
+    """
+    request.cls.snapshot = snapshot
 
 
 class CommonSetupClassMixin:

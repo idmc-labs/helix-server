@@ -96,3 +96,7 @@ Feel free to test in your style. Here, the ```test-docker-compose.yml``` doesn't
 ```
 docker compose -f docker-compose.yml -f test-docker-compose.yml run --rm server pytest --reuse-db
 ```
+Incase you add additional test with snapshots use below command to regenerate snapshots
+```
+docker compose -f docker-compose.yml -f test-docker-compose.yml run --rm server pytest --shapshot-update --reuse-db
+```

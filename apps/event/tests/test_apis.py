@@ -1,11 +1,8 @@
 import json
-import json5
 import pytest
-from snapshottest import TestCase
 from datetime import datetime, timedelta
 from uuid import uuid4
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from apps.common.enums import QA_RULE_TYPE
 from apps.contrib.migrate_commands import merge_events
@@ -31,7 +28,7 @@ from utils.factories import (
     ViolenceSubTypeFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
-from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from utils.tests import HelixGraphQLTestCase, create_user_with_role, snapshot_in_class
 
 BASE_DIR = Path(__file__).parent.parent.parent.parent
 
@@ -96,7 +93,7 @@ class TestDataMigrationTestCase(HelixGraphQLTestCase):
         self.assertEqual(UnifiedReviewComment.objects.filter(event=self.event2).count(), 0)
 
 
-class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase, TestCase):
+class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
     def setUp(self) -> None:
         countries = CountryFactory.create_batch(2)
         self.country1 = CountryFactory.create()
@@ -220,13 +217,14 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase, TestCase):
         self.assertFalse(content["data"]["createEvent"]["ok"], content)
         self.assertIn("countries", [item["field"] for item in content["data"]["createEvent"]["errors"]], content)
 
+    @pytest.mark.usefixtures("snapshot_in_class")
     def test_event_validation(self) -> None:
         # if eventType equals disaster disasterSubType is required
         input_1 = self.input
         input_1["disasterSubType"] = None
         response = self.query(self.mutation, input_data=input_1)
-        content = json.loads(response.content)
-        self.assertMatchSnapshot(content)
+        content = json.loads(response.content.decode())
+        assert content == self.snapshot
         assert not content["data"]["createEvent"]["ok"]
 
         # if eventType equals conflict violenceSubType is required
@@ -239,6 +237,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase, TestCase):
         input_2["violenceSubType"] = None
         response = self.query(self.mutation, input_data=input_2)
         content = json.loads(response.content)
+        assert content == self.snapshot
         assert not content["data"]["createEvent"]["ok"]
 
         # validate event codes
@@ -254,6 +253,7 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase, TestCase):
         input_3["eventCodes"] = [event_codes for _ in range(0, 55)]
         response = self.query(self.mutation, input_data=input_3)
         content = json.loads(response.content)
+        assert content == self.snapshot
         assert not content["data"]["createEvent"]["ok"]
         # Accept up to 50 event codes
         input_3["eventCodes"] = [event_codes for _ in range(0, 50)]
