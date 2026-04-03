@@ -32,4 +32,4 @@ jobs:
       - name: uv sync
         run: uv sync --all-extras
 
-      - uses: pre-commit/action@main
+      - uses: pre-commit/action@v3.0.1
