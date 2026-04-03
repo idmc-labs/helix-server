@@ -240,26 +240,6 @@ enum CRISIS_TYPE {
   OTHER
 }
 
-type CarryOverHouseholdSize {
-  errors: [GenericScalar!]
-  ok: Boolean
-  result: CarryOverHouseholdSizeType
-}
-
-type CarryOverHouseholdSizeType {
-  id: ID!
-  createdAt: DateTime!
-  modifiedAt: DateTime!
-  createdBy: UserType
-  lastModifiedBy: UserType
-  versionId: String
-  startedAt: DateTime
-  completedAt: DateTime
-  status: HouseholdSizeCarryOverTaskStatus!
-  targetYear: Int!
-  failureReasons: JSONString!
-}
-
 type ChangeUserPassword {
   errors: [GenericScalar!]
   ok: Boolean
@@ -2661,14 +2641,6 @@ type GiddYearType {
   year: Int!
 }
 
-enum HouseholdSizeCarryOverTaskStatus {
-  A_0
-  A_1
-  A_2
-  A_3
-  A_4
-}
-
 input HouseholdSizeFilterDataTypeInputType {
   search: String
   filterIdmcReportingYear: Float
@@ -2824,7 +2796,6 @@ type Mutation {
   updateOrganizationKind(data: OrganizationKindUpdateInputType!): UpdateOrganizationKind
   deleteOrganizationKind(id: ID!): DeleteOrganizationKind
   exportOrganizations(filters: OrganizationFilterDataInputType!): ExportOrganizations
-  carryOverHouseholdSize: CarryOverHouseholdSize
   createSummary(data: SummaryCreateInputType!): CreateSummary
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
   exportCountries(filters: CountryFilterDataInputType!): ExportCountries

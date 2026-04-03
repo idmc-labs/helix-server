@@ -12,7 +12,7 @@ from apps.country.filters import (
     CountryRegionFilter,
     CountrySummaryFilter,
     GeographicalGroupFilter,
-    HouseholdSizeFilterSet,
+    HouseholdSizeFilter,
     MonitoringSubRegionFilter,
 )
 from apps.country.models import (
@@ -22,7 +22,6 @@ from apps.country.models import (
     CountrySubRegion,
     GeographicalGroup,
     HouseholdSize,
-    HouseholdSizeCarryOverTask,
     MonitoringSubRegion,
     Summary,
 )
@@ -214,11 +213,6 @@ class CountryType(DjangoObjectType):
         return info.context.request.build_absolute_uri(Country.geojson_url(root.iso3))
 
 
-class CarryOverHouseholdSizeType(DjangoObjectType):
-    class Meta:
-        model = HouseholdSizeCarryOverTask
-
-
 class CountryListType(CustomDjangoListObjectType):
     class Meta:
         model = Country
@@ -233,7 +227,7 @@ class CountryHouseholdSizeType(DjangoObjectType):
 class HouseholdSizeListType(CustomDjangoListObjectType):
     class Meta:
         model = HouseholdSize
-        filterset_class = HouseholdSizeFilterSet
+        filterset_class = HouseholdSizeFilter
 
 
 class Query:

@@ -35,7 +35,7 @@ from utils.filters import (
 )
 
 
-class HouseholdSizeFilterSet(MultiWordSearchFilterSet):
+class HouseholdSizeFilter(MultiWordSearchFilterSet):
     filter_idmc_reporting_year = django_filters.NumberFilter(method="filter_reporting_year")
     filter_ahhs_size = django_filters.NumberFilter(method="filter_size")
     filter_ahhs_source = django_filters.CharFilter(method="filter_source")
@@ -204,7 +204,7 @@ MonitoringSubRegionFilterDataType, MonitoringSubRegionFilterDataInputType = gene
 )
 
 HouseholdSizeFilterDataType, HouseholdSizeFilterDataTypeInputType = generate_type_for_filter_set(
-    HouseholdSizeFilterSet,
+    HouseholdSizeFilter,
     "country.schema.household_size_list",
     "HouseholdSizeFilterDataType",
     "HouseholdSizeFilterDataTypeInputType",
