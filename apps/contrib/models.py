@@ -366,7 +366,7 @@ class Client(MetaInformationAbstractModel):
     )
     opted_out_of_emails = models.BooleanField(verbose_name="Opted out of receiving emails", default=False)
     use_cases = ArrayField(base_field=enum.EnumField(USE_CASE_TYPES, verbose_name=_("Use case")), null=False, default=list)
-    other_notes = models.CharField(max_length=255, null=True, blank=True)
+    other_notes = models.TextField(verbose_name=_("Notes"), null=True, blank=True)
     is_active = models.BooleanField(verbose_name=_("Is active?"), default=False)
     share_source = models.BooleanField(verbose_name=_("Share source?"), default=False)
 
