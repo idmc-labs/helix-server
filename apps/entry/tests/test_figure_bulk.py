@@ -1,3 +1,6 @@
+import json
+import pytest
+from datetime import datetime, timedelta
 from copy import deepcopy as copy
 from unittest.mock import call, patch
 from uuid import uuid4
@@ -19,7 +22,19 @@ from utils.factories import (
     OrganizationFactory,
     ViolenceSubTypeFactory,
 )
-from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from utils.tests import HelixGraphQLTestCase, create_user_with_role, snapshot_in_class
+
+
+def clean_response(data):
+    if isinstance(data, dict):
+        for key in ["id", "uuid", "totalFlowNdFigures", "totalStockIdpFigures", "key"]:
+            data.pop(key, None)
+        for v in data.values():
+            clean_response(v)
+    elif isinstance(data, list):
+        for item in data:
+            clean_response(item)
+    return data
 
 
 def get_first_error_fields(errors):
@@ -39,7 +54,11 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
         self.event = EventFactory.create(
             event_type=Crisis.CRISIS_TYPE.CONFLICT.value, start_date="2015-01-01", end_date="2025-01-30"
         )
+        self.event2 = EventFactory.create(
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value, start_date="2015-01-01", end_date="2025-01-30"
+        )
         self.event.countries.add(self.country_1, self.country_2)
+        self.event2.countries.add(self.country_1, self.country_2)
         self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.entry = EntryFactory.create(article_title="test", publish_date="2020-02-02")
@@ -79,7 +98,7 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             "geocoder": FigureLocation.GEOCODER.CUSTOM_SOURCE.name,
         }
         self.figure_item_input = {
-            "id": self.f3.id,
+            # "id": self.f3.id,
             "entry": self.entry.id,
             "uuid": str(uuid4()),
             "quantifier": Figure.QUANTIFIER.MORE_THAN_OR_EQUAL.name,
@@ -92,6 +111,13 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
             "startDate": "2020-01-01",
             "endDate": "2020-01-30",
             "violenceSubType": self.violence_sub_type.id,
+            "calculationLogic": "test logic",
+            "unit": "PERSON",
+            "category": "NEW_DISPLACEMENT",
+            "term": "DISPLACED",
+            "role": "RECOMMENDED",
+            "sources": self.source.id,
+            "tags": []
         }
 
         self.figure_bulk_mutation = """
@@ -114,11 +140,341 @@ class TestBulkFigureUpdate(HelixGraphQLTestCase):
                         id
                         name
                       }
+                      term
+                      isHousingDestruction
+                      displacementOccurredDisplay
                     }
                 }
             }
         """
         self.force_login(self.editor)
+
+    @pytest.mark.usefixtures("snapshot_in_class")
+    def test_figure_validation(
+        self,
+        mock_bulk_update_figure_manager_exit,
+        mock_bulk_update_figure_manager_add_event,
+    ):
+        # country required
+        f1 = self.figure_item_input.copy()
+        # f1["country"] = None
+        f1.pop("country")
+
+        # calculationLogic required
+        f2 = self.figure_item_input.copy()
+        # f2["calculationLogic"] = None
+        f2.pop("calculationLogic")
+
+        # quantifier required
+        f3 = self.figure_item_input.copy()
+        # f3["quantifier"] = None
+        f3.pop("quantifier")
+
+        # reported required
+        f4 = self.figure_item_input.copy()
+        # f4["reported"] = None
+        f4.pop("reported")
+
+        # event required
+        f5 = self.figure_item_input.copy()
+        # f5["event"] = None
+        f5.pop("event")
+
+        # entry required
+        f6 = self.figure_item_input.copy()
+        # f6["entry"] = None
+        f6.pop("entry")
+
+        # tags cannot be null
+        f7 = self.figure_item_input.copy()
+        f7["tags"] = None
+        # f7.pop("tags")
+
+        # tags must be list of pk
+        f8 = self.figure_item_input.copy()
+        f8["tags"] = "string" 
+
+        # term required
+        f9 = self.figure_item_input.copy()
+        # f9["term"] = None
+        f9.pop("term")
+
+        # category required
+        f10 = self.figure_item_input.copy()
+        # f10["category"] = None
+        f10.pop("category")
+
+        # endDate required
+        f11 = self.figure_item_input.copy()
+        # f11["endDate"] = None
+        f11.pop("endDate")
+
+        # endDate must be past date
+        f12 = self.figure_item_input.copy()
+        f12["endDate"] = (datetime.today() + timedelta(days=2)).date().isoformat()
+
+        # unit required
+        f13 = self.figure_item_input.copy()
+        # f13["unit"] = None
+        f13.pop("unit")
+
+        # if unit = household, household size is required
+        f14 = self.figure_item_input.copy()
+        f14["unit"] = "HOUSEHOLD"
+        f14["householdSize"] = None
+        # f14.pop("householdSize")
+
+        # figure_cause required
+        f15 = self.figure_item_input.copy()
+        f15.pop("figureCause")
+
+        # if figureCause = Conflict, violenceSubType is required
+        f16 = self.figure_item_input.copy()
+        f16["figureCause"] = "CONFLICT"
+        f16["violenceSubType"] = None
+
+        # if figureCause = disaster, disasterSubType is required
+        f17 = self.figure_item_input.copy()
+        f17["figureCause"] = "DISASTER"
+        f17["event"] = self.event2.id
+        f17["disasterSubType"] = None
+
+        # geoLocation must not be empty
+        f18 = self.figure_item_input.copy()
+        f18["geoLocations"] = []
+
+        # lat should range between [-90, 90] (inclusive)
+        f19 = self.figure_item_input.copy()
+        geolocation_invalid_lat = self.geo_location_1.copy()
+        geolocation_invalid_lat["lat"] = 100
+        f19["geoLocations"] = [geolocation_invalid_lat]
+
+        # lon should range between [-180, 180] (inclusive)
+        f20 = self.figure_item_input.copy()
+        geolocation_invalid_lon = self.geo_location_1.copy()
+        geolocation_invalid_lon["lon"] = 200
+        f20["geoLocations"] = [geolocation_invalid_lon]
+
+        # if isDisaggregated = true, disaggregationAge is required
+        f21 = self.figure_item_input.copy()
+        f21["isDisaggregated"] = True
+        f21["disaggregationAge"] = None
+
+        response = self.query(
+            self.figure_bulk_mutation,
+            variables={
+                "items": [
+                    f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14, f15, f16, f17, f18, f19, f20,
+                    f21
+                ],
+                "delete_ids": [],
+            },
+        )
+        print("RESP: ", json.dumps(response.json(), indent=4))
+        content_data = response.json()["data"]["bulkUpdateFigures"]
+        assert clean_response(content_data) == self.snapshot
+        self.assertResponseNoErrors(response)
+
+        # validate end data
+        end_date_required_category_types = [
+            Figure.FIGURE_CATEGORY_TYPES.IDPS.name,
+            Figure.FIGURE_CATEGORY_TYPES.RETURNEES.name,
+            Figure.FIGURE_CATEGORY_TYPES.LOCALLY_INTEGRATED_IDPS.name,
+            Figure.FIGURE_CATEGORY_TYPES.IDPS_SETTLED_ELSEWHERE.name,
+            Figure.FIGURE_CATEGORY_TYPES.PEOPLE_DISPLACED_ACROSS_BORDERS.name,
+            Figure.FIGURE_CATEGORY_TYPES.PARTIAL_STOCK.name,
+            Figure.FIGURE_CATEGORY_TYPES.UNVERIFIED_STOCK.name,
+        ]
+        figures = []
+        for category_type in end_date_required_category_types:
+            figure = self.figure_item_input.copy()
+            figure["category"] = category_type
+            figure["endDate"] = None
+            figures.append(figure)
+
+        response = self.query(
+            self.figure_bulk_mutation,
+            variables={
+                "items": figures,
+                "delete_ids": [],
+            },
+        )
+        content_data = response.json()["data"]["bulkUpdateFigures"]
+        assert clean_response(content_data) == self.snapshot
+        self.assertResponseNoErrors(response)
+
+        # end date must be past date
+        end_date_must_be_past_date_categories = [
+            Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.name,
+            Figure.FIGURE_CATEGORY_TYPES.RETURN.name,
+            Figure.FIGURE_CATEGORY_TYPES.MULTIPLE_DISPLACEMENT.name,
+            Figure.FIGURE_CATEGORY_TYPES.PARTIAL_FLOW.name,
+            Figure.FIGURE_CATEGORY_TYPES.CROSS_BORDER_FLIGHT.name,
+            Figure.FIGURE_CATEGORY_TYPES.CROSS_BORDER_RETURN.name,
+            Figure.FIGURE_CATEGORY_TYPES.RELOCATION_ELSEWHERE.name,
+            Figure.FIGURE_CATEGORY_TYPES.DEATHS.name,
+            Figure.FIGURE_CATEGORY_TYPES.PROVISIONAL_SOLUTIONS.name,
+            Figure.FIGURE_CATEGORY_TYPES.FAILED_LOCAL_INTEGRATION.name,
+            Figure.FIGURE_CATEGORY_TYPES.LOCAL_INTEGRATION.name,
+            Figure.FIGURE_CATEGORY_TYPES.FAILED_RETURN_RETURNEE_DISPLACEMENT.name,
+            Figure.FIGURE_CATEGORY_TYPES.FAILED_RELOCATION_ELSEWHERE.name,
+            Figure.FIGURE_CATEGORY_TYPES.BIRTH.name,
+            Figure.FIGURE_CATEGORY_TYPES.UNVERIFIED_FLOW.name,
+            Figure.FIGURE_CATEGORY_TYPES.PEOPLE_DISPLACED_ACROSS_BORDERS_FLOW.name,
+        ]
+        figures_2 = []
+        for category_type in end_date_must_be_past_date_categories:
+            figure = self.figure_item_input.copy()
+            figure["category"] = category_type
+            figure["endDate"] = (datetime.today() + timedelta(days=2)).date().isoformat()
+            figures_2.append(figure)
+
+        response = self.query(
+            self.figure_bulk_mutation,
+            variables={
+                "items": figures_2,
+                "delete_ids": [],
+            },
+        )
+        content_data = response.json()["data"]["bulkUpdateFigures"]
+        assert clean_response(content_data) == self.snapshot
+        self.assertResponseNoErrors(response)
+
+    def test_figure_clear_fields(
+        self,
+        mock_bulk_update_figure_manager_exit,
+        mock_bulk_update_figure_manager_add_event,
+    ):
+        def _assert_field_is_clear(fields, output):
+            for field in fields:
+                value = output[field]
+                if isinstance(value, dict) and "results" in value:
+                    assert value["results"] in [None, []]
+                else:
+                    assert value in [None, []]
+
+
+        # if_term_equals_distroyedHousing_clear_displacementOccured
+        f1 = self.figure_item_input
+        f1["term"] = "DESTROYED_HOUSING"
+
+        # if_term_equals_partiallyDistroyedHousing_clear_displacementOccured
+        f2 = self.figure_item_input
+        f2["term"] = "PARTIALLY_DESTROYED_HOUSING"
+
+        # if_term_equals_unihabitableHousing_clear_displacementOccured
+        f3 = self.figure_item_input
+        f3["term"] = "UNINHABITABLE_HOUSING"
+
+        # if_term_equals_evacuated_clear_isHousingDestruction
+        f4 = self.figure_item_input
+        f4["term"] = "EVACUATED"
+
+        # if_term_equals_displaced_clear_isHousingDestruction
+        f5 = self.figure_item_input
+        f5["term"] = "DISPLACED"
+
+        # if_term_equals_forcedToFlee_clear_isHousingDestruction
+        f6 = self.figure_item_input
+        f6["term"] = "FORCED_TO_FLEE"
+
+        # if_term_equals_relocated_clear_isHousingDestruction
+        f7 = self.figure_item_input
+        f7["term"] = "RELOCATED"
+
+        # if_term_equals_sheltered_clear_isHousingDestruction
+        f8 = self.figure_item_input
+        f8["term"] = "SHELTERED"
+
+        # if_term_equals_inReliefCamp_clear_isHousingDestruction
+        f9 = self.figure_item_input
+        f9["term"] = "IN_RELIEF_CAMP"
+
+        # if_term_equals_homeless_clear_isHousingDestruction_displacementOccurred
+        f10 = self.figure_item_input
+        f10["term"] = "HOMELESS"
+
+        # if_term_equals_affected_clear_isHousingDestruction_displacementOccurred
+        f11 = self.figure_item_input
+        f11["term"] = "AFFECTED"
+
+        # if_term_equals_returns_clear_isHousingDestruction_displacementOccurred
+        f12 = self.figure_item_input
+        f12["term"] = "RETURNS"
+
+        # if_term_equals_multipleOrOther_clear_isHousingDestruction_displacementOccurred
+        f13 = self.figure_item_input
+        f13["term"] = "MULTIPLE_OR_OTHER"
+
+        # if_category_equals_idps_clear_endDateAccuracy
+        f13 = self.figure_item_input
+        f13["term"] = "MULTIPLE_OR_OTHER"
+
+        response = self.query(
+            self.figure_bulk_mutation,
+            variables={
+                "items": [f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13, f14],
+                "delete_ids": [],
+            },
+        )
+        print("RES", response.content)
+        content_data = response.json()["data"]["bulkUpdateFigures"]["result"]
+        print("Content DATA: ", content_data)
+
+        expected_cleared_fields_for_term_input = {
+            "DESTROYED_HOUSING": ["displacementOccured"],
+            "PARTIALLY_DESTROYED_HOUSING": ["displacementOccured"],
+            "UNINHABITABLE_HOUSING": ["displacementOccured"],
+            "EVACUATED": ["isHousingDestruction"],
+            "DISPLACED": ["isHousingDestruction"],
+            "FORCED_TO_FLEE": ["isHousingDestruction"],
+            "RELOCATED": ["isHousingDestruction"],
+            "SHELTERED": ["isHousingDestruction"],
+            "IN_RELIEF_CAMP": ["isHousingDestruction"],
+            "HOMELESS": ["isHousingDestruction", "displacementOccurredDisplay"],
+            "AFFECTED": ["isHousingDestruction", "displacementOccurredDisplay"],
+            "RETURNS": ["isHousingDestruction", "displacementOccurredDisplay"],
+            "MULTIPLE_OR_OTHER": ["isHousingDestruction", "displacementOccurredDisplay"],
+        }
+
+        for item in content_data:
+            # print("ITEM", item)
+            _assert_field_is_clear(
+                expected_cleared_fields_for_term_input.get(item["term"]),
+                item
+            )
+
+        print("Test input as category")
+        # if_category_equals_idps_clear_endDateAccuracy
+        f14 = self.figure_item_input
+        f14["category"] = "IDPS"
+
+        # if_category_equals_returnees_clear_endDateAccuracy
+        f15 = self.figure_item_input
+        f15["category"] = "RETURNEES"
+
+        response = self.query(
+            self.figure_bulk_mutation,
+            variables={
+                "items": [f14, f15],
+                "delete_ids": [],
+            },
+        )
+        print("RES", response.content)
+        content_data = response.json()["data"]["bulkUpdateFigures"]["result"]
+        print("Content DATA: ", content_data)
+
+        expected_cleared_fields_for_category_input = {
+            "IDPS" : ["endDateAccuracy"],
+            "RETURNEES" : ["endDateAccuracy"],
+        }
+
+        for item in content_data:
+            print("ITEM", item)
+            _assert_field_is_clear(
+                expected_cleared_fields_for_category_input.get(item["category"]),
+                item
+            )
 
     def test_can_bulk_create_and_delete_figures(
         self,

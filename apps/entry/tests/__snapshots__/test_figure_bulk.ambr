@@ -1,0 +1,463 @@
+# serializer version: 1
+# name: TestBulkFigureUpdate.test_figure_validation
+  dict({
+    'deletedResult': list([
+    ]),
+    'errors': list([
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'country',
+          'messages': 'This field is required.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'calculationLogic',
+          'messages': 'This field is required.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'quantifier',
+          'messages': 'This field is required.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'reported',
+          'messages': 'This field is required.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'event',
+          'messages': 'This field is required.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'entry',
+          'messages': 'This field is required.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'tags',
+          'messages': 'This field may not be null.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': list([
+            dict({
+              'messages': 'Incorrect type. Expected pk value, received str.',
+              'objectErrors': None,
+            }),
+          ]),
+          'field': 'tags',
+          'messages': None,
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'term',
+          'messages': 'This field is required.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'category',
+          'messages': 'This field is required.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This field is required.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'unit',
+          'messages': 'This field is required.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'householdSize',
+          'messages': 'This field is required',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'figureCause',
+          'messages': 'This field is required.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'violenceSubType',
+          'messages': 'This field is required',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'disasterSubType',
+          'messages': 'This field is required',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'geoLocations',
+          'messages': None,
+          'objectErrors': list([
+            dict({
+              'arrayErrors': None,
+              'field': 'nonFieldErrors',
+              'messages': 'This list may not be empty.',
+              'objectErrors': None,
+            }),
+          ]),
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': list([
+            dict({
+              'messages': None,
+              'objectErrors': list([
+                dict({
+                  'arrayErrors': None,
+                  'field': 'lat',
+                  'messages': 'Latitude must be between -90 and 90.',
+                  'objectErrors': None,
+                }),
+              ]),
+            }),
+          ]),
+          'field': 'geoLocations',
+          'messages': None,
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': list([
+            dict({
+              'messages': None,
+              'objectErrors': list([
+                dict({
+                  'arrayErrors': None,
+                  'field': 'lon',
+                  'messages': 'Longitude must be between -180 and 180.',
+                  'objectErrors': None,
+                }),
+              ]),
+            }),
+          ]),
+          'field': 'geoLocations',
+          'messages': None,
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'disaggregationAge',
+          'messages': 'This field may not be null.',
+          'objectErrors': None,
+        }),
+      ]),
+    ]),
+    'result': list([
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+    ]),
+  })
+# ---
+# name: TestBulkFigureUpdate.test_figure_validation.1
+  dict({
+    'deletedResult': list([
+    ]),
+    'errors': list([
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This field may not be null.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This field may not be null.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This field may not be null.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This field may not be null.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This field may not be null.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This field may not be null.',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This field may not be null.',
+          'objectErrors': None,
+        }),
+      ]),
+    ]),
+    'result': list([
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+    ]),
+  })
+# ---
+# name: TestBulkFigureUpdate.test_figure_validation.2
+  dict({
+    'deletedResult': list([
+    ]),
+    'errors': list([
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+      list([
+        dict({
+          'arrayErrors': None,
+          'field': 'endDate',
+          'messages': 'This must be a past date',
+          'objectErrors': None,
+        }),
+      ]),
+    ]),
+    'result': list([
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+      None,
+    ]),
+  })
+# ---

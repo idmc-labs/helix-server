@@ -59,3 +59,63 @@
     }),
   })
 # ---
+# name: TestUpdateEvent.test_event_update_validation
+  dict({
+    'data': dict({
+      'updateEvent': dict({
+        'errors': list([
+          dict({
+            'arrayErrors': None,
+            'field': 'disasterSubType',
+            'messages': 'This field is required.',
+            'objectErrors': None,
+          }),
+        ]),
+        'ok': False,
+        'result': None,
+      }),
+    }),
+  })
+# ---
+# name: TestUpdateEvent.test_event_update_validation.1
+  dict({
+    'data': dict({
+      'updateEvent': dict({
+        'errors': list([
+          dict({
+            'arrayErrors': None,
+            'field': 'violenceSubType',
+            'messages': 'This field is required.',
+            'objectErrors': None,
+          }),
+        ]),
+        'ok': False,
+        'result': None,
+      }),
+    }),
+  })
+# ---
+# name: TestUpdateEvent.test_event_update_validation.2
+  dict({
+    'data': dict({
+      'updateEvent': dict({
+        'errors': list([
+          dict({
+            'arrayErrors': list([
+              dict({
+                'key': 'nonMemberErrors',
+                'messages': 'More than 50 event codes are not allowed',
+                'objectErrors': None,
+              }),
+            ]),
+            'field': 'eventCodes',
+            'messages': None,
+            'objectErrors': None,
+          }),
+        ]),
+        'ok': False,
+        'result': None,
+      }),
+    }),
+  })
+# ---

@@ -23,3 +23,63 @@
     }),
   })
 # ---
+# name: TestEntryCreation.test_entry_validation.1
+  dict({
+    'data': dict({
+      'createEntry': dict({
+        'errors': list([
+          dict({
+            'arrayErrors': None,
+            'field': 'documentUrl',
+            'messages': 'Enter a valid URL.',
+            'objectErrors': None,
+          }),
+        ]),
+        'ok': False,
+        'result': None,
+      }),
+    }),
+  })
+# ---
+# name: TestEntryUpdate.test_entry_validation
+  dict({
+    'data': dict({
+      'updateEntry': dict({
+        'errors': list([
+          dict({
+            'arrayErrors': None,
+            'field': 'url',
+            'messages': 'Cannot change type of the entry.',
+            'objectErrors': None,
+          }),
+          dict({
+            'arrayErrors': None,
+            'field': 'document',
+            'messages': 'Cannot change type of the entry.',
+            'objectErrors': None,
+          }),
+        ]),
+        'ok': False,
+        'result': None,
+      }),
+    }),
+  })
+# ---
+# name: TestEntryUpdate.test_entry_validation.1
+  dict({
+    'data': dict({
+      'updateEntry': dict({
+        'errors': list([
+          dict({
+            'arrayErrors': None,
+            'field': 'documentUrl',
+            'messages': 'Enter a valid URL.',
+            'objectErrors': None,
+          }),
+        ]),
+        'ok': False,
+        'result': None,
+      }),
+    }),
+  })
+# ---
