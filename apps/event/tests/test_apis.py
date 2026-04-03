@@ -26,6 +26,7 @@ from utils.factories import (
     ReportFactory,
     UnifiedReviewCommentFactory,
     ViolenceSubTypeFactory,
+    ContextOfViolenceFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, create_user_with_role, snapshot_in_class
@@ -97,9 +98,9 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
     def setUp(self) -> None:
         countries = CountryFactory.create_batch(2)
         self.country1 = CountryFactory.create()
-        self.crisis = crisis = CrisisFactory.create()
-        crisis.crisis_type = Crisis.CRISIS_TYPE.DISASTER
-        crisis.save()
+        self.crisis = crisis = CrisisFactory.create(crisis_type=Crisis.CRISIS_TYPE.DISASTER)
+        # crisis.crisis_type = Crisis.CRISIS_TYPE.DISASTER
+        # crisis.save()
         crisis.countries.set(countries)
         self.mutation = """mutation CreateEvent($input: EventCreateInputType!) {
             createEvent(data: $input) {
@@ -129,6 +130,15 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
                         name
                     }
                     violenceSubType {
+                        name
+                    }
+                    contextOfViolence {
+                        name
+                    }
+                    actor {
+                        name
+                    }
+                    osvSubType {
                         name
                     }
                     eventCodes {
@@ -261,6 +271,47 @@ class TestCreateEventHelixGraphQLTestCase(HelixGraphQLTestCase):
         content = json.loads(response.content)
         assert content["data"]["createEvent"]["ok"]
 
+    def test_event_clear_fields(self):
+        clear_fields_assumptions = ["", None, []]
+
+        # if event type = conflict, clear disasterSubType, otherSubType
+        input_1 = self.input
+        crisis = self.crisis
+        crisis.crisis_type = Crisis.CRISIS_TYPE.CONFLICT
+        crisis.save(update_fields=["crisis_type"])
+        input_1["eventType"] = "CONFLICT"
+        input_1["violenceSubType"] = ViolenceSubTypeFactory().id
+        response = self.query(self.mutation, input_data=input_1)
+        content = json.loads(response.content)
+        assert not content["data"]["createEvent"]["result"]["disasterSubType"]
+        assert not content["data"]["createEvent"]["result"]["otherSubType"]
+
+        # if eventType = disaster, clear violenceSubType, osvSubType, actor, contextOfViolence, otherSubType
+        crisis.crisis_type = Crisis.CRISIS_TYPE.DISASTER
+        crisis.save(update_fields=["crisis_type"])
+        input_1["eventType"] = "DISASTER"
+        input_1["contextOfViolence"] = ContextOfViolenceFactory().id
+        response = self.query(self.mutation, input_data=input_1)
+        content = json.loads(response.content)
+        assert content["data"]["createEvent"]["result"]["violenceSubType"] in clear_fields_assumptions
+        assert content["data"]["createEvent"]["result"]["contextOfViolence"] in clear_fields_assumptions
+        assert content["data"]["createEvent"]["result"]["actor"] in clear_fields_assumptions
+        assert content["data"]["createEvent"]["result"]["otherSubType"] in clear_fields_assumptions
+
+        # if eventType = other, clear disasterSubType, violencSubType, contextOfViolence, osvSubType, actor
+        crisis.crisis_type = Crisis.CRISIS_TYPE.OTHER
+        crisis.save(update_fields=["crisis_type"])
+        input_1["eventType"] = "OTHER"
+        # print("Input: ", json.dumps(input_1, indent=4))
+        response = self.query(self.mutation, input_data=input_1)
+        content = json.loads(response.content)
+        # print("Content", json.dumps(content, indent=4))
+        assert content["data"]["createEvent"]["result"]["disasterSubType"] in clear_fields_assumptions
+        assert content["data"]["createEvent"]["result"]["violenceSubType"] in clear_fields_assumptions
+        assert content["data"]["createEvent"]["result"]["contextOfViolence"] in clear_fields_assumptions
+        assert content["data"]["createEvent"]["result"]["osvSubType"] in clear_fields_assumptions
+        assert content["data"]["createEvent"]["result"]["actor"] in clear_fields_assumptions
+
 
 class TestUpdateEvent(HelixGraphQLTestCase):
     def setUp(self) -> None:
@@ -276,7 +327,29 @@ class TestUpdateEvent(HelixGraphQLTestCase):
                     violence {
                         name
                     }
+                    disasterSubType {
+                        name
+                    }
                     violenceSubType {
+                        name
+                    }
+                    otherSubType {
+                        id
+                        name
+                    }
+                    violence {
+                        name
+                    }
+                    violenceSubType {
+                        name
+                    }
+                    contextOfViolence {
+                        name
+                    }
+                    actor {
+                        name
+                    }
+                    osvSubType {
                         name
                     }
                     eventCodes {
@@ -315,6 +388,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
             "id": self.event.id,
             "endDate": "2020-10-29",
             "eventNarrative": "event narrative",
+            "disasterSubType": DisasterSubTypeFactory().id,
             "eventType": "CONFLICT",
             "name": "xyz",
             "startDate": "2020-10-20",
@@ -437,6 +511,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         content = json.loads(response.content)
         self.assertIn(PERMISSION_DENIED_MESSAGE, content["errors"][0]["message"])
 
+    @pytest.mark.usefixtures("snapshot_in_class")
     def test_event_update_validation(self) -> None:
         # if eventType equals disaster disasterSubType is required
         input_1 = self.input
@@ -444,7 +519,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         input_1["disasterSubType"] = None
         response = self.query(self.mutation, input_data=input_1)
         content = json.loads(response.content)
-        print("RESP          ", content)
+        assert content == self.snapshot
         assert not content["data"]["updateEvent"]["ok"]
 
         # if eventType equals conflict violenceSubType is required
@@ -457,7 +532,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         input_2["violenceSubType"] = None
         response = self.query(self.mutation, input_data=input_2)
         content = json.loads(response.content)
-        print("RESP          ", content)
+        assert content == self.snapshot
         assert not content["data"]["updateEvent"]["ok"]
 
         # validate event codes
@@ -474,7 +549,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         ]
         response = self.query(self.mutation, input_data=input_3)
         content = json.loads(response.content)
-        print("RESP          ", content)
+        assert content == self.snapshot
         assert not content["data"]["updateEvent"]["ok"]
         # Accept up to 50 event codes
         input_3["eventCodes"] = [
@@ -488,6 +563,45 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         response = self.query(self.mutation, input_data=input_3)
         content = json.loads(response.content)
         assert content["data"]["updateEvent"]["ok"]
+
+    def test_event_clear_fields(self):
+        clear_fields_assumptions = ["", None, []]
+
+        # if event type conflict clear disasterSubType otherSubType
+        input_1 = self.input
+        crisis = self.crisis
+        crisis.crisis_type = Crisis.CRISIS_TYPE.CONFLICT
+        crisis.save(update_fields=["crisis_type"])
+        input_1["eventType"] = "CONFLICT"
+        input_1["violenceSubType"] = ViolenceSubTypeFactory().id
+        response = self.query(self.mutation, input_data=input_1)
+        content = json.loads(response.content)
+        assert not content["data"]["updateEvent"]["result"]["disasterSubType"]
+        assert not content["data"]["updateEvent"]["result"]["otherSubType"]
+
+        # if eventType equals disaster clear violenceSubType osvSubType actor contextOfViolence otherSubType
+        crisis.crisis_type = Crisis.CRISIS_TYPE.DISASTER
+        crisis.save(update_fields=["crisis_type"])
+        input_1["eventType"] = "DISASTER"
+        input_1["contextOfViolence"] = ContextOfViolenceFactory().id
+        response = self.query(self.mutation, input_data=input_1)
+        content = json.loads(response.content)
+        assert content["data"]["updateEvent"]["result"]["violenceSubType"] in clear_fields_assumptions
+        assert content["data"]["updateEvent"]["result"]["contextOfViolence"] in clear_fields_assumptions
+        assert content["data"]["updateEvent"]["result"]["actor"] in clear_fields_assumptions
+        assert content["data"]["updateEvent"]["result"]["otherSubType"] in clear_fields_assumptions
+
+        # if eventType equals other clear disasterSubType violencSubType contextOfViolence osvSubType actor
+        crisis.crisis_type = Crisis.CRISIS_TYPE.OTHER
+        crisis.save(update_fields=["crisis_type"])
+        input_1["eventType"] = "OTHER"
+        response = self.query(self.mutation, input_data=input_1)
+        content = json.loads(response.content)
+        assert content["data"]["updateEvent"]["result"]["disasterSubType"] in clear_fields_assumptions
+        assert content["data"]["updateEvent"]["result"]["violenceSubType"] in clear_fields_assumptions
+        assert content["data"]["updateEvent"]["result"]["contextOfViolence"] in clear_fields_assumptions
+        assert content["data"]["updateEvent"]["result"]["osvSubType"] in clear_fields_assumptions
+        assert content["data"]["updateEvent"]["result"]["actor"] in clear_fields_assumptions
 
 
 class TestDeleteEvent(HelixGraphQLTestCase):
