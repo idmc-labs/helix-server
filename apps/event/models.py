@@ -550,7 +550,6 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         )
 
         def transformer(datum):
-            print(datum)
             return {
                 **datum,
                 **dict(
