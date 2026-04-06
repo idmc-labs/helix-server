@@ -3,6 +3,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import date
 from typing import Callable, Dict, List, Optional, Union
+from urllib.parse import urljoin
 from uuid import uuid4
 
 from django.conf import settings
@@ -1088,7 +1089,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             type_of_points="Locations type",
             locations="Locations (Name:Lat, Lon:Accuracy:Type)",
         )
-        exclude_headers = ["location_display_name", "loc_lat_lon", "accuracy", "type_of_points"]
+        exclude_headers = ["location_display_name", "loc_lat_lon", "accuracy", "type_of_points", "entry_link"]
 
         values = (
             figures.annotate(
@@ -1104,9 +1105,6 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 source_document=models.Case(
                     models.When(entry__document__isnull=False, then=F("entry__document__attachment")),
                     output_field=models.CharField(),
-                ),
-                entry_link=Concat(
-                    Value(settings.FRONTEND_BASE_URL), Value("/entries/"), F("entry__id"), output_field=models.CharField()
                 ),
                 figure_link=Concat(
                     Value(settings.FRONTEND_BASE_URL),
@@ -1209,6 +1207,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 "sources_reliability": get_enum_label("sources_reliability", Figure.SOURCES_RELIABILITY),
                 "source_document": generate_full_media_url(datum["source_document"], absolute=True),
                 "centroid": datum["centroid"],
+                "entry_link": urljoin(settings.FRONTEND_BASE_URL, f"entries/{datum['entry__id']}"),
                 "event__event_type": get_enum_label("event__event_type", Crisis.CRISIS_TYPE),
                 "event__start_date_accuracy": get_enum_label("event__start_date_accuracy", DATE_ACCURACY),
                 "event__end_date_accuracy": get_enum_label("event__end_date_accuracy", DATE_ACCURACY),
@@ -1534,7 +1533,8 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             context_of_violences="Context of violences",
             entry_link="Entry Link",
         )
-        entries = (
+        exclude_headers = ["entry_link"]
+        values = (
             EntryExtractionFilterSet(
                 data=filters,
                 request=DummyRequest(user=User.objects.get(id=user_id)),
@@ -1557,20 +1557,16 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                 context_of_violences=StringAgg(
                     "figures__context_of_violence__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True
                 ),
-                entry_link=models.functions.Concat(
-                    models.Value(settings.FRONTEND_BASE_URL),
-                    models.Value("/entries/"),
-                    Cast(models.F("id"), models.CharField()),
-                    output_field=models.CharField(),
-                ),
                 # **cls._total_figure_disaggregation_subquery(),
             )
             .order_by("created_at")
+            .values(*[header for header in headers.keys() if header not in exclude_headers])
         )
 
         def transformer(datum):
             return {
                 **datum,
+                "entry_link": urljoin(settings.FRONTEND_BASE_URL, f"entries/{datum['id']}"),
                 "preview__pdf": generate_full_media_url(datum["preview__pdf"], absolute=True),
                 "document__attachment": generate_full_media_url(datum["document__attachment"], absolute=True),
                 "is_confidential": "Yes" if datum["is_confidential"] else "No",
@@ -1581,7 +1577,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
         return {
             "headers": headers,
-            "data": entries.values(*[header for header in headers.keys()]),
+            "data": values,
             "formulae": None,
             "transformer": transformer,
         }
