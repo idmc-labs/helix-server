@@ -351,7 +351,8 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
 
     def filter_geographical_groups(self, qs, name, value):
         if value:
-            qs = qs.filter(country__in=Country.objects.filter(geographical_group__in=value))
+            countries_qs = Country.objects.filter(geographical_group__in=value, pk=OuterRef("country_id"))
+            qs = qs.filter(Exists(countries_qs))
         return qs
 
     def filter_regions(self, qs, name, value):
