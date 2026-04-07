@@ -1,4 +1,6 @@
-from apps.country.filters import CountryFilter
+from django.utils import timezone
+
+from apps.country.filters import CountryFilter, HouseholdSizeFilter
 from apps.country.models import (
     Country,
 )
@@ -7,8 +9,61 @@ from utils.factories import (
     CrisisFactory,
     EventFactory,
     GeographicalGroupFactory,
+    HouseholdSizeFactory,
 )
 from utils.tests import HelixTestCase
+
+
+class TestHouseholdSizeFilter(HelixTestCase):
+    def setUp(self) -> None:
+        # AHHS year
+        self.current_year = timezone.now().year
+
+        # Filterset
+        self.filter_class = HouseholdSizeFilter
+
+        # Country
+        self.c1 = CountryFactory.create(name="Newal")
+        self.c2 = CountryFactory.create(name="Nepal")
+        self.c3 = CountryFactory.create(name="Wanel")
+        self.c4 = CountryFactory.create(name="Palne")
+        self.c5 = CountryFactory.create(name="Neighbour Nepal")
+
+        # Householdsize
+        self.h1 = HouseholdSizeFactory.create(country=self.c1, year=self.current_year - 1)
+        self.h2 = HouseholdSizeFactory.create(country=self.c2, year=self.current_year - 2)
+        self.h3 = HouseholdSizeFactory.create(country=self.c3, size=2.0, year=self.current_year - 3)  # 1.0 by default
+        self.h4 = HouseholdSizeFactory.create(
+            country=self.c4, data_source_category="CENSUS-Nepal", year=self.current_year + 1
+        )
+        self.h5 = HouseholdSizeFactory.create(country=self.c5, data_source_category="XYZ", year=self.current_year + 2)
+        self.h6 = HouseholdSizeFactory.create(country=self.c4, year=self.current_year)
+
+    def test_householdsize_filter_by_search(self):
+        QUERY = "nepal"
+        obtained = self.filter_class(data=dict(search=QUERY)).qs
+        expected = [self.h2, self.h4, self.h5]
+
+        self.assertEqual(expected, list(obtained))
+
+    def test_householdsize_filter_by_size(self):
+        QUERY = 2.0
+        obtained = self.filter_class(data=dict(filter_ahhs_size=QUERY)).qs
+        expected = [self.h3]
+        self.assertEqual(expected, list(obtained))
+
+    def test_householdsize_filter_by_year(self):
+        QUERY = self.current_year
+        obtained = self.filter_class(data=dict(filter_idmc_reporting_year=QUERY)).qs
+        expected = [self.h6]
+
+        self.assertEqual(expected, list(obtained))
+
+    def test_householdsize_filter_by_data_source_category(self):
+        QUERY = "CENSUS-Nepal"
+        obtained = self.filter_class(data=dict(filter_ahhs_data_source_category=QUERY)).qs
+        expected = [self.h4]
+        self.assertEqual(expected, list(obtained))
 
 
 class TestCountryFilter(HelixTestCase):

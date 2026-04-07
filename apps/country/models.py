@@ -528,3 +528,38 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
 
     def __str__(self):
         return f"PK:{self.pk}-Country-ID:{self.country_id}-Year:{self.year}"
+
+    @classmethod
+    def get_excel_sheets_data(cls, user_id, filters):
+        from apps.country.filters import HouseholdSizeFilter
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        qs = HouseholdSizeFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs
+
+        headers = OrderedDict(
+            country__iso3="ISO3",
+            country__region__name="Region Name",
+            country__idmc_short_name="Country",
+            year="Year",
+            size="AHHS",
+            # NOTE: reference year is the year since when the data is being referred.
+            # entry created year is confusingly used to represnt this.
+            # https://github.com/toggle-corp/togglecorp-meta/issues/1526#issuecomment-4197659091
+            data_source_category="Data Source Category",
+            source="Source",
+            source_link="Source Link",
+            notes="Notes",
+        )
+        values = qs.order_by("year").values(*headers.keys())
+        return {
+            "headers": headers,
+            "data": values,
+            "formulae": None,
+            "transformer": None,
+        }

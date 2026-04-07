@@ -12,6 +12,7 @@ from apps.country.filters import (
     CountryRegionFilter,
     CountrySummaryFilter,
     GeographicalGroupFilter,
+    HouseholdSizeFilter,
     MonitoringSubRegionFilter,
 )
 from apps.country.models import (
@@ -223,6 +224,12 @@ class CountryHouseholdSizeType(DjangoObjectType):
         model = HouseholdSize
 
 
+class HouseholdSizeListType(CustomDjangoListObjectType):
+    class Meta:
+        model = HouseholdSize
+        filterset_class = HouseholdSizeFilter
+
+
 class Query:
     country = DjangoObjectField(CountryType)
     country_list = DjangoPaginatedListObjectField(
@@ -232,6 +239,9 @@ class Query:
     geographical_group_list = DjangoPaginatedListObjectField(GeographicalGroupListType)
     household_size = graphene.Field(
         CountryHouseholdSizeType, country=graphene.ID(required=True), year=graphene.Int(required=True)
+    )
+    household_size_list = DjangoPaginatedListObjectField(
+        HouseholdSizeListType, pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize")
     )
     monitoring_sub_region = DjangoObjectField(MonitoringSubRegionType)
     monitoring_sub_region_list = DjangoPaginatedListObjectField(

@@ -1083,6 +1083,7 @@ enum DOWNLOAD_TYPES {
   CONTEXT_OF_VIOLENCE
   MONITORING_SUB_REGION
   CLIENT
+  AHHS
 }
 
 scalar Date
@@ -1753,6 +1754,11 @@ type ExportFigureTags {
 }
 
 type ExportFigures {
+  errors: [GenericScalar!]
+  ok: Boolean
+}
+
+type ExportHouseholdSize {
   errors: [GenericScalar!]
   ok: Boolean
 }
@@ -2635,6 +2641,21 @@ type GiddYearType {
   year: Int!
 }
 
+input HouseholdSizeFilterDataTypeInputType {
+  search: String
+  filterIdmcReportingYear: Float
+  filterAhhsSize: Float
+  filterAhhsSource: String
+  filterAhhsDataSourceCategory: String
+}
+
+type HouseholdSizeListType {
+  results: [CountryHouseholdSizeType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
 enum IDENTIFIER {
   ORIGIN
   DESTINATION
@@ -2779,6 +2800,7 @@ type Mutation {
   createContextualAnalysis(data: ContextualAnalysisCreateInputType!): CreateContextualAnalysis
   exportCountries(filters: CountryFilterDataInputType!): ExportCountries
   exportMonitoringSubRegions(filters: MonitoringSubRegionFilterDataInputType!): ExportMonitoringSubRegions
+  exportHouseholdSize(filters: HouseholdSizeFilterDataTypeInputType!): ExportHouseholdSize
   createAttachment(data: AttachmentCreateInputType!): CreateAttachment
   createBigAttachment(data: BigAttachmentCreateInputType!): CreateBigAttachment
   markBigAttachmentFileAsUploaded(attachmentId: ID!): MarkBigAttachmentFileAsUploaded
@@ -3248,6 +3270,7 @@ type Query {
   countryRegionList(filters: CountryRegionFilterDataInputType, ordering: String): CountryRegionListType
   geographicalGroupList(filters: GeographicalGroupFilterDataInputType, ordering: String): GeographicalGroupListType
   householdSize(country: ID!, year: Int!): CountryHouseholdSizeType
+  householdSizeList(filters: HouseholdSizeFilterDataTypeInputType, page: Int = 1, ordering: String, pageSize: Int): HouseholdSizeListType
   monitoringSubRegion(id: ID!): MonitoringSubRegionType
   monitoringSubRegionList(filters: MonitoringSubRegionFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): MonitoringSubRegionListType
   organization(id: ID!): OrganizationType
