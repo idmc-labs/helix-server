@@ -6,8 +6,7 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Case, CharField, Count, F, OuterRef, Subquery, Value, When
-from django.db.models.functions import ExtractYear
+from django.db.models import Count, OuterRef, Subquery
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -552,26 +551,12 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
             # NOTE: reference year is the year since when the data is being referred.
             # entry created year is confusingly used to represnt this.
             # https://github.com/toggle-corp/togglecorp-meta/issues/1526#issuecomment-4197659091
-            reference_year="Reference Year",
             data_source_category="Data Source Category",
             source="Source",
             source_link="Source Link",
-            gap_filling_method="Gap Filling Method",
             notes="Notes",
         )
-        values = (
-            qs.annotate(
-                reference_year=ExtractYear("created_at"),
-                gap_filling_method=Case(
-                    When(reference_year__lt=F("year"), then=Value("Forward filling")),
-                    When(reference_year__gt=F("year"), then=Value("Backward filling")),
-                    default=Value("Exact"),
-                    output_field=CharField(),
-                ),
-            )
-            .order_by("year")
-            .values(*headers.keys())
-        )
+        values = qs.order_by("year").values(*headers.keys())
         return {
             "headers": headers,
             "data": values,
