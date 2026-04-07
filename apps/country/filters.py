@@ -12,6 +12,7 @@ from apps.country.models import (
     Country,
     CountryRegion,
     GeographicalGroup,
+    HouseholdSize,
     MonitoringSubRegion,
     Summary,
 )
@@ -32,6 +33,39 @@ from utils.filters import (
     StringListFilter,
     generate_type_for_filter_set,
 )
+
+
+class HouseholdSizeFilter(MultiWordSearchFilterSet):
+    filter_idmc_reporting_year = django_filters.NumberFilter(method="filter_year")
+    filter_ahhs_size = django_filters.NumberFilter(method="filter_size")
+    filter_ahhs_source = django_filters.CharFilter(method="filter_source")
+    filter_ahhs_data_source_category = django_filters.CharFilter(method="filter_source_category")
+
+    def filter_year(self, qs, name, value):
+        if value is None:
+            return qs
+
+        return qs.filter(year=value)
+
+    def filter_size(self, qs, name, value):
+        if value is None:
+            return qs
+        return qs.filter(size=value)
+
+    def filter_source(self, qs, name, value):
+        if value is None:
+            return qs
+        return qs.filter(source=value)
+
+    def filter_source_category(self, qs, name, value):
+        if value is None:
+            return qs
+        return qs.filter(data_source_category=value)
+
+    class Meta:
+        model = HouseholdSize
+        fields = []
+        multi_word_search_fields = ["country__name", "data_source_category", "notes"]
 
 
 class GeographicalGroupFilter(MultiWordSearchFilterSet):
@@ -167,4 +201,11 @@ MonitoringSubRegionFilterDataType, MonitoringSubRegionFilterDataInputType = gene
     "country.schema.monitoring_sub_region_list",
     "MonitoringSubRegionFilterDataType",
     "MonitoringSubRegionFilterDataInputType",
+)
+
+HouseholdSizeFilterDataType, HouseholdSizeFilterDataTypeInputType = generate_type_for_filter_set(
+    HouseholdSizeFilter,
+    "country.schema.household_size_list",
+    "HouseholdSizeFilterDataType",
+    "HouseholdSizeFilterDataTypeInputType",
 )
