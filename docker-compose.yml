@@ -71,7 +71,11 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_DB: postgres
       POSTGRES_PASSWORD: postgres
-    command: postgres -c log_statement=all
+    command: >
+      postgres
+      -c log_statement=all
+      -c log_duration=on
+      -c log_min_duration_statement=0
     volumes:
       - helix-db-17-data:/var/lib/postgresql/data
     ports:
