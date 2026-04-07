@@ -3,6 +3,7 @@ from collections import OrderedDict
 from dataclasses import dataclass
 from datetime import date
 from typing import Callable, Dict, List, Optional, Union
+from urllib.parse import urljoin
 from uuid import uuid4
 
 from django.conf import settings
@@ -1059,6 +1060,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             entry__old_id="Entry old ID",
             entry__article_title="Entry title",
             entry_link="Entry link",
+            entry__publish_date="Publication Date",
+            entry__is_confidential="Confidential",
             disaggregation_disability="Disability",
             disaggregation_indigenous_people="Indigenous people",
             event__id="Event ID",
@@ -1086,7 +1089,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             type_of_points="Locations type",
             locations="Locations (Name:Lat, Lon:Accuracy:Type)",
         )
-        exclude_headers = ["location_display_name", "loc_lat_lon", "accuracy", "type_of_points"]
+        exclude_headers = ["location_display_name", "loc_lat_lon", "accuracy", "type_of_points", "entry_link"]
 
         values = (
             figures.annotate(
@@ -1102,9 +1105,6 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 source_document=models.Case(
                     models.When(entry__document__isnull=False, then=F("entry__document__attachment")),
                     output_field=models.CharField(),
-                ),
-                entry_link=Concat(
-                    Value(settings.FRONTEND_BASE_URL), Value("/entries/"), F("entry__id"), output_field=models.CharField()
                 ),
                 figure_link=Concat(
                     Value(settings.FRONTEND_BASE_URL),
@@ -1192,6 +1192,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 **datum,
                 "include_idu": "Yes" if datum["include_idu"] else "No",
                 "entry__preview__pdf": generate_full_media_url(datum["entry__preview__pdf"], absolute=True),
+                "entry__is_confidential": "Yes" if datum["entry__is_confidential"] else "No",
                 "is_housing_destruction": "Yes" if datum["is_housing_destruction"] else "No",
                 "stock_date_accuracy": get_enum_label("stock_date_accuracy", DATE_ACCURACY),
                 "flow_start_date_accuracy": get_enum_label("flow_start_date_accuracy", DATE_ACCURACY),
@@ -1206,6 +1207,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 "sources_reliability": get_enum_label("sources_reliability", Figure.SOURCES_RELIABILITY),
                 "source_document": generate_full_media_url(datum["source_document"], absolute=True),
                 "centroid": datum["centroid"],
+                "entry_link": urljoin(settings.FRONTEND_BASE_URL, f"entries/{datum['entry__id']}"),
                 "event__event_type": get_enum_label("event__event_type", Crisis.CRISIS_TYPE),
                 "event__start_date_accuracy": get_enum_label("event__start_date_accuracy", DATE_ACCURACY),
                 "event__end_date_accuracy": get_enum_label("event__end_date_accuracy", DATE_ACCURACY),
@@ -1529,8 +1531,10 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
             min_fig_end="Earliest figure end",
             max_fig_end="Latest figure end",
             context_of_violences="Context of violences",
+            entry_link="Entry Link",
         )
-        entries = (
+        exclude_headers = ["entry_link"]
+        values = (
             EntryExtractionFilterSet(
                 data=filters,
                 request=DummyRequest(user=User.objects.get(id=user_id)),
@@ -1556,11 +1560,13 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                 # **cls._total_figure_disaggregation_subquery(),
             )
             .order_by("created_at")
+            .values(*[header for header in headers.keys() if header not in exclude_headers])
         )
 
         def transformer(datum):
             return {
                 **datum,
+                "entry_link": urljoin(settings.FRONTEND_BASE_URL, f"entries/{datum['id']}"),
                 "preview__pdf": generate_full_media_url(datum["preview__pdf"], absolute=True),
                 "document__attachment": generate_full_media_url(datum["document__attachment"], absolute=True),
                 "is_confidential": "Yes" if datum["is_confidential"] else "No",
@@ -1571,7 +1577,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
         return {
             "headers": headers,
-            "data": entries.values(*[header for header in headers.keys()]),
+            "data": values,
             "formulae": None,
             "transformer": transformer,
         }
