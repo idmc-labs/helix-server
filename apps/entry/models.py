@@ -30,6 +30,7 @@ from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from django.utils.translation import gettext_lazy as _
+from django_cte import CTEManager
 from django_enumfield import enum
 
 from apps.common.enums import GENDER_TYPE
@@ -358,6 +359,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             APPROVED: _("Approved"),
             REVIEW_RE_REQUESTED: _("Review re-requested"),
         }
+
+    objects = CTEManager()
 
     uuid = models.UUIDField(verbose_name="UUID", blank=True, default=uuid4)
     entry = models.ForeignKey("Entry", verbose_name=_("Entry"), related_name="figures", on_delete=models.CASCADE)
