@@ -46,23 +46,11 @@ class TestHouseholdSizeFilter(HelixTestCase):
 
         self.assertEqual(expected, list(obtained))
 
-    def test_householdsize_filter_by_size(self):
-        QUERY = 2.0
-        obtained = self.filter_class(data=dict(filter_ahhs_size=QUERY)).qs
-        expected = [self.h3]
-        self.assertEqual(expected, list(obtained))
-
     def test_householdsize_filter_by_year(self):
         QUERY = self.current_year
-        obtained = self.filter_class(data=dict(filter_idmc_reporting_year=QUERY)).qs
+        obtained = self.filter_class(data=dict(year=QUERY)).qs
         expected = [self.h6]
 
-        self.assertEqual(expected, list(obtained))
-
-    def test_householdsize_filter_by_data_source_category(self):
-        QUERY = "CENSUS-Nepal"
-        obtained = self.filter_class(data=dict(filter_ahhs_data_source_category=QUERY)).qs
-        expected = [self.h4]
         self.assertEqual(expected, list(obtained))
 
 
