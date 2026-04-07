@@ -544,10 +544,14 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
         ).qs
 
         headers = OrderedDict(
+            country__iso3="ISO3",
             country__region__name="Region Name",
             country__idmc_short_name="Country",
             year="Year",
             size="AHHS",
+            # NOTE: reference year is the year since when the data is being referred.
+            # entry created year is confusingly used to represnt this.
+            # https://github.com/toggle-corp/togglecorp-meta/issues/1526#issuecomment-4197659091
             reference_year="Reference Year",
             data_source_category="Data Source Category",
             source="Source",
@@ -565,7 +569,7 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
                     output_field=CharField(),
                 ),
             )
-            .order_by("country__region__name")
+            .order_by("year")
             .values(*headers.keys())
         )
         return {

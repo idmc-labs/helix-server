@@ -36,12 +36,12 @@ from utils.filters import (
 
 
 class HouseholdSizeFilter(MultiWordSearchFilterSet):
-    filter_idmc_reporting_year = django_filters.NumberFilter(method="filter_reporting_year")
+    filter_idmc_reporting_year = django_filters.NumberFilter(method="filter_year")
     filter_ahhs_size = django_filters.NumberFilter(method="filter_size")
     filter_ahhs_source = django_filters.CharFilter(method="filter_source")
     filter_ahhs_data_source_category = django_filters.CharFilter(method="filter_source_category")
 
-    def filter_reporting_year(self, qs, name, value):
+    def filter_year(self, qs, name, value):
         if value is None:
             return qs
 
