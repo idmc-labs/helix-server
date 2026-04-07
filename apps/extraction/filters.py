@@ -1,5 +1,11 @@
 from django.contrib.postgres.aggregates.general import StringAgg
-from django.db.models import Q
+from django.db.models import (
+    Exists,
+    OuterRef,
+    Q,
+)
+from django.db.models.sql.constants import LOUTER
+from django_cte import With
 from django_filters import rest_framework as df
 
 from apps.common.enums import GENDER_TYPE
@@ -508,12 +514,6 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
             return qs
         return qs.filter(Q(role=Figure.ROLE.RECOMMENDED) | Q(event__include_triangulation_in_qa=True))
 
-    @property
-    def qs(self):
-        # FIXME: using this prefetch_related results in calling count after a
-        # subquery. This has a severe performance penalty
-        return super().qs.distinct()
-
 
 class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
     """
@@ -534,25 +534,57 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         start_date = self.data.get("filter_figure_start_after")
         end_date = self.data.get("filter_figure_end_before")
 
-        flow_qs = Figure.filtered_nd_figures_for_listing(queryset, start_date, end_date)
-        stock_qs = Figure.filtered_idp_figures_for_listing(queryset, start_date, end_date)
-        # FIXME: avoid union
-        queryset = flow_qs | stock_qs
+        if start_date or end_date:
+            flow_qs = Figure.filtered_nd_figures_for_listing(queryset, start_date, end_date)
+            stock_qs = Figure.filtered_idp_figures_for_listing(queryset, start_date, end_date)
+            # FIXME: avoid union
+            queryset = flow_qs | stock_qs
 
         # NOTE: ordering_context was injected earlier in list_resolver.
         if ordering := getattr(self, "ordering_context", {}).get("ordering", None):
             # NOTE: expensive annotation for geolocations
             if "geolocations" in ordering:
-                queryset = queryset.annotate(geolocations=StringAgg("geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR))
+                # Approach 1
+                # queryset = queryset.annotate(
+                #     geolocations=StringAgg("geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR)
+                # )
+
+                # Approach 2
+                # geolocations_subquery = (
+                #     FigureLocation.objects
+                #     .filter(figures=OuterRef('pk'))
+                #     .order_by()  # remove ordering to allow aggregation
+                #     .values('figures')  # group by Figure
+                #     .annotate(agg=StringAgg('display_name', EXTERNAL_ARRAY_SEPARATOR))
+                #     .values('agg')  # this is the single column Subquery expects
+                # )
+                # queryset = queryset.annotate(
+                #     geolocations=Coalesce(Subquery(geolocations_subquery), Value(''))
+                # )
+
+                # Approach 3
+                cte = With(
+                    Figure.objects.values("id").annotate(
+                        geolocations=StringAgg("geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR)
+                    )
+                )
+                queryset = (
+                    cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
+                    .with_cte(cte)
+                    .annotate(geolocations=cte.col.geolocations)
+                )
 
             # NOTE: expensive annotation for ordering and filtering.
             # we can't use elif here as ordering params can be multiple; is it practical?
             if "sources_reliability" in ordering:
-                queryset = queryset.annotate(**Figure.annotate_sources_reliability())
+                cte = With(Figure.objects.values("id").annotate(**Figure.annotate_sources_reliability()))
+                queryset = (
+                    cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
+                    .with_cte(cte)
+                    .annotate(sources_reliability=cte.col.sources_reliability)
+                )
 
             stock_and_flow_annotations = Figure.annotate_stock_and_flow_dates()
-
-            # we can safely filter out the deselected fields unlike in sources reliability.
             stock_and_flow_annotations = {key: value for key, value in stock_and_flow_annotations.items() if key in ordering}
             if stock_and_flow_annotations:
                 queryset = queryset.annotate(**stock_and_flow_annotations)
