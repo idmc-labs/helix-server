@@ -59,7 +59,8 @@ class TestHouseholdSizeFilter(HelixTestCase):
 
     def test_filter_inactive_householdsize(self):
         QUERY = "nepal"
-        HouseholdSizeFactory.create(country=self.c5, year=self.current_year + 2)  # will be is_active=False by default
+        # this householdsize is similar to h5 but inactive
+        HouseholdSizeFactory.create(country=self.c5, year=self.current_year + 2, is_active=False)
         obtained = self.filter_class(data=dict(search=QUERY)).qs
         expected = [self.h2, self.h4, self.h5]
         # inactive household size must be filtered out.
