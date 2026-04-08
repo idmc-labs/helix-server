@@ -56,6 +56,10 @@ class HouseholdSizeFilter(MultiWordSearchFilterSet):
             return qs
         return qs.filter(country__in=value)
 
+    @property
+    def qs(self):
+        return super().qs.filter(is_active=True)
+
     class Meta:
         model = HouseholdSize
         fields = []
