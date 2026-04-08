@@ -30,14 +30,18 @@ class TestHouseholdSizeFilter(HelixTestCase):
         self.c5 = CountryFactory.create(name="Neighbour Nepal")
 
         # Householdsize
-        self.h1 = HouseholdSizeFactory.create(country=self.c1, year=self.current_year - 1)
-        self.h2 = HouseholdSizeFactory.create(country=self.c2, year=self.current_year - 2)
-        self.h3 = HouseholdSizeFactory.create(country=self.c3, size=2.0, year=self.current_year - 3)  # 1.0 by default
+        self.h1 = HouseholdSizeFactory.create(country=self.c1, year=self.current_year - 1, is_active=True)
+        self.h2 = HouseholdSizeFactory.create(country=self.c2, year=self.current_year - 2, is_active=True)
+        self.h3 = HouseholdSizeFactory.create(
+            country=self.c3, size=2.0, year=self.current_year - 3, is_active=True
+        )  # 1.0 by default
         self.h4 = HouseholdSizeFactory.create(
-            country=self.c4, data_source_category="CENSUS-Nepal", year=self.current_year + 1
+            country=self.c4, data_source_category="CENSUS-Nepal", year=self.current_year + 1, is_active=True
         )
-        self.h5 = HouseholdSizeFactory.create(country=self.c5, data_source_category="XYZ", year=self.current_year + 2)
-        self.h6 = HouseholdSizeFactory.create(country=self.c4, year=self.current_year)
+        self.h5 = HouseholdSizeFactory.create(
+            country=self.c5, data_source_category="XYZ", year=self.current_year + 2, is_active=True
+        )
+        self.h6 = HouseholdSizeFactory.create(country=self.c4, year=self.current_year, is_active=True)
 
     def test_householdsize_filter_by_search(self):
         QUERY = "nepal"
@@ -51,6 +55,14 @@ class TestHouseholdSizeFilter(HelixTestCase):
         obtained = self.filter_class(data=dict(year=QUERY)).qs
         expected = [self.h6]
 
+        self.assertEqual(expected, list(obtained))
+
+    def test_filter_inactive_householdsize(self):
+        QUERY = "nepal"
+        HouseholdSizeFactory.create(country=self.c5, year=self.current_year + 2)  # will be is_active=False by default
+        obtained = self.filter_class(data=dict(search=QUERY)).qs
+        expected = [self.h2, self.h4, self.h5]
+        # inactive household size must be filtered out.
         self.assertEqual(expected, list(obtained))
 
 
