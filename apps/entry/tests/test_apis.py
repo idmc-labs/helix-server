@@ -1,4 +1,5 @@
 import json
+
 import pytest
 
 from apps.crisis.models import Crisis
@@ -7,6 +8,7 @@ from apps.entry.models import (
 )
 from apps.users.enums import USER_ROLE
 from utils.factories import (
+    AttachmentFactory,
     ContextOfViolenceFactory,
     CountryFactory,
     EntryFactory,
@@ -14,10 +16,9 @@ from utils.factories import (
     FigureFactory,
     OrganizationFactory,
     TagFactory,
-    AttachmentFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
-from utils.tests import HelixGraphQLTestCase, create_user_with_role, snapshot_in_class
+from utils.tests import HelixGraphQLTestCase, create_user_with_role, snapshot_in_class  # noqa: F401
 
 
 class TestEntryQuery(HelixGraphQLTestCase):
@@ -172,7 +173,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         # document url must be valid url
         input_2 = self.input
         input_2["document"] = AttachmentFactory().id
-        input_2["documentUrl"] = "www.invalidurl.com",
+        input_2["documentUrl"] = ("www.invalidurl.com",)
         response = self.query(self.mutation, input_data=input_2)
         content = json.loads(response.content)
         assert content == self.snapshot
@@ -185,7 +186,7 @@ class TestEntryCreation(HelixGraphQLTestCase):
         input_1["documentUrl"] = "https://www.test.com"
         response = self.query(self.mutation, input_data=input_1)
         content = json.loads(response.content)
-        assert content["data"]["createEntry"]["result"]["documentUrl"] == None
+        assert not content["data"]["createEntry"]["result"]["documentUrl"]
 
 
 class TestEntryUpdate(HelixGraphQLTestCase):
@@ -254,7 +255,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
         # document url must be valid url
         input_2 = self.input
         input_2["document"] = AttachmentFactory().id
-        input_2["documentUrl"] = "www.invalidurl.com",
+        input_2["documentUrl"] = ("www.invalidurl.com",)
         response = self.query(self.mutation, input_data=input_2)
         content = json.loads(response.content)
         assert content == self.snapshot

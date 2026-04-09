@@ -2746,6 +2746,7 @@ input MonitoringExpertPortfolioInputType {
 input MonitoringSubRegionFilterDataInputType {
   search: String
   id: ID
+  name: String
 }
 
 type MonitoringSubRegionListType {
