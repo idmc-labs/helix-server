@@ -2643,10 +2643,9 @@ type GiddYearType {
 
 input HouseholdSizeFilterDataTypeInputType {
   search: String
-  filterIdmcReportingYear: Float
-  filterAhhsSize: Float
-  filterAhhsSource: String
-  filterAhhsDataSourceCategory: String
+  year: Float
+  ahhsSource: String
+  countries: [ID!]
 }
 
 type HouseholdSizeListType {
