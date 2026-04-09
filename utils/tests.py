@@ -1,10 +1,10 @@
 import copy
-import pytest
 import datetime
 import os
 import shutil
 from unittest.mock import patch
 
+import pytest
 import pytz
 from django.conf import settings
 from django.contrib.auth import get_user_model

@@ -162,6 +162,7 @@ class CountryFilter(MultiWordSearchFilterSet):
 
 class MonitoringSubRegionFilter(MultiWordSearchFilterSet):
     id = IDFilter(field_name="id", lookup_expr="exact")
+    name = django_filters.CharFilter(method="_filter_name")
 
     class Meta:
         model = MonitoringSubRegion
