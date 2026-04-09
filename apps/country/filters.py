@@ -36,10 +36,9 @@ from utils.filters import (
 
 
 class HouseholdSizeFilter(MultiWordSearchFilterSet):
-    filter_idmc_reporting_year = django_filters.NumberFilter(method="filter_year")
-    filter_ahhs_size = django_filters.NumberFilter(method="filter_size")
-    filter_ahhs_source = django_filters.CharFilter(method="filter_source")
-    filter_ahhs_data_source_category = django_filters.CharFilter(method="filter_source_category")
+    year = django_filters.NumberFilter(method="filter_year")
+    ahhs_source = django_filters.CharFilter(method="filter_source")
+    countries = IDListFilter(method="filter_countries")
 
     def filter_year(self, qs, name, value):
         if value is None:
@@ -47,20 +46,19 @@ class HouseholdSizeFilter(MultiWordSearchFilterSet):
 
         return qs.filter(year=value)
 
-    def filter_size(self, qs, name, value):
-        if value is None:
-            return qs
-        return qs.filter(size=value)
-
     def filter_source(self, qs, name, value):
         if value is None:
             return qs
         return qs.filter(source=value)
 
-    def filter_source_category(self, qs, name, value):
+    def filter_countries(self, qs, name, value):
         if value is None:
             return qs
-        return qs.filter(data_source_category=value)
+        return qs.filter(country__in=value)
+
+    @property
+    def qs(self):
+        return super().qs.filter(is_active=True)
 
     class Meta:
         model = HouseholdSize
