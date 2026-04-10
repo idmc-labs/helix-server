@@ -1,4 +1,5 @@
 import logging
+import re
 import typing
 
 from dateutil.relativedelta import relativedelta
@@ -32,7 +33,7 @@ def get_many_to_many_field_names(model: typing.Type[models.Model]):
 
 
 def clone_many_to_many_field(new_object: ModelVar, old_object: ModelVar, field_name: str):
-    old_ids = getattr(old_object, field_name).values_list("id", flat=True)
+    old_ids = list(getattr(old_object, field_name).values_list("id", flat=True))
     getattr(new_object, field_name).set(old_ids)
 
 
@@ -192,6 +193,14 @@ def clone_figure(
 
 def clone_report():
     def mutate_new_report(new_report: Report, old_report: Report):
+        # change report name
+        pattern = re.compile(r"\b(\d{4})\b")
+        match = pattern.search(new_report.name)
+        if match:
+            old_year = int(match.group(1))
+            new_year = old_year - YEAR_DIFF
+            new_report.name = new_report.name.replace(str(old_year), str(new_year), 1)
+
         if new_report.filter_figure_start_after and new_report.filter_figure_end_before:
             new_report.filter_figure_start_after -= relativedelta(years=YEAR_DIFF)
             new_report.filter_figure_end_before -= relativedelta(years=YEAR_DIFF)
