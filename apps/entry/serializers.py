@@ -265,7 +265,14 @@ class CommonFigureValidationMixin:
             location_moved = location.get("moved", False)
             location_country_code = location.get("country_code", "")
             if not location_moved and location_country_code.lower() != country_code.lower():
-                errors.update({"geo_locations": "Location should be inside the selected figure's country"})
+                errors.update(
+                    {
+                        "geo_locations": (
+                            "Location should be inside the selected figure's country: "
+                            f"{location_country_code} should be {country_code}"
+                        )
+                    }
+                )
         return errors
 
     def _validate_disaggregated_sum_against_total_figures(self, instance, attrs, fields, verbose_names):
