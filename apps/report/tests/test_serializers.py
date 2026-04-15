@@ -180,3 +180,29 @@ class TestReportSerializer(HelixTestCase):
         serializer = ReportSerializer(instance=report, data=data, partial=True, context=self.context)
         self.assertFalse(serializer.is_valid())
         self.assertIn("filter_figure_start_after", serializer.errors)
+
+    def test_summary_rejects_blank_and_null_but_allows_omission(self):
+        ref = timezone.now()
+        report = Report.objects.create(
+            name="hello",
+            filter_figure_start_after=ref.date(),
+            filter_figure_end_before=(ref + timedelta(days=1)).date(),
+        )
+
+        # omitting summary is allowed on a patch update
+        serializer = ReportSerializer(instance=report, data=dict(name="renamed"), partial=True, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
+        # blank summary is rejected
+        serializer = ReportSerializer(instance=report, data=dict(summary=""), partial=True, context=self.context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("summary", serializer.errors)
+
+        # null summary is rejected
+        serializer = ReportSerializer(instance=report, data=dict(summary=None), partial=True, context=self.context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("summary", serializer.errors)
+
+        # a real summary is accepted
+        serializer = ReportSerializer(instance=report, data=dict(summary="real summary"), partial=True, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)

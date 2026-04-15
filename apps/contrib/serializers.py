@@ -244,17 +244,6 @@ class ClientSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
     Serializer for Client objects, including custom validation and creation logic.
     """
 
-    contact_name = serializers.CharField(required=True)
-    contact_email = serializers.EmailField(required=True)
-    use_cases = serializers.ListField(
-        child=serializers.ChoiceField(choices=Client.USE_CASE_TYPES.choices()),
-        required=True,
-    )
-    type = serializers.ChoiceField(
-        choices=Client.CLIENT_TYPE.choices(),
-        required=True,
-    )
-
     class Meta:
         model = Client
         fields = (
@@ -272,6 +261,12 @@ class ClientSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
             "description",
             "type",
         )
+        extra_kwargs = {
+            "contact_name": {"required": True},
+            "contact_email": {"required": True},
+            "use_cases": {"required": True, "allow_empty": False},
+            "type": {"required": True},
+        }
 
     def validate(self, attrs):
         """
@@ -279,8 +274,11 @@ class ClientSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
         """
         attrs = super().validate(attrs)
         use_cases = attrs.get("use_cases", [])
-        if Client.USE_CASE_TYPES.OTHER.value in use_cases and not attrs.get("other_notes"):
-            raise serializers.ValidationError({"other_notes": "Required when 'Other' is selected in use cases."})
+        if Client.USE_CASE_TYPES.OTHER.value in use_cases:
+            if not attrs.get("other_notes"):
+                raise serializers.ValidationError({"other_notes": "Required when 'Other' is selected in use cases."})
+        else:
+            attrs["other_notes"] = None
         return attrs
 
     def create(self, validated_data):

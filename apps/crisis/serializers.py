@@ -14,6 +14,9 @@ class CrisisSerializer(serializers.ModelSerializer, MetaInformationSerializerMix
     class Meta:
         model = Crisis
         fields = "__all__"
+        extra_kwargs = {
+            "countries": {"required": True},
+        }
 
     def validate_dates(self, attrs):
         errors = OrderedDict()

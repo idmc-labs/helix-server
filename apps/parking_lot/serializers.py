@@ -17,6 +17,10 @@ class ParkedItemSerializer(MetaInformationSerializerMixin, serializers.ModelSeri
     class Meta:
         model = ParkedItem
         fields = "__all__"
+        extra_kwargs = {
+            "country": {"required": True},
+            "assigned_to": {"required": True},
+        }
 
     def validate(self, data):
         data = super().validate(data)

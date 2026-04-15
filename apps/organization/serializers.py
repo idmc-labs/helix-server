@@ -20,6 +20,7 @@ class OrganizationSerializer(serializers.ModelSerializer, MetaInformationSeriali
         fields = "__all__"
         extra_kwargs = {
             "countries": {"required": False},
+            "methodology": {"required": True},
         }
 
 
