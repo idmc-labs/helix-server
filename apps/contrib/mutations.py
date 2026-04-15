@@ -12,7 +12,7 @@ from apps.contrib.models import (
     Client,
     ExcelDownload,
 )
-from apps.contrib.schema import AttachmentType, BulkApiOperationObjectType, ClientType
+from apps.contrib.schema import AttachmentType, BulkApiOperationObjectType, ClientType, ExcelExportType
 from apps.contrib.serializers import (
     AttachmentSerializer,
     BigAttachmentSerializer,
@@ -171,6 +171,7 @@ class ExportBaseMutation(graphene.Mutation, abstract=True):
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
+    result = graphene.Field(ExcelExportType)
 
     DOWNLOAD_TYPE: typing.ClassVar[ExcelDownload.DOWNLOAD_TYPES]
 
@@ -197,8 +198,8 @@ class ExportBaseMutation(graphene.Mutation, abstract=True):
         )
         if errors := mutation_is_not_valid(serializer):
             return cls(errors=errors, ok=False)
-        serializer.save()
-        return cls(errors=None, ok=True)
+        instance = serializer.save()
+        return cls(errors=None, ok=True, result=instance)
 
 
 class ExportTrackingData(ExportBaseMutation):
