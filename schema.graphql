@@ -1680,6 +1680,7 @@ input ExcelExportFilterDataInputType {
   startedAt_Gt: DateTime
   startedAt_Gte: DateTime
   startedAt_Lte: DateTime
+  ids: [String!]
   statusList: [String!]
 }
 

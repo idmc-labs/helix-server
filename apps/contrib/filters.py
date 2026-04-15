@@ -14,11 +14,17 @@ from .enums import BulkApiOperationActionEnum, BulkApiOperationStatusEnum
 
 
 class ExcelExportFilter(django_filters.FilterSet):
+    ids = StringListFilter(method="filter_by_ids")
     status_list = StringListFilter(method="filter_status")
 
     class Meta:
         model = ExcelDownload
         fields = {"started_at": ["lt", "gt", "gte", "lte"]}
+
+    def filter_by_ids(self, qs, name, value):
+        if not value:
+            return qs
+        return qs.filter(id__in=value)
 
     def filter_status(self, qs, name, value):
         if value:
