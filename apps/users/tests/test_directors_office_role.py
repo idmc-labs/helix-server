@@ -95,10 +95,7 @@ class TestDirectorsOfficeRole(HelixGraphQLTestCase):
         self.force_login(self.directors_office_user)
         # Test can update report
         report_id = content["result"]["id"]
-        update_data = {
-            "id": report_id,
-            "name": "Report updated",
-        }
+        update_data = {"id": report_id, "name": "Report updated"}
         response = self.query(
             self.report_update_mutation,
             input_data=update_data,

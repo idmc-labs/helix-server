@@ -92,10 +92,7 @@ class TestReportingTeamRole(HelixGraphQLTestCase):
 
         # Test can update report
         report_id = content["result"]["id"]
-        update_data = {
-            "id": report_id,
-            "name": "Report updated",
-        }
+        update_data = {"id": report_id, "name": "Report updated"}
         response = self.query(
             self.report_update_mutation,
             input_data=update_data,
@@ -111,10 +108,7 @@ class TestReportingTeamRole(HelixGraphQLTestCase):
 
         # Test cannot update other's report
         report_id = content_admin["result"]["id"]
-        update_data = {
-            "id": report_id,
-            "name": "Report updated",
-        }
+        update_data = {"id": report_id, "name": "Report updated"}
         response = self.query(
             self.report_update_mutation,
             input_data=update_data,
