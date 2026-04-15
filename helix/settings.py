@@ -86,6 +86,8 @@ env = environ.Env(
     # Pytest
     PYTEST_XDIST_WORKER=(str, None),
     ENABLE_DANGER_MODE=(bool, False),
+    # Exports
+    EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT=(int, 10),
 )
 
 ENABLE_DANGER_MODE = env("ENABLE_DANGER_MODE")
@@ -575,7 +577,7 @@ PASSWORD_RESET_CLIENT_URL = "{FRONTEND_BASE_URL}/reset-password/{{uid}}/{{token}
 # TASKS TIMEOUTS
 OLD_JOB_EXECUTION_TTL = 72 * 60 * 60  # seconds
 
-EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT = 10
+EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT = env("EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT")
 # staying in pending for too long will be moved to killed
 EXCEL_EXPORT_PENDING_STATE_TIMEOUT = 5 * 60 * 60  # seconds
 # staying in progress for too long will be moved to killed
