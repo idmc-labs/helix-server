@@ -1680,6 +1680,7 @@ input ExcelExportFilterDataInputType {
   startedAt_Gt: DateTime
   startedAt_Gte: DateTime
   startedAt_Lte: DateTime
+  ids: [String!]
   statusList: [String!]
 }
 
@@ -1711,71 +1712,85 @@ type ExcelExportsListType {
 type ExportActors {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportClients {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportContacts {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportContextOfViolences {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportCountries {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportCrises {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportEntries {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportEvents {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportFigureTags {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportFigures {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportHouseholdSize {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportMonitoringSubRegions {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportOrganizations {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportParkedItem {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportReport {
@@ -1787,16 +1802,19 @@ type ExportReport {
 type ExportReports {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportTrackingData {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 type ExportUsers {
   errors: [GenericScalar!]
   ok: Boolean
+  result: ExcelExportType
 }
 
 enum ExternalApiType {
