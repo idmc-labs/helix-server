@@ -18,6 +18,7 @@ from apps.report.models import Report
 from utils.filters import (
     IDFilter,
     IDListFilter,
+    MultiWordSearchFilterSet,
     StringListFilter,
     generate_type_for_filter_set,
 )
@@ -26,7 +27,7 @@ MALE = GENDER_TYPE.MALE.name
 FEMALE = GENDER_TYPE.FEMALE.name
 
 
-class EntryExtractionFilterSet(df.FilterSet):
+class EntryExtractionFilterSet(MultiWordSearchFilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
     filter_figure_events = IDListFilter(method="filter_figure_events_")
 
@@ -34,7 +35,9 @@ class EntryExtractionFilterSet(df.FilterSet):
 
     filter_figure_sources = IDListFilter(method="filter_sources")
     filter_entry_publishers = IDListFilter(method="filter_publishers")
-    filter_entry_article_title = df.CharFilter(field_name="article_title", lookup_expr="unaccent__icontains")
+    filter_entry_article_title = df.CharFilter(method="multi_word_search")
+    # NOTE: We want the multi_word_search to be filter_entry_article_title not search.
+    search = None
     filter_figure_created_by = IDListFilter(method="filter_created_by")
 
     filter_figure_regions = IDListFilter(method="filter_regions")
@@ -68,6 +71,7 @@ class EntryExtractionFilterSet(df.FilterSet):
     class Meta:
         model = Entry
         fields = {}
+        multi_word_search_fields = ["article_title"]
 
     def filter_created_by(self, qs, name, value):
         if not value:
@@ -270,7 +274,7 @@ class EntryExtractionFilterSet(df.FilterSet):
         return super().qs.distinct()
 
 
-class BaseFigureExtractionFilterSet(df.FilterSet):
+class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
     # NOTE: these filter names exactly match the extraction query model field names
     filter_figure_regions = IDListFilter(method="filter_regions")
     filter_figure_geographical_groups = IDListFilter(method="filter_geographical_groups")
@@ -284,7 +288,9 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     filter_figure_start_after = df.DateFilter(method="filter_time_frame_after")
     filter_figure_end_before = df.DateFilter(method="filter_time_frame_before")
     filter_figure_roles = StringListFilter(method="filter_filter_figure_roles")
-    filter_entry_article_title = df.CharFilter(field_name="entry__article_title", lookup_expr="unaccent__icontains")
+    filter_entry_article_title = df.CharFilter(method="multi_word_search")
+    # NOTE: We want the multi_word_search to be filter_entry_article_title not search.
+    search = None
     filter_figure_tags = IDListFilter(method="filter_tags")
     filter_figure_crisis_types = StringListFilter(method="filter_crisis_types")
     filter_figure_created_by = IDListFilter(method="filter_filter_figure_created_by")
@@ -310,6 +316,7 @@ class BaseFigureExtractionFilterSet(df.FilterSet):
     class Meta:
         model = Figure
         fields = []
+        multi_word_search_fields = ["entry__article_title"]
 
     def filter_filter_figure_created_by(self, qs, name, value):
         if value:
@@ -575,13 +582,13 @@ class FigureExtractionBulkOperationFilterSet(ReportFigureExtractionFilterSet):
         return qs
 
 
-class ExtractionQueryFilter(df.FilterSet):
+class ExtractionQueryFilter(MultiWordSearchFilterSet):
+    id = IDFilter(field_name="id", lookup_expr="exact")
+
     class Meta:
         model = ExtractionQuery
-        fields = {
-            "id": ("exact",),
-            "name": ("unaccent__icontains",),
-        }
+        fields = []
+        multi_word_search_fields = ["name"]
 
     @property
     def qs(self):

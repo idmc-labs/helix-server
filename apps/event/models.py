@@ -1,6 +1,8 @@
 import typing
 from collections import OrderedDict
+from urllib.parse import urljoin
 
+from django.conf import settings
 from django.contrib.postgres.aggregates.general import ArrayAgg, StringAgg
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
@@ -54,6 +56,11 @@ class ContextOfViolence(MetaInformationAbstractModel, NameAttributedModels):
     """
     Holds the context of violence
     """
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["name"]),
+        ]
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
@@ -316,6 +323,25 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
 
     assignee_id: typing.Optional[int]
 
+    class Meta:
+        indexes = [
+            models.Index(fields=["name"]),
+            models.Index(fields=["event_type"]),
+            models.Index(fields=["start_date"]),
+            models.Index(fields=["end_date"]),
+            models.Index(fields=["start_date_accuracy"]),
+            models.Index(fields=["end_date_accuracy"]),
+            models.Index(fields=["review_status"]),
+        ]
+
+        permissions = (
+            ("assign_event", "Can assign on event level"),
+            ("self_assign_event", "Can assign self on event level"),
+            ("clear_assignee_event", "Can clear any assignee from event"),
+            ("clear_self_assignee_event", "Can clear self assigned event"),
+            ("sign_off_event", "Can sign-off event"),
+        )
+
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None, reference_date=None):
         if figures is None:
@@ -494,8 +520,9 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             context_of_violences="Context of violences",
             event_codes="Event codes (Code:Type:ISO3)",
             event_narrative="Event description",
+            event_link="Event Link",
         )
-
+        exclude_headers = ["event_link"]
         data = (
             EventFilter(
                 data=filters,
@@ -519,12 +546,14 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 ),
             )
             .order_by("created_at")
+            .values(*[header for header in headers.keys() if header not in exclude_headers])
         )
 
         def transformer(datum):
             return {
                 **datum,
                 **dict(
+                    event_link=urljoin(settings.FRONTEND_BASE_URL, f"events/{datum['id']}"),
                     event_type=getattr(Crisis.CRISIS_TYPE.get(datum["event_type"]), "label", ""),
                     start_date_accuracy=getattr(DATE_ACCURACY.get(datum["start_date_accuracy"]), "label", ""),
                     end_date_accuracy=getattr(DATE_ACCURACY.get(datum["end_date_accuracy"]), "label", ""),
@@ -534,22 +563,13 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
 
         return {
             "headers": headers,
-            "data": data.values(*[header for header in headers.keys()]),
+            "data": data,
             "formulae": None,
             "transformer": transformer,
         }
 
     def __str__(self):
         return self.name or str(self.id)
-
-    class Meta:
-        permissions = (
-            ("assign_event", "Can assign on event level"),
-            ("self_assign_event", "Can assign self on event level"),
-            ("clear_assignee_event", "Can clear any assignee from event"),
-            ("clear_self_assignee_event", "Can clear self assigned event"),
-            ("sign_off_event", "Can sign-off event"),
-        )
 
     def clone_and_save_event(self, user: "User"):
         event_data = model_to_dict(

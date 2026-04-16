@@ -1,6 +1,5 @@
-import django_filters
 import graphene
-from django.db.models import Count, Q
+from django.db.models import Count
 from django.http import HttpRequest
 
 from apps.crisis.models import Crisis
@@ -15,15 +14,14 @@ from utils.figure_filter import (
 )
 from utils.filters import (
     IDListFilter,
-    NameFilterMixin,
+    MultiWordSearchFilterSet,
     SimpleInputFilter,
     StringListFilter,
     generate_type_for_filter_set,
 )
 
 
-class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
-    name = django_filters.CharFilter(method="filter_name")
+class CrisisFilter(MultiWordSearchFilterSet):
     countries = IDListFilter(method="filter_countries")
     crisis_types = StringListFilter(method="filter_crisis_types")
     events = IDListFilter(method="filter_events")
@@ -43,6 +41,7 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
             "start_date": ["lt", "lte", "gt", "gte"],
             "end_date": ["lt", "lte", "gt", "gte"],
         }
+        multi_word_search_fields = ["name", "events__name"]
 
     def noop(self, qs, name, value):
         return qs
@@ -68,11 +67,6 @@ class CrisisFilter(NameFilterMixin, django_filters.FilterSet):
             return qs.filter(crisis_type__in=value).distinct()
         # client side filtering
         return qs.filter(crisis_type__in=[Crisis.CRISIS_TYPE.get(item).value for item in value]).distinct()
-
-    def filter_name(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(Q(name__unaccent__icontains=value) | Q(events__name__unaccent__icontains=value)).distinct()
 
     def filter_created_by(self, qs, name, value):
         if not value:

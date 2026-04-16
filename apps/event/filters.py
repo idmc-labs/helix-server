@@ -32,16 +32,16 @@ from utils.figure_filter import (
     FigureFilterHelper,
 )
 from utils.filters import (
+    IDFilter,
     IDListFilter,
-    NameFilterMixin,
+    MultiWordSearchFilterSet,
     SimpleInputFilter,
     StringListFilter,
     generate_type_for_filter_set,
 )
 
 
-class EventFilter(NameFilterMixin, django_filters.FilterSet):
-    name = django_filters.CharFilter(method="filter_name")
+class EventFilter(MultiWordSearchFilterSet):
     crisis_by_ids = IDListFilter(method="filter_crises")
     event_types = StringListFilter(method="filter_event_types")
     countries = IDListFilter(method="filter_countries")
@@ -71,6 +71,8 @@ class EventFilter(NameFilterMixin, django_filters.FilterSet):
             "end_date": ["lte", "lt", "gte", "gt"],
             "ignore_qa": ["exact"],
         }
+        # NOTE: event_code__event_code is not using exact match
+        multi_word_search_fields = ["name", "event_code__event_code"]
 
     def noop(self, qs, name, value):
         return qs
@@ -145,11 +147,6 @@ class EventFilter(NameFilterMixin, django_filters.FilterSet):
                 ]
             ).distinct()
         return qs
-
-    def filter_name(self, qs, name, value):
-        if not value:
-            return qs
-        return qs.filter(Q(name__unaccent__icontains=value) | Q(event_code__event_code__iexact=value)).distinct()
 
     def filter_osv_sub_types(self, qs, name, value):
         if value:
@@ -251,68 +248,76 @@ class EventFilter(NameFilterMixin, django_filters.FilterSet):
         )
 
 
-class ActorFilter(django_filters.FilterSet):
+class ActorFilter(MultiWordSearchFilterSet):
     class Meta:
         model = Actor
-        fields = {"name": ["unaccent__icontains"]}
+        fields = []
+        multi_word_search_fields = ["name"]
 
 
-class DisasterSubTypeFilter(django_filters.FilterSet):
+class DisasterSubTypeFilter(MultiWordSearchFilterSet):
     class Meta:
         model = DisasterSubType
-        fields = {"name": ["unaccent__icontains"]}
+        fields = []
+        multi_word_search_fields = ["name"]
 
 
-class DisasterTypeFilter(django_filters.FilterSet):
+class DisasterTypeFilter(MultiWordSearchFilterSet):
     class Meta:
         model = DisasterType
-        fields = {"name": ["unaccent__icontains"]}
+        fields = []
+        multi_word_search_fields = ["name"]
 
 
-class DisasterCategoryFilter(django_filters.FilterSet):
+class DisasterCategoryFilter(MultiWordSearchFilterSet):
     class Meta:
         model = DisasterCategory
-        fields = {"name": ["unaccent__icontains"]}
+        fields = []
+        multi_word_search_fields = ["name"]
 
 
-class DisasterSubCategoryFilter(django_filters.FilterSet):
+class DisasterSubCategoryFilter(MultiWordSearchFilterSet):
     class Meta:
         model = DisasterSubCategory
-        fields = {"name": ["unaccent__icontains"]}
+        fields = []
+        multi_word_search_fields = ["name"]
 
 
-class OsvSubTypeFilter(django_filters.FilterSet):
+class OsvSubTypeFilter(MultiWordSearchFilterSet):
     class Meta:
         model = OsvSubType
-        fields = {"name": ["icontains"]}
+        fields = []
+        multi_word_search_fields = ["name"]
 
 
-class OtherSubTypeFilter(django_filters.FilterSet):
+class OtherSubTypeFilter(MultiWordSearchFilterSet):
     class Meta:
         model = OtherSubType
-        fields = {"name": ["icontains"]}
+        fields = []
+        multi_word_search_fields = ["name"]
 
 
-class ContextOfViolenceFilter(django_filters.FilterSet):
+class ContextOfViolenceFilter(MultiWordSearchFilterSet):
     class Meta:
         model = ContextOfViolence
-        fields = {"name": ["icontains"]}
+        fields = []
+        multi_word_search_fields = ["name"]
 
 
 class ViolenceFilter(django_filters.FilterSet):
+    id = IDFilter(field_name="id", lookup_expr="exact")
+
     class Meta:
         model = Violence
-        fields = {
-            "id": ["iexact"],
-        }
+        fields = []
 
 
 class ViolenceSubTypeFilter(django_filters.FilterSet):
+    id = IDFilter(field_name="id", lookup_expr="exact")
+
     class Meta:
         model = ViolenceSubType
-        fields = {
-            "id": ["iexact"],
-        }
+        fields = []
 
 
 EventFilterDataType, EventFilterDataInputType = generate_type_for_filter_set(

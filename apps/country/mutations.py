@@ -2,11 +2,12 @@ import graphene
 
 from apps.contrib.models import ExcelDownload
 from apps.contrib.mutations import ExportBaseMutation
-from apps.country.filters import CountryFilterDataInputType, MonitoringSubRegionFilterDataInputType
-from apps.country.schema import (
-    ContextualAnalysisType,
-    SummaryType,
+from apps.country.filters import (
+    CountryFilterDataInputType,
+    HouseholdSizeFilterDataTypeInputType,
+    MonitoringSubRegionFilterDataInputType,
 )
+from apps.country.schema import ContextualAnalysisType, SummaryType
 from apps.country.serializers import ContextualAnalysisSerializer, SummarySerializer
 from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.error_types import CustomErrorType, mutation_is_not_valid
@@ -83,8 +84,16 @@ class ExportMonitoringSubRegions(ExportBaseMutation):
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.MONITORING_SUB_REGION
 
 
+class ExportHouseholdSize(ExportBaseMutation):
+    class Arguments(ExportBaseMutation.Arguments):
+        filters = HouseholdSizeFilterDataTypeInputType(required=True)
+
+    DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.AHHS
+
+
 class Mutation:
     create_summary = CreateSummary.Field()
     create_contextual_analysis = CreateContextualAnalysis.Field()
     export_countries = ExportCountries.Field()
     export_monitoring_sub_regions = ExportMonitoringSubRegions.Field()
+    export_household_size = ExportHouseholdSize.Field()

@@ -242,6 +242,7 @@ class ExcelDownload(MetaInformationAbstractModel):
         CONTEXT_OF_VIOLENCE = 14
         MONITORING_SUB_REGION = 15
         CLIENT = 16
+        AHHS = 17
 
     started_at = models.DateTimeField(
         verbose_name=_("Started at"),
@@ -299,6 +300,7 @@ class ExcelDownload(MetaInformationAbstractModel):
             self.DOWNLOAD_TYPES.CONTEXT_OF_VIOLENCE: apps.get_model("event", "ContextOfViolence"),
             self.DOWNLOAD_TYPES.MONITORING_SUB_REGION: apps.get_model("country", "MonitoringSubRegion"),
             self.DOWNLOAD_TYPES.CLIENT: apps.get_model("contrib", "Client"),
+            self.DOWNLOAD_TYPES.AHHS: apps.get_model("country", "HouseholdSize"),
         }
         model = mapper.get(self.download_type)
         if not model:
@@ -366,7 +368,7 @@ class Client(MetaInformationAbstractModel):
     )
     opted_out_of_emails = models.BooleanField(verbose_name="Opted out of receiving emails", default=False)
     use_cases = ArrayField(base_field=enum.EnumField(USE_CASE_TYPES, verbose_name=_("Use case")), null=False, default=list)
-    other_notes = models.CharField(max_length=255, null=True, blank=True)
+    other_notes = models.TextField(verbose_name=_("Notes"), null=True, blank=True)
     is_active = models.BooleanField(verbose_name=_("Is active?"), default=False)
     share_source = models.BooleanField(verbose_name=_("Share source?"), default=False)
 

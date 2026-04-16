@@ -10,6 +10,7 @@ from utils.factories import (
     CountryFactory,
     CrisisFactory,
     EntryFactory,
+    EventCodeFactory,
     EventFactory,
     FigureFactory,
     FigureLocationFactory,
@@ -33,8 +34,9 @@ class TestEventFilter(HelixTestCase):
             name="two",
             event_type=Crisis.CRISIS_TYPE.OTHER.value,
         )
-        obtained = self.filter_class(data=dict(name="w")).qs
+        obtained = self.filter_class(data=dict(search="w")).qs
         expected = [e2]
+
         self.assertQuerySetEqual(expected, obtained)
 
     def test_crisis_filter(self):
@@ -246,3 +248,29 @@ class TestEventFilter(HelixTestCase):
             # With name - GraphQl interface
             obtained = self.filter_class(data=dict(review_status=[v.name for v in filters])).qs
             self.assertQuerySetEqual(expected, obtained, filters)
+
+    def test_event_search_by_event_code_event_code(self):
+        asia_event = EventFactory.create(event_type=DISASTER, name="asia-event")
+        asia_event_1 = EventFactory.create(event_type=CONFLICT, name="asia-event-1")
+        asia_event_2 = EventFactory.create(event_type=DISASTER, name="asia-event-2")
+
+        asia_event_3 = EventFactory.create(event_type=DISASTER, name="asia-event-3")
+        EventFactory.create(event_type=DISASTER, name="africa-event")
+
+        EventCodeFactory.create(event_code="nepal-event-code-1", event=asia_event_1)
+        EventCodeFactory.create(event_code="nepal-event-code-2", event=asia_event_1)
+
+        EventCodeFactory.create(event_code="india-event-code-1", event=asia_event_2)
+        EventCodeFactory.create(event_code="india-event-code-2", event=asia_event_2)
+
+        obtained = self.filter_class(data=dict(search="asia")).qs
+        expected = [asia_event, asia_event_1, asia_event_2, asia_event_3]
+        self.assertQuerySetEqual(expected, obtained)
+
+        obtained = self.filter_class(data=dict(search="nepal")).qs
+        expected = [asia_event_1]
+        self.assertQuerySetEqual(expected, obtained)
+
+        obtained = self.filter_class(data=dict(search="asia", event_types=[CONFLICT])).qs
+        expected = [asia_event_1]
+        self.assertQuerySetEqual(expected, obtained)

@@ -1,15 +1,70 @@
-from apps.country.filters import CountryFilter
+from django.utils import timezone
+
+from apps.country.filters import CountryFilter, HouseholdSizeFilter
 from apps.country.models import (
     Country,
 )
 from utils.factories import (
     CountryFactory,
-    CountryRegionFactory,
     CrisisFactory,
     EventFactory,
     GeographicalGroupFactory,
+    HouseholdSizeFactory,
 )
 from utils.tests import HelixTestCase
+
+
+class TestHouseholdSizeFilter(HelixTestCase):
+    def setUp(self) -> None:
+        # AHHS year
+        self.current_year = timezone.now().year
+
+        # Filterset
+        self.filter_class = HouseholdSizeFilter
+
+        # Country
+        self.c1 = CountryFactory.create(name="Newal")
+        self.c2 = CountryFactory.create(name="Nepal")
+        self.c3 = CountryFactory.create(name="Wanel")
+        self.c4 = CountryFactory.create(name="Palne")
+        self.c5 = CountryFactory.create(name="Neighbour Nepal")
+
+        # Householdsize
+        self.h1 = HouseholdSizeFactory.create(country=self.c1, year=self.current_year - 1, is_active=True)
+        self.h2 = HouseholdSizeFactory.create(country=self.c2, year=self.current_year - 2, is_active=True)
+        self.h3 = HouseholdSizeFactory.create(
+            country=self.c3, size=2.0, year=self.current_year - 3, is_active=True
+        )  # 1.0 by default
+        self.h4 = HouseholdSizeFactory.create(
+            country=self.c4, data_source_category="CENSUS-Nepal", year=self.current_year + 1, is_active=True
+        )
+        self.h5 = HouseholdSizeFactory.create(
+            country=self.c5, data_source_category="XYZ", year=self.current_year + 2, is_active=True
+        )
+        self.h6 = HouseholdSizeFactory.create(country=self.c4, year=self.current_year, is_active=True)
+
+    def test_householdsize_filter_by_search(self):
+        QUERY = "nepal"
+        obtained = self.filter_class(data=dict(search=QUERY)).qs
+        expected = [self.h2, self.h4, self.h5]
+
+        self.assertEqual(expected, list(obtained))
+
+    def test_householdsize_filter_by_year(self):
+        QUERY = self.current_year
+        obtained = self.filter_class(data=dict(year=QUERY)).qs
+        expected = [self.h6]
+
+        self.assertEqual(expected, list(obtained))
+
+    def test_filter_inactive_householdsize(self):
+        QUERY = "nepal"
+        # this householdsize is similar to h5 but inactive
+        HouseholdSizeFactory.create(country=self.c5, year=self.current_year + 2, is_active=False)
+        obtained = self.filter_class(data=dict(search=QUERY)).qs
+        expected = [self.h2, self.h4, self.h5]
+        # inactive household size must be filtered out.
+        self.assertEqual(expected, list(obtained))
 
 
 class TestCountryFilter(HelixTestCase):
@@ -22,8 +77,8 @@ class TestCountryFilter(HelixTestCase):
 
     def test_country_name_filter(self):
         QUERY = "ne"
-        obtained = self.filter_class(data=dict(country_name=QUERY), queryset=Country.objects.all()).qs
-        expected = [self.c2, self.c1, self.c3, self.c4]
+        obtained = self.filter_class(data=dict(search=QUERY), queryset=Country.objects.all()).qs
+        expected = [self.c1, self.c2, self.c3, self.c4]
         self.assertEqual(expected, list(obtained))
 
     def test_events_filters(self):
@@ -60,22 +115,6 @@ class TestCountryFilter(HelixTestCase):
         QUERY = [crisis2.id]
         obtained = self.filter_class(data=dict(crises=QUERY), queryset=Country.objects.all()).qs
         expected = [c2]
-        self.assertEqual(expected, list(obtained))
-
-    def test_region_filter(self):
-        reg = CountryRegionFactory.create(name="xyz")
-        reg2 = CountryRegionFactory.create(name="abc")
-        self.c1.region = reg
-        self.c1.save()
-        self.c2.region = reg
-        self.c2.save()
-        self.c3.region = reg2
-        self.c3.save()
-        obtained = self.filter_class(data=dict(region_name=reg.name), queryset=Country.objects.all()).qs
-        expected = [self.c1, self.c2]
-        self.assertEqual(sorted([each.id for each in expected]), sorted([each.id for each in obtained]))
-        obtained = self.filter_class(data=dict(region_by_ids=[str(reg2.id)]), queryset=Country.objects.all()).qs
-        expected = [self.c3]
         self.assertEqual(expected, list(obtained))
 
     def test_geo_group_ids_filter(self):

@@ -1,10 +1,14 @@
 import django_filters
-from django.db.models import Q
 
 from apps.contrib.models import BulkApiOperation, Client, ClientTrackInfo, ExcelDownload
 from apps.entry.models import ExternalApiDump
 from apps.users.roles import USER_ROLE
-from utils.filters import MultipleInputFilter, StringListFilter, generate_type_for_filter_set
+from utils.filters import (
+    MultipleInputFilter,
+    MultiWordSearchFilterSet,
+    StringListFilter,
+    generate_type_for_filter_set,
+)
 
 from .enums import BulkApiOperationActionEnum, BulkApiOperationStatusEnum
 
@@ -30,8 +34,7 @@ class ExcelExportFilter(django_filters.FilterSet):
         return super().qs.filter(created_by=self.request.user)
 
 
-class ClientFilter(django_filters.FilterSet):
-    name = django_filters.CharFilter(method="filter_name")
+class ClientFilter(MultiWordSearchFilterSet):
     is_active = django_filters.BooleanFilter()
     use_cases = StringListFilter(method="filter_use_cases")
     share_source = django_filters.BooleanFilter()
@@ -39,16 +42,7 @@ class ClientFilter(django_filters.FilterSet):
     class Meta:
         model = Client
         fields = ()
-
-    def filter_name(self, queryset, name, value):
-        if not value:
-            return queryset
-        return queryset.filter(
-            Q(name__unaccent__icontains=value)
-            | Q(acronym__icontains=value)
-            | Q(contact_name__icontains=value)
-            | Q(contact_email__icontains=value)
-        ).distinct()
+        multi_word_search_fields = ["name", "acronym", "contact_name", "contact_email"]
 
     def filter_use_cases(self, qs, name, value):
         enum_values = [Client.USE_CASE_TYPES[use_case].value for use_case in value]

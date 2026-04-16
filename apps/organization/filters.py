@@ -4,13 +4,13 @@ from django.db.models import Case, When
 from apps.organization.models import Organization, OrganizationKind
 from utils.filters import (
     IDListFilter,
-    NameFilterMixin,
+    MultiWordSearchFilterSet,
     StringListFilter,
     generate_type_for_filter_set,
 )
 
 
-class OrganizationFilter(NameFilterMixin, django_filters.FilterSet):
+class OrganizationFilter(MultiWordSearchFilterSet):
     countries = IDListFilter(method="filter_countries")
     categories = StringListFilter(method="filter_categories")
     organization_kinds = IDListFilter(method="filter_organization_kinds")
@@ -18,10 +18,8 @@ class OrganizationFilter(NameFilterMixin, django_filters.FilterSet):
 
     class Meta:
         model = Organization
-        fields = {
-            "name": ["unaccent__icontains"],
-            "short_name": ["unaccent__icontains"],
-        }
+        fields = []
+        multi_word_search_fields = ["name", "short_name"]
 
     def filter_countries(self, qs, name, value):
         if not value:

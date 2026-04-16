@@ -1,20 +1,17 @@
-from django_filters import rest_framework as df
-
 from apps.parking_lot.models import ParkedItem
-from utils.filters import StringListFilter
+from utils.filters import MultiWordSearchFilterSet, StringListFilter
 
 
-class ParkingLotFilter(df.FilterSet):
+class ParkingLotFilter(MultiWordSearchFilterSet):
     status_in = StringListFilter(method="filter_status_in")
-    # assigned_to_in = StringListFilter(field_name='assigned_to', lookup_expr='in')
     assigned_to_in = StringListFilter(method="filter_assigned_to")
 
     class Meta:
         model = ParkedItem
         fields = {
-            "title": ["unaccent__icontains"],
             "created_by": ["exact"],
         }
+        multi_word_search_fields = ["title"]
 
     def filter_status_in(self, queryset, name, value):
         if value:

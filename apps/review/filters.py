@@ -9,6 +9,10 @@ class UnifiedReviewCommentFilter(df.FilterSet):
     figures = IDListFilter(method="filter_figures")
     fields = StringListFilter(method="filter_fields")
 
+    class Meta:
+        model = UnifiedReviewComment
+        fields = ("is_edited", "is_deleted")
+
     def filter_events(self, qs, name, value):
         if not value:
             return qs
@@ -25,7 +29,3 @@ class UnifiedReviewCommentFilter(df.FilterSet):
                 return qs.filter(field__in=value).distinct()
             return qs.filter(field__in=[UnifiedReviewComment.REVIEW_FIELD_TYPE.get(item).value for item in value])
         return qs
-
-    class Meta:
-        model = UnifiedReviewComment
-        fields = ("is_edited", "is_deleted")

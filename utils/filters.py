@@ -1,17 +1,116 @@
+import re
 import typing
+import unicodedata
 from functools import partial
 
 import django_filters
 import graphene
 from django import forms
-from django.db.models import Value
-from django.db.models.functions import Lower, StrIndex
+from django.db.models import Func, Model, Q
 from django.db.models.query import QuerySet
+from django_filters import rest_framework as df
 from graphene.types.generic import GenericScalar
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django.forms.converter import convert_form_field
 
 from utils.mutation import compare_input_output_type_fields, generate_object_field_from_input_type
+
+
+class Unaccent(Func):
+    function = "unaccent"
+    arity = 1
+
+
+class MultiWordSearchFilterSet(df.FilterSet):
+    """
+    Search baseclass to implement multi-word query logic to any FilterSet.
+    """
+
+    search = django_filters.CharFilter(method="multi_word_search")
+
+    @property
+    def multiword_searchable_fields(self) -> typing.List[str]:
+        """
+        Defines the fields to be included in the multi_word_search logic in Meta.multi_word_search_fields.
+        """
+
+        return getattr(self.Meta, "multi_word_search_fields", [])  # type:ignore child class has a Meta
+
+    def traverse_field_path(
+        self,
+        model: typing.Type[Model],
+        field_path: str,
+    ):
+        """
+        Checks a Django model field's relation such as:
+        - "model_field", e.g. "name"
+        - "related__model_field", e.g. "crisis__name"
+        - "related__model_related_field", e.g. "crisis__countries__name"
+        """
+        parts = field_path.split("__")
+
+        for part in parts:
+            field = model._meta.get_field(part)
+
+            yield field
+
+            # Move to the related model if this field is a relation
+            if field.is_relation:
+                model = typing.cast(typing.Type[Model], field.related_model)
+
+    def search_should_be_distinct(self, field_names: typing.List[str]) -> bool:
+        model = self.Meta.model  # type: ignore child has always a Meta
+
+        return any(
+            field.is_relation and (field.many_to_many or field.one_to_many)
+            for field_name in field_names
+            for field in self.traverse_field_path(model, field_name)
+        )
+
+    @staticmethod
+    def normalize_search_value(value: str) -> str:
+        # For uniformity between application and the backend
+        # https://docs.python.org/3/library/unicodedata.html#unicodedata.normalize
+        value = unicodedata.normalize("NFKC", value)
+        # NOTE: Do we need stemming?
+
+        # Removes special characters except underscore
+        value = re.sub(r"[^\w\s]", " ", value)
+        # Collapse multiple spaces into one
+        value = re.sub(r"\s+", " ", value)
+
+        return value.strip().lower()
+
+    def apply_search_filter(self, queryset: QuerySet, query_terms: typing.Set[str], distinct: bool):
+        filter_condition = Q()
+        for term in query_terms:
+            search_term_filter_condition = Q()
+            for field in self.multiword_searchable_fields:
+                lookup = f"{field}__unaccent__icontains"
+                # check in every searchable fields
+                search_term_filter_condition |= Q(**{lookup: term})
+            # check multiple terms in the searchable fields
+            filter_condition &= search_term_filter_condition
+
+        queryset = queryset.filter(filter_condition)
+        if distinct:
+            queryset = queryset.distinct()
+
+        return queryset
+
+    def multi_word_search(self, queryset: QuerySet, name, search_query: str) -> QuerySet:
+        if not search_query or not self.multiword_searchable_fields:
+            return queryset
+
+        normalized_search_query = self.normalize_search_value(search_query)
+
+        search_query_terms = set(normalized_search_query.split())
+
+        results_should_be_distinct = self.search_should_be_distinct(self.multiword_searchable_fields)
+
+        queryset = self.apply_search_filter(queryset, search_query_terms, results_should_be_distinct)
+
+        return queryset
 
 
 class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
@@ -171,18 +270,3 @@ DateTimeLteFilter = partial(
 
 DateGteFilter = partial(django_filters.DateFilter, lookup_expr="gte")
 DateLteFilter = partial(django_filters.DateFilter, lookup_expr="lte")
-
-
-class NameFilterMixin:
-    # NOTE: add a `name` django_filter as follows in the child filters
-    # name = django_filters.CharFilter(method='_filter_name')
-
-    def _filter_name(self, queryset, name, value):
-        if not value:
-            return queryset
-        return (
-            queryset.annotate(lname=Lower("name"))
-            .annotate(idx=StrIndex("lname", Value(value.lower())))
-            .filter(idx__gt=0)
-            .order_by("idx", "name")
-        )
