@@ -169,12 +169,14 @@ class TestCommunication(HelixGraphQLTestCase):
         }
         """
         self.contact = ContactFactory.create()
+        self.country = CountryFactory.create()
         self.medium = CommunicationMediumFactory.create()
         self.input = {
             "contact": str(self.contact.id),
             "subject": "Subject",
             "content": "Content",
             "medium": str(self.medium.id),
+            "country": self.country.id,
         }
 
     def test_valid_communication_creation(self):
