@@ -25,7 +25,7 @@ input ActorCreateInputType {
   versionId: String
   name: String!
   torg: String
-  country: ID
+  country: ID!
 }
 
 input ActorFilterDataInputType {
@@ -382,8 +382,8 @@ input CommunicationCreateInputType {
   content: String!
   date: Date
   contact: ID!
-  country: ID
-  medium: ID
+  country: ID!
+  medium: ID!
   attachment: ID
 }
 
@@ -467,7 +467,7 @@ input ContactCreateInputType {
   comment: String
   organization: ID
   country: ID
-  countriesOfOperation: [ID!]
+  countriesOfOperation: [ID!]!
 }
 
 input ContactFilterDataInputType {
@@ -3000,7 +3000,7 @@ input OrganizationCreateInputType {
   name: String!
   shortName: String
   category: ORGANIZATION_CATEGORY
-  methodology: String
+  methodology: String!
   organizationKind: ID
   parent: ID
   countries: [ID!]
@@ -3221,8 +3221,8 @@ input ParkedItemCreateInputType {
   source: PARKING_LOT_SOURCE
   sourceUuid: String
   metaData: JSONString
-  country: ID
-  assignedTo: ID
+  country: ID!
+  assignedTo: ID!
 }
 
 type ParkedItemListType {

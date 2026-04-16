@@ -24,7 +24,11 @@ class TestCreateParkedItem(HelixGraphQLTestCase):
 
         self.assigned_to = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.input = dict(
-            assignedTo=str(self.assigned_to.id), status="TO_BE_REVIEWED", title="title", url="http://google.com"
+            assignedTo=str(self.assigned_to.id),
+            status="TO_BE_REVIEWED",
+            title="title",
+            url="http://google.com",
+            country=str(self.country_id),
         )
 
     def test_valid_parking_lot_creation(self) -> None:
@@ -92,7 +96,8 @@ class ParkedItemAPITestCase(HelixAPITestCase):
             "title": "test_parking",
             "url": "http://google.com",
             "country_iso3": self.country.iso3,
-            "assignedTo": self.assigned_to.id,
+            "country": self.country.id,
+            "assigned_to": self.assigned_to.id,
         }
         self.authenticate()
         response = self.client.post(self.url, data)
@@ -109,13 +114,15 @@ class ParkedItemAPITestCase(HelixAPITestCase):
                 "title": "test_parking",
                 "url": "http://google.com",
                 "country_iso3": self.country1.iso3,
-                "assignedTo": self.assigned_to1.id,
+                "country": self.country1.id,
+                "assigned_to": self.assigned_to1.id,
             },
             {
                 "title": "test_parking1",
                 "url": "http://hello.com",
                 "country_iso3": self.country2.iso3,
-                "assignedTo": self.assigned_to2.id,
+                "country": self.country2.id,
+                "assigned_to": self.assigned_to2.id,
             },
         ]
         self.authenticate()
@@ -131,7 +138,8 @@ class ParkedItemAPITestCase(HelixAPITestCase):
             "title": "test_parking",
             "url": "http://google.com",
             "country_iso3": "abc",
-            "assignedTo": self.assigned_to1.id,
+            "country": self.country1.id,
+            "assigned_to": self.assigned_to1.id,
         }
         self.authenticate()
         response = self.client.post(self.url, data)
@@ -184,13 +192,15 @@ class ParkedItemAPITestCase(HelixAPITestCase):
                 "title": title1,
                 "url": url1,
                 "country_iso3": self.country1.iso3,
-                "assignedTo": self.assigned_to1.id,
+                "country": self.country1.id,
+                "assigned_to": self.assigned_to1.id,
             },
             {
                 "title": title2,
                 "url": url2,
                 "country_iso3": self.country2.iso3,
-                "assignedTo": self.assigned_to2.id,
+                "country": self.country2.id,
+                "assigned_to": self.assigned_to2.id,
                 "comments": "Many people participated in the protest here.",
             },
         ]
