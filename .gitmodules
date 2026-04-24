@@ -1,3 +1,4 @@
+# Sync this with ./fugit/scripts/sub-module-sync.sh
 [submodule "fugit"]
     path = fugit
     url = git@github.com:toggle-corp/fugit.git
