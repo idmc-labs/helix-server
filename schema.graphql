@@ -269,6 +269,7 @@ input ClientCreateInputType {
   otherNotes: String
   optedOutOfEmails: Boolean
   shareSource: Boolean
+  description: String
 }
 
 input ClientFilterDataInputType {
@@ -327,6 +328,7 @@ type ClientType {
   contactWebsite: String
   optedOutOfEmails: Boolean!
   otherNotes: String
+  description: String
   isActive: Boolean!
   shareSource: Boolean!
   useCases: [USE_CASE_TYPES!]
@@ -345,6 +347,7 @@ input ClientUpdateInputType {
   otherNotes: String
   optedOutOfEmails: Boolean
   shareSource: Boolean
+  description: String
 }
 
 type CloneEvent {

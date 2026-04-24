@@ -84,6 +84,7 @@ class ClientType(DjangoObjectType):
             "last_modified_by",
             "modified_at",
             "share_source",
+            "description",
         )
 
     def resolve_use_cases_display(self, info):
