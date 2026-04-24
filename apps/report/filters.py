@@ -11,6 +11,8 @@ from django.db.models import (
 )
 from django_filters import rest_framework as df
 
+from apps.crisis.models import Crisis
+from apps.entry.models import Figure
 from apps.report.models import Report, ReportApproval, ReportComment, ReportGeneration
 from utils.filters import IDListFilter, MultiWordSearchFilterSet, StringListFilter, generate_type_for_filter_set
 
@@ -23,6 +25,8 @@ class ReportFilter(MultiWordSearchFilterSet):
     is_public = df.BooleanFilter(method="filter_is_public")
     is_gidd_report = df.BooleanFilter(method="filter_is_gidd_report")
     is_pfa_visible_in_gidd = df.BooleanFilter(method="filter_is_pfa_visible_in_gidd")
+    filter_figure_crisis_types = StringListFilter(method="filter_by_filter_figure_crisistype")
+    filter_figure_categories = StringListFilter(method="filter_by_filter_figure_categories")
 
     class Meta:
         model = Report
@@ -33,6 +37,14 @@ class ReportFilter(MultiWordSearchFilterSet):
             "retroactive_change": ["exact"],
         }
         multi_word_search_fields = ["name"]
+
+    def filter_by_filter_figure_crisistype(self, qs, name, value):
+        enum_values = [Crisis.CRISIS_TYPE[crisis_type].value for crisis_type in value]
+        return qs.filter(filter_figure_crisis_types__overlap=enum_values)
+
+    def filter_by_filter_figure_categories(self, qs, name, value):
+        enum_values = [Figure.FIGURE_CATEGORY_TYPES[category].value for category in value]
+        return qs.filter(filter_figure_categories__overlap=enum_values)
 
     def filter_countries(self, qs, name, value):
         if value:
