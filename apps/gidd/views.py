@@ -719,7 +719,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 "affected community or society to cope using its own resources (UNSDR)."
             ],
             [],
-            ["USE LICENSE: This content is licensed under CC BY-NC. See: https://creativecommons.org/licenses/by-nc/4.0/. "],
+            ["USE LICENSE: This content is licensed under CC BY-NC. See: https://creativecommons.org/licenses/by-nc/4.0/."],
             [],
             [
                 "COVERAGE: Global. The GIDD provides data on internal displacement caused by conflict from 2009 "
@@ -801,15 +801,15 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 "and country."
             ],
             [],
-            ["ISO3: ISO 3166-1 alpha-3 code. AB9 = Abyei Area. "],
+            ["ISO3: ISO 3166-1 alpha-3 code. AB9 = Abyei Area."],
             ["Year: Year for which displacement data are reported."],
             ["Figure cause: Trigger of displacement: Conflict or Disaster."],
-            ["Figure category: Type of metric: Internal Displacements (flows) or IDPs (stocks). "],
-            ["Description: Contextual information including sources, data limitations, methodology, and caveats. "],
-            ["Figures: Total number of internal displacements or IDPs. "],
+            ["Figure category: Type of metric: Internal Displacements (flows) or IDPs (stocks)."],
+            ["Description: Contextual information including sources, data limitations, methodology, and caveats."],
+            ["Figures: Total number of internal displacements or IDPs."],
             [
                 "Figures rounded: Rounded figures matching values reported in the Global Report on "
-                "Internal Displacement (GRID). "
+                "Internal Displacement (GRID)."
             ],
         ]
 
@@ -823,7 +823,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             [
                 "Sex and Age Disaggregated Data (SADD) is often scarce. IDMC employs UN Population "
                 "Estimates and Projections to break down internally displaced people by sex and age. "
-                "Methodology and limitations: https://www.internal-displacement.org/monitoring-tools "
+                "Methodology and limitations: https://www.internal-displacement.org/monitoring-tools"
             ]
         )
         ws4.append([])
@@ -1023,7 +1023,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             [
                 "3.1",
                 "May 12, 2026",
-                "Added Q2 2026 revision round (13 figures). Standardized Disasters -> Disaster in revision tables. ",
+                "Added Q2 2026 revision round (13 figures). Standardized Disasters -> Disaster in revision tables.",
             ],
             ["3.0", "May 13, 2025", "Added May 2025 revision round (61 figures)."],
             ["2.0", "Jan 2025", "Added January 2025 revision round (24 figures)."],
