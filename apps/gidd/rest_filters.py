@@ -227,6 +227,16 @@ class DisaggregationFilterSet(django_filters.FilterSet):
         method="filter_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
+    start_year = django_filters.NumberFilter(
+        field_name="start_year",
+        method="filter_start_year",
+        help_text="Filter by start date",
+    )
+    end_year = django_filters.NumberFilter(
+        field_name="end_year",
+        method="filter_end_year",
+        help_text="Filter by end date",
+    )
     release_environment = django_filters.ChoiceFilter(
         method="no_op",
         choices=get_name_choices(ReleaseMetadata.ReleaseEnvironment),
@@ -238,6 +248,16 @@ class DisaggregationFilterSet(django_filters.FilterSet):
             "iso3": ["in"],
             "disaster_type": ["in"],
         }
+
+    def filter_start_year(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(year__gte=value)
+
+    def filter_end_year(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(year__lte=value)
 
     def filter_cause(self, queryset, name, value):
         if not value:
@@ -284,6 +304,16 @@ class DisaggregationPublicFigureAnalysisFilterSet(django_filters.FilterSet):
         method="filter_figure_cause",
         choices=get_name_choices(CRISIS_TYPE_PUBLIC),
     )
+    start_year = django_filters.NumberFilter(
+        field_name="start_year",
+        method="filter_start_year",
+        help_text="Filter by start date",
+    )
+    end_year = django_filters.NumberFilter(
+        field_name="end_year",
+        method="filter_end_year",
+        help_text="Filter by end date",
+    )
     release_environment = django_filters.ChoiceFilter(
         method="no_op",
         choices=get_name_choices(ReleaseMetadata.ReleaseEnvironment),
@@ -308,6 +338,16 @@ class DisaggregationPublicFigureAnalysisFilterSet(django_filters.FilterSet):
                 figure_cause=Crisis.CRISIS_TYPE.DISASTER.value,
             )
         return qs
+
+    def filter_start_year(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(year__gte=value)
+
+    def filter_end_year(self, queryset, name, value):
+        if not value:
+            return queryset
+        return queryset.filter(year__lte=value)
 
     def no_op(self, qs, name, value):
         return qs
