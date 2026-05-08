@@ -6,7 +6,7 @@ from pathlib import Path
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models import Case, F, Q, When
-from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.types import OpenApiTypes
@@ -32,6 +32,7 @@ from apps.entry.models import ExternalApiDump, Figure, FigureLocation
 from apps.event.models import EventCode
 from utils.common import client_id, get_valid_xml_string, track_gidd
 
+from .cache import GiddExportCache
 from .models import Conflict, Disaster, DisplacementData, GiddFigure, IdpsSaddEstimate, PublicFigureAnalysis, StatusLog
 from .paginations import GiddLimitOffsetPagination
 from .rest_filters import (
@@ -190,27 +191,10 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             return "Displacement reporting preventive evacuations"
         return "Displacement without preventive evacuations reported"
 
-    @extend_schema(
-        description=Path("docs/disaster/xlsx-export-description.md").read_text(),
-        responses={
-            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
-        },
-        filters=True,
-        tags=["GIDD"],
-    )
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="disaster-export",
-        permission_classes=[AllowAny],
-        pagination_class=None,
-        renderer_classes=[XlsxRenderer],
-    )
-    def export(self, request):
+    def _export(self, qs):
         """
         Export disaster
         """
-        qs = self.filter_queryset(self.get_queryset())
         wb = Workbook(write_only=True)
         ws = wb.create_sheet("1_Disaster_Displacement_data")
         ws.append(
@@ -432,12 +416,40 @@ class DisasterViewSet(ListOnlyViewSetMixin):
 
         for item in readme_text_3:
             ws2.append(item)
+        return save_virtual_workbook(wb)
 
-        response = HttpResponse(content=save_virtual_workbook(wb))
+    @extend_schema(
+        description=Path("docs/disaster/xlsx-export-description.md").read_text(),
+        responses={
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
+        },
+        filters=True,
+        tags=["GIDD"],
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="disaster-export",
+        permission_classes=[AllowAny],
+        pagination_class=None,
+        renderer_classes=[XlsxRenderer],
+    )
+    def export(self, request):
+        qs = self.filter_queryset(self.get_queryset())
         filename = "IDMC_GIDD_Disasters_Internal_Displacement_Data.xlsx"
-        response["Content-Disposition"] = f"attachment; filename={filename}"
-        response["Content-Type"] = "application/octet-stream"
-        return response
+        return redirect(
+            GiddExportCache.get_or_create(
+                filename,
+                request,
+                [self.filterset_class],
+                GiddExportCache.Key.DISASTER_EXPORT,
+                lambda: self._export(qs),
+                s3_parameters={
+                    "ResponseContentDisposition": f"attachment; filename={filename}",
+                    "ResponseContentType": "application/octet-stream",
+                },
+            )
+        )
 
 
 @extend_schema_view(
@@ -547,38 +559,14 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 ]
             )
 
-    @extend_schema(
-        description=Path("docs/displacement/xlsx-export-description.md").read_text(),
-        responses={
-            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
-        },
-        filters=True,
-        tags=["GIDD"],
-    )
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="displacement-export",
-        permission_classes=[AllowAny],
-        pagination_class=None,
-        renderer_classes=[XlsxRenderer],
-    )
-    def export(self, request):
+    def _export(self, qs, pfa_qs, idps_sadd_qs, request_cause):
         """
         Export displacements, conflict and disaster
         """
 
-        # Track export
-        qs = self.filter_queryset(self.get_queryset()).order_by(
-            "-year",
-            "iso3",
-        )
-
         wb = Workbook(write_only=True)
         # Tab 1
         ws = wb.create_sheet("1_Displacement_data")
-
-        request_cause = request.GET.get("cause")
 
         if request_cause and request_cause.lower() == "conflict":
             self.export_conflicts(ws, qs)
@@ -599,9 +587,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 "Figures rounded",
             ]
         )
-        pfa_qs = PublicFigureAnalysisFilterSet(
-            data=self.request.query_params, queryset=PublicFigureAnalysis.objects.all()
-        ).qs.order_by("iso3", "year")
+
         for item in pfa_qs:
             ws2.append(
                 [
@@ -630,10 +616,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 "60+",
             ]
         )
-        idps_sadd_qs = IdpsSaddEstimateFilter(
-            data=self.request.query_params,
-            queryset=IdpsSaddEstimate.objects.all(),
-        ).qs.order_by("iso3", "year")
+
         for item in idps_sadd_qs:
             ws3.append(
                 [
@@ -1031,11 +1014,56 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         for item in readme_text_7:
             ws4.append(item)
 
-        response = HttpResponse(content=save_virtual_workbook(wb))
+        return save_virtual_workbook(wb)
+
+    @extend_schema(
+        description=Path("docs/displacement/xlsx-export-description.md").read_text(),
+        responses={
+            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
+        },
+        filters=True,
+        tags=["GIDD"],
+    )
+    @action(
+        detail=False,
+        methods=["get"],
+        url_path="displacement-export",
+        permission_classes=[AllowAny],
+        pagination_class=None,
+        renderer_classes=[XlsxRenderer],
+    )
+    def export(self, request):
+        # Track export
+        qs = self.filter_queryset(self.get_queryset()).order_by(
+            "-year",
+            "iso3",
+        )
+
+        request_cause = request.GET.get("cause")
+
+        pfa_qs = PublicFigureAnalysisFilterSet(
+            data=self.request.query_params, queryset=PublicFigureAnalysis.objects.all()
+        ).qs.order_by("iso3", "year")
+
+        idps_sadd_qs = IdpsSaddEstimateFilter(
+            data=self.request.query_params,
+            queryset=IdpsSaddEstimate.objects.all(),
+        ).qs.order_by("iso3", "year")
+
         filename = "IDMC_Internal_Displacement_Conflict-Violence_Disasters.xlsx"
-        response["Content-Disposition"] = f"attachment; filename={filename}"
-        response["Content-Type"] = "application/octet-stream"
-        return response
+        return redirect(
+            GiddExportCache.get_or_create(
+                filename,
+                request,
+                [self.filterset_class, PublicFigureAnalysisFilterSet, IdpsSaddEstimateFilter],
+                GiddExportCache.Key.DISPLACEMENT_EXPORT,
+                lambda: self._export(qs, pfa_qs, idps_sadd_qs, request_cause),
+                s3_parameters={
+                    "ResponseContentDisposition": f"attachment; filename={filename}",
+                    "ResponseContentType": "application/octet-stream",
+                },
+            )
+        )
 
 
 class DisaggregationViewSet(ListOnlyViewSetMixin):
@@ -1044,6 +1072,15 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
     filter_backends = (DjangoFilterBackend,)
     filterset_class = DisaggregationFilterSet
     pagination_class = None
+
+    def _generate_export_filename(self):
+        filename_map = {
+            Crisis.CRISIS_TYPE.CONFLICT.name.lower(): "IDMC_GIDD_Conflict_Internal_Displacement_Disaggregated",
+            Crisis.CRISIS_TYPE.DISASTER.name.lower(): "IDMC_GIDD_Disasters_Internal_Displacement_Disaggregated",
+        }
+
+        filter_cause = self.request.query_params.get("cause", "").lower()
+        return filename_map.get(filter_cause, "IDMC_GIDD_Internal_Displacement_Disaggregated")
 
     def _get_category(self, category) -> typing.Optional[str]:
         if category is None:
@@ -1098,7 +1135,7 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
 
         return [[loc[0], _get_event_code_label(loc[1])] for loc in transposed_components if loc[2] == filter_iso3]
 
-    def _export_disaggregated_geojson(self, qs):
+    def _export_disaggregated_geojson(self, filename, qs):
         def format_coordinate(coordinate: str) -> typing.Tuple[float, float]:
             lat, lng = coordinate.split(", ")
             return (float(lng), float(lat))
@@ -1115,14 +1152,6 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             ),
         )
         now = timezone.now().strftime("%B %d, %Y")
-
-        # Determine the filename based on filters
-        filter_cause = self.request.query_params.get("cause", "").lower()
-        filename_map = {
-            Crisis.CRISIS_TYPE.CONFLICT.name.lower(): "IDMC_GIDD_Conflict_Internal_Displacement_Disaggregated",
-            Crisis.CRISIS_TYPE.DISASTER.name.lower(): "IDMC_GIDD_Disasters_Internal_Displacement_Disaggregated",
-        }
-        filename = filename_map.get(filter_cause, "IDMC_GIDD_Internal_Displacement_Disaggregated")
 
         readme_text = (
             "TITLE: Disasters Global Internal Displacement Database (GIDD)\n"
@@ -1358,21 +1387,10 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             }
             feature_collection["features"].append(feature)
 
-        feature_collection = json.dumps(feature_collection, cls=DjangoJSONEncoder)
-        response = HttpResponse(content=feature_collection, content_type="application/json")
-        response["Content-Disposition"] = f"attachment; filename={filename}.geojson"
-        return response
+        return json.dumps(feature_collection, cls=DjangoJSONEncoder).encode("utf-8")
 
-    def _export_disaggregated_excel(self, qs):
+    def _export_disaggregated_excel(self, filename, qs, pfa_qs):
         wb = Workbook(write_only=True)
-
-        # Determine the filename based on filters
-        filter_cause = self.request.query_params.get("cause", "").lower()
-        filename_map = {
-            Crisis.CRISIS_TYPE.CONFLICT.name.lower(): "IDMC_GIDD_Conflict_Internal_Displacement_Disaggregated",
-            Crisis.CRISIS_TYPE.DISASTER.name.lower(): "IDMC_GIDD_Disasters_Internal_Displacement_Disaggregated",
-        }
-        filename = filename_map.get(filter_cause, "IDMC_GIDD_Internal_Displacement_Disaggregated")
 
         ws = wb.create_sheet("1_Disaggregated_Data")
         ws.append(
@@ -1435,10 +1453,6 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 "Figures rounded",
             ]
         )
-
-        pfa_qs = DisaggregationPublicFigureAnalysisFilterSet(
-            data=self.request.query_params, queryset=PublicFigureAnalysis.objects.filter(year__gte=2023)
-        ).qs.order_by("iso3", "year", "id")
 
         for item in pfa_qs:
             ws2.append(
@@ -1925,19 +1939,14 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
                 ]
             )
 
-        response = HttpResponse(
-            content=save_virtual_workbook(wb),
-            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-        response["Content-Disposition"] = f"attachment; filename={filename}.xlsx"
-        return response
+        return save_virtual_workbook(wb)
 
     @extend_schema(
         description=Path("docs/disaggregation/geojson-export-description.md").read_text(),
         responses={
             # FIXME: Handle proper accept header
-            # (200, "application/geo+json"): OpenApiTypes.STR,
-            (200, "application/json"): OpenApiTypes.STR,
+            # (302, "application/geo+json"): OpenApiTypes.STR,
+            (302, "application/json"): OpenApiTypes.STR,
         },
         filters=True,
         tags=["GIDD"],
@@ -1968,14 +1977,28 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             .filter(year__gte=2023)
         )
         qs = self.filter_queryset(queryset)
-        return self._export_disaggregated_geojson(qs)
+
+        filename = self._generate_export_filename()
+        return redirect(
+            GiddExportCache.get_or_create(
+                f"{filename}.geojson",
+                request,
+                [self.filterset_class],
+                GiddExportCache.Key.DISAGGREGATION_EXPORT_GEOJSON,
+                lambda: self._export_disaggregated_geojson(filename, qs),
+                s3_parameters={
+                    "ResponseContentDisposition": f"attachment; filename={filename}.geojson",
+                    "ResponseContentType": "application/json",
+                },
+            )
+        )
 
     @extend_schema(
         description=Path("docs/disaggregation/xlsx-export-description.md").read_text(),
         responses={
             # FIXME: Handle proper accept header
-            # (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
-            (200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): None,
+            # (302, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): OpenApiTypes.BINARY,
+            (302, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"): None,
         },
         filters=True,
         tags=["GIDD"],
@@ -2007,8 +2030,26 @@ class DisaggregationViewSet(ListOnlyViewSetMixin):
             )
             .filter(year__gte=2023)
         )
-        qs = self.filter_queryset(queryset)
-        return self._export_disaggregated_excel(qs)
+        qs: models.QuerySet[GiddFigure] = self.filter_queryset(queryset)
+
+        pfa_qs: models.QuerySet[PublicFigureAnalysis] = DisaggregationPublicFigureAnalysisFilterSet(
+            data=self.request.query_params, queryset=PublicFigureAnalysis.objects.filter(year__gte=2023)
+        ).qs.order_by("iso3", "year", "id")
+
+        filename = self._generate_export_filename()
+        return redirect(
+            GiddExportCache.get_or_create(
+                f"{filename}.xlsx",
+                request,
+                [self.filterset_class, DisaggregationPublicFigureAnalysisFilterSet],
+                GiddExportCache.Key.DISAGGREGATION_EXPORT,
+                lambda: self._export_disaggregated_excel(filename, qs, pfa_qs),
+                s3_parameters={
+                    "ResponseContentDisposition": f"attachment; filename={filename}.xlsx",
+                    "ResponseContentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                },
+            )
+        )
 
 
 @extend_schema_view(
