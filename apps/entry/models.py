@@ -1005,6 +1005,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         headers = OrderedDict(
             id="ID",
             old_id="Old ID",
+            hulk_uuid="Hulk (UUID)",
             created_at="Created at",
             modified_at="Updated at",
             country__iso3="ISO3",
@@ -1088,12 +1089,20 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             type_of_points="Locations type",
             locations="Locations (Name:Lat, Lon:Accuracy:Type)",
         )
-        exclude_headers = ["location_display_name", "loc_lat_lon", "accuracy", "type_of_points", "entry_link"]
+        exclude_headers = [
+            "location_display_name",
+            "loc_lat_lon",
+            "accuracy",
+            "type_of_points",
+            "entry_link",
+            "hulk_uuid",
+        ]
 
         values = (
             figures.annotate(
                 **Figure.annotate_stock_and_flow_dates(),
                 **Figure.annotate_sources_reliability(),
+                hulk_id=models.F("hulkfigure__uuid"),
                 centroid_lat=RawSQL("country_country.centroid[2]", params=()),
                 centroid_lon=RawSQL("country_country.centroid[1]", params=()),
                 entry_url_or_document_url=models.Case(
