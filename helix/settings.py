@@ -466,6 +466,7 @@ GZIP_CONTENT_TYPES = [
     "application/x-javascript",
     "image/svg+xml",
     "application/json",
+    "application/geo+json",
     "application/pdf",
 ]
 
