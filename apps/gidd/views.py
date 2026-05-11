@@ -570,7 +570,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
 
         if request_cause and request_cause.lower() == "conflict":
             self.export_conflicts(ws, qs)
-        if request_cause and request_cause.lower() == "disaster":
+        elif request_cause and request_cause.lower() == "disaster":
             self.export_disasters(ws, qs)
         else:
             self.export_displacements(ws, qs)
