@@ -941,17 +941,43 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
         )
 
 
-class IDUFromFigureParamsSerializer(serializers.Serializer):
-    main_trigger = serializers.CharField()
-    quantifier = serializers.CharField()
-    figure = serializers.IntegerField()
-    unit = serializers.CharField()
-    displacement_term = serializers.CharField()
-    location = serializers.CharField()
-    start_date = serializers.CharField()
-    source_type = serializers.CharField()
+class IDUGenerateSerializer(serializers.Serializer):
+    main_trigger = serializers.ChoiceField(
+        choices=Crisis.CRISIS_TYPE.choices(),
+        required=True,
+    )
+    quantifier = serializers.ChoiceField(
+        choices=Figure.QUANTIFIER.choices(),
+        required=True,
+    )
+    figure = serializers.IntegerField(min_value=0)
+    unit = serializers.ChoiceField(
+        choices=Figure.UNIT.choices(),
+        required=True,
+    )
+    displacement_term = serializers.ChoiceField(
+        choices=Figure.FIGURE_TERMS.choices(),
+        required=True,
+    )
+    locations = FigureLocationSerializer(many=True, required=True, allow_null=False)
+    start_date = serializers.DateField()
+    end_date = serializers.DateField()
+    sources = serializers.ListField(child=serializers.IntegerField())
+    disaster_sub_type = serializers.CharField(required=False, allow_null=True)
+    violence_sub_type = serializers.CharField(required=False, allow_null=True)
+    other_sub_type = serializers.CharField(required=False, allow_null=True)
+
+    class Meta:
+        extra_kwargs = {
+            "sources": {"required": True, "allow_empty": False},
+            "locations": {"required": True, "allow_empty": False},
+        }
+
+    def validate(self, attrs):
+        if attrs.get("end_date") < attrs.get("start_date"):
+            raise serializers.ValidationError(_("end date must be greater or equal to start date"))
+        return attrs
 
     def create(self, validated_data):
         self.idu = generate_idu_from_figure_data(validated_data)
-
         return self

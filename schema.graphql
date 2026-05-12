@@ -2770,6 +2770,27 @@ enum IDENTIFIER {
   ORIGIN_AND_DESTINATION
 }
 
+type IDUGenerate {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: String
+}
+
+input IDUGenerateInputType {
+  mainTrigger: CRISIS_TYPE!
+  quantifier: QUANTIFIER!
+  figure: Int!
+  unit: UNIT!
+  displacementTerm: FIGURE_TERMS!
+  locations: [FigureLocationInputType!]!
+  startDate: Date!
+  endDate: Date!
+  sources: [Int!]!
+  disasterSubType: String
+  violenceSubType: String
+  otherSubType: String
+}
+
 scalar JSONString
 
 type Login {
@@ -2876,6 +2897,7 @@ type Mutation {
   approveFigure(id: ID!): ApproveFigure
   unapproveFigure(id: ID!): UnapproveFigure
   reRequestReviewFigure(id: ID!): ReRequestReviewFigure
+  generateIdu(data: IDUGenerateInputType!): IDUGenerate
   createEvent(data: EventCreateInputType!): CreateEvent
   updateEvent(data: EventUpdateInputType!): UpdateEvent
   deleteEvent(id: ID!): DeleteEvent

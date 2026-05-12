@@ -19,7 +19,7 @@ from apps.entry.serializers import (
     FigureSerializer,
     FigureTagCreateSerializer,
     FigureTagUpdateSerializer,
-    IDUFromFigureParamsSerializer,
+    IDUGenerateSerializer,
 )
 from apps.extraction.filters import (
     EntryExtractionFilterDataInputType,
@@ -48,9 +48,9 @@ FigureUpdateInputType = generate_input_type_for_serializer(
     partial=True,
 )
 
-GenerateIDUInputType = generate_input_type_for_serializer(
-    "GenerateIDUInputType",
-    serializer_class=IDUFromFigureParamsSerializer,
+IDUGenerateInputType = generate_input_type_for_serializer(
+    "IDUGenerateInputType",
+    serializer_class=IDUGenerateSerializer,
 )
 
 
@@ -542,9 +542,9 @@ class BulkUpdateFigures(BulkUpdateMutation):
             return super().mutate(*args, **kwargs, context={"bulk_manager": bulk_manager})
 
 
-class GenerateIDU(graphene.Mutation):
+class IDUGenerate(graphene.Mutation):
     class Arguments:
-        data = GenerateIDUInputType(required=True)
+        data = IDUGenerateInputType(required=True)
 
     errors = graphene.List(graphene.NonNull(CustomErrorType))
     ok = graphene.Boolean()
@@ -553,13 +553,13 @@ class GenerateIDU(graphene.Mutation):
     @staticmethod
     @is_authenticated()
     def mutate(root, info, data):
-        serializer = IDUFromFigureParamsSerializer(data=data, context={"request": info.context.request})
+        serializer = IDUGenerateSerializer(data=data, context={"request": info.context.request})
         if errors := mutation_is_not_valid(serializer):
-            return GenerateIDU(errors=errors, ok=False, result=None)
+            return IDUGenerate(errors=errors, ok=False, result=None)
 
         idu_instance = serializer.save()
 
-        return GenerateIDU(ok=True, result=idu_instance.idu)
+        return IDUGenerate(ok=True, result=idu_instance.idu)
 
 
 class Mutation(object):
@@ -583,4 +583,4 @@ class Mutation(object):
     unapprove_figure = UnapproveFigure.Field()
     re_request_review_figure = ReRequestReviewFigure.Field()
     # generate IDU
-    generate_idu = GenerateIDU.Field()
+    generate_idu = IDUGenerate.Field()

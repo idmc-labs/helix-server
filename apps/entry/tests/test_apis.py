@@ -15,6 +15,7 @@ from utils.factories import (
     EventFactory,
     FigureFactory,
     OrganizationFactory,
+    OrganizationKindFactory,
     TagFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
@@ -386,28 +387,67 @@ class TestEntryTypeFields(HelixTestCase):
         self.assertNotIn("figures", EntryType._meta.fields)
 
 
-class TestGenerateIDU(HelixGraphQLTestCase):
+class TestIDUGenerate(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         self.force_login(self.editor)
+        self.org_kind_gov = OrganizationKindFactory.create(name="Government")
+        self.org_kind_local_auth = OrganizationKindFactory.create(name="Local Authority")
+        self.sources_1 = OrganizationFactory.create(organization_kind=self.org_kind_local_auth)
+        self.sources_2 = OrganizationFactory.create(organization_kind=self.org_kind_gov)
         self.mutation = """
-            mutation MyMutation($data: GenerateIDUInputType!) {
+            mutation MyMutation($data: IDUGenerateInputType!) {
                 generateIdu(data: $data) {
                     ok
                     result
                 }
             }
         """
+
         self.variables = {
             "data": {
-                "mainTrigger": "Flood",
-                "sourceType": "News Report",
-                "location": "Jakarta",
-                "startDate": "2023-01-15",
-                "unit": "People",
-                "quantifier": "Around",
-                "displacementTerm": "Displaced",
-                "figure": 5000,
+                "mainTrigger": Crisis.CRISIS_TYPE.DISASTER.name,
+                "disasterSubType": "1",
+                "violenceSubType": None,
+                "otherSubType": None,
+                "quantifier": Figure.QUANTIFIER.APPROXIMATELY.name,
+                "figure": 1,
+                "sources": [self.sources_1.id, self.sources_2.id],
+                "displacementTerm": Figure.FIGURE_TERMS.PARTIALLY_DESTROYED_HOUSING.name,
+                "locations": [
+                    {
+                        "id": "656496",
+                        "uuid": "ee41e69a-addf-4953-bf46-f3e14d578c3e",
+                        "accuracy": "ADM3",
+                        "identifier": "ORIGIN",
+                        "geocoder": "OSMNAME",
+                        "boundingBox": [85.268105, 27.66795, 85.375557, 27.751339],
+                        "city": "Kathmandu",
+                        "className": "place",
+                        "country": "Nepal",
+                        "countryCode": "np",
+                        "displayName": "Kathmandu, Kathmandu, Bagmati, Central Development Region, Nepal",
+                        "houseNumbers": "",
+                        "importance": 0.578457,
+                        "lat": 27.709909,
+                        "lon": 85.324753,
+                        "moved": False,
+                        "name": "Kathmandu",
+                        "nameSuffix": "Kathmandu",
+                        "osmId": "4853462",
+                        "osmType": "relation",
+                        "placeRank": 16,
+                        "rank": 25802786,
+                        "state": "Central Development Region",
+                        "street": "",
+                        "type": "city",
+                        "wikiData": "Q3037",
+                        "wikipedia": "en:Kathmandu",
+                    }
+                ],
+                "startDate": "2025-01-11",
+                "endDate": "2025-01-16",
+                "unit": Figure.UNIT.HOUSEHOLD.name,
             }
         }
 
@@ -417,8 +457,37 @@ class TestGenerateIDU(HelixGraphQLTestCase):
 
         content = response.json()
 
-        result_string = content["data"]["generateIdu"]["result"].lower()
-        expected_string = self.variables["data"]["mainTrigger"].lower()
+        result_string = content["data"]["generateIdu"]["result"]
+
+        expected_string = (
+            "According to local authorities, around one household was reported "
+            "partially destroyed housing in kathmandu, kathmandu, "
+            "bagmati, central development region, nepal due to an earthquake "
+            "between the 11th and 16th of january 2025.",
+            "According to local authorities, about one household was reported "
+            "partially destroyed housing in kathmandu, kathmandu, "
+            "bagmati, central development region, nepal due to an earthquake "
+            "between the 11th and 16th of january 2025.",
+        )
         self.assertEqual(response.status_code, 200)
         self.assertTrue(content["data"]["generateIdu"]["ok"])
-        self.assertIn(expected_string, result_string)
+        self.assertIn(result_string, expected_string)
+
+        input_1 = self.variables.copy()
+        input_1["data"]["mainTrigger"] = Crisis.CRISIS_TYPE.CONFLICT.name
+        input_1["data"]["violenceSubType"] = "2"
+        input_1["data"]["figure"] = 10
+        input_1["data"]["displacementTerm"] = Figure.FIGURE_TERMS.DISPLACED.name
+        input_1["data"]["unit"] = Figure.UNIT.PERSON.name
+        response = self.query(self.mutation, variables=self.variables)
+        self.assertResponseNoErrors(response)
+        content = response.json()
+        result_string = content["data"]["generateIdu"]["result"]
+        expected_string = (
+            "According to local authorities, around 10 people were reported displaced "
+            "in kathmandu, kathmandu, bagmati, central development region, nepal due to "
+            "international armed conflict between the 11th and 30th of january 2025.",
+            "According to local authorities, about 10 people were reported displaced in "
+            "kathmandu, kathmandu, bagmati, central development region, nepal due to "
+            "international armed conflict between the 11th and 30th of january 2025.",
+        )
