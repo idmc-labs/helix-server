@@ -48,7 +48,7 @@ class ClientFilter(MultiWordSearchFilterSet):
     class Meta:
         model = Client
         fields = ()
-        multi_word_search_fields = ["name", "acronym", "contact_name", "contact_email"]
+        multi_word_search_fields = ["name", "acronym", "contact_name", "contact_email", "code"]
 
     def filter_use_cases(self, qs, name, value):
         enum_values = [Client.USE_CASE_TYPES[use_case].value for use_case in value]
