@@ -1244,9 +1244,9 @@ input DisaggregatedAgeInputType {
   id: ID
   sex: GENDER_TYPE!
   uuid: String!
-  value: Int
-  ageFrom: Int
-  ageTo: Int
+  value: Int!
+  ageFrom: Int!
+  ageTo: Int!
 }
 
 type DisaggregatedAgeListType {
@@ -1438,7 +1438,7 @@ input EntryCreateInputType {
   associatedParkedItem: ID
   preview: ID
   document: ID
-  publishers: [ID!]
+  publishers: [ID!]!
 }
 
 input EntryExtractionFilterDataInputType {
@@ -1558,7 +1558,7 @@ input EventCreateInputType {
   startDateAccuracy: DATE_ACCURACY
   endDate: Date!
   endDateAccuracy: DATE_ACCURACY
-  eventNarrative: String
+  eventNarrative: String!
   includeTriangulationInQa: Boolean
   crisis: ID
   otherSubType: ID
@@ -1567,7 +1567,7 @@ input EventCreateInputType {
   disasterSubCategory: ID
   disasterSubType: ID
   osvSubType: ID
-  countries: [ID!]
+  countries: [ID!]!
   contextOfViolence: [ID!]
 }
 

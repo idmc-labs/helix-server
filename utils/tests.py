@@ -4,6 +4,7 @@ import os
 import shutil
 from unittest.mock import patch
 
+import pytest
 import pytz
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -36,6 +37,15 @@ TEST_CACHES = {
 
 
 TEST_AUTH_PASSWORD_VALIDATORS = []
+
+
+@pytest.fixture(scope="function")
+def snapshot_in_class(request, snapshot):
+    """
+    Wraps snapshot fixture to provide instance snapshot property for
+    unittest.TestCase tests
+    """
+    request.cls.snapshot = snapshot
 
 
 class CommonSetupClassMixin:
