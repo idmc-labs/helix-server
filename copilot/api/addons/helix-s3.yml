@@ -120,8 +120,17 @@ Resources:
               - GET
               - HEAD
             AllowedOrigins:
-              - "*"
+              - '*'
             MaxAge: 3600
+            # NOTE: We add these expose headers as swagger ui is using js to get export files
+            ExposedHeaders:
+              - 'Content-Disposition'
+              - 'Content-Length'
+              - 'Content-Type'
+              - 'ETag'
+              - 'Last-Modified'
+              - 'Accept-Ranges'
+              - 'Content-Range'
       LifecycleConfiguration:
         Rules:
           - Id: AutoDelete
