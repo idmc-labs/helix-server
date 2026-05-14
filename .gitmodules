@@ -3,3 +3,9 @@
     path = fugit
     url = git@github.com:toggle-corp/fugit.git
     branch = v0.1.6
+[submodule "helix-assests"]
+	path = helix-assests
+	url = git@github.com:idmc-labs/helix-assests.git
+[submodule "assests"]
+	path = assests
+	url = git@github.com:idmc-labs/helix-assests.git

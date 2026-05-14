@@ -1,11 +1,14 @@
 import json
 
+import pytest
+
 from apps.crisis.models import Crisis
 from apps.entry.models import (
     Figure,
 )
 from apps.users.enums import USER_ROLE
 from utils.factories import (
+    AttachmentFactory,
     ContextOfViolenceFactory,
     CountryFactory,
     EntryFactory,
@@ -15,7 +18,7 @@ from utils.factories import (
     TagFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
-from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from utils.tests import HelixGraphQLTestCase, create_user_with_role, snapshot_in_class  # noqa: F401
 
 
 class TestEntryQuery(HelixGraphQLTestCase):
@@ -108,6 +111,10 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     errors
                     result {
                         id
+                        url
+                        versionId
+                        articleTitle
+                        documentUrl
                         figures {
                             id
                             createdBy{
@@ -153,6 +160,34 @@ class TestEntryCreation(HelixGraphQLTestCase):
         content = json.loads(response.content)
         self.assertIn(PERMISSION_DENIED_MESSAGE, content["errors"][0]["message"])
 
+    @pytest.mark.usefixtures("snapshot_in_class")
+    def test_entry_validation(self) -> None:
+        # both url and document cannot be set
+        input_1 = self.input
+        input_1["document"] = AttachmentFactory().id
+        response = self.query(self.mutation, input_data=input_1)
+        content = json.loads(response.content)
+        assert content == self.snapshot
+        assert not content["data"]["createEntry"]["ok"]
+
+        # document url must be valid url
+        input_2 = self.input
+        input_2["document"] = AttachmentFactory().id
+        input_2["documentUrl"] = ("www.invalidurl.com",)
+        response = self.query(self.mutation, input_data=input_2)
+        content = json.loads(response.content)
+        assert content == self.snapshot
+        assert not content["data"]["createEntry"]["ok"]
+
+    def test_clear_fields(self):
+        # if document not defined clear document url
+        input_1 = self.input
+        input_1["document"] = None
+        input_1["documentUrl"] = "https://www.test.com"
+        response = self.query(self.mutation, input_data=input_1)
+        content = json.loads(response.content)
+        assert not content["data"]["createEntry"]["result"]["documentUrl"]
+
 
 class TestEntryUpdate(HelixGraphQLTestCase):
     def setUp(self) -> None:
@@ -175,6 +210,7 @@ class TestEntryUpdate(HelixGraphQLTestCase):
               id
               createdAt
               articleTitle
+              documentUrl
               createdBy {
                   id
                   fullName
@@ -203,6 +239,37 @@ class TestEntryUpdate(HelixGraphQLTestCase):
 
         self.assertResponseNoErrors(response)
         self.assertTrue(content["data"]["updateEntry"]["ok"], content)
+
+    @pytest.mark.usefixtures("snapshot_in_class")
+    def test_entry_validation(self) -> None:
+        self.force_login(self.admin)
+
+        # both url and document cannot be set
+        input_1 = self.input
+        input_1["document"] = AttachmentFactory().id
+        response = self.query(self.mutation, input_data=input_1)
+        content = json.loads(response.content)
+        assert content == self.snapshot
+        assert not content["data"]["updateEntry"]["ok"]
+
+        # document url must be valid url
+        input_2 = self.input
+        input_2["document"] = AttachmentFactory().id
+        input_2["documentUrl"] = ("www.invalidurl.com",)
+        response = self.query(self.mutation, input_data=input_2)
+        content = json.loads(response.content)
+        assert content == self.snapshot
+        assert not content["data"]["updateEntry"]["ok"]
+
+    def test_entry_clear_fields(self):
+        self.force_login(self.admin)
+        # if document not defined clear document url
+        input_1 = self.input
+        input_1["document"] = None
+        input_1["documentUrl"] = "https://www.test.com"
+        response = self.query(self.mutation, input_data=input_1)
+        content = json.loads(response.content)
+        assert not content["data"]["updateEntry"]["result"]["documentUrl"]
 
 
 class TestEntryDelete(HelixGraphQLTestCase):
