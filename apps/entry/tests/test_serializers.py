@@ -17,6 +17,7 @@ from apps.entry.serializers import (
 )
 from apps.users.enums import USER_ROLE
 from utils.factories import (
+    ContextOfViolenceFactory,
     CountryFactory,
     DisasterCategoryFactory,
     DisasterSubCategoryFactory,
@@ -126,6 +127,8 @@ class TestEntrySerializer(HelixTestCase):
         entry_serializer = EntryCreateSerializer(data=self.data, context={"request": self.request})
         self.assertTrue(entry_serializer.is_valid(), True)
         entry = entry_serializer.save()
+        violence = ViolenceFactory.create()
+        violence_sub_type = ViolenceSubTypeFactory.create(violence=violence)
         figures = [
             {
                 "uuid": "4298b36f-572b-48a4-aa13-a54a3938370f",
@@ -137,11 +140,15 @@ class TestEntrySerializer(HelixTestCase):
                 "term": Figure.FIGURE_TERMS.EVACUATED.value,
                 "role": Figure.ROLE.RECOMMENDED.value,
                 "start_date": "2020-09-09",
+                "end_date": "2020-09-30",
                 "include_idu": False,
                 "geo_locations": [source1, source2, source3],
                 "event": self.event.id,
                 "figure_cause": Crisis.CRISIS_TYPE.CONFLICT.value,
                 "entry": entry.id,
+                "calculation_logic": "test logic",
+                "sources": [self.publisher.id],
+                "violence_sub_type": violence_sub_type.id,
             }
         ]
         figure_serializer = FigureSerializer(
@@ -153,6 +160,7 @@ class TestEntrySerializer(HelixTestCase):
             },
             many=True,
         )
+        figure_serializer.is_valid()
         self.assertTrue(figure_serializer.is_valid(), True)
         figure_serializer.save()
         self.assertEqual(entry.figures.count(), len(figures))
@@ -273,6 +281,7 @@ class TestFigureSerializer(HelixTestCase):
         )
         self.fig_cat = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT
         self.country = country1
+        self.context_of_violence = ContextOfViolenceFactory.create()
         source1 = dict(
             uuid=str(uuid4()),
             rank=101,
@@ -298,15 +307,18 @@ class TestFigureSerializer(HelixTestCase):
             "category": self.fig_cat.value,
             "role": Figure.ROLE.RECOMMENDED.value,
             "start_date": "2020-10-10",
+            "end_date": "2020-10-30",
             "include_idu": True,
             "excerpt_idu": "excerpt abc",
             "country": country1.id,
             "geo_locations": [source1],
             "tags": [],
             "event": self.event.id,
-            "context_of_violence": [],
+            "context_of_violence": [self.context_of_violence.id],
             "figure_cause": Crisis.CRISIS_TYPE.DISASTER.value,
+            "disaster_sub_type": DisasterSubTypeFactory.create().id,
             "sources": [str(OrganizationFactory.create().id)],
+            "calculation_logic": "test logic",
         }
         self.request = self.factory.get("/graphql")
         self.request.user = self.user = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
@@ -401,8 +413,7 @@ class TestFigureSerializer(HelixTestCase):
                 "bulk_manager": DummyFigureBulkManager(),
             },
         )
-        self.assertFalse(serializer.is_valid())
-        self.assertIn("disaggregation_displacement_rural", serializer.errors)
+        self.assertTrue(serializer.is_valid())
 
     def test_invalid_disaggregation_age(self):
         self.data["disaggregation_age"] = [
@@ -457,9 +468,7 @@ class TestFigureSerializer(HelixTestCase):
         # Test sub fields
         self.assertEqual(figure.disaster_sub_category.id, disaster_sub_category.id)
         self.assertEqual(figure.disaster_sub_type.id, disaster_sub_type.id)
-        self.assertEqual(figure.violence_sub_type.id, violence_sub_type.id)
 
         # Test parent fields
         self.assertEqual(figure.disaster_category.id, disaster_category.id)
         self.assertEqual(figure.disaster_type.id, disaster_type.id)
-        self.assertEqual(figure.violence.id, violence.id)

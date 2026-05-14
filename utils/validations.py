@@ -18,11 +18,11 @@ def is_child_parent_dates_valid(c_start_date, c_end_date, p_start_date, p_name) 
     errors = OrderedDict()
 
     if c_start_date and c_end_date and c_start_date > c_end_date:
-        errors["start_date"] = gettext("Choose your start date earlier than end date.")
-        errors["end_date"] = gettext("Choose your start date earlier than end date.")
+        errors["start_date"] = gettext("The start date must be earlier than end date.")
+        errors["end_date"] = gettext("The start date must be earlier than end date.")
         return errors
     if c_start_date and p_start_date and p_start_date > c_start_date:
-        errors["start_date"] = gettext("Choose your start date after %s start date: %s.") % (
+        errors["start_date"] = gettext("The start date must be after %s start date: %s.") % (
             p_name or "parent",
             p_start_date,
         )
