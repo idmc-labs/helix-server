@@ -1,3 +1,6 @@
+import gzip
+from io import BytesIO
+
 import magic
 from botocore.exceptions import ClientError
 from django.conf import settings
@@ -42,13 +45,35 @@ class AttachmentBoto3ConnectorService(object):
 
             data = obj["Body"].read()
 
+            # When ``AWS_IS_GZIPPED=True`` + the object's content type is in
+            # ``GZIP_CONTENT_TYPES`` (PDFs are by default), django-storages
+            # uploads the object with ``Content-Encoding: gzip`` — so a Range
+            # GET returns the *raw* gzipped bytes (boto3 does not auto-decode
+            # for Range requests). Decompress before sniffing or libmagic
+            # reports the gzip wrapper instead of the real content type.
+            if (obj.get("ContentEncoding") or "").lower() == "gzip":
+                try:
+                    with gzip.GzipFile(fileobj=BytesIO(data)) as gzf:
+                        decoded = gzf.read(4096)
+                    if decoded:
+                        data = decoded
+                except (OSError, EOFError):
+                    # Truncated gzip stream — leave ``data`` as-is so the
+                    # error message below is the actual gzip-detection
+                    # outcome rather than a swallowed exception.
+                    pass
+
             with magic.Magic(flags=magic.MAGIC_MIME_TYPE) as m:
                 mime_type = m.id_buffer(data)
                 if mime_type not in Attachment.ALLOWED_MIMETYPES:
                     raise BigFileUploadVerificationException(f"Invalid attachment type, {mime_type}")
             return dict(file_size=file_size, mimetype=mime_type)
+        except BigFileUploadVerificationException:
+            # Don't bury the specific reason ("Invalid attachment type, …")
+            # under the catch-all below.
+            raise
         except Exception as e:
-            raise BigFileUploadVerificationException("File verification was failed") from e
+            raise BigFileUploadVerificationException(f"File verification was failed: {e}") from e
 
     def get_attachment_presigned_url(self) -> str:
         presigned_url = None

@@ -22,7 +22,7 @@ from .enums import (
     HulkDataTypeEnum,
     HulkEntryImportTypeEnum,
 )
-from .parsers import validate_and_parse_enum
+from .parsers import enum_parser, validate_and_parse_enum
 from .types import (
     DateAccuracy,
     EventCodeType,
@@ -38,6 +38,8 @@ from .types import (
     FigureUnitType,
     ListOfIds,
 )
+
+AttachmentForChoicesType = typing_extensions.Annotated[ATTACHMENT_FOR_CHOICES, enum_parser(ATTACHMENT_FOR_CHOICES)]
 
 
 # TODO: Support partial data input for optional fields
@@ -63,10 +65,17 @@ class HulkBaseModel(BaseModel):
     Useful for backtracking and mapping Helix responses to Hulk data.
     """
 
+    impersonate_as: typing.Optional[int] = None
+    """
+    Optional Helix User PK. When set, the row is created as if this user ran the
+    import (per-row login is reused across the bulk run). Unset rows fall back
+    to the user who triggered the bulk import.
+    """
+
 
 class HulkAttachmentImport(HulkBaseModel):
     _hulk_data_type = HulkDataTypeEnum.ATTACHMENT
-    attachment_for: ATTACHMENT_FOR_CHOICES = ATTACHMENT_FOR_CHOICES.ENTRY
+    attachment_for: AttachmentForChoicesType = ATTACHMENT_FOR_CHOICES.ENTRY
     file_url: str
     """
     Only S3 url supported
@@ -231,7 +240,7 @@ class HulkFigureImport(HulkBaseModel):
 
     reported_figure: int
     is_housing_destruction: bool
-    household_size: float
+    household_size: typing.Optional[float] = None
     displacement_occurred: FigureDisplacementOccurredType
     is_disaggregated: bool
     analysis_text: str
@@ -281,8 +290,8 @@ class HulkFigureImport(HulkBaseModel):
                 )
             self._start_date = self.start_date
             self._start_date_accuracy = self.start_date_accuracy
-            self._end_date = self.start_date
-            self._end_date_accuracy = self.start_date_accuracy
+            self._end_date = self.end_date
+            self._end_date_accuracy = self.end_date_accuracy
 
         elif self.category.value in FIGURE_STOCK_LIST:
             if self.stock_date is None or self.stock_reporting_date is None or self.stock_date_accuracy is None:

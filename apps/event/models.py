@@ -485,6 +485,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
 
         headers = OrderedDict(
             id="ID",
+            hulk_uuid="Hulk (UUID)",
             created_at="Created at",
             created_by__full_name="Created by",
             name="Name",
@@ -529,6 +530,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 request=DummyRequest(user=User.objects.get(id=user_id)),
             )
             .qs.annotate(
+                hulk_uuid=models.F("hulkevent__uuid"),
                 countries_iso3=StringAgg("countries__iso3", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
                 countries_name=StringAgg("countries__idmc_short_name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
                 regions_name=StringAgg("countries__region__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
