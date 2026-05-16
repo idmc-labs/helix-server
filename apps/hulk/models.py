@@ -9,12 +9,40 @@ from django_enumfield import enum
 from utils.fields import CachedFileField
 
 
-def bulk_operation_payload(instance, filename: str) -> str:
-    return f"hulk/bulk-operation/{instance.pk}/payload/{uuid4()}/{filename}"
+def upload_dataset_import_file(instance, filename: str) -> str:
+    return (
+        f"hulk/bulk-operation/{instance.bulk_import_id}/datasets/"
+        f"{instance.import_type.name.lower() if hasattr(instance.import_type, 'name') else instance.import_type}/import/"
+        f"{uuid4()}/{filename}"
+    )
 
 
-def bulk_operation_snapshot(instance, filename: str) -> str:
-    return f"hulk/bulk-operation/{instance.pk}/snapshot/{uuid4()}/{filename}"
+def upload_dataset_success_file(instance, filename: str) -> str:
+    return (
+        f"hulk/bulk-operation/{instance.bulk_import_id}/datasets/"
+        f"{instance.import_type.name.lower() if hasattr(instance.import_type, 'name') else instance.import_type}/success/"
+        f"{uuid4()}/{filename}"
+    )
+
+
+def upload_dataset_failure_file(instance, filename: str) -> str:
+    return (
+        f"hulk/bulk-operation/{instance.bulk_import_id}/datasets/"
+        f"{instance.import_type.name.lower() if hasattr(instance.import_type, 'name') else instance.import_type}/failure/"
+        f"{uuid4()}/{filename}"
+    )
+
+
+# Resource types handled by the bulk pipeline. The order is *also* the
+# dependency order the handler walks — later types reference earlier ones
+# by UUID. Driver code should always iterate in this order.
+HULK_BULK_RESOURCES = (
+    "attachments",
+    "source_previews",
+    "entries",
+    "events",
+    "figures",
+)
 
 
 class HulkBulkImport(models.Model):
@@ -42,13 +70,10 @@ class HulkBulkImport(models.Model):
     # Runtime information
     started_at = models.DateTimeField(verbose_name=_("Started At"), null=True, blank=True)
     completed_at = models.DateTimeField(verbose_name=_("Completed At"), null=True, blank=True)
-
-    # User provided fields
-    payload = CachedFileField(
-        verbose_name=_("Import data snapshot"),
-        upload_to=bulk_operation_payload,
-        max_length=2000,
-    )
+    # Celery task id assigned at dispatch time. Used by admins to verify
+    # whether an IN_PROGRESS row is still being worked on (via AsyncResult)
+    # or has been orphaned by a dead worker.
+    celery_task_id = models.CharField(max_length=255, blank=True, null=True)
 
     # System generated fields
     status = enum.EnumField(
@@ -56,47 +81,95 @@ class HulkBulkImport(models.Model):
         default=HULK_BULK_IMPORT_STATUS.PENDING,
     )
 
-    # Output from operation
-    success_count = models.PositiveIntegerField(blank=True, null=True)
-    failure_count = models.PositiveIntegerField(blank=True, null=True)
-
-    # TODO: is this okay?
-    success_dataset = CachedFileField(
-        verbose_name=_("Success data snapshot"),
-        upload_to=bulk_operation_payload,
-        max_length=2000,
-    )
-    failure_dataset = models.JSONField(default=list)
-
-    snapshot = CachedFileField(
-        verbose_name=_("Existing data snapshot"),
-        blank=True,
-        null=True,
-        upload_to=bulk_operation_snapshot,
-        max_length=2000,
-    )
-
     # Type hints
     get_action_display: typing.Callable
     get_status_display: typing.Callable
+    datasets: "models.Manager[HulkBulkImportDataset]"
+
+    class Meta:
+        permissions = (("trigger_hulkbulkimport", "Can trigger hulk bulk import"),)
 
     def __str__(self):
         return f"HulkBulkImport-{self.pk}"
 
     def update_status(self, status: HULK_BULK_IMPORT_STATUS, commit=True):
-        # If status has changed
+        update_fields = ["status"]
         if status != self.status:
             if status == self.HULK_BULK_IMPORT_STATUS.IN_PROGRESS:
                 self.started_at = timezone.now()
-            elif status in [
+                update_fields.append("started_at")
+            elif status in (
                 self.HULK_BULK_IMPORT_STATUS.COMPLETED,
                 self.HULK_BULK_IMPORT_STATUS.FAILED,
-                self.HULK_BULK_IMPORT_STATUS.KILLED,
-            ]:
+                self.HULK_BULK_IMPORT_STATUS.SKIPPED,
+            ):
                 self.completed_at = timezone.now()
+                update_fields.append("completed_at")
         self.status = status
         if commit:
-            self.save(update_fields=("status",))
+            self.save(update_fields=update_fields)
+
+
+class HulkBulkImportDataset(models.Model):
+    """
+    One row per resource type uploaded for a HulkBulkImport. Stores the input
+    JSONL plus the success/failure output JSONLs and per-type counts.
+
+    Replaces the older 15-FileField layout on ``HulkBulkImport`` itself.
+    """
+
+    class HULK_BULK_IMPORT_DATASET_IMPORT_TYPE(enum.Enum):
+        ATTACHMENT = 0
+        SOURCE_PREVIEW = 1
+        ENTRY = 2
+        EVENT = 3
+        FIGURE = 4
+
+    bulk_import = models.ForeignKey(
+        "hulk.HulkBulkImport",
+        verbose_name=_("Bulk Import"),
+        related_name="datasets",
+        on_delete=models.CASCADE,
+    )
+    import_type = enum.EnumField(enum=HULK_BULK_IMPORT_DATASET_IMPORT_TYPE)
+
+    import_file = CachedFileField(
+        verbose_name=_("Import JSONL"),
+        upload_to=upload_dataset_import_file,
+        max_length=2000,
+    )
+    success_file = CachedFileField(
+        verbose_name=_("Success JSONL"),
+        blank=True,
+        null=True,
+        upload_to=upload_dataset_success_file,
+        max_length=2000,
+    )
+    failure_file = CachedFileField(
+        verbose_name=_("Failure JSONL"),
+        blank=True,
+        null=True,
+        upload_to=upload_dataset_failure_file,
+        max_length=2000,
+    )
+
+    success_count = models.PositiveIntegerField(blank=True, null=True)
+    failure_count = models.PositiveIntegerField(blank=True, null=True)
+
+    created_at = models.DateTimeField(verbose_name=_("Created At"), auto_now_add=True)
+
+    get_import_type_display: typing.Callable
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["bulk_import", "import_type"],
+                name="hulk_dataset_unique_type_per_bulk",
+            ),
+        ]
+
+    def __str__(self):
+        return f"HulkBulkImportDataset(bulk_import={self.bulk_import_id} type={self.get_import_type_display()})"
 
 
 class HulkEntityRelationBase(models.Model):
@@ -104,7 +177,7 @@ class HulkEntityRelationBase(models.Model):
     bulk_import = models.ForeignKey(HulkBulkImport, on_delete=models.PROTECT)
     created_at = models.DateTimeField(verbose_name=_("Created At"), auto_now_add=True)
 
-    entity: models.ForeignKey
+    entity: models.OneToOneField
 
     entity_id: int
 
@@ -117,36 +190,37 @@ class HulkEntityRelationBase(models.Model):
 
 
 class HulkAttachment(HulkEntityRelationBase):
-    entity = models.ForeignKey("contrib.Attachment", on_delete=models.CASCADE)
+    # OneToOneField (not FK): exports annotate ``hulk_uuid`` via the reverse
+    # relation, so allowing >1 hulk row per entity would multiply export rows.
+    entity = models.OneToOneField("contrib.Attachment", on_delete=models.CASCADE)
 
     def __str__(self):
         return f"Hulk Attachment ({self.uuid})"
 
 
 class HulkSourcePreview(HulkEntityRelationBase):
-    entity = models.ForeignKey("contrib.SourcePreview", on_delete=models.CASCADE)
+    entity = models.OneToOneField("contrib.SourcePreview", on_delete=models.CASCADE)
 
     def __str__(self):
         return f"Hulk Source Preview ({self.uuid})"
 
 
 class HulkEntry(HulkEntityRelationBase):
-    entity = models.ForeignKey("entry.Entry", on_delete=models.CASCADE)
+    entity = models.OneToOneField("entry.Entry", on_delete=models.CASCADE)
 
     def __str__(self):
         return f"Hulk Entry ({self.uuid})"
 
 
 class HulkEvent(HulkEntityRelationBase):
-    entity = models.ForeignKey("event.Event", on_delete=models.CASCADE)
+    entity = models.OneToOneField("event.Event", on_delete=models.CASCADE)
 
     def __str__(self):
         return f"Hulk Event ({self.uuid})"
 
 
-# TODO: Do we need this? We have uuid in figure to.. but it's not unique
 class HulkFigure(HulkEntityRelationBase):
-    entity = models.ForeignKey("entry.Figure", on_delete=models.CASCADE)
+    entity = models.OneToOneField("entry.Figure", on_delete=models.CASCADE)
 
     def __str__(self):
         return f"Hulk Figure ({self.uuid})"

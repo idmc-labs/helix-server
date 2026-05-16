@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import dataclasses
 import json
+import logging
 import pathlib
 import typing
 from contextlib import ExitStack
 
+import httpx
 from pydantic import ValidationError
 
-from pyhelix.api.api import HelixClient, helix_client_context
+from pyhelix.api.api import HULK_BULK_INPUT_FIELDS, HelixClient, helix_client_context
 
 from .models import (
     HulkAttachmentImport,
@@ -17,6 +20,94 @@ from .models import (
     HulkFigureImport,
     HulkSourcePreviewImport,
 )
+
+logger = logging.getLogger(__name__)
+
+
+# Maps each HulkBaseModel subclass to the short resource name expected by
+# ``HelixClient.trigger_hulk_bulk_import`` (matches ``HULK_BULK_INPUT_FIELDS``).
+_IMPORT_MODEL_TO_SHORT: typing.Dict[typing.Type[HulkBaseModel], str] = {
+    HulkAttachmentImport: "attachments",
+    HulkSourcePreviewImport: "source_previews",
+    HulkEntryImport: "entries",
+    HulkEventImport: "events",
+    HulkFigureImport: "figures",
+}
+
+
+@dataclasses.dataclass
+class HulkBulkImportRun:
+    """
+    Handle to a triggered HulkBulkImport. Returned by
+    :py:meth:`HulkDataHandler.send_to_helix`.
+
+    Wraps the ``bulk_id`` and the originating :class:`HelixClient` so callers
+    can poll status, wait for terminal state, and pull success/failure
+    artefacts without re-passing the client around.
+    """
+
+    helix_client: HelixClient
+    bulk_id: str
+
+    def get_state(self) -> dict:
+        """Return the current ``hulkBulkImport(id)`` payload."""
+        return self.helix_client.get_hulk_bulk_import(self.bulk_id)
+
+    def wait(
+        self,
+        *,
+        timeout: float = 3600.0,
+        poll_interval: float = 5.0,
+        progress_cb: typing.Optional[typing.Callable[[dict], None]] = None,
+    ) -> dict:
+        """
+        Block until the import reaches a terminal status (COMPLETED / FAILED /
+        SKIPPED) and return the final state. ``progress_cb`` is invoked on
+        every poll with the latest state dict.
+        """
+        return self.helix_client.wait_for_hulk_bulk_import(
+            self.bulk_id,
+            timeout=timeout,
+            poll_interval=poll_interval,
+            progress_cb=progress_cb,
+        )
+
+    def download_artifacts(self, out_dir: pathlib.Path) -> typing.Dict[str, typing.Dict[str, typing.Optional[pathlib.Path]]]:
+        """
+        Download ``success_<resource>.jsonl`` and ``failure_<resource>.jsonl``
+        for every dataset attached to this import into ``out_dir``.
+
+        Returns ``{resource: {"success": path|None, "failure": path|None}}``.
+        Missing URLs (e.g. no failures) are reported as ``None``.
+        """
+        state = self.get_state()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        type_to_resource = {import_type: short for short, import_type in HULK_BULK_INPUT_FIELDS}
+        artefacts: typing.Dict[str, typing.Dict[str, typing.Optional[pathlib.Path]]] = {}
+        for ds in state.get("datasets") or []:
+            resource = type_to_resource.get(ds["importType"])
+            if resource is None:
+                continue
+            entry: typing.Dict[str, typing.Optional[pathlib.Path]] = {}
+            for kind, url_key in (("success", "successFile"), ("failure", "failureFile")):
+                url = ds.get(url_key)
+                dst = out_dir / f"{kind}_{resource}.jsonl"
+                entry[kind] = dst if (url and _download_to(url, dst)) else None
+            artefacts[resource] = entry
+        return artefacts
+
+
+def _download_to(url: str, dst: pathlib.Path) -> bool:
+    """Fetch ``url`` and write to ``dst``. Returns True on success."""
+    try:
+        resp = httpx.get(url, follow_redirects=True, timeout=120)
+        resp.raise_for_status()
+    except Exception as e:
+        logger.warning("download %s failed: %s", url, e)
+        return False
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    dst.write_bytes(resp.content)
+    return True
 
 
 class HulkDataHandler:
@@ -30,7 +121,7 @@ class HulkDataHandler:
         self.helix_client = helix_client
 
         # TODO: Use HulkDataTypeEnum to add type check here to add names for each types
-        self._export_path_names: dict[typing.Type[HulkBaseModel], str] = {
+        self._export_path_names: typing.Dict[typing.Type[HulkBaseModel], str] = {
             HulkAttachmentImport: "attachments.jsonl",
             HulkSourcePreviewImport: "source_previews.jsonl",
             HulkEntryImport: "entries.jsonl",
@@ -38,15 +129,15 @@ class HulkDataHandler:
             HulkFigureImport: "figures.jsonl",
         }
 
-        self._export_path_ref = {}
-        self._export_error_path_ref = {}
+        self._export_path_ref: typing.Dict[typing.Type[HulkBaseModel], typing.IO] = {}
+        self._export_error_path_ref: typing.Dict[typing.Type[HulkBaseModel], typing.IO] = {}
         self._success_count = {import_type: 0 for import_type in self._export_path_names}
         self._error_count = {import_type: 0 for import_type in self._export_path_names}
 
     def __enter__(self):
         self._stack = ExitStack()
 
-        # FIXME: Should we clear _success_count and _error_count on either __enter__ or __exit__?
+        self.export_dir.mkdir(parents=True, exist_ok=True)
 
         # Open all files when entering the context
         self._export_path_ref = {
@@ -58,14 +149,14 @@ class HulkDataHandler:
             for import_type, path in self._export_path_names.items()
         }
 
-        self.helix_client.login()
+        # Bind the client so model code reached via get_active_helix_client()
+        # resolves to this client for the duration of the block. Login and
+        # client lifetime are the caller's responsibility.
         self._stack.enter_context(helix_client_context(self.helix_client))
 
         return self
 
     def __exit__(self, exc_type, exc, tb):
-        # TODO: self.helix_client.logout()
-
         self._stack.__exit__(exc_type, exc, tb)
 
         self._export_path_ref.clear()
@@ -87,8 +178,8 @@ class HulkDataHandler:
                 "errors": {_type.__name__: count for _type, count in self._error_count.items()},
             },
             "files": {
-                "success": [_path.name for _path in self._export_path_ref.values()],
-                "errors": [_path.name for _path in self._export_error_path_ref.values()],
+                "success": [self._export_path_names[_type] for _type in self._export_path_names],
+                "errors": [f"errors_{self._export_path_names[_type]}" for _type in self._export_path_names],
             },
         }
 
@@ -112,6 +203,36 @@ class HulkDataHandler:
         )
         self._error_count[import_model] += 1
 
-    def send_to_helix(self):
-        # TODO: Implement this
-        raise NotImplementedError("Not yet implemented")
+    def send_to_helix(self) -> HulkBulkImportRun:
+        """
+        Upload the JSONL files produced by this handler to helix via the
+        ``triggerHulkBulkImport`` mutation and return a :class:`HulkBulkImportRun`
+        the caller can poll for status / pull artefacts.
+
+        Resources whose JSONL is empty (or missing) are skipped — helix's
+        serializer requires at least one non-empty dataset, otherwise this
+        method raises ``RuntimeError``.
+
+        Safe to call inside or outside the context manager. Inside the block
+        writers are still open in ``"w"`` mode — they're flushed here so the
+        multipart upload's separate ``"rb"`` fd sees the tail of the buffer.
+        After ``__exit__`` (or skip-generate) the writer dict is empty and the
+        flush loop is a no-op; the JSONL on disk is already complete.
+        """
+        for fh in self._export_path_ref.values():
+            fh.flush()
+
+        paths: typing.Dict[str, pathlib.Path] = {}
+        for import_model, filename in self._export_path_names.items():
+            short = _IMPORT_MODEL_TO_SHORT[import_model]
+            path = self.export_dir / filename
+            if path.exists() and path.stat().st_size > 0:
+                paths[short] = path
+
+        if not paths:
+            raise RuntimeError(f"send_to_helix: no non-empty JSONL files in {self.export_dir}; nothing to upload.")
+
+        logger.info("Uploading %d JSONL files to helix: %s", len(paths), sorted(paths))
+        bulk_id = self.helix_client.trigger_hulk_bulk_import(paths)
+        logger.info("Triggered HulkBulkImport id=%s", bulk_id)
+        return HulkBulkImportRun(helix_client=self.helix_client, bulk_id=bulk_id)

@@ -131,6 +131,8 @@ class GraphqlQuery:
                     results {
                       id
                       name
+                      iso3
+                      idmcShortName
                     }
                   }
                 }
@@ -141,7 +143,54 @@ class GraphqlQuery:
             },
         }
 
+    @classmethod
+    def hulk_bulk_import(cls, id: str):
+        """Read the current state (status + aggregate counts + dataset file URLs) of a HulkBulkImport."""
+        return {
+            "operationName": "pyhelixHulkBulkImport",
+            "query": """
+                query pyhelixHulkBulkImport($id: ID!) {
+                  hulkBulkImport(id: $id) {
+                    id
+                    status
+                    statusDisplay
+                    successCount
+                    failureCount
+                    startedAt
+                    completedAt
+                    datasets {
+                      id
+                      importType
+                      successCount
+                      failureCount
+                      importFile
+                      successFile
+                      failureFile
+                    }
+                  }
+                }
+             """,
+            "variables": {"id": id},
+        }
+
     # Mutations
+
+    # Shape of the trigger_hulk_bulk_import mutation. The variables dict is
+    # *only* the null-placeholder shape (a list of {importType, importFile:null}
+    # objects) — the actual file objects ride on the multipart envelope,
+    # see ``HelixClient.trigger_hulk_bulk_import``.
+    trigger_hulk_bulk_import_query = """
+        mutation pyhelixTriggerHulkBulkImport($data: HulkBulkImportCreateInputType!) {
+          triggerHulkBulkImport(data: $data) {
+            ok
+            errors
+            result {
+              id
+              status
+            }
+          }
+        }
+    """
 
     @classmethod
     def login(cls, email: str, password: str):

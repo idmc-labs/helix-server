@@ -85,6 +85,12 @@ jobs:
             exit 1;
           }
 
+      - name: 🕮 Validate pyhelix constants are in sync with helix-server enums.
+        env:
+          DOCKER_IMAGE_SERVER: ${{ steps.prep.outputs.tagged_image }}
+        run: |
+          docker compose run --rm server ./manage.py update_pyhelix_constants --check
+
       - name: 🤞 Run Test 🧪
         env:
           DOCKER_IMAGE_SERVER: ${{ steps.prep.outputs.tagged_image }}

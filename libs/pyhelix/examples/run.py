@@ -420,6 +420,7 @@ def main():
             password=settings.HELIX_PASSWORD,
         ),
     )
+    helix_client.login()
 
     with HulkDataHandler(export_dir=OUTPUT_DATASET_DIR, helix_client=helix_client) as hulk_handler:
         context = ImportContext(helix_client=helix_client)

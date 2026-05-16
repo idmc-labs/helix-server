@@ -2659,6 +2659,22 @@ type GiddYearType {
   year: Int!
 }
 
+enum HULK_BULK_IMPORT_DATASET_IMPORT_TYPE {
+  ATTACHMENT
+  SOURCE_PREVIEW
+  ENTRY
+  EVENT
+  FIGURE
+}
+
+enum HULK_BULK_IMPORT_STATUS {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+  SKIPPED
+}
+
 input HouseholdSizeFilterDataTypeInputType {
   search: String
   year: Float
@@ -2671,6 +2687,41 @@ type HouseholdSizeListType {
   totalCount: Int
   page: Int
   pageSize: Int
+}
+
+input HulkBulkImportCreateInputType {
+  datasets: [HulkBulkImportDatasetCreateInputType!]!
+}
+
+input HulkBulkImportDatasetCreateInputType {
+  importType: HULK_BULK_IMPORT_DATASET_IMPORT_TYPE!
+  importFile: Upload!
+}
+
+type HulkBulkImportDatasetType {
+  id: ID!
+  bulkImport: HulkBulkImportType!
+  successCount: Int
+  failureCount: Int
+  createdAt: DateTime!
+  importType: HULK_BULK_IMPORT_DATASET_IMPORT_TYPE!
+  importTypeDisplay: EnumDescription!
+  importFile: String
+  successFile: String
+  failureFile: String
+}
+
+type HulkBulkImportType {
+  id: ID!
+  createdAt: DateTime!
+  createdBy: UserType!
+  startedAt: DateTime
+  completedAt: DateTime
+  status: HULK_BULK_IMPORT_STATUS!
+  statusDisplay: EnumDescription!
+  successCount: Int
+  failureCount: Int
+  datasets: [HulkBulkImportDatasetType!]
 }
 
 enum IDENTIFIER {
@@ -2735,6 +2786,7 @@ type MonitoringSubRegionType {
 }
 
 type Mutation {
+  triggerHulkBulkImport(data: HulkBulkImportCreateInputType!): TriggerHulkBulkImport
   giddUpdateData: GiddUpdateData
   giddUpdateReleaseMetaData(data: ReleaseMetadataInputType!): GiddUpdateReleaseMetaData
   toggleNotificationRead(id: ID!): ToggleNotificationRead
@@ -3073,6 +3125,7 @@ enum PERMISSION_ACTION {
   update_pfa_visibility
   update_gidd_data
   update_release_meta_data
+  bulk_import
 }
 
 enum PERMISSION_ENTITY {
@@ -3223,6 +3276,7 @@ enum QUANTIFIER {
 }
 
 type Query {
+  hulkBulkImport(id: ID!): HulkBulkImportType
   giddPublicConflicts(filters: ConflictFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddConflictListType
   giddPublicDisasters(filters: DisasterFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
   giddPublicConflictStatistics(releaseEnvironment: String, countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddConflictStatisticsType!
@@ -3847,6 +3901,12 @@ type TriggerBulkOperation {
   errors: [GenericScalar!]
   ok: Boolean
   result: BulkApiOperationObjectType
+}
+
+type TriggerHulkBulkImport {
+  errors: [GenericScalar!]
+  ok: Boolean
+  result: HulkBulkImportType
 }
 
 enum UNIT {
