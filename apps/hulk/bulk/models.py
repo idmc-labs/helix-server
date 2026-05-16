@@ -55,7 +55,7 @@ class HulkBaseModel(pyhelix_models.BaseModel):
 class HulkAttachmentImport(HulkBaseModel, pyhelix_models.HulkAttachmentImport):
     def generate_for_graphql_mutation(self):
         return {
-            # TODO: "attachment": Upload!
+            # XXX: File import logic is in the HulkHelixAttachmentImportHandler
             "attachmentFor": self.attachment_for.value,
         }
 
@@ -127,7 +127,7 @@ class HulkEntryImport(HulkBaseModel, pyhelix_models.HulkEntryImport):
 class HulkEventImportEventCode(HulkBaseModel, pyhelix_models.HulkEventImportEventCode):
     def generate_for_graphql_mutation(self):
         return {
-            "uuid": self.uuid,
+            "uuid": str(self.uuid),
             "country": self.country_id,
             "eventCode": self.event_code,
             "eventCodeType": self.event_code_type.name,
@@ -137,11 +137,7 @@ class HulkEventImportEventCode(HulkBaseModel, pyhelix_models.HulkEventImportEven
 
 # TODO: Support partial data input for optional fields
 class HulkEventImport(HulkBaseModel, pyhelix_models.HulkEventImport):
-    # TODO:
-    # event_codes: typing_extensions.Annotated[  # type: ignore[reportIncompatibleVariableOverride]
-    #     typing.List[HulkEventImportEventCode],
-    #     conlist(item_type=HulkEventImportEventCode, min_length=1),
-    # ]
+    event_codes: typing.List[HulkEventImportEventCode]  # type: ignore[reportIncompatibleVariableOverride]
 
     @model_validator(mode="before")
     @classmethod
@@ -176,7 +172,7 @@ class HulkEventImport(HulkBaseModel, pyhelix_models.HulkEventImport):
             "endDate": get_date_for_graphql(self.end_date),
             "endDateAccuracy": self.end_date_accuracy.name,
             "eventNarrative": self.event_narrative,
-            "eventCodes": [],  # TODO:
+            "eventCodes": [ec.generate_for_graphql_mutation() for ec in self.event_codes],
             # TODO: Other fields?
         }
 
@@ -260,9 +256,9 @@ class HulkFigureImport(HulkBaseModel, pyhelix_models.HulkFigureImport):
             "reported": self.reported_figure,
             "country": self.country_id,
             "startDate": get_date_for_graphql(self._start_date),
-            "startDateAccuracy": self._start_date_accuracy is not None and self._start_date_accuracy.name,
+            "startDateAccuracy": self._start_date_accuracy.name if self._start_date_accuracy is not None else None,
             "endDate": get_date_for_graphql(self._end_date),
-            "endDateAccuracy": self._end_date_accuracy is not None and self._end_date_accuracy.name,
+            "endDateAccuracy": self._end_date_accuracy.name if self._end_date_accuracy is not None else None,
             "term": self.term.name,
             "isHousingDestruction": self.is_housing_destruction,
             "quantifier": self.quantifier.name,

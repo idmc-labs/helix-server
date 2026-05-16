@@ -1,6 +1,7 @@
 *.pyc
 *.egg-info
 *.eggs
+build/
 
 __pycache__/
 .idea/
