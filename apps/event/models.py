@@ -68,6 +68,7 @@ class ViolenceSubType(NameAttributedModels):
     )
 
     violence = models.ForeignKey("Violence", related_name="sub_types", on_delete=models.CASCADE)
+    idu_name = models.CharField(_("IDU name"), max_length=256, null=True, blank=True)
 
 
 class ContextOfViolence(MetaInformationAbstractModel, NameAttributedModels):
@@ -134,6 +135,8 @@ class OtherSubType(MetaInformationAbstractModel, NameAttributedModels):
             "name",
         }
     )
+
+    idu_name = models.CharField(_("IDU name"), max_length=256, null=True, blank=True)
 
 
 class Actor(MetaInformationAbstractModel, NameAttributedModels):
@@ -255,6 +258,7 @@ class DisasterSubType(NameAttributedModels):
         }
     )
 
+    idu_name = models.CharField(_("IDU name"), max_length=256, null=True, blank=True)
     type = models.ForeignKey(
         "DisasterType", verbose_name=_("Hazard Type"), related_name="sub_types", on_delete=models.CASCADE
     )

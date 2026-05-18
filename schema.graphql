@@ -1324,6 +1324,7 @@ type DisasterSubObjectListType {
 type DisasterSubObjectType {
   id: ID!
   name: String!
+  iduName: String
   disasters: [GiddDisasterType!]!
 }
 
@@ -3148,6 +3149,7 @@ type OtherSubTypeObjectType {
   lastModifiedBy: UserType
   versionId: String
   name: String!
+  iduName: String
 }
 
 enum PARKING_LOT_SOURCE {
@@ -4318,6 +4320,7 @@ type ViolenceSubObjectListType {
 type ViolenceSubObjectType {
   id: ID!
   name: String!
+  iduName: String
 }
 
 input ViolenceSubTypeFilterDataInputType {
