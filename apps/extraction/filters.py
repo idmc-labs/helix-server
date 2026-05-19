@@ -82,10 +82,14 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
         fields = {}
         multi_word_search_fields = ["article_title"]
 
+    @staticmethod
+    def _figures_for_entry(**lookups):
+        return Figure.objects.filter(entry=OuterRef("pk"), **lookups)
+
     def filter_created_by(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(figures__created_by__in=value)
+        return qs.filter(Exists(self._figures_for_entry(created_by__in=value)))
 
     def filter_report(self, qs, name, value):
         if not value:
@@ -95,46 +99,51 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
 
     def filter_geographical_groups(self, qs, name, value):
         if value:
-            qs = qs.filter(id__in=Figure.objects.filter(country__geographical_group__in=value).values("entry"))
+            qs = qs.filter(Exists(self._figures_for_entry(country__geographical_group__in=value)))
         return qs
 
     def filter_regions(self, qs, name, value):
         if value:
-            qs = qs.filter(id__in=Figure.objects.filter(country__region__in=value).values("entry"))
+            qs = qs.filter(Exists(self._figures_for_entry(country__region__in=value)))
         return qs
 
     def filter_countries(self, qs, name, value):
         if value:
-            return qs.filter(id__in=Figure.objects.filter(country__in=value).values("entry"))
+            return qs.filter(Exists(self._figures_for_entry(country__in=value)))
         return qs
 
     def filter_figure_events_(self, qs, name, value):
         if value:
-            return qs.filter(figures__event__in=value).distinct()
+            return qs.filter(Exists(self._figures_for_entry(event__in=value)))
         return qs
 
     def filter_crises(self, qs, name, value):
         if value:
-            return qs.filter(figures__event__crisis__in=value).distinct()
+            return qs.filter(Exists(self._figures_for_entry(event__crisis__in=value)))
         return qs
 
     def filter_sources(self, qs, name, value):
         if value:
-            return qs.filter(figures__sources__in=value).distinct()
+            return qs.filter(Exists(self._figures_for_entry(sources__in=value)))
         return qs
 
     def filter_publishers(self, qs, name, value):
         if value:
-            return qs.filter(publishers__in=value).distinct()
+            return qs.filter(Exists(Organization.objects.filter(pk__in=value, published_entries=OuterRef("pk"))))
         return qs
 
     def filter_by_figure_terms(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
                 # coming from saved query
-                return qs.filter(figures__in=Figure.objects.filter(term__in=value))
-
-            return qs.filter(figures__term__in=[Figure.FIGURE_TERMS.get(item).value for item in value]).distinct()
+                return qs.filter(Exists(self._figures_for_entry(term__in=value)))
+            return qs.filter(
+                Exists(
+                    self._figures_for_entry(
+                        term__in=[Figure.FIGURE_TERMS.get(item).value for item in value],
+                    )
+                )
+            )
         return qs
 
     def filter_filter_figure_category_types(self, qs, name, value):
@@ -148,139 +157,191 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
                 category_enums_to_filter += Figure.stock_list()
             if category_type == FLOW:
                 category_enums_to_filter += Figure.flow_list()
-        return qs.filter(figures__category__in=category_enums_to_filter).distinct()
+        return qs.filter(Exists(self._figures_for_entry(category__in=category_enums_to_filter)))
 
     def filter_filter_figure_categories(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
                 # coming from saved query
-                return qs.filter(figures__category__in=value)
-            return qs.filter(figures__category__in=[Figure.FIGURE_CATEGORY_TYPES.get(item).value for item in value])
+                return qs.filter(Exists(self._figures_for_entry(category__in=value)))
+            return qs.filter(
+                Exists(
+                    self._figures_for_entry(
+                        category__in=[Figure.FIGURE_CATEGORY_TYPES.get(item).value for item in value],
+                    )
+                )
+            )
         return qs
 
     def filter_time_frame_after(self, qs, name, value):
         if value:
             return qs.filter(
-                id__in=Figure.objects.exclude(start_date__isnull=True).filter(start_date__gte=value).values("entry")
+                Exists(self._figures_for_entry().exclude(start_date__isnull=True).filter(start_date__gte=value))
             )
         return qs
 
     def filter_time_frame_before(self, qs, name, value):
         if value:
-            return qs.filter(id__in=Figure.objects.exclude(end_date__isnull=True).filter(end_date__lt=value).values("entry"))
+            return qs.filter(Exists(self._figures_for_entry().exclude(end_date__isnull=True).filter(end_date__lt=value)))
         return qs
 
     def filter_filter_figure_roles(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
                 # coming from saved query
-                return qs.filter(figures__in=Figure.objects.filter(role__in=value))
-            return qs.filter(figures__in=Figure.objects.filter(role__in=[Figure.ROLE.get(item).value for item in value]))
+                return qs.filter(Exists(self._figures_for_entry(role__in=value)))
+            return qs.filter(
+                Exists(
+                    self._figures_for_entry(
+                        role__in=[Figure.ROLE.get(item).value for item in value],
+                    )
+                )
+            )
         return qs
 
     def filter_tags(self, qs, name, value):
         if value:
-            return qs.filter(figures__tags__in=value).distinct()
+            return qs.filter(Exists(self._figures_for_entry(tags__in=value)))
         return qs
 
     def filter_crisis_types(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
                 # coming from saved query
-                return qs.filter(figures__figure_cause__in=value).distinct()
+                return qs.filter(Exists(self._figures_for_entry(figure_cause__in=value)))
             # coming from client side
-            return qs.filter(figures__figure_cause__in=[Crisis.CRISIS_TYPE.get(item).value for item in value])
+            return qs.filter(
+                Exists(
+                    self._figures_for_entry(
+                        figure_cause__in=[Crisis.CRISIS_TYPE.get(item).value for item in value],
+                    )
+                )
+            )
         return qs
 
     def filter_filter_figure_disaster_categories(self, qs, name, value):
         if value:
             return qs.filter(
-                ~Q(figures__figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(figures__disaster_category__in=value)
-            ).distinct()
+                Exists(
+                    self._figures_for_entry().filter(
+                        ~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_category__in=value)
+                    )
+                )
+            )
         return qs
 
     def filter_filter_figure_disaster_sub_categories(self, qs, name, value):
         if value:
             return qs.filter(
-                ~Q(figures__figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(figures__disaster_sub_category__in=value)
-            ).distinct()
+                Exists(
+                    self._figures_for_entry().filter(
+                        ~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_sub_category__in=value)
+                    )
+                )
+            )
         return qs
 
     def filter_filter_figure_disaster_sub_types(self, qs, name, value):
         if value:
             return qs.filter(
-                ~Q(figures__figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(figures__disaster_sub_type__in=value)
-            ).distinct()
+                Exists(
+                    self._figures_for_entry().filter(
+                        ~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_sub_type__in=value)
+                    )
+                )
+            )
         return qs
 
     def filter_filter_figure_disaster_types(self, qs, name, value):
         if value:
             return qs.filter(
-                ~Q(figures__figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(figures__disaster_type__in=value)
-            ).distinct()
+                Exists(
+                    self._figures_for_entry().filter(
+                        ~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_type__in=value)
+                    )
+                )
+            )
         return qs
 
     def filter_filter_figure_violence_sub_types(self, qs, name, value):
         if value:
             return qs.filter(
-                ~Q(figures__figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(figures__violence_sub_type__in=value)
-            ).distinct()
+                Exists(
+                    self._figures_for_entry().filter(
+                        ~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_sub_type__in=value)
+                    )
+                )
+            )
         return qs
 
     def filter_filter_figure_violence_types(self, qs, name, value):
         if value:
             return qs.filter(
-                ~Q(figures__figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(figures__violence_type__in=value)
-            ).distinct()
+                Exists(
+                    self._figures_for_entry().filter(
+                        ~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_type__in=value)
+                    )
+                )
+            )
         return qs
 
     def filter_filter_figure_osv_sub_types(self, qs, name, value):
         if value:
-            return qs.filter(~Q(figures__event__violence__name=OSV) | Q(figures__osv_sub_type__in=value)).distinct()
+            return qs.filter(
+                Exists(self._figures_for_entry().filter(~Q(event__violence__name=OSV) | Q(osv_sub_type__in=value)))
+            )
         return qs
 
     def filter_has_disaggregated_data(self, qs, name, value):
         if value is True:
-            return qs.filter(figures__is_disaggregated=True)
+            return qs.filter(Exists(self._figures_for_entry(is_disaggregated=True)))
         if value is False:
-            return qs.filter(figures__is_disaggregated=False)
+            return qs.filter(Exists(self._figures_for_entry(is_disaggregated=False)))
         return qs
 
     def filter_filter_figure_context_of_violence(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(figures__context_of_violence__in=value).distinct()
+        return qs.filter(Exists(self._figures_for_entry(context_of_violence__in=value)))
 
     def filter_filter_figure_review_status(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
-                return qs.filter(figures__review_status__in=value)
-            return qs.filter(figures__review_status__in=[Figure.FIGURE_REVIEW_STATUS.get(item).value for item in value])
+                return qs.filter(Exists(self._figures_for_entry(review_status__in=value)))
+            return qs.filter(
+                Exists(
+                    self._figures_for_entry(
+                        review_status__in=[Figure.FIGURE_REVIEW_STATUS.get(item).value for item in value],
+                    )
+                )
+            )
         return qs
 
     def filter_filter_figure_approved_by(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(figures__approved_by__in=value)
+        return qs.filter(Exists(self._figures_for_entry(approved_by__in=value)))
 
     def filter_filter_figure_has_excerpt_idu(self, qs, name, value):
         if value is None:
             return qs
-        return qs.filter(figures__include_idu=value)
+        return qs.filter(Exists(self._figures_for_entry(include_idu=value)))
 
     def filter_filter_figure_has_housing_destruction(self, qs, name, value):
         if value is None:
             return qs
-        return qs.filter(figures__is_housing_destruction=value)
+        return qs.filter(Exists(self._figures_for_entry(is_housing_destruction=value)))
 
     def filter_filter_figure_is_to_be_reviewed(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(Q(figures__role=Figure.ROLE.RECOMMENDED) | Q(figures__event__include_triangulation_in_qa=True))
-
-    @property
-    def qs(self):
-        return super().qs.distinct()
+        return qs.filter(
+            Exists(
+                self._figures_for_entry().filter(
+                    Q(role=Figure.ROLE.RECOMMENDED) | Q(event__include_triangulation_in_qa=True)
+                )
+            )
+        )
 
 
 class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
