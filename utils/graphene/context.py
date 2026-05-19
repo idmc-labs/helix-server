@@ -39,6 +39,11 @@ from apps.event.dataloaders import (
     TotalIDPFigureByEventLoader,
     TotalNDFigureByEventLoader,
 )
+from apps.hulk.dataloaders import (
+    HulkBulkImportDatasetsLoader,
+    HulkBulkImportFailureCountLoader,
+    HulkBulkImportSuccessCountLoader,
+)
 from apps.organization.dataloaders import OrganizationCountriesLoader, OrganizationOrganizationKindLoader
 from apps.users.dataloaders import UserPortfoliosMetadataLoader
 from utils.graphene.dataloaders import CountLoader, OneToManyLoader
@@ -201,6 +206,18 @@ class GQLContext:
     @cached_property
     def bulk_api_operation_failure_list_loader(self):
         return BulkApiOperationFailureListLoader()
+
+    @cached_property
+    def hulk_bulk_import_success_count_loader(self):
+        return HulkBulkImportSuccessCountLoader()
+
+    @cached_property
+    def hulk_bulk_import_failure_count_loader(self):
+        return HulkBulkImportFailureCountLoader()
+
+    @cached_property
+    def hulk_bulk_import_datasets_loader(self):
+        return HulkBulkImportDatasetsLoader()
 
     @cached_property
     def event_crisis_loader(self):
