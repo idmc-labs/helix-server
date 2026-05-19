@@ -612,10 +612,10 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         end_date = self.data.get("filter_figure_end_before")
 
         if start_date or end_date:
-            flow_qs = Figure.filtered_nd_figures_for_listing(queryset, start_date, end_date)
-            stock_qs = Figure.filtered_idp_figures_for_listing(queryset, start_date, end_date)
-            # FIXME: avoid union
-            queryset = flow_qs | stock_qs
+            queryset = Figure.with_year_difference(queryset).filter(
+                Figure.nd_figures_q_for_listing(start_date, end_date)
+                | Figure.idp_figures_q_for_listing(start_date, end_date)
+            )
 
         if self.ordering_fields:
             # NOTE: expensive annotation for geolocations
@@ -689,9 +689,9 @@ class ReportFigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         start_date = self.data.get("filter_figure_start_after")
         end_date = self.data.get("filter_figure_end_before")
 
-        flow_qs = Figure.filtered_nd_figures_for_listing(queryset, start_date, end_date)
-        stock_qs = Figure.filtered_idp_figures_for_listing(queryset, start_date, end_date)
-        return flow_qs | stock_qs
+        return Figure.with_year_difference(queryset).filter(
+            Figure.nd_figures_q_for_listing(start_date, end_date) | Figure.idp_figures_q_for_listing(start_date, end_date)
+        )
 
 
 class FigureExtractionBulkOperationFilterSet(ReportFigureExtractionFilterSet):
