@@ -281,6 +281,11 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
 
 
 class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
+    # Opt-in: DjangoPaginatedListObjectField uses this marker to decide whether
+    # to forward the active ordering as a constructor arg, so subclasses can
+    # gate expensive annotations on it.
+    accepts_ordering = True
+
     # NOTE: these filter names exactly match the extraction query model field names
     filter_figure_regions = IDListFilter(method="filter_regions")
     filter_figure_geographical_groups = IDListFilter(method="filter_geographical_groups")
@@ -323,6 +328,11 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
         model = Figure
         fields = []
         multi_word_search_fields = ["entry__article_title"]
+
+    def __init__(self, *args, ordering=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ordering = ordering
+        self.ordering_fields = {field.lstrip("-") for field in ordering.split(",") if field} if ordering else set()
 
     def filter_filter_figure_created_by(self, qs, name, value):
         if value:
@@ -541,10 +551,9 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
             # FIXME: avoid union
             queryset = flow_qs | stock_qs
 
-        # NOTE: ordering_context was injected earlier in list_resolver.
-        if ordering := getattr(self, "ordering_context", {}).get("ordering", None):
+        if self.ordering_fields:
             # NOTE: expensive annotation for geolocations
-            if "geolocations" in ordering:
+            if "geolocations" in self.ordering_fields:
                 # Approach 1
                 # queryset = queryset.annotate(
                 #     geolocations=StringAgg("geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR)
@@ -577,7 +586,7 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
 
             # NOTE: expensive annotation for ordering and filtering.
             # we can't use elif here as ordering params can be multiple; is it practical?
-            if "sources_reliability" in ordering:
+            if "sources_reliability" in self.ordering_fields:
                 cte = With(Figure.objects.values("id").annotate(**Figure.annotate_sources_reliability()))
                 queryset = (
                     cte.join(queryset, id=cte.col.id, _join_type=LOUTER)
@@ -585,8 +594,9 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
                     .annotate(sources_reliability=cte.col.sources_reliability)
                 )
 
-            stock_and_flow_annotations = Figure.annotate_stock_and_flow_dates()
-            stock_and_flow_annotations = {key: value for key, value in stock_and_flow_annotations.items() if key in ordering}
+            stock_and_flow_annotations = {
+                key: value for key, value in Figure.annotate_stock_and_flow_dates().items() if key in self.ordering_fields
+            }
             if stock_and_flow_annotations:
                 queryset = queryset.annotate(**stock_and_flow_annotations)
 
