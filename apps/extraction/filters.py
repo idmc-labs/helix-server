@@ -94,8 +94,11 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
     def filter_report(self, qs, name, value):
         if not value:
             return qs
-        # Can't we just use: ReportFigureExtractionFilterSet(data=figure_filters, request=request).qs
-        return qs.filter(id__in=Report.objects.get(id=value).report_figures.values("entry"))
+        # report_figures is a property on Report that builds a filtered Figure
+        # queryset from the report's stored filter kwargs — the .get() can't
+        # be avoided, but the outer lookup is Exists for consistency.
+        report = Report.objects.get(id=value)
+        return qs.filter(Exists(report.report_figures.filter(entry=OuterRef("pk"))))
 
     def filter_geographical_groups(self, qs, name, value):
         if value:
