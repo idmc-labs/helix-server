@@ -772,54 +772,45 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         return None
 
     # methods
+    @staticmethod
+    def with_year_difference(qs: QuerySet) -> QuerySet:
+        return qs.annotate(
+            year_difference=ExpressionWrapper(
+                ExtractYear("end_date") - ExtractYear("start_date"),
+                output_field=fields.IntegerField(),
+            )
+        )
+
     @classmethod
-    def _filtered_nd_figures(
+    def _nd_figures_q(
         cls,
         categories: List[int],
-        qs: QuerySet,
         start_date: Optional[date],
         end_date: Optional[date],
     ):
-        # NOTE: We should write this query without using union
-        year_difference = ExpressionWrapper(
-            ExtractYear("end_date") - ExtractYear("start_date"),
-            output_field=fields.IntegerField(),
-        )
-        qs = qs.annotate(year_difference=year_difference)
-
-        same_year_figures_filter = dict(
-            year_difference__lt=1,
-        )
-        multiple_year_figures = dict(
-            year_difference__gte=1,
-        )
-
+        # Caller must annotate `year_difference` on the queryset first.
         if len(categories) > 1:
-            same_year_figures_filter.update(category__in=categories)
-            multiple_year_figures.update(category__in=categories)
+            category_q = models.Q(category__in=categories)
         else:
-            same_year_figures_filter.update(
-                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-            )
-            multiple_year_figures.update(
-                category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
-            )
+            category_q = models.Q(category=categories[0])
 
+        same_year = category_q & models.Q(year_difference__lt=1)
+        multi_year = category_q & models.Q(year_difference__gte=1)
         if start_date:
-            same_year_figures_filter = dict(
-                **same_year_figures_filter,
-                start_date__gte=start_date,
-            )
-            multiple_year_figures = dict(**multiple_year_figures, end_date__gte=start_date)
-
+            same_year &= models.Q(start_date__gte=start_date)
+            multi_year &= models.Q(end_date__gte=start_date)
         if end_date:
-            same_year_figures_filter = dict(**same_year_figures_filter, start_date__lte=end_date)
-            multiple_year_figures = dict(
-                **multiple_year_figures,
-                end_date__lte=end_date,
-            )
+            same_year &= models.Q(start_date__lte=end_date)
+            multi_year &= models.Q(end_date__lte=end_date)
+        return same_year | multi_year
 
-        return qs.filter(models.Q(**same_year_figures_filter) | models.Q(**multiple_year_figures))
+    @classmethod
+    def nd_figures_q_for_listing(
+        cls,
+        start_date: Optional[date],
+        end_date: Optional[date] = None,
+    ):
+        return cls._nd_figures_q(cls.flow_list(), start_date, end_date)
 
     @classmethod
     def filtered_nd_figures(
@@ -828,12 +819,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
-        return cls._filtered_nd_figures(
-            [Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value],
-            qs,
-            start_date,
-            end_date=end_date,
-        )
+        qs = cls.with_year_difference(qs)
+        return qs.filter(cls._nd_figures_q([Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value], start_date, end_date))
 
     @classmethod
     def filtered_nd_figures_for_listing(
@@ -842,12 +829,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
-        return cls._filtered_nd_figures(
-            cls.flow_list(),
-            qs,
-            start_date,
-            end_date=end_date,
-        )
+        qs = cls.with_year_difference(qs)
+        return qs.filter(cls._nd_figures_q(cls.flow_list(), start_date, end_date))
 
     @classmethod
     def annotate_stock_and_flow_dates(cls):
@@ -960,20 +943,43 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         ]
 
     @classmethod
+    def _idp_figures_q(
+        cls,
+        categories: List[int],
+        start_date: Optional[date],
+        end_date: Optional[date],
+        *,
+        end_date_lookup,
+    ):
+        if len(categories) > 1:
+            q = models.Q(category__in=categories)
+        else:
+            q = models.Q(category=categories[0])
+
+        if start_date:
+            q &= models.Q(end_date__gte=start_date)
+        if end_date:
+            q &= models.Q(**{f"end_date__{end_date_lookup}": end_date})
+        return q
+
+    @classmethod
+    def idp_figures_q_for_listing(
+        cls,
+        start_date: Optional[date],
+        end_date: Optional[date] = None,
+    ):
+        return cls._idp_figures_q(cls.stock_list(), start_date, end_date, end_date_lookup="lte")
+
+    @classmethod
     def filtered_idp_figures(
         cls,
         qs: QuerySet,
         start_date: Optional[date],
         end_date: Optional[Union[date, models.OuterRef]] = None,
     ):
-        qs = qs.filter(
-            category=Figure.FIGURE_CATEGORY_TYPES.IDPS.value,
+        return qs.filter(
+            cls._idp_figures_q([Figure.FIGURE_CATEGORY_TYPES.IDPS.value], start_date, end_date, end_date_lookup="exact")
         )
-        if start_date:
-            qs = qs.filter(end_date__gte=start_date)
-        if end_date:
-            qs = qs.filter(end_date=end_date)
-        return qs
 
     @classmethod
     def filtered_idp_figures_for_listing(
@@ -982,12 +988,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         start_date: Optional[date],
         end_date: Optional[date] = None,
     ):
-        qs = qs.filter(category__in=cls.stock_list())
-        if start_date:
-            qs = qs.filter(end_date__gte=start_date)
-        if end_date:
-            qs = qs.filter(end_date__lte=end_date)
-        return qs
+        return qs.filter(cls.idp_figures_q_for_listing(start_date, end_date))
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
