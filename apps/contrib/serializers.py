@@ -121,7 +121,7 @@ class BigAttachmentSerializer(MetaInformationSerializerMixin, serializers.ModelS
         return instance
 
 
-class AttachmentSerializer(serializers.ModelSerializer):
+class AttachmentSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
     class Meta:
         model = Attachment
         fields = "__all__"
@@ -143,6 +143,10 @@ class AttachmentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"nonFieldErrors": f"Invalid attachment type, {mimetype}"})
 
     def validate(self, attrs) -> dict:
+        # Chain to MetaInformationSerializerMixin so created_by / last_modified_by
+        # get populated from request.user; without this attachments are saved
+        # with NULL created_by and lose attribution.
+        attrs = super().validate(attrs)
         attachment = attrs["attachment"]
         self._validate_file_size(attrs, attachment)
         byte_stream = attachment.file.read()

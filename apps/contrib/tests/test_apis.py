@@ -73,6 +73,12 @@ class TestAttachment(HelixGraphQLTestCase):
         with magic.Magic() as m:
             self.assertEqual(content["data"]["createAttachment"]["result"]["filetypeDetail"], m.id_buffer(file_text))
 
+        # Regression: the small-upload attachment path previously skipped
+        # MetaInformationSerializerMixin and persisted attachments with
+        # created_by=NULL. Verify the request user is now recorded.
+        attachment = Attachment.objects.get(pk=content["data"]["createAttachment"]["result"]["id"])
+        self.assertEqual(attachment.created_by, self.editor)
+
 
 class TestBulkOperation(HelixGraphQLTestCase):
     BulkApiOperationObjectFragment = """
