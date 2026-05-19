@@ -1,6 +1,6 @@
 """
 Model-layer tests for ``HulkBulkImport`` + ``HulkBulkImportDataset``: dataset
-rows persist their three file artefacts and the ``update_status`` state
+rows persist their three file artifacts and the ``update_status`` state
 machine sets + saves timestamps.
 """
 

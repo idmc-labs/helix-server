@@ -43,7 +43,7 @@ class HulkBulkImportRun:
 
     Wraps the ``bulk_id`` and the originating :class:`HelixClient` so callers
     can poll status, wait for terminal state, and pull success/failure
-    artefacts without re-passing the client around.
+    artifacts without re-passing the client around.
     """
 
     helix_client: HelixClient
@@ -83,7 +83,7 @@ class HulkBulkImportRun:
         state = self.get_state()
         out_dir.mkdir(parents=True, exist_ok=True)
         type_to_resource = {import_type: short for short, import_type in HULK_BULK_INPUT_FIELDS}
-        artefacts: typing.Dict[str, typing.Dict[str, typing.Optional[pathlib.Path]]] = {}
+        artifacts: typing.Dict[str, typing.Dict[str, typing.Optional[pathlib.Path]]] = {}
         for ds in state.get("datasets") or []:
             resource = type_to_resource.get(ds["importType"])
             if resource is None:
@@ -93,8 +93,8 @@ class HulkBulkImportRun:
                 url = ds.get(url_key)
                 dst = out_dir / f"{kind}_{resource}.jsonl"
                 entry[kind] = dst if (url and _download_to(url, dst)) else None
-            artefacts[resource] = entry
-        return artefacts
+            artifacts[resource] = entry
+        return artifacts
 
 
 def _download_to(url: str, dst: pathlib.Path) -> bool:
@@ -207,7 +207,7 @@ class HulkDataHandler:
         """
         Upload the JSONL files produced by this handler to helix via the
         ``triggerHulkBulkImport`` mutation and return a :class:`HulkBulkImportRun`
-        the caller can poll for status / pull artefacts.
+        the caller can poll for status / pull artifacts.
 
         Resources whose JSONL is empty (or missing) are skipped — helix's
         serializer requires at least one non-empty dataset, otherwise this
