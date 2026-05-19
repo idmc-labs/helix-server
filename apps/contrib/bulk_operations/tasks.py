@@ -20,6 +20,7 @@ from rest_framework import serializers
 from apps.contrib.models import BulkApiOperation
 from apps.event.models import Figure
 from apps.extraction.filters import FigureExtractionBulkOperationFilterSet
+from apps.users.models import User
 from helix.permalinks import Permalink
 from utils.common import get_temp_file
 
@@ -54,6 +55,7 @@ def process_request(request: HttpRequest) -> None:
     auth_middlware.process_request(request)
 
 
+# TODO: Remove this and update it's usages with InternalHelixGraphQlClient
 def generate_dummy_request(user):
     api_request = HttpRequest()
     process_request(api_request)
@@ -61,21 +63,35 @@ def generate_dummy_request(user):
     return api_request
 
 
-def run_mutation(
-    request: HttpRequest,
-    query: str,
-    variables: dict,
-) -> typing.Tuple[typing.Optional[dict], typing.Optional[dict]]:
-    # To avoid circular dependency
-    from helix.schema import schema as gql_schema
-    from utils.graphene.context import GQLContext
+class InternalHelixGraphQlClient:
+    def __init__(self, user: User):
+        self.user = user
 
-    result = gql_schema.execute(
-        query,
-        context=GQLContext(request),
-        variables=variables,
-    )
-    return result.data, result.errors
+    def __enter__(self):
+        self.api_request = HttpRequest()
+        process_request(self.api_request)
+        login(self.api_request, self.user)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        logout(self.api_request)
+        return False  # If True, suppresses exceptions
+
+    def run_mutation(
+        self,
+        query: str,
+        variables: dict,
+    ) -> typing.Tuple[typing.Optional[dict], typing.Optional[dict]]:
+        # To avoid circular dependency
+        from helix.schema import schema as gql_schema
+        from utils.graphene.context import GQLContext
+
+        result = gql_schema.execute(
+            query,
+            context=GQLContext(self.api_request),
+            variables=variables,
+        )
+        return result.data, result.errors
 
 
 def get_gql_response_count(data: typing.Optional[typing.List[typing.Optional[dict]]]) -> int:
@@ -140,11 +156,11 @@ class BulkApiOperationBaseTask(typing.Generic[ModelType]):
     @classmethod
     def run_mutation(
         cls,
-        request: HttpRequest,
+        client: InternalHelixGraphQlClient,
         query: str,
         variables: dict,
     ) -> typing.Tuple[typing.Optional[dict], typing.Optional[dict]]:
-        return run_mutation(request, query, variables)
+        return client.run_mutation(query, variables)
 
     @classmethod
     def mutate(
@@ -155,29 +171,25 @@ class BulkApiOperationBaseTask(typing.Generic[ModelType]):
         """
         NOTE: Response should be (success_count, failure_count, errors)
         """
-        # TODO: Create a context manager for login/logout
-        api_request = generate_dummy_request(operation.created_by)
+        with InternalHelixGraphQlClient(operation.created_by) as client:
+            variables = cls.get_mutation_variables(operation.payload, items)
+            gql_data, gql_errors = cls.run_mutation(client, cls.MUTATION, variables)
 
-        variables = cls.get_mutation_variables(operation.payload, items)
-        gql_data, gql_errors = cls.run_mutation(api_request, cls.MUTATION, variables)
-
-        logout(api_request)
-
-        # This should't happen in theory - Should be validated using unit test cases
-        if gql_errors:
-            logger.error(
-                f"Error found on bulk operation: {operation.get_action_display()}",
-                extra={
-                    "context": {
-                        "bulk_operation_id": operation.pk,
-                        "variables": variables,
-                        "data": gql_data,
-                        "errors": gql_errors,
+            # This should't happen in theory - Should be validated using unit test cases
+            if gql_errors:
+                logger.error(
+                    f"Error found on bulk operation: {operation.get_action_display()}",
+                    extra={
+                        "context": {
+                            "bulk_operation_id": operation.pk,
+                            "variables": variables,
+                            "data": gql_data,
+                            "errors": gql_errors,
+                        },
                     },
-                },
-            )
+                )
 
-        return cls.parse_mutation_response(items, gql_data)
+            return cls.parse_mutation_response(items, gql_data)
 
     @classmethod
     def run(cls, operation: BulkApiOperation):
@@ -217,12 +229,12 @@ class BulkFigureBulkUpdateTask(BulkApiOperationBaseTask[Figure]):
     @classmethod
     def run_mutation(
         cls,
-        request: HttpRequest,
+        client: InternalHelixGraphQlClient,
         query: str,
         variables: dict,
     ) -> typing.Tuple[typing.Optional[dict], typing.Optional[dict]]:
         with override_settings(GRAPHENE_BATCH_DEFAULT_MAX_LIMIT=len(variables["items"])):
-            return super().run_mutation(request, query, variables)
+            return super().run_mutation(client, query, variables)
 
     @classmethod
     def get_mutation_variables(cls, payload: dict, items: typing.List[Figure]) -> dict:

@@ -169,13 +169,13 @@ class SourcePreviewSerializer(MetaInformationSerializerMixin, serializers.ModelS
     def create(self, validated_data):
         filter_params = dict(
             url=validated_data["url"],
-            created_by=validated_data["created_by"],
+            created_by=self.context["request"].user,
             status=SourcePreview.PREVIEW_STATUS.IN_PROGRESS,
             created_at__gte=timezone.now() - timedelta(seconds=PDF_TASK_TIMEOUT),
         )
 
-        if SourcePreview.objects.filter(**filter_params).exists():
-            return SourcePreview.objects.filter(**filter_params).first()
+        if existing_preview := SourcePreview.objects.filter(**filter_params).first():
+            return existing_preview
         return SourcePreview.get_pdf(validated_data)
 
     def update(self, instance, validated_data):

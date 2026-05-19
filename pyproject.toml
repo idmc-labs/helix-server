@@ -48,6 +48,9 @@ dependencies = [
     "turfpy==0.0.6",
     "uWSGI==2.0.31",
     "syrupy>=3.0.6",
+    "httpx",
+    "pydantic~=2.10",
+    "pyhelix",
 ]
 
 [dependency-groups]
@@ -57,8 +60,11 @@ dev = [
     "django-stubs",
 ]
 
+[tool.uv.sources]
+pyhelix = { path = "libs/pyhelix", editable = true }
+
 [tool.pyright]
-extraPaths = ["apps"]
+extraPaths = ["apps", "libs/pyhelix"]
 exclude = [
     "**/node_modules",
     "**/__pycache__",
