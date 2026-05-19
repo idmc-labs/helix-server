@@ -133,6 +133,7 @@ class HelixCountry(HelixEntityManager):
     def __init__(self, helix_client: HelixClient):
         super().__init__(helix_client)
         self._iso3_map = {obj["iso3"].upper(): obj["id"] for obj in self._entities if obj.get("iso3")}
+        self._iso2_by_id = {obj["id"]: obj["iso2"] for obj in self._entities if obj.get("iso2")}
         # idmc_short_name is the export's preferred display name; helix Country.name
         # is the formal name and often diverges (e.g. "Syrian Arab Republic" vs "Syria").
         for obj in self._entities:
@@ -144,6 +145,11 @@ class HelixCountry(HelixEntityManager):
         if not iso3:
             return None
         return self._iso3_map.get(iso3.upper().strip())
+
+    def iso2_by_id(self, country_id: int | None) -> str | None:
+        if country_id is None:
+            return None
+        return self._iso2_by_id.get(country_id)
 
 
 class HelixViolenceSubType(HelixEntityManager):
