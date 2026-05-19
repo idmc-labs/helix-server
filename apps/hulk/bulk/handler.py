@@ -229,6 +229,7 @@ class HulkHelixModelImportBaseHandler:
 
         self.success_list = []
         self.error_list = []
+        self._impersonation_user_cache: dict[int, typing.Optional[User]] = {}
 
     @abc.abstractmethod
     def graphql_response_parser_fn(self, response):
@@ -322,7 +323,11 @@ class HulkHelixModelImportBaseHandler:
     def _resolve_impersonation(self, impersonate_as: typing.Optional[int]) -> typing.Optional[User]:
         if impersonate_as is None:
             return None
-        user = User.objects.filter(pk=impersonate_as, is_active=True).first()
+        if impersonate_as in self._impersonation_user_cache:
+            user = self._impersonation_user_cache[impersonate_as]
+        else:
+            user = User.objects.filter(pk=impersonate_as, is_active=True).first()
+            self._impersonation_user_cache[impersonate_as] = user
         if user is None:
             raise _ImpersonatedUserNotFound(f"impersonate_as user {impersonate_as} not found or inactive")
         return user
