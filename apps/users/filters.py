@@ -10,6 +10,7 @@ from utils.filters import IDFilter, IDListFilter, MultiWordSearchFilterSet, Stri
 
 class UserFilter(MultiWordSearchFilterSet):
     id = IDFilter(field_name="id", lookup_expr="exact")
+    email = django_filters.CharFilter(field_name="email", lookup_expr="iexact")
     role_in = StringListFilter(method="filter_role_in")
     role_not_in = StringListFilter(method="filter_role_not_in")
     monitoring_sub_region_in = IDListFilter(method="filter_monitoring_sub_region_in")
