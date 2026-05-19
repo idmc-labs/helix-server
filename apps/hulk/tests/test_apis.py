@@ -134,8 +134,7 @@ class TestTriggerHulkBulkImport(HelixGraphQLTestCase):
     def test_mutation_requires_at_least_one_dataset(self):
         self.force_login(self.admin)
         # Empty datasets list.
-        operations = json.dumps({"query": self.MUTATION, "variables": {"data": {"datasets": []}}})
-        resp = self._client.post("/graphql", data={"operations": operations, "map": json.dumps({})})
+        resp = self.query(self.MUTATION, variables={"data": {"datasets": []}})
         content = resp.json()
         self.assertFalse(content["data"]["triggerHulkBulkImport"]["ok"])
         errors = content["data"]["triggerHulkBulkImport"]["errors"] or []
@@ -262,31 +261,90 @@ class TestHulkBulkImportQuery(HelixGraphQLTestCase):
     """
 
     def setUp(self):
-        self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
-        self.bulk = HulkBulkImport.objects.create(created_by=self.admin)
+        self.owner = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.viewer = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.bulk = HulkBulkImport.objects.create(created_by=self.owner)
 
     def _post(self, user):
         if user is not None:
             self.force_login(user)
-        return self._client.post(
-            "/graphql",
-            data=json.dumps({"query": self.QUERY, "variables": {"id": self.bulk.id}}),
-            content_type="application/json",
-        )
+        return self.query(self.QUERY, variables={"id": self.bulk.id})
 
     def test_query_requires_authentication(self):
         content = self._post(None).json()
         self.assertIsNone(content["data"]["hulkBulkImport"])
 
-    def test_query_requires_bulk_import_permission(self):
-        # ADMIN role alone is not enough.
-        content = self._post(self.admin).json()
-        self.assertIsNone(content["data"]["hulkBulkImport"])
-
-    def test_query_allowed_with_permission(self):
-        self.admin.user_permissions.add(
-            Permission.objects.get(codename="trigger_hulkbulkimport"),
-        )
-        resp = self._post(self.admin)
+    def test_query_allowed_for_any_authenticated_user(self):
+        # Reads are open to anyone authenticated — no trigger permission needed,
+        # and viewers can see bulks they didn't create.
+        resp = self._post(self.viewer)
         self.assertResponseNoErrors(resp)
         self.assertEqual(resp.json()["data"]["hulkBulkImport"]["id"], str(self.bulk.id))
+
+
+class TestHulkBulkImportListQuery(HelixGraphQLTestCase):
+    QUERY = """
+        query ($filters: HulkBulkImportFilterDataInputType) {
+          hulkBulkImports(filters: $filters) {
+            totalCount
+            results { id status }
+          }
+        }
+    """
+
+    def setUp(self):
+        self.owner = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.viewer = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.bulk_a = HulkBulkImport.objects.create(created_by=self.owner)
+        self.bulk_b = HulkBulkImport.objects.create(
+            created_by=self.owner,
+            status=HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED,
+        )
+        self.bulk_c = HulkBulkImport.objects.create(created_by=self.viewer)
+
+    def _post(self, user, variables=None):
+        if user is not None:
+            self.force_login(user)
+        return self.query(self.QUERY, variables=variables or {})
+
+    def test_list_requires_authentication(self):
+        # The global WhiteListMiddleware (helix/auth.py) blocks anonymous access
+        # to any non-whitelisted root field, so the field resolves to null.
+        content = self._post(None).json()
+        self.assertIsNone(content["data"]["hulkBulkImports"])
+
+    def test_list_visible_to_any_authenticated_user(self):
+        # Reads are open to anyone authenticated — viewers see bulks created
+        # by other users as well.
+        resp = self._post(self.viewer)
+        self.assertResponseNoErrors(resp)
+        data = resp.json()["data"]["hulkBulkImports"]
+        self.assertEqual(data["totalCount"], 3)
+        returned_ids = {row["id"] for row in data["results"]}
+        self.assertEqual(
+            returned_ids,
+            {str(self.bulk_a.id), str(self.bulk_b.id), str(self.bulk_c.id)},
+        )
+
+    def test_list_filters_by_status(self):
+        resp = self._post(self.viewer, variables={"filters": {"statusList": ["COMPLETED"]}})
+        self.assertResponseNoErrors(resp)
+        data = resp.json()["data"]["hulkBulkImports"]
+        self.assertEqual(data["totalCount"], 1)
+        self.assertEqual(data["results"][0]["id"], str(self.bulk_b.id))
+
+    def test_list_filters_by_created_by(self):
+        resp = self._post(self.viewer, variables={"filters": {"createdByIds": [str(self.viewer.id)]}})
+        self.assertResponseNoErrors(resp)
+        data = resp.json()["data"]["hulkBulkImports"]
+        self.assertEqual(data["totalCount"], 1)
+        self.assertEqual(data["results"][0]["id"], str(self.bulk_c.id))
+
+        # Multiple ids — union.
+        resp = self._post(
+            self.viewer,
+            variables={"filters": {"createdByIds": [str(self.owner.id), str(self.viewer.id)]}},
+        )
+        self.assertResponseNoErrors(resp)
+        data = resp.json()["data"]["hulkBulkImports"]
+        self.assertEqual(data["totalCount"], 3)

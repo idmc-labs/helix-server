@@ -2744,6 +2744,20 @@ type HulkBulkImportDatasetType {
   failureFile: String
 }
 
+input HulkBulkImportFilterDataInputType {
+  statusList: [HULK_BULK_IMPORT_STATUS!]
+  createdByIds: [ID!]
+  createdAtGte: DateTime
+  createdAtLte: DateTime
+}
+
+type HulkBulkImportListType {
+  results: [HulkBulkImportType!]
+  totalCount: Int
+  page: Int
+  pageSize: Int
+}
+
 type HulkBulkImportType {
   id: ID!
   createdAt: DateTime!
@@ -3310,6 +3324,7 @@ enum QUANTIFIER {
 
 type Query {
   hulkBulkImport(id: ID!): HulkBulkImportType
+  hulkBulkImports(filters: HulkBulkImportFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): HulkBulkImportListType
   giddPublicConflicts(filters: ConflictFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddConflictListType
   giddPublicDisasters(filters: DisasterFilterDataInputType, clientId: String!, page: Int = 1, ordering: String, pageSize: Int): GiddDisasterListType
   giddPublicConflictStatistics(releaseEnvironment: String, countries: [String!], startYear: Float, endYear: Float, countriesIso3: [String!], clientId: String!): GiddConflictStatisticsType!

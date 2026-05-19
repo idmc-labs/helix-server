@@ -1,11 +1,14 @@
 import graphene
-from django.db.models import Sum
 from graphene_django import DjangoObjectType
+from graphene_django_extras import PageGraphqlPagination
 
 from utils.graphene.enums import EnumDescription
-from utils.permissions import is_authenticated, permission_checker
+from utils.graphene.fields import DjangoPaginatedListObjectField
+from utils.graphene.types import CustomDjangoListObjectType
+from utils.permissions import is_authenticated
 
 from .enums import HulkBulkImportDatasetImportTypeEnum, HulkBulkImportStatusEnum
+from .filters import HulkBulkImportFilter
 from .models import HulkBulkImport, HulkBulkImportDataset
 
 
@@ -68,20 +71,29 @@ class HulkBulkImportType(DjangoObjectType):
     datasets = graphene.List(graphene.NonNull(HulkBulkImportDatasetType))
 
     def resolve_success_count(root, info, **kwargs):
-        return HulkBulkImportDataset.objects.filter(bulk_import=root).aggregate(s=Sum("success_count"))["s"] or 0
+        return info.context.hulk_bulk_import_success_count_loader.load(root.pk)
 
     def resolve_failure_count(root, info, **kwargs):
-        return HulkBulkImportDataset.objects.filter(bulk_import=root).aggregate(s=Sum("failure_count"))["s"] or 0
+        return info.context.hulk_bulk_import_failure_count_loader.load(root.pk)
 
     def resolve_datasets(root, info, **kwargs):
-        return root.datasets.all().order_by("import_type")
+        return info.context.hulk_bulk_import_datasets_loader.load(root.pk)
+
+
+class HulkBulkImportListType(CustomDjangoListObjectType):
+    class Meta:
+        model = HulkBulkImport
+        filterset_class = HulkBulkImportFilter
 
 
 class Query:
     hulk_bulk_import = graphene.Field(HulkBulkImportType, id=graphene.ID(required=True))
+    hulk_bulk_imports = DjangoPaginatedListObjectField(
+        HulkBulkImportListType,
+        pagination=PageGraphqlPagination(page_size_query_param="pageSize"),
+    )
 
     @staticmethod
     @is_authenticated()
-    @permission_checker(["hulk.trigger_hulkbulkimport"])
     def resolve_hulk_bulk_import(_, info, id):
         return HulkBulkImport.objects.filter(pk=id).first()
