@@ -68,6 +68,31 @@ class TestUserFilter(HelixTestCase):
         self.assertNotIn(u1, qs)
         self.assertNotIn(u2, qs)
 
+    def test_filter_user_by_email(self):
+        u1 = UserFactory.create(email="alice@example.com")
+        u2 = UserFactory.create(email="bob@example.com")
+        UserFactory.create(email="other.user@example.org")
+
+        # Exact match returns the single user.
+        qs = UserFilter(data=dict(email="alice@example.com")).qs
+        self.assertEqual([each for each in qs], [u1])
+
+        # iexact: case-insensitive.
+        qs = UserFilter(data=dict(email="BOB@EXAMPLE.COM")).qs
+        self.assertEqual([each for each in qs], [u2])
+
+        # Substring/prefix must NOT match — distinguishes this filter from
+        # ``search`` (which does icontains).
+        qs = UserFilter(data=dict(email="example.com")).qs
+        self.assertEqual([each for each in qs], [])
+
+        qs = UserFilter(data=dict(email="alice")).qs
+        self.assertEqual([each for each in qs], [])
+
+        # No-match email returns empty.
+        qs = UserFilter(data=dict(email="missing@nowhere.invalid")).qs
+        self.assertEqual([each for each in qs], [])
+
     def test_filter_user_by_monitoring_sub_region(self):
         u1 = create_user_with_role(role=USER_ROLE.ADMIN.name)
         monitoring_sub_region = MonitoringSubRegionFactory.create()

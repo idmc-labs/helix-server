@@ -4194,6 +4194,7 @@ input UserFilterDataInputType {
   isActive: Boolean
   search: String
   id: ID
+  email: String
   roleIn: [String!]
   roleNotIn: [String!]
   monitoringSubRegionIn: [ID!]
