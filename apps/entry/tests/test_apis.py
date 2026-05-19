@@ -11,12 +11,18 @@ from utils.factories import (
     AttachmentFactory,
     ContextOfViolenceFactory,
     CountryFactory,
+    DisasterCategoryFactory,
+    DisasterSubCategoryFactory,
+    DisasterSubTypeFactory,
+    DisasterTypeFactory,
     EntryFactory,
     EventFactory,
     FigureFactory,
     OrganizationFactory,
     OrganizationKindFactory,
     TagFactory,
+    ViolenceFactory,
+    ViolenceSubTypeFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
 from utils.tests import HelixGraphQLTestCase, HelixTestCase, create_user_with_role, snapshot_in_class  # noqa: F401
@@ -395,6 +401,14 @@ class TestIDUGenerate(HelixGraphQLTestCase):
         self.org_kind_local_auth = OrganizationKindFactory.create(name="Local Authority")
         self.sources_1 = OrganizationFactory.create(organization_kind=self.org_kind_local_auth)
         self.sources_2 = OrganizationFactory.create(organization_kind=self.org_kind_gov)
+        self.disaster_category = DisasterCategoryFactory.create(name="Geophysical")
+        self.disaster_sub_category = DisasterSubCategoryFactory.create(category=self.disaster_category)
+        self.disaster_type = DisasterTypeFactory.create(name="Earthquake", disaster_sub_category=self.disaster_sub_category)
+        self.disaster_sub_type = DisasterSubTypeFactory.create(type=self.disaster_type, idu_name="an earthquake")
+        self.violence = ViolenceFactory.create(name="International armed conflict (IAC)")
+        self.violence_sub_type = ViolenceSubTypeFactory.create(
+            violence=self.violence, idu_name="international armed conflict"
+        )
         self.mutation = """
             mutation MyMutation($data: IDUGenerateInputType!) {
                 generateIdu(data: $data) {
@@ -407,7 +421,7 @@ class TestIDUGenerate(HelixGraphQLTestCase):
         self.variables = {
             "data": {
                 "mainTrigger": Crisis.CRISIS_TYPE.DISASTER.name,
-                "disasterSubType": "1",
+                "disasterSubType": str(self.disaster_sub_type.id),
                 "violenceSubType": None,
                 "otherSubType": None,
                 "quantifier": Figure.QUANTIFIER.APPROXIMATELY.name,
@@ -475,7 +489,7 @@ class TestIDUGenerate(HelixGraphQLTestCase):
 
         input_1 = self.variables.copy()
         input_1["data"]["mainTrigger"] = Crisis.CRISIS_TYPE.CONFLICT.name
-        input_1["data"]["violenceSubType"] = "2"
+        input_1["data"]["violenceSubType"] = int(self.violence_sub_type.id)
         input_1["data"]["figure"] = 10
         input_1["data"]["displacementTerm"] = Figure.FIGURE_TERMS.DISPLACED.name
         input_1["data"]["unit"] = Figure.UNIT.PERSON.name

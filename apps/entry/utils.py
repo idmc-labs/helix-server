@@ -5,7 +5,7 @@ from typing import Any, Dict, List, Optional, Union
 
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure, FigureLocation
-from apps.event.models import Event
+from apps.event.models import DisasterSubType, Event, OtherSubType, ViolenceSubType
 from apps.notification.models import Notification
 from apps.organization.models import Organization
 from apps.users.models import User
@@ -42,61 +42,16 @@ def generate_idu_from_figure_data(figure_data: typing.Dict) -> str:
         violence_sub_type_id: Optional[int],
         other_sub_type_id: Optional[int],
     ):
-        hazard_map_by_id = {
-            1: "an earthquake",
-            2: "a tsunami",
-            3: "dry mass movement",
-            4: "a sinkhole",
-            5: "volcanic activity",
-            6: "desertification",
-            7: "a drought",
-            8: "erosion",
-            9: "salinization",
-            10: "sea level rise",
-            11: "a wildfire",
-            12: "flooding caused by a dam release",
-            13: "flooding",
-            14: "an avalanche",
-            15: "a landslide",
-            16: "a rogue wave",
-            17: "a cold wave",
-            18: "a heat wave",
-            19: "a hailstorm",
-            20: "a sandstorm",
-            21: "a storm",
-            22: "storm surge",
-            23: "a tornado",
-            24: "a tropical cyclone",
-            25: "a winter storm",
-            26: "mixed disasters",
-        }
-
-        conflict_map_by_id = {
-            2: "international armed conflict",
-            7: "non-international armed conflict",
-            11: "civilian state violence",
-            12: "crime related violence",
-            13: "communal violence",
-            14: "conflict",
-            17: "conflict",
-        }
-
-        other_crisis_by_id = {
-            1: "development",
-            2: "eviction",
-            3: "a technical disaster",
-        }
-
         cause_text = None
 
         if figure_cause == Crisis.CRISIS_TYPE.DISASTER.value and disaster_sub_type_id is not None:
-            cause_text = hazard_map_by_id.get(int(disaster_sub_type))
+            cause_text = DisasterSubType.objects.filter(id=int(disaster_sub_type_id)).first().idu_name
 
         elif figure_cause == Crisis.CRISIS_TYPE.CONFLICT.value and violence_sub_type_id is not None:
-            cause_text = conflict_map_by_id.get(int(violence_sub_type))
+            cause_text = ViolenceSubType.objects.filter(id=violence_sub_type_id).first().idu_name
 
         elif figure_cause == Crisis.CRISIS_TYPE.OTHER.value and other_sub_type_id is not None:
-            cause_text = other_crisis_by_id.get(int(other_sub_type_id))
+            cause_text = OtherSubType.objects.filter(id=violence_sub_type_id).first().idu_name
 
         return cause_text
 
