@@ -131,6 +131,7 @@ class GraphqlQuery:
                     results {
                       id
                       name
+                      iso2
                       iso3
                       idmcShortName
                     }

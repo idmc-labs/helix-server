@@ -28,6 +28,7 @@ from pydantic import ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from pyhelix.api.api import HelixClient, HelixEndpoint
+from pyhelix.api_types import HulkBulkImportState
 from pyhelix.constants import CRISIS_TYPE
 from pyhelix.hulk import HulkDataHandler
 from pyhelix.models import (
@@ -93,6 +94,12 @@ class Settings(BaseSettings):
     HELIX_BASE_DOMAIN: str = HelixEndpoint.BaseDomain.PRODUCTION
     HELIX_EMAIL: str
     HELIX_PASSWORD: str
+    # Trigger triggerHulkBulkImport and download success/failure artifacts
+    # after the JSONL files are generated. Disable to do a dry-run that only
+    # writes local JSONL.
+    HELIX_SEND_TO_HELIX: bool = True
+    HELIX_BULK_TIMEOUT: float = 10 * 60  # 10min (Make sure to keep this higher as possible)
+    HELIX_BULK_POLL_INTERVAL: float = 5.0
 
 
 def read_from_sheet(sheet: Worksheet, header_row=1, max_col=None) -> typing.Generator[dict[typing.Any, typing.Any]]:
@@ -316,6 +323,16 @@ def import_figures(hulk_handler: HulkDataHandler, context: ImportContext):
                     },
                 )
                 continue
+            country_iso2 = context.helix_client.country_manager.iso2_by_id(country_id)
+            if country_iso2 is None:
+                hulk_handler.handle_import_error_raw(
+                    HulkFigureImport,
+                    {
+                        "uuid": figure_uuid,
+                        "error": f"country iso2 not found for: {country_raw}",
+                    },
+                )
+                continue
 
             organizations_raw = json.loads(figure_data["sources"])
             organizations_id = []
@@ -346,7 +363,7 @@ def import_figures(hulk_handler: HulkDataHandler, context: ImportContext):
                         bounding_box=None,
                         display_name=loc_display_name,
                         country_name=country_raw,
-                        country_code="TEST",  # TODO
+                        country_code=country_iso2,
                         identifier=loc_identifier,
                         accuracy=loc_accuracy,
                         geocoder=loc_geocoder,
@@ -410,6 +427,47 @@ def import_figures(hulk_handler: HulkDataHandler, context: ImportContext):
                 continue
 
 
+def _log_bulk_progress(state: HulkBulkImportState) -> None:
+    logger.info(
+        "HulkBulkImport %s status=%s success=%s failure=%s",
+        state.id,
+        state.status_display or state.status.name,
+        state.success_count,
+        state.failure_count,
+    )
+
+
+def send_to_helix(hulk_handler: HulkDataHandler, settings: Settings) -> None:
+    try:
+        run = hulk_handler.send_to_helix()
+    except RuntimeError as e:
+        # Raised when every JSONL is empty — nothing to upload.
+        logger.error("Skipping helix upload: %s", e)
+        return
+
+    logger.info("Triggered HulkBulkImport id=%s; polling until terminal status…", run.bulk_id)
+    final_state = run.wait(
+        timeout=settings.HELIX_BULK_TIMEOUT,
+        poll_interval=settings.HELIX_BULK_POLL_INTERVAL,
+        progress_cb=_log_bulk_progress,
+    )
+    logger.info(
+        "HulkBulkImport %s finished with status=%s",
+        run.bulk_id,
+        final_state.status_display or final_state.status.name,
+    )
+
+    for dataset in final_state.datasets or []:
+        print(f"{dataset.import_type} success={dataset.success_count} failure={dataset.failure_count}")
+
+    artifacts = run.download_artifacts(OUTPUT_DATASET_DIR / f"helix_{run.bulk_id}")
+    artifacts_serializable = {
+        resource: {kind: str(path) if path else None for kind, path in entry.items()}
+        for resource, entry in artifacts.items()
+    }
+    print(json.dumps({"bulk_id": run.bulk_id, "artifacts": artifacts_serializable}, indent=2))
+
+
 def main():
     settings = Settings()
 
@@ -436,6 +494,11 @@ def main():
 
         # NOTE: Just for verbose information about the outputs
         print(json.dumps(hulk_handler.debug_metadata(), indent=2))
+
+        if settings.HELIX_SEND_TO_HELIX:
+            send_to_helix(hulk_handler, settings)
+        else:
+            logger.info("HELIX_SEND_TO_HELIX is false; skipping upload to helix.")
 
 
 main()
