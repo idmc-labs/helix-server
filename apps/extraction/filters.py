@@ -17,9 +17,12 @@ from apps.entry.filters import FigureTagFilter
 from apps.entry.models import (
     Entry,
     Figure,
+    FigureTag,
 )
 from apps.event.constants import OSV
+from apps.event.models import ContextOfViolence
 from apps.extraction.models import ExtractionQuery
+from apps.organization.models import Organization
 from apps.report.models import Report
 from utils.filters import (
     IDFilter,
@@ -341,12 +344,12 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
 
     def filter_time_frame_after(self, qs, name, value):
         if value:
-            return qs.exclude(start_date__isnull=True).filter(start_date__gte=value).distinct()
+            return qs.exclude(start_date__isnull=True).filter(start_date__gte=value)
         return qs
 
     def filter_time_frame_before(self, qs, name, value):
         if value:
-            return qs.exclude(end_date__isnull=True).filter(end_date__lt=value).distinct()
+            return qs.exclude(end_date__isnull=True).filter(end_date__lt=value)
         return qs
 
     def filter_report(self, qs, name, value):
@@ -367,32 +370,33 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
 
     def filter_regions(self, qs, name, value):
         if value:
-            qs = qs.filter(country__in=Country.objects.filter(region__in=value))
+            countries_qs = Country.objects.filter(region__in=value, pk=OuterRef("country_id"))
+            qs = qs.filter(Exists(countries_qs))
         return qs
 
     def filter_countries(self, qs, name, value):
         if value:
-            return qs.filter(country__in=value).distinct()
+            return qs.filter(country__in=value)
         return qs
 
     def filter_figure_events_(self, qs, name, value):
         if value:
-            return qs.filter(event__in=value).distinct()
+            return qs.filter(event__in=value)
         return qs
 
     def filter_crises(self, qs, name, value):
         if value:
-            return qs.filter(event__crisis__in=value).distinct()
+            return qs.filter(event__crisis__in=value)
         return qs
 
     def filter_sources(self, qs, name, value):
         if value:
-            return qs.filter(sources__in=value).distinct()
+            return qs.filter(Exists(Organization.objects.filter(pk__in=value, sourced_figures=OuterRef("pk"))))
         return qs
 
     def filter_publishers(self, qs, name, value):
         if value:
-            return qs.filter(entry__publishers__in=value).distinct()
+            return qs.filter(Exists(Organization.objects.filter(pk__in=value, published_entries=OuterRef("entry_id"))))
         return qs
 
     def filter_filter_figure_category_types(self, qs, name, value):
@@ -406,7 +410,7 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
                 category_enums_to_filter = category_enums_to_filter + Figure.stock_list()
             if category_type == FLOW:
                 category_enums_to_filter = category_enums_to_filter + Figure.flow_list()
-        return qs.filter(category__in=category_enums_to_filter).distinct()
+        return qs.filter(category__in=category_enums_to_filter)
 
     def filter_filter_figure_categories(self, qs, name, value):
         if value:
@@ -428,14 +432,14 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
 
     def filter_tags(self, qs, name, value):
         if value:
-            return qs.filter(tags__in=value).distinct()
+            return qs.filter(Exists(FigureTag.objects.filter(pk__in=value, figure=OuterRef("pk"))))
         return qs
 
     def filter_crisis_types(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
                 # coming from saved query
-                return qs.filter(figure_cause__in=value).distinct()
+                return qs.filter(figure_cause__in=value)
             else:
                 # coming from client side
                 return qs.filter(figure_cause__in=[Crisis.CRISIS_TYPE.get(item).value for item in value])
@@ -461,39 +465,37 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
 
     def filter_filter_figure_disaster_categories(self, qs, name, value):
         if value:
-            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_category__in=value)).distinct()
+            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_category__in=value))
         return qs
 
     def filter_filter_figure_disaster_sub_categories(self, qs, name, value):
         if value:
-            return qs.filter(
-                ~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_sub_category__in=value)
-            ).distinct()
+            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_sub_category__in=value))
         return qs
 
     def filter_filter_figure_disaster_sub_types(self, qs, name, value):
         if value:
-            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_sub_type__in=value)).distinct()
+            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_sub_type__in=value))
         return qs
 
     def filter_filter_figure_disaster_types(self, qs, name, value):
         if value:
-            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_type__in=value)).distinct()
+            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_type__in=value))
         return qs
 
     def filter_filter_figure_violence_sub_types(self, qs, name, value):
         if value:
-            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_sub_type__in=value)).distinct()
+            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_sub_type__in=value))
         return qs
 
     def filter_filter_figure_violence_types(self, qs, name, value):
         if value:
-            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_type__in=value)).distinct()
+            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_type__in=value))
         return qs
 
     def filter_filter_figure_osv_sub_types(self, qs, name, value):
         if value:
-            return qs.filter(~Q(event__violence__name=OSV) | Q(osv_sub_type__in=value)).distinct()
+            return qs.filter(~Q(event__violence__name=OSV) | Q(osv_sub_type__in=value))
         return qs
 
     def filter_has_disaggregated_data(self, qs, name, value):
@@ -506,7 +508,7 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
     def filter_filter_figure_context_of_violence(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(context_of_violence__in=value).distinct()
+        return qs.filter(Exists(ContextOfViolence.objects.filter(pk__in=value, figures=OuterRef("pk"))))
 
     def filter_filter_figure_review_status(self, qs, name, value):
         if value:
