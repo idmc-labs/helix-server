@@ -18,6 +18,9 @@ jobs:
       docker__compose_file: "docker-compose.yml:gh-docker-compose.yml"
       docker__compose_service_name: "server"
       docker__compose_test_cmd: "/code/run_tests.sh"
+      # Extra step - TODO: Use pre step?
+      docker__post_test__extra_step_01: "🕮 Validate pyhelix constants are in sync with helix-server enums."
+      docker__post_test__extra_step_01_command: "docker compose run --rm server ./manage.py update_pyhelix_constants --check"
       # Job: Helm
       helm__chart_directory: "./helm"
       # -- Publish

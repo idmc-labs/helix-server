@@ -50,10 +50,14 @@ dependencies = [
     "uWSGI==2.0.31",
     "banjo-utils",
     "syrupy>=3.0.6",
+    "httpx",
+    "pydantic~=2.10",
+    "pyhelix",
 ]
 
 [tool.uv.sources]
 banjo-utils = { git = "https://github.com/toggle-corp/banjo-utils", tag = "v0.2.0" }
+pyhelix = { path = "libs/pyhelix", editable = true }
 
 [dependency-groups]
 dev = [
@@ -63,7 +67,7 @@ dev = [
 ]
 
 [tool.pyright]
-extraPaths = ["apps"]
+extraPaths = ["apps", "libs/pyhelix"]
 exclude = [
     "**/node_modules",
     "**/__pycache__",

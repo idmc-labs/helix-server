@@ -1006,6 +1006,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         headers = OrderedDict(
             id="ID",
             old_id="Old ID",
+            hulk_uuid="Hulk (UUID)",
             created_at="Created at",
             modified_at="Updated at",
             country__iso3="ISO3",
@@ -1089,12 +1090,19 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             type_of_points="Locations type",
             locations="Locations (Name:Lat, Lon:Accuracy:Type)",
         )
-        exclude_headers = ["location_display_name", "loc_lat_lon", "accuracy", "type_of_points", "entry_link"]
+        exclude_headers = [
+            "location_display_name",
+            "loc_lat_lon",
+            "accuracy",
+            "type_of_points",
+            "entry_link",
+        ]
 
         values = (
             figures.annotate(
                 **Figure.annotate_stock_and_flow_dates(),
                 **Figure.annotate_sources_reliability(),
+                hulk_uuid=models.F("hulkfigure__uuid"),
                 centroid_lat=RawSQL("country_country.centroid[2]", params=()),
                 centroid_lon=RawSQL("country_country.centroid[1]", params=()),
                 entry_url_or_document_url=models.Case(
@@ -1497,6 +1505,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
 
         headers = OrderedDict(
             id="ID",
+            hulk_uuid="Hulk (UUID)",
             created_by__full_name="Created by",
             created_at="Created at",
             last_modified_by__full_name="Updated by",
@@ -1540,6 +1549,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
                 request=DummyRequest(user=User.objects.get(id=user_id)),
             )
             .qs.annotate(
+                hulk_uuid=models.F("hulkentry__uuid"),
                 countries=StringAgg("figures__country__idmc_short_name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
                 countries_iso3=StringAgg("figures__country__iso3", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
                 figure_causes=ArrayAgg("figures__figure_cause", distinct=True),
