@@ -284,11 +284,16 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
             else:
                 qs = self.get_queryset(manager, info, **kwargs)
 
-            filterset_instance = filterset_class(data=filter_kwargs, queryset=qs, request=info.context.request)
-
-            # helps annotate only when it is required.
-            filterset_instance.ordering_context = {"ordering": kwargs.get(self.pagination.ordering_param)}
-            qs = filterset_instance.qs
+            filterset_kwargs = {
+                "data": filter_kwargs,
+                "queryset": qs,
+                "request": info.context.request,
+            }
+            # Only forward ordering to filtersets that opt in, so they can
+            # gate expensive annotations on the active ordering.
+            if getattr(filterset_class, "accepts_ordering", False):
+                filterset_kwargs["ordering"] = kwargs.get(self.pagination.ordering_param)
+            qs = filterset_class(**filterset_kwargs).qs
             if root and not accessor and is_valid_django_model(root._meta.model):
                 extra_filters = get_extra_filters(root, manager.model)
                 if len(list(extra_filters.keys())) == 1:
