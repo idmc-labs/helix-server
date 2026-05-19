@@ -28,6 +28,7 @@ from django.test import override_settings
 from apps.hulk.bulk.handler import (
     HulkBulkImportHandler,
     JsonlParseError,
+    _normalize_graphql_errors,
     dump_jsonl,
     iter_jsonl_field,
 )
@@ -1387,3 +1388,81 @@ class TestHulkBulkImportImpersonation(HelixGraphQLTestCase):
             {self.impersonated.pk, other.pk, self.creator.pk},
         )
         self.assertEqual(len(constructed_with), 3)
+
+
+class TestGraphqlErrorNormalization(HelixGraphQLTestCase):
+    """
+    graphene returns ``GraphQLLocatedError`` exception objects from
+    ``schema.execute(...).errors``. They aren't JSON-serializable, so if they
+    leak into ``handler.error_list`` the per-dataset ``failure.jsonl`` write
+    blows up in ``_persist_results`` and flips the bulk to FAILED even though
+    every row was processed. ``_normalize_graphql_errors`` collapses them to
+    ``.formatted`` dicts at the ``_handle_mutation`` boundary.
+    """
+
+    def test_normalize_uses_formatted_dict(self):
+        class FakeGraphQLError(Exception):
+            formatted = {"message": "You do not have permission", "path": ["createSourcePreview"]}
+
+        out = _normalize_graphql_errors([FakeGraphQLError()])
+        self.assertEqual(out, [{"message": "You do not have permission", "path": ["createSourcePreview"]}])
+
+    def test_normalize_falls_back_to_str_when_no_formatted(self):
+        out = _normalize_graphql_errors([ValueError("boom")])
+        self.assertEqual(out, [{"message": "boom"}])
+
+    def test_normalize_none_and_empty(self):
+        self.assertIsNone(_normalize_graphql_errors(None))
+        self.assertEqual(_normalize_graphql_errors([]), [])
+
+    def test_graphql_error_row_persists_to_failure_jsonl(self):
+        """
+        Regression: when run_mutation surfaces a ``GraphQLLocatedError``-shaped
+        object (e.g. from a permission denial on an impersonated user),
+        ``_persist_results`` must successfully write the failure JSONL and the
+        bulk must NOT flip to FAILED — the row is a row-level failure, not a
+        run-level failure.
+        """
+
+        class FakeGraphQLError(Exception):
+            def __init__(self, message):
+                super().__init__(message)
+                self.formatted = {"message": message, "path": ["createSourcePreview"]}
+
+        creator = create_user_with_role(USER_ROLE.ADMIN.name)
+        bulk = HulkBulkImport.objects.create(created_by=creator)
+        _create_dataset(
+            bulk,
+            "source_previews",
+            (
+                "\n".join(
+                    json.dumps(r)
+                    for r in [
+                        {"uuid": "60000000-0000-4000-8000-000000000001", "file_url": "https://x.invalid/a.pdf"},
+                    ]
+                )
+                + "\n"
+            ).encode("utf-8"),
+        )
+
+        with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient:
+            mock_client = MagicMock()
+            mock_client.run_mutation.return_value = (
+                {"createSourcePreview": None},
+                [FakeGraphQLError("You do not have permission to perform this action.")],
+            )
+            MockClient.return_value.__enter__.return_value = mock_client
+            ok = HulkBulkImportHandler(bulk).handle()
+
+        bulk.refresh_from_db()
+        # Bulk should be COMPLETED — the row failed, the run did not.
+        self.assertTrue(ok, "handle() should report success even when individual rows fail")
+        self.assertEqual(bulk.status, HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED)
+
+        failure_rows = _jsonl_rows(_failure_file(bulk, "source_previews"))
+        self.assertEqual(len(failure_rows), 1)
+        self.assertIn("post-errors", failure_rows[0]["error"])
+        self.assertEqual(
+            failure_rows[0]["error"]["post-errors"],
+            [{"message": "You do not have permission to perform this action.", "path": ["createSourcePreview"]}],
+        )
