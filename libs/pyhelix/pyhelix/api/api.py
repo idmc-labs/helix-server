@@ -20,6 +20,7 @@ from .entities import (
     HelixFigureTag,
     HelixOrganization,
     HelixOtherSubType,
+    HelixUser,
     HelixViolenceSubType,
 )
 from .queries import GraphqlQuery
@@ -254,6 +255,13 @@ class HelixClient:
         manager = getattr(self, "_other_sub_type_manager", None)
         if not manager:
             manager = self._other_sub_type_manager = HelixOtherSubType(self)
+        return manager
+
+    @property
+    def user_manager(self) -> HelixUser:
+        manager = getattr(self, "_user_manager", None)
+        if not manager:
+            manager = self._user_manager = HelixUser(self)
         return manager
 
     @property
