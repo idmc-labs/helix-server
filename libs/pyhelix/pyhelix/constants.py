@@ -245,6 +245,15 @@ class ATTACHMENT_FOR_CHOICES(enum.Enum):
     CONTEXTUAL_UPDATE = 2
 
 
+# Clone of HulkBulkImport.HULK_BULK_IMPORT_STATUS
+class HULK_BULK_IMPORT_STATUS(enum.Enum):
+    PENDING = 0
+    IN_PROGRESS = 1
+    COMPLETED = 2
+    FAILED = 3
+    SKIPPED = 4
+
+
 # Clone of Figure.flow_list()
 FIGURE_FLOW_LIST = [
     FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,

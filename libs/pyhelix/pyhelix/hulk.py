@@ -11,6 +11,7 @@ import httpx
 from pydantic import ValidationError
 
 from pyhelix.api.api import HULK_BULK_INPUT_FIELDS, HelixClient, helix_client_context
+from pyhelix.api_types import HulkBulkImportState
 
 from .models import (
     HulkAttachmentImport,
@@ -49,7 +50,7 @@ class HulkBulkImportRun:
     helix_client: HelixClient
     bulk_id: str
 
-    def get_state(self) -> dict:
+    def get_state(self) -> HulkBulkImportState:
         """Return the current ``hulkBulkImport(id)`` payload."""
         return self.helix_client.get_hulk_bulk_import(self.bulk_id)
 
@@ -58,12 +59,12 @@ class HulkBulkImportRun:
         *,
         timeout: float = 3600.0,
         poll_interval: float = 5.0,
-        progress_cb: typing.Optional[typing.Callable[[dict], None]] = None,
-    ) -> dict:
+        progress_cb: typing.Optional[typing.Callable[[HulkBulkImportState], None]] = None,
+    ) -> HulkBulkImportState:
         """
         Block until the import reaches a terminal status (COMPLETED / FAILED /
         SKIPPED) and return the final state. ``progress_cb`` is invoked on
-        every poll with the latest state dict.
+        every poll with the latest state.
         """
         return self.helix_client.wait_for_hulk_bulk_import(
             self.bulk_id,
@@ -84,13 +85,12 @@ class HulkBulkImportRun:
         out_dir.mkdir(parents=True, exist_ok=True)
         type_to_resource = {import_type: short for short, import_type in HULK_BULK_INPUT_FIELDS}
         artifacts: typing.Dict[str, typing.Dict[str, typing.Optional[pathlib.Path]]] = {}
-        for ds in state.get("datasets") or []:
-            resource = type_to_resource.get(ds["importType"])
+        for ds in state.datasets or []:
+            resource = type_to_resource.get(ds.import_type)
             if resource is None:
                 continue
             entry: typing.Dict[str, typing.Optional[pathlib.Path]] = {}
-            for kind, url_key in (("success", "successFile"), ("failure", "failureFile")):
-                url = ds.get(url_key)
+            for kind, url in (("success", ds.success_file), ("failure", ds.failure_file)):
                 dst = out_dir / f"{kind}_{resource}.jsonl"
                 entry[kind] = dst if (url and _download_to(url, dst)) else None
             artifacts[resource] = entry
