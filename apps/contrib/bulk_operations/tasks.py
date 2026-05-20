@@ -337,12 +337,79 @@ class BulkFigureEventUpdateTask(BulkFigureBulkUpdateTask):
         }
 
 
+class BulkOperationBaseTask(typing.Generic[ModelType]):
+    filter_set: typing.Optional[typing.Type[django_filters.FilterSet]]
+
+    @staticmethod
+    @abc.abstractmethod
+    def get_update_payload(payload: dict) -> dict:
+        raise NotImplementedError
+
+    @classmethod
+    def get_filterset(cls) -> typing.Type[django_filters.FilterSet]:
+        if cls.filter_set is None:
+            raise Exception("filter_set not defined")
+        return cls.filter_set
+
+    @staticmethod
+    @abc.abstractmethod
+    def get_filters(filters: dict) -> dict:
+        raise NotImplementedError
+
+    @classmethod
+    @abc.abstractmethod
+    def get_mutation_variables(cls, payload: dict, items: typing.List[ModelType]) -> dict:
+        raise NotImplementedError
+
+    @classmethod
+    def get_items(cls, operation: BulkApiOperation) -> typing.List[ModelType]:
+        filterset = cls.get_filterset()
+        filters = cls.get_filters(operation.filters)
+        queryset: models.QuerySet[ModelType] = filterset(data=filters).qs.order_by("id")
+        return list(queryset)
+
+    @staticmethod
+    @abc.abstractmethod
+    def generate_snapshot(operation: BulkApiOperation, items: typing.List[ModelType]):
+        raise NotImplementedError
+
+    @classmethod
+    def run(cls, operation: BulkApiOperation):
+        # Generate item list
+        items = cls.get_items(operation)
+        # Create a snapshot
+        cls.generate_snapshot(operation, items)
+        # Mutate -> success, errors
+        (
+            operation.success_list,
+            operation.failure_list,
+        ) = cls.mutate(operation, items)
+        operation.success_count = len(operation.success_list)
+        operation.failure_count = len(operation.failure_list)
+        operation.update_status(BulkApiOperation.BULK_OPERATION_STATUS.COMPLETED, commit=False)
+        operation.save()
+        return operation
+
+    @classmethod
+    @abc.abstractmethod
+    def mutate(
+        cls,
+        operation: BulkApiOperation,
+        items: typing.List[ModelType],
+    ) -> typing.Tuple[typing.List[SuccessDataType], typing.List[FailureDataType]]:
+        raise NotImplementedError
+
+
 def get_operation_handler(operation_action):
+    from apps.country.tasks import BulkAHHSCloneTask
+
     _handler: typing.Optional[typing.Type[BulkApiOperationBaseTask]] = None
     if operation_action == BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_ROLE:
         _handler = BulkFigureRoleUpdateTask
     if operation_action == BulkApiOperation.BULK_OPERATION_ACTION.FIGURE_EVENT:
         _handler = BulkFigureEventUpdateTask
+    if operation_action == BulkApiOperation.BULK_OPERATION_ACTION.AHHS:
+        _handler = BulkAHHSCloneTask
     if _handler is None:
         raise serializers.ValidationError(f"Action not implemented yet: {operation_action}")
     return _handler
