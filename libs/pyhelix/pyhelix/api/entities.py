@@ -91,6 +91,64 @@ class HelixEntityManager:
             raise ValueError(f"Invalid id={_id} for {type(self).__name__}")
 
 
+class HelixEntityLazyManagerFetcher:
+    """
+    Mirrors :class:`HelixEntityManagerFetcher` but for on-demand single-key
+    lookups instead of paginated prefetch. ``fetch_one`` is expected to make
+    one server call per key and return the matched entity dict (with ``id``)
+    or ``None``.
+    """
+
+    helix_model_name: str
+
+    def __init__(self, helix_client: HelixClient):
+        self.helix_client = helix_client
+
+    @abc.abstractmethod
+    def fetch_one(self, key: str) -> typing.Optional[dict]:
+        raise NotImplementedError()
+
+
+class HelixEntityLazyManager:
+    """
+    Lazy counterpart to :class:`HelixEntityManager`: no prefetch, per-call
+    server lookup, process-local cache. Use this when:
+
+      - the entity list is unbounded (e.g. helix users on real deployments)
+      - the lookup field is masked by the resolver and can only be matched
+        server-side (e.g. ``UserType.email`` is hidden for non-self users)
+      - callers only need a handful of values, not the whole list
+
+    Subclasses supply a :class:`HelixEntityLazyManagerFetcher` and inherit
+    :meth:`search` for free. ``None``/blank input short-circuits to ``None``;
+    repeated lookups for the same key hit the cache.
+    """
+
+    fetch_manager: type[HelixEntityLazyManagerFetcher]
+
+    def __init__(self, helix_client: HelixClient):
+        self.helix_client = helix_client
+        self._fetch_manager = self.fetch_manager(helix_client)
+        self._cache: typing.Dict[str, typing.Optional[int]] = {}
+
+    @staticmethod
+    def _normalize_key(key: str) -> str:
+        return key.strip().lower()
+
+    def search(self, key: str | None) -> int | None:
+        if not key:
+            return None
+        norm = self._normalize_key(key)
+        if not norm:
+            return None
+        if norm in self._cache:
+            return self._cache[norm]
+        entity = self._fetch_manager.fetch_one(key)
+        pk = int(entity["id"]) if entity else None
+        self._cache[norm] = pk
+        return pk
+
+
 class HelixOrganization(HelixEntityManager):
     class Fetcher(HelixEntityManagerFetcher):
         helix_model_name = "Organization/Source"
@@ -133,6 +191,7 @@ class HelixCountry(HelixEntityManager):
     def __init__(self, helix_client: HelixClient):
         super().__init__(helix_client)
         self._iso3_map = {obj["iso3"].upper(): obj["id"] for obj in self._entities if obj.get("iso3")}
+        self._iso2_by_id = {obj["id"]: obj["iso2"] for obj in self._entities if obj.get("iso2")}
         # idmc_short_name is the export's preferred display name; helix Country.name
         # is the formal name and often diverges (e.g. "Syrian Arab Republic" vs "Syria").
         for obj in self._entities:
@@ -144,6 +203,11 @@ class HelixCountry(HelixEntityManager):
         if not iso3:
             return None
         return self._iso3_map.get(iso3.upper().strip())
+
+    def iso2_by_id(self, country_id: int | None) -> str | None:
+        if country_id is None:
+            return None
+        return self._iso2_by_id.get(country_id)
 
 
 class HelixViolenceSubType(HelixEntityManager):
@@ -190,6 +254,46 @@ class HelixOtherSubType(HelixEntityManager):
             return resp.json()["data"]["otherSubTypeList"]
 
     fetch_manager = Fetcher
+
+
+class HelixUser(HelixEntityLazyManager):
+    """
+    Resolve a Helix User PK from an email — used for
+    ``HulkBaseModel.impersonate_as``. Lazy because:
+
+      * the user list is unbounded on real deployments, and callers typically
+        need only a few emails
+      * ``UserType.email`` is masked by the resolver for non-self users, so a
+        fetch-all + local email→pk map can't be built; the match has to
+        happen server-side via ``UserFilter.email`` (iexact).
+
+    Prefer :meth:`search_by_email` over the inherited :meth:`search` for
+    readability — they're the same call.
+    """
+
+    class Fetcher(HelixEntityLazyManagerFetcher):
+        helix_model_name = "User"
+
+        @typing_extensions.override
+        def fetch_one(self, key):
+            resp = self.helix_client.grequest(GraphqlQuery.users_by_email(email=key))
+            resp.raise_for_status()
+            body = resp.json()
+            if body.get("errors"):
+                raise RuntimeError(f"users graphql errors: {body['errors']}")
+            results = body["data"]["users"]["results"] or []
+            if not results:
+                return None
+            if len(results) > 1:
+                # iexact + unique email constraint should make this impossible —
+                # raise loudly if it ever happens.
+                raise RuntimeError(f"users email filter for {key!r} returned {len(results)} matches (expected ≤1)")
+            return results[0]
+
+    fetch_manager = Fetcher
+
+    def search_by_email(self, email: str | None) -> int | None:
+        return self.search(email)
 
 
 class HelixFigureTag(HelixEntityManager):

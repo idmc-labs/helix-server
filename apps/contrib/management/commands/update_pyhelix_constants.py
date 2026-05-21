@@ -1,12 +1,21 @@
 """
-Regenerate libs/pyhelix/pyhelix/constants.py from helix-server Django enums.
+Regenerate pyhelix's generated files from the helix-server Django enums and
+``schema.graphql``.
 
 pyhelix is a standalone library (different Python version + dependency set, no
-Django) so it cannot import from apps.*. To keep its enum clones in lockstep
-with the Django source-of-truth, this command renders the file from the Django
-enums. CI runs `--check` to fail the build if pyhelix constants are stale.
+Django) so it cannot import from apps.*. To keep its enum clones and GraphQL
+response types in lockstep with the helix-server source-of-truth, this command
+renders both files. CI runs ``--check`` to fail the build if either generated
+file is stale.
+
+Generated files:
+
+* ``libs/pyhelix/pyhelix/constants.py`` — enum clones (from Django enums).
+* ``libs/pyhelix/pyhelix/api_types.py`` — pydantic models for GraphQL
+  response types (from ``schema.graphql``).
 """
 
+import dataclasses
 import difflib
 import enum as _enum
 import io
@@ -16,14 +25,26 @@ from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.utils.translation import override
+from graphql.language.parser import parse as graphql_parse
+from graphql.type import (
+    GraphQLEnumType,
+    GraphQLList,
+    GraphQLNonNull,
+    GraphQLObjectType,
+    GraphQLScalarType,
+)
+from graphql.utils.build_ast_schema import build_ast_schema
 
 from apps.contrib.commons import DATE_ACCURACY
 from apps.contrib.models import Attachment
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure, FigureLocation
 from apps.event.models import EventCode
+from apps.hulk.models import HulkBulkImport
 
 PYHELIX_CONSTANTS_REL_PATH = "libs/pyhelix/pyhelix/constants.py"
+PYHELIX_API_TYPES_REL_PATH = "libs/pyhelix/pyhelix/api_types.py"
+SCHEMA_REL_PATH = "schema.graphql"
 
 # Members of Figure.FIGURE_CATEGORY_TYPES marked `# deprecated` in
 # apps/entry/models.py. Kept here because the deprecation marker is a source
@@ -97,6 +118,12 @@ ENUM_SPECS: List[EnumSpec] = [
         "ATTACHMENT_FOR_CHOICES",
         "Attachment.FOR_CHOICES",
         Attachment.FOR_CHOICES,
+        set(),
+    ),
+    (
+        "HULK_BULK_IMPORT_STATUS",
+        "HulkBulkImport.HULK_BULK_IMPORT_STATUS",
+        HulkBulkImport.HULK_BULK_IMPORT_STATUS,
         set(),
     ),
 ]
@@ -194,38 +221,274 @@ def render() -> str:
     return body + "\n\n\n" + flow + "\n\n" + stock + "\n"
 
 
+# ---------------------------------------------------------------------------
+# api_types.py: pydantic models cloned from schema.graphql response types
+# ---------------------------------------------------------------------------
+
+# GraphQL scalar -> rendered python type. ``GenericScalar`` / ``JSONString``
+# come back as opaque structures; ``EnumDescription`` is a display string the
+# server stamps on enums. Anything not in this map raises so the operator
+# notices new scalars instead of silently widening to str.
+SCALAR_TO_PY: Dict[str, str] = {
+    "ID": "str",
+    "String": "str",
+    "Int": "int",
+    "Float": "float",
+    "Boolean": "bool",
+    "DateTime": "datetime.datetime",
+    "Date": "datetime.date",
+    "EnumDescription": "str",
+    "JSONString": "str",
+    "GenericScalar": "typing.Any",
+    "Upload": "str",
+}
+
+# GraphQL enum type name -> pyhelix constants enum name. Enums in this map
+# become ``Annotated[<constant>, enum_parser(<constant>)]`` so the wire-format
+# enum *name* (e.g. ``"PENDING"``) is parsed into the typed enum. Enums not in
+# this map fall back to ``str``.
+GRAPHQL_ENUM_TO_PYHELIX_CONSTANT: Dict[str, str] = {
+    "HULK_BULK_IMPORT_STATUS": "HULK_BULK_IMPORT_STATUS",
+}
+
+
+@dataclasses.dataclass
+class GraphqlTypeSpec:
+    """One graphql object type to clone into pyhelix as a pydantic model."""
+
+    graphql_name: str
+    py_name: str
+    # graphql field names (camelCase) to render — limits the model to the
+    # selection set used by pyhelix queries so unused fields don't pollute
+    # the generated model.
+    fields: List[str]
+
+
+# Order matters: types referenced by later entries (e.g. ``HulkBulkImportType``
+# references ``HulkBulkImportDatasetType``) must appear first. Forward refs work
+# via ``from __future__ import annotations`` so ordering is not strictly
+# required, but we keep dependents-after-deps for readability.
+GRAPHQL_TYPE_SPECS: List[GraphqlTypeSpec] = [
+    GraphqlTypeSpec(
+        graphql_name="HulkBulkImportDatasetType",
+        py_name="HulkBulkImportDatasetState",
+        fields=[
+            "id",
+            "importType",
+            "successCount",
+            "failureCount",
+            "importFile",
+            "successFile",
+            "failureFile",
+        ],
+    ),
+    GraphqlTypeSpec(
+        graphql_name="HulkBulkImportType",
+        py_name="HulkBulkImportState",
+        fields=[
+            "id",
+            "status",
+            "statusDisplay",
+            "successCount",
+            "failureCount",
+            "startedAt",
+            "completedAt",
+            "datasets",
+        ],
+    ),
+]
+
+
+@dataclasses.dataclass
+class _FieldRenderInfo:
+    uses_datetime: bool = False
+    uses_typing_extensions: bool = False
+    enum_constants: Set[str] = dataclasses.field(default_factory=set)
+
+
+def _camel_to_snake(name: str) -> str:
+    out: List[str] = []
+    for i, ch in enumerate(name):
+        if ch.isupper() and i > 0:
+            out.append("_")
+        out.append(ch.lower())
+    return "".join(out)
+
+
+def _render_inner_type(t: Any, type_map: Dict[str, str], info: _FieldRenderInfo) -> str:
+    if isinstance(t, GraphQLNonNull):
+        return _render_inner_type(t.of_type, type_map, info)
+    if isinstance(t, GraphQLList):
+        return f"typing.List[{_render_inner_type(t.of_type, type_map, info)}]"
+    if isinstance(t, GraphQLScalarType):
+        py = SCALAR_TO_PY.get(t.name)
+        if py is None:
+            raise CommandError(f"Unmapped GraphQL scalar: {t.name}")
+        if py.startswith("datetime."):
+            info.uses_datetime = True
+        return py
+    if isinstance(t, GraphQLEnumType):
+        const = GRAPHQL_ENUM_TO_PYHELIX_CONSTANT.get(t.name)
+        if const:
+            info.enum_constants.add(const)
+            return const
+        return "str"
+    if isinstance(t, GraphQLObjectType):
+        py = type_map.get(t.name)
+        if py is None:
+            raise CommandError(
+                f"GraphQL object type {t.name!r} referenced but not declared in GRAPHQL_TYPE_SPECS",
+            )
+        return py
+    raise CommandError(f"Unhandled GraphQL type at field render time: {t!r}")
+
+
+def _innermost_named_type(t: Any) -> Any:
+    while isinstance(t, (GraphQLNonNull, GraphQLList)):
+        t = t.of_type
+    return t
+
+
+def _render_field(field_name: str, field_type: Any, type_map: Dict[str, str]) -> Tuple[str, _FieldRenderInfo]:
+    info = _FieldRenderInfo()
+    nullable = not isinstance(field_type, GraphQLNonNull)
+    inner = _render_inner_type(field_type, type_map, info)
+
+    bottom = _innermost_named_type(field_type)
+    if isinstance(bottom, GraphQLEnumType) and bottom.name in GRAPHQL_ENUM_TO_PYHELIX_CONSTANT:
+        const = GRAPHQL_ENUM_TO_PYHELIX_CONSTANT[bottom.name]
+        info.uses_typing_extensions = True
+        inner = f"typing_extensions.Annotated[{inner}, enum_parser({const})]"
+
+    py_name = _camel_to_snake(field_name)
+    alias_needed = py_name != field_name
+
+    rendered_type = f"typing.Optional[{inner}]" if nullable else inner
+
+    field_args: List[str] = []
+    if nullable:
+        field_args.append("default=None")
+    if alias_needed:
+        field_args.append(f'alias="{field_name}"')
+
+    if not field_args:
+        line = f"    {py_name}: {rendered_type}"
+    else:
+        line = f"    {py_name}: {rendered_type} = Field({', '.join(field_args)})"
+    return line, info
+
+
+API_TYPES_HEADER_PREFIX = (
+    "# AUTOGENERATED - do not edit.\n"
+    "# Regenerate via: ./manage.py update_pyhelix_constants\n"
+    "# Source of truth: helix-server schema.graphql.\n"
+    "from __future__ import annotations\n"
+)
+
+
+def _build_api_types_header(
+    uses_datetime: bool,
+    uses_typing_extensions: bool,
+    enum_constants: Set[str],
+) -> str:
+    lines: List[str] = [API_TYPES_HEADER_PREFIX.rstrip("\n"), ""]
+    if uses_datetime:
+        lines.append("import datetime")
+    lines.append("import typing")
+    if uses_typing_extensions:
+        lines.append("")
+        lines.append("import typing_extensions")
+    lines.append("from pydantic import BaseModel, ConfigDict, Field")
+    if enum_constants:
+        lines.append("")
+        lines.append(f"from .constants import {', '.join(sorted(enum_constants))}")
+        lines.append("from .parsers import enum_parser")
+    return "\n".join(lines)
+
+
+def render_api_types() -> str:
+    schema_path = os.path.join(settings.BASE_DIR, SCHEMA_REL_PATH)
+    with open(schema_path, "r", encoding="utf-8") as f:
+        schema = build_ast_schema(graphql_parse(f.read()))
+
+    type_map = {spec.graphql_name: spec.py_name for spec in GRAPHQL_TYPE_SPECS}
+
+    blocks: List[str] = []
+    total = _FieldRenderInfo()
+    for spec in GRAPHQL_TYPE_SPECS:
+        gtype = schema.get_type(spec.graphql_name)
+        if gtype is None:
+            raise CommandError(f"GraphQL type {spec.graphql_name!r} not found in {SCHEMA_REL_PATH}")
+        if not isinstance(gtype, GraphQLObjectType):
+            raise CommandError(f"{spec.graphql_name} is not an object type")
+
+        buf = io.StringIO()
+        buf.write(f"# Clone of {spec.graphql_name}\n")
+        buf.write(f"class {spec.py_name}(BaseModel):\n")
+        buf.write("    model_config = ConfigDict(populate_by_name=True)\n")
+        buf.write("\n")
+        for field_name in spec.fields:
+            if field_name not in gtype.fields:
+                raise CommandError(f"Field {field_name!r} not on GraphQL type {spec.graphql_name}")
+            line, info = _render_field(field_name, gtype.fields[field_name].type, type_map)
+            buf.write(line + "\n")
+            total.uses_datetime = total.uses_datetime or info.uses_datetime
+            total.uses_typing_extensions = total.uses_typing_extensions or info.uses_typing_extensions
+            total.enum_constants.update(info.enum_constants)
+        blocks.append(buf.getvalue().rstrip("\n"))
+
+    header = _build_api_types_header(total.uses_datetime, total.uses_typing_extensions, total.enum_constants)
+    return header + "\n\n\n" + "\n\n\n".join(blocks) + "\n"
+
+
+# ---------------------------------------------------------------------------
+# Command
+# ---------------------------------------------------------------------------
+
+
+def _check_or_write(
+    target_rel_path: str,
+    generated: str,
+    check: bool,
+    stderr,
+    stdout,
+    style,
+) -> None:
+    target = os.path.join(settings.BASE_DIR, target_rel_path)
+    if check:
+        try:
+            with open(target, "r", encoding="utf-8") as f:
+                current = f.read()
+        except FileNotFoundError:
+            raise CommandError(f"{target_rel_path} is missing.")
+        if current != generated:
+            diff = difflib.unified_diff(
+                current.splitlines(keepends=True),
+                generated.splitlines(keepends=True),
+                fromfile=f"{target_rel_path} (on disk)",
+                tofile=f"{target_rel_path} (expected)",
+            )
+            stderr.write("".join(diff))
+            raise CommandError(f"{target_rel_path} is stale. Run: ./manage.py update_pyhelix_constants")
+        stdout.write(style.SUCCESS(f"{target_rel_path} is up to date."))
+        return
+
+    with open(target, "w", encoding="utf-8") as f:
+        f.write(generated)
+    stdout.write(style.SUCCESS(f"Wrote {target_rel_path}"))
+
+
 class Command(BaseCommand):
-    help = "Regenerate libs/pyhelix/pyhelix/constants.py from helix-server Django enums."
+    help = "Regenerate pyhelix's constants.py (Django enums) and api_types.py (schema.graphql response types)."
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--check",
             action="store_true",
-            help="Exit 1 if the generated content differs from the file on disk (for CI).",
+            help="Exit 1 if any generated content differs from the file on disk (for CI).",
         )
 
     def handle(self, *args, **options):
-        target = os.path.join(settings.BASE_DIR, PYHELIX_CONSTANTS_REL_PATH)
-        generated = render()
-
-        if options["check"]:
-            try:
-                with open(target, "r", encoding="utf-8") as f:
-                    current = f.read()
-            except FileNotFoundError:
-                raise CommandError(f"{PYHELIX_CONSTANTS_REL_PATH} is missing.")
-            if current != generated:
-                diff = difflib.unified_diff(
-                    current.splitlines(keepends=True),
-                    generated.splitlines(keepends=True),
-                    fromfile=f"{PYHELIX_CONSTANTS_REL_PATH} (on disk)",
-                    tofile=f"{PYHELIX_CONSTANTS_REL_PATH} (expected)",
-                )
-                self.stderr.write("".join(diff))
-                raise CommandError(f"{PYHELIX_CONSTANTS_REL_PATH} is stale. Run: ./manage.py update_pyhelix_constants")
-            self.stdout.write(self.style.SUCCESS(f"{PYHELIX_CONSTANTS_REL_PATH} is up to date."))
-            return
-
-        with open(target, "w", encoding="utf-8") as f:
-            f.write(generated)
-        self.stdout.write(self.style.SUCCESS(f"Wrote {PYHELIX_CONSTANTS_REL_PATH}"))
+        check = options["check"]
+        _check_or_write(PYHELIX_CONSTANTS_REL_PATH, render(), check, self.stderr, self.stdout, self.style)
+        _check_or_write(PYHELIX_API_TYPES_REL_PATH, render_api_types(), check, self.stderr, self.stdout, self.style)

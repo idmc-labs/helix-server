@@ -121,6 +121,26 @@ def iter_jsonl_field(field_file) -> typing.Optional[typing.Generator]:
     return _gen()
 
 
+def _normalize_graphql_errors(errors):
+    """
+    Convert a list of graphql errors (``GraphQLLocatedError``/``GraphQLError``)
+    into plain JSON-serializable dicts so they can be round-tripped through the
+    failure JSONL artifacts. Anything without ``.formatted`` falls back to a
+    ``{"message": str(error)}`` dict — never let a raw exception object leak
+    into ``handler.error_list``.
+    """
+    if not errors:
+        return errors
+    normalized = []
+    for err in errors:
+        formatted = getattr(err, "formatted", None)
+        if isinstance(formatted, dict):
+            normalized.append(formatted)
+        else:
+            normalized.append({"message": str(err)})
+    return normalized
+
+
 def _jsonl_default(o):
     if isinstance(o, uuid.UUID):
         return str(o)
@@ -229,6 +249,7 @@ class HulkHelixModelImportBaseHandler:
 
         self.success_list = []
         self.error_list = []
+        self._impersonation_user_cache: dict[int, typing.Optional[User]] = {}
 
     @abc.abstractmethod
     def graphql_response_parser_fn(self, response):
@@ -259,8 +280,11 @@ class HulkHelixModelImportBaseHandler:
 
     def _handle_mutation(self, mutation: str, variables, *, user_override: typing.Optional[User] = None):
         client = self.client_cache.get_client(user_override)
-        gql_data, gql_errors = client.run_mutation(mutation, variables)
-        # This should't happen in theory - Should be validated using unit test cases
+        gql_data, gql_errors_raw = client.run_mutation(mutation, variables)
+        # graphene returns ``GraphQLLocatedError`` / ``GraphQLError`` objects which
+        # aren't JSON-serializable. Normalize to ``.formatted`` dicts at the boundary
+        # so downstream row-error payloads (and the failure JSONL files) stay JSON-safe.
+        gql_errors = _normalize_graphql_errors(gql_errors_raw)
         if gql_errors:
             logger.error(
                 "Error found on hulk bulk operation",
@@ -322,7 +346,11 @@ class HulkHelixModelImportBaseHandler:
     def _resolve_impersonation(self, impersonate_as: typing.Optional[int]) -> typing.Optional[User]:
         if impersonate_as is None:
             return None
-        user = User.objects.filter(pk=impersonate_as, is_active=True).first()
+        if impersonate_as in self._impersonation_user_cache:
+            user = self._impersonation_user_cache[impersonate_as]
+        else:
+            user = User.objects.filter(pk=impersonate_as, is_active=True).first()
+            self._impersonation_user_cache[impersonate_as] = user
         if user is None:
             raise _ImpersonatedUserNotFound(f"impersonate_as user {impersonate_as} not found or inactive")
         return user

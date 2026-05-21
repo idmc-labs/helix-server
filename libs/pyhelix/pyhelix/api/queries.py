@@ -119,6 +119,33 @@ class GraphqlQuery:
         }
 
     @classmethod
+    def users_by_email(cls, email: str):
+        """
+        Look up a user by exact email (case-insensitive) via
+        ``UserFilter.email``. Helix masks ``UserType.email`` for non-self users
+        so we can't read it back — we trust the filter and pick the single
+        match.
+        """
+        return {
+            "operationName": "pyhelixUsersByEmail",
+            "query": """
+                query pyhelixUsersByEmail($email: String!) {
+                  users(page: 1, pageSize: 2, filters: {email: $email, includeInactive: false}) {
+                    totalCount
+                    results {
+                      id
+                      fullName
+                      isActive
+                    }
+                  }
+                }
+             """,
+            "variables": {
+                "email": email,
+            },
+        }
+
+    @classmethod
     def countries(cls, page: int, page_size: int = 100):
         return {
             "operationName": "pyhelixCountries",
@@ -131,6 +158,7 @@ class GraphqlQuery:
                     results {
                       id
                       name
+                      iso2
                       iso3
                       idmcShortName
                     }
