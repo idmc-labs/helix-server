@@ -24,9 +24,9 @@ from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from apps.contrib.models import SourcePreview
-from apps.hulk.bulk.db_snapshot import dump_db_state
 from apps.hulk.bulk.handler import HulkBulkImportHandler
 from apps.hulk.models import HulkBulkImport, HulkBulkImportDataset
+from apps.hulk.tests._db_snapshot import dump_db_state
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     CountryFactory,

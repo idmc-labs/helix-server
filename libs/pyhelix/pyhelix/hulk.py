@@ -11,6 +11,7 @@ import httpx
 from pydantic import ValidationError
 
 from pyhelix.api.api import HULK_BULK_INPUT_FIELDS, HelixClient, helix_client_context
+from pyhelix.api_types import HulkBulkImportState
 
 from .models import (
     HulkAttachmentImport,
@@ -43,13 +44,13 @@ class HulkBulkImportRun:
 
     Wraps the ``bulk_id`` and the originating :class:`HelixClient` so callers
     can poll status, wait for terminal state, and pull success/failure
-    artefacts without re-passing the client around.
+    artifacts without re-passing the client around.
     """
 
     helix_client: HelixClient
     bulk_id: str
 
-    def get_state(self) -> dict:
+    def get_state(self) -> HulkBulkImportState:
         """Return the current ``hulkBulkImport(id)`` payload."""
         return self.helix_client.get_hulk_bulk_import(self.bulk_id)
 
@@ -58,12 +59,12 @@ class HulkBulkImportRun:
         *,
         timeout: float = 3600.0,
         poll_interval: float = 5.0,
-        progress_cb: typing.Optional[typing.Callable[[dict], None]] = None,
-    ) -> dict:
+        progress_cb: typing.Optional[typing.Callable[[HulkBulkImportState], None]] = None,
+    ) -> HulkBulkImportState:
         """
         Block until the import reaches a terminal status (COMPLETED / FAILED /
         SKIPPED) and return the final state. ``progress_cb`` is invoked on
-        every poll with the latest state dict.
+        every poll with the latest state.
         """
         return self.helix_client.wait_for_hulk_bulk_import(
             self.bulk_id,
@@ -83,18 +84,17 @@ class HulkBulkImportRun:
         state = self.get_state()
         out_dir.mkdir(parents=True, exist_ok=True)
         type_to_resource = {import_type: short for short, import_type in HULK_BULK_INPUT_FIELDS}
-        artefacts: typing.Dict[str, typing.Dict[str, typing.Optional[pathlib.Path]]] = {}
-        for ds in state.get("datasets") or []:
-            resource = type_to_resource.get(ds["importType"])
+        artifacts: typing.Dict[str, typing.Dict[str, typing.Optional[pathlib.Path]]] = {}
+        for ds in state.datasets or []:
+            resource = type_to_resource.get(ds.import_type)
             if resource is None:
                 continue
             entry: typing.Dict[str, typing.Optional[pathlib.Path]] = {}
-            for kind, url_key in (("success", "successFile"), ("failure", "failureFile")):
-                url = ds.get(url_key)
+            for kind, url in (("success", ds.success_file), ("failure", ds.failure_file)):
                 dst = out_dir / f"{kind}_{resource}.jsonl"
                 entry[kind] = dst if (url and _download_to(url, dst)) else None
-            artefacts[resource] = entry
-        return artefacts
+            artifacts[resource] = entry
+        return artifacts
 
 
 def _download_to(url: str, dst: pathlib.Path) -> bool:
@@ -207,7 +207,7 @@ class HulkDataHandler:
         """
         Upload the JSONL files produced by this handler to helix via the
         ``triggerHulkBulkImport`` mutation and return a :class:`HulkBulkImportRun`
-        the caller can poll for status / pull artefacts.
+        the caller can poll for status / pull artifacts.
 
         Resources whose JSONL is empty (or missing) are skipped — helix's
         serializer requires at least one non-empty dataset, otherwise this
