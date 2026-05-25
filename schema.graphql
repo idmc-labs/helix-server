@@ -234,6 +234,16 @@ type BulkUpdateFigures {
   deletedResult: [FigureType!]
 }
 
+enum CLIENT_TYPE {
+  ACADEMIA_THINK_TANK
+  ONG_INGO
+  INTERGOVERNMENTAL_ORGANIZATION
+  GOVERNMENT
+  ICRC_IFRC_RED_CROSS
+  UN
+  OTHER
+}
+
 enum CRISIS_TYPE {
   CONFLICT
   DISASTER
@@ -270,12 +280,14 @@ input ClientCreateInputType {
   optedOutOfEmails: Boolean
   shareSource: Boolean
   description: String
+  type: CLIENT_TYPE!
 }
 
 input ClientFilterDataInputType {
   search: String
   isActive: Boolean
   useCases: [String!]
+  type: [String!]
   shareSource: Boolean
 }
 
@@ -333,6 +345,8 @@ type ClientType {
   shareSource: Boolean!
   useCases: [USE_CASE_TYPES!]
   useCasesDisplay: [String]
+  type: CLIENT_TYPE!
+  typeDisplay: EnumDescription!
 }
 
 input ClientUpdateInputType {
@@ -348,6 +362,7 @@ input ClientUpdateInputType {
   optedOutOfEmails: Boolean
   shareSource: Boolean
   description: String
+  type: CLIENT_TYPE
 }
 
 type CloneEvent {

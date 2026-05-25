@@ -10,6 +10,7 @@ from apps.contrib.enums import (
     AttachmentForGrapheneEnum,
     BulkApiOperationActionEnum,
     BulkApiOperationStatusEnum,
+    ClientTypeEnum,
     ClientUseCaseEnum,
     DownloadTypeGrapheneEnum,
     ExcelGenerationStatusGrapheneEnum,
@@ -65,6 +66,8 @@ class ExcelExportsListType(CustomDjangoListObjectType):
 class ClientType(DjangoObjectType):
     use_cases = graphene.List(graphene.NonNull(ClientUseCaseEnum), description="List of use cases for the client.")
     use_cases_display = graphene.List(graphene.String, description="Display string for the client's use case.")
+    type = graphene.Field(ClientTypeEnum, required=True)
+    type_display = EnumDescription(source="get_type_display", required=True)
 
     class Meta:
         model = Client

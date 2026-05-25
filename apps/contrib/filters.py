@@ -43,6 +43,7 @@ class ExcelExportFilter(django_filters.FilterSet):
 class ClientFilter(MultiWordSearchFilterSet):
     is_active = django_filters.BooleanFilter()
     use_cases = StringListFilter(method="filter_use_cases")
+    type = StringListFilter(method="filter_type")
     share_source = django_filters.BooleanFilter()
 
     class Meta:
@@ -53,6 +54,10 @@ class ClientFilter(MultiWordSearchFilterSet):
     def filter_use_cases(self, qs, name, value):
         enum_values = [Client.USE_CASE_TYPES[use_case].value for use_case in value]
         return qs.filter(use_cases__overlap=enum_values)
+
+    def filter_type(self, qs, name, value):
+        enum_values = [Client.CLIENT_TYPE[type].value for type in value]
+        return qs.filter(type__in=enum_values)
 
     @property
     def qs(self):
