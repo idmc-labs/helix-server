@@ -1,10 +1,11 @@
 import csv
-import datetime
 import os
 import re
 import typing
+from datetime import datetime
 from decimal import Decimal
 from functools import cached_property
+from typing import Union
 
 from django.core.management.base import BaseCommand
 from django.db import transaction
@@ -25,7 +26,8 @@ DataRow = typing.TypedDict(
         "AHHS": str,
         "ISO3": str,
         "Data source category": str,
-        "Reference date": str,
+        "Reference year": str,
+        "Gap filling method": str,
         "Source": typing.Optional[str],  # We have default value "No data"
         "Source link": typing.Optional[str],  # This should be nullable
         "Notes": typing.Optional[str],
@@ -34,8 +36,11 @@ DataRow = typing.TypedDict(
 )
 
 
-def format_date(date: str) -> datetime.datetime:
-    return datetime.datetime.strptime(date, "%Y-%m-%d")
+def format_date(date: Union[str, datetime]) -> datetime:
+    if isinstance(date, datetime):
+        return date
+
+    return datetime.strptime(date, "%Y-%m-%d")
 
 
 class Command(BaseCommand):
@@ -45,7 +50,7 @@ class Command(BaseCommand):
         "AHHS",
         "ISO3",
         "Data source category",
-        "Reference date",
+        "Reference year",
     }
 
     def add_arguments(self, parser):
@@ -129,7 +134,7 @@ class Command(BaseCommand):
         if iso3 := row.get("ISO3"):
             country_id = self.iso3_to_country_id.get(iso3)
 
-        created_at = format_date(row["Reference date"])
+        created_at = format_date(datetime.today())
 
         modified_at = created_at
         if idmc_update_date := row.get("IDMC update date"):
@@ -140,10 +145,16 @@ class Command(BaseCommand):
         if size is None or size == "":
             size = 0
 
+        # Gap filling method level to value mapping
+        label_to_value_map = {label: value for value, label in HouseholdSize.GAP_FILLING_METHOD.__labels__.items()}
+        gap_filling_method = label_to_value_map.get(row["Gap filling method"])
+
         return {
             # Data from csv
             "size": size,
             "year": row["Year"],
+            "reference_year": row["Reference year"],
+            "gap_filling_method": gap_filling_method,
             "country": country_id,
             "data_source_category": row["Data source category"],
             "source": row.get("Source", "No Data"),
@@ -192,6 +203,7 @@ class Command(BaseCommand):
                     for field, error in errors.items():
                         self.stdout.write(self.style.ERROR(f"'{field}': {error}"))
                 raise Exception("Import failed")
+
             return household_values
 
     def update_figure(
@@ -200,7 +212,7 @@ class Command(BaseCommand):
         figure: Figure,
         old_household_sizes: typing.Dict[str, typing.Optional[HouseholdSize]],
         new_household_sizes: typing.Dict[str, typing.Optional[HouseholdSize]],
-        retroactive_update_date: datetime.datetime,
+        retroactive_update_date: datetime,
         retroactive_notes_cutoff_year: int,
     ):
         old_household_size = old_household_sizes.get(figure.country.iso3)
@@ -283,7 +295,7 @@ class Command(BaseCommand):
         old_household_sizes: typing.Dict[str, typing.Optional[HouseholdSize]],
         new_household_sizes: typing.Dict[str, typing.Optional[HouseholdSize]],
         filter_countries: typing.Set[str],
-        retroactive_update_date: datetime.datetime,
+        retroactive_update_date: datetime,
         retroactive_notes_cutoff_year: int,
     ):
         bulk_mgr = BulkUpdateManager(
