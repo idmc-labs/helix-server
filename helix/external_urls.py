@@ -29,7 +29,33 @@ router.register("displacements", DisplacementDataViewSet, "displacements-view")
 router.register("public-figure-analyses", PublicFigureAnalysisViewSet, "public-figure-analysis-view-set")
 
 urlpatterns = [
-    path("idus/last-180-days/", IdusFlatCachedView.as_view()),
+    path(
+        "idus/last-180-days/",
+        IdusFlatCachedView.as_view(
+            {
+                "get": "export_json",
+            }
+        ),
+        name="idus-180-json-view",
+    ),
+    path(
+        "idus/last-180-days-excel/",
+        IdusFlatCachedView.as_view(
+            {
+                "get": "export_excel",
+            }
+        ),
+        name="idus-180-excel-view",
+    ),
+    path(
+        "idus/last-180-days-geojson/",
+        IdusFlatCachedView.as_view(
+            {
+                "get": "export_geojson",
+            }
+        ),
+        name="idus-180-geojson-view",
+    ),
     path(
         "idus/all/",
         IdusAllFlatCachedView.as_view(
@@ -40,7 +66,7 @@ urlpatterns = [
         name="idus-json-view",
     ),
     path(
-        "idus/all/excel-export/",
+        "idus/all-excel/",
         IdusAllFlatCachedView.as_view(
             {
                 "get": "export_excel",
@@ -49,7 +75,7 @@ urlpatterns = [
         name="idus-excel-view",
     ),
     path(
-        "idus/all/geojson-export/",
+        "idus/all-geojson/",
         IdusAllFlatCachedView.as_view(
             {
                 "get": "export_geojson",
@@ -57,7 +83,33 @@ urlpatterns = [
         ),
         name="idus-geojson-view",
     ),
-    path("idus/all/disaster/", IdusAllDisasterCachedView.as_view()),
+    path(
+        "idus/all/disaster/",
+        IdusAllDisasterCachedView.as_view(
+            {
+                "get": "export_json",
+            }
+        ),
+        name="idus-json-view",
+    ),
+    path(
+        "idus/all/disaster-excel/",
+        IdusAllDisasterCachedView.as_view(
+            {
+                "get": "export_excel",
+            }
+        ),
+        name="idus-excel-view",
+    ),
+    path(
+        "idus/all/disaster-geojson/",
+        IdusAllDisasterCachedView.as_view(
+            {
+                "get": "export_geojson",
+            }
+        ),
+        name="idus-geojson-view",
+    ),
     path("gidd/", include(router.urls)),
     # NOTE: If we do not add these manually, the are not visible in GIDD
     path(

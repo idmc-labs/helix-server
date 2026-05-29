@@ -1,19 +1,19 @@
 import typing
 from pathlib import Path
+from typing import Optional
 
 from django.contrib.postgres.aggregates.general import ArrayAgg, StringAgg
 from django.contrib.postgres.fields import ArrayField
 from django.db.models import Avg, Case, CharField, F, Func, Q, Value, When
 from django.db.models.functions import Cast, Coalesce, Concat, ExtractYear, Lower
-from django.http import FileResponse
+from django.shortcuts import redirect
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from drf_spectacular.utils import extend_schema
 from openpyxl import Workbook
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
 
 from apps.common.utils import (
@@ -25,8 +25,17 @@ from apps.common.utils import (
 from apps.entry.models import ExternalApiDump, Figure
 from apps.entry.serializers import FigureReadOnlySerializer
 from apps.gidd.views import client_id
+from helix.storages import TemporaryStorageEnableAuthString, get_external_storage
 from utils.common import track_gidd
 from utils.db import Array
+
+external_storage = get_external_storage()
+
+CONTENT_TYPES = {
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "json": "application/json",
+    "geojson": "application/geo+json",
+}
 
 
 def get_idu_data(filters=None):
@@ -658,8 +667,41 @@ class FigureViewSet(viewsets.ReadOnlyModelViewSet):
         return get_idu_data()
 
 
+CONTENT_TYPES = {
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "json": "application/json",
+    "geojson": "application/geo+json",
+}
+
+
 class ExternalEndpointBaseCachedViewMixin:
     ENDPOINT_TYPE = None
+
+    def get_content_type(self, filename: str) -> Optional[str]:
+        extension = Path(filename).suffix.lower().lstrip(".")
+        return CONTENT_TYPES.get(extension)
+
+    def build_download_params(self, filename: str) -> dict:
+        params = {
+            "ResponseContentDisposition": f'attachment; filename="{filename}"',
+        }
+
+        content_type = self.get_content_type(filename)
+        if content_type:
+            params["ResponseContentType"] = content_type
+
+        return params
+
+    def download_file(self, request, obj):
+        filename = Path(obj.dump_file.name).name
+        params = self.build_download_params(filename)
+        with TemporaryStorageEnableAuthString(external_storage):
+            url = external_storage.url(
+                obj.dump_file.name,
+                parameters=params,
+            )
+
+        return redirect(url)
 
     @client_id
     def get(self, request, data_format=ExternalApiDump.Format.JSON):
@@ -679,78 +721,51 @@ class ExternalEndpointBaseCachedViewMixin:
             return Response(_empty_response, status=status.HTTP_404_NOT_FOUND)
 
         if api_dump.status == ExternalApiDump.Status.COMPLETED:
-            return FileResponse(
-                api_dump.dump_file.open("rb"),
-                as_attachment=True,
-                filename=api_dump.dump_file.name.split("/")[-1],
-            )
+            return self.download_file(request, api_dump)
+
         if api_dump.status == ExternalApiDump.Status.FAILED:
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Finally, for pending. If we have a dump send it
         if api_dump.dump_file.name is not None:
-            return FileResponse(
-                api_dump.dump_file.open("rb"),
-                as_attachment=True,
-                filename=api_dump.dump_file.name.split("/")[-1],
-            )
+            return self.download_file(request, api_dump)
 
         # Else send 202 response
         return Response(_empty_response, status=status.HTTP_202_ACCEPTED)
 
 
-@extend_schema_view(
-    get=extend_schema(
-        description=Path("docs/idus/export-description.md").read_text(),
-        responses=FigureReadOnlySerializer,
-        tags=["IDU"],
-    )
+@extend_schema(
+    description=Path("docs/idus/export-description.md").read_text(),
+    responses=FigureReadOnlySerializer,
+    tags=["IDU"],
 )
-class IdusFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
+class BaseIdusCachedView(ExternalEndpointBaseCachedViewMixin, ViewSet):
+    @client_id
+    @action(detail=False, methods=["get"], url_path="export-excel")
+    def export_excel(self, request):
+        return self._export(request, ExternalApiDump.Format.EXCEL)
+
+    @client_id
+    @action(detail=False, methods=["get"], url_path="export-json")
+    def export_json(self, request):
+        return self._export(request, ExternalApiDump.Format.JSON)
+
+    @client_id
+    @action(detail=False, methods=["get"], url_path="export-geojson")
+    def export_geojson(self, request):
+        return self._export(request, ExternalApiDump.Format.GEOJSON)
+
+    def _export(self, request, fmt):
+        return super().get(request, data_format=fmt)
+
+
+class IdusFlatCachedView(BaseIdusCachedView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS
 
 
-@extend_schema(
-    description=Path("docs/idus/export-description.md").read_text(),
-    responses=FigureReadOnlySerializer,
-    tags=["IDU"],
-)
-class IdusAllFlatCachedView(ExternalEndpointBaseCachedViewMixin, ViewSet):
+class IdusAllFlatCachedView(BaseIdusCachedView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL
 
-    @client_id
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="export-excel",
-    )
-    def export_excel(self, request):
-        # cannot return self.get(...) here as it goes into recursion
-        return ExternalEndpointBaseCachedViewMixin.get(self, request, data_format=ExternalApiDump.Format.EXCEL)
 
-    @client_id
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="export-json",
-    )
-    def export_json(self, request):
-        return ExternalEndpointBaseCachedViewMixin.get(self, request, data_format=ExternalApiDump.Format.JSON)
-
-    @client_id
-    @action(
-        detail=False,
-        methods=["get"],
-        url_path="export-geojson",
-    )
-    def export_geojson(self, request):
-        return ExternalEndpointBaseCachedViewMixin.get(self, request, data_format=ExternalApiDump.Format.GEOJSON)
-
-
-@extend_schema(
-    description=Path("docs/idus/export-description.md").read_text(),
-    responses=FigureReadOnlySerializer,
-    tags=["IDU"],
-)
-class IdusAllDisasterCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
+class IdusAllDisasterCachedView(BaseIdusCachedView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER

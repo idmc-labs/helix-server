@@ -1,4 +1,4 @@
-This endpoint provides quality-controlled, annually validated data on internal displacement due to conflicts and disasters, disaggregated by caseload. This dataset is disaggregated by caseload, location and event.
+This dataset provides the most up-to-date estimates of new occurrences of internal displacement triggered by conflicts and disasters. It encompasses data on internal displacements (or population movements) which are obtained through event-based monitoring. The IDU figures are likely to change over time as more information is available. Curated figures are published as part of the GIDD dataset.
 
 | Field                         | Description |
 |-------------------------------|-------------|
