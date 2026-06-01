@@ -45,7 +45,7 @@ class TestExcelDownload(HelixTestCase):
         self.request.user = self.admin
         self.context["request"] = self.request
 
-        metadata = {"type": "disaggregated-by-location", "extra": [1, 2, {"nested": True}]}
+        metadata = {"explode_by_locations": True, "extra": [1, 2, {"nested": True}]}
         serializer = ExcelDownloadSerializer(
             data=dict(
                 download_type=ExcelDownload.DOWNLOAD_TYPES.FIGURE.value,

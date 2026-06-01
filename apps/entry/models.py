@@ -988,8 +988,8 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters, metadata=None):
-        if (metadata or {}).get("type") == "disaggregated-by-location":
-            raise NotImplementedError("disaggregated-by-location export is not yet implemented")
+        if (metadata or {}).get("explode_by_locations") is True:
+            raise NotImplementedError("explode-by-locations export is not yet implemented")
         from apps.extraction.filters import ReportFigureExtractionFilterSet
 
         class DummyRequest:

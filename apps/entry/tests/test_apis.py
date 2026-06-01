@@ -315,25 +315,25 @@ class TestExportFigures(HelixGraphQLTestCase):
         self.force_login(self.editor)
         response = self.query(
             self.mutation,
-            variables={"metadata": {"type": "DISAGGREGATED_BY_LOCATION"}},
+            variables={"metadata": {"explodeByLocations": True}},
         )
         self.assertResponseNoErrors(response)
         content = json.loads(response.content)
         self.assertTrue(content["data"]["exportFigures"]["ok"], content)
         instance_id = content["data"]["exportFigures"]["result"]["id"]
         instance = ExcelDownload.objects.get(id=instance_id)
-        self.assertEqual(instance.metadata, {"type": "disaggregated-by-location"})
+        self.assertEqual(instance.metadata, {"explode_by_locations": True})
 
 
 class TestFigureGetExcelSheetsData(HelixGraphQLTestCase):
-    def test_disaggregated_by_location_raises_not_implemented(self):
+    def test_explode_by_locations_raises_not_implemented(self):
         """Phase 1 stub: Figure.get_excel_sheets_data raises NotImplementedError for the new selector."""
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
         with self.assertRaises(NotImplementedError):
             Figure.get_excel_sheets_data(
                 user_id=editor.id,
                 filters={},
-                metadata={"type": "disaggregated-by-location"},
+                metadata={"explode_by_locations": True},
             )
 
 

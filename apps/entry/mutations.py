@@ -270,12 +270,8 @@ class ExportEntries(ExportBaseMutation):
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.ENTRY
 
 
-class FigureExportTypeEnum(graphene.Enum):
-    DISAGGREGATED_BY_LOCATION = "disaggregated-by-location"
-
-
 class ExportFiguresMetadataInputType(graphene.InputObjectType):
-    type = graphene.Field(FigureExportTypeEnum, required=False)
+    explode_by_locations = graphene.Boolean(required=False)
 
 
 class ExportFigures(ExportBaseMutation):
