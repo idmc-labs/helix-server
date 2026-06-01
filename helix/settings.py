@@ -88,6 +88,7 @@ env = environ.Env(
     ENABLE_DANGER_MODE=(bool, False),
     # Exports
     EXCEL_EXPORT_CONCURRENT_DOWNLOAD_LIMIT=(int, 10),
+    GOOGLE_ANALYTICS_ID=(str, None),
 )
 
 ENABLE_DANGER_MODE = env("ENABLE_DANGER_MODE")
@@ -112,6 +113,7 @@ IN_AWS_COPILOT_ECS = not not env("COPILOT_SERVICE_NAME")
 
 # See if we are inside a test environment (pytest)
 PYTEST_XDIST_WORKER = env("PYTEST_XDIST_WORKER")
+GOOGLE_ANALYTICS_ID = env("GOOGLE_ANALYTICS_ID")
 TESTING = (
     any(
         [
@@ -276,6 +278,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "helix.context_processors.analytics",
             ],
         },
     },
@@ -734,7 +737,7 @@ SPECTACULAR_SETTINGS = {
         "defaultModelRendering": "model",
         "syntaxHighlight": False,  # Disabling syntax highlighting as it takes considerable time to load
         "persistAuthorization": True,
-        "displayOperationId ": False,
+        "displayOperationId": False,
         "tryItOutEnabled": True,
     },
     "SWAGGER_UI_DIST": "SIDECAR",  # shorthand to use the sidecar instead
