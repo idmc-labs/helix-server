@@ -104,7 +104,7 @@ class Crisis(MetaInformationAbstractModel, models.Model):
         }
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         from apps.crisis.filters import CrisisFilter
 
         class DummyRequest:

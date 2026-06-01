@@ -68,7 +68,7 @@ class Contact(MetaInformationArchiveAbstractModel, models.Model):
         return " ".join([name for name in [self.first_name, self.last_name] if name]) or self.email
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         from apps.contact.filters import ContactFilter
 
         class DummyRequest:

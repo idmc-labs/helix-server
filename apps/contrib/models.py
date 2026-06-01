@@ -280,6 +280,11 @@ class ExcelDownload(MetaInformationAbstractModel):
         blank=True,
         null=True,
     )
+    metadata = JSONField(
+        null=True,
+        blank=True,
+        default=None,
+    )
 
     def get_model_sheet_data_getter(self):
         mapper = {
@@ -397,7 +402,7 @@ class Client(MetaInformationAbstractModel):
         return self.code
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         """
         Generates data for Excel sheets based on filters applied to the client queryset.
 
@@ -489,7 +494,7 @@ class ClientTrackInfo(models.Model):
         return f"{self.client} - {self.tracked_date}"
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         from apps.entry.models import ExternalApiDump
 
         from .filters import ClientTrackInfoFilter

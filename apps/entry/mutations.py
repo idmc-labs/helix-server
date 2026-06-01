@@ -270,10 +270,19 @@ class ExportEntries(ExportBaseMutation):
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.ENTRY
 
 
+class FigureExportTypeEnum(graphene.Enum):
+    DISAGGREGATED_BY_LOCATION = "disaggregated-by-location"
+
+
+class ExportFiguresMetadataInputType(graphene.InputObjectType):
+    type = graphene.Field(FigureExportTypeEnum, required=False)
+
+
 class ExportFigures(ExportBaseMutation):
     class Arguments(ExportBaseMutation.Arguments):
         # TODO: use Can we use ReportFigureExtractionFilterSet?
         filters = FigureExtractionFilterDataInputType(required=True)
+        metadata = ExportFiguresMetadataInputType(required=False)
 
     DOWNLOAD_TYPE = ExcelDownload.DOWNLOAD_TYPES.FIGURE
 

@@ -987,7 +987,9 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         return qs
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
+        if (metadata or {}).get("type") == "disaggregated-by-location":
+            raise NotImplementedError("disaggregated-by-location export is not yet implemented")
         from apps.extraction.filters import ReportFigureExtractionFilterSet
 
         class DummyRequest:
@@ -1330,7 +1332,7 @@ class FigureTag(MetaInformationAbstractModel):
     name = models.CharField(verbose_name=_("Name"), max_length=256)
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         from apps.entry.filters import FigureTagFilter
 
         class DummyRequest:
@@ -1489,7 +1491,7 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         }
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         from apps.extraction.filters import EntryExtractionFilterSet
 
         class DummyRequest:

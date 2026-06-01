@@ -188,12 +188,15 @@ class ExportBaseMutation(graphene.Mutation, abstract=True):
             raise TypeError(errors)
 
     @classmethod
-    def mutate(cls, _, info, filters):
+    def mutate(cls, _, info, filters, metadata=None):
+        data = dict(
+            download_type=int(cls.DOWNLOAD_TYPE),
+            filters=convert_date_object_to_string_in_dict(filters),
+        )
+        if metadata is not None:
+            data["metadata"] = dict(metadata)
         serializer = ExcelDownloadSerializer(
-            data=dict(
-                download_type=int(cls.DOWNLOAD_TYPE),
-                filters=convert_date_object_to_string_in_dict(filters),
-            ),
+            data=data,
             context=dict(request=info.context.request),
         )
         if errors := mutation_is_not_valid(serializer):

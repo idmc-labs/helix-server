@@ -276,6 +276,67 @@ class TestExportEntry(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
 
 
+class TestExportFigures(HelixGraphQLTestCase):
+    def setUp(self) -> None:
+        self.editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        self.mutation = """
+        mutation ExportFigures($metadata: ExportFiguresMetadataInputType){
+            exportFigures(
+                filters: {}
+                metadata: $metadata
+          ){
+            errors
+            ok
+            result {
+              id
+              metadata
+            }
+          }
+        }
+        """
+
+    def test_export_figures_without_metadata_is_unchanged(self):
+        """Backward compatible: existing ExportFigures callers without metadata still work."""
+        from apps.contrib.models import ExcelDownload
+
+        self.force_login(self.editor)
+        response = self.query(self.mutation, variables={})
+        self.assertResponseNoErrors(response)
+        content = json.loads(response.content)
+        self.assertTrue(content["data"]["exportFigures"]["ok"], content)
+        instance_id = content["data"]["exportFigures"]["result"]["id"]
+        instance = ExcelDownload.objects.get(id=instance_id)
+        self.assertIsNone(instance.metadata)
+
+    def test_export_figures_persists_metadata(self):
+        """ExportFigures mutation accepts the new metadata argument and persists it."""
+        from apps.contrib.models import ExcelDownload
+
+        self.force_login(self.editor)
+        response = self.query(
+            self.mutation,
+            variables={"metadata": {"type": "DISAGGREGATED_BY_LOCATION"}},
+        )
+        self.assertResponseNoErrors(response)
+        content = json.loads(response.content)
+        self.assertTrue(content["data"]["exportFigures"]["ok"], content)
+        instance_id = content["data"]["exportFigures"]["result"]["id"]
+        instance = ExcelDownload.objects.get(id=instance_id)
+        self.assertEqual(instance.metadata, {"type": "disaggregated-by-location"})
+
+
+class TestFigureGetExcelSheetsData(HelixGraphQLTestCase):
+    def test_disaggregated_by_location_raises_not_implemented(self):
+        """Phase 1 stub: Figure.get_excel_sheets_data raises NotImplementedError for the new selector."""
+        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        with self.assertRaises(NotImplementedError):
+            Figure.get_excel_sheets_data(
+                user_id=editor.id,
+                filters={},
+                metadata={"type": "disaggregated-by-location"},
+            )
+
+
 class TestFigureDelete(HelixGraphQLTestCase):
     def setUp(self) -> None:
         self.country = CountryFactory.create()

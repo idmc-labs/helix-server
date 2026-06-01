@@ -58,7 +58,7 @@ class ParkedItem(MetaInformationAbstractModel):
         return f"{self.country.name} - {self.title}"
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         from apps.parking_lot.filters import ParkingLotFilter
 
         class DummyRequest:

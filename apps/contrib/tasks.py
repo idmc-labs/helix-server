@@ -120,7 +120,7 @@ def generate_excel_file(download_id, user_id, model_instance_id=None):
             save_download_file(download, workbook, path)
         else:
             sheet_data_getter = download.get_model_sheet_data_getter()
-            sheet_data = sheet_data_getter(user_id=user_id, filters=download.filters)
+            sheet_data = sheet_data_getter(user_id=user_id, filters=download.filters, metadata=download.metadata)
             workbook = get_excel_sheet_content(**sheet_data)
             save_download_file(download, workbook, path)
         download.status = ExcelDownload.EXCEL_GENERATION_STATUS.COMPLETED

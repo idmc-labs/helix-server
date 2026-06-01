@@ -63,7 +63,7 @@ class ContextOfViolence(MetaInformationAbstractModel, NameAttributedModels):
         ]
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         from apps.event.filters import ContextOfViolenceFilter
 
         class DummyRequest:
@@ -109,7 +109,7 @@ class Actor(MetaInformationAbstractModel, NameAttributedModels):
     torg = models.CharField(verbose_name=_("Torg"), max_length=10, null=True)
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         from apps.event.filters import ActorFilter
 
         class DummyRequest:
@@ -476,7 +476,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
         return coordinators.values("id")
 
     @classmethod
-    def get_excel_sheets_data(cls, user_id, filters):
+    def get_excel_sheets_data(cls, user_id, filters, metadata=None):
         from apps.event.filters import EventFilter
 
         class DummyRequest:
