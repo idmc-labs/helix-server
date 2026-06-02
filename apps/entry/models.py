@@ -56,7 +56,7 @@ from utils.common import get_string_from_list
 from utils.db import Array
 from utils.fields import CachedFileField, generate_full_media_url
 
-from .documents import README_DATA
+from .documents import README_DATA, README_DATA_EXPLODE
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -199,6 +199,96 @@ class DisaggregatedAge(models.Model):
 
     def __str__(self):
         return str(self.pk)
+
+
+def _build_explode_headers(base_headers):
+    """Mutate a copy of the default figure-export headers into the explode-export shape.
+
+    1. Drop location-aggregate / centroid columns.
+    2. Insert `allocated_figure` immediately after `total_figures`.
+    3. Append the five per-location columns at the end (where `locations` used to be).
+    """
+    drop_keys = {"centroid", "centroid_lat", "centroid_lon", "locations"}
+    new_headers = OrderedDict()
+    for key, label in base_headers.items():
+        if key in drop_keys:
+            continue
+        new_headers[key] = label
+        if key == "total_figures":
+            new_headers["allocated_figure"] = "Allocated figure"
+    new_headers["location_id"] = "Location ID"
+    new_headers["location_display_name"] = "Location"
+    new_headers["location_lat_lng"] = "Location lat, lng"
+    new_headers["location_accuracy"] = "Location accuracy"
+    new_headers["location_identifier"] = "Location identifier"
+    return new_headers
+
+
+def _mock_explode_data():
+    """Phase 2a placeholder: yields three hardcoded rows.
+
+    The three rows demonstrate the row shape Phase 2b will produce:
+        - Row A: a pure Origin location.
+        - Row B: an O&D location expanded into its Origin row.
+        - Row C: the SAME O&D location (same `location_id`) expanded into its Destination row.
+    """
+    sample_base = {
+        "id": 1,
+        "country__iso3": "NPL",
+        "country__idmc_short_name": "Nepal",
+        "country__region__name": "Asia",
+        "country__geographical_group__name": "South Asia",
+        "year": 2024,
+        "figure_cause": "Conflict",
+        "total_figures": 100,
+        # Other base columns left absent; the consumer's clean_data_item
+        # treats missing keys as empty string. That's fine for 2a.
+    }
+    # Row A: pure Origin location
+    yield {
+        **sample_base,
+        "allocated_figure": 34,
+        "location_id": 1,
+        "location_display_name": "Kathmandu",
+        "location_lat_lng": "27.71, 85.32",
+        "location_accuracy": "Country",
+        "location_identifier": "Origin",
+    }
+    # Row B: O&D location expanded as Origin
+    yield {
+        **sample_base,
+        "allocated_figure": 33,
+        "location_id": 2,
+        "location_display_name": "Sauraha",
+        "location_lat_lng": "27.58, 84.49",
+        "location_accuracy": "Country",
+        "location_identifier": "Origin",
+    }
+    # Row C: SAME O&D location (location_id=2) expanded as Destination
+    yield {
+        **sample_base,
+        "allocated_figure": 50,
+        "location_id": 2,
+        "location_display_name": "Sauraha",
+        "location_lat_lng": "27.58, 84.49",
+        "location_accuracy": "Country",
+        "location_identifier": "Destination",
+    }
+
+
+def _build_explode_readme_data():
+    return [
+        {
+            "title": "Readme",
+            "results": {
+                "headers": OrderedDict(
+                    column_name="Column Name",
+                    description="Description",
+                ),
+                "data": README_DATA_EXPLODE,
+            },
+        }
+    ]
 
 
 class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisaggregationAbstractModel, models.Model):
@@ -988,8 +1078,6 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters, metadata=None):
-        if (metadata or {}).get("explode_by_locations") is True:
-            raise NotImplementedError("explode-by-locations export is not yet implemented")
         from apps.extraction.filters import ReportFigureExtractionFilterSet
 
         class DummyRequest:
@@ -1000,6 +1088,9 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             data=filters,
             request=DummyRequest(user=User.objects.get(id=user_id)),
         ).qs
+
+        if (metadata or {}).get("explode_by_locations") is True:
+            return cls.get_figure_explode_by_locations_excel_sheets_data(qs)
         return cls.get_figure_excel_sheets_data(qs)
 
     @classmethod
@@ -1242,6 +1333,23 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             "formulae": None,
             "transformer": transformer,
             "readme_data": readme_data,
+        }
+
+    @classmethod
+    def get_figure_explode_by_locations_excel_sheets_data(cls, figures):
+        """Phase 2a scaffold: returns real headers + real Readme with three mock data rows.
+
+        Phase 2b will replace `_mock_explode_data()` with a real generator that consumes the
+        base queryset and the base transformer, and applies the R2 allocation algorithm.
+        """
+        base = cls.get_figure_excel_sheets_data(figures)
+        headers = _build_explode_headers(base["headers"])
+        return {
+            "headers": headers,
+            "data": _mock_explode_data(),
+            "formulae": None,
+            "transformer": None,
+            "readme_data": _build_explode_readme_data(),
         }
 
     @classmethod

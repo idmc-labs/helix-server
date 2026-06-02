@@ -110,3 +110,103 @@ readme_data_raw = [
 ]
 
 README_DATA = [{"column_name": column_name, "description": description} for column_name, description in readme_data_raw]
+
+
+# --- Explode-by-locations Readme ---
+#
+# Built programmatically from `readme_data_raw` so that any future edit to a
+# shared row description propagates to both default and explode Readmes.
+_EXPLODE_DROPPED_COLUMN_NAMES = {
+    "Centroid",
+    "Lat",
+    "Lon",
+    "Locations name",
+    "Locations coordinates",
+    "Locations accuracy",
+    "Locations type",
+}
+
+_TOTAL_FIGURES_REPEAT_SUFFIX = " Value is repeated across all rows belonging to the same figure."
+
+_ALLOCATED_FIGURE_ROW = (
+    "Allocated figure",
+    "This location's share of `Total figures`, computed by equal division within the figure's"
+    " locations of the same Location identifier. Integer remainder is distributed by Location ID ascending.",
+)
+
+_EXTRA_LOCATION_ROWS = [
+    ("Location ID", "Unique identifier of the location."),
+    ("Location", "Display name of the location."),
+    ("Location lat, lng", "Location coordinates as 'latitude, longitude'."),
+    ("Location accuracy", "Accuracy level of the location."),
+    (
+        "Location identifier",
+        "Whether this row attributes the location as the Origin or Destination of the displacement."
+        " A location originally tagged 'Origin and destination' produces two rows — one set to Origin,"
+        " one to Destination.",
+    ),
+]
+
+_EXPLODE_NOTE_ROWS = [
+    (
+        "About",
+        "This file contains one row per (figure, location, identifier) combination. Each row attributes"
+        " a share of a figure's displacement value to a specific location, distinguished by whether the"
+        " location is an Origin or a Destination of the displacement.",
+    ),
+    (
+        "Excluded figures",
+        "Figures without any associated location are not included in this export. Figures with `Total figures`"
+        " equal to 0 are also excluded. To see all figures regardless of locations, use the default figure export.",
+    ),
+    (
+        "Allocation method",
+        "`Allocated figure` is computed by dividing `Total figures` equally among the figure's locations of the"
+        " same Location identifier (Origin or Destination). Because displacement counts must be whole numbers,"
+        " the integer remainder is distributed by `Location ID` ascending — the first locations each receive one"
+        " additional person until the remainder is exhausted.",
+    ),
+    (
+        "Origin and destination locations",
+        "A location whose underlying identifier is \"Origin and destination\" produces two rows for the same"
+        " figure: one with `Location identifier` = `Origin` (counted in the origin allocation), and one with"
+        " `Location identifier` = `Destination` (counted in the destination allocation).",
+    ),
+    (
+        "Aggregating safely",
+        "Summing `Allocated figure` over the entire sheet double-counts figures that have both origin and"
+        " destination locations. To aggregate by identifier, filter `Location identifier` to a single value"
+        " first. To compute the true grand total of displacement, group by `ID` and take any one row's"
+        " `Total figures` per figure.",
+    ),
+    (
+        "Asymmetric figures",
+        "A figure with only origin locations contributes zero rows to a `Location identifier = Destination`"
+        " aggregation (and vice versa). Per-identifier sums may therefore under-count the displacement total."
+        " Use the `Total figures` column on any row to recover the figure's full value.",
+    ),
+]
+
+
+def _build_readme_data_explode_raw():
+    rows = []
+    for column_name, description in readme_data_raw:
+        if column_name in _EXPLODE_DROPPED_COLUMN_NAMES:
+            continue
+        if column_name == "Total figures":
+            rows.append((column_name, description + _TOTAL_FIGURES_REPEAT_SUFFIX))
+            rows.append(_ALLOCATED_FIGURE_ROW)
+            continue
+        rows.append((column_name, description))
+    rows.extend(_EXTRA_LOCATION_ROWS)
+    rows.append(("", ""))
+    rows.extend(_EXPLODE_NOTE_ROWS)
+    return rows
+
+
+readme_data_explode_raw = _build_readme_data_explode_raw()
+
+README_DATA_EXPLODE = [
+    {"column_name": column_name, "description": description}
+    for column_name, description in readme_data_explode_raw
+]

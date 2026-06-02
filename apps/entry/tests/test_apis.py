@@ -326,15 +326,103 @@ class TestExportFigures(HelixGraphQLTestCase):
 
 
 class TestFigureGetExcelSheetsData(HelixGraphQLTestCase):
-    def test_explode_by_locations_raises_not_implemented(self):
-        """Phase 1 stub: Figure.get_excel_sheets_data raises NotImplementedError for the new selector."""
+    def test_explode_by_locations_returns_mock_scaffold(self):
+        """Phase 2a scaffold: explode_by_locations returns real headers + Readme with 3 mock rows."""
         editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
-        with self.assertRaises(NotImplementedError):
-            Figure.get_excel_sheets_data(
-                user_id=editor.id,
-                filters={},
-                metadata={"explode_by_locations": True},
-            )
+        result = Figure.get_excel_sheets_data(
+            user_id=editor.id,
+            filters={},
+            metadata={"explode_by_locations": True},
+        )
+
+        headers = result["headers"]
+        # Newly added column lives right after total_figures.
+        self.assertIn("allocated_figure", headers)
+        # The five per-location columns appear at the end (positions where
+        # `locations` used to be).
+        for key in (
+            "location_id",
+            "location_display_name",
+            "location_lat_lng",
+            "location_accuracy",
+            "location_identifier",
+        ):
+            self.assertIn(key, headers)
+        # Dropped columns.
+        for key in ("centroid", "centroid_lat", "centroid_lon", "locations"):
+            self.assertNotIn(key, headers)
+
+        # `allocated_figure` is positioned immediately after `total_figures`.
+        keys = list(headers.keys())
+        self.assertEqual(keys[keys.index("total_figures") + 1], "allocated_figure")
+
+        # Transformer is consumed inside the generator (None in the return shape).
+        self.assertIsNone(result["transformer"])
+
+        # Three mock rows demonstrating Origin / Origin / Destination shape.
+        rows = list(result["data"])
+        self.assertEqual(len(rows), 3)
+        self.assertEqual(
+            [r["location_identifier"] for r in rows],
+            ["Origin", "Origin", "Destination"],
+        )
+        # Rows B and C share the same location_id — the O&D-expansion demonstration.
+        self.assertEqual(rows[1]["location_id"], rows[2]["location_id"])
+
+        # Readme is wired up.
+        readme_data = result["readme_data"]
+        self.assertEqual(len(readme_data), 1)
+        readme_rows = readme_data[0]["results"]["data"]
+        readme_column_names = {row["column_name"] for row in readme_rows}
+        self.assertIn("Allocated figure", readme_column_names)
+        self.assertIn("Location ID", readme_column_names)
+        self.assertIn("About", readme_column_names)
+        self.assertNotIn("Centroid", readme_column_names)
+        self.assertNotIn("Locations name", readme_column_names)
+
+    def test_explode_by_locations_produces_workbook_with_three_rows(self):
+        """Smoke: feed the explode export through `get_excel_sheet_content` and verify the workbook."""
+        import io
+
+        from openpyxl import load_workbook
+
+        from apps.contrib.tasks import get_excel_sheet_content
+
+        editor = create_user_with_role(USER_ROLE.MONITORING_EXPERT.name)
+        sheet_data = Figure.get_excel_sheets_data(
+            user_id=editor.id,
+            filters={},
+            metadata={"explode_by_locations": True},
+        )
+
+        workbook = get_excel_sheet_content(**sheet_data)
+        buf = io.BytesIO()
+        workbook.save(buf)
+        buf.seek(0)
+        wb = load_workbook(buf)
+
+        # Main sheet: header row + 3 mock rows.
+        ws_main = wb["Main"]
+        all_rows = list(ws_main.iter_rows(values_only=True))
+        self.assertEqual(len(all_rows), 4)
+
+        header_row = all_rows[0]
+        self.assertIn("Allocated figure", header_row)
+        self.assertIn("Location identifier", header_row)
+        self.assertNotIn("Centroid", header_row)
+
+        # Pull Location identifier values out of the three data rows.
+        loc_id_col = header_row.index("Location identifier")
+        identifier_values = [row[loc_id_col] for row in all_rows[1:]]
+        self.assertEqual(identifier_values, ["Origin", "Origin", "Destination"])
+
+        # Readme sheet exists and has the new column descriptions + note paragraphs.
+        ws_readme = wb["Readme"]
+        readme_rows = list(ws_readme.iter_rows(values_only=True))
+        first_col_values = {row[0] for row in readme_rows}
+        self.assertIn("Allocated figure", first_col_values)
+        self.assertIn("Location ID", first_col_values)
+        self.assertIn("About", first_col_values)
 
 
 class TestFigureDelete(HelixGraphQLTestCase):

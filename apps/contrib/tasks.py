@@ -51,7 +51,8 @@ def get_excel_sheet_content(headers, data, **kwargs):
     def append_to_worksheet(_ws, _headers, _data, _transformer):
         keys = _headers.keys()
         _ws.append([_headers[key] for key in keys])
-        for _datum in _data.iterator(chunk_size=2000):
+        iter_source = _data.iterator(chunk_size=2000) if hasattr(_data, "iterator") else _data
+        for _datum in iter_source:
             transformed_datum = _datum
             if _transformer:
                 transformed_datum = _transformer(_datum)
