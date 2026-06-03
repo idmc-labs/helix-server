@@ -686,7 +686,7 @@ type CountryHouseholdSizeType {
   sourceLink: String
   notes: String
   isActive: Boolean!
-  referenceYear: Int
+  referenceDate: Date
   gapFillingMethod: GAP_FILLING_METHOD
   gapFillingMethodDisplay: EnumDescription
 }

@@ -534,8 +534,8 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
     source_link = models.CharField(verbose_name=_("Source Link"), max_length=2000, blank=True, null=True)
     notes = models.TextField(verbose_name=_("Notes"), blank=True, null=True)
     is_active = models.BooleanField(verbose_name=_("Is active?"), default=False)
-    reference_year = models.IntegerField(verbose_name=_("Reference year"), null=True)
-    gap_filling_method = enum.EnumField(GAP_FILLING_METHOD, verbose_name=_("Gap filling method"), null=True)
+    reference_date = models.DateField(verbose_name=_("Reference date"), blank=True, null=True)
+    gap_filling_method = enum.EnumField(GAP_FILLING_METHOD, verbose_name=_("Gap filling method"), blank=True, null=True)
 
     country_id: int
 

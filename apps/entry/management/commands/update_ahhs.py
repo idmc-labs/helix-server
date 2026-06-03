@@ -50,7 +50,7 @@ class Command(BaseCommand):
         "AHHS",
         "ISO3",
         "Data source category",
-        "Reference year",
+        "Reference date",
     }
 
     def add_arguments(self, parser):
@@ -153,7 +153,7 @@ class Command(BaseCommand):
             # Data from csv
             "size": size,
             "year": row["Year"],
-            "reference_year": row["Reference year"],
+            "reference_date": row["Reference date"],
             "gap_filling_method": gap_filling_method,
             "country": country_id,
             "data_source_category": row["Data source category"],
