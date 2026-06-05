@@ -568,7 +568,7 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
             source="Source",
             source_link="Source Link",
             notes="Notes",
-            reference_year="Reference year",
+            reference_date="Reference date",
             gap_filling_method="Gap filling method",
         )
         values = qs.order_by("year").values(*headers.keys())

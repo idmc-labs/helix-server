@@ -26,14 +26,21 @@ DataRow = typing.TypedDict(
         "AHHS": str,
         "ISO3": str,
         "Data source category": str,
-        "Reference year": str,
-        "Gap filling method": str,
+        "Reference date": str,
         "Source": typing.Optional[str],  # We have default value "No data"
         "Source link": typing.Optional[str],  # This should be nullable
         "Notes": typing.Optional[str],
         "IDMC update date": typing.Optional[str],
     },
 )
+
+
+def calculate_gap_filling_method(year, reference_year):
+    if reference_year == year:
+        return HouseholdSize.GAP_FILLING_METHOD.EXACT
+    if reference_year > year:
+        return HouseholdSize.GAP_FILLING_METHOD.BACKWARD_FILLING
+    return HouseholdSize.GAP_FILLING_METHOD.FORWARD_FILLING
 
 
 def format_date(date: Union[str, datetime]) -> datetime:
@@ -145,9 +152,8 @@ class Command(BaseCommand):
         if size is None or size == "":
             size = 0
 
-        # Gap filling method level to value mapping
-        label_to_value_map = {label: value for value, label in HouseholdSize.GAP_FILLING_METHOD.__labels__.items()}
-        gap_filling_method = label_to_value_map.get(row["Gap filling method"])
+        reference_year = datetime.strptime(row["Reference date"], "%Y-%m-%d").year
+        gap_filling_method = calculate_gap_filling_method(int(row["Year"]), reference_year)
 
         return {
             # Data from csv
