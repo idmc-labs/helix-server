@@ -108,6 +108,10 @@ class GraphqlQuery:
                     results {
                       id
                       name
+                      countries {
+                        id
+                        idmcShortName
+                      }
                     }
                   }
                 }

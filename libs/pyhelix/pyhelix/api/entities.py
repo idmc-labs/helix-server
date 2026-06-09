@@ -222,7 +222,33 @@ class HelixEntityLazyManager:
         return pk
 
 
+def _normalize_org_key(value: str) -> str:
+    """
+    Canonicalize the lookup key for organization labels.
+
+    Matches the format the helix-client renders in the dropdown:
+    ``{name} - {idmc_short_name_1, idmc_short_name_2, ...}``. We lowercase,
+    expand bare commas to ``", "`` so ``A,B`` and ``A, B`` collapse to the
+    same key, and squash any run of whitespace.
+    """
+    value = value.lower().replace(",", ", ")
+    return " ".join(value.split())
+
+
 class HelixOrganization(HelixEntityManager[HelixOrganizationEntity]):
+    """
+    Match an organization by its dropdown label (``{name} - {countries}``)
+    with a deliberate asymmetric ambiguity policy:
+
+      - **Label** ambiguity (same name AND same country list) → pick the
+        highest-id row and warn. These are server-side dupes that are
+        interchangeable for the caller's purposes.
+      - **Bare-name** ambiguity (same name but different country lists) →
+        return ``None`` and warn. The caller's input is underspecified;
+        forcing them to pass the full label avoids silently picking a
+        cross-country row.
+    """
+
     entity_cls = HelixOrganizationEntity
 
     class Fetcher(HelixEntityManagerFetcher):
@@ -242,6 +268,68 @@ class HelixOrganization(HelixEntityManager[HelixOrganizationEntity]):
             return resp.json()["data"]["organizationList"]
 
     fetch_manager = Fetcher
+
+    def __init__(self, helix_client: HelixClient):
+        super().__init__(helix_client)
+        self._label_index: typing.Dict[str, typing.List[HelixOrganizationEntity]] = {}
+        self._bare_name_index: typing.Dict[str, typing.List[HelixOrganizationEntity]] = {}
+        for entity in self._entities:
+            self._label_index.setdefault(self._label_key(entity), []).append(entity)
+            self._bare_name_index.setdefault(_normalize_org_key(entity.name), []).append(entity)
+        for key, hits in self._label_index.items():
+            if len(hits) > 1:
+                logger.warning(
+                    "duplicate organization label %r ids=%s",
+                    key,
+                    [h.id for h in hits],
+                )
+
+    @staticmethod
+    def _label_key(entity: HelixOrganizationEntity) -> str:
+        countries = ", ".join(c.idmc_short_name for c in entity.countries)
+        label = f"{entity.name} - {countries}" if countries else entity.name
+        return _normalize_org_key(label)
+
+    @typing_extensions.override
+    def search(self, name: str) -> typing.Optional[HelixOrganizationEntity]:
+        key = _normalize_org_key(name)
+        hits = self._label_index.get(key)
+        if hits:
+            if len(hits) == 1:
+                return hits[0]
+            # Same label = same name AND same countries → server-side dupes.
+            # Pick the highest-id row (best-effort recovery).
+            chosen = max(hits, key=lambda e: e.id)
+            logger.warning(
+                "ambiguous label %r — picked latest id=%d from candidates=%s",
+                key,
+                chosen.id,
+                [e.id for e in hits],
+            )
+            return chosen
+        hits = self._bare_name_index.get(key)
+        if hits:
+            if len(hits) == 1:
+                return hits[0]
+            distinct_labels = {self._label_key(h) for h in hits}
+            if len(distinct_labels) == 1:
+                # All candidates share the same label (same countries) — they
+                # are interchangeable just like a label-level dupe.
+                chosen = max(hits, key=lambda e: e.id)
+                logger.warning(
+                    "ambiguous bare name %r — all candidates share label; picked latest id=%d from %s",
+                    key,
+                    chosen.id,
+                    [e.id for e in hits],
+                )
+                return chosen
+            logger.warning(
+                "ambiguous bare name %r — candidates=%s; pass full label to disambiguate",
+                key,
+                [e.id for e in hits],
+            )
+            return None
+        return None
 
 
 class HelixCountry(HelixEntityManager[HelixCountryEntity]):
