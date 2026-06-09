@@ -203,6 +203,26 @@ class HulkFigureImport(HulkBaseModel, pyhelix_models.HulkFigureImport):
     _entry_id: int
     _event_id: int
 
+    @model_validator(mode="before")
+    @classmethod
+    @typing_extensions.override
+    def parse_figure_cause(cls, data):
+        if not isinstance(data, dict):
+            return data
+        raw_figure_cause = data.get("figure_cause") or ""
+        figure_cause = validate_and_parse_enum(Crisis.CRISIS_TYPE, raw_figure_cause, is_required=True)
+
+        if figure_cause == Crisis.CRISIS_TYPE.CONFLICT:
+            get_name_attributed_model(ViolenceSubType, data.get("violence_sub_type_id"))
+        elif figure_cause == Crisis.CRISIS_TYPE.DISASTER:
+            get_name_attributed_model(DisasterSubType, data.get("disaster_sub_type_id"))
+        elif figure_cause == Crisis.CRISIS_TYPE.OTHER:
+            get_name_attributed_model(OtherSubType, data.get("other_sub_type_id"))
+        else:
+            typing_extensions.assert_never(figure_cause)
+
+        return data
+
     @model_validator(mode="after")
     @typing_extensions.override
     def parse_entry(self):
