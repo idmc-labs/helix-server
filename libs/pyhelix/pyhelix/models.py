@@ -7,7 +7,7 @@ import uuid
 
 import typing_extensions
 from pydantic import BaseModel as OgBaseModel
-from pydantic import PrivateAttr, model_validator
+from pydantic import PrivateAttr, field_validator, model_validator
 from pydantic.fields import Field
 
 from pyhelix.api.api import get_active_helix_client
@@ -17,6 +17,7 @@ from .constants import (
     CRISIS_TYPE,
     FIGURE_FLOW_LIST,
     FIGURE_STOCK_LIST,
+    FIGURE_UNIT,
 )
 from .enums import (
     HulkDataTypeEnum,
@@ -103,7 +104,7 @@ class HulkEntryImport(HulkBaseModel):
     publish_date: datetime.date
     is_confidential: bool
 
-    publishers_id: ListOfIds
+    publishers_id: typing_extensions.Annotated[ListOfIds, Field(min_length=1)]
     """
     FK: organization.Organization
     """
@@ -145,12 +146,19 @@ class HulkEventImport(HulkBaseModel):
 
     event_narrative: str
 
-    countries_id: ListOfIds
+    countries_id: typing_extensions.Annotated[ListOfIds, Field(min_length=1)]
     """
     FK: country.Country
     """
 
     event_codes: typing.List[HulkEventImportEventCode]
+
+    @field_validator("event_narrative")
+    @classmethod
+    def _validate_event_narrative(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("event_narrative must not be blank")
+        return v.strip()
 
     @model_validator(mode="before")
     @classmethod
@@ -184,8 +192,8 @@ class HulkFigureImportLocation(BaseModel):
     accuracy: FigureLocationAccuracyType
     geocoder: FigureLocationGeocoderType
 
-    latitude: float
-    longitude: float
+    latitude: float = Field(ge=-90, le=90)
+    longitude: float = Field(ge=-180, le=180)
 
     # TODO: We should also add the metadata field to store raw information that can be later used to fill gazetteer
 
@@ -258,10 +266,49 @@ class HulkFigureImport(HulkBaseModel):
     FK: entry.FigureTag
     """
 
-    sources_id: ListOfIds
+    sources_id: typing_extensions.Annotated[ListOfIds, Field(min_length=1)]
     """
     FK: organization.Organization
     """
+
+    @field_validator("analysis_text")
+    @classmethod
+    def _validate_analysis_text(cls, v: str) -> str:
+        if not v or not v.strip():
+            raise ValueError("analysis_text must not be blank")
+        return v.strip()
+
+    @model_validator(mode="before")
+    @classmethod
+    def parse_figure_cause(cls, data):
+        if not isinstance(data, dict):
+            return data
+        helix_client = get_active_helix_client()
+        raw_figure_cause = data.get("figure_cause") or ""
+        figure_cause = validate_and_parse_enum(CRISIS_TYPE, raw_figure_cause, is_required=True)
+
+        if figure_cause == CRISIS_TYPE.CONFLICT:
+            helix_client.violence_sub_type_manager.validate_id_exists(data.get("violence_sub_type_id"))
+        elif figure_cause == CRISIS_TYPE.DISASTER:
+            helix_client.disaster_sub_type_manager.validate_id_exists(data.get("disaster_sub_type_id"))
+        elif figure_cause == CRISIS_TYPE.OTHER:
+            helix_client.other_sub_type_manager.validate_id_exists(data.get("other_sub_type_id"))
+        else:
+            typing_extensions.assert_never(figure_cause)
+
+        return data
+
+    @model_validator(mode="after")
+    def _validate_household_size(self):
+        if self.unit == FIGURE_UNIT.HOUSEHOLD and self.household_size is None:
+            raise ValueError("household_size is required when unit is HOUSEHOLD")
+        return self
+
+    @model_validator(mode="after")
+    def _validate_idu(self):
+        if self.include_idu and (not self.idu_text or not self.idu_text.strip()):
+            raise ValueError("idu_text is required (non-blank) when include_idu is True")
+        return self
 
     @model_validator(mode="after")
     def parse_entry(self):
