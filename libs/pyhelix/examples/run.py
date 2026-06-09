@@ -359,9 +359,7 @@ def import_figures(hulk_handler: HulkDataHandler, context: ImportContext):
             organizations_raw = json.loads(figure_data["sources"])
             organizations_id = []
             for organization_raw in organizations_raw:
-                organization_entity = context.helix_client.organization_manager.search(
-                    organization_raw.replace("- Peru", "")  # TODO: Fix this in dataset
-                )
+                organization_entity = context.helix_client.organization_manager.search(organization_raw)
                 if organization_entity:
                     organizations_id.append(organization_entity.id)
                     continue
