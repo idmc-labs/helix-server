@@ -30,6 +30,7 @@ ExcelGenerationStatusGrapheneEnum = graphene.Enum.from_enum(
 )
 ExternalApiTypeEnum = graphene.Enum.from_enum(ExternalApiDump.ExternalApiType, description=enum_description)
 ClientUseCaseEnum = graphene.Enum.from_enum(Client.USE_CASE_TYPES, description=enum_description)
+ClientTypeEnum = graphene.Enum.from_enum(Client.CLIENT_TYPE, description=enum_description)
 
 BulkApiOperationActionEnum = graphene.Enum.from_enum(BulkApiOperation.BULK_OPERATION_ACTION, description=enum_description)
 BulkApiOperationStatusEnum = graphene.Enum.from_enum(BulkApiOperation.BULK_OPERATION_STATUS, description=enum_description)
@@ -43,6 +44,7 @@ enum_map = dict(
     BULK_OPERATION_ACTION=BulkApiOperationActionEnum,
     BULK_OPERATION_STATUS=BulkApiOperationStatusEnum,
     USE_CASE_TYPES=ClientUseCaseEnum,
+    CLIENT_TYPE=ClientTypeEnum,
 )
 
 ENUM_TO_GRAPHENE_ENUM_MAP = {

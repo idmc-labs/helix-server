@@ -324,6 +324,25 @@ class ExcelDownload(MetaInformationAbstractModel):
 
 
 class Client(MetaInformationAbstractModel):
+    class CLIENT_TYPE(enum.Enum):
+        ACADEMIA_THINK_TANK = 0
+        ONG_INGO = 1
+        INTERGOVERNMENTAL_ORGANIZATION = 2
+        GOVERNMENT = 3
+        ICRC_IFRC_RED_CROSS = 4
+        UN = 5
+        OTHER = 6
+
+        __labels__ = {
+            ACADEMIA_THINK_TANK: _("Academia/Think Tank"),
+            ONG_INGO: _("ONG/INGO"),
+            INTERGOVERNMENTAL_ORGANIZATION: _("Intergovernmental Organization"),
+            GOVERNMENT: _("Government"),
+            ICRC_IFRC_RED_CROSS: _("ICRC/IFRC/Red Cross"),
+            UN: _("UN"),
+            OTHER: _("Other"),
+        }
+
     class USE_CASE_TYPES(enum.Enum):
         ANTICIPATORY_ACTION = 0
         RESPONSE = 1
@@ -369,8 +388,10 @@ class Client(MetaInformationAbstractModel):
     opted_out_of_emails = models.BooleanField(verbose_name="Opted out of receiving emails", default=False)
     use_cases = ArrayField(base_field=enum.EnumField(USE_CASE_TYPES, verbose_name=_("Use case")), null=False, default=list)
     other_notes = models.TextField(verbose_name=_("Notes"), null=True, blank=True)
+    description = models.TextField(verbose_name=_("Description"), null=True, blank=True)
     is_active = models.BooleanField(verbose_name=_("Is active?"), default=False)
     share_source = models.BooleanField(verbose_name=_("Share source?"), default=False)
+    type = enum.EnumField(enum=CLIENT_TYPE, default=CLIENT_TYPE.OTHER)
 
     def __str__(self):
         return self.code
@@ -403,12 +424,14 @@ class Client(MetaInformationAbstractModel):
             contact_website="Website",
             use_cases="Use cases",
             other_notes="Notes",
+            description="Description",
             opted_out_of_emails="Opted out of receiving emails",
             created_by__full_name="Created By",
             created_at="Created At",
             last_modified_by__full_name="Last Modified By",
             modified_at="Modified At",
             is_active="Active",
+            type="Type",
         )
 
         data = ClientFilter(
@@ -425,6 +448,7 @@ class Client(MetaInformationAbstractModel):
                 "use_cases": EXTERNAL_ARRAY_SEPARATOR.join(transformed_use_cases),
                 "is_active": "Yes" if datum["is_active"] else "No",
                 "opted_out_of_emails": "Yes" if datum["opted_out_of_emails"] else "No",
+                "type": Client.CLIENT_TYPE.get(datum["type"]).label,
             }
 
         return {

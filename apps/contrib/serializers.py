@@ -239,6 +239,10 @@ class ClientSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
         child=serializers.ChoiceField(choices=Client.USE_CASE_TYPES.choices()),
         required=True,
     )
+    type = serializers.ChoiceField(
+        choices=Client.CLIENT_TYPE.choices(),
+        required=True,
+    )
 
     class Meta:
         model = Client
@@ -254,6 +258,8 @@ class ClientSerializer(MetaInformationSerializerMixin, serializers.ModelSerializ
             "other_notes",
             "opted_out_of_emails",
             "share_source",
+            "description",
+            "type",
         )
 
     def validate(self, attrs):
