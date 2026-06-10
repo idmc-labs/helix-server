@@ -1,7 +1,6 @@
 import hashlib
 import json
 import os
-import threading
 import typing
 
 import django_filters
@@ -12,27 +11,11 @@ from rest_framework import serializers
 from rest_framework.request import Request
 from storages.backends.s3boto3 import S3Boto3Storage
 
-from helix.storages import get_external_storage
+from helix.storages import TemporaryStorageEnableAuthString, get_external_storage
 
 from .models import ReleaseMetadata, StatusLog
 
 external_storage = get_external_storage()
-_storage_auth_lock = threading.Lock()
-
-
-class ExternalStorageEnableAuthString:
-    """Temporarily enable querystring auth to generate signed URLs with response override parameters."""
-
-    def __enter__(self):
-        _storage_auth_lock.acquire()
-        if isinstance(external_storage, S3Boto3Storage):
-            self._original = external_storage.querystring_auth
-            external_storage.querystring_auth = True
-
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        if isinstance(external_storage, S3Boto3Storage):
-            external_storage.querystring_auth = self._original
-        _storage_auth_lock.release()
 
 
 class GiddExportCache:
@@ -128,7 +111,7 @@ class GiddExportCache:
 
         cache_key = cls._get_or_create(key, data, filename, export_generator)
         if isinstance(external_storage, S3Boto3Storage):
-            with ExternalStorageEnableAuthString():
+            with TemporaryStorageEnableAuthString(external_storage):
                 return external_storage.url(
                     cache_key,
                     parameters=s3_parameters,
