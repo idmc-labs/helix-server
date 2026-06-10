@@ -686,6 +686,9 @@ type CountryHouseholdSizeType {
   sourceLink: String
   notes: String
   isActive: Boolean!
+  referenceDate: Date
+  gapFillingMethod: GAP_FILLING_METHOD
+  gapFillingMethodDisplay: EnumDescription
 }
 
 type CountryListType {
@@ -2341,6 +2344,12 @@ input FigureUpdateInputType {
   disaggregationConflictCommunal: Int
   disaggregationConflictOther: Int
   geoLocations: [FigureLocationInputType!]
+}
+
+enum GAP_FILLING_METHOD {
+  EXACT_YEAR
+  BACKWARD_FILLING
+  FORWARD_FILLING
 }
 
 enum GENDER_TYPE {

@@ -31,6 +31,8 @@ from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
 from utils.graphene.types import CustomDjangoListObjectType
 
+from .enums import HouseholdSizeGapFillingMethodEnum
+
 
 class MonitoringSubRegionType(DjangoObjectType):
     class Meta:
@@ -222,6 +224,9 @@ class CountryListType(CustomDjangoListObjectType):
 class CountryHouseholdSizeType(DjangoObjectType):
     class Meta:
         model = HouseholdSize
+
+    gap_filling_method = graphene.Field(HouseholdSizeGapFillingMethodEnum)
+    gap_filling_method_display = EnumDescription(source="get_gap_filling_method_display")
 
 
 class HouseholdSizeListType(CustomDjangoListObjectType):

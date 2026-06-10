@@ -511,6 +511,17 @@ class Summary(MetaInformationArchiveAbstractModel, models.Model):
 
 
 class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
+    class GAP_FILLING_METHOD(enum.Enum):
+        EXACT_YEAR = 0
+        BACKWARD_FILLING = 1
+        FORWARD_FILLING = 2
+
+        __labels__ = {
+            EXACT_YEAR: _("Exact year"),
+            BACKWARD_FILLING: _("Backward filling"),
+            FORWARD_FILLING: _("Forward filling"),
+        }
+
     country = models.ForeignKey("Country", related_name="household_sizes", on_delete=models.CASCADE)
     year = models.PositiveSmallIntegerField(verbose_name=_("Year"))
     size = models.FloatField(
@@ -523,6 +534,8 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
     source_link = models.CharField(verbose_name=_("Source Link"), max_length=2000, blank=True, null=True)
     notes = models.TextField(verbose_name=_("Notes"), blank=True, null=True)
     is_active = models.BooleanField(verbose_name=_("Is active?"), default=False)
+    reference_date = models.DateField(verbose_name=_("Reference date"), blank=True, null=True)
+    gap_filling_method = enum.EnumField(GAP_FILLING_METHOD, verbose_name=_("Gap filling method"), blank=True, null=True)
 
     country_id: int
 
@@ -555,11 +568,22 @@ class HouseholdSize(ArchiveAbstractModel, MetaInformationAbstractModel):
             source="Source",
             source_link="Source Link",
             notes="Notes",
+            reference_date="Reference date",
+            gap_filling_method="Gap filling method",
         )
         values = qs.order_by("year").values(*headers.keys())
+
+        def transformer(datum):
+            gap_filling_method = HouseholdSize.GAP_FILLING_METHOD.get(datum.get("gap_filling_method"))
+
+            return {
+                **datum,
+                "gap_filling_method": getattr(gap_filling_method, "label", None),
+            }
+
         return {
             "headers": headers,
             "data": values,
             "formulae": None,
-            "transformer": None,
+            "transformer": transformer,
         }
