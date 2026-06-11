@@ -33,19 +33,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-GEOJSON_TYPES = {
-    "Point",
-    "LineString",
-    "Polygon",
-    "MultiPoint",
-    "MultiLineString",
-    "MultiPolygon",
-    "GeometryCollection",
-    "Feature",
-    "FeatureCollection",
-}
-
-
 def get_excel_sheet_content(headers, data, **kwargs):
     wb = Workbook(write_only=True)
 
@@ -201,23 +188,22 @@ def generate_external_endpoint_dump_file(
 ):
     from apps.entry.models import ExternalApiDump
 
+    format = format or ExternalApiDump.Format.JSON
+
     external_api_dump, _ = ExternalApiDump.objects.get_or_create(
-        api_type=endpoint_type, include_sources=include_sources, format=format or ExternalApiDump.Format.JSON
+        api_type=endpoint_type,
+        include_sources=include_sources,
+        format=format,
     )
 
     try:
         data = get_data()
-        if isinstance(data, Workbook):
+        if format == ExternalApiDump.Format.EXCEL:
             with get_temp_file(mode="wb+") as tmp:
                 data.save(tmp.name)
                 data.close()
-                tmp.seek(0)
-                external_api_dump.dump_file.save(
-                    filename,
-                    File(tmp),
-                    save=False,
-                )
-        elif isinstance(data, dict) and data.get("type") in GEOJSON_TYPES:
+                external_api_dump.dump_file.save(filename, File(tmp), save=False)
+        elif format == ExternalApiDump.Format.GEOJSON:
             with get_temp_file(mode="wb+") as tmp:
                 tmp.write(json.dumps(data).encode("utf-8"))
                 external_api_dump.dump_file.save(filename, File(tmp), save=False)
@@ -225,11 +211,8 @@ def generate_external_endpoint_dump_file(
             serializer = serializer(data, many=True)
             with get_temp_file(mode="w+") as tmp:
                 json.dump(serializer.data, tmp)
-                external_api_dump.dump_file.save(
-                    filename,
-                    File(tmp),
-                    save=False,
-                )
+                external_api_dump.dump_file.save(filename, File(tmp), save=False)
+
         external_api_dump.status = ExternalApiDump.Status.COMPLETED
         logger.info(
             f"{endpoint_type}: {format.label if format else ExternalApiDump.Format.JSON.label} "

@@ -1,5 +1,6 @@
 import typing
 from pathlib import Path
+from types import MappingProxyType
 from typing import Optional
 
 from django.contrib.postgres.aggregates.general import ArrayAgg, StringAgg
@@ -30,12 +31,6 @@ from utils.common import track_gidd
 from utils.db import Array
 
 external_storage = get_external_storage()
-
-CONTENT_TYPES = {
-    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "json": "application/json",
-    "geojson": "application/geo+json",
-}
 
 
 def get_idu_data(filters=None):
@@ -667,19 +662,20 @@ class FigureViewSet(viewsets.ReadOnlyModelViewSet):
         return get_idu_data()
 
 
-CONTENT_TYPES = {
-    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "json": "application/json",
-    "geojson": "application/geo+json",
-}
-
-
 class ExternalEndpointBaseCachedViewMixin:
     ENDPOINT_TYPE = None
 
+    CONTENT_TYPES = MappingProxyType(
+        {
+            "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "json": "application/json",
+            "geojson": "application/geo+json",
+        }
+    )
+
     def get_content_type(self, filename: str) -> Optional[str]:
         extension = Path(filename).suffix.lower().lstrip(".")
-        return CONTENT_TYPES.get(extension)
+        return self.CONTENT_TYPES.get(extension)
 
     def build_download_params(self, filename: str) -> dict:
         params = {
@@ -704,7 +700,7 @@ class ExternalEndpointBaseCachedViewMixin:
         return redirect(url)
 
     @client_id
-    def get(self, request, data_format=ExternalApiDump.Format.JSON):
+    def get(self, request, data_format):
         # Check if request is comming from valid client
         client_id = request.GET.get("client_id", None)
         # Track client
@@ -712,9 +708,17 @@ class ExternalEndpointBaseCachedViewMixin:
             client_id,
             self.ENDPOINT_TYPE,
         )
-        api_dump = ExternalApiDump.objects.filter(
-            api_type=self.ENDPOINT_TYPE, include_sources=client.share_source, format=data_format
-        ).first()
+        # FIXME(tnagorra): We should add constraint on the server and then use .get()
+        api_dump = (
+            ExternalApiDump.objects.filter(
+                api_type=self.ENDPOINT_TYPE,
+                include_sources=client.share_source,
+                format=data_format,
+            )
+            .order_by("-id")
+            .first()
+        )
+
         # NOTE: Sending empty array so client don't break.
         _empty_response = []
         if not api_dump:
