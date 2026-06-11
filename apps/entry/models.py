@@ -1665,8 +1665,14 @@ class ExternalApiDump(models.Model):
     class ExternalApiType(models.TextChoices):
         # There might be other external endpoints
         IDUS = "idus", _("/external-api/idus/last-180-days/")
+        IDUS_EXCEL = "idus-excel", _("/external-api/idus/last-180-days-excel/")
+        IDUS_GEOJSON = "idus-geojson", _("/external-api/idus/last-180-days-geojson/")
         IDUS_ALL = "idus-all", _("/external-api/idus/all/")
+        IDUS_ALL_EXCEL = "idus-all-excel", _("/external-api/idus/all-excel/")
+        IDUS_ALL_GEOJSON = "idus-all-geojson", _("/external-api/idus/all-geojson/")
         IDUS_ALL_DISASTER = "idus-all-disaster", _("/external-api/idus/all/disaster/")
+        IDUS_ALL_DISASTER_EXCEL = "idus-all-disaster-excel", _("/external-api/idus/all/disaster-excel/")
+        IDUS_ALL_DISASTER_GEOJSON = "idus-all-disaster-geojson", _("/external-api/idus/all/disaster-geojson/")
 
         GIDD_COUNTRY_REST = "gidd-country-rest", _("/external-api/gidd/countries/")
         GIDD_CONFLICT_REST = "gidd-conflict-rest", _("/external-api/gidd/conflicts/")
@@ -1705,6 +1711,24 @@ class ExternalApiDump(models.Model):
         COMPLETED = 1, "Completed"
         FAILED = 2, "Failed"
 
+    class Format(models.IntegerChoices):
+        JSON = 0, "Json"
+        GEOJSON = 1, "Geojson"
+        EXCEL = 2, "Excel"
+
+    # NOTE: Used only for usage tracking, so excel/geojson hits are counted
+    # separately from json. The dump records themselves stay keyed by the base
+    # api_type + format. JSON (and any unmapped format) falls back to the base
+    # api_type.
+    TRACKING_API_TYPE = {
+        (ExternalApiType.IDUS, Format.EXCEL): ExternalApiType.IDUS_EXCEL,
+        (ExternalApiType.IDUS, Format.GEOJSON): ExternalApiType.IDUS_GEOJSON,
+        (ExternalApiType.IDUS_ALL, Format.EXCEL): ExternalApiType.IDUS_ALL_EXCEL,
+        (ExternalApiType.IDUS_ALL, Format.GEOJSON): ExternalApiType.IDUS_ALL_GEOJSON,
+        (ExternalApiType.IDUS_ALL_DISASTER, Format.EXCEL): ExternalApiType.IDUS_ALL_DISASTER_EXCEL,
+        (ExternalApiType.IDUS_ALL_DISASTER, Format.GEOJSON): ExternalApiType.IDUS_ALL_DISASTER_GEOJSON,
+    }
+
     @dataclass
     class Metadata:
         response_type: str  # Use Enum GraphQL - JSON/REST
@@ -1733,6 +1757,26 @@ class ExternalApiDump(models.Model):
                 )
             ),
         ),
+        ExternalApiType.IDUS_EXCEL: Metadata(
+            response_type="XLSX",
+            usage="External",
+            description="IDUs from the last 180 days updated every 2 hours (GeoJSON)",
+            example_request=(
+                lambda request, client_code: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDUS_EXCEL.label + f"?client_id={client_code}"
+                )
+            ),
+        ),
+        ExternalApiType.IDUS_GEOJSON: Metadata(
+            response_type="GeoJSON",
+            usage="External",
+            description="IDUs from the last 180 days updated every 2 hours (GeoJSON)",
+            example_request=(
+                lambda request, client_code: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDUS_GEOJSON.label + f"?client_id={client_code}"
+                )
+            ),
+        ),
         ExternalApiType.IDUS_ALL: Metadata(
             response_type="JSON",
             usage="External",
@@ -1743,6 +1787,26 @@ class ExternalApiDump(models.Model):
                 )
             ),
         ),
+        ExternalApiType.IDUS_ALL_EXCEL: Metadata(
+            response_type="XLSX",
+            usage="External",
+            description="All IDUs updated every 2 hours (Excel)",
+            example_request=(
+                lambda request, client_code: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDUS_ALL_EXCEL.label + f"?client_id={client_code}"
+                )
+            ),
+        ),
+        ExternalApiType.IDUS_ALL_GEOJSON: Metadata(
+            response_type="GeoJSON",
+            usage="External",
+            description="All IDUs updated every 2 hours (GeoJSON)",
+            example_request=(
+                lambda request, client_code: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDUS_ALL_GEOJSON.label + f"?client_id={client_code}"
+                )
+            ),
+        ),
         ExternalApiType.IDUS_ALL_DISASTER: Metadata(
             response_type="JSON",
             usage="External",
@@ -1750,6 +1814,26 @@ class ExternalApiDump(models.Model):
             example_request=(
                 lambda request, client_code: request.build_absolute_uri(
                     ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER.label + f"?client_id={client_code}"
+                )
+            ),
+        ),
+        ExternalApiType.IDUS_ALL_DISASTER_EXCEL: Metadata(
+            response_type="REST - XLSX",
+            usage="External",
+            description="IDUs for disaster updated every 2 hours (Excel)",
+            example_request=(
+                lambda request, client_code: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER_EXCEL.label + f"?client_id={client_code}"
+                )
+            ),
+        ),
+        ExternalApiType.IDUS_ALL_DISASTER_GEOJSON: Metadata(
+            response_type="REST - GeoJSON",
+            usage="External",
+            description="IDUs for disaster updated every 2 hours (GeoJSON)",
+            example_request=(
+                lambda request, client_code: request.build_absolute_uri(
+                    ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER_GEOJSON.label + f"?client_id={client_code}"
                 )
             ),
         ),
@@ -1931,8 +2015,9 @@ class ExternalApiDump(models.Model):
         max_length=40,
         choices=ExternalApiType.choices,
     )
+    format = models.IntegerField(choices=Format.choices, default=Format.JSON)
     include_sources = models.BooleanField(default=False)
     status = models.IntegerField(choices=Status.choices, default=Status.PENDING)
 
     def __str__(self):
-        return self.api_type
+        return f"{self.api_type}-{self.get_format_display()}"

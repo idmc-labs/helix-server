@@ -630,6 +630,7 @@ class FigureTagUpdateSerializer(UpdateSerializerMixin, FigureTagCreateSerializer
 
 
 class FigureReadOnlySerializer(serializers.ModelSerializer):
+    id = serializers.IntegerField(help_text="IDMC figure unique identifier.")
     country = serializers.CharField(source="country_name", help_text="Short name of the country or territory.")
     iso3 = serializers.CharField(
         help_text="Represents the ISO 3166-1 alpha-3 code. The code 'AB9' is assigned to the Abyei Area."
@@ -653,15 +654,17 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
     displacement_date = serializers.CharField(help_text="Initial date when the displacement flow began.")
     event_id = serializers.IntegerField(help_text="Unique identifier for events as assigned by IDMC.")
     event_name = serializers.CharField(
-        help_text="This field includes the event's coded name which is based on the country,\n"
+        help_text="This field includes the event's coded name which is based on the country, "
         "type of hazard, location, and start date. "
         "It also incorporates the common or official name of the event when available."
     )
     event_codes = serializers.CharField(
-        help_text="(Field description not provided in the context; consider documenting separately if needed.)"
+        help_text="Unique codes such as the GLIDE number and other database-specific codes "
+        "used to identify and track specific events across databases."
     )
     event_code_types = serializers.CharField(
-        help_text="(Field description not provided in the context; consider documenting separately if needed.)"
+        help_text="Types of unique codes such as the GLIDE number and other database-specific "
+        "identifiers used to track events."
     )
     event_start_date = serializers.CharField(help_text="Date when the event or hazard began.")
     event_end_date = serializers.CharField(help_text="Date when the event or hazard concluded.")
@@ -681,7 +684,7 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
     standard_popup_text = serializers.CharField(help_text="Standard text from the IDMC website for the data entry.")
     standard_info_text = serializers.CharField(help_text="Additional standard information provided by IDMC.")
     role = serializers.CharField(
-        help_text="The field of data delineates the most reliable figure accessible"
+        help_text="The field of data delineates the most reliable figure accessible "
         "as determined by the primary data source, "
         "the methodology employed in data collection, the scope of coverage, "
         "and the promptness of the reported information. "
@@ -716,7 +719,7 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
     )
     locations_coordinates = serializers.CharField(
         help_text="This field contains geographic coordinates representing the reported locations. "
-        "Please note that this field contains multipoints, meaning that multiple locations may represent one figures. "
+        "Please note that this field contains multipoints, meaning that multiple locations may represent one figure. "
         "It's important to note that this field may exhibit a many-to-one relationship signifying that multiple location "
         "names could be associated with a single reported figure preventing disaggregation by individual location. "
         "This becomes particularly relevant in geospatial analysis, where Geographic Information System (GIS) software "
@@ -748,7 +751,7 @@ class FigureReadOnlySerializer(serializers.ModelSerializer):
     )
     displacement_occurred = serializers.CharField(
         source="displacement_occurred_transformed",
-        help_text="This field contains values that represent if preventive evacuations were reported."
+        help_text="This field contains values that represent if preventive evacuations were reported. "
         "These evacuations are the result of existing early warning systems.",
     )
     old_id = serializers.CharField(help_text="Legacy identifier for the data entry.")

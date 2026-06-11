@@ -4,6 +4,7 @@ from django.utils import timezone
 
 from apps.crisis.models import Crisis
 from apps.entry.models import (
+    ExternalApiDump,
     Figure,
 )
 from apps.users.enums import USER_ROLE
@@ -316,3 +317,39 @@ class TestEntryModel(HelixTestCase):
         e.save()
         e.refresh_from_db()
         self.assertEqual(e.calculation_logic, markup_and_html_mixed_data_cleaned)
+
+
+class TestExternalApiDumpTrackingType(HelixTestCase):
+    """
+    The IDU export endpoints (excel/geojson) are tracked separately from json by
+    resolving a format-specific api_type via ExternalApiDump.TRACKING_API_TYPE.
+    """
+
+    def _resolve(self, endpoint_type, data_format):
+        # Mirror the resolution used in ExternalEndpointBaseCachedViewMixin.get()
+        return ExternalApiDump.TRACKING_API_TYPE.get(
+            (endpoint_type, data_format),
+            endpoint_type,
+        )
+
+    def test_excel_and_geojson_resolve_to_dedicated_types(self):
+        ApiType = ExternalApiDump.ExternalApiType
+        Format = ExternalApiDump.Format
+        cases = [
+            (ApiType.IDUS, Format.EXCEL, ApiType.IDUS_EXCEL),
+            (ApiType.IDUS, Format.GEOJSON, ApiType.IDUS_GEOJSON),
+            (ApiType.IDUS_ALL, Format.EXCEL, ApiType.IDUS_ALL_EXCEL),
+            (ApiType.IDUS_ALL, Format.GEOJSON, ApiType.IDUS_ALL_GEOJSON),
+            (ApiType.IDUS_ALL_DISASTER, Format.EXCEL, ApiType.IDUS_ALL_DISASTER_EXCEL),
+            (ApiType.IDUS_ALL_DISASTER, Format.GEOJSON, ApiType.IDUS_ALL_DISASTER_GEOJSON),
+        ]
+        for endpoint_type, data_format, expected in cases:
+            with self.subTest(endpoint_type=endpoint_type, data_format=data_format):
+                self.assertEqual(self._resolve(endpoint_type, data_format), expected)
+
+    def test_json_falls_back_to_base_type(self):
+        ApiType = ExternalApiDump.ExternalApiType
+        Format = ExternalApiDump.Format
+        for base in (ApiType.IDUS, ApiType.IDUS_ALL, ApiType.IDUS_ALL_DISASTER):
+            with self.subTest(base=base):
+                self.assertEqual(self._resolve(base, Format.JSON), base)

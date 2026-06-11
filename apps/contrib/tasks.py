@@ -183,27 +183,46 @@ def generate_external_endpoint_dump_file(
     serializer,
     get_data,
     filename,
+    format=None,
     include_sources=False,
 ):
     from apps.entry.models import ExternalApiDump
 
-    external_api_dump, _ = ExternalApiDump.objects.get_or_create(api_type=endpoint_type, include_sources=include_sources)
+    format = format or ExternalApiDump.Format.JSON
+
+    external_api_dump, _ = ExternalApiDump.objects.get_or_create(
+        api_type=endpoint_type,
+        include_sources=include_sources,
+        format=format,
+    )
+
     try:
         data = get_data()
-        serializer = serializer(data, many=True)
-        with get_temp_file(mode="w+") as tmp:
-            json.dump(serializer.data, tmp)
-            external_api_dump.dump_file.save(
-                filename,
-                File(tmp),
-                save=False,
-            )
+        if format == ExternalApiDump.Format.EXCEL:
+            with get_temp_file(mode="wb+") as tmp:
+                data.save(tmp.name)
+                data.close()
+                external_api_dump.dump_file.save(filename, File(tmp), save=False)
+        elif format == ExternalApiDump.Format.GEOJSON:
+            with get_temp_file(mode="wb+") as tmp:
+                tmp.write(json.dumps(data).encode("utf-8"))
+                external_api_dump.dump_file.save(filename, File(tmp), save=False)
+        else:
+            serializer = serializer(data, many=True)
+            with get_temp_file(mode="w+") as tmp:
+                json.dump(serializer.data, tmp)
+                external_api_dump.dump_file.save(filename, File(tmp), save=False)
+
         external_api_dump.status = ExternalApiDump.Status.COMPLETED
-        logger.info(f"{endpoint_type}: file dump created ({include_sources=})")
+        logger.info(
+            f"{endpoint_type}: {format.label if format else ExternalApiDump.Format.JSON.label} "
+            f"file dump created ({include_sources=})"
+        )
     except Exception:
         external_api_dump.status = ExternalApiDump.Status.FAILED
         logger.error(
-            f"{endpoint_type}: file dump generation failed ({include_sources=})",
+            f"{endpoint_type}: {format.label if format else ExternalApiDump.Format.JSON.label} "
+            f"file dump generation failed ({include_sources=})",
             exc_info=True,
         )
     external_api_dump.save()
@@ -215,7 +234,7 @@ def _generate_idus_dump_file(api_type):
     from apps.crisis.models import Crisis
     from apps.entry.models import ExternalApiDump
     from apps.entry.serializers import FigureReadOnlySerializer
-    from apps.entry.views import get_idu_data
+    from apps.entry.views import get_idu_data, get_idu_data_excel, get_idu_data_geojson
 
     if api_type == ExternalApiDump.ExternalApiType.IDUS_ALL:
         # generate dump file with out source
@@ -231,7 +250,41 @@ def _generate_idus_dump_file(api_type):
             FigureReadOnlySerializer,
             lambda: get_idu_data(filters={"include_source": True}),
             "idus_all_with_source.json",
-            True,
+            include_sources=True,
+        )
+        # generate excel dump file with out source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL,
+            FigureReadOnlySerializer,
+            get_idu_data_excel,
+            "idus_all.xlsx",
+            ExternalApiDump.Format.EXCEL,
+        )
+        # generate excel dump file with source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data_excel(filters={"include_source": True}),
+            "idus_all_with_source.xlsx",
+            ExternalApiDump.Format.EXCEL,
+            include_sources=True,
+        )
+        # generate geojson dump file with out source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL,
+            FigureReadOnlySerializer,
+            get_idu_data_geojson,
+            "idus_all.geojson",
+            ExternalApiDump.Format.GEOJSON,
+        )
+        # generate geojson dump file with source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data_geojson(filters={"include_source": True}),
+            "idus_all_with_source.geojson",
+            ExternalApiDump.Format.GEOJSON,
+            include_sources=True,
         )
         return
 
@@ -249,7 +302,41 @@ def _generate_idus_dump_file(api_type):
             FigureReadOnlySerializer,
             lambda: get_idu_data(filters={"figure_cause": Crisis.CRISIS_TYPE.DISASTER, "include_source": True}),
             "idus_all_disaster_with_source.json",
-            True,
+            include_sources=True,
+        )
+        # generate excel dump file with out source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data_excel(filters={"figure_cause": Crisis.CRISIS_TYPE.DISASTER}),
+            "idus_all_disaster.xlsx",
+            ExternalApiDump.Format.EXCEL,
+        )
+        # generate excel dump file with source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data_excel(filters={"figure_cause": Crisis.CRISIS_TYPE.DISASTER, "include_source": True}),
+            "idus_all_disaster_with_source.xlsx",
+            ExternalApiDump.Format.EXCEL,
+            include_sources=True,
+        )
+        # generate geojson dump file with out source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data_geojson(filters={"figure_cause": Crisis.CRISIS_TYPE.DISASTER}),
+            "idus_all_disaster.geojson",
+            ExternalApiDump.Format.GEOJSON,
+        )
+        # generate geojson dump file with source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data_geojson(filters={"figure_cause": Crisis.CRISIS_TYPE.DISASTER, "include_source": True}),
+            "idus_all_disaster_with_source.geojson",
+            ExternalApiDump.Format.GEOJSON,
+            include_sources=True,
         )
         return
 
@@ -260,15 +347,49 @@ def _generate_idus_dump_file(api_type):
             ExternalApiDump.ExternalApiType.IDUS,
             FigureReadOnlySerializer,
             lambda: get_idu_data(filters={"displacement_date__gte": idu_date_from}),
-            "idus.json",
+            "idus_180_days.json",
         )
         # generate dump file with source
         generate_external_endpoint_dump_file(
             ExternalApiDump.ExternalApiType.IDUS,
             FigureReadOnlySerializer,
             lambda: get_idu_data(filters={"displacement_date__gte": idu_date_from, "include_source": True}),
-            "idus_with_source.json",
-            True,
+            "idus_180_days_with_source.json",
+            include_sources=True,
+        )
+        # generate excel dump file with out source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data_excel(filters={"displacement_date__gte": idu_date_from}),
+            "idus_180_days.xlsx",
+            ExternalApiDump.Format.EXCEL,
+        )
+        # generate excel dump file with source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data_excel(filters={"displacement_date__gte": idu_date_from, "include_source": True}),
+            "idus_180_days_with_source.xlsx",
+            ExternalApiDump.Format.EXCEL,
+            include_sources=True,
+        )
+        # generate geojson dump file with out source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data_geojson(filters={"displacement_date__gte": idu_date_from, "include_source": True}),
+            "idus_180_days.geojson",
+            ExternalApiDump.Format.GEOJSON,
+        )
+        # generate geojson dump file with source
+        generate_external_endpoint_dump_file(
+            ExternalApiDump.ExternalApiType.IDUS,
+            FigureReadOnlySerializer,
+            lambda: get_idu_data_geojson(filters={"include_source": True}),
+            "idus_180_days_all_with_source.geojson",
+            ExternalApiDump.Format.GEOJSON,
+            include_sources=True,
         )
         return
 

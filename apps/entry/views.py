@@ -1,15 +1,21 @@
+import typing
 from pathlib import Path
+from types import MappingProxyType
+from typing import Optional
 
 from django.contrib.postgres.aggregates.general import ArrayAgg, StringAgg
 from django.contrib.postgres.fields import ArrayField
 from django.db.models import Avg, Case, CharField, F, Func, Q, Value, When
 from django.db.models.functions import Cast, Coalesce, Concat, ExtractYear, Lower
 from django.shortcuts import redirect
-from drf_spectacular.utils import extend_schema, extend_schema_view
+from django.utils import timezone
+from drf_spectacular.utils import extend_schema
+from openpyxl import Workbook
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework.viewsets import ViewSet
 
 from apps.common.utils import (
     EXTERNAL_ARRAY_SEPARATOR,
@@ -20,8 +26,11 @@ from apps.common.utils import (
 from apps.entry.models import ExternalApiDump, Figure
 from apps.entry.serializers import FigureReadOnlySerializer
 from apps.gidd.views import client_id
+from helix.storages import TemporaryStorageEnableAuthString, get_external_storage
 from utils.common import track_gidd
 from utils.db import Array
+
+external_storage = get_external_storage()
 
 
 def get_idu_data(filters=None):
@@ -302,6 +311,190 @@ def get_idu_data(filters=None):
         }
 
 
+def get_idu_export_field_descriptions() -> typing.List[str]:
+    serializer = FigureReadOnlySerializer()
+    return [f"{field.label}: {field.help_text}" for field in serializer.fields.values() if field.help_text]
+
+
+def get_idu_data_excel(filters=None):
+    wb = Workbook(write_only=True)
+    ws = wb.create_sheet("IDUS_Data")
+    ws.append(
+        [
+            "Id",
+            "Country",
+            "Iso3",
+            "Latitude",
+            "Longitude",
+            "Centroid",
+            "Role",
+            "DisplacementType",
+            "Qualifier",
+            "Figure",
+            "DisplacementDate",
+            "DisplacementStartDate",
+            "DisplacementEndDate",
+            "Year",
+            "EventId",
+            "EventName",
+            "EventCodes",
+            "EventCodeTypes",
+            "EventStartDate",
+            "EventEndDate",
+            "Category",
+            "Subcategory",
+            "Type",
+            "Subtype",
+            "StandardPopupText",
+            "StandardInfoText",
+            "OldId",
+            "Sources",
+            "SourceUrl",
+            "LocationsName",
+            "LocationsCoordinates",
+            "LocationsAccuracy",
+            "LocationsType",
+            "DisplacementOccurred",
+            "CreatedAt",
+        ]
+    )
+
+    if filters:
+        idu_data = get_idu_data(filters)
+    else:
+        idu_data = get_idu_data()
+
+    for obj in idu_data:
+        serializer = FigureReadOnlySerializer(obj)
+        item = dict(serializer.data)  # dict used here to solve pyright issue
+        ws.append(
+            [
+                item["id"],
+                item["country"],
+                item["iso3"],
+                item["latitude"],
+                item["longitude"],
+                item["centroid"],
+                item["role"],
+                item["displacement_type"],
+                item["qualifier"],
+                item["figure"],
+                item["displacement_date"],
+                item["displacement_start_date"],
+                item["displacement_end_date"],
+                item["year"],
+                item["event_id"],
+                item["event_name"],
+                item["event_codes"],
+                item["event_code_types"],
+                item["event_start_date"],
+                item["event_end_date"],
+                item["category"],
+                item["subcategory"],
+                item["type"],
+                item["subtype"],
+                item["standard_popup_text"],
+                item["standard_info_text"],
+                item["old_id"],
+                item["sources"],
+                item["source_url"],
+                item["locations_name"],
+                item["locations_coordinates"],
+                item["locations_accuracy"],
+                item["locations_type"],
+                item["displacement_occurred"],
+                item["created_at"],
+            ]
+        )
+
+    ws2 = wb.create_sheet("README")
+    for description in get_idu_export_field_descriptions():
+        ws2.append([description])
+
+    return wb
+
+
+def get_idu_data_geojson(filters=None):
+    def format_coordinates(coordinates: typing.List[str]):
+        if not coordinates:
+            return []
+        return coordinates.split(",")
+
+    def remove_null_from_dict(data: dict) -> dict:
+        return {key: value for key, value in data.items() if value is not None}
+
+    if filters:
+        idu_data = get_idu_data(filters)
+    else:
+        idu_data = get_idu_data()
+
+    readme_text = "\n\n".join(get_idu_export_field_descriptions())
+    feature_collection = {
+        "type": "FeatureCollection",
+        "readme": readme_text,
+        "lastUpdated": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "features": [],
+    }
+    for obj in idu_data:
+        serializer = FigureReadOnlySerializer(obj)
+        item = dict(serializer.data)
+
+        coordinates = format_coordinates(item["locations_coordinates"])
+        if coordinates == []:
+            continue
+
+        geometry = {
+            "type": "MultiPoint",
+            "coordinates": coordinates,
+        }
+
+        feature = {
+            "type": "Feature",
+            "geometry": geometry,
+            "properties": remove_null_from_dict(
+                {
+                    "id": item["id"],
+                    "country": item["country"],
+                    "iso3": item["iso3"],
+                    "latitude": item["latitude"],
+                    "longitude": item["longitude"],
+                    "centroid": item["centroid"],
+                    "role": item["role"],
+                    "displacement_type": item["displacement_type"],
+                    "qualifier": item["qualifier"],
+                    "figure": item["figure"],
+                    "displacement_date": item["displacement_date"],
+                    "displacement_start_date": item["displacement_start_date"],
+                    "displacement_end_date": item["displacement_end_date"],
+                    "year": item["year"],
+                    "event_id": item["event_id"],
+                    "event_name": item["event_name"],
+                    "event_codes": item["event_codes"],
+                    "event_code_types": item["event_code_types"],
+                    "event_start_date": item["event_start_date"],
+                    "event_end_date": item["event_end_date"],
+                    "category": item["category"],
+                    "subcategory": item["subcategory"],
+                    "type": item["type"],
+                    "subtype": item["subtype"],
+                    "standard_popup_text": item["standard_popup_text"],
+                    "standard_info_text": item["standard_info_text"],
+                    "old_id": item["old_id"],
+                    "sources": item["sources"],
+                    "source_url": item["source_url"],
+                    "locations_name": item["locations_name"],
+                    "locations_coordinates": item["locations_coordinates"],
+                    "locations_accuracy": item["locations_accuracy"],
+                    "locations_type": item["locations_type"],
+                    "displacement_occurred": item["displacement_occurred"],
+                    "created_at": item["created_at"],
+                }
+            ),
+        }
+        feature_collection["features"].append(feature)
+    return feature_collection
+
+
 class FigureViewSet(viewsets.ReadOnlyModelViewSet):
     # TODO Add url for this viewset
     serializer_class = FigureReadOnlySerializer
@@ -314,65 +507,116 @@ class FigureViewSet(viewsets.ReadOnlyModelViewSet):
 class ExternalEndpointBaseCachedViewMixin:
     ENDPOINT_TYPE = None
 
+    CONTENT_TYPES = MappingProxyType(
+        {
+            "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "json": "application/json",
+            "geojson": "application/geo+json",
+        }
+    )
+
+    def get_content_type(self, filename: str) -> Optional[str]:
+        extension = Path(filename).suffix.lower().lstrip(".")
+        return self.CONTENT_TYPES.get(extension)
+
+    def build_download_params(self, filename: str) -> dict:
+        params = {
+            "ResponseContentDisposition": f'attachment; filename="{filename}"',
+        }
+
+        content_type = self.get_content_type(filename)
+        if content_type:
+            params["ResponseContentType"] = content_type
+
+        return params
+
+    def download_file(self, request, obj):
+        filename = Path(obj.dump_file.name).name
+        params = self.build_download_params(filename)
+        with TemporaryStorageEnableAuthString(external_storage):
+            url = external_storage.url(
+                obj.dump_file.name,
+                parameters=params,
+            )
+
+        return redirect(url)
+
     @client_id
-    def get(self, request):
+    def get(self, request, data_format):
         # Check if request is comming from valid client
         client_id = request.GET.get("client_id", None)
-        # Track client
-        client = track_gidd(
-            client_id,
+        # Track client. Use a format-specific api_type so excel/geojson hits are
+        # counted separately from json (which falls back to the base type).
+        tracking_type = ExternalApiDump.TRACKING_API_TYPE.get(
+            (self.ENDPOINT_TYPE, data_format),
             self.ENDPOINT_TYPE,
         )
-        api_dump = ExternalApiDump.objects.filter(api_type=self.ENDPOINT_TYPE, include_sources=client.share_source).first()
+        client = track_gidd(
+            client_id,
+            tracking_type,
+        )
+        # FIXME(tnagorra): We should add constraint on the server and then use .get()
+        api_dump = (
+            ExternalApiDump.objects.filter(
+                api_type=self.ENDPOINT_TYPE,
+                include_sources=client.share_source,
+                format=data_format,
+            )
+            .order_by("-id")
+            .first()
+        )
+
         # NOTE: Sending empty array so client don't break.
         _empty_response = []
         if not api_dump:
             return Response(_empty_response, status=status.HTTP_404_NOT_FOUND)
+
         if api_dump.status == ExternalApiDump.Status.COMPLETED:
-            return redirect(
-                request.build_absolute_uri(
-                    api_dump.dump_file.url,
-                )
-            )
+            return self.download_file(request, api_dump)
+
         if api_dump.status == ExternalApiDump.Status.FAILED:
             return Response(status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
         # Finally, for pending. If we have a dump send it
         if api_dump.dump_file.name is not None:
-            return redirect(
-                request.build_absolute_uri(
-                    api_dump.dump_file.url,
-                )
-            )
+            return self.download_file(request, api_dump)
 
         # Else send 202 response
         return Response(_empty_response, status=status.HTTP_202_ACCEPTED)
 
 
-@extend_schema_view(
-    get=extend_schema(
-        description=Path("docs/idus/main-description.md").read_text(),
-        responses=FigureReadOnlySerializer,
-        tags=["IDU"],
-    )
+@extend_schema(
+    description=Path("docs/idus/main-description.md").read_text(),
+    responses=FigureReadOnlySerializer,
+    tags=["IDU"],
 )
-class IdusFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
+class BaseIdusCachedView(ExternalEndpointBaseCachedViewMixin, ViewSet):
+    @client_id
+    @action(detail=False, methods=["get"], url_path="export-excel")
+    def export_excel(self, request):
+        return self._export(request, ExternalApiDump.Format.EXCEL)
+
+    @client_id
+    @action(detail=False, methods=["get"], url_path="export-json")
+    def export_json(self, request):
+        return self._export(request, ExternalApiDump.Format.JSON)
+
+    @client_id
+    @action(detail=False, methods=["get"], url_path="export-geojson")
+    def export_geojson(self, request):
+        return self._export(request, ExternalApiDump.Format.GEOJSON)
+
+    def _export(self, request, fmt):
+        return super().get(request, data_format=fmt)
+
+
+class IdusFlatCachedView(BaseIdusCachedView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS
 
 
-@extend_schema(
-    description=Path("docs/idus/main-description.md").read_text(),
-    responses=FigureReadOnlySerializer,
-    tags=["IDU"],
-)
-class IdusAllFlatCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
+class IdusAllFlatCachedView(BaseIdusCachedView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL
 
 
-@extend_schema(
-    description=Path("docs/idus/main-description.md").read_text(),
-    responses=FigureReadOnlySerializer,
-    tags=["IDU"],
-)
-class IdusAllDisasterCachedView(ExternalEndpointBaseCachedViewMixin, APIView):
+class IdusAllDisasterCachedView(BaseIdusCachedView):
     ENDPOINT_TYPE = ExternalApiDump.ExternalApiType.IDUS_ALL_DISASTER
