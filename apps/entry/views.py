@@ -703,10 +703,15 @@ class ExternalEndpointBaseCachedViewMixin:
     def get(self, request, data_format):
         # Check if request is comming from valid client
         client_id = request.GET.get("client_id", None)
-        # Track client
+        # Track client. Use a format-specific api_type so excel/geojson hits are
+        # counted separately from json (which falls back to the base type).
+        tracking_type = ExternalApiDump.TRACKING_API_TYPE.get(
+            (self.ENDPOINT_TYPE, data_format),
+            self.ENDPOINT_TYPE,
+        )
         client = track_gidd(
             client_id,
-            self.ENDPOINT_TYPE,
+            tracking_type,
         )
         # FIXME(tnagorra): We should add constraint on the server and then use .get()
         api_dump = (
