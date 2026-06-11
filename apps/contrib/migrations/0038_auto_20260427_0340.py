@@ -18,14 +18,17 @@ def migrate_notes_to_description(apps, schema_editor):
     for obj in Client.objects.all():
         use_cases = obj.use_cases or []
         has_other = USE_CASE_TYPES.OTHER in use_cases
-        non_other = [x for x in use_cases if x != USE_CASE_TYPES.OTHER]
 
-        if has_other:
+        if not has_other:
+            continue
+
+        if obj.other_notes:
             obj.description = obj.other_notes
 
-            if non_other:
-                obj.use_cases = non_other
-                obj.other_notes = None
+        non_other = [x for x in use_cases if x != USE_CASE_TYPES.OTHER]
+        if non_other:
+            obj.use_cases = non_other
+            obj.other_notes = None
 
         obj.save(update_fields=["description", "use_cases", "other_notes"])
 
