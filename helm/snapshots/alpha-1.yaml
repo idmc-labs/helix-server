@@ -26,6 +26,7 @@ spec:
     - ports:
         - port: 9001
         - port: 9000
+
 ---
 # Source: helix-backend-helm/charts/app/charts/minio/templates/provisioning-networkpolicy.yaml
 kind: NetworkPolicy
@@ -49,6 +50,7 @@ spec:
   egress:
     - {}
   ingress:
+
 ---
 # Source: helix-backend-helm/charts/app/charts/postgresql/templates/primary/networkpolicy.yaml
 kind: NetworkPolicy
@@ -77,6 +79,7 @@ spec:
   ingress:
     - ports:
         - port: 5432
+
 ---
 # Source: helix-backend-helm/charts/app/charts/minio/templates/pdb.yaml
 apiVersion: policy/v1
@@ -96,6 +99,7 @@ spec:
     matchLabels:
       app.kubernetes.io/instance: release-name
       app.kubernetes.io/name: minio
+
 ---
 # Source: helix-backend-helm/charts/app/charts/postgresql/templates/primary/pdb.yaml
 apiVersion: policy/v1
@@ -117,6 +121,7 @@ spec:
       app.kubernetes.io/instance: release-name
       app.kubernetes.io/name: postgresql
       app.kubernetes.io/component: primary
+
 ---
 # Source: helix-backend-helm/charts/app/charts/minio/templates/serviceaccount.yaml
 apiVersion: v1
@@ -133,6 +138,7 @@ metadata:
 automountServiceAccountToken: false
 secrets:
   - name: helix-minio
+
 ---
 # Source: helix-backend-helm/charts/app/charts/postgresql/templates/serviceaccount.yaml
 apiVersion: v1
@@ -147,6 +153,7 @@ metadata:
     app.kubernetes.io/version: 17.2.0
     helm.sh/chart: postgresql-16.4.5
 automountServiceAccountToken: false
+
 ---
 # Source: helix-backend-helm/charts/app/charts/minio/templates/secrets.yaml
 apiVersion: v1
@@ -164,6 +171,7 @@ type: Opaque
 data:
   root-user: "aGVsaXg="
   root-password: "WFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFg="
+
 ---
 # Source: helix-backend-helm/charts/app/charts/postgresql/templates/secrets.yaml
 apiVersion: v1
@@ -182,6 +190,7 @@ data:
   postgres-password: "WFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFg="
   password: "WFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFg="
   # We don't auto-generate LDAP password when it's not provided as we do for other passwords
+
 ---
 # Source: helix-backend-helm/charts/app/templates/config/secret.yaml
 kind: Secret
@@ -206,6 +215,7 @@ stringData:
   POSTGRES_PORT: "5432"
   POSTGRES_USER: "postgres"
   SENTRY_DSN: "https://xyz@sentry.local.example.com/14"
+
 ---
 # Source: helix-backend-helm/charts/app/charts/minio/templates/provisioning-configmap.yaml
 apiVersion: v1
@@ -221,6 +231,7 @@ metadata:
     helm.sh/chart: minio-14.10.5
     app.kubernetes.io/component: minio-provisioning
 data:
+
 ---
 # Source: helix-backend-helm/charts/app/charts/postgresql/templates/primary/initialization-configmap.yaml
 apiVersion: v1
@@ -246,6 +257,7 @@ data:
     du -sh /tmp/db.dump
   
     PGPASSWORD="${POSTGRES_PASSWORD}" PGUSER=$POSTGRES_USER pg_restore -v --no-owner --no-privileges -d "$POSTGRES_DATABASE" < /tmp/db.dump
+
 ---
 # Source: helix-backend-helm/charts/app/templates/config/configmap.yaml
 kind: ConfigMap
@@ -275,6 +287,7 @@ data:
   SENTRY_SAMPLE_RATE: "0.8"
   SESSION_COOKIE_DOMAIN: ".example.com"
   USE_S3_BUCKET: "true"
+
 ---
 # Source: helix-backend-helm/charts/app/charts/minio/templates/pvc.yaml
 kind: PersistentVolumeClaim
@@ -295,6 +308,7 @@ spec:
     requests:
       storage: "0.5Gi"
   storageClassName: local-path
+
 ---
 # Source: helix-backend-helm/charts/app/charts/minio/templates/service.yaml
 apiVersion: v1
@@ -322,6 +336,7 @@ spec:
   selector:
     app.kubernetes.io/instance: release-name
     app.kubernetes.io/name: minio
+
 ---
 # Source: helix-backend-helm/charts/app/charts/postgresql/templates/primary/svc-headless.yaml
 apiVersion: v1
@@ -352,6 +367,7 @@ spec:
     app.kubernetes.io/instance: release-name
     app.kubernetes.io/name: postgresql
     app.kubernetes.io/component: primary
+
 ---
 # Source: helix-backend-helm/charts/app/charts/postgresql/templates/primary/svc.yaml
 apiVersion: v1
@@ -378,6 +394,7 @@ spec:
     app.kubernetes.io/instance: release-name
     app.kubernetes.io/name: postgresql
     app.kubernetes.io/component: primary
+
 ---
 # Source: helix-backend-helm/charts/app/templates/api/service.yaml
 apiVersion: v1
@@ -398,6 +415,7 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 80
+
 ---
 # Source: helix-backend-helm/charts/app/charts/minio/templates/standalone/deployment.yaml
 apiVersion: apps/v1
@@ -552,6 +570,7 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: helix-minio
+
 ---
 # Source: helix-backend-helm/charts/app/templates/api/deployment.yaml
 apiVersion: apps/v1
@@ -614,6 +633,7 @@ spec:
               value: redis://idmc-helix-dragonfly:6379/2
             - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
               value: redis://idmc-helix-dragonfly:6379/3
+
 ---
 # Source: helix-backend-helm/charts/app/templates/worker-beat/deployment.yaml
 apiVersion: apps/v1
@@ -677,6 +697,7 @@ spec:
               value: redis://idmc-helix-dragonfly:6379/2
             - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
               value: redis://idmc-helix-dragonfly:6379/3
+
 ---
 # Source: helix-backend-helm/charts/app/templates/worker/deployment.yaml
 # Queue: default
@@ -750,6 +771,7 @@ spec:
               value: redis://idmc-helix-dragonfly:6379/2
             - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
               value: redis://idmc-helix-dragonfly:6379/3
+
 ---
 # Source: helix-backend-helm/charts/app/charts/postgresql/templates/primary/statefulset.yaml
 apiVersion: apps/v1
@@ -948,6 +970,7 @@ spec:
           requests:
             storage: "2Gi"
         storageClassName: local-path
+
 ---
 # Source: helix-backend-helm/charts/app/templates/argo-hooks/hook-job.yaml
 # Hook: collect-static
@@ -1254,6 +1277,7 @@ spec:
               value: redis://idmc-helix-dragonfly:6379/2
             - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
               value: redis://idmc-helix-dragonfly:6379/3
+
 ---
 # Source: helix-backend-helm/charts/app/charts/minio/templates/api-ingress.yaml
 apiVersion: networking.k8s.io/v1
@@ -1282,6 +1306,7 @@ spec:
                 name: helix-minio
                 port:
                   name: minio-api
+
 ---
 # Source: helix-backend-helm/charts/app/templates/api/ingress.yaml
 apiVersion: networking.k8s.io/v1
@@ -1308,6 +1333,7 @@ spec:
                 name: helix-backend-1-api
                 port:
                   number: 80
+
 ---
 # Source: helix-backend-helm/charts/app/templates/extraManifests.yaml
 # Manifest: dragonflydb-cluster
@@ -1552,3 +1578,4 @@ spec:
         - name: minio-provisioning
           configMap:
             name: helix-minio-provisioning
+
