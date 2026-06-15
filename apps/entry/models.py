@@ -23,6 +23,7 @@ from django.db.models import (
     When,
     fields,
 )
+from django.db.models.constraints import UniqueConstraint
 from django.db.models.expressions import RawSQL
 from django.db.models.functions import Cast, Concat, ExtractYear
 from django.db.models.query import QuerySet
@@ -2021,3 +2022,11 @@ class ExternalApiDump(models.Model):
 
     def __str__(self):
         return f"{self.api_type}-{self.get_format_display()}"
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=["format", "include_sources", "api_type"],
+                name="unique_for_format_type_and_include_sources",
+            ),
+        ]

@@ -183,12 +183,10 @@ def generate_external_endpoint_dump_file(
     serializer,
     get_data,
     filename,
-    format=None,
+    format,
     include_sources=False,
 ):
     from apps.entry.models import ExternalApiDump
-
-    format = format or ExternalApiDump.Format.JSON
 
     external_api_dump, _ = ExternalApiDump.objects.get_or_create(
         api_type=endpoint_type,
@@ -214,15 +212,11 @@ def generate_external_endpoint_dump_file(
                 external_api_dump.dump_file.save(filename, File(tmp), save=False)
 
         external_api_dump.status = ExternalApiDump.Status.COMPLETED
-        logger.info(
-            f"{endpoint_type}: {format.label if format else ExternalApiDump.Format.JSON.label} "
-            f"file dump created ({include_sources=})"
-        )
+        logger.info(f"{endpoint_type}: {format.label} file dump created ({include_sources=})")
     except Exception:
         external_api_dump.status = ExternalApiDump.Status.FAILED
         logger.error(
-            f"{endpoint_type}: {format.label if format else ExternalApiDump.Format.JSON.label} "
-            f"file dump generation failed ({include_sources=})",
+            f"{endpoint_type}: {format.label} file dump generation failed ({include_sources=})",
             exc_info=True,
         )
     external_api_dump.save()
@@ -243,6 +237,7 @@ def _generate_idus_dump_file(api_type):
             FigureReadOnlySerializer,
             get_idu_data,
             "idus_all.json",
+            ExternalApiDump.Format.JSON,
         )
         # generate dump file with source
         generate_external_endpoint_dump_file(
@@ -250,6 +245,7 @@ def _generate_idus_dump_file(api_type):
             FigureReadOnlySerializer,
             lambda: get_idu_data(filters={"include_source": True}),
             "idus_all_with_source.json",
+            ExternalApiDump.Format.JSON,
             include_sources=True,
         )
         # generate excel dump file with out source
@@ -295,6 +291,7 @@ def _generate_idus_dump_file(api_type):
             FigureReadOnlySerializer,
             lambda: get_idu_data(filters={"figure_cause": Crisis.CRISIS_TYPE.DISASTER}),
             "idus_all_disaster.json",
+            ExternalApiDump.Format.JSON,
         )
         # generate dump file with source
         generate_external_endpoint_dump_file(
@@ -302,6 +299,7 @@ def _generate_idus_dump_file(api_type):
             FigureReadOnlySerializer,
             lambda: get_idu_data(filters={"figure_cause": Crisis.CRISIS_TYPE.DISASTER, "include_source": True}),
             "idus_all_disaster_with_source.json",
+            ExternalApiDump.Format.JSON,
             include_sources=True,
         )
         # generate excel dump file with out source
@@ -348,6 +346,7 @@ def _generate_idus_dump_file(api_type):
             FigureReadOnlySerializer,
             lambda: get_idu_data(filters={"displacement_date__gte": idu_date_from}),
             "idus_180_days.json",
+            ExternalApiDump.Format.JSON,
         )
         # generate dump file with source
         generate_external_endpoint_dump_file(
@@ -355,6 +354,7 @@ def _generate_idus_dump_file(api_type):
             FigureReadOnlySerializer,
             lambda: get_idu_data(filters={"displacement_date__gte": idu_date_from, "include_source": True}),
             "idus_180_days_with_source.json",
+            ExternalApiDump.Format.JSON,
             include_sources=True,
         )
         # generate excel dump file with out source

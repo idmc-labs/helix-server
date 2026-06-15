@@ -555,20 +555,15 @@ class ExternalEndpointBaseCachedViewMixin:
             client_id,
             tracking_type,
         )
-        # FIXME(tnagorra): We should add constraint on the server and then use .get()
-        api_dump = (
-            ExternalApiDump.objects.filter(
+        # NOTE: Sending empty array so client don't break.
+        _empty_response = []
+        try:
+            api_dump = ExternalApiDump.objects.get(
                 api_type=self.ENDPOINT_TYPE,
                 include_sources=client.share_source,
                 format=data_format,
             )
-            .order_by("-id")
-            .first()
-        )
-
-        # NOTE: Sending empty array so client don't break.
-        _empty_response = []
-        if not api_dump:
+        except ExternalApiDump.DoesNotExist:
             return Response(_empty_response, status=status.HTTP_404_NOT_FOUND)
 
         if api_dump.status == ExternalApiDump.Status.COMPLETED:
