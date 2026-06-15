@@ -77,6 +77,18 @@ class TestExternalClientTrack(HelixAPITestCase):
         )
         _response_status_check(status.HTTP_202_ACCEPTED)
 
+    def test_should_return_404_when_dump_does_not_exist(self):
+        self.assertEqual(ExternalApiDump.objects.count(), 0)
+
+        endpoints = [
+            f"{self.idus_url}?client_id={self.client1.code}",
+            f"{self.idus_all_url}?client_id={self.client2.code}",
+            f"{self.idus_all_disaster_url}?client_id={self.client2.code}",
+        ]
+        for endpoint in endpoints:
+            response = self.client.get(endpoint)
+            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
     def test_tracked_data(self):
         # Test with invalid client ids
         endpoints = [
