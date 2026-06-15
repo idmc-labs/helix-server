@@ -14,91 +14,87 @@ from helix.caches import external_api_cache
 from utils.factories import ClientFactory
 from utils.tests import HelixAPITestCase
 
+# All IDU exports: each dataset (last-180-days, all, all/disaster) is served as
+# json, excel and geojson.
+IDU_EXPORT_URLS = [
+    "/external-api/idus/last-180-days/",
+    "/external-api/idus/last-180-days-excel/",
+    "/external-api/idus/last-180-days-geojson/",
+    "/external-api/idus/all/",
+    "/external-api/idus/all-excel/",
+    "/external-api/idus/all-geojson/",
+    "/external-api/idus/all/disaster/",
+    "/external-api/idus/all/disaster-excel/",
+    "/external-api/idus/all/disaster-geojson/",
+]
+
+GIDD_API_URLS = [
+    "/external-api/gidd/countries/",
+    "/external-api/gidd/conflicts/",
+    "/external-api/gidd/disasters/",
+    "/external-api/gidd/displacements/",
+    "/external-api/gidd/public-figure-analyses/",
+    # GIDD exports
+    "/external-api/gidd/disasters/disaster-export/",
+    "/external-api/gidd/displacements/displacement-export/",
+    "/external-api/gidd/disaggregations/disaggregation-geojson/",
+    "/external-api/gidd/disaggregations/disaggregation-export/",
+]
+
+EXTERNAL_API_URLS = [*IDU_EXPORT_URLS, *GIDD_API_URLS]
+
 
 class TestExternalClientTrack(HelixAPITestCase):
     def setUp(self):
         super().setUp()
-        # Idus REST endpoints
-        self.idus_url = "/external-api/idus/last-180-days/"
-        self.idus_all_url = "/external-api/idus/all/"
-        self.idus_all_disaster_url = "/external-api/idus/all/disaster/"
-
-        # Gidd public REST endpoints
-        self.countries_url = "/external-api/gidd/countries/"
-        self.conflicts_url = "/external-api/gidd/conflicts/"
-        self.disasters_url = "/external-api/gidd/disasters/"
-        self.displacements_url = "/external-api/gidd/displacements/"
-        self.public_figure_analysis_url = "/external-api/gidd/public-figure-analyses/"
-
         self.client1 = ClientFactory.create(code="random-code-1", is_active=True, share_source=True)
         self.client2 = ClientFactory.create(code="random-code-2", is_active=True, share_source=True)
 
-    def test_should_raise_permission_denied_if_client_is_not_registered(self):
-        for endpoint in [self.idus_url, self.idus_all_url]:
-            response = self.client.get(self.idus_url)
-            assert response.status_code == status.HTTP_403_FORBIDDEN
+    def test_tracking_enforced_on_idu_and_gidd_rest_apis(self):
+        # Every external API endpoint must run track_gidd and reject unregistered clients.
+        # NOTE: a 403 response status for an unregistered client means tracking is implemented.
+        unregistered_client_id = "unregistered-client-code"
+        for endpoint in EXTERNAL_API_URLS:
+            with self.subTest(endpoint=endpoint):
+                response = self.client.get(f"{endpoint}?client_id={unregistered_client_id}")
+                self.assertEqual(
+                    response.status_code,
+                    status.HTTP_403_FORBIDDEN,
+                    f"{endpoint} did not enforce client tracking (track_gidd)",
+                )
 
-        # Test with invalid client ids
-        endpoints = [
-            f"{self.idus_url}?client_id=random-client-id-1",
-            f"{self.idus_all_url}?client_id=random-client-id-2",
-            f"{self.idus_all_disaster_url}?client_id=random-client-id-2",
-        ]
-
-        for endpoint in endpoints:
-            response = self.client.get(self.idus_url)
-            assert response.status_code == status.HTTP_403_FORBIDDEN
-
-    def test_should_return_api_data_for_registered_clients(self):
-        # Test with invalid client ids
-        endpoints = [
-            f"{self.idus_url}?client_id={self.client1.code}",
-            f"{self.idus_all_url}?client_id={self.client2.code}",
-            f"{self.idus_all_disaster_url}?client_id={self.client2.code}",
-        ]
+    def test_should_return_idu_data_or_404_for_registered_clients(self):
+        # All IDU exports must behave the same across their lifecycle.
+        endpoints = [f"{url}?client_id={self.client1.code}" for url in IDU_EXPORT_URLS]
 
         def _response_status_check(status_code):
             for endpoint in endpoints:
-                response = self.client.get(endpoint)
-                assert response.status_code == status_code
+                with self.subTest(endpoint=endpoint, expected=status_code):
+                    response = self.client.get(endpoint)
+                    self.assertEqual(response.status_code, status_code)
 
+        # Case: IDU data is not present
+        self.assertEqual(ExternalApiDump.objects.count(), 0)
         _response_status_check(status.HTTP_404_NOT_FOUND)
 
-        # Let's trigger dump generator
+        # IDU data has been generarted
         generate_idus_dump_file()
         generate_idus_all_dump_file()
         generate_idus_all_disaster_dump_file()
-
         _response_status_check(status.HTTP_302_FOUND)
 
+        # IDU data generation is in progress
         ExternalApiDump.objects.update(
             status=ExternalApiDump.Status.PENDING,
             dump_file=None,
         )
         _response_status_check(status.HTTP_202_ACCEPTED)
 
-    def test_should_return_404_when_dump_does_not_exist(self):
-        self.assertEqual(ExternalApiDump.objects.count(), 0)
-
-        endpoints = [
-            f"{self.idus_url}?client_id={self.client1.code}",
-            f"{self.idus_all_url}?client_id={self.client2.code}",
-            f"{self.idus_all_disaster_url}?client_id={self.client2.code}",
-        ]
-        for endpoint in endpoints:
-            response = self.client.get(endpoint)
-            self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-
-    def test_tracked_data(self):
-        # Test with invalid client ids
-        endpoints = [
-            f"{self.idus_url}?client_id={self.client1.code}",
-            f"{self.idus_url}?client_id={self.client2.code}",
-            f"{self.idus_all_url}?client_id={self.client1.code}",
-            f"{self.idus_all_url}?client_id={self.client2.code}",
-            f"{self.idus_all_disaster_url}?client_id={self.client1.code}",
-            f"{self.idus_all_disaster_url}?client_id={self.client2.code}",
-        ]
+    def test_idu_tracked_data(self):
+        # Each IDU export is tracked as a distinct api type, so every export is
+        # hit for both clients.
+        endpoints = [f"{url}?client_id={client.code}" for client in [self.client1, self.client2] for url in IDU_EXPORT_URLS]
+        expected_track_count = len(IDU_EXPORT_URLS) * 2
 
         # Assume yesterdays data
         self.now_patcher.start().return_value = self.now_datetime - timedelta(days=1)
@@ -107,7 +103,7 @@ class TestExternalClientTrack(HelixAPITestCase):
 
         # Sync redis data to database
         save_and_delete_tracked_data_from_redis_to_db()
-        self.assertEqual(ClientTrackInfo.objects.count(), 6)
+        self.assertEqual(ClientTrackInfo.objects.count(), expected_track_count)
 
         # Again track client ids for same date
         for endpoint in endpoints:
@@ -115,7 +111,7 @@ class TestExternalClientTrack(HelixAPITestCase):
 
         # Resync redis data for same date
         save_and_delete_tracked_data_from_redis_to_db()
-        self.assertEqual(ClientTrackInfo.objects.count(), 6)
+        self.assertEqual(ClientTrackInfo.objects.count(), expected_track_count)
 
         # Again track client ids for same date
         for endpoint in endpoints:
@@ -123,7 +119,7 @@ class TestExternalClientTrack(HelixAPITestCase):
 
         # Resync redis data for same date
         save_and_delete_tracked_data_from_redis_to_db()
-        self.assertEqual(ClientTrackInfo.objects.count(), 6)
+        self.assertEqual(ClientTrackInfo.objects.count(), expected_track_count)
 
         # For each client track info requests per day should be 1 for each api type
         for obj in ClientTrackInfo.objects.all():
@@ -162,21 +158,10 @@ class TestExternalClientTrack(HelixAPITestCase):
         self.assertEqual(ClientTrackInfo.objects.count(), 14)
 
     def test_gidd_tracked_data(self):
-        # Test with invalid client ids
-        endpoints = [
-            # For the first client
-            f"{self.countries_url}?client_id={self.client1.code}",
-            f"{self.conflicts_url}?client_id={self.client1.code}",
-            f"{self.disasters_url}?client_id={self.client1.code}",
-            f"{self.displacements_url}?client_id={self.client1.code}",
-            f"{self.public_figure_analysis_url}?client_id={self.client1.code}",
-            # For the second client
-            f"{self.countries_url}?client_id={self.client2.code}",
-            f"{self.conflicts_url}?client_id={self.client2.code}",
-            f"{self.disasters_url}?client_id={self.client2.code}",
-            f"{self.displacements_url}?client_id={self.client2.code}",
-            f"{self.public_figure_analysis_url}?client_id={self.client2.code}",
-        ]
+        # Each GIDD endpoint is tracked as a distinct api type, so every endpoint
+        # is hit for both clients.
+        endpoints = [f"{url}?client_id={client.code}" for client in [self.client1, self.client2] for url in GIDD_API_URLS]
+        expected_track_count = len(GIDD_API_URLS) * 2
 
         # Assume yesterdays data
         self.now_patcher.start().return_value = self.now_datetime - timedelta(days=1)
@@ -185,7 +170,7 @@ class TestExternalClientTrack(HelixAPITestCase):
 
         # Sync redis data to database
         save_and_delete_tracked_data_from_redis_to_db()
-        self.assertEqual(ClientTrackInfo.objects.count(), 10)
+        self.assertEqual(ClientTrackInfo.objects.count(), expected_track_count)
 
         # Again track client ids for same date
         for endpoint in endpoints:
@@ -193,7 +178,7 @@ class TestExternalClientTrack(HelixAPITestCase):
 
         # Resync redis data for same date
         save_and_delete_tracked_data_from_redis_to_db()
-        self.assertEqual(ClientTrackInfo.objects.count(), 10)
+        self.assertEqual(ClientTrackInfo.objects.count(), expected_track_count)
 
         # Again track client ids for same date
         for endpoint in endpoints:
@@ -201,7 +186,7 @@ class TestExternalClientTrack(HelixAPITestCase):
 
         # Resync redis data for same date
         save_and_delete_tracked_data_from_redis_to_db()
-        self.assertEqual(ClientTrackInfo.objects.count(), 10)
+        self.assertEqual(ClientTrackInfo.objects.count(), expected_track_count)
 
         # For each client track info requests per day should be 1 for each api type
         for obj in ClientTrackInfo.objects.all():
