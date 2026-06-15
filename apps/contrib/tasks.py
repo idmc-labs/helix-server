@@ -378,7 +378,7 @@ def _generate_idus_dump_file(api_type):
         generate_external_endpoint_dump_file(
             ExternalApiDump.ExternalApiType.IDUS,
             FigureReadOnlySerializer,
-            lambda: get_idu_data_geojson(filters={"displacement_date__gte": idu_date_from, "include_source": True}),
+            lambda: get_idu_data_geojson(filters={"displacement_date__gte": idu_date_from}),
             "idus_180_days.geojson",
             ExternalApiDump.Format.GEOJSON,
         )
@@ -386,8 +386,8 @@ def _generate_idus_dump_file(api_type):
         generate_external_endpoint_dump_file(
             ExternalApiDump.ExternalApiType.IDUS,
             FigureReadOnlySerializer,
-            lambda: get_idu_data_geojson(filters={"include_source": True}),
-            "idus_180_days_all_with_source.geojson",
+            lambda: get_idu_data_geojson(filters={"displacement_date__gte": idu_date_from, "include_source": True}),
+            "idus_180_days_with_source.geojson",
             ExternalApiDump.Format.GEOJSON,
             include_sources=True,
         )
