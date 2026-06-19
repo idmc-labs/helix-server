@@ -4,6 +4,7 @@ Focused on the Phase 2a iterator-dispatch change in `append_to_worksheet`:
 the consumer must accept both Django QuerySets (which expose `.iterator(chunk_size=...)`)
 and plain Python iterables (the new explode generator).
 """
+
 import io
 from collections import OrderedDict
 from unittest.mock import MagicMock
@@ -44,10 +45,12 @@ class TestAppendToWorksheetDispatch(HelixTestCase):
     def test_queryset_like_object_uses_iterator_with_chunk_size(self):
         """A QuerySet-like mock with `.iterator(chunk_size=...)` is called with chunk_size=2000."""
         mock_qs = MagicMock()
-        mock_qs.iterator.return_value = iter([
-            {"id": 10, "name": "gamma"},
-            {"id": 11, "name": "delta"},
-        ])
+        mock_qs.iterator.return_value = iter(
+            [
+                {"id": 10, "name": "gamma"},
+                {"id": 11, "name": "delta"},
+            ]
+        )
 
         headers = OrderedDict(id="ID", name="Name")
         workbook = get_excel_sheet_content(headers=headers, data=mock_qs)

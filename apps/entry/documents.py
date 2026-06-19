@@ -168,7 +168,7 @@ _EXPLODE_NOTE_ROWS = [
     ),
     (
         "Origin and destination locations",
-        "A location whose underlying identifier is \"Origin and destination\" produces two rows for the same"
+        'A location whose underlying identifier is "Origin and destination" produces two rows for the same'
         " figure: one with `Location identifier` = `Origin` (counted in the origin allocation), and one with"
         " `Location identifier` = `Destination` (counted in the destination allocation).",
     ),
@@ -207,6 +207,5 @@ def _build_readme_data_explode_raw():
 readme_data_explode_raw = _build_readme_data_explode_raw()
 
 README_DATA_EXPLODE = [
-    {"column_name": column_name, "description": description}
-    for column_name, description in readme_data_explode_raw
+    {"column_name": column_name, "description": description} for column_name, description in readme_data_explode_raw
 ]

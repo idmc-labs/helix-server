@@ -1,5 +1,5 @@
 import logging
-from collections import OrderedDict
+from collections import OrderedDict, defaultdict
 from dataclasses import dataclass
 from datetime import date
 from typing import Callable, Dict, List, Optional, Union
@@ -204,18 +204,17 @@ class DisaggregatedAge(models.Model):
 def _build_explode_headers(base_headers):
     """Mutate a copy of the default figure-export headers into the explode-export shape.
 
-    1. Drop location-aggregate / centroid columns.
-    2. Insert `allocated_figure` immediately after `total_figures`.
-    3. Append the five per-location columns at the end (where `locations` used to be).
+    1. Inserts `allocated_figure` immediately after `total_figures`.
+    2. Ahe per-location columns at the end.
     """
-    drop_keys = {"centroid", "centroid_lat", "centroid_lon", "locations"}
     new_headers = OrderedDict()
     for key, label in base_headers.items():
-        if key in drop_keys:
-            continue
         new_headers[key] = label
+
+        # Add allocated_figure just after total_figures
         if key == "total_figures":
             new_headers["allocated_figure"] = "Allocated figure"
+
     new_headers["location_id"] = "Location ID"
     new_headers["location_display_name"] = "Location"
     new_headers["location_lat_lng"] = "Location lat, lng"
@@ -224,56 +223,102 @@ def _build_explode_headers(base_headers):
     return new_headers
 
 
-def _mock_explode_data():
-    """Phase 2a placeholder: yields three hardcoded rows.
+# Module-level so tests can monkeypatch it
+_EXPLODE_CHUNK_SIZE = 2000
 
-    The three rows demonstrate the row shape Phase 2b will produce:
-        - Row A: a pure Origin location.
-        - Row B: an O&D location expanded into its Origin row.
-        - Row C: the SAME O&D location (same `location_id`) expanded into its Destination row.
+
+def _process_chunk(figures_chunk, base_transformer):
+    """For a chunk of base-queryset figure rows, fire one batched side query
+    against `FigureLocation` (historical `OSMName`) and yield exploded rows.
+
+    Each input figure produces N rows: one per (location × identifier-bucket).
+    An `ORIGIN_AND_DESTINATION` location produces two rows (Origin + Destination).
     """
-    sample_base = {
-        "id": 1,
-        "country__iso3": "NPL",
-        "country__idmc_short_name": "Nepal",
-        "country__region__name": "Asia",
-        "country__geographical_group__name": "South Asia",
-        "year": 2024,
-        "figure_cause": "Conflict",
-        "total_figures": 100,
-        # Other base columns left absent; the consumer's clean_data_item
-        # treats missing keys as empty string. That's fine for 2a.
+    figure_ids = [row["id"] for row in figures_chunk]
+
+    location_rows = FigureLocation.objects.filter(figures__id__in=figure_ids).values(
+        "figures__id", "id", "identifier", "display_name", "lat", "lon", "accuracy"
+    )
+
+    locations_by_figure = defaultdict(list)
+    for loc in location_rows:
+        locations_by_figure[loc["figures__id"]].append(loc)
+
+    # NOTE: "origin and destination" is included in both "origin" and "destination" bucket
+    origin_identifiers = {
+        FigureLocation.IDENTIFIER.ORIGIN.value,
+        FigureLocation.IDENTIFIER.ORIGIN_AND_DESTINATION.value,
     }
-    # Row A: pure Origin location
-    yield {
-        **sample_base,
-        "allocated_figure": 34,
-        "location_id": 1,
-        "location_display_name": "Kathmandu",
-        "location_lat_lng": "27.71, 85.32",
-        "location_accuracy": "Country",
-        "location_identifier": "Origin",
+    destination_identifiers = {
+        FigureLocation.IDENTIFIER.DESTINATION.value,
+        FigureLocation.IDENTIFIER.ORIGIN_AND_DESTINATION.value,
     }
-    # Row B: O&D location expanded as Origin
-    yield {
-        **sample_base,
-        "allocated_figure": 33,
-        "location_id": 2,
-        "location_display_name": "Sauraha",
-        "location_lat_lng": "27.58, 84.49",
-        "location_accuracy": "Country",
-        "location_identifier": "Origin",
-    }
-    # Row C: SAME O&D location (location_id=2) expanded as Destination
-    yield {
-        **sample_base,
-        "allocated_figure": 50,
-        "location_id": 2,
-        "location_display_name": "Sauraha",
-        "location_lat_lng": "27.58, 84.49",
-        "location_accuracy": "Country",
-        "location_identifier": "Destination",
-    }
+    origin_label = FigureLocation.IDENTIFIER.ORIGIN.label
+    destination_label = FigureLocation.IDENTIFIER.DESTINATION.label
+
+    for raw_row in figures_chunk:
+        formatted_row = base_transformer(raw_row)
+        figure_id = raw_row["id"]
+        figure_locations = locations_by_figure.get(figure_id, [])
+
+        origin_bucket = sorted(
+            [loc for loc in figure_locations if loc["identifier"] in origin_identifiers],
+            key=lambda loc: loc["id"],
+        )
+        destination_bucket = sorted(
+            [loc for loc in figure_locations if loc["identifier"] in destination_identifiers],
+            key=lambda loc: loc["id"],
+        )
+
+        # Iterate over the origin bucket first, then destination bucket
+        # Within each bucket sorted by location_id in ascending order
+        # We want this to be sorted so that the remainder distribution is stable
+        for bucket, identifier_label in (
+            (origin_bucket, origin_label),
+            (destination_bucket, destination_label),
+        ):
+            T = formatted_row["total_figures"]
+            N = len(bucket)
+
+            # We can skip if the bucket is empty
+            if N == 0:
+                continue
+
+            base_allocation = T // N
+            remainder = T - (base_allocation * N)
+
+            for idx, location in enumerate(bucket):
+                # NOTE: redistributing remainder
+                allocated = base_allocation + (1 if idx < remainder else 0)
+
+                row = dict(formatted_row)
+                row["allocated_figure"] = allocated
+                row["location_id"] = location["id"]
+                row["location_display_name"] = location["display_name"]
+                row["location_lat_lng"] = f"{location['lat']}, {location['lon']}"
+                row["location_accuracy"] = FigureLocation.ACCURACY(location["accuracy"]).label
+                # NOTE: We are overriding the identifier because "origin & destination" identifier
+                # needs to either be "origin" or "destination"
+                row["location_identifier"] = identifier_label
+                yield row
+
+
+def _explode_generator(base_qs, base_transformer):
+    """Stream the base queryset in chunks; for each chunk, fire one batched
+    side query for locations and emit exploded rows."""
+    chunk_size = _EXPLODE_CHUNK_SIZE
+    buffer = []
+    for raw_row in base_qs.iterator(chunk_size=chunk_size):
+        buffer.append(raw_row)
+
+        # Only process after the buffer size is at least 2000
+        if len(buffer) >= chunk_size:
+            yield from _process_chunk(buffer, base_transformer)
+            buffer = []
+
+    # Handle remaining rows
+    if buffer:
+        yield from _process_chunk(buffer, base_transformer)
 
 
 def _build_explode_readme_data():
@@ -1094,7 +1139,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         return cls.get_figure_excel_sheets_data(qs)
 
     @classmethod
-    def get_figure_excel_sheets_data(cls, figures: models.QuerySet):
+    def get_figure_excel_sheets_data(cls, figures: models.QuerySet, include_location_aggregate=True):
         from apps.crisis.models import Crisis
 
         headers = OrderedDict(
@@ -1183,73 +1228,91 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             type_of_points="Locations type",
             locations="Locations (Name:Lat, Lon:Accuracy:Type)",
         )
-        exclude_headers = ["location_display_name", "loc_lat_lon", "accuracy", "type_of_points", "entry_link"]
+        exclude_headers_from_qs = ["location_display_name", "loc_lat_lon", "accuracy", "type_of_points", "entry_link"]
 
-        values = (
-            figures.annotate(
-                **Figure.annotate_stock_and_flow_dates(),
-                **Figure.annotate_sources_reliability(),
+        # The explode-by-locations export reads each location as its own row
+        # so it has no use for the aggregated-location columns or the country centroid
+        if not include_location_aggregate:
+            for key in (
+                "centroid",
+                "centroid_lat",
+                "centroid_lon",
+                "locations",
+                "loc_lat_lon",
+                "accuracy",
+                "type_of_points",
+            ):
+                headers.pop(key, None)
+
+        annotated = figures.annotate(
+            **Figure.annotate_stock_and_flow_dates(),
+            **Figure.annotate_sources_reliability(),
+            entry_url_or_document_url=models.Case(
+                models.When(entry__document__isnull=False, then=F("entry__document_url")),
+                models.When(entry__document__isnull=True, then=F("entry__url")),
+                output_field=models.CharField(),
+            ),
+            source_document=models.Case(
+                models.When(entry__document__isnull=False, then=F("entry__document__attachment")),
+                output_field=models.CharField(),
+            ),
+            figure_link=Concat(
+                Value(settings.FRONTEND_BASE_URL),
+                Value("/entries/"),
+                F("entry__id"),
+                Value("/?id="),
+                F("id"),
+                Value("#/figures-and-analysis"),
+                output_field=models.CharField(),
+            ),
+            publishers_name=StringAgg(
+                "entry__publishers__name",
+                EXTERNAL_ARRAY_SEPARATOR,
+                filter=~Q(entry__publishers__name=""),
+                distinct=True,
+                output_field=models.CharField(),
+            ),
+            year=ExtractYear("end_date"),
+            context_of_violences=StringAgg(
+                "context_of_violence__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()
+            ),
+            tags_name=StringAgg("tags__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()),
+            sources_name=StringAgg(
+                "sources__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()
+            ),
+            sources_type=StringAgg(
+                "sources__organization_kind__name",
+                EXTERNAL_ARRAY_SEPARATOR,
+                distinct=True,
+                output_field=models.CharField(),
+            ),
+            sources_methodology=StringAgg(
+                "sources__methodology", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()
+            ),
+            event_main_trigger=Case(
+                When(event__event_type=Crisis.CRISIS_TYPE.CONFLICT, then=F("event__violence_sub_type__name")),
+                When(event__event_type=Crisis.CRISIS_TYPE.DISASTER, then=F("event__disaster_sub_type__name")),
+                When(event__event_type=Crisis.CRISIS_TYPE.OTHER, then=F("event__other_sub_type__name")),
+                output_field=models.CharField(),
+            ),
+            event_codes=ArrayAgg(
+                Array(
+                    F("event__event_code__event_code"),
+                    Cast(F("event__event_code__event_code_type"), models.CharField()),
+                    output_field=ArrayField(models.CharField()),
+                ),
+                distinct=True,
+                filter=models.Q(event__event_code__country__id=F("country__id")),
+            ),
+        )
+
+        # Annotate only when needed.
+        if include_location_aggregate:
+            annotated = annotated.annotate(
                 centroid_lat=RawSQL("country_country.centroid[2]", params=()),
                 centroid_lon=RawSQL("country_country.centroid[1]", params=()),
-                entry_url_or_document_url=models.Case(
-                    models.When(entry__document__isnull=False, then=F("entry__document_url")),
-                    models.When(entry__document__isnull=True, then=F("entry__url")),
-                    output_field=models.CharField(),
-                ),
-                source_document=models.Case(
-                    models.When(entry__document__isnull=False, then=F("entry__document__attachment")),
-                    output_field=models.CharField(),
-                ),
-                figure_link=Concat(
-                    Value(settings.FRONTEND_BASE_URL),
-                    Value("/entries/"),
-                    F("entry__id"),
-                    Value("/?id="),
-                    F("id"),
-                    Value("#/figures-and-analysis"),
-                    output_field=models.CharField(),
-                ),
-                publishers_name=StringAgg(
-                    "entry__publishers__name",
-                    EXTERNAL_ARRAY_SEPARATOR,
-                    filter=~Q(entry__publishers__name=""),
-                    distinct=True,
-                    output_field=models.CharField(),
-                ),
-                year=ExtractYear("end_date"),
-                context_of_violences=StringAgg(
-                    "context_of_violence__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()
-                ),
-                tags_name=StringAgg("tags__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()),
-                sources_name=StringAgg(
-                    "sources__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()
-                ),
-                sources_type=StringAgg(
-                    "sources__organization_kind__name",
-                    EXTERNAL_ARRAY_SEPARATOR,
-                    distinct=True,
-                    output_field=models.CharField(),
-                ),
-                sources_methodology=StringAgg(
-                    "sources__methodology", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=models.CharField()
-                ),
                 centroid=Concat(
                     F("centroid_lat"), Value(EXTERNAL_TUPLE_SEPARATOR), F("centroid_lon"), output_field=models.CharField()
-                ),
-                event_main_trigger=Case(
-                    When(event__event_type=Crisis.CRISIS_TYPE.CONFLICT, then=F("event__violence_sub_type__name")),
-                    When(event__event_type=Crisis.CRISIS_TYPE.DISASTER, then=F("event__disaster_sub_type__name")),
-                    When(event__event_type=Crisis.CRISIS_TYPE.OTHER, then=F("event__other_sub_type__name")),
-                    output_field=models.CharField(),
-                ),
-                event_codes=ArrayAgg(
-                    Array(
-                        F("event__event_code__event_code"),
-                        Cast(F("event__event_code__event_code_type"), models.CharField()),
-                        output_field=ArrayField(models.CharField()),
-                    ),
-                    distinct=True,
-                    filter=models.Q(event__event_code__country__id=F("country__id")),
                 ),
                 locations=ArrayAgg(
                     Array(
@@ -1268,11 +1331,10 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                     filter=~Q(Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name="")),
                 ),
             )
-            .order_by(
-                "created_at",
-            )
-            .values(*[header for header in headers.keys() if header not in exclude_headers])
-        )
+
+        values = annotated.order_by(
+            "created_at",
+        ).values(*[header for header in headers.keys() if header not in exclude_headers_from_qs])
 
         def transformer(datum):
             def get_enum_label(key, Enum):
@@ -1280,9 +1342,7 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 obj = Enum.get(val)
                 return getattr(obj, "label", val)
 
-            location_data = extract_location_data(datum["locations"])
-
-            return {
+            result = {
                 **datum,
                 "include_idu": "Yes" if datum["include_idu"] else "No",
                 "entry__preview__pdf": generate_full_media_url(datum["entry__preview__pdf"], absolute=True),
@@ -1300,7 +1360,6 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 "figure_cause": get_enum_label("figure_cause", Crisis.CRISIS_TYPE),
                 "sources_reliability": get_enum_label("sources_reliability", Figure.SOURCES_RELIABILITY),
                 "source_document": generate_full_media_url(datum["source_document"], absolute=True),
-                "centroid": datum["centroid"],
                 "entry_link": urljoin(settings.FRONTEND_BASE_URL, f"entries/{datum['entry__id']}"),
                 "event__event_type": get_enum_label("event__event_type", Crisis.CRISIS_TYPE),
                 "event__start_date_accuracy": get_enum_label("event__start_date_accuracy", DATE_ACCURACY),
@@ -1308,12 +1367,21 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
                 "review_status": get_enum_label("review_status", Figure.FIGURE_REVIEW_STATUS),
                 "is_disaggregated": "Yes" if datum["is_disaggregated"] else "No",
                 "event_codes": format_event_codes_as_string(datum["event_codes"]),
-                "locations": format_locations_as_string(datum["locations"]),
-                "location_display_name": location_data["display_name"],
-                "loc_lat_lon": location_data["lat_lon"],
-                "accuracy": location_data["accuracy"],
-                "type_of_points": location_data["type_of_points"],
             }
+
+            if "locations" in datum:
+                location_data = extract_location_data(datum["locations"])
+                result.update(
+                    {
+                        "locations": format_locations_as_string(datum["locations"]),
+                        "location_display_name": location_data["display_name"],
+                        "loc_lat_lon": location_data["lat_lon"],
+                        "accuracy": location_data["accuracy"],
+                        "type_of_points": location_data["type_of_points"],
+                    }
+                )
+
+            return result
 
         readme_data = [
             {
@@ -1337,16 +1405,14 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
 
     @classmethod
     def get_figure_explode_by_locations_excel_sheets_data(cls, figures):
-        """Phase 2a scaffold: returns real headers + real Readme with three mock data rows.
+        has_location = FigureLocation.objects.filter(figures=models.OuterRef("pk"))
+        figures = figures.exclude(total_figures=0).filter(models.Exists(has_location))
 
-        Phase 2b will replace `_mock_explode_data()` with a real generator that consumes the
-        base queryset and the base transformer, and applies the R2 allocation algorithm.
-        """
-        base = cls.get_figure_excel_sheets_data(figures)
+        base = cls.get_figure_excel_sheets_data(figures, include_location_aggregate=False)
         headers = _build_explode_headers(base["headers"])
         return {
             "headers": headers,
-            "data": _mock_explode_data(),
+            "data": _explode_generator(base["data"], base["transformer"]),
             "formulae": None,
             "transformer": None,
             "readme_data": _build_explode_readme_data(),

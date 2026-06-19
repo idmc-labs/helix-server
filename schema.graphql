@@ -1719,6 +1719,7 @@ type ExcelExportType {
   file: String
   fileSize: Int
   filters: JSONString
+  metadata: GenericScalar
   downloadTypeDisplay: EnumDescription
   statusDisplay: EnumDescription
 }
@@ -1788,6 +1789,10 @@ type ExportFigures {
   errors: [GenericScalar!]
   ok: Boolean
   result: ExcelExportType
+}
+
+input ExportFiguresMetadataInputType {
+  explodeByLocations: Boolean
 }
 
 type ExportHouseholdSize {
@@ -2810,7 +2815,7 @@ type Mutation {
   updateFigureTag(data: FigureTagUpdateInputType!): UpdateFigureTag
   deleteFigureTag(id: ID!): DeleteFigureTag
   exportEntries(filters: EntryExtractionFilterDataInputType!): ExportEntries
-  exportFigures(filters: FigureExtractionFilterDataInputType!): ExportFigures
+  exportFigures(filters: FigureExtractionFilterDataInputType!, metadata: ExportFiguresMetadataInputType): ExportFigures
   exportFigureTags(filters: FigureTagFilterDataInputType!): ExportFigureTags
   bulkUpdateFigures(deleteIds: [ID!], items: [FigureUpdateInputType!]): BulkUpdateFigures
   deleteFigure(id: ID!): DeleteFigure
