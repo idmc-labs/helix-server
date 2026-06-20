@@ -1458,6 +1458,11 @@ class Entry(MetaInformationArchiveAbstractModel, models.Model):
         indexes = [
             models.Index(fields=["publish_date"]),
             models.Index(fields=["review_status"]),
+            # Match the entry-list default ordering (created_at DESC NULLS LAST,
+            # applied by utils.graphene.pagination.nulls_last_order_queryset). A plain
+            # ASC index can't serve DESC NULLS LAST, so the list previously seq-scanned
+            # all rows + top-N sorted; this expression index turns it into an index scan.
+            models.Index(models.F("created_at").desc(nulls_last=True), name="entry_created_at_desc_idx"),
         ]
 
     @classmethod
