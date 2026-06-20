@@ -23,7 +23,3 @@ class ParkingLotFilter(MultiWordSearchFilterSet):
         if value:
             return queryset.filter(assigned_to__in=value)
         return queryset
-
-    @property
-    def qs(self):
-        return super().qs.distinct()

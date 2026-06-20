@@ -1,3 +1,5 @@
+from django.db.models import Exists, OuterRef
+
 from apps.contextualupdate.models import ContextualUpdate
 from apps.crisis.models import Crisis
 from utils.filters import MultiWordSearchFilterSet, StringListFilter
@@ -19,8 +21,9 @@ class ContextualUpdateFilter(MultiWordSearchFilterSet):
     def filter_m2m(self, qs, field_name, value):
         if not value:
             return qs
-        filter_param = {f"{field_name}__in": value}
-        return qs.filter(**filter_param).distinct()
+        # M2M paths (countries/sources/publishers): test membership with a correlated
+        # Exists on self so the join fan-out stays inside the subquery -> no .distinct().
+        return qs.filter(Exists(ContextualUpdate.objects.filter(pk=OuterRef("pk"), **{f"{field_name}__in": value})))
 
     def filter_countries(self, qs, name, value):
         return self.filter_m2m(qs, "countries", value)

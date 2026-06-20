@@ -26,6 +26,6 @@ class UnifiedReviewCommentFilter(df.FilterSet):
     def filter_fields(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
-                return qs.filter(field__in=value).distinct()
+                return qs.filter(field__in=value)
             return qs.filter(field__in=[UnifiedReviewComment.REVIEW_FIELD_TYPE.get(item).value for item in value])
         return qs
