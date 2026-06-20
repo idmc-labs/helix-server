@@ -332,6 +332,11 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             models.Index(fields=["start_date_accuracy"]),
             models.Index(fields=["end_date_accuracy"]),
             models.Index(fields=["review_status"]),
+            # The event list default ordering is created_at DESC NULLS LAST (applied by
+            # nulls_last_order_queryset). A plain ascending index cannot serve DESC NULLS
+            # LAST, so the list seq-scanned all events + top-N sorted. This expression
+            # index matches the ordering, turning it into an index scan.
+            models.Index(models.F("created_at").desc(nulls_last=True), name="event_created_at_desc_idx"),
         ]
 
         permissions = (
@@ -529,6 +534,10 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 request=DummyRequest(user=User.objects.get(id=user_id)),
             )
             .qs.annotate(
+                # The filter qs no longer annotates the figure disaggregation by default
+                # (it is dataloader-resolved for the list); the excel export reads these
+                # columns directly, so annotate them explicitly here.
+                **cls._total_figure_disaggregation_subquery(),
                 countries_iso3=StringAgg("countries__iso3", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
                 countries_name=StringAgg("countries__idmc_short_name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
                 regions_name=StringAgg("countries__region__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),

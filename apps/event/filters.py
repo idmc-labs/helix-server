@@ -42,6 +42,11 @@ from utils.filters import (
 
 
 class EventFilter(MultiWordSearchFilterSet):
+    # Opt-in: DjangoPaginatedListObjectField uses this marker to decide whether
+    # to forward the active ordering as a constructor arg, so we can gate
+    # expensive annotations on it (see qs property below).
+    accepts_ordering = True
+
     crisis_by_ids = IDListFilter(method="filter_crises")
     event_types = StringListFilter(method="filter_event_types")
     countries = IDListFilter(method="filter_countries")
@@ -73,6 +78,11 @@ class EventFilter(MultiWordSearchFilterSet):
         }
         # NOTE: event_code__event_code is not using exact match
         multi_word_search_fields = ["name", "event_code__event_code"]
+
+    def __init__(self, *args, ordering=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ordering = ordering
+        self.ordering_fields = {field.lstrip("-") for field in ordering.split(",") if field} if ordering else set()
 
     def noop(self, qs, name, value):
         return qs
@@ -234,18 +244,41 @@ class EventFilter(MultiWordSearchFilterSet):
 
     @property
     def qs(self):
+        queryset = super().qs
+
         figure_qs, reference_date = FigureFilterHelper.aggregate_data_generate(
             self.data.get("aggregate_figures"),
             self.request,
         )
-        return (
-            super()
-            .qs.annotate(
-                **Event._total_figure_disaggregation_subquery(
-                    figures=figure_qs,
-                    reference_date=reference_date,
-                ),
-                **Event.annotate_review_figures_count(),
+        # The figure-disaggregation (nd/idp) annotations are only needed in the queryset
+        # when either the client asked for a filtered aggregate (aggregate_figures) or the
+        # list is ordered by one of them. Otherwise EventType resolvers fall back to the
+        # (unfiltered) dataloaders, which return identical values without a per-row subquery
+        # on the whole list. When aggregate_figures is provided the annotation reflects the
+        # filtered aggregate, so it must stay regardless of ordering.
+        figure_disaggregation = Event._total_figure_disaggregation_subquery(
+            figures=figure_qs,
+            reference_date=reference_date,
+        )
+        # has_figure_scope: aggregate_figures resolved to an actual figure set (a report or a
+        # non-empty filter_figures) — not merely whether the field was passed. (reference_date is
+        # only ever set alongside figure_qs, so checking figure_qs alone is enough.)
+        has_figure_scope = figure_qs is not None
+        if has_figure_scope or (self.ordering_fields & set(figure_disaggregation.keys())):
+            queryset = queryset.annotate(**figure_disaggregation)
+
+        # The review-figure counts are an expensive fan-out aggregation over the whole
+        # Figure table (Count over a join + GroupAggregate). They are only needed in the
+        # queryset when the list is ordered by one of them; otherwise the review_count
+        # field is resolved via EventReviewCountLoader. This is the dominant cost of the
+        # default (created_at) list.
+        review_figures_count = Event.annotate_review_figures_count()
+        if self.ordering_fields & set(review_figures_count.keys()):
+            queryset = queryset.annotate(**review_figures_count)
+
+        # entry_count is resolved via EventEntryCountLoader unless ordered by it.
+        if "entry_count" in self.ordering_fields:
+            queryset = queryset.annotate(
                 entry_count=models.Subquery(
                     Figure.objects.filter(event=models.OuterRef("pk"))
                     .order_by()
@@ -255,14 +288,14 @@ class EventFilter(MultiWordSearchFilterSet):
                     output_field=models.IntegerField(),
                 ),
             )
-            # NOTE: no prefetch_related("figures"): EventType excludes the `figures` field
-            # (apps/event/schema.py), and the figure-count fields resolve via annotations or
-            # dataloaders, so nothing serializes root.figures. prefetch_related is eager, so
-            # keeping it ran an extra query + hydrated every figure of the page's events for
-            # nothing (~211 figure rows at pageSize 100). context_of_violence IS an exposed
-            # field, so it stays.
-            .prefetch_related("context_of_violence")
-        )
+
+        # NOTE: no prefetch_related("figures"): EventType excludes the `figures` field
+        # (apps/event/schema.py), and the figure-count fields resolve via annotations or
+        # dataloaders, so nothing serializes root.figures. prefetch_related is eager, so
+        # keeping it ran an extra query + hydrated every figure of the page's events for
+        # nothing (~211 figure rows at pageSize 100). context_of_violence IS an exposed
+        # field, so it stays.
+        return queryset.prefetch_related("context_of_violence")
 
 
 class ActorFilter(MultiWordSearchFilterSet):
