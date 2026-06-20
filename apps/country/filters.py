@@ -169,23 +169,23 @@ class CountryFilter(MultiWordSearchFilterSet):
             start_date = datetime.datetime(year=int(year), month=1, day=1)
             end_date = datetime.datetime(year=int(year), month=12, day=31)
 
-        # The figure-disaggregation (nd/idp stock/flow) annotations are an expensive
-        # per-row correlated subquery over the whole Figure table, computed for every
-        # returned country. They are only needed in the queryset when either the client
-        # asked for a filtered aggregate (aggregate_figures) or the list is ordered by
-        # one of them. Otherwise CountryType resolvers fall back to the (unfiltered,
-        # current-year) dataloaders, which return identical values without the per-row
-        # subqueries. When aggregate_figures is provided the annotation reflects the
-        # filtered aggregate, so it must stay regardless of ordering. This is the
-        # dominant cost of the default (idmc_short_name) list and the source of its
-        # page-size sensitivity.
+        # nd/idp totals are annotated only when needed: aggregate_figures set, or sorting by them
+        # (else resolvers read the default current-year dataloaders). We need BOTH a subquery and a
+        # CTE; a CTE alone can't do it — it is fixed to the default current-year unfiltered scope,
+        # so aggregate_figures' filtered / year / report-scoped values must come from the
+        # parametrized subquery. (Gate on the raw field, not figure_qs: a year-only filter leaves
+        # figure_qs None but still needs its own date range.) The CTE is just the faster set-based
+        # path for the default values when sorting; country is low-cardinality, so ~neutral, parity.
         figure_disaggregation = Country._total_figure_disaggregation_subquery(
             figures=figure_qs,
             start_date=start_date,
             end_date=end_date,
         )
-        if aggregate_figures or (self.ordering_fields & set(figure_disaggregation.keys())):
+        figure_count_sort_fields = set(figure_disaggregation.keys())
+        if aggregate_figures:
             queryset = queryset.annotate(**figure_disaggregation)
+        elif self.ordering_fields & figure_count_sort_fields:
+            queryset = Country.annotate_total_figure_disaggregation_via_cte(queryset)
 
         return queryset
 
