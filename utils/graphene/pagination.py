@@ -22,6 +22,11 @@ def nulls_last_order_queryset(qs, ordering_param, **kwargs):
     if not order:
         return qs
 
+    # TODO: append a deterministic tiebreaker (e.g. "id") to `mod_ordering` so
+    # paginated results are stable when rows tie on the sort key. Without it, ties
+    # come back in plan-dependent physical order, so a row can appear on two pages
+    # or be skipped across requests. Deferred: it also makes before/after perf runs
+    # byte-comparable. See ~/tmp/helix-server-perf/serializer-perf-validation/PLAN.md
     mod_ordering = []
     for o in order:
         if not o:
