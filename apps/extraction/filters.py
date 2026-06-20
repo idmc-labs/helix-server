@@ -618,27 +618,13 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
             )
 
         if self.ordering_fields:
-            # NOTE: expensive annotation for geolocations
+            # NOTE: expensive annotation for geolocations.
+            # Aggregate over the whole Figure table via a CTE, then LEFT JOIN. This
+            # is the fast path for the (large) figure list, which is the only place
+            # figure-field ordering is exposed. A per-row correlated subquery would
+            # win on small filtered subsets but loses badly here (186k per-row execs
+            # vs one hash aggregation), so the whole-table CTE is the right default.
             if "geolocations" in self.ordering_fields:
-                # Approach 1
-                # queryset = queryset.annotate(
-                #     geolocations=StringAgg("geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR)
-                # )
-
-                # Approach 2
-                # geolocations_subquery = (
-                #     FigureLocation.objects
-                #     .filter(figures=OuterRef('pk'))
-                #     .order_by()  # remove ordering to allow aggregation
-                #     .values('figures')  # group by Figure
-                #     .annotate(agg=StringAgg('display_name', EXTERNAL_ARRAY_SEPARATOR))
-                #     .values('agg')  # this is the single column Subquery expects
-                # )
-                # queryset = queryset.annotate(
-                #     geolocations=Coalesce(Subquery(geolocations_subquery), Value(''))
-                # )
-
-                # Approach 3
                 cte = With(
                     Figure.objects.values("id").annotate(
                         geolocations=StringAgg("geo_locations__display_name", EXTERNAL_ARRAY_SEPARATOR)
