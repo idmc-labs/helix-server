@@ -1,4 +1,5 @@
 import django_filters
+from django.db.models import Exists, OuterRef
 
 from apps.contact.models import Communication, CommunicationMedium, Contact
 from apps.users.roles import USER_ROLE
@@ -17,13 +18,17 @@ class ContactFilter(MultiWordSearchFilterSet):
     def filter_countries(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(countries_of_operation__in=value).distinct()
+        return qs.filter(
+            Exists(Contact.countries_of_operation.through.objects.filter(contact_id=OuterRef("pk"), country_id__in=value))
+        )
 
     @property
     def qs(self):
         if self.request.user.highest_role == USER_ROLE.GUEST.value:
             return super().qs.none()
-        return super().qs.distinct()
+        # No .distinct(): the only fan-out filter (countries_of_operation) now uses Exists
+        # and multi-word search is Exists-based, so nothing multiplies rows.
+        return super().qs
 
 
 class CommunicationFilter(MultiWordSearchFilterSet):
@@ -38,7 +43,8 @@ class CommunicationFilter(MultiWordSearchFilterSet):
     def qs(self):
         if self.request.user.highest_role == USER_ROLE.GUEST.value:
             return super().qs.none()
-        return super().qs.distinct()
+        # No .distinct(): no filter on this set crosses a to-many relation.
+        return super().qs
 
 
 class CommunicationMediumFilter(django_filters.FilterSet):
