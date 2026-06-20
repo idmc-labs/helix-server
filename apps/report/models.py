@@ -315,15 +315,12 @@ class Report(MetaInformationArchiveAbstractModel, QueryAbstractModel, FigureDisa
 
     @property
     def total_disaggregation(self) -> dict:
-        return self.report_figures.annotate(
-            **self.TOTAL_FIGURE_DISAGGREGATIONS,
-        ).aggregate(
-            total_stock_conflict_sum=Sum("total_stock_conflict"),
-            total_flow_conflict_sum=Sum("total_flow_conflict"),
-            total_flow_disaster_sum=Sum("total_flow_disaster"),
-            total_stock_disaster_sum=Sum("total_stock_disaster"),
-            total_flow_sum=Sum("total_flow"),
-            total_stock_sum=Sum("total_stock"),
+        # Single-pass aggregate. TOTAL_FIGURE_DISAGGREGATIONS are already conditional
+        # Sum()s, so aggregate them directly (renamed to *_sum) instead of
+        # annotate-then-Sum, which forced a redundant inner GROUP BY over every figure
+        # row + the event join. Output keys and values are unchanged.
+        return self.report_figures.aggregate(
+            **{f"{key}_sum": aggregate for key, aggregate in self.TOTAL_FIGURE_DISAGGREGATIONS.items()}
         )
 
     @property
