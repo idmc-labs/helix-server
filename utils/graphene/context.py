@@ -46,7 +46,7 @@ from apps.hulk.dataloaders import (
     HulkBulkImportSuccessCountLoader,
 )
 from apps.organization.dataloaders import OrganizationCountriesLoader, OrganizationOrganizationKindLoader
-from apps.report.dataloaders import ReportLastGenerationLoader
+from apps.report.dataloaders import ReportLastGenerationLoader, ReportTotalDisaggregationLoader
 from apps.users.dataloaders import UserPortfoliosMetadataLoader
 from utils.graphene.dataloaders import CountLoader, OneToManyLoader
 
@@ -256,3 +256,7 @@ class GQLContext:
     @cached_property
     def report_report_last_generation(self):
         return ReportLastGenerationLoader()
+
+    @cached_property
+    def report_report_total_disaggregation(self):
+        return ReportTotalDisaggregationLoader()

@@ -145,7 +145,17 @@ class QueryAbstractModel(models.Model):
         # full model instances. The figure filterset only needs the ids (it filters
         # with `__in`), so this avoids materializing fat rows (e.g. country geometry,
         # full event/crisis/organization records) just to check/apply each filter.
+        #
+        # If the relation was prefetched (e.g. ReportTotalDisaggregationLoader prefetches
+        # all filter M2Ms with .only("id") to batch a report list), read the ids from the
+        # prefetch cache instead — values_list() would ignore the cache and re-query per
+        # relation per report (the N+1 this avoids). Falls back to the lean values_list
+        # when not prefetched (the single-report figureList path is unchanged).
+        prefetched = getattr(self, "_prefetched_objects_cache", {})
+
         def ids(manager):
+            if getattr(manager, "prefetch_cache_name", None) in prefetched:
+                return [obj.pk for obj in manager.all()]
             return list(manager.values_list("id", flat=True))
 
         return dict(

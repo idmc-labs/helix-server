@@ -1,8 +1,32 @@
-from django.db.models import Exists, OuterRef
+from django.db.models import Exists, OuterRef, Prefetch
 from promise import Promise
 from promise.dataloader import DataLoader
 
-from apps.report.models import ReportApproval, ReportGeneration
+from apps.report.models import Report, ReportApproval, ReportGeneration
+
+# M2M filter relations read by QueryAbstractModel.get_filter_kwargs. Prefetching these
+# (lean, id-only) lets get_filter_kwargs read ids from the prefetch cache instead of one
+# query per relation per report.
+_REPORT_FILTER_M2M_FIELDS = [
+    "filter_figure_countries",
+    "filter_figure_regions",
+    "filter_figure_geographical_groups",
+    "filter_figure_events",
+    "filter_figure_crises",
+    "filter_figure_tags",
+    "filter_figure_disaster_categories",
+    "filter_figure_disaster_sub_categories",
+    "filter_figure_disaster_types",
+    "filter_figure_disaster_sub_types",
+    "filter_figure_violence_types",
+    "filter_figure_violence_sub_types",
+    "filter_figure_osv_sub_types",
+    "filter_figure_context_of_violence",
+    "filter_figure_approved_by",
+    "filter_figure_created_by",
+    "filter_figure_sources",
+    "filter_entry_publishers",
+]
 
 
 class ReportLastGenerationLoader(DataLoader):
@@ -23,4 +47,30 @@ class ReportLastGenerationLoader(DataLoader):
             .distinct("report_id")
         )
         _map = {generation.report_id: generation for generation in qs}
+        return Promise.resolve([_map.get(key) for key in keys])
+
+
+class ReportTotalDisaggregationLoader(DataLoader):
+    """Batch ReportType.total_disaggregation across a report list.
+
+    total_disaggregation per report = get_filter_kwargs (one query per filter M2M) +
+    a Sum aggregate over the report's filtered figures. Resolved per-row it was an N+1
+    of ~19 queries/report. The per-report aggregate cannot be merged (each report has a
+    distinct figure filter), but the ~18 M2M filter reads CAN: prefetch them (id-only)
+    for the whole batch so get_filter_kwargs reads ids from cache. That collapses the
+    query count from ~19*N to ~18 + N (one aggregate per report), cutting DB round-trips
+    sharply (the dominant win over the network).
+    """
+
+    def batch_load_fn(self, keys):
+        reports = Report.objects.filter(id__in=keys).prefetch_related(
+            *[
+                Prefetch(
+                    field,
+                    queryset=Report._meta.get_field(field).related_model._default_manager.only("id"),
+                )
+                for field in _REPORT_FILTER_M2M_FIELDS
+            ]
+        )
+        _map = {report.id: report.total_disaggregation for report in reports}
         return Promise.resolve([_map.get(key) for key in keys])
