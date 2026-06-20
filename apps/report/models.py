@@ -400,6 +400,14 @@ class Report(MetaInformationArchiveAbstractModel, QueryAbstractModel, FigureDisa
 
     class Meta:
         # TODO: implement the side effects of report sign off
+        indexes = [
+            # The report list is paginated with created_at DESC NULLS LAST ordering
+            # (the client default, applied by nulls_last_order_queryset). A plain
+            # ascending index cannot serve DESC NULLS LAST, so the list seq-scanned
+            # all reports + top-N sorted on every request. This expression index
+            # matches the ordering, turning it into an index scan.
+            models.Index(models.F("created_at").desc(nulls_last=True), name="report_created_at_desc_idx"),
+        ]
         permissions = (
             ("sign_off_report", "Can sign off the report"),
             ("approve_report", "Can approve the report"),
