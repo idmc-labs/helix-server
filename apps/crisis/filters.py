@@ -23,6 +23,11 @@ from utils.filters import (
 
 
 class CrisisFilter(MultiWordSearchFilterSet):
+    # Opt-in: DjangoPaginatedListObjectField uses this marker to decide whether
+    # to forward the active ordering as a constructor arg, so we can gate
+    # expensive annotations on it (see qs property below).
+    accepts_ordering = True
+
     countries = IDListFilter(method="filter_countries")
     crisis_types = StringListFilter(method="filter_crisis_types")
     events = IDListFilter(method="filter_events")
@@ -43,6 +48,11 @@ class CrisisFilter(MultiWordSearchFilterSet):
             "end_date": ["lt", "lte", "gt", "gte"],
         }
         multi_word_search_fields = ["name", "events__name"]
+
+    def __init__(self, *args, ordering=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ordering = ordering
+        self.ordering_fields = {field.lstrip("-") for field in ordering.split(",") if field} if ordering else set()
 
     def noop(self, qs, name, value):
         return qs
@@ -80,27 +90,48 @@ class CrisisFilter(MultiWordSearchFilterSet):
 
     @property
     def qs(self):
+        queryset = super().qs
+
         figure_qs, reference_date = FigureFilterHelper.aggregate_data_generate(
             self.data.get("aggregate_figures"),
             self.request,
         )
-        return (
-            super()
-            .qs.annotate(
-                **Crisis._total_figure_disaggregation_subquery(
-                    figures=figure_qs,
-                    reference_date=reference_date,
-                ),
-                **Crisis.annotate_review_figures_count(),
-                event_count=Count("events"),
-            )
-            # NOTE: no prefetch_related("events"): CrisisType exposes `events` as a paginated
-            # dataloader field (apps/crisis/schema.py), not root.events.all(), and event_count
-            # resolves via EventCountLoader. Nothing serializes root.events, so the eager
-            # prefetch only ran an extra query + hydrated every event of the listed crises for
-            # nothing (~1.8k event rows across the crisis list).
-            .distinct()
+        # The figure-disaggregation (nd/idp) annotations are only needed in the queryset
+        # when either the client asked for a filtered aggregate (aggregate_figures) or the
+        # list is ordered by one of them. Otherwise CrisisType resolvers fall back to the
+        # (unfiltered) dataloaders, which return identical values without per-row subqueries
+        # over every crisis. When aggregate_figures is provided the annotation reflects the
+        # filtered aggregate, so it must stay regardless of ordering.
+        figure_disaggregation = Crisis._total_figure_disaggregation_subquery(
+            figures=figure_qs,
+            reference_date=reference_date,
         )
+        # has_figure_scope: aggregate_figures resolved to an actual figure set (a report or a
+        # non-empty filter_figures) — not merely whether the field was passed. (reference_date is
+        # only ever set alongside figure_qs, so checking figure_qs alone is enough.)
+        has_figure_scope = figure_qs is not None
+        if has_figure_scope or (self.ordering_fields & set(figure_disaggregation.keys())):
+            queryset = queryset.annotate(**figure_disaggregation)
+
+        # The review-figure counts are an expensive fan-out aggregation over the whole
+        # Figure table (Count over a crisis->event->figure join + GroupAggregate). They are
+        # only needed in the queryset when the list is ordered by one of them; otherwise the
+        # review_count field is resolved via CrisisReviewCountLoader. This is the dominant
+        # cost of the default (created_at) list.
+        review_figures_count = Crisis.annotate_review_figures_count()
+        if self.ordering_fields & set(review_figures_count.keys()):
+            queryset = queryset.annotate(**review_figures_count)
+
+        # event_count is resolved via EventCountLoader unless the list is ordered by it.
+        if "event_count" in self.ordering_fields:
+            queryset = queryset.annotate(event_count=Count("events"))
+
+        # NOTE: no prefetch_related("events"): CrisisType exposes `events` as a paginated
+        # dataloader field (apps/crisis/schema.py), not root.events.all(), and event_count
+        # resolves via EventCountLoader. Nothing serializes root.events, so the eager
+        # prefetch only ran an extra query + hydrated every event of the listed crises for
+        # nothing (~1.8k event rows across the crisis list).
+        return queryset
 
 
 CrisisFilterDataType, CrisisFilterDataInputType = generate_type_for_filter_set(

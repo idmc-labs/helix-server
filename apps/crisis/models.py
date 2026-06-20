@@ -49,6 +49,15 @@ class Crisis(MetaInformationAbstractModel, models.Model):
         null=True,
     )
 
+    class Meta:
+        indexes = [
+            # The crisis list default ordering is created_at DESC NULLS LAST (applied by
+            # nulls_last_order_queryset). A plain ascending index cannot serve DESC NULLS
+            # LAST, so the list seq-scanned/sorted all crises. This expression index
+            # matches the ordering, turning it into an index scan.
+            models.Index(models.F("created_at").desc(nulls_last=True), name="crisis_created_at_desc_idx"),
+        ]
+
     @classmethod
     def _total_figure_disaggregation_subquery(cls, figures=None, reference_date=None):
         from apps.entry.models import Figure
@@ -139,6 +148,10 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                 request=DummyRequest(user=User.objects.get(id=user_id)),
             )
             .qs.annotate(
+                # The filter qs no longer annotates the figure disaggregation by default
+                # (it is dataloader-resolved for the list); the excel export reads these
+                # columns directly, so annotate them explicitly here.
+                **cls._total_figure_disaggregation_subquery(),
                 countries_iso3=StringAgg("countries__iso3", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
                 countries_name=StringAgg("countries__idmc_short_name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
                 regions_name=StringAgg("countries__region__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
