@@ -521,10 +521,13 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             models.Index(fields=["end_date"]),
             models.Index(fields=["start_date_accuracy"]),
             models.Index(fields=["end_date_accuracy"]),
-            models.Index(fields=["country"]),
+            # NOTE: no explicit index on `country` / `event` — both are ForeignKeys, which
+            # Django already indexes (db_index defaults True for FK). The explicit Meta
+            # indexes here were exact duplicates (entry_figur_country_*/event_* alongside
+            # the FK's entry_figure_country_id_*/event_id_*), doubling write cost + space
+            # on this 186k-row table for no read benefit.
             models.Index(fields=["category"]),
             models.Index(fields=["role"]),
-            models.Index(fields=["event"]),
             models.Index(fields=["figure_cause"]),
             # Match the figure-list default ordering (created_at DESC NULLS LAST,
             # applied by utils.graphene.pagination.nulls_last_order_queryset). A plain
