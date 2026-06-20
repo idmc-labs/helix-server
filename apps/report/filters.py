@@ -48,7 +48,10 @@ class ReportFilter(MultiWordSearchFilterSet):
 
     def filter_countries(self, qs, name, value):
         if value:
-            return qs.filter(filter_figure_countries__in=value).distinct()
+            # M2M: Exists membership, no fan-out -> no .distinct().
+            return qs.filter(
+                Exists(Report.filter_figure_countries.through.objects.filter(report_id=OuterRef("pk"), country_id__in=value))
+            )
         return qs
 
     def filter_by_review_status(self, qs, name, value):

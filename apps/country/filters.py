@@ -122,12 +122,12 @@ class CountryFilter(MultiWordSearchFilterSet):
     def filter_regions(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(region__in=value).distinct()
+        return qs.filter(region__in=value)
 
     def filter_geo_groups(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(geographical_group__in=value).distinct()
+        return qs.filter(geographical_group__in=value)
 
     def filter_year(self, qs, name, value):
         """Filter logic is applied in qs"""
