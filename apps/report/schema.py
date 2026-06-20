@@ -106,11 +106,17 @@ class ReportType(DjangoObjectType):
     filter_figure_review_status = graphene.List(graphene.NonNull(FigureReviewStatusEnum))
 
     total_disaggregation = graphene.NonNull(ReportTotalsType)
-    # FIXME: use dataloader for last_generation
     last_generation = graphene.Field(ReportGenerationType)
     generations = DjangoPaginatedListObjectField(
         ReportGenerationListType,
     )
+
+    def resolve_last_generation(root, info, **kwargs):
+        # Batched (was a per-report query -> N+1 on the report list). The loader
+        # replicates Report.last_generation: latest generation per report with the
+        # is_approved annotation.
+        return info.context.report_report_last_generation.load(root.id)
+
     generated_from = graphene.Field(ReportTypeEnum)
     generated_from_display = EnumDescription(source="get_generated_from_display_display")
 
