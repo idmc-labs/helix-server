@@ -6,7 +6,7 @@ from django.contrib.postgres.aggregates.general import StringAgg
 from django.contrib.postgres.fields import ArrayField
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
-from django.db.models import Count, OuterRef, Subquery
+from django.db.models import Count, Exists, OuterRef, Subquery
 from django.db.models.query import QuerySet
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -456,7 +456,9 @@ class Country(models.Model):
 
     @property
     def entries(self) -> QuerySet:
-        return Entry.objects.filter(figures__event__countries=self.pk).distinct()
+        # Exists on the figures->event->countries path keeps one row per entry
+        # (the path is to-many), so no .distinct() is needed.
+        return Entry.objects.filter(Exists(Figure.objects.filter(entry_id=OuterRef("pk"), event__countries=self.pk)))
 
     @property
     def last_contextual_analysis(self):

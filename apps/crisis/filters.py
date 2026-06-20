@@ -1,8 +1,9 @@
 import graphene
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef
 from django.http import HttpRequest
 
 from apps.crisis.models import Crisis
+from apps.event.models import Event
 from apps.extraction.filters import (
     FigureExtractionFilterDataInputType,
     FigureExtractionFilterDataType,
@@ -52,21 +53,25 @@ class CrisisFilter(MultiWordSearchFilterSet):
     def filter_events(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(events__in=value).distinct()
+        # reverse FK (one-to-many): Exists avoids one outer row per matching event,
+        # so no .distinct() is needed.
+        return qs.filter(Exists(Event.objects.filter(crisis_id=OuterRef("pk"), pk__in=value)))
 
     def filter_countries(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(countries__in=value).distinct()
+        # M2M: Exists membership test, no fan-out -> no .distinct().
+        return qs.filter(Exists(Crisis.countries.through.objects.filter(crisis_id=OuterRef("pk"), country_id__in=value)))
 
     def filter_crisis_types(self, qs, name, value):
         if not value:
             return qs
+        # crisis_type is a scalar field: no join, no fan-out, no .distinct().
         if isinstance(value[0], int):
             # internal filtering
-            return qs.filter(crisis_type__in=value).distinct()
+            return qs.filter(crisis_type__in=value)
         # client side filtering
-        return qs.filter(crisis_type__in=[Crisis.CRISIS_TYPE.get(item).value for item in value]).distinct()
+        return qs.filter(crisis_type__in=[Crisis.CRISIS_TYPE.get(item).value for item in value])
 
     def filter_created_by(self, qs, name, value):
         if not value:

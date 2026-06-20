@@ -30,9 +30,9 @@ class ExcelExportFilter(django_filters.FilterSet):
         if value:
             if isinstance(value[0], int):
                 # internal filtering
-                return qs.filter(status__in=value).distinct()
+                return qs.filter(status__in=value)
             # client side filtering
-            return qs.filter(status__in=[ExcelDownload.EXCEL_GENERATION_STATUS.get(item).value for item in value]).distinct()
+            return qs.filter(status__in=[ExcelDownload.EXCEL_GENERATION_STATUS.get(item).value for item in value])
         return qs
 
     @property
@@ -80,8 +80,8 @@ class ClientTrackInfoFilter(django_filters.FilterSet):
     def filter_api_type(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
-                return qs.filter(api_type__in=value).distinct()
-            return qs.filter(api_type__in=[ExternalApiDump.ExternalApiType[item].value for item in value]).distinct()
+                return qs.filter(api_type__in=value)
+            return qs.filter(api_type__in=[ExternalApiDump.ExternalApiType[item].value for item in value])
         return qs
 
     def filter_client_codes(self, qs, name, value):

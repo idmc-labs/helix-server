@@ -1,5 +1,5 @@
 import django_filters
-from django.db.models import Case, When
+from django.db.models import Case, Exists, OuterRef, When
 
 from apps.organization.models import Organization, OrganizationKind
 from utils.filters import (
@@ -24,7 +24,9 @@ class OrganizationFilter(MultiWordSearchFilterSet):
     def filter_countries(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(countries__in=value).distinct()
+        return qs.filter(
+            Exists(Organization.countries.through.objects.filter(organization_id=OuterRef("pk"), country_id__in=value))
+        )
 
     def filter_categories(self, qs, name, value):
         if not value:
@@ -35,12 +37,14 @@ class OrganizationFilter(MultiWordSearchFilterSet):
     def filter_organization_kinds(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(organization_kind__in=value).distinct()
+        return qs.filter(organization_kind__in=value)
 
     def filter_order_country_first(self, qs, name, value):
         if not value:
             return qs
-        country_organization_ids = qs.filter(countries__in=value).values("id").distinct()
+        country_organization_ids = qs.filter(
+            Exists(Organization.countries.through.objects.filter(organization_id=OuterRef("pk"), country_id__in=value))
+        ).values("id")
         return qs.order_by(Case(When(id__in=country_organization_ids, then=0), default=1))
 
 

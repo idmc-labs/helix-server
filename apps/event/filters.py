@@ -83,34 +83,38 @@ class EventFilter(MultiWordSearchFilterSet):
     def filter_countries(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(countries__in=value).distinct()
+        # M2M: test membership with Exists (no join fan-out) so no .distinct() is needed.
+        return qs.filter(
+            models.Exists(Event.countries.through.objects.filter(event_id=models.OuterRef("pk"), country_id__in=value))
+        )
 
     def filter_disaster_sub_types(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_sub_type__in=value)).distinct()
+        # disaster_sub_type is a to-one FK: the join can't fan out, so no .distinct().
+        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_sub_type__in=value))
 
     def filter_violence_types(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence__in=value)).distinct()
+        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence__in=value))
 
     def filter_violence_sub_types(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_sub_type__in=value)).distinct()
+        return qs.filter(~Q(event_type=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_sub_type__in=value))
 
     def filter_crises(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(crisis__in=value).distinct()
+        return qs.filter(crisis__in=value)
 
     def filter_event_types(self, qs, name, value):
         if value:
             if isinstance(value[0], int):
                 # internal filtering
-                return qs.filter(event_type__in=value).distinct()
-            return qs.filter(event_type__in=[Crisis.CRISIS_TYPE.get(item).value for item in value]).distinct()
+                return qs.filter(event_type__in=value)
+            return qs.filter(event_type__in=[Crisis.CRISIS_TYPE.get(item).value for item in value])
         return qs
 
     def filter_review_status(self, qs, name, value):
@@ -138,19 +142,19 @@ class EventFilter(MultiWordSearchFilterSet):
                     Event.EVENT_REVIEW_STATUS.SIGNED_OFF_BUT_CHANGED.value,
                 ]
             if isinstance(value[0], int):
-                return qs.filter(review_status__in=value).distinct()
+                return qs.filter(review_status__in=value)
             return qs.filter(
                 review_status__in=[
                     # NOTE: item is string. eg: 'REVIEW_IN_PROGRESS'
                     Event.EVENT_REVIEW_STATUS.get(item).value
                     for item in value
                 ]
-            ).distinct()
+            )
         return qs
 
     def filter_osv_sub_types(self, qs, name, value):
         if value:
-            return qs.filter(~Q(violence__name=OSV) | Q(osv_sub_type__in=value)).distinct()
+            return qs.filter(~Q(violence__name=OSV) | Q(osv_sub_type__in=value))
         return qs
 
     def filter_qa_rule(self, qs, name, value):
@@ -204,7 +208,14 @@ class EventFilter(MultiWordSearchFilterSet):
     def filter_context_of_violences(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(context_of_violence__in=value).distinct()
+        # M2M: Exists membership test, no fan-out -> no .distinct() needed.
+        return qs.filter(
+            models.Exists(
+                Event.context_of_violence.through.objects.filter(
+                    event_id=models.OuterRef("pk"), contextofviolence_id__in=value
+                )
+            )
+        )
 
     def filter_assigners(self, qs, name, value):
         if not value:
