@@ -117,6 +117,12 @@ class ReportType(DjangoObjectType):
         # is_approved annotation.
         return info.context.report_report_last_generation.load(root.id)
 
+    def resolve_total_disaggregation(root, info, **kwargs):
+        # Batched: the per-report aggregate can't be merged (distinct filters), but the
+        # loader prefetches the filter M2Ms for the whole batch so get_filter_kwargs
+        # stops issuing ~18 queries per report (N+1 in query count).
+        return info.context.report_report_total_disaggregation.load(root.id)
+
     generated_from = graphene.Field(ReportTypeEnum)
     generated_from_display = EnumDescription(source="get_generated_from_display_display")
 
