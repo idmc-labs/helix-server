@@ -7,8 +7,10 @@ from django.contrib.postgres.aggregates.general import ArrayAgg, StringAgg
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models.functions import Cast
+from django.db.models.sql.constants import LOUTER
 from django.forms import model_to_dict
 from django.utils.translation import gettext_lazy as _
+from django_cte import CTEManager, With
 from django_enumfield import enum
 
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR, format_event_codes_as_string
@@ -201,6 +203,10 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
     IDP_FIGURES_ANNOTATE = "total_stock_idp_figures"
     IDP_FIGURES_REFERENCE_DATE_ANNOTATE = "idp_figures_reference_date"
 
+    # CTEManager so the list queryset can render WITH clauses (used by the figure-count
+    # ordering CTE in annotate_total_figure_disaggregation_via_cte), matching Figure.
+    objects = CTEManager()
+
     crisis = models.ForeignKey(
         "crisis.Crisis", verbose_name=_("Crisis"), blank=True, null=True, related_name="events", on_delete=models.CASCADE
     )
@@ -359,7 +365,7 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                     role=Figure.ROLE.RECOMMENDED,
                     event=models.OuterRef("pk"),
                 )
-                .order_by("-end_date")
+                .order_by(models.F("end_date").desc(nulls_last=True))
                 .values("end_date")[:1]
             )
         else:
@@ -399,6 +405,71 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
                 output_field=models.IntegerField(),
             ),
         }
+
+    @classmethod
+    def annotate_total_figure_disaggregation_via_cte(cls, queryset):
+        """Set-based equivalent of `_total_figure_disaggregation_subquery` (default scope) for the
+        list sort path: replaces ~40k per-event correlated subqueries with two chained CTEs over
+        `entry_figure`, LEFT-JOINed onto `queryset` under the same `total_flow_nd_figures` /
+        `total_stock_idp_figures` names (resolvers read them via getattr-fallback).
+
+        The IDP reference date is MAX(end_date) over the event's IDPS/RECOMMENDED figures (NULLs
+        ignored, matching the subquery's `end_date DESC NULLS LAST` pick); ND sums all
+        NEW_DISPLACEMENT/RECOMMENDED figures. Figures always have start_date/end_date (so no NULL
+        guards are needed).
+
+        Default scope only — `aggregate_figures` (filtered set + explicit reference_date) must use
+        the subquery.
+        """
+        rec = Figure.ROLE.RECOMMENDED.value
+        idps = Figure.FIGURE_CATEGORY_TYPES.IDPS.value
+        nd = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
+
+        # CTE1: reference date per event = MAX(end_date) over IDPS/RECOMMENDED figures.
+        reference_date_cte = With(
+            Figure.objects.filter(category=idps, role=rec)
+            .values("event")
+            .annotate(reference_date=models.Max("end_date"))
+            .values("event", "reference_date"),
+            name="event_figure_reference_date",
+        )
+
+        # CTE2: nd/idp counts per event, joined to the reference date from CTE1.
+        figure_with_reference = reference_date_cte.join(
+            Figure.objects.all(),
+            event=reference_date_cte.col.event_id,
+            _join_type=LOUTER,
+        ).with_cte(reference_date_cte)
+        figure_count_cte = With(
+            figure_with_reference.values("event")
+            .annotate(
+                **{
+                    cls.ND_FIGURES_ANNOTATE: models.Sum(
+                        "total_figures",
+                        filter=models.Q(category=nd, role=rec),
+                    ),
+                    cls.IDP_FIGURES_ANNOTATE: models.Sum(
+                        "total_figures",
+                        filter=models.Q(category=idps, role=rec) & models.Q(end_date=reference_date_cte.col.reference_date),
+                    ),
+                }
+            )
+            .values("event", cls.ND_FIGURES_ANNOTATE, cls.IDP_FIGURES_ANNOTATE),
+            name="event_figure_count",
+        )
+
+        # queryset is a CTEQuerySet (Event.objects = CTEManager()), so the join renders
+        # the WITH clause directly — same pattern as the figure ordering CTE.
+        return (
+            figure_count_cte.join(queryset, id=figure_count_cte.col.event_id, _join_type=LOUTER)
+            .with_cte(figure_count_cte)
+            .annotate(
+                **{
+                    cls.ND_FIGURES_ANNOTATE: figure_count_cte.col.total_flow_nd_figures,
+                    cls.IDP_FIGURES_ANNOTATE: figure_count_cte.col.total_stock_idp_figures,
+                }
+            )
+        )
 
     @classmethod
     def annotate_review_figures_count(cls):

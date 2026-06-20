@@ -250,22 +250,23 @@ class EventFilter(MultiWordSearchFilterSet):
             self.data.get("aggregate_figures"),
             self.request,
         )
-        # The figure-disaggregation (nd/idp) annotations are only needed in the queryset
-        # when either the client asked for a filtered aggregate (aggregate_figures) or the
-        # list is ordered by one of them. Otherwise EventType resolvers fall back to the
-        # (unfiltered) dataloaders, which return identical values without a per-row subquery
-        # on the whole list. When aggregate_figures is provided the annotation reflects the
-        # filtered aggregate, so it must stay regardless of ordering.
+        # nd/idp totals are annotated only when needed: aggregate_figures set, or sorting by them
+        # (else resolvers read the default dataloaders). We need BOTH a subquery and a CTE; a CTE
+        # alone can't do it — it is fixed to the default unfiltered scope, so aggregate_figures'
+        # filtered values must come from the parametrized subquery. The CTE is just the faster
+        # set-based path for the default values when sorting (big win on event; crisis/country are
+        # low-cardinality, so ~neutral there, kept for parity).
+        # TODO: move aggregate_figures onto dataloaders -> the subquery arm goes away.
         figure_disaggregation = Event._total_figure_disaggregation_subquery(
             figures=figure_qs,
             reference_date=reference_date,
         )
-        # has_figure_scope: aggregate_figures resolved to an actual figure set (a report or a
-        # non-empty filter_figures) — not merely whether the field was passed. (reference_date is
-        # only ever set alongside figure_qs, so checking figure_qs alone is enough.)
+        figure_count_sort_fields = {Event.ND_FIGURES_ANNOTATE, Event.IDP_FIGURES_ANNOTATE}
         has_figure_scope = figure_qs is not None
-        if has_figure_scope or (self.ordering_fields & set(figure_disaggregation.keys())):
+        if has_figure_scope:
             queryset = queryset.annotate(**figure_disaggregation)
+        elif self.ordering_fields & figure_count_sort_fields:
+            queryset = Event.annotate_total_figure_disaggregation_via_cte(queryset)
 
         # The review-figure counts are an expensive fan-out aggregation over the whole
         # Figure table (Count over a join + GroupAggregate). They are only needed in the
