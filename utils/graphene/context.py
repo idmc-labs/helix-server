@@ -18,6 +18,7 @@ from apps.crisis.dataloaders import (
 )
 from apps.entry.dataloaders import (
     EntryDocumentLoader,
+    EntryFiguresLoader,
     EntryPreviewLoader,
     FigureEntryLoader,
     FigureGeoLocationLoader,
@@ -161,6 +162,10 @@ class GQLContext:
     @cached_property
     def event_figure_typology_dataloader(self):
         return EventFigureTypologyLoader()
+
+    @cached_property
+    def entry_entry_figures(self):
+        return EntryFiguresLoader()
 
     @cached_property
     def figure_typology_dataloader(self):

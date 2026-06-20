@@ -117,6 +117,55 @@ class FigureLastReviewCommentStatusLoader(DataLoader):
         return Promise.resolve([_map[key] for key in keys])
 
 
+class EntryFiguresLoader(DataLoader):
+    """Batch-load the figures of each entry for EntryType.figures.
+
+    EntryType.figures was resolved per-entry, so an entry list issued one figures
+    query (plus its select_related/prefetch_related) for every row -> ~9 queries
+    per entry (an N+1). This loads all figures for the batched entries in one query
+    (the prefetches run once for the whole batch), then groups by entry_id. The
+    select_related/prefetch_related set is identical to the old per-entry resolver,
+    so each FigureType sees the same prefetched data; only the query count changes.
+    """
+
+    def batch_load_fn(self, keys: list):
+        qs = (
+            Figure.objects.filter(entry_id__in=keys)
+            .select_related(
+                "event",
+                "violence",
+                "violence_sub_type",
+                "disaster_category",
+                "disaster_sub_category",
+                "disaster_type",
+                "disaster_sub_type",
+                "other_sub_type",
+                "osv_sub_type",
+                "approved_by",
+                "country",
+                "event__disaster_category",
+                "event__disaster_sub_category",
+                "event__disaster_type",
+                "event__disaster_sub_type",
+            )
+            .prefetch_related(
+                "tags",
+                "context_of_violence",
+                "geo_locations",
+                "event__disaster_sub_category",
+                "event__countries",
+                "event__context_of_violence",
+                "sources",
+                "sources__countries",
+                "sources__organization_kind",
+            )
+        )
+        _map = defaultdict(list)
+        for figure in qs:
+            _map[figure.entry_id].append(figure)
+        return Promise.resolve([_map.get(key, []) for key in keys])
+
+
 class FigureEntryLoader(DataLoader):
     def batch_load_fn(self, keys: list):
         qs = Figure.objects.filter(id__in=keys).select_related("entry").only("id", "entry")
