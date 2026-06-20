@@ -228,41 +228,10 @@ class EntryType(DjangoObjectType):
     preview = graphene.Field("apps.entry.schema.SourcePreviewType")
 
     def resolve_figures(root, info, **kwargs):
-        # FIXME: this might be wrong
-        return (
-            Figure.objects.filter(entry=root.id)
-            .select_related(
-                "event",
-                "violence",
-                "violence_sub_type",
-                "disaster_category",
-                "disaster_sub_category",
-                "disaster_type",
-                "disaster_sub_type",
-                "disaster_category",
-                "disaster_sub_category",
-                "other_sub_type",
-                "osv_sub_type",
-                "approved_by",
-                "country",
-                "event__disaster_category",
-                "event__disaster_sub_category",
-                "event__disaster_type",
-                "event__disaster_sub_type",
-                "event__disaster_category",
-            )
-            .prefetch_related(
-                "tags",
-                "context_of_violence",
-                "geo_locations",
-                "event__disaster_sub_category",
-                "event__countries",
-                "event__context_of_violence",
-                "sources",
-                "sources__countries",
-                "sources__organization_kind",
-            )
-        )
+        # Batched via EntryFiguresLoader to avoid an N+1: resolving per-entry issued
+        # one figures query (+ its prefetches) for every entry in a list. The loader
+        # uses the same select_related/prefetch_related set across the whole batch.
+        return info.context.entry_entry_figures.load(root.id)
 
     def resolve_document(root, info, **kwargs):
         return info.context.entry_document_loader.load(root.id)
