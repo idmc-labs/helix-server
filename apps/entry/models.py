@@ -526,6 +526,11 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             models.Index(fields=["role"]),
             models.Index(fields=["event"]),
             models.Index(fields=["figure_cause"]),
+            # Match the figure-list default ordering (created_at DESC NULLS LAST,
+            # applied by utils.graphene.pagination.nulls_last_order_queryset). A plain
+            # ASC index can't serve DESC NULLS LAST, so the list previously seq-scanned
+            # all rows + top-N sorted; this expression index turns it into an index scan.
+            models.Index(models.F("created_at").desc(nulls_last=True), name="figure_created_at_desc_idx"),
         ]
         permissions = (("approve_figure", "Can approve/unapprove figure"),)
 
