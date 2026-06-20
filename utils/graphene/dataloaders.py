@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from django.db.models import (
     Count,
+    F,
     IntegerField,
     OuterRef,
     Prefetch,
@@ -9,6 +10,8 @@ from django.db.models import (
 )
 from promise import Promise
 from promise.dataloader import DataLoader
+
+from utils.graphene.pagination import nulls_last_order_queryset
 
 
 def get_relations(model1, model2):
@@ -120,13 +123,33 @@ class OneToManyLoader(DataLoader):
         return super().load(key)
 
     def batch_load_fn(self, keys):
-        related_objects_by_parent = defaultdict(list)
-
-        # queryset by related names
         related_name = self.related_name or get_related_name(self.parent, self.child)
         reverse_related_name = self.reverse_related_name or get_related_name(self.child, self.parent)
 
-        # pre-ready the filtered and paginated queryset
+        related_objects_by_parent = defaultdict(list)
+
+        # The default pagination (OrderingOnlyArgumentPagination) has no page params, so the
+        # field returns *every* related child per parent (just ordered). The old code did
+        # this with an unsliced correlated subquery `child.filter(reverse=OuterRef(reverse))`
+        # which, for M2M relations with high reverse fan-out (e.g. a source organization
+        # linked to thousands of figures), produced a huge semi-join + DISTINCT-over-all-
+        # columns sort (figureList { sources }: ~244k intermediate rows / 74MB on-disk sort
+        # / ~1.7s). Since there is no per-parent limit here, fetch the batch's children once
+        # and group in Python — same result set, no cross product (~48ms).
+        if not getattr(self.pagination, "page_size_query_param", None):
+            related_qs = (
+                self.filterset_class(data=self.filter_kwargs, request=self.request)
+                .qs.filter(**{f"{reverse_related_name}__in": keys})
+                .annotate(_dataloader_parent_id=F(reverse_related_name))
+            )
+            related_qs = nulls_last_order_queryset(related_qs, self.pagination.ordering_param, **self.kwargs)
+            for child in related_qs:
+                related_objects_by_parent[child._dataloader_parent_id].append(child)
+            return Promise.resolve([related_objects_by_parent.get(key, []) for key in keys])
+
+        # Paginated fields (page params present) keep the per-parent windowed subquery so the
+        # DB returns at most one page per parent — important when a parent can have a large
+        # related set (e.g. a country's events).
         filtered_qs = self.filterset_class(
             data=self.filter_kwargs,
             request=self.request,
@@ -140,10 +163,7 @@ class OneToManyLoader(DataLoader):
             queryset=self.child.objects.filter(id__in=Subquery(filtered_paginated_qs)).distinct(),
             to_attr=OUT_RELATED_FIELD,
         )
-
-        # FIXME: this prefetch is causing un-necessary join in generated queries
         qs = self.parent.objects.filter(id__in=keys).prefetch_related(prefetch)
-
         for each in qs:
             related_objects_by_parent[each.id] = getattr(each, OUT_RELATED_FIELD)
 
