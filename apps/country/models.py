@@ -8,8 +8,10 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.db.models import Count, Exists, OuterRef, Subquery
 from django.db.models.query import QuerySet
+from django.db.models.sql.constants import LOUTER
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django_cte import CTEManager, With
 from django_enumfield import enum
 
 from apps.common.utils import EXTERNAL_ARRAY_SEPARATOR, EXTERNAL_TUPLE_SEPARATOR
@@ -248,6 +250,11 @@ class Country(models.Model):
     IDP_CONFLICT_ANNOTATE = "total_stock_conflict"
     IDP_DISASTER_ANNOTATE = "total_stock_disaster"
 
+    # CTEManager so the list queryset can render WITH clauses (used by the figure-count
+    # ordering CTE in annotate_total_figure_disaggregation_via_cte), matching
+    # Figure/Event/Crisis. Manager-only change (no migration).
+    objects = CTEManager()
+
     name = models.CharField(verbose_name=_("Name"), max_length=256)
     geographical_group = models.ForeignKey(
         "GeographicalGroup", verbose_name=_("Geographical Group"), null=True, on_delete=models.SET_NULL
@@ -372,6 +379,101 @@ class Country(models.Model):
                 output_field=models.IntegerField(),
             ),
         }
+
+    @classmethod
+    def annotate_total_figure_disaggregation_via_cte(cls, queryset):
+        """Set-based equivalent of `_total_figure_disaggregation_subquery` (default current-year
+        scope) for the list sort path: replaces four per-country correlated subqueries with one
+        hash aggregation over `entry_figure` grouped by `country_id` (a direct FK — no join),
+        LEFT-JOINed onto `queryset` under the same four field names (`total_{flow,stock}_{conflict,
+        disaster}`).
+
+        Differs from event/crisis: direct FK (no two-hop join); a *fixed* this-year end date (no
+        per-row DESC-NULLS-FIRST reference date, so no reference CTE); four counts split by
+        `event__event_type` (CONFLICT/DISASTER) x category (flow/stock). Values match the subquery
+        exactly (NULL year-difference excluded for ND; IDP keyed on the fixed end date).
+
+        Default scope only — `aggregate_figures` (filtered set / year / report) must use the subquery.
+        """
+        rec = Figure.ROLE.RECOMMENDED.value
+        idps = Figure.FIGURE_CATEGORY_TYPES.IDPS.value
+        nd = Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value
+        conflict = Crisis.CRISIS_TYPE.CONFLICT.value
+        disaster = Crisis.CRISIS_TYPE.DISASTER.value
+
+        # Default current-year date range (matches _total_figure_disaggregation_subquery
+        # when no year / aggregate_figures is supplied).
+        start_date = datetime(year=timezone.now().year, month=1, day=1)
+        end_date = datetime(year=timezone.now().year, month=12, day=31)
+
+        # ND (flow) date/category predicate, mirroring Figure._nd_figures_q for a single
+        # category (NEW_DISPLACEMENT) with the default current-year bounds. year_difference
+        # is annotated on the base queryset below via Figure.with_year_difference.
+        nd_same_year = models.Q(
+            year_difference__lt=1,
+            start_date__gte=start_date,
+            start_date__lte=end_date,
+        )
+        nd_multi_year = models.Q(
+            year_difference__gte=1,
+            end_date__gte=start_date,
+            end_date__lte=end_date,
+        )
+        nd_date_q = nd_same_year | nd_multi_year
+
+        # IDP (stock) date/category predicate, mirroring Figure._idp_figures_q for a single
+        # category (IDPS) with end_date_lookup="exact": end_date >= start_date AND
+        # end_date == end_date (fixed this-year end).
+        idp_date_q = models.Q(end_date__gte=start_date, end_date=end_date)
+
+        base = Figure.with_year_difference(Figure.objects.all())
+        figure_count_cte = With(
+            base.order_by()
+            .values("country")
+            .annotate(
+                **{
+                    cls.ND_CONFLICT_ANNOTATE: models.Sum(
+                        "total_figures",
+                        filter=models.Q(category=nd, role=rec, event__event_type=conflict) & nd_date_q,
+                    ),
+                    cls.ND_DISASTER_ANNOTATE: models.Sum(
+                        "total_figures",
+                        filter=models.Q(category=nd, role=rec, event__event_type=disaster) & nd_date_q,
+                    ),
+                    cls.IDP_CONFLICT_ANNOTATE: models.Sum(
+                        "total_figures",
+                        filter=models.Q(category=idps, role=rec, event__event_type=conflict) & idp_date_q,
+                    ),
+                    cls.IDP_DISASTER_ANNOTATE: models.Sum(
+                        "total_figures",
+                        filter=models.Q(category=idps, role=rec, event__event_type=disaster) & idp_date_q,
+                    ),
+                }
+            )
+            .values(
+                "country",
+                cls.ND_CONFLICT_ANNOTATE,
+                cls.ND_DISASTER_ANNOTATE,
+                cls.IDP_CONFLICT_ANNOTATE,
+                cls.IDP_DISASTER_ANNOTATE,
+            ),
+            name="country_figure_count",
+        )
+
+        # queryset is a CTEQuerySet (Country.objects = CTEManager()), so the join renders
+        # the WITH clause directly — same pattern as the event/crisis figure-count CTEs.
+        return (
+            figure_count_cte.join(queryset, id=figure_count_cte.col.country_id, _join_type=LOUTER)
+            .with_cte(figure_count_cte)
+            .annotate(
+                **{
+                    cls.ND_CONFLICT_ANNOTATE: getattr(figure_count_cte.col, cls.ND_CONFLICT_ANNOTATE),
+                    cls.ND_DISASTER_ANNOTATE: getattr(figure_count_cte.col, cls.ND_DISASTER_ANNOTATE),
+                    cls.IDP_CONFLICT_ANNOTATE: getattr(figure_count_cte.col, cls.IDP_CONFLICT_ANNOTATE),
+                    cls.IDP_DISASTER_ANNOTATE: getattr(figure_count_cte.col, cls.IDP_DISASTER_ANNOTATE),
+                }
+            )
+        )
 
     @classmethod
     def get_excel_sheets_data(cls, user_id, filters):
