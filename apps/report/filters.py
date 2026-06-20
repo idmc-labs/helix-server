@@ -133,7 +133,11 @@ class ReportFilter(MultiWordSearchFilterSet):
             user = self.request.user
             return super().qs.filter(Q(is_public=True) | Q(is_public=False, created_by=user))
 
-        return super().qs.distinct()
+        # No global .distinct(): the only filter that fans out (filter_countries, an
+        # M2M join) applies its own .distinct(), and the multi-word search uses Exists
+        # (no join fan-out). A blanket DISTINCT here forces a Unique over every column
+        # on top of the created_at index scan for nothing. Id-set verified identical.
+        return super().qs
 
 
 class DummyFilter(df.FilterSet):
