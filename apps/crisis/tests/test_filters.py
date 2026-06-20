@@ -17,7 +17,10 @@ class TestCrisisFilter(HelixTestCase):
         CrisisFactory.create(name="one")
         c2 = CrisisFactory.create(name="two")
         c3 = CrisisFactory.create(name="towo")
-        obtained = self.filter_class(data=dict(search="w")).qs
+        # The multi-word search qs has no inherent ORDER BY (the list field applies the
+        # production ordering), so order by id here to keep the assertion independent of the
+        # DB scan order. TODO: make the search/list ordering deterministic (see FUTURE_WORK).
+        obtained = self.filter_class(data=dict(search="w")).qs.order_by("id")
         expected = [c2, c3]
         self.assertEqual(expected, list(obtained))
 
