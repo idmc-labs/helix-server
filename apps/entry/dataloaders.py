@@ -151,13 +151,15 @@ class EntryFiguresLoader(DataLoader):
             .prefetch_related(
                 "tags",
                 "context_of_violence",
-                "geo_locations",
                 "event__disaster_sub_category",
                 "event__countries",
                 "event__context_of_violence",
-                "sources",
-                "sources__countries",
-                "sources__organization_kind",
+                # NOTE: geo_locations / sources (+ sources__countries / __organization_kind)
+                # are intentionally NOT prefetched: FigureType serves them via paginated
+                # dataloader fields (DjangoPaginatedListObjectField), so they are never read
+                # off the prefetched instance. Prefetching them only hydrated thousands of
+                # rows (incl. the fat Organization table) for nothing — ~270ms of the ~600ms
+                # spent here at pageSize 100.
             )
         )
         _map = defaultdict(list)
