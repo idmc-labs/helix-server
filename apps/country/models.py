@@ -404,37 +404,41 @@ class Country(models.Model):
                 cls.ND_DISASTER_ANNOTATE: f"ND disaster figure {str_year}",
             },
         )
-        data = (
-            CountryFilter(
-                data=filters,
-                request=DummyRequest(user=User.objects.get(id=user_id)),
-            )
-            .qs.annotate(
-                crises_count=Count("crises", distinct=True),
-                events_count=Count("events", distinct=True),
-                # NOTE: Subquery was relatively faster than JOINs
-                # entries_count=Count('events__entries', distinct=True),
-                entries_count=models.Subquery(
-                    Entry.objects.filter(figures__country=OuterRef("pk"))
-                    .order_by()
-                    .values("figures__country")
-                    .annotate(_count=Count("figures__entry", distinct=True))
-                    .values("_count")[:1],
-                    output_field=models.IntegerField(),
-                ),
-                figures_count=models.Subquery(
-                    Figure.objects.filter(country=OuterRef("pk"))
-                    .order_by()
-                    .values("country")
-                    .annotate(_count=Count("pk"))
-                    .values("_count")[:1],
-                    output_field=models.IntegerField(),
-                ),
-                # contacts_count=Count('contacts', distinct=True),
-                # operating_contacts_count=Count('operating_contacts', distinct=True),
-            )
-            .order_by("idmc_short_name")
-        )
+        country_qs = CountryFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs
+        # The filter qs no longer annotates the figure disaggregation by default (it is
+        # dataloader-resolved for the list); the excel export reads these columns
+        # directly. When the export filter carries aggregate_figures the qs already
+        # annotates them (dated to that aggregate), so only add the default (current-year)
+        # annotation when it is absent, to avoid a duplicate-annotation conflict.
+        if cls.IDP_DISASTER_ANNOTATE not in country_qs.query.annotations:
+            country_qs = country_qs.annotate(**cls._total_figure_disaggregation_subquery())
+        data = country_qs.annotate(
+            crises_count=Count("crises", distinct=True),
+            events_count=Count("events", distinct=True),
+            # NOTE: Subquery was relatively faster than JOINs
+            # entries_count=Count('events__entries', distinct=True),
+            entries_count=models.Subquery(
+                Entry.objects.filter(figures__country=OuterRef("pk"))
+                .order_by()
+                .values("figures__country")
+                .annotate(_count=Count("figures__entry", distinct=True))
+                .values("_count")[:1],
+                output_field=models.IntegerField(),
+            ),
+            figures_count=models.Subquery(
+                Figure.objects.filter(country=OuterRef("pk"))
+                .order_by()
+                .values("country")
+                .annotate(_count=Count("pk"))
+                .values("_count")[:1],
+                output_field=models.IntegerField(),
+            ),
+            # contacts_count=Count('contacts', distinct=True),
+            # operating_contacts_count=Count('operating_contacts', distinct=True),
+        ).order_by("idmc_short_name")
 
         return {
             "headers": headers,

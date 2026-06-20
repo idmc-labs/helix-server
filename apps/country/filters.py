@@ -86,6 +86,11 @@ class CountryRegionFilter(MultiWordSearchFilterSet):
 
 
 class CountryFilter(MultiWordSearchFilterSet):
+    # Opt-in: DjangoPaginatedListObjectField uses this marker to decide whether
+    # to forward the active ordering as a constructor arg, so we can gate
+    # expensive annotations on it (see qs property below).
+    accepts_ordering = True
+
     id = IDFilter(field_name="id", lookup_expr="exact")
     region_by_ids = StringListFilter(method="filter_regions")
     geo_group_by_ids = StringListFilter(method="filter_geo_groups")
@@ -103,6 +108,11 @@ class CountryFilter(MultiWordSearchFilterSet):
         model = Country
         fields = []
         multi_word_search_fields = ["idmc_short_name", "iso3"]
+
+    def __init__(self, *args, ordering=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ordering = ordering
+        self.ordering_fields = {field.lstrip("-") for field in ordering.split(",") if field} if ordering else set()
 
     def noop(self, qs, name, value):
         return qs
@@ -141,6 +151,8 @@ class CountryFilter(MultiWordSearchFilterSet):
 
     @property
     def qs(self):
+        queryset = super().qs
+
         # Aggregate filter logic
         aggregate_figures = self.data.get("aggregate_figures") or {}
         year = aggregate_figures.get("year")
@@ -157,13 +169,25 @@ class CountryFilter(MultiWordSearchFilterSet):
             start_date = datetime.datetime(year=int(year), month=1, day=1)
             end_date = datetime.datetime(year=int(year), month=12, day=31)
 
-        return super().qs.annotate(
-            **Country._total_figure_disaggregation_subquery(
-                figures=figure_qs,
-                start_date=start_date,
-                end_date=end_date,
-            )
+        # The figure-disaggregation (nd/idp stock/flow) annotations are an expensive
+        # per-row correlated subquery over the whole Figure table, computed for every
+        # returned country. They are only needed in the queryset when either the client
+        # asked for a filtered aggregate (aggregate_figures) or the list is ordered by
+        # one of them. Otherwise CountryType resolvers fall back to the (unfiltered,
+        # current-year) dataloaders, which return identical values without the per-row
+        # subqueries. When aggregate_figures is provided the annotation reflects the
+        # filtered aggregate, so it must stay regardless of ordering. This is the
+        # dominant cost of the default (idmc_short_name) list and the source of its
+        # page-size sensitivity.
+        figure_disaggregation = Country._total_figure_disaggregation_subquery(
+            figures=figure_qs,
+            start_date=start_date,
+            end_date=end_date,
         )
+        if aggregate_figures or (self.ordering_fields & set(figure_disaggregation.keys())):
+            queryset = queryset.annotate(**figure_disaggregation)
+
+        return queryset
 
 
 class MonitoringSubRegionFilter(MultiWordSearchFilterSet):
