@@ -647,6 +647,11 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
             # figure-field ordering is exposed. A per-row correlated subquery would
             # win on small filtered subsets but loses badly here (186k per-row execs
             # vs one hash aggregation), so the whole-table CTE is the right default.
+            # NOTE: scoping the CTE to the *filtered* queryset was measured and rejected
+            # — it wins for selective filters (reportId/sources −40%) but regresses
+            # non-selective ones (a 131k/186k region filter +39%, because the filter then
+            # runs in both the CTE and the outer query). The real fix for filtered
+            # aggregate-ordering is denormalizing the sort key.
             if "geolocations" in self.ordering_fields:
                 cte = With(
                     Figure.objects.values("id").annotate(
