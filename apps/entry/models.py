@@ -537,6 +537,22 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
             # ASC index can't serve DESC NULLS LAST, so the list previously seq-scanned
             # all rows + top-N sorted; this expression index turns it into an index scan.
             models.Index(models.F("created_at").desc(nulls_last=True), name="figure_created_at_desc_idx"),
+            # Partial index serving the reference-date CTE in
+            # Event.annotate_total_figure_disaggregation_via_cte (CTE1), which filters
+            # role=RECOMMENDED + category=IDPS, groups by event, and takes MAX(end_date).
+            # Leading with `event` (the GROUP BY key) lets the planner produce groups in
+            # index order; `category` (equality) narrows within the partial set; `end_date`
+            # last lets MAX() read the last row per (event,category) range without a sort.
+            # The `role=RECOMMENDED` predicate is baked into the partial condition so the
+            # index only stores the recommended rows (the common QA/default-filter subset),
+            # keeping it small on this 186k-row table. The literal 0 is ROLE.RECOMMENDED.value
+            # (`role` is an enum.EnumField stored as int); the enum class isn't in scope inside
+            # Meta, and the CTE itself filters on `rec = Figure.ROLE.RECOMMENDED.value` == 0.
+            models.Index(
+                fields=["event", "category", "end_date"],
+                condition=models.Q(role=0),
+                name="figure_event_cat_role_rec_idx",
+            ),
         ]
         permissions = (("approve_figure", "Can approve/unapprove figure"),)
 
