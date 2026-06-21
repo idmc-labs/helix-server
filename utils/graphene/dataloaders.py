@@ -3,9 +3,6 @@ from collections import defaultdict
 from django.db.models import (
     Count,
     F,
-    IntegerField,
-    OuterRef,
-    Subquery,
     Window,
 )
 from django.db.models.functions import RowNumber
@@ -96,22 +93,20 @@ class CountLoader(DataLoader):
 
         filtered_qs = self.filterset_class(data=self.filter_kwargs, request=self.request).qs
 
-        qs = (
-            self.parent.objects.filter(id__in=keys)
-            .annotate(
-                count=Subquery(
-                    filtered_qs.filter(**{reverse_related_name: OuterRef("pk")})
-                    .order_by()
-                    .values(reverse_related_name)
-                    .annotate(c=Count("*"))
-                    .values("c"),
-                    output_field=IntegerField(),
-                )
-            )
-            .values_list("id", "count")
+        # Single grouped count instead of one correlated COUNT subquery per parent row:
+        # group the filtered children by the reverse relation and count once. Parents in
+        # ``keys`` with no matching children simply don't appear in the result and fall
+        # back to 0 below (same as the old NULL -> 0 coercion). ``.order_by()`` clears any
+        # default ordering so it doesn't pollute the GROUP BY.
+        counts = (
+            filtered_qs.filter(**{f"{reverse_related_name}__in": keys})
+            .order_by()
+            .values(reverse_related_name)
+            .annotate(c=Count("*"))
+            .values_list(reverse_related_name, "c")
         )
 
-        related_objects_by_parent = {id_: count for id_, count in qs}
+        related_objects_by_parent = {parent_id: c for parent_id, c in counts}
 
         return Promise.resolve([related_objects_by_parent.get(key) or 0 for key in keys])
 
