@@ -529,16 +529,20 @@ class Event(MetaInformationArchiveAbstractModel, models.Model):
             event_link="Event Link",
         )
         exclude_headers = ["event_link"]
+        event_qs = EventFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs
+        # The filter qs no longer annotates the figure disaggregation by default (it is
+        # dataloader-resolved for the list); the excel export reads these columns directly.
+        # When the export filter carries aggregate_figures the qs ALREADY annotates them
+        # (dated to that aggregate), so only add the default (unfiltered) annotation when it
+        # is absent — re-annotating unconditionally would overwrite the filtered values with
+        # the whole-history default and silently export wrong figures.
+        if cls.IDP_FIGURES_ANNOTATE not in event_qs.query.annotations:
+            event_qs = event_qs.annotate(**cls._total_figure_disaggregation_subquery())
         data = (
-            EventFilter(
-                data=filters,
-                request=DummyRequest(user=User.objects.get(id=user_id)),
-            )
-            .qs.annotate(
-                # The filter qs no longer annotates the figure disaggregation by default
-                # (it is dataloader-resolved for the list); the excel export reads these
-                # columns directly, so annotate them explicitly here.
-                **cls._total_figure_disaggregation_subquery(),
+            event_qs.annotate(
                 hulk_uuid=models.F("hulkevent__uuid"),
                 countries_iso3=StringAgg("countries__iso3", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
                 countries_name=StringAgg("countries__idmc_short_name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
