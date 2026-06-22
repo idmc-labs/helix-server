@@ -68,6 +68,8 @@ class GQLContext:
         self.count_dataloaders = {}
         # one RelationNodeLoader per related model (forward FK / O2O batching)
         self.relation_node_loaders = {}
+        # one reverse-FK / M2M list loader per (parent, accessor) ref
+        self.relation_list_loaders = {}
 
     @cached_property
     def user(self):
@@ -93,6 +95,12 @@ class GQLContext:
         if ref not in self.relation_node_loaders:
             self.relation_node_loaders[ref] = RelationNodeLoader(model)
         return self.relation_node_loaders[ref]
+
+    def get_relation_list_loader(self, ref, factory):
+        # one reverse-FK / M2M list loader per (parent, accessor) ref; factory() builds it once
+        if ref not in self.relation_list_loaders:
+            self.relation_list_loaders[ref] = factory()
+        return self.relation_list_loaders[ref]
 
     """
     NOTE: As a convention, data loader should have the name as:
