@@ -371,7 +371,10 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
     unit = enum.EnumField(enum=UNIT, verbose_name=_("Unit of Figure"), default=UNIT.PERSON)
     household_size = models.FloatField(verbose_name=_("Household Size"), blank=True, null=True)
     total_figures = models.PositiveIntegerField(verbose_name=_("Total Figures"), default=0, editable=False)
-    category = enum.EnumField(enum=FIGURE_CATEGORY_TYPES, verbose_name=_("Figure Category"), blank=True, null=True)
+    # category is required like the other figure enums (quantifier/unit/role/figure_cause):
+    # every figure has one and all rows already populate it, so NOT NULL just enforces what the
+    # data already guarantees (DRF derives required=True; no value CHECK, like the sibling enums).
+    category = enum.EnumField(enum=FIGURE_CATEGORY_TYPES, verbose_name=_("Figure Category"), blank=False, null=False)
     term = enum.EnumField(enum=FIGURE_TERMS, verbose_name=_("Figure Term"), blank=True, null=True)
     displacement_occurred = enum.EnumField(
         enum=DISPLACEMENT_OCCURRED,
