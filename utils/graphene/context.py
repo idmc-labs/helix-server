@@ -5,8 +5,12 @@ from apps.contrib.dataloaders import (
     BulkApiOperationSuccessListLoader,
 )
 from apps.country.dataloaders import (
+    CountryLastContextualAnalysisLoader,
+    CountryLastSummaryLoader,
+    CountryMonitoringExpertLoader,
     MonitoringSubRegionCountryCountLoader,
     MonitoringSubRegionCountryLoader,
+    MonitoringSubRegionRegionalCoordinatorLoader,
     TotalFigureThisYearByCountryCategoryEventTypeLoader,
 )
 from apps.crisis.dataloaders import (
@@ -46,7 +50,11 @@ from apps.hulk.dataloaders import (
     HulkBulkImportSuccessCountLoader,
 )
 from apps.organization.dataloaders import OrganizationCountriesLoader, OrganizationOrganizationKindLoader
-from apps.report.dataloaders import ReportLastGenerationLoader, ReportTotalDisaggregationLoader
+from apps.report.dataloaders import (
+    ReportGenerationApprovedLoader,
+    ReportLastGenerationLoader,
+    ReportTotalDisaggregationLoader,
+)
 from apps.users.dataloaders import UserPortfoliosMetadataLoader
 from utils.graphene.dataloaders import CountLoader, OneToManyLoader
 
@@ -158,6 +166,22 @@ class GQLContext:
         return MonitoringSubRegionCountryCountLoader()
 
     @cached_property
+    def country_last_summary_loader(self):
+        return CountryLastSummaryLoader()
+
+    @cached_property
+    def country_last_contextual_analysis_loader(self):
+        return CountryLastContextualAnalysisLoader()
+
+    @cached_property
+    def country_monitoring_expert_loader(self):
+        return CountryMonitoringExpertLoader()
+
+    @cached_property
+    def monitoring_subregion_regional_coordinator_loader(self):
+        return MonitoringSubRegionRegionalCoordinatorLoader()
+
+    @cached_property
     def event_entry_count_dataloader(self):
         return EventEntryCountLoader()
 
@@ -260,3 +284,7 @@ class GQLContext:
     @cached_property
     def report_report_total_disaggregation(self):
         return ReportTotalDisaggregationLoader()
+
+    @cached_property
+    def report_generation_approved_loader(self):
+        return ReportGenerationApprovedLoader()
