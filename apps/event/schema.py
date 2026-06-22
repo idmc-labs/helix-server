@@ -39,6 +39,7 @@ from apps.event.models import (
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 
@@ -192,7 +193,7 @@ class EventCodeType(DjangoObjectType):
         fields = ("id", "uuid", "event_code", "event_code_type", "country")
 
 
-class EventType(DjangoObjectType):
+class EventType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Event
         exclude_fields = ("figures", "gidd_events", "glide_numbers")
