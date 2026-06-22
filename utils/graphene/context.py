@@ -52,6 +52,7 @@ from apps.report.dataloaders import (
 )
 from apps.users.dataloaders import UserPortfoliosMetadataLoader
 from utils.graphene.dataloaders import CountLoader, OneToManyLoader
+from utils.graphene.relation_loaders import RelationNodeLoader
 
 
 class GQLContext:
@@ -60,6 +61,8 @@ class GQLContext:
         # global dataloaders
         self.one_to_many_dataloaders = {}
         self.count_dataloaders = {}
+        # one RelationNodeLoader per related model (forward FK / O2O batching)
+        self.relation_node_loaders = {}
 
     @cached_property
     def user(self):
@@ -78,6 +81,13 @@ class GQLContext:
         if ref not in self.count_dataloaders:
             self.count_dataloaders[ref] = CountLoader()
         return self.count_dataloaders[ref]
+
+    def get_relation_node_loader(self, model):
+        # one RelationNodeLoader per related model (batches forward FK / O2O loads by PK)
+        ref = model._meta.label
+        if ref not in self.relation_node_loaders:
+            self.relation_node_loaders[ref] = RelationNodeLoader(model)
+        return self.relation_node_loaders[ref]
 
     """
     NOTE: As a convention, data loader should have the name as:
