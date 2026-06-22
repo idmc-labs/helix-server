@@ -624,6 +624,16 @@ class FigureExtractionFilterSet(BaseFigureExtractionFilterSet):
         start_date = self.data.get("filter_figure_start_after")
         end_date = self.data.get("filter_figure_end_before")
 
+        # NOTE: with no date filter this applies NO listing restriction,
+        # so the unfiltered figureList returns every figure. The pre-optimization code restricted
+        # to listable (flow ∪ stock) figures; reintroducing that here regresses totalCount
+        # (qs.count()): the full with_year_difference/nd|idp predicate adds ~21ms, and even a plain
+        # `category IN (flow∪stock)` adds ~10-23ms on *filtered* lists (flips the planner off the
+        # selective filter). Instead the leak is closed at the DATA layer: Figure.category is now
+        # NOT NULL, and every category enum value is in flow ∪ stock (asserted by
+        # FigureCategoryListsTest), so a (valid, non-null) category is necessarily listable — no
+        # per-request filter needed. The finer pre-opt check (flow figures must have dates) is not
+        # reproduced; 0 such rows in practice.
         if start_date or end_date:
             queryset = Figure.with_year_difference(queryset).filter(
                 Figure.nd_figures_q_for_listing(start_date, end_date)
