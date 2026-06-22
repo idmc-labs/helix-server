@@ -244,7 +244,13 @@ class EventFilter(MultiWordSearchFilterSet):
                     output_field=models.IntegerField(),
                 ),
             )
-            .prefetch_related("figures", "context_of_violence")
+            # NOTE: no prefetch_related("figures"): EventType excludes the `figures` field
+            # (apps/event/schema.py), and the figure-count fields resolve via annotations or
+            # dataloaders, so nothing serializes root.figures. prefetch_related is eager, so
+            # keeping it ran an extra query + hydrated every figure of the page's events for
+            # nothing (~211 figure rows at pageSize 100). context_of_violence IS an exposed
+            # field, so it stays.
+            .prefetch_related("context_of_violence")
         )
 
 
