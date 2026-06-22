@@ -69,6 +69,9 @@ class ReportGenerationType(DjangoObjectType):
         ReportApprovalListType,
     )
 
+    def resolve_is_approved(root, info, **kwargs):
+        return info.context.report_generation_approved_loader.load(root.id)
+
     def resolve_full_report(root, info, **kwargs):
         if root.status == ReportGeneration.REPORT_GENERATION_STATUS.COMPLETED:
             return info.context.request.build_absolute_uri(root.full_report.url)
