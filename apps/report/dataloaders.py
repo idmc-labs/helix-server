@@ -74,3 +74,13 @@ class ReportTotalDisaggregationLoader(DataLoader):
         )
         _map = {report.id: report.total_disaggregation for report in reports}
         return Promise.resolve([_map.get(key) for key in keys])
+
+
+class ReportGenerationApprovedLoader(DataLoader):
+    # ReportGenerationType.is_approved = generation.approvals.filter(is_approved=True).exists().
+    # Batch it: one query for all generations on report_generation_list / nested generations.
+    def batch_load_fn(self, keys):
+        approved = set(
+            ReportApproval.objects.filter(generation_id__in=keys, is_approved=True).values_list("generation_id", flat=True)
+        )
+        return Promise.resolve([key in approved for key in keys])
