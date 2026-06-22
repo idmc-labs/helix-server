@@ -21,16 +21,25 @@ def _ordering_expressions(ordering_param, kwargs):
     order = kwargs.get(ordering_param) or ""
     order = order.strip(",").replace(" ", "").split(",") if order else []
     expressions = []
+    explicit_fields = set()
     for field in order:
         if not field:
             continue
         if field[0] == "-":
             expressions.append(F(field[1:]).desc(nulls_last=True))
+            explicit_fields.add(field[1:])
         else:
             expressions.append(F(field).asc(nulls_last=True))
+            explicit_fields.add(field)
     # RowNumber needs a deterministic order; fall back to pk (the paginated slice was
     # otherwise on arbitrary physical order, which is not a stable contract).
-    return expressions or [F("pk").asc()]
+    if not expressions:
+        return [F("pk").asc()]
+    # Append the pk as a deterministic tiebreaker (mirrors nulls_last_order_queryset) so a
+    # paginated nested list with rows tying on the sort key numbers them stably across pages.
+    if "pk" not in explicit_fields and "id" not in explicit_fields:
+        expressions.append(F("pk").desc())
+    return expressions
 
 
 def get_relations(model1, model2):
