@@ -228,74 +228,75 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
 
     def filter_filter_figure_disaster_categories(self, qs, name, value):
         if value:
+            # Baseline compiled `~Q(figures__cause=DISASTER) | Q(figures__category__in=value)`
+            # as NOT EXISTS(disaster figure) OR EXISTS(figure with matching category): a
+            # figureless entry matches (no disaster figure), and an entry that has a disaster
+            # figure but no figure in `value` is excluded. A single Exists over `~Q | Q` flips
+            # both (drops figureless entries, admits entries via any non-disaster figure), so
+            # split it into the two correlated subqueries to preserve the original row set.
             return qs.filter(
-                Exists(
-                    self._figures_for_entry().filter(
-                        ~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_category__in=value)
-                    )
-                )
+                ~Exists(self._figures_for_entry(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value))
+                | Exists(self._figures_for_entry(disaster_category__in=value))
             )
         return qs
 
     def filter_filter_figure_disaster_sub_categories(self, qs, name, value):
         if value:
+            # See filter_filter_figure_disaster_categories: split `~Q | Q` into
+            # NOT EXISTS(disaster figure) OR EXISTS(matching figure) to preserve the row set.
             return qs.filter(
-                Exists(
-                    self._figures_for_entry().filter(
-                        ~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_sub_category__in=value)
-                    )
-                )
+                ~Exists(self._figures_for_entry(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value))
+                | Exists(self._figures_for_entry(disaster_sub_category__in=value))
             )
         return qs
 
     def filter_filter_figure_disaster_sub_types(self, qs, name, value):
         if value:
+            # See filter_filter_figure_disaster_categories: split `~Q | Q` into
+            # NOT EXISTS(disaster figure) OR EXISTS(matching figure) to preserve the row set.
             return qs.filter(
-                Exists(
-                    self._figures_for_entry().filter(
-                        ~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_sub_type__in=value)
-                    )
-                )
+                ~Exists(self._figures_for_entry(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value))
+                | Exists(self._figures_for_entry(disaster_sub_type__in=value))
             )
         return qs
 
     def filter_filter_figure_disaster_types(self, qs, name, value):
         if value:
+            # See filter_filter_figure_disaster_categories: split `~Q | Q` into
+            # NOT EXISTS(disaster figure) OR EXISTS(matching figure) to preserve the row set.
             return qs.filter(
-                Exists(
-                    self._figures_for_entry().filter(
-                        ~Q(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value) | Q(disaster_type__in=value)
-                    )
-                )
+                ~Exists(self._figures_for_entry(figure_cause=Crisis.CRISIS_TYPE.DISASTER.value))
+                | Exists(self._figures_for_entry(disaster_type__in=value))
             )
         return qs
 
     def filter_filter_figure_violence_sub_types(self, qs, name, value):
         if value:
+            # See filter_filter_figure_disaster_categories: split `~Q | Q` into
+            # NOT EXISTS(conflict figure) OR EXISTS(matching figure) to preserve the row set.
             return qs.filter(
-                Exists(
-                    self._figures_for_entry().filter(
-                        ~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_sub_type__in=value)
-                    )
-                )
+                ~Exists(self._figures_for_entry(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value))
+                | Exists(self._figures_for_entry(violence_sub_type__in=value))
             )
         return qs
 
     def filter_filter_figure_violence_types(self, qs, name, value):
         if value:
+            # See filter_filter_figure_disaster_categories: split `~Q | Q` into
+            # NOT EXISTS(conflict figure) OR EXISTS(matching figure) to preserve the row set.
             return qs.filter(
-                Exists(
-                    self._figures_for_entry().filter(
-                        ~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_type__in=value)
-                    )
-                )
+                ~Exists(self._figures_for_entry(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value))
+                | Exists(self._figures_for_entry(violence_type__in=value))
             )
         return qs
 
     def filter_filter_figure_osv_sub_types(self, qs, name, value):
         if value:
+            # See filter_filter_figure_disaster_categories: split `~Q | Q` into
+            # NOT EXISTS(OSV figure) OR EXISTS(matching figure) to preserve the row set.
             return qs.filter(
-                Exists(self._figures_for_entry().filter(~Q(event__violence__name=OSV) | Q(osv_sub_type__in=value)))
+                ~Exists(self._figures_for_entry(event__violence__name=OSV))
+                | Exists(self._figures_for_entry(osv_sub_type__in=value))
             )
         return qs
 
