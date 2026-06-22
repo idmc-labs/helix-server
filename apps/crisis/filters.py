@@ -89,7 +89,11 @@ class CrisisFilter(MultiWordSearchFilterSet):
                 **Crisis.annotate_review_figures_count(),
                 event_count=Count("events"),
             )
-            .prefetch_related("events")
+            # NOTE: no prefetch_related("events"): CrisisType exposes `events` as a paginated
+            # dataloader field (apps/crisis/schema.py), not root.events.all(), and event_count
+            # resolves via EventCountLoader. Nothing serializes root.events, so the eager
+            # prefetch only ran an extra query + hydrated every event of the listed crises for
+            # nothing (~1.8k event rows across the crisis list).
             .distinct()
         )
 
