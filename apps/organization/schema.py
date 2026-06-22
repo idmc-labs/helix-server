@@ -10,10 +10,11 @@ from apps.organization.models import Organization, OrganizationKind
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 
-class OrganizationType(DjangoObjectType):
+class OrganizationType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Organization
 
