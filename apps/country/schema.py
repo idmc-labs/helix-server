@@ -183,6 +183,20 @@ class CountryType(DjangoObjectType):
     regional_coordinator = graphene.Field("apps.users.schema.PortfolioType")
     monitoring_expert = graphene.Field("apps.users.schema.PortfolioType")
 
+    def resolve_last_summary(root, info, **kwargs):
+        return info.context.country_last_summary_loader.load(root.id)
+
+    def resolve_last_contextual_analysis(root, info, **kwargs):
+        return info.context.country_last_contextual_analysis_loader.load(root.id)
+
+    def resolve_monitoring_expert(root, info, **kwargs):
+        return info.context.country_monitoring_expert_loader.load(root.id)
+
+    def resolve_regional_coordinator(root, info, **kwargs):
+        if root.monitoring_sub_region_id is None:
+            return None
+        return info.context.monitoring_subregion_regional_coordinator_loader.load(root.monitoring_sub_region_id)
+
     def resolve_total_stock_disaster(root, info, **kwargs):
         NULL = "null"
         value = getattr(root, Country.IDP_DISASTER_ANNOTATE, NULL)
