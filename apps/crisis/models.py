@@ -142,26 +142,27 @@ class Crisis(MetaInformationAbstractModel, models.Model):
                 cls.ND_FIGURES_ANNOTATE: "ND figure",
             },
         )
-        data = (
-            CrisisFilter(
-                data=filters,
-                request=DummyRequest(user=User.objects.get(id=user_id)),
-            )
-            .qs.annotate(
-                # The filter qs no longer annotates the figure disaggregation by default
-                # (it is dataloader-resolved for the list); the excel export reads these
-                # columns directly, so annotate them explicitly here.
-                **cls._total_figure_disaggregation_subquery(),
-                countries_iso3=StringAgg("countries__iso3", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
-                countries_name=StringAgg("countries__idmc_short_name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
-                regions_name=StringAgg("countries__region__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
-                events_count=models.Count("events", distinct=True),
-                min_event_start=models.Min("events__start_date"),
-                max_event_end=models.Max("events__end_date"),
-                figures_count=models.Count("events__figures", distinct=True),
-            )
-            .order_by("created_at")
-        )
+        crisis_qs = CrisisFilter(
+            data=filters,
+            request=DummyRequest(user=User.objects.get(id=user_id)),
+        ).qs
+        # The filter qs no longer annotates the figure disaggregation by default (it is
+        # dataloader-resolved for the list); the excel export reads these columns directly.
+        # When the export filter carries aggregate_figures the qs ALREADY annotates them
+        # (dated to that aggregate), so only add the default (unfiltered) annotation when it
+        # is absent — re-annotating unconditionally would overwrite the filtered values with
+        # the whole-history default and silently export wrong figures.
+        if cls.IDP_FIGURES_ANNOTATE not in crisis_qs.query.annotations:
+            crisis_qs = crisis_qs.annotate(**cls._total_figure_disaggregation_subquery())
+        data = crisis_qs.annotate(
+            countries_iso3=StringAgg("countries__iso3", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            countries_name=StringAgg("countries__idmc_short_name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            regions_name=StringAgg("countries__region__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True),
+            events_count=models.Count("events", distinct=True),
+            min_event_start=models.Min("events__start_date"),
+            max_event_end=models.Max("events__end_date"),
+            figures_count=models.Count("events__figures", distinct=True),
+        ).order_by("created_at")
 
         def transformer(datum):
             return {
