@@ -6,8 +6,10 @@ import django.db.models.expressions
 
 class Migration(migrations.Migration):
 
+    # Depends on both event leaves so the graph stays single-leaf without a separate merge migration.
     dependencies = [
         ('event', '0034_alter_eventcode_uuid'),
+        ('event', '0002_auto_20260225_0529'),
     ]
 
     operations = [
