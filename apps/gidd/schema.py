@@ -2,7 +2,6 @@
 import graphene
 from django.db import models
 from django.db.models.functions import Coalesce
-from graphene_django import DjangoObjectType
 from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django_extras import DjangoObjectField
 
@@ -14,6 +13,7 @@ from utils.common import round_and_remove_zero, track_gidd
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 from .enums import GiddStatusLogEnum
@@ -120,7 +120,7 @@ class GiddCombinedStatisticsType(graphene.ObjectType):
     total_displacement_countries = graphene.Int()
 
 
-class GiddConflictType(DjangoObjectType):
+class GiddConflictType(RelationBatchedDjangoObjectType):
     country_id = graphene.ID(required=True)
 
     class Meta:
@@ -147,7 +147,7 @@ class GiddConflictListType(CustomDjangoListObjectType):
         filterset_class = ConflictFilter
 
 
-class GiddDisasterType(DjangoObjectType):
+class GiddDisasterType(RelationBatchedDjangoObjectType):
     country_id = graphene.ID(required=True)
     event_id = graphene.ID()
     hazard_category_id = graphene.ID()
@@ -210,7 +210,7 @@ class GiddDisasterListType(CustomDjangoListObjectType):
         filterset_class = DisasterFilter
 
 
-class GiddStatusLogType(DjangoObjectType):
+class GiddStatusLogType(RelationBatchedDjangoObjectType):
     class Meta:
         model = StatusLog
 
@@ -224,7 +224,7 @@ class GiddStatusLogListType(CustomDjangoListObjectType):
         filterset_class = GiddStatusLogFilter
 
 
-class GiddPublicFigureAnalysisType(DjangoObjectType):
+class GiddPublicFigureAnalysisType(RelationBatchedDjangoObjectType):
     class Meta:
         model = PublicFigureAnalysis
         fields = (
@@ -248,7 +248,7 @@ class GiddPublicFigureAnalysisListType(CustomDjangoListObjectType):
         filterset_class = PublicFigureAnalysisFilter
 
 
-class GiddReleaseMetadataType(DjangoObjectType):
+class GiddReleaseMetadataType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ReleaseMetadata
 
@@ -275,7 +275,7 @@ class GiddHazardSubCategoryType(graphene.ObjectType):
     name = graphene.String(required=True)
 
 
-class GiddDisplacementDataType(DjangoObjectType):
+class GiddDisplacementDataType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisplacementData
         fields = (

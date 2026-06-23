@@ -1,5 +1,4 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.review.enums import (
@@ -11,10 +10,11 @@ from apps.review.models import UnifiedReviewComment
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 
-class UnifiedReviewCommentType(DjangoObjectType):
+class UnifiedReviewCommentType(RelationBatchedDjangoObjectType):
     comment_type = graphene.NonNull(ReviewCommentTypeEnum)
     comment_display = EnumDescription(source="get_comment_type_display")
     field = graphene.NonNull(ReviewFieldTypeEnum)
