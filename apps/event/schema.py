@@ -1,5 +1,4 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.contrib.commons import DateAccuracyGrapheneEnum
@@ -43,7 +42,7 @@ from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 
-class ViolenceSubObjectType(DjangoObjectType):
+class ViolenceSubObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ViolenceSubType
         exclude_fields = ("events", "violence")
@@ -55,7 +54,7 @@ class ViolenceSubObjectListType(CustomDjangoListObjectType):
         filterset_class = ViolenceSubTypeFilter
 
 
-class ViolenceType(DjangoObjectType):
+class ViolenceType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Violence
         exclude_fields = ("events",)
@@ -73,7 +72,7 @@ class ViolenceListType(CustomDjangoListObjectType):
         filterset_class = ViolenceFilter
 
 
-class ActorType(DjangoObjectType):
+class ActorType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Actor
         exclude_fields = ("events",)
@@ -85,7 +84,7 @@ class ActorListType(CustomDjangoListObjectType):
         filterset_class = ActorFilter
 
 
-class DisasterSubObjectType(DjangoObjectType):
+class DisasterSubObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisasterSubType
         exclude_fields = ("events", "type")
@@ -97,7 +96,7 @@ class DisasterSubObjectListType(CustomDjangoListObjectType):
         filterset_class = DisasterSubTypeFilter
 
 
-class DisasterTypeObjectType(DjangoObjectType):
+class DisasterTypeObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisasterType
         exclude_fields = ("events", "disaster_sub_category")
@@ -115,7 +114,7 @@ class DisasterTypeObjectListType(CustomDjangoListObjectType):
         filterset_class = DisasterTypeFilter
 
 
-class DisasterSubCategoryType(DjangoObjectType):
+class DisasterSubCategoryType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisasterSubCategory
         exclude_fields = ("events", "category")
@@ -133,7 +132,7 @@ class DisasterSubCategoryListType(CustomDjangoListObjectType):
         filterset_class = DisasterSubCategoryFilter
 
 
-class DisasterCategoryType(DjangoObjectType):
+class DisasterCategoryType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisasterCategory
         exclude_fields = ("events",)
@@ -160,7 +159,7 @@ class EventReviewCountType(graphene.ObjectType):
     progress = graphene.Float(required=False)
 
 
-class OsvSubObjectType(DjangoObjectType):
+class OsvSubObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = OsvSubType
         filterset_class = OsvSubTypeFilter
@@ -172,7 +171,7 @@ class OsvSubTypeList(CustomDjangoListObjectType):
         filterset_class = OsvSubTypeFilter
 
 
-class OtherSubTypeObjectType(DjangoObjectType):
+class OtherSubTypeObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = OtherSubType
         filterset_class = OtherSubTypeFilter
@@ -184,7 +183,7 @@ class OtherSubTypeList(CustomDjangoListObjectType):
         filterset_class = OtherSubTypeFilter
 
 
-class EventCodeType(DjangoObjectType):
+class EventCodeType(RelationBatchedDjangoObjectType):
     event_code_type = graphene.Field(EventCodeTypeGrapheneEnum)
     event_code_display = EnumDescription(source="get_event_code_type_display")
 
@@ -270,7 +269,7 @@ class EventListType(CustomDjangoListObjectType):
         filterset_class = EventFilter
 
 
-class ContextOfViolenceType(DjangoObjectType):
+class ContextOfViolenceType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ContextOfViolence
         filterset_class = ContextOfViolenceFilter

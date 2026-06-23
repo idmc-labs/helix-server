@@ -1,5 +1,4 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.contact.schema import ContactListType
@@ -45,7 +44,7 @@ class OrganizationListType(CustomDjangoListObjectType):
         model = Organization
 
 
-class OrganizationKindObjectType(DjangoObjectType):
+class OrganizationKindObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = OrganizationKind
 

@@ -1,6 +1,5 @@
 import graphene
 from graphene.types.utils import get_type
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.contextualupdate.filters import ContextualUpdateFilter
@@ -9,10 +8,11 @@ from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 
-class ContextualUpdateType(DjangoObjectType):
+class ContextualUpdateType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ContextualUpdate
 
