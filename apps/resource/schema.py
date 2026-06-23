@@ -1,16 +1,16 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.resource.models import Resource, ResourceGroup
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 
 
-class ResourceType(DjangoObjectType):
+class ResourceType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Resource
 
 
-class ResourceGroupType(DjangoObjectType):
+class ResourceGroupType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ResourceGroup
 

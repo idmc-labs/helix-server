@@ -6,7 +6,6 @@ from django.db.models import Model
 from graphene import Field, ObjectType
 from graphene.types.generic import GenericScalar
 from graphene.types.utils import get_type
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.users.filters import PortfolioFilter, UserFilter
@@ -14,6 +13,7 @@ from apps.users.models import Portfolio
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 from .enums import PermissionActionEnum, PermissionModelEnum, PermissionRoleEnum
@@ -29,7 +29,7 @@ class PermissionsType(ObjectType):
     entities = graphene.List(graphene.NonNull(PermissionModelEnum), required=True)
 
 
-class PortfolioType(DjangoObjectType):
+class PortfolioType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Portfolio
 
@@ -52,7 +52,7 @@ class UserPortfolioMetaDataType(graphene.ObjectType):
     portfolio_role_display = graphene.String()
 
 
-class UserType(DjangoObjectType):
+class UserType(RelationBatchedDjangoObjectType):
     class Meta:
         model = User
         fields = (
