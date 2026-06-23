@@ -3,6 +3,7 @@ import datetime
 import django_filters
 import graphene
 from django.core.exceptions import ValidationError
+from django.db.models import Exists, OuterRef
 from django.http import HttpRequest
 from django.utils import timezone
 from django.utils.translation import gettext
@@ -112,12 +113,17 @@ class CountryFilter(MultiWordSearchFilterSet):
     def filter_by_events(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(id__in=Country.objects.filter(events__in=value).values("id"))
+        # Correlated Exists over the event<->country M2M through table (mirrors the
+        # Exists-over-distinct conversion elsewhere); the through model is reached via _meta
+        # to avoid importing Event here.
+        through = Country._meta.get_field("events").through
+        return qs.filter(Exists(through.objects.filter(country_id=OuterRef("pk"), event_id__in=value)))
 
     def filter_by_crisis(self, qs, name, value):
         if not value:
             return qs
-        return qs.filter(id__in=Country.objects.filter(crises__in=value).values("id"))
+        through = Country._meta.get_field("crises").through
+        return qs.filter(Exists(through.objects.filter(country_id=OuterRef("pk"), crisis_id__in=value)))
 
     def filter_regions(self, qs, name, value):
         if not value:
