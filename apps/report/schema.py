@@ -1,5 +1,4 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.crisis.enums import CrisisTypeGrapheneEnum
@@ -25,6 +24,7 @@ from apps.report.models import (
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 
@@ -35,7 +35,7 @@ class ReportTotalsType(graphene.ObjectType):
     total_flow_disaster_sum = graphene.Int()
 
 
-class ReportCommentType(DjangoObjectType):
+class ReportCommentType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ReportComment
 
@@ -46,7 +46,7 @@ class ReportCommentListType(CustomDjangoListObjectType):
         filterset_class = ReportCommentFilter
 
 
-class ReportApprovalType(DjangoObjectType):
+class ReportApprovalType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ReportApproval
 
@@ -57,7 +57,7 @@ class ReportApprovalListType(CustomDjangoListObjectType):
         filterset_class = ReportApprovalFilter
 
 
-class ReportGenerationType(DjangoObjectType):
+class ReportGenerationType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ReportGeneration
         exclude_fields = ("approvers",)
@@ -89,7 +89,7 @@ class ReportGenerationListType(CustomDjangoListObjectType):
         filterset_class = ReportGenerationFilter
 
 
-class ReportType(DjangoObjectType):
+class ReportType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Report
         exclude_fields = ("reports", "figures", "masterfact_reports")
