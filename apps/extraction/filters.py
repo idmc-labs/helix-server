@@ -222,7 +222,7 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
     def filter_filter_figure_violence_types(self, qs, name, value):
         if value:
             return qs.filter(
-                ~Q(figures__figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(figures__violence_type__in=value)
+                ~Q(figures__figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(figures__violence__in=value)
             ).distinct()
         return qs
 
@@ -472,7 +472,7 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
 
     def filter_filter_figure_violence_types(self, qs, name, value):
         if value:
-            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_type__in=value)).distinct()
+            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence__in=value)).distinct()
         return qs
 
     def filter_filter_figure_osv_sub_types(self, qs, name, value):
