@@ -1,5 +1,4 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django_extras import (
     DjangoObjectField,
     PageGraphqlPagination,
@@ -34,6 +33,7 @@ from apps.extraction.filters import FigureExtractionBulkOperationFilterDataType
 from utils.error_types import CustomErrorType
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField, generate_type_for_serializer
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 BulkApiOperationPayloadType = generate_type_for_serializer(
@@ -42,7 +42,7 @@ BulkApiOperationPayloadType = generate_type_for_serializer(
 )
 
 
-class ExcelExportType(DjangoObjectType):
+class ExcelExportType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ExcelDownload
 
@@ -63,7 +63,7 @@ class ExcelExportsListType(CustomDjangoListObjectType):
         filterset_class = ExcelExportFilter
 
 
-class ClientType(DjangoObjectType):
+class ClientType(RelationBatchedDjangoObjectType):
     use_cases = graphene.List(graphene.NonNull(ClientUseCaseEnum), description="List of use cases for the client.")
     use_cases_display = graphene.List(graphene.String, description="Display string for the client's use case.")
     type = graphene.Field(ClientTypeEnum, required=True)
@@ -103,7 +103,7 @@ class ClientListType(CustomDjangoListObjectType):
         filterset_class = ClientFilter
 
 
-class ClientTrackInformationType(DjangoObjectType):
+class ClientTrackInformationType(RelationBatchedDjangoObjectType):
     api_name = graphene.NonNull(graphene.String)
 
     class Meta:
@@ -155,7 +155,7 @@ class ClientTrackInformationListType(CustomDjangoListObjectType):
         filterset_class = ClientTrackInfoFilter
 
 
-class AttachmentType(DjangoObjectType):
+class AttachmentType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Attachment
 
@@ -189,7 +189,7 @@ class BulkApiOperationFailureType(BulkApiOperationSuccessType):
     errors = graphene.List(graphene.NonNull(CustomErrorType), required=True)
 
 
-class BulkApiOperationObjectType(DjangoObjectType):
+class BulkApiOperationObjectType(RelationBatchedDjangoObjectType):
     class Meta:
         model = BulkApiOperation
         fields = (
