@@ -43,10 +43,6 @@ class OrganizationFilter(MultiWordSearchFilterSet):
         country_organization_ids = qs.filter(countries__in=value).values("id").distinct()
         return qs.order_by(Case(When(id__in=country_organization_ids, then=0), default=1))
 
-    @property
-    def qs(self):
-        return super().qs.select_related("organization_kind").prefetch_related("countries")
-
 
 class OrganizationKindFilter(django_filters.FilterSet):
     ids = IDListFilter(field_name="id")
