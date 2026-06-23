@@ -5,7 +5,6 @@ from django.db.models import Case, ExpressionWrapper, JSONField, Q, Sum, When, f
 from django.db.models.functions import ExtractYear
 from graphene import ObjectType
 from graphene.types.generic import GenericScalar
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 from graphene_django_extras.converter import convert_django_field
 
@@ -53,6 +52,7 @@ from apps.review.enums import ReviewCommentTypeEnum, ReviewFieldTypeEnum
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ def convert_json_field_to_scalar(field, registry=None):
     return GenericScalar()
 
 
-class DisaggregatedAgeType(DjangoObjectType):
+class DisaggregatedAgeType(RelationBatchedDjangoObjectType):
     class Meta:
         model = DisaggregatedAge
 
@@ -87,7 +87,7 @@ class DisaggregatedStratumType(ObjectType):
     value = graphene.Int()
 
 
-class FigureLocationType(DjangoObjectType):
+class FigureLocationType(RelationBatchedDjangoObjectType):
     class Meta:
         model = FigureLocation
 
@@ -105,7 +105,7 @@ class FigureLocationListType(CustomDjangoListObjectType):
         filterset_class = FigureLocationFilter
 
 
-class FigureTagType(DjangoObjectType):
+class FigureTagType(RelationBatchedDjangoObjectType):
     class Meta:
         model = FigureTag
 
@@ -116,7 +116,7 @@ class FigureLastReviewCommentStatusType(ObjectType):
     comment_type = graphene.Field(ReviewCommentTypeEnum, required=True)
 
 
-class FigureType(DjangoObjectType):
+class FigureType(RelationBatchedDjangoObjectType):
     class Meta:
         exclude_fields = ("figure_reviews",)
         model = Figure
@@ -209,7 +209,7 @@ class TotalFigureFilterInputType(graphene.InputObjectType):
     roles = graphene.List(graphene.NonNull(graphene.String))
 
 
-class EntryType(DjangoObjectType):
+class EntryType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Entry
         exclude_fields = (
@@ -246,7 +246,7 @@ class EntryListType(CustomDjangoListObjectType):
         filterset_class = EntryExtractionFilterSet
 
 
-class SourcePreviewType(DjangoObjectType):
+class SourcePreviewType(RelationBatchedDjangoObjectType):
     class Meta:
         model = SourcePreview
         exclude_fields = ("entry", "token")
