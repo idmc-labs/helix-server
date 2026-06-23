@@ -40,7 +40,6 @@ class MonitoringSubRegionType(DjangoObjectType):
         exclude_fields = ("portfolios",)
 
     countries = graphene.Dynamic(lambda: graphene.List(graphene.NonNull(get_type("apps.country.schema.CountryType"))))
-    # TODO: Add dataloaders
     regional_coordinator = graphene.Field("apps.users.schema.PortfolioType")
     monitoring_experts_count = graphene.Int(required=True)
     unmonitored_countries_count = graphene.Int(required=True)
@@ -52,6 +51,10 @@ class MonitoringSubRegionType(DjangoObjectType):
 
     def resolve_countries(root, info, **kwargs):
         return info.context.monitoring_sub_region_country_loader.load(root.id)
+
+    def resolve_regional_coordinator(root, info, **kwargs):
+        # was a per-instance Portfolio lookup (N+1); batch via the existing loader keyed by sub-region id
+        return info.context.monitoring_subregion_regional_coordinator_loader.load(root.id)
 
 
 class MonitoringSubRegionListType(CustomDjangoListObjectType):
