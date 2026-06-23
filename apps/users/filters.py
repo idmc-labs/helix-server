@@ -49,8 +49,10 @@ class UserFilter(MultiWordSearchFilterSet):
 
     @property
     def qs(self):
-        # to get the highest role
-        return super().qs.prefetch_related("portfolios").distinct()
+        # No prefetch_related("portfolios"): UserType serves portfolios via its own resolver,
+        # not off the instance, so the eager prefetch was a dead load. The .distinct() stays —
+        # it is load-bearing for the to-many portfolio filters (see FUTURE_WORK).
+        return super().qs.distinct()
 
 
 class PortfolioFilter(django_filters.FilterSet):
