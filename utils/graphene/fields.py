@@ -221,6 +221,17 @@ class DjangoPaginatedListObjectField(DjangoFilterPaginateListField):
 
         super(DjangoFilterPaginateListField, self).__init__(_type, *args, **kwargs)
 
+    def get_queryset(self, manager, info, **kwargs):
+        # Relation eager-loading is handled by RelationBatchedDjangoObjectType's per-field
+        # DataLoaders (depth- and path-independent batching). We therefore DO NOT route through
+        # graphene_django_extras.queryset_factory, which only select_related/prefetch_related'd the
+        # FIRST relation level under the list (leaving latent N+1s at depth) and duplicated the
+        # loaders' work (an extra JOIN per selected forward FK). Return the plain queryset; the
+        # filterset + pagination downstream are unchanged.
+        from graphene_django_extras.utils import _get_queryset
+
+        return _get_queryset(manager)
+
     def list_resolver(self, manager, filterset_class, filtering_args, root, info, **kwargs):
         filter_kwargs = kwargs.get("filters", {})
 
