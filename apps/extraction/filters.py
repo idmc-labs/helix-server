@@ -22,7 +22,6 @@ from apps.entry.models import (
 from apps.event.constants import OSV
 from apps.event.models import ContextOfViolence
 from apps.extraction.models import ExtractionQuery
-from apps.organization.models import Organization
 from apps.report.models import Report
 from utils.filters import (
     IDFilter,
@@ -132,7 +131,12 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
 
     def filter_publishers(self, qs, name, value):
         if value:
-            return qs.filter(Exists(Organization.objects.filter(pk__in=value, published_entries=OuterRef("pk"))))
+            # Test the entry<->publisher M2M through table directly instead of the (fat)
+            # Organization table (mirrors filter_sources / the figure filterset, 9901ccda):
+            # the through row (entry_id, organization_id) is all we need and both columns
+            # are indexed.
+            through = Entry.publishers.through
+            return qs.filter(Exists(through.objects.filter(entry_id=OuterRef("pk"), organization_id__in=value)))
         return qs
 
     def filter_by_figure_terms(self, qs, name, value):
