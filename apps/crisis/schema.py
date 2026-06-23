@@ -1,5 +1,4 @@
 import graphene
-from graphene_django import DjangoObjectType
 from graphene_django_extras import DjangoObjectField
 
 from apps.contrib.commons import DateAccuracyGrapheneEnum
@@ -10,6 +9,7 @@ from apps.event.schema import EventListType
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 
@@ -22,7 +22,7 @@ class CrisisReviewCountType(graphene.ObjectType):
     progress = graphene.Float(required=False)
 
 
-class CrisisType(DjangoObjectType):
+class CrisisType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Crisis
 
