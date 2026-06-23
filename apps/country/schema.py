@@ -1,6 +1,5 @@
 import graphene
 from graphene.types.utils import get_type
-from graphene_django import DjangoObjectType
 from graphene_django_extras import (
     DjangoObjectField,
 )
@@ -29,12 +28,13 @@ from apps.crisis.enums import CrisisTypeGrapheneEnum
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
 from utils.graphene.types import CustomDjangoListObjectType
 
 from .enums import HouseholdSizeGapFillingMethodEnum
 
 
-class MonitoringSubRegionType(DjangoObjectType):
+class MonitoringSubRegionType(RelationBatchedDjangoObjectType):
     class Meta:
         model = MonitoringSubRegion
         exclude_fields = ("portfolios",)
@@ -63,12 +63,12 @@ class MonitoringSubRegionListType(CustomDjangoListObjectType):
         filterset_class = MonitoringSubRegionFilter
 
 
-class CountrySubRegionType(DjangoObjectType):
+class CountrySubRegionType(RelationBatchedDjangoObjectType):
     class Meta:
         model = CountrySubRegion
 
 
-class CountryRegionType(DjangoObjectType):
+class CountryRegionType(RelationBatchedDjangoObjectType):
     class Meta:
         model = CountryRegion
 
@@ -79,7 +79,7 @@ class CountryRegionListType(CustomDjangoListObjectType):
         filterset_class = CountryRegionFilter
 
 
-class GeographicalGroupType(DjangoObjectType):
+class GeographicalGroupType(RelationBatchedDjangoObjectType):
     class Meta:
         model = GeographicalGroup
 
@@ -90,7 +90,7 @@ class GeographicalGroupListType(CustomDjangoListObjectType):
         filterset_class = GeographicalGroupFilter
 
 
-class ContextualAnalysisType(DjangoObjectType):
+class ContextualAnalysisType(RelationBatchedDjangoObjectType):
     class Meta:
         model = ContextualAnalysis
         exclude_fields = ("country",)
@@ -107,7 +107,7 @@ class ContextualAnalysisListType(CustomDjangoListObjectType):
         filterset_class = ContextualAnalysisFilter
 
 
-class SummaryType(DjangoObjectType):
+class SummaryType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Summary
         exclude_fields = ("country",)
@@ -122,7 +122,7 @@ class SummaryListType(CustomDjangoListObjectType):
         filterset_class = CountrySummaryFilter
 
 
-class CountryType(DjangoObjectType):
+class CountryType(RelationBatchedDjangoObjectType):
     class Meta:
         model = Country
         exclude_fields = ("country_conflict", "country_disaster", "displacements")
@@ -238,7 +238,7 @@ class CountryListType(CustomDjangoListObjectType):
         filterset_class = CountryFilter
 
 
-class CountryHouseholdSizeType(DjangoObjectType):
+class CountryHouseholdSizeType(RelationBatchedDjangoObjectType):
     class Meta:
         model = HouseholdSize
 
