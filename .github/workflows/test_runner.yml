@@ -4,11 +4,9 @@ on:
   push:
     branches:
       - 'develop'
+      - 'release'
       - 'project/**'
   pull_request:
-    branches:
-      - 'develop'
-      - 'project/**'
 
 env:
   GITHUB_WORKFLOW: true
