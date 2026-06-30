@@ -1502,7 +1502,6 @@ type EntryType {
   idmcAnalysis: String
   isConfidential: Boolean!
   notifications: [GenericNotificationType!]!
-  figures: [FigureType!]
 }
 
 input EntryUpdateInputType {

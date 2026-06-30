@@ -15,7 +15,7 @@ from utils.factories import (
     TagFactory,
 )
 from utils.permissions import PERMISSION_DENIED_MESSAGE
-from utils.tests import HelixGraphQLTestCase, create_user_with_role
+from utils.tests import HelixGraphQLTestCase, HelixTestCase, create_user_with_role
 
 
 class TestEntryQuery(HelixGraphQLTestCase):
@@ -108,13 +108,6 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     errors
                     result {
                         id
-                        figures {
-                            id
-                            createdBy{
-                                id
-                                fullName
-                            }
-                        }
                         createdBy{
                             id
                             fullName
@@ -315,3 +308,12 @@ class TestFigureDelete(HelixGraphQLTestCase):
 
         content = json.loads(response.content)
         self.assertTrue(content["data"]["deleteFigure"]["ok"], content)
+
+
+class TestEntryTypeFields(HelixTestCase):
+    def test_figures_is_not_exposed_on_entry_type(self):
+        # The nested list was unbounded fan-out and no client used it; figures are
+        # read via figureList(filterFigureEntry). Guard against re-adding it.
+        from apps.entry.schema import EntryType
+
+        self.assertNotIn("figures", EntryType._meta.fields)
