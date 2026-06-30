@@ -20,7 +20,6 @@ from apps.crisis.dataloaders import (
     TotalNDFigureByCrisisLoader,
 )
 from apps.entry.dataloaders import (
-    EntryFiguresLoader,
     FigureGeoLocationLoader,
     FigureLastReviewCommentStatusLoader,
     FigureSourcesReliability,
@@ -200,10 +199,6 @@ class GQLContext:
     @cached_property
     def event_figure_typology_dataloader(self):
         return EventFigureTypologyLoader()
-
-    @cached_property
-    def entry_entry_figures(self):
-        return EntryFiguresLoader()
 
     @cached_property
     def figure_typology_dataloader(self):
