@@ -216,6 +216,10 @@ class EntryType(RelationBatchedDjangoObjectType):
             "review_status",
             "review_comments",
             "reviewing",
+            # Unbounded fan-out (an entry can own hundreds of figures) and no client
+            # uses it: figures are read via figureList(filterFigureEntry). Without the
+            # exclude, graphene-django auto-exposes the reverse relation as a plain list.
+            "figures",
         )
 
     created_by = graphene.Field("apps.users.schema.UserType")
@@ -223,14 +227,7 @@ class EntryType(RelationBatchedDjangoObjectType):
     publishers = DjangoPaginatedListObjectField(
         OrganizationListType, related_name="publishers", reverse_related_name="published_entries"
     )
-    figures = graphene.List(graphene.NonNull(FigureType))
     preview = graphene.Field("apps.entry.schema.SourcePreviewType")
-
-    def resolve_figures(root, info, **kwargs):
-        # Batched via EntryFiguresLoader to avoid an N+1: resolving per-entry issued
-        # one figures query (+ its prefetches) for every entry in a list. The loader
-        # uses the same select_related/prefetch_related set across the whole batch.
-        return info.context.entry_entry_figures.load(root.id)
 
     # document + preview (forward FKs) are auto-wired via RelationBatchedDjangoObjectType ->
     # RelationNodeLoader (no explicit resolver needed).
