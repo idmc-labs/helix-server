@@ -223,14 +223,18 @@ class EntryType(RelationBatchedDjangoObjectType):
     publishers = DjangoPaginatedListObjectField(
         OrganizationListType, related_name="publishers", reverse_related_name="published_entries"
     )
-    figures = graphene.List(graphene.NonNull(FigureType))
+    # Paginated (bounded by MAX_PAGE_SIZE) instead of an unbounded plain list: an entry can
+    # own hundreds of figures, so nesting them under a list (entryList) was the one high-fan-out
+    # nested relation still unbounded. Served via the OneToManyLoader paginated path (batched per
+    # request), same as CrisisType.events / CountryType.figures. Clients already read an entry's
+    # figures through figureList(filterFigureEntry), so the nested field is internal-only.
+    figures = DjangoPaginatedListObjectField(
+        FigureListType,
+        pagination=PageGraphqlPaginationWithoutCount(page_size_query_param="pageSize"),
+        related_name="figures",
+        reverse_related_name="entry",
+    )
     preview = graphene.Field("apps.entry.schema.SourcePreviewType")
-
-    def resolve_figures(root, info, **kwargs):
-        # Batched via EntryFiguresLoader to avoid an N+1: resolving per-entry issued
-        # one figures query (+ its prefetches) for every entry in a list. The loader
-        # uses the same select_related/prefetch_related set across the whole batch.
-        return info.context.entry_entry_figures.load(root.id)
 
     # document + preview (forward FKs) are auto-wired via RelationBatchedDjangoObjectType ->
     # RelationNodeLoader (no explicit resolver needed).

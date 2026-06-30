@@ -109,10 +109,12 @@ class TestEntryCreation(HelixGraphQLTestCase):
                     result {
                         id
                         figures {
-                            id
-                            createdBy{
+                            results {
                                 id
-                                fullName
+                                createdBy{
+                                    id
+                                    fullName
+                                }
                             }
                         }
                         createdBy{
