@@ -21,10 +21,14 @@ from django.test.utils import CaptureQueriesContext
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     CountryFactory,
+    CrisisFactory,
     EntryFactory,
+    EventCodeFactory,
     EventFactory,
     FigureFactory,
+    MonitoringSubRegionFactory,
     OrganizationFactory,
+    OrganizationKindFactory,
     ParkingLotFactory,
     TagFactory,
     UserFactory,
@@ -244,18 +248,111 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
                 elif "_make_list_resolver" in qual:
                     list_count += 1
 
-        # Baselines enumerated from the engine (37 types / 121 fwd-FK, 27 types / 107 list).
+        # Baselines: 121 fwd-FK / 107 list from the engine, +5 fwd-FK and +2 list after the
+        # generic-loader dedup below promoted 7 formerly-bespoke fields onto the auto-wire.
         # >= so legitimate additions don't fail; a drop means a type lost the auto-wiring base.
-        self.assertGreaterEqual(fk_count, 121, "auto-wired forward-FK resolvers regressed")
-        self.assertGreaterEqual(list_count, 107, "auto-wired reverse-FK/M2M resolvers regressed")
+        self.assertGreaterEqual(fk_count, 126, "auto-wired forward-FK resolvers regressed")
+        self.assertGreaterEqual(list_count, 109, "auto-wired reverse-FK/M2M resolvers regressed")
 
-        # Spot-check a few critical fields are loader-wired by name. (NOT `entry`: FigureType.entry
-        # keeps the hand-written FigureEntryLoader, so the auto-wire intentionally skips it.)
+        # Spot-check critical FigureType fields are loader-wired by name.
         from apps.entry.schema import FigureType
 
-        for field in ("event", "country", "created_by", "violence"):
+        for field in ("event", "entry", "country", "created_by", "violence"):
             resolver = getattr(FigureType, "resolve_%s" % field, None)
             self.assertTrue(
                 resolver is not None and "relation_loaders" in getattr(resolver, "__module__", ""),
                 f"FigureType.{field} is not loader-wired",
             )
+
+    def test_deduped_bespoke_loaders_now_route_through_generic_loaders(self) -> None:
+        # The 8 pure-traversal loaders were deleted; these fields now use the generic loaders.
+        # 7 via auto-wire (resolver lives in relation_loaders); event_codes uses an explicit thin
+        # resolver over the generic ReverseFKListLoader (covered behaviourally elsewhere).
+        import helix.schema  # noqa: F401
+        from apps.country.schema import MonitoringSubRegionType
+        from apps.entry.schema import EntryType, FigureType
+        from apps.event.schema import EventType
+        from apps.organization.schema import OrganizationType
+
+        auto_wired = [
+            (FigureType, "entry"),  # was FigureEntryLoader
+            (EntryType, "document"),  # was EntryDocumentLoader
+            (EntryType, "preview"),  # was EntryPreviewLoader
+            (EventType, "crisis"),  # was EventCrisisLoader
+            (OrganizationType, "organization_kind"),  # was OrganizationOrganizationKindLoader
+            (OrganizationType, "countries"),  # was OrganizationCountriesLoader (M2M)
+            (MonitoringSubRegionType, "countries"),  # was MonitoringSubRegionCountryLoader
+        ]
+        for cls, field in auto_wired:
+            resolver = getattr(cls, "resolve_%s" % field, None)
+            self.assertTrue(
+                resolver is not None and "relation_loaders" in getattr(resolver, "__module__", ""),
+                f"{cls.__name__}.{field} (formerly a bespoke loader) is not auto-wired to a generic loader",
+            )
+
+
+class TestDedupedLoaderBehaviour(HelixGraphQLTestCase):
+    """Value-equivalence for the fields whose bespoke loaders were deleted (generic-loader dedup):
+    the resolved value must match what the removed loader would have returned."""
+
+    def setUp(self) -> None:
+        self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.force_login(self.admin)
+
+    def _run(self, query):
+        response = self.query(query)
+        self.assertResponseNoErrors(response)
+        return json.loads(response.content)["data"]
+
+    def test_event_crisis_fk(self) -> None:  # was EventCrisisLoader -> RelationNodeLoader
+        crisis = CrisisFactory.create()
+        event = EventFactory.create(crisis=crisis)
+        data = self._run('query { eventList(ordering: "id") { results { id crisis { id } } } }')
+        row = next(r for r in data["eventList"]["results"] if r["id"] == str(event.id))
+        self.assertEqual(row["crisis"]["id"], str(crisis.id))
+
+    def test_organization_kind_fk_and_countries_m2m(self) -> None:
+        # was OrganizationOrganizationKindLoader (FK) + OrganizationCountriesLoader (M2M)
+        kind = OrganizationKindFactory.create()
+        country = CountryFactory.create()
+        org = OrganizationFactory.create(organization_kind=kind)
+        org.countries.add(country)
+        no_kind = OrganizationFactory.create()  # null FK + empty M2M
+
+        data = self._run(
+            """
+            query { organizationList(ordering: "id") { results {
+              id organizationKind { id } countries { id }
+            } } }
+            """
+        )
+        by_id = {r["id"]: r for r in data["organizationList"]["results"]}
+        self.assertEqual(by_id[str(org.id)]["organizationKind"]["id"], str(kind.id))
+        self.assertEqual({c["id"] for c in by_id[str(org.id)]["countries"]}, {str(country.id)})
+        self.assertIsNone(by_id[str(no_kind.id)]["organizationKind"])
+        self.assertEqual(by_id[str(no_kind.id)]["countries"], [])
+
+    def test_monitoring_sub_region_countries_reverse_fk(self) -> None:
+        # was MonitoringSubRegionCountryLoader; the field is a graphene.Dynamic -> verify the
+        # auto-wire binds through Dynamic resolution (the flagged risk).
+        sub_region = MonitoringSubRegionFactory.create()
+        c1 = CountryFactory.create(monitoring_sub_region=sub_region)
+        c2 = CountryFactory.create(monitoring_sub_region=sub_region)
+        empty_sr = MonitoringSubRegionFactory.create()
+
+        data = self._run('query { monitoringSubRegionList(ordering: "id") { results { id countries { id } } } }')
+        by_id = {r["id"]: {c["id"] for c in r["countries"]} for r in data["monitoringSubRegionList"]["results"]}
+        self.assertEqual(by_id[str(sub_region.id)], {str(c1.id), str(c2.id)})
+        self.assertEqual(by_id[str(empty_sr.id)], set())
+
+    def test_event_codes_thin_reverse_fk(self) -> None:  # was EventCodeLoader -> generic ReverseFKListLoader
+        event = EventFactory.create()
+        ec1 = EventCodeFactory.create(event=event)
+        ec2 = EventCodeFactory.create(event=event)
+        other_event = EventFactory.create()
+
+        data = self._run('query { eventList(ordering: "id") { results { id eventCodes { id } } } }')
+        by_id = {r["id"]: {e["id"] for e in r["eventCodes"]} for r in data["eventList"]["results"]}
+        self.assertEqual(by_id[str(event.id)], {str(ec1.id), str(ec2.id)})
+        # An event with no codes resolves to an empty list.
+        self.assertEqual(by_id[str(other_event.id)], set())

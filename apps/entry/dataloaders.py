@@ -166,30 +166,3 @@ class EntryFiguresLoader(DataLoader):
         for figure in qs:
             _map[figure.entry_id].append(figure)
         return Promise.resolve([_map.get(key, []) for key in keys])
-
-
-class FigureEntryLoader(DataLoader):
-    def batch_load_fn(self, keys: list):
-        qs = Figure.objects.filter(id__in=keys).select_related("entry").only("id", "entry")
-        _map = {}
-        for figure in qs.all():
-            _map[figure.id] = figure.entry
-        return Promise.resolve([_map.get(key) for key in keys])
-
-
-class EntryDocumentLoader(DataLoader):
-    def batch_load_fn(self, keys: list):
-        qs = Entry.objects.filter(id__in=keys).select_related("document").only("id", "document")
-        _map = {}
-        for entry in qs.all():
-            _map[entry.id] = entry.document
-        return Promise.resolve([_map.get(key) for key in keys])
-
-
-class EntryPreviewLoader(DataLoader):
-    def batch_load_fn(self, keys: list):
-        qs = Entry.objects.filter(id__in=keys).select_related("preview").only("id", "preview")
-        _map = {}
-        for entry in qs.all():
-            _map[entry.id] = entry.preview
-        return Promise.resolve([_map.get(key) for key in keys])

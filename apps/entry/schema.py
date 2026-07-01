@@ -192,8 +192,7 @@ class FigureType(RelationBatchedDjangoObjectType):
     def resolve_last_review_comment_status(root, info, **kwargs):
         return info.context.last_review_comment_status_loader.load(root.id)
 
-    def resolve_entry(root, info, **kwargs):
-        return info.context.figure_entry_loader.load(root.id)
+    # entry (forward FK) is auto-wired via RelationBatchedDjangoObjectType -> RelationNodeLoader.
 
 
 class FigureListType(CustomDjangoListObjectType):
@@ -233,11 +232,8 @@ class EntryType(RelationBatchedDjangoObjectType):
         # uses the same select_related/prefetch_related set across the whole batch.
         return info.context.entry_entry_figures.load(root.id)
 
-    def resolve_document(root, info, **kwargs):
-        return info.context.entry_document_loader.load(root.id)
-
-    def resolve_preview(root, info, **kwargs):
-        return info.context.entry_preview_loader.load(root.id)
+    # document + preview (forward FKs) are auto-wired via RelationBatchedDjangoObjectType ->
+    # RelationNodeLoader (no explicit resolver needed).
 
 
 class EntryListType(CustomDjangoListObjectType):
