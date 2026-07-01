@@ -9,7 +9,6 @@ from apps.country.dataloaders import (
     CountryLastSummaryLoader,
     CountryMonitoringExpertLoader,
     MonitoringSubRegionCountryCountLoader,
-    MonitoringSubRegionCountryLoader,
     MonitoringSubRegionRegionalCoordinatorLoader,
     TotalFigureThisYearByCountryCategoryEventTypeLoader,
 )
@@ -21,10 +20,7 @@ from apps.crisis.dataloaders import (
     TotalNDFigureByCrisisLoader,
 )
 from apps.entry.dataloaders import (
-    EntryDocumentLoader,
     EntryFiguresLoader,
-    EntryPreviewLoader,
-    FigureEntryLoader,
     FigureGeoLocationLoader,
     FigureLastReviewCommentStatusLoader,
     FigureSourcesReliability,
@@ -34,8 +30,6 @@ from apps.entry.dataloaders import (
 )
 from apps.entry.models import Figure
 from apps.event.dataloaders import (
-    EventCodeLoader,
-    EventCrisisLoader,
     EventEntryCountLoader,
     EventFigureTypologyLoader,
     EventReviewCountLoader,
@@ -44,7 +38,6 @@ from apps.event.dataloaders import (
     TotalIDPFigureByEventLoader,
     TotalNDFigureByEventLoader,
 )
-from apps.organization.dataloaders import OrganizationCountriesLoader, OrganizationOrganizationKindLoader
 from apps.report.dataloaders import (
     ReportGenerationApprovedLoader,
     ReportLastGenerationLoader,
@@ -171,10 +164,6 @@ class GQLContext:
         )
 
     @cached_property
-    def monitoring_sub_region_country_loader(self):
-        return MonitoringSubRegionCountryLoader()
-
-    @cached_property
     def monitoring_sub_region_country_count_loader(self):
         return MonitoringSubRegionCountryCountLoader()
 
@@ -239,40 +228,12 @@ class GQLContext:
         return CrisisReviewCountLoader()
 
     @cached_property
-    def event_code_loader(self):
-        return EventCodeLoader()
-
-    @cached_property
     def bulk_api_operation_success_list_loader(self):
         return BulkApiOperationSuccessListLoader()
 
     @cached_property
     def bulk_api_operation_failure_list_loader(self):
         return BulkApiOperationFailureListLoader()
-
-    @cached_property
-    def event_crisis_loader(self):
-        return EventCrisisLoader()
-
-    @cached_property
-    def figure_entry_loader(self):
-        return FigureEntryLoader()
-
-    @cached_property
-    def entry_document_loader(self):
-        return EntryDocumentLoader()
-
-    @cached_property
-    def organization_countries_loader(self):
-        return OrganizationCountriesLoader()
-
-    @cached_property
-    def organization_organization_kind_loader(self):
-        return OrganizationOrganizationKindLoader()
-
-    @cached_property
-    def entry_preview_loader(self):
-        return EntryPreviewLoader()
 
     @cached_property
     def user_portfolios_metadata(self):
