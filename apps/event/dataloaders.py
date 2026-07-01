@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from django.contrib.postgres.aggregates import ArrayAgg
 from django.db import models
 from django.db.models import Case, CharField, F, When
@@ -7,7 +5,7 @@ from promise import Promise
 from promise.dataloader import DataLoader
 
 from apps.entry.models import Figure
-from apps.event.models import Event, EventCode
+from apps.event.models import Event
 
 
 def batch_load_fn_by_category(keys, category):
@@ -131,21 +129,3 @@ class EventReviewCountLoader(DataLoader):
             for item in qs
         }
         return Promise.resolve([batch_load.get(key) for key in keys])
-
-
-class EventCodeLoader(DataLoader):
-    def batch_load_fn(self, keys: list):
-        qs = EventCode.objects.filter(event__id__in=keys)
-        _map = defaultdict(list)
-        for event_code in qs.all():
-            _map[event_code.event_id].append(event_code)
-        return Promise.resolve([_map.get(key) for key in keys])
-
-
-class EventCrisisLoader(DataLoader):
-    def batch_load_fn(self, keys: list):
-        qs = Event.objects.filter(id__in=keys).select_related("crisis").only("id", "crisis")
-        _map = {}
-        for event in qs.all():
-            _map[event.id] = event.crisis
-        return Promise.resolve([_map.get(key) for key in keys])

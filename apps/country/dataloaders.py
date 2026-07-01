@@ -1,5 +1,3 @@
-from collections import defaultdict
-
 from django.db import models
 from promise import Promise
 from promise.dataloader import DataLoader
@@ -46,15 +44,6 @@ class MonitoringSubRegionCountryCountLoader(DataLoader):
             .values("id", "country_count")
         )
         return Promise.resolve([item["country_count"] for item in qs])
-
-
-class MonitoringSubRegionCountryLoader(DataLoader):
-    def batch_load_fn(self, keys: list):
-        country_qs = Country.objects.filter(monitoring_sub_region__in=keys)
-        _map = defaultdict(list)
-        for item in country_qs:
-            _map[item.monitoring_sub_region_id].append(item)
-        return Promise.resolve([_map[key] for key in keys])
 
 
 # --- N+1 fixes for countryList per-object resolvers (coverage follow-up) ---

@@ -49,8 +49,7 @@ class MonitoringSubRegionType(RelationBatchedDjangoObjectType):
     def resolve_countries_count(root, info, **kwargs):
         return info.context.monitoring_sub_region_country_count_loader.load(root.id)
 
-    def resolve_countries(root, info, **kwargs):
-        return info.context.monitoring_sub_region_country_loader.load(root.id)
+    # countries (reverse FK) is auto-wired via RelationBatchedDjangoObjectType -> ReverseFKListLoader.
 
     def resolve_regional_coordinator(root, info, **kwargs):
         # was a per-instance Portfolio lookup (N+1); batch via the existing loader keyed by sub-region id
