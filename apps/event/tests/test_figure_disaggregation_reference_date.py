@@ -101,3 +101,52 @@ class TestFigureDisaggregationReferenceDate(HelixTestCase):
         self.assertEqual(cte, (self.EXPECTED_IDP, self.EXPECTED_ND))
         self.assertEqual(sub, (self.EXPECTED_IDP, self.EXPECTED_ND))
         self.assertEqual(cte, sub, "CTE (list sort) and subquery (aggregate path) must agree")
+
+
+class TestFigureDisaggregationNdOnly(HelixTestCase):
+    """An event/crisis with NEW_DISPLACEMENT (flow) figures but NO IDPS (stock) figure must still
+    report its real ND total (and IDP 0/None). Regression guard for the CTE structure: CTE2 was
+    chained off an IDPS/RECOMMENDED reference-date CTE, so an entity with no IDPS figure never
+    appeared -> its total_flow_nd_figures came back NULL on the sort path, while the subquery
+    (independent ND correlated subquery) returned the real value.
+
+    Data (RECOMMENDED, one crisis, no IDPS anywhere):
+      ND: total=50 (2022) ; total=100 (2022)  -> ND = 150 ; IDP = 0/None
+    """
+
+    EXPECTED_ND = 150
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.crisis = CrisisFactory.create(
+            crisis_type=Crisis.CRISIS_TYPE.CONFLICT, start_date="2022-01-01", end_date="2022-12-31"
+        )
+        cls.event = EventFactory.create(
+            crisis=cls.crisis, event_type=Crisis.CRISIS_TYPE.CONFLICT, start_date="2022-01-01", end_date="2022-12-31"
+        )
+        common = dict(
+            event=cls.event,
+            role=Figure.ROLE.RECOMMENDED,
+            category=Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT,
+        )
+        FigureFactory.create(**common, total_figures=50, start_date="2022-01-10", end_date="2022-02-10")
+        FigureFactory.create(**common, total_figures=100, start_date="2022-05-01", end_date="2022-06-01")
+        # NO IDPS/stock figure at all.
+
+    def _check(self, model, obj_id):
+        cte = model.annotate_total_figure_disaggregation_via_cte(model.objects.filter(id=obj_id)).get()
+        sub = model.objects.filter(id=obj_id).annotate(**model._total_figure_disaggregation_subquery()).get()
+        cte_idp, cte_nd = getattr(cte, model.IDP_FIGURES_ANNOTATE), getattr(cte, model.ND_FIGURES_ANNOTATE)
+        sub_idp, sub_nd = getattr(sub, model.IDP_FIGURES_ANNOTATE), getattr(sub, model.ND_FIGURES_ANNOTATE)
+        # The ND-only entity must report its real ND (not NULL/0) and no IDP.
+        self.assertEqual(cte_nd, self.EXPECTED_ND, f"{model.__name__} CTE dropped ND for an ND-only entity")
+        self.assertEqual(sub_nd, self.EXPECTED_ND)
+        self.assertIn(cte_idp, (None, 0))
+        self.assertIn(sub_idp, (None, 0))
+        self.assertEqual((cte_idp or 0, cte_nd), (sub_idp or 0, sub_nd), "CTE and subquery must agree")
+
+    def test_event_nd_only(self):
+        self._check(Event, self.event.id)
+
+    def test_crisis_nd_only(self):
+        self._check(Crisis, self.crisis.id)
