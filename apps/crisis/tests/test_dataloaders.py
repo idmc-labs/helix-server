@@ -1,9 +1,11 @@
 import json
+from datetime import date
 
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 
 from apps.crisis.models import Crisis
+from apps.entry.models import Figure
 from apps.users.enums import USER_ROLE
 from utils.factories import (
     CrisisFactory,
@@ -214,3 +216,43 @@ class TestGenericDataLoaders(HelixGraphQLTestCase):
             f"(N+1 regression): {single_parent_queries} query(s) for 1 crisis vs "
             f"{multi_parent_queries} for 3.",
         )
+
+    def test_nested_list_ordered_by_gated_figure_count_annotation(self) -> None:
+        # Regression guard: a nested paginated list ordered by a GATED figure-count annotation
+        # (total_stock_idp_figures) must not FieldError. The annotation is added only when the
+        # ordering references it, so OneToManyLoader must forward `ordering` into the entity
+        # filterset (mirroring the top-level path). Before the fix this raised
+        # "Cannot resolve keyword 'total_stock_idp_figures'" -> HTTP 500.
+        crisis = CrisisFactory.create()
+        hi = EventFactory.create(crisis=crisis)
+        lo = EventFactory.create(crisis=crisis)
+        entry = EntryFactory.create()
+        for event, total in ((hi, 500), (lo, 100)):
+            FigureFactory.create(
+                entry=entry,
+                event=event,
+                category=Figure.FIGURE_CATEGORY_TYPES.IDPS,
+                role=Figure.ROLE.RECOMMENDED,
+                total_figures=total,
+                end_date=date(2022, 1, 1),  # reference_date = max(end_date); stock counts this figure
+            )
+        query = """
+            query CrisisEventsOrdered {
+              crisisList(ordering: "id") {
+                results {
+                  id
+                  events(ordering: "-totalStockIdpFigures", pageSize: 5) {
+                    results { id totalStockIdpFigures }
+                  }
+                }
+              }
+            }
+        """
+        data = self._run(query)  # _run asserts no GraphQL errors
+        node = next(r for r in data["crisisList"]["results"] if r["id"] == str(crisis.id))
+        results = node["events"]["results"]
+        # ordered by IDP count desc, and the annotation value is returned (not null)
+        self.assertEqual([e["id"] for e in results], [str(hi.id), str(lo.id)])
+        vals = {e["id"]: e["totalStockIdpFigures"] for e in results}
+        self.assertEqual(vals[str(hi.id)], 500)
+        self.assertEqual(vals[str(lo.id)], 100)
