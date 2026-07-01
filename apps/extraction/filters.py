@@ -286,7 +286,7 @@ class EntryExtractionFilterSet(MultiWordSearchFilterSet):
             # NOT EXISTS(conflict figure) OR EXISTS(matching figure) to preserve the row set.
             return qs.filter(
                 ~Exists(self._figures_for_entry(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value))
-                | Exists(self._figures_for_entry(violence_type__in=value))
+                | Exists(self._figures_for_entry(violence__in=value))
             )
         return qs
 
@@ -567,7 +567,7 @@ class BaseFigureExtractionFilterSet(MultiWordSearchFilterSet):
 
     def filter_filter_figure_violence_types(self, qs, name, value):
         if value:
-            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence_type__in=value))
+            return qs.filter(~Q(figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value) | Q(violence__in=value))
         return qs
 
     def filter_filter_figure_osv_sub_types(self, qs, name, value):
