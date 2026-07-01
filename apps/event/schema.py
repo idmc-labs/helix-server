@@ -38,7 +38,7 @@ from apps.event.models import (
 from utils.graphene.enums import EnumDescription
 from utils.graphene.fields import DjangoPaginatedListObjectField
 from utils.graphene.pagination import PageGraphqlPaginationWithoutCount
-from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType
+from utils.graphene.relation_loaders import RelationBatchedDjangoObjectType, ReverseFKListLoader
 from utils.graphene.types import CustomDjangoListObjectType
 
 
@@ -223,11 +223,17 @@ class EventType(RelationBatchedDjangoObjectType):
     crisis = graphene.Field("apps.crisis.schema.CrisisType")
     crisis_id = graphene.ID(required=True, source="crisis_id")
 
-    def resolve_crisis(root, info, **kwargs):
-        return info.context.event_crisis_loader.load(root.id)
+    # crisis (forward FK) is auto-wired via RelationBatchedDjangoObjectType -> RelationNodeLoader.
 
     def resolve_event_codes(root, info, **kwargs):
-        return info.context.event_code_loader.load(root.id)
+        # The GraphQL field name (event_codes) != the model reverse accessor (event.event_code),
+        # so the auto-wire can't map it. Route through the generic ReverseFKListLoader explicitly,
+        # reusing the same ref as the auto-wire so it shares the per-request loader instance.
+        # An event with no codes resolves to an empty list (consistent with the other list loaders).
+        return info.context.get_relation_list_loader(
+            "event.Event.event.rfk",
+            lambda: ReverseFKListLoader(EventCode, "event"),
+        ).load(root.id)
 
     def resolve_entry_count(root, info, **kwargs):
         return info.context.event_entry_count_dataloader.load(root.id)

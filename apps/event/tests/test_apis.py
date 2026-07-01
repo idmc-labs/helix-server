@@ -504,7 +504,7 @@ class TestUpdateEvent(HelixGraphQLTestCase):
         self.assertResponseNoErrors(response)
         self.assertTrue(content1["data"]["updateEvent"]["ok"], content1)
         self.assertIsNone(content1["data"]["updateEvent"]["errors"], content1)
-        self.assertIsNone(content1["data"]["updateEvent"]["result"]["eventCodes"], content1)
+        self.assertEqual(content1["data"]["updateEvent"]["result"]["eventCodes"], [], content1)
 
     def test_invalid_update_event_by_guest(self):
         guest = create_user_with_role(USER_ROLE.GUEST.name)

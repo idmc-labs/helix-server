@@ -25,17 +25,8 @@ class OrganizationType(RelationBatchedDjangoObjectType):
     organization_kind = graphene.Field("apps.organization.schema.OrganizationKindObjectType")
     countries = graphene.List(graphene.NonNull(CountryType), required=True)
 
-    def resolve_countries(root, info, **kwargs):
-        """
-        Resolves the countries related to the organization.
-        """
-        return info.context.organization_countries_loader.load(root.id)
-
-    def resolve_organization_kind(root, info, **kwargs):
-        """
-        Resolves the organization kind for the organization.
-        """
-        return info.context.organization_organization_kind_loader.load(root.id)
+    # organization_kind (forward FK) + countries (M2M) are auto-wired via
+    # RelationBatchedDjangoObjectType -> RelationNodeLoader / M2MListLoader.
 
 
 class OrganizationListType(CustomDjangoListObjectType):
