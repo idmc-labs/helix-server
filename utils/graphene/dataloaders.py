@@ -148,6 +148,17 @@ class OneToManyLoader(DataLoader):
         self.kwargs = kwargs
         return super().load(key)
 
+    def _filtered_qs(self):
+        # Forward ordering to filtersets that opt in, so the (gated) figure-count annotations the
+        # ordering references actually get added — mirrors the top-level path in
+        # utils/graphene/fields.py (list_resolver). Without this, a nested list ordered by a gated
+        # annotation (e.g. crisisList{events(ordering:"-total_stock_idp_figures")}) FieldErrors,
+        # because nulls_last_order_queryset / _ordering_expressions reference an un-annotated column.
+        fkw = {"data": self.filter_kwargs, "request": self.request}
+        if getattr(self.filterset_class, "accepts_ordering", False):
+            fkw["ordering"] = self.kwargs.get(self.pagination.ordering_param)
+        return self.filterset_class(**fkw).qs
+
     def batch_load_fn(self, keys):
         self.related_name or get_related_name(self.parent, self.child)
         reverse_related_name = self.reverse_related_name or get_related_name(self.child, self.parent)
@@ -164,8 +175,8 @@ class OneToManyLoader(DataLoader):
         # and group in Python — same result set, no cross product (~48ms).
         if not getattr(self.pagination, "page_size_query_param", None):
             related_qs = (
-                self.filterset_class(data=self.filter_kwargs, request=self.request)
-                .qs.filter(**{f"{reverse_related_name}__in": keys})
+                self._filtered_qs()
+                .filter(**{f"{reverse_related_name}__in": keys})
                 .annotate(_dataloader_parent_id=F(reverse_related_name))
             )
             related_qs = nulls_last_order_queryset(related_qs, self.pagination.ordering_param, **self.kwargs)
@@ -190,8 +201,8 @@ class OneToManyLoader(DataLoader):
         offset = page_size * (page - 1)
 
         base_qs = (
-            self.filterset_class(data=self.filter_kwargs, request=self.request)
-            .qs.filter(**{f"{reverse_related_name}__in": keys})
+            self._filtered_qs()
+            .filter(**{f"{reverse_related_name}__in": keys})
             .annotate(
                 _dataloader_parent_id=F(reverse_related_name),
                 _dataloader_row=Window(
