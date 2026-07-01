@@ -12,6 +12,7 @@ from utils.factories import (
     FigureFactory,
     OrganizationFactory,
     TagFactory,
+    ViolenceFactory,
 )
 from utils.tests import HelixTestCase
 
@@ -189,6 +190,35 @@ class TestExtractionFilter(HelixTestCase):
         crisis_types = [Crisis.CRISIS_TYPE.DISASTER]
         fqs = f(data=dict(filter_figure_crisis_types=crisis_types)).qs
         self.assertEqual(set(fqs), {self.entry2event2, self.entry3event2})
+
+    def test_filter_by_figure_violence_types(self):
+        # Regression: filter_figure_violence_types filtered on a non-existent `violence_type`
+        # field (a 500 for any client using it). It must filter on Figure.violence. Semantics:
+        # ~Exists(conflict figure) OR Exists(figure whose violence is in value).
+        v_match = ViolenceFactory.create()
+        v_other = ViolenceFactory.create()
+        conflict_event = EventFactory.create(event_type=Crisis.CRISIS_TYPE.CONFLICT)
+
+        entry_match = EntryFactory.create()
+        FigureFactory.create(
+            entry=entry_match,
+            event=conflict_event,
+            violence=v_match,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value,
+        )
+        entry_other = EntryFactory.create()
+        FigureFactory.create(
+            entry=entry_other,
+            event=conflict_event,
+            violence=v_other,
+            figure_cause=Crisis.CRISIS_TYPE.CONFLICT.value,
+        )
+
+        ids = set(f(data=dict(filter_figure_violence_types=[v_match.id])).qs.values_list("id", flat=True))
+        # conflict figure whose violence matches -> included
+        self.assertIn(entry_match.id, ids)
+        # only conflict figure has a different violence -> excluded
+        self.assertNotIn(entry_other.id, ids)
 
     def test_filter_by_country(self):
         data = dict(filter_figure_countries=[self.country3reg3.id])
