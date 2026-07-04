@@ -229,6 +229,8 @@ class HelixAPITestCase(APITestCase):
             # leaking the frozen clock into later tests)
             self.now_mock = self.now_patcher.start()
             self.now_mock.return_value = self.now_datetime
+            # The patcher was started without ever being stopped, which leaked the
+            # frozen timezone.now to EVERY subsequent test in the process
             self.addCleanup(self.now_patcher.stop)
 
     def authenticate(self, user=None):
