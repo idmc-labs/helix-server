@@ -214,7 +214,17 @@ class HelixAPITestCase(APITestCase):
             self.now_patcher = patch("django.utils.timezone.now")
             self.now_datetime = datetime.datetime(2021, 1, 1, 0, 0, 0, 123456, tzinfo=pytz.UTC)
             self.now_datetime_str = self.now_datetime.isoformat()
-            self.now_patcher.start().return_value = self.now_datetime
+            # Keep the mock so tests can retarget the frozen time
+            # (self.now_mock.return_value = ...) WITHOUT calling start() again —
+            # a second start() nests the activation and a single stop() no longer
+            # fully unwinds it.
+            self.now_mock = self.now_patcher.start()
+            self.now_mock.return_value = self.now_datetime
+            # The patcher was started without ever being stopped, which leaked the
+            # frozen timezone.now to EVERY subsequent test in the process (the first
+            # API test permanently froze the clock for the rest of the suite —
+            # breaking anything keyed on auto_now, e.g. the get_filter_kwargs cache).
+            self.addCleanup(self.now_patcher.stop)
 
     def authenticate(self, user=None):
         user = user or self.user
