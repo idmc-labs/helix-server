@@ -1,4 +1,5 @@
 from django.contrib.postgres.fields import ArrayField
+from django.core.cache import cache
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
@@ -139,8 +140,32 @@ class QueryAbstractModel(models.Model):
         default=None,
     )
 
+    # Bounded staleness window for the cached filter kwargs. Every live edit path
+    # (serializer/admin) saves the instance first (auto_now bumps modified_at), so the
+    # cache key rotates on edit and the TTL only matters for out-of-band writes
+    # (e.g. a data migration touching the filter M2Ms directly).
+    FILTER_KWARGS_CACHE_TTL = 6 * 60 * 60
+
     @property
     def get_filter_kwargs(self):
+        # The stored filter definition only changes when the instance is edited, but
+        # reading it costs one query per M2M filter field (~18) — a fixed tax on every
+        # report-scoped list/figure query. Cache the computed kwargs keyed on
+        # (model, pk, modified_at): a save rotates modified_at, so edits invalidate
+        # by construction. (Prefetching instead was measured as a regression — there
+        # is no N to amortize on the single-report path.)
+        if self.pk is None:
+            return self._compute_filter_kwargs()
+        modified_at = getattr(self, "modified_at", None)  # from the MetaInformation mixins
+        stamp = modified_at.isoformat() if modified_at else "na"
+        key = f"query_filter_kwargs:v1:{self._meta.label_lower}:{self.pk}:{stamp}"
+        data = cache.get(key)
+        if data is None:
+            data = self._compute_filter_kwargs()
+            cache.set(key, data, self.FILTER_KWARGS_CACHE_TTL)
+        return data
+
+    def _compute_filter_kwargs(self):
         # NOTE: M2M filter values are read as id lists (values_list) rather than
         # full model instances. The figure filterset only needs the ids (it filters
         # with `__in`), so this avoids materializing fat rows (e.g. country geometry,
