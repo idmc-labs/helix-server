@@ -73,6 +73,7 @@ env = environ.Env(
     POSTGRES_PASSWORD=str,
     POSTGRES_PORT=(int, 5432),
     POSTGRES_USER=str,
+    POSTGRES_CONN_MAX_AGE=(int, 0),
     SEND_ACTIVATION_EMAIL=(bool, True),
     # Sentry
     SENTRY_DEBUG=(bool, False),
@@ -290,6 +291,13 @@ WSGI_APPLICATION = "helix.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/3.0/ref/settings/#databases
 
+# Reuse DB connections across requests for POSTGRES_CONN_MAX_AGE seconds.
+# Default 0 = a new connection per request (the Django default); staging/prod
+# set 60 explicitly in the copilot API manifest. Coordinate with PG
+# max_connections when scaling workers.
+POSTGRES_CONN_MAX_AGE = env("POSTGRES_CONN_MAX_AGE")
+
+
 if IN_AWS_COPILOT_ECS:
     DBCLUSTER_SECRET = json.loads(env("HELIXDBCLUSTER_SECRET") or "{}") or fetch_db_credentials_from_secret_arn(
         env("HELIXDBCLUSTER_SECRET_ARN")
@@ -303,6 +311,7 @@ if IN_AWS_COPILOT_ECS:
             "PASSWORD": DBCLUSTER_SECRET["password"],
             "HOST": DBCLUSTER_SECRET["host"],
             "PORT": DBCLUSTER_SECRET["port"],
+            "CONN_MAX_AGE": POSTGRES_CONN_MAX_AGE,
         }
     }
 else:
@@ -314,6 +323,7 @@ else:
             "PASSWORD": env("POSTGRES_PASSWORD"),
             "HOST": env("POSTGRES_HOST"),
             "PORT": env("POSTGRES_PORT"),
+            "CONN_MAX_AGE": POSTGRES_CONN_MAX_AGE,
         }
     }
 

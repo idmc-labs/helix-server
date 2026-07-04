@@ -35,6 +35,8 @@ variables:
   DJANGO_DEBUG: False
   ENABLE_DEBUG_TOOLBAR: False
   USE_S3_BUCKET: True
+  # Reuse DB connections across requests (settings default is 0)
+  POSTGRES_CONN_MAX_AGE: 60
 
 logging:
   retention: 90
