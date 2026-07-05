@@ -20,7 +20,13 @@ def nulls_last_order_queryset(qs, ordering_param, **kwargs):
         order = order.strip(",").replace(" ", "").split(",")
 
     if not order:
-        return qs
+        # Slicing an unordered queryset follows plan-dependent physical order, so
+        # rows can repeat on or vanish between pages. pk ASC (not newest-first)
+        # matches the nested-loader fallback and the de-facto insertion order the
+        # public GIDD lists rely on.
+        if qs.ordered:
+            return qs
+        return qs.order_by(qs.model._meta.pk.name)
 
     # Append a deterministic tiebreaker (the primary key) to `mod_ordering` so
     # paginated results are stable when rows tie on the sort key. Without it, ties
