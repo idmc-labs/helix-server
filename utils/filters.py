@@ -6,7 +6,7 @@ from functools import partial
 import django_filters
 import graphene
 from django import forms
-from django.db.models import Func, Model, Q
+from django.db.models import Model, Q
 from django.db.models.query import QuerySet
 from django_filters import rest_framework as df
 from graphene.types.generic import GenericScalar
@@ -14,11 +14,6 @@ from graphene_django.filter.utils import get_filtering_args_from_filterset
 from graphene_django.forms.converter import convert_form_field
 
 from utils.mutation import compare_input_output_type_fields, generate_object_field_from_input_type
-
-
-class Unaccent(Func):
-    function = "unaccent"
-    arity = 1
 
 
 class MultiWordSearchFilterSet(df.FilterSet):
@@ -58,13 +53,14 @@ class MultiWordSearchFilterSet(df.FilterSet):
             if field.is_relation:
                 model = typing.cast(typing.Type[Model], field.related_model)
 
-    def search_should_be_distinct(self, field_names: typing.List[str]) -> bool:
+    def field_path_is_to_many(self, field_path: str) -> bool:
+        # Filtering through a to-many join fans out the row set (one row per
+        # related match), which is why the search needs a `.distinct()`.
         model = self.Meta.model  # type: ignore child has always a Meta
 
         return any(
             field.is_relation and (field.many_to_many or field.one_to_many)
-            for field_name in field_names
-            for field in self.traverse_field_path(model, field_name)
+            for field in self.traverse_field_path(model, field_path)
         )
 
     @staticmethod
@@ -81,21 +77,21 @@ class MultiWordSearchFilterSet(df.FilterSet):
 
         return value.strip().lower()
 
-    def apply_search_filter(self, queryset: QuerySet, query_terms: typing.Set[str], distinct: bool):
+    def apply_search_filter(self, queryset: QuerySet, query_terms: typing.Set[str]) -> QuerySet:
+        # One shared `.filter()` keeps the baseline semantics: terms hitting a
+        # to-many field must match the SAME related row (per-term filters would
+        # broaden the results). `helix_unaccent` = the built-in `unaccent`,
+        # but index-served.
         filter_condition = Q()
         for term in query_terms:
-            search_term_filter_condition = Q()
+            term_condition = Q()
             for field in self.multiword_searchable_fields:
-                lookup = f"{field}__unaccent__icontains"
-                # check in every searchable fields
-                search_term_filter_condition |= Q(**{lookup: term})
-            # check multiple terms in the searchable fields
-            filter_condition &= search_term_filter_condition
+                term_condition |= Q(**{f"{field}__helix_unaccent__icontains": term})
+            filter_condition &= term_condition
 
         queryset = queryset.filter(filter_condition)
-        if distinct:
+        if any(self.field_path_is_to_many(field) for field in self.multiword_searchable_fields):
             queryset = queryset.distinct()
-
         return queryset
 
     def multi_word_search(self, queryset: QuerySet, name, search_query: str) -> QuerySet:
@@ -103,14 +99,9 @@ class MultiWordSearchFilterSet(df.FilterSet):
             return queryset
 
         normalized_search_query = self.normalize_search_value(search_query)
-
         search_query_terms = set(normalized_search_query.split())
 
-        results_should_be_distinct = self.search_should_be_distinct(self.multiword_searchable_fields)
-
-        queryset = self.apply_search_filter(queryset, search_query_terms, results_should_be_distinct)
-
-        return queryset
+        return self.apply_search_filter(queryset, search_query_terms)
 
 
 class NumberInFilter(django_filters.BaseInFilter, django_filters.NumberFilter):
