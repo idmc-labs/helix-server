@@ -1502,7 +1502,7 @@ type EntryType {
   idmcAnalysis: String
   isConfidential: Boolean!
   notifications: [GenericNotificationType!]!
-  figures: [FigureType!]
+  figures(filters: FigureFilterDataInputType, page: Int = 1, ordering: String, pageSize: Int): FigureListType
 }
 
 input EntryUpdateInputType {
