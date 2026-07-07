@@ -20,7 +20,7 @@ class TestCrisisFilter(HelixTestCase):
         # The multi-word search qs has no inherent ORDER BY (the list field applies the
         # production ordering), so order by id here to keep the assertion independent of the
         # DB scan order. TODO: make the search/list ordering deterministic (see FUTURE_WORK).
-        obtained = self.filter_class(data=dict(search="w")).qs.order_by("id")
+        obtained = self.filter_class(data=dict(search="wo")).qs.order_by("id")
         expected = [c2, c3]
         self.assertEqual(expected, list(obtained))
 
