@@ -6,7 +6,8 @@ from functools import partial
 import django_filters
 import graphene
 from django import forms
-from django.db.models import Model, Q
+from django.db.models import Exists, Model, OuterRef, Q
+from django.db.models.fields.reverse_related import ForeignObjectRel
 from django.db.models.query import QuerySet
 from django_filters import rest_framework as df
 from graphene.types.generic import GenericScalar
@@ -20,6 +21,13 @@ class MultiWordSearchFilterSet(df.FilterSet):
     """
     Search baseclass to implement multi-word query logic to any FilterSet.
     """
+
+    # Why capped: each term costs a predicate per searchable field (a subquery on
+    # to-many paths) and 1-char terms match nearly every row. Sized so the longest
+    # real event/crisis name (256 chars / 38 words) pastes verbatim.
+    SEARCH_MAX_LENGTH = 512
+    SEARCH_MAX_TERMS = 40
+    SEARCH_MIN_TERM_LENGTH = 2
 
     search = django_filters.CharFilter(method="multi_word_search")
 
@@ -54,8 +62,8 @@ class MultiWordSearchFilterSet(df.FilterSet):
                 model = typing.cast(typing.Type[Model], field.related_model)
 
     def field_path_is_to_many(self, field_path: str) -> bool:
-        # Filtering through a to-many join fans out the row set (one row per
-        # related match), which is why the search needs a `.distinct()`.
+        # A join over a to-many path fans out the row set, so the search tests
+        # these paths through a correlated `Exists` instead.
         model = self.Meta.model  # type: ignore child has always a Meta
 
         return any(
@@ -77,29 +85,73 @@ class MultiWordSearchFilterSet(df.FilterSet):
 
         return value.strip().lower()
 
-    def apply_search_filter(self, queryset: QuerySet, query_terms: typing.Set[str]) -> QuerySet:
-        # One shared `.filter()` keeps the baseline semantics: terms hitting a
-        # to-many field must match the SAME related row (per-term filters would
-        # broaden the results). `helix_unaccent` = the built-in `unaccent`,
-        # but index-served.
+    def to_many_exists(self, model: typing.Type[Model], field_path: str, predicate: typing.Dict) -> Exists:
+        """Correlated `Exists` on the child model directly — the generic
+        `pk=OuterRef("pk")` self-join form pays an extra parent index probe per
+        outer row. Deeper relation segments (`events__countries__name`) become
+        plain joins INSIDE the subquery — fan-out there is harmless."""
+        first, _, rest = field_path.partition("__")
+        rel = model._meta.get_field(first)
+        if not rest:
+            raise NotImplementedError(
+                f"search path {field_path!r} on {model.__name__} must name a column on the related model"
+            )
+        if rel.is_relation and (rel.many_to_many or rel.one_to_many):
+            # First hop is to-many: anchor on the child's back-reference (reverse
+            # relations carry the child-side field; a forward M2M is referenced
+            # from the child by its related query name).
+            back = rel.field.name if isinstance(rel, ForeignObjectRel) else rel.related_query_name()
+            child_predicate = {f"{rest}__{key}": value for key, value in predicate.items()}
+            return Exists(rel.related_model._base_manager.filter(**{back: OuterRef("pk")}, **child_predicate))
+        # First hop is to-one with the to-many deeper (e.g. event ->
+        # crisis__countries__name): there is no child set to anchor on. The
+        # self-join form below is believed correct but has no production use case;
+        # enable it deliberately (with tests) when one appears.
+        # return Exists(
+        #     model._base_manager.filter(
+        #         pk=OuterRef("pk"), **{f"{field_path}__{key}": value for key, value in predicate.items()}
+        #     )
+        # )
+        raise NotImplementedError(f"search path {field_path!r} on {model.__name__} must start with a to-many relation")
+
+    def apply_search_filter(self, queryset: QuerySet, query_terms: typing.List[str]) -> QuerySet:
+        # Terms are independent: on a to-many field two terms may match two
+        # DIFFERENT related rows. Testing those paths through `Exists` keeps the
+        # fan-out inside the subquery — no `.distinct()`.
+        #
+        # `helix_unaccent` for every lookup: the wrapper inlines to the extension's
+        # C function, so unindexed evaluations cost the same as the built-in
+        # `unaccent` while the planner index-serves whatever predicate shapes it
+        # can (single-column scans, same-table BitmapOr, the `Exists` child
+        # subqueries). Cross-table ORs still evaluate row-by-row — no index can
+        # drive those regardless of the function.
+        model = queryset.model
+        field_is_to_many = {field: self.field_path_is_to_many(field) for field in self.multiword_searchable_fields}
         filter_condition = Q()
         for term in query_terms:
             term_condition = Q()
             for field in self.multiword_searchable_fields:
-                term_condition |= Q(**{f"{field}__helix_unaccent__icontains": term})
+                if field_is_to_many[field]:
+                    term_condition |= Q(self.to_many_exists(model, field, {"helix_unaccent__icontains": term}))
+                else:
+                    term_condition |= Q(**{f"{field}__helix_unaccent__icontains": term})
             filter_condition &= term_condition
 
-        queryset = queryset.filter(filter_condition)
-        if any(self.field_path_is_to_many(field) for field in self.multiword_searchable_fields):
-            queryset = queryset.distinct()
-        return queryset
+        return queryset.filter(filter_condition)
 
     def multi_word_search(self, queryset: QuerySet, name, search_query: str) -> QuerySet:
         if not search_query or not self.multiword_searchable_fields:
             return queryset
 
-        normalized_search_query = self.normalize_search_value(search_query)
-        search_query_terms = set(normalized_search_query.split())
+        normalized_search_query = self.normalize_search_value(search_query[: self.SEARCH_MAX_LENGTH])
+        # Ordered dedup so the term cap keeps the FIRST terms the user typed.
+        search_query_terms = [
+            term for term in dict.fromkeys(normalized_search_query.split()) if len(term) >= self.SEARCH_MIN_TERM_LENGTH
+        ][: self.SEARCH_MAX_TERMS]
+
+        # Same as search="": input that normalizes to nothing must not filter.
+        if not search_query_terms:
+            return queryset
 
         return self.apply_search_filter(queryset, search_query_terms)
 
