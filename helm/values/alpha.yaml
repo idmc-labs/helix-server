@@ -1,42 +1,8 @@
 app:
-  ingress:
-    enabled: true
-    className: default
-
-  postgresql:
-    enabled: true
-    auth:
-      username: "helix"
-      database: "helix"
-    primary:
-      resources:
-        requests:
-          cpu: "0.2"
-          memory: 1Gi
-        limits:
-          cpu: "4"
-      initdb:
-        scripts:
-          my_init_script.sh: |
-            #!/bin/sh -e
-
-            DATABASE_DUMP_URL="$DUMP_REGISTRY_URL$DUMP_FILENAME"
-
-            # Don't have curl here
-            /usr/lib/apt/apt-helper download-file -o "Acquire::https::Verify-Peer=false" "$DATABASE_DUMP_URL" /tmp/db.dump
-
-            du -sh /tmp/db.dump
-
-            PGPASSWORD="${POSTGRES_PASSWORD}" PGUSER=$POSTGRES_USER pg_restore -v --no-owner --no-privileges -d "$POSTGRES_DATABASE" < /tmp/db.dump
-
-  minio:
-    enabled: true
-    apiIngress:
-      ingressClassName: default
-      annotations:
-        nginx.ingress.kubernetes.io/proxy-body-size: "5g"
-
   api:
+    ingress:
+      enabled: true
+      className: default
     resources:
       requests:
         cpu: "0.1"
@@ -47,10 +13,11 @@ app:
 
   worker:
     enabled: true
-    beat:
-      resources:
-        limits:
-          cpu: "4"
+    addons:
+      beat:
+        resources:
+          limits:
+            cpu: "4"
     queues:
       # NOTE: Make sure keys are lowercase
       default:
@@ -68,13 +35,15 @@ app:
     SENTRY_PROFILES_SAMPLE_RATE: "0.8"
     SENTRY_MONITOR_CELERY_BEAT_TASKS: "true"
 
-  argoHook:
+  hooks:
     enabled: true
-    hooks:
+    jobs:
       # NOTE: Make sure keys are lowercase
       init-fix-script:
         enabled: true
-        hook: PostSync
+        annotations:
+          argocd.argoproj.io/hook: "PostSync"
+          argocd.argoproj.io/sync-wave: "25"
         command:
           - ./manage.py
           - shell
@@ -88,14 +57,18 @@ app:
             Client.objects.first().save();
       load-geojson:
         enabled: true
-        hook: PostSync
+        annotations:
+          argocd.argoproj.io/hook: "PostSync"
+          argocd.argoproj.io/sync-wave: "25"
         command: ["/bin/bash", "-c"]
         args:
           - "./manage.py wait_for_resources --db --minio && ./manage.py split_geojson"
       create-users:
         enabled: true
-        hook: PostSync
-        env:
+        annotations:
+          argocd.argoproj.io/hook: "PostSync"
+          argocd.argoproj.io/sync-wave: "25"
+        extraEnv:
           SET_AS_ADMIN_USER_EMAILS: ""
         command:
           - ./manage.py
