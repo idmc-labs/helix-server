@@ -1,7 +1,9 @@
+import datetime
 import typing
 
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_enumfield import enum
 
@@ -182,11 +184,27 @@ class StatusLog(models.Model):
     completed_at = models.DateTimeField(verbose_name="Completed at", null=True, blank=True)
     status = enum.EnumField(verbose_name=_("Status"), enum=Status, default=Status.PENDING)
 
+    # A run that died without flipping its status (killed worker: the transaction
+    # rolls back but the PENDING log row survives) must not block triggers, and the
+    # cleanup task marks it FAILED. Slightly above the task's 30-min hard ceiling
+    # so a still-running generation is never flipped; the advisory lock in the task
+    # is the real mutual exclusion.
+    PENDING_STALE_AFTER = datetime.timedelta(minutes=35)
+
     class Meta:
         permissions = (("update_gidd_data_gidd", "Can update GIDD data"),)
 
     def __str__(self):
         return str(self.triggered_at)
+
+    @classmethod
+    def has_active_run(cls) -> bool:
+        last_run = cls.objects.last()
+        return bool(
+            last_run
+            and last_run.status == cls.Status.PENDING
+            and last_run.triggered_at >= timezone.now() - cls.PENDING_STALE_AFTER
+        )
 
     @classmethod
     def last_release_date(cls, format=None) -> typing.Optional[str]:
