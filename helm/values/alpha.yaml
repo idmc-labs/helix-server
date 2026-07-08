@@ -84,7 +84,7 @@ app:
             from apps.contrib.models import Client;
             from django.core.management import call_command;
 
-            call_command("wait_for_resources", "--redis", "--db");
+            call_command("wait_for_resources", "--cache", "--db");
             Client.objects.first().save();
       load-geojson:
         enabled: true
@@ -110,7 +110,7 @@ app:
             from django.db import transaction;
             from django.core.management import call_command;
 
-            call_command("wait_for_resources", "--redis", "--db");
+            call_command("wait_for_resources", "--cache", "--db");
 
             set_as_admin_user_emails = [
               email.strip(" ")
