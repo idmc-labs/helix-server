@@ -23,8 +23,7 @@ class GiddUpdateData(graphene.Mutation):
     def mutate(root, info):
         user = info.context.user
         # Check if any pending updates
-        status_log = StatusLog.objects.last()
-        if status_log and status_log.status == StatusLog.Status.PENDING:
+        if StatusLog.has_active_run():
             return GiddUpdateData(
                 errors=[
                     dict(

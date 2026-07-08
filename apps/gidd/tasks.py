@@ -23,7 +23,7 @@ from apps.entry.models import Figure
 from apps.event.models import Crisis, Event, EventCode
 from apps.report.models import Report
 from helix.celery import app as celery_app
-from utils.common import round_and_remove_zero
+from utils.common import redis_lock, round_and_remove_zero
 from utils.db import Array
 
 from .models import (
@@ -677,8 +677,19 @@ def update_gidd_event_and_gidd_figure_data():
         )
 
 
-@celery_app.task
-def update_gidd_data(log_id):
+# Hard ceiling for one generation run (currently ~12 min in production). The soft
+# limit raises inside the task so the run rolls back and marks itself FAILED; the
+# hard limit is the kill-switch backstop. The lock TTL must stay ABOVE the hard
+# limit: if the lock expired mid-run, a second generation could start — and under
+# READ COMMITTED its DELETE cannot see the first run's uncommitted inserts, so
+# both row sets would COMMIT.
+GIDD_GENERATION_TIMEOUT = 60 * 30
+GIDD_GENERATION_LOCK_KEY = "update_gidd_data"
+GIDD_GENERATION_LOCK_TTL = GIDD_GENERATION_TIMEOUT + 60 * 5
+
+
+@redis_lock(GIDD_GENERATION_LOCK_KEY, GIDD_GENERATION_LOCK_TTL)
+def _generate_gidd_data(log_id):
     try:
         with transaction.atomic():
             # DELETE
@@ -705,3 +716,27 @@ def update_gidd_data(log_id):
     except Exception as e:
         StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.FAILED, completed_at=timezone.now())
         logger.error("Failed update data: " + str(e), exc_info=True)
+
+
+@celery_app.task(soft_time_limit=GIDD_GENERATION_TIMEOUT, time_limit=GIDD_GENERATION_TIMEOUT + 120)
+def update_gidd_data(log_id):
+    # redis_lock is non-blocking and returns False when another generation holds
+    # the lock: the losing run must never reach the delete+rebuild (the mutations'
+    # pending-run guard is only advisory — mutation races and celery redelivery
+    # bypass it).
+    if _generate_gidd_data(log_id=log_id) is False:
+        StatusLog.objects.filter(id=log_id).update(status=StatusLog.Status.FAILED, completed_at=timezone.now())
+        logger.error("Another GIDD generation is already running; refused to run concurrently.")
+
+
+@celery_app.task
+def kill_all_stale_gidd_generations():
+    """A worker killed hard (OOM, deploy, the time_limit backstop) rolls back its
+    transaction but leaves its StatusLog PENDING forever — flip those to FAILED so
+    the run's fate is visible and triggers are never blocked by a dead run."""
+    updated = StatusLog.objects.filter(
+        status=StatusLog.Status.PENDING,
+        triggered_at__lt=timezone.now() - StatusLog.PENDING_STALE_AFTER,
+    ).update(status=StatusLog.Status.FAILED, completed_at=timezone.now())
+    if updated:
+        logger.error(f"Marked {updated} stale GIDD generation(s) as failed.")
