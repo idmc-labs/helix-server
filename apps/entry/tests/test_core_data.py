@@ -1700,9 +1700,19 @@ class TestCoreData(HelixGraphQLTestCase):
                         }
                     )
 
-        # NOTE: Both IDPs and NDs are summed if year is not provided
-        overall_conflict_idps = get_safe_sum(
-            [row["conflict_idps"] for row in displacement_data if row["conflict_idps"] is not None]
+        # NOTE: Without a year filter NDs (flows) are summed across years, while
+        # IDPs (stocks) default to the release-year snapshot.
+        # The seeded end-year stocks avoid Dec 31, so the release-year snapshot is
+        # legitimately empty here; the resolvers coalesce empty sums to 0.
+        overall_conflict_idps = (
+            get_safe_sum(
+                [
+                    row["conflict_idps"]
+                    for row in displacement_data
+                    if row["conflict_idps"] is not None and row["year"] == self.end_year
+                ]
+            )
+            or 0
         )
         overall_conflict_nds = get_safe_sum(
             [row["conflict_nds"] for row in displacement_data if row["conflict_nds"] is not None]
@@ -1710,8 +1720,15 @@ class TestCoreData(HelixGraphQLTestCase):
         overall_disaster_nds = get_safe_sum(
             [row["disaster_nds"] for row in displacement_data if row["disaster_nds"] is not None]
         )
-        overall_disaster_idps = get_safe_sum(
-            [row["disaster_idps"] for row in displacement_data if row["disaster_idps"] is not None]
+        overall_disaster_idps = (
+            get_safe_sum(
+                [
+                    row["disaster_idps"]
+                    for row in displacement_data
+                    if row["disaster_idps"] is not None and row["year"] == self.end_year
+                ]
+            )
+            or 0
         )
 
         query = """
@@ -1783,6 +1800,56 @@ class TestCoreData(HelixGraphQLTestCase):
         assert combined_stats_r_data["totalDisplacements"] == get_safe_sum(
             [x for x in [overall_disaster_idps, overall_conflict_idps] if x is not None]
         )
+
+        # The release-year (2019) assertions above are 0 == 0 by seeding design, so
+        # they cannot catch a broken snapshot. 2018 DOES have Dec-31 stocks and is
+        # the pre_release_year: assert the snapshot logic against NON-ZERO values,
+        # both with an explicit endYear and through the year-less PRE_RELEASE
+        # default (the two must agree).
+        pre_release_year = self.end_year - 1
+
+        def get_sum_idps(key):
+            value = get_safe_sum(
+                [row[key] for row in displacement_data if row[key] is not None and row["year"] == pre_release_year]
+            )
+            assert value, f"expected a non-zero {key} snapshot at {pre_release_year}"
+            return value
+
+        def get_sum_nds(key):
+            value = get_safe_sum(
+                [row[key] for row in displacement_data if row[key] is not None and row["year"] <= pre_release_year]
+            )
+            assert value, f"expected a non-zero {key} snapshot at {pre_release_year}"
+            return value
+
+        stats_query = """
+            query ConflictStatistics($clientId: String!, $endYear: Float, $releaseEnvironment: String) {
+                giddPublicConflictStatistics(
+                    clientId: $clientId, endYear: $endYear, releaseEnvironment: $releaseEnvironment,
+                ) {
+                    newDisplacements
+                    totalDisplacements
+                }
+                giddPublicDisasterStatistics(
+                    clientId: $clientId, endYear: $endYear, releaseEnvironment: $releaseEnvironment,
+                ) {
+                    newDisplacements
+                    totalDisplacements
+                }
+            }
+        """
+        explicit = self.query_json(stats_query, variables={"clientId": self.gidd_client.code, "endYear": pre_release_year})[
+            "data"
+        ]
+        year_less_pre_release = self.query_json(
+            stats_query, variables={"clientId": self.gidd_client.code, "releaseEnvironment": "PRE_RELEASE"}
+        )["data"]
+
+        assert explicit == year_less_pre_release
+        assert explicit["giddPublicConflictStatistics"]["totalDisplacements"] == get_sum_idps("conflict_idps")
+        assert explicit["giddPublicDisasterStatistics"]["totalDisplacements"] == get_sum_idps("disaster_idps")
+        assert explicit["giddPublicConflictStatistics"]["newDisplacements"] == get_sum_nds("conflict_nds")
+        assert explicit["giddPublicDisasterStatistics"]["newDisplacements"] == get_sum_nds("disaster_nds")
 
     @RuntimeProfile()
     def test_gidd_disaster_data(self):

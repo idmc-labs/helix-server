@@ -37,6 +37,20 @@ from .models import (
 )
 
 
+def default_end_year(kwargs):
+    """IDPs are a stock: without an explicit endYear the snapshot year must default
+    to the (pre-)release year, so `no year filter` returns the same response as
+    `startYear=<first year>, endYear=<release year>` instead of summing every
+    yearly snapshot (a ~9x overcount on current data)."""
+    release_meta_data = ReleaseMetadata.objects.last()
+    if release_meta_data is None:
+        return None
+    environment = kwargs.get("release_environment") or ReleaseMetadata.ReleaseEnvironment.RELEASE.name
+    if environment.lower() == ReleaseMetadata.ReleaseEnvironment.PRE_RELEASE.name.lower():
+        return release_meta_data.pre_release_year
+    return release_meta_data.release_year
+
+
 def custom_date_filters(start_year, end_year):
     filters = {
         "idps_date_filters": {},
@@ -463,7 +477,7 @@ class Query(graphene.ObjectType):
         # timeseries are derived from the by-country rows (same grouping base).
         conflict_qs = ConflictStatisticsFilter(data=kwargs).qs
         start_year = kwargs.pop("start_year", None)
-        end_year = kwargs.pop("end_year", None)
+        end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
         filters = custom_date_filters(start_year, end_year)
 
         conflict_variant_base_qs = ConflictStatisticsFilter(data=kwargs).qs
@@ -555,7 +569,7 @@ class Query(graphene.ObjectType):
         # from the by-country rows.
         disaster_qs = DisasterStatisticsFilter(data=kwargs).qs
         start_year = kwargs.pop("start_year", None)
-        end_year = kwargs.pop("end_year", None)
+        end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
         filters = custom_date_filters(start_year, end_year)
 
         disaster_variant_base_qs = DisasterStatisticsFilter(data=kwargs).qs
@@ -767,7 +781,7 @@ class Query(graphene.ObjectType):
         track_gidd(client_id, ExternalApiDump.ExternalApiType.GIDD_COMBINED_STAT_GRAPHQL)
 
         start_year = kwargs.pop("start_year", None)
-        end_year = kwargs.pop("end_year", None)
+        end_year = kwargs.pop("end_year", None) or default_end_year(kwargs)
 
         filters = custom_date_filters(start_year, end_year)
 
