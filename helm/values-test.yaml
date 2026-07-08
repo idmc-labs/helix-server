@@ -6,30 +6,11 @@ app:
     name: test-image
     tag: random-hash
 
-  ingress:
-    enabled: true
-    host: dummy-api.com
-    className: "nginx"
-
-  postgresql:
-    enabled: true
-    auth:
-      postgresPassword: "strong-password"
-      username: "helix"
-      password: "strong-password"
-      database: "helix"
-
-  minio:
-    enabled: true
-    apiIngress:
+  api:
+    ingress:
       enabled: true
-      ingressClassName: nginx
-      hostname: test-minio.com
-    auth:
-      enabled: true
-      forceNewKeys: True
-      rootUser: helix
-      rootPassword: helix
+      host: dummy-api.com
+      className: "nginx"
 
   envConfigMapName: "helix-config-map"
   env:
@@ -53,19 +34,31 @@ app:
   secretsName: "helix-secrets-map"
   secrets:
     DJANGO_SECRET_KEY: dummy-secret-key
+    # Postgres (external)
+    POSTGRES_HOST: dummy-pg
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: helix
+    POSTGRES_USER: helix
+    POSTGRES_PASSWORD: strong-password
+    # Minio (S3, external)
+    AWS_S3_ENDPOINT_URL: https://test-minio.com/
+    AWS_S3_ACCESS_KEY_ID: helix
+    AWS_S3_SECRET_ACCESS_KEY: helix
     # Sentry
     SENTRY_DSN: dummy.com/dummy-id
     # Hcaptcha
     HCAPTCHA_SITEKEY: "10000000-ffff-ffff-ffff-000000000001"
     HCAPTCHA_SECRET: "0x0000000000000000000000000000000000000000"
 
-  argoHook:
-    hooks:
+  hooks:
+    jobs:
       db-migrate:
-        preserveHistory: false
+        useGenerateName: false
       custom-python-script-01:
         enabled: true
-        hook: PostSync
+        annotations:
+          argocd.argoproj.io/hook: "PostSync"
+          argocd.argoproj.io/sync-wave: "25"
         command:
           - ./manage.py
           - shell
