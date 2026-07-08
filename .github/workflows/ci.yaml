@@ -5,7 +5,11 @@ on:
 
 jobs:
   _:
-    uses: toggle-corp/banjo-action/.github/workflows/pipeline.yml@v0.1.1
+    uses: toggle-corp/banjo-action/.github/workflows/pipeline.yml@v0.2.0
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: read
     with:
       # Job: Docker
       docker__wait_cmd: "./manage.py wait_for_resources --db --cache --minio"
