@@ -42,15 +42,12 @@ data:
   CSRF_COOKIE_DOMAIN: ".example.com"
   DJANGO_ALLOWED_HOST: "helix-1.idmc.local.example.com,helix-api-1.idmc.local.example.com"
   DJANGO_DEBUG: "false"
-  EXTERNAL_S3_BUCKET_NAME: "helix-external-data"
   FRONTEND_BASE_URL: "https://helix-1.idmc.local.example.com"
   HELIX_ENVIRONMENT: "ALPHA-1"
-  S3_BUCKET_NAME: "helix-data"
   SENTRY_MONITOR_CELERY_BEAT_TASKS: "true"
   SENTRY_PROFILES_SAMPLE_RATE: "0.8"
   SENTRY_SAMPLE_RATE: "0.8"
   SESSION_COOKIE_DOMAIN: ".example.com"
-  USE_S3_BUCKET: "true"
 
 ---
 # Source: helix-backend-helm/charts/app/templates/hooks/job.yaml
@@ -137,7 +134,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
+        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
       labels:
         app: helix-backend-1
         component: api
@@ -232,7 +229,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
+        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
       labels:
         app: helix-backend-1
         component: worker-addon
@@ -268,10 +265,10 @@ spec:
           resources:
             limits:
               cpu: "4"
-              memory: 1Gi
+              memory: 512Mi
             requests:
-              cpu: "1"
-              memory: 0.5Gi
+              cpu: "0.1"
+              memory: 256Mi
           envFrom:
             - secretRef:
                 name: helix-backend-1-secret
@@ -322,7 +319,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
+        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
       labels:
         app: helix-backend-1
         component: worker
@@ -369,7 +366,7 @@ spec:
               memory: 2Gi
             requests:
               cpu: "0.1"
-              memory: 2Gi
+              memory: 1Gi
           envFrom:
             - secretRef:
                 name: helix-backend-1-secret
@@ -415,7 +412,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
+        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
       labels:
         app: helix-backend-1
         component: hook
@@ -475,7 +472,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
+        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
       labels:
         app: helix-backend-1
         component: hook
@@ -547,7 +544,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
+        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
       labels:
         app: helix-backend-1
         component: hook
@@ -606,7 +603,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
+        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
       labels:
         app: helix-backend-1
         component: hook
@@ -675,7 +672,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
+        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
       labels:
         app: helix-backend-1
         component: hook
@@ -736,7 +733,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
+        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
       labels:
         app: helix-backend-1
         component: hook
@@ -792,7 +789,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "30"
 spec:
-  ingressClassName: "default"
+  ingressClassName: "traefik"
   rules:
     - host: "helix-api-1.idmc.local.example.com"
       http:

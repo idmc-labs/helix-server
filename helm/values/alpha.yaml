@@ -2,32 +2,9 @@ app:
   api:
     ingress:
       enabled: true
-      className: default
-    resources:
-      requests:
-        cpu: "0.1"
-        memory: "2Gi"
-      limits:
-        cpu: "4"
-        memory: "2Gi"
 
   worker:
     enabled: true
-    addons:
-      beat:
-        resources:
-          limits:
-            cpu: "4"
-    queues:
-      # NOTE: Make sure keys are lowercase
-      default:
-        resources:
-          requests:
-            cpu: "0.1"
-            memory: 2Gi
-          limits:
-            cpu: "4"
-            memory: 2Gi
 
   env:
     # Sentry
