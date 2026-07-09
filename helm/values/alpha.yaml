@@ -75,14 +75,14 @@ app:
           create_users.py: |
             import os
             import re
-            from apps.users.models import User;
-            from apps.users.enums import USER_ROLE;
-            from apps.users.models import Portfolio;
+            from apps.users.models import User
+            from apps.users.enums import USER_ROLE
+            from apps.users.models import Portfolio
 
-            from django.db import transaction;
-            from django.core.management import call_command;
+            from django.db import transaction
+            from django.core.management import call_command
 
-            call_command("wait_for_resources", "--cache", "--db");
+            call_command("wait_for_resources", "--cache", "--db")
 
             set_as_admin_user_emails = [
               email.strip(" ")
@@ -93,22 +93,22 @@ app:
             @transaction.atomic
             def create_initial_users():
               for email in set_as_admin_user_emails:
-                  user = User.objects.filter(email=email).first();
+                  user = User.objects.filter(email=email).first()
                   if user is None:
-                      print(f"Failed to process user {email=}. Doesn't exists");
+                      print(f"Failed to process user {email=}. Doesn't exists")
 
-                  user.username = user.email = email;
-                  user.is_superuser = True;
-                  user.is_staff = True;
-                  user.is_active = True;
-                  user.save();
-                  print(f"Successfully updated user {email=} as superuser");
+                  user.username = user.email = email
+                  user.is_superuser = True
+                  user.is_staff = True
+                  user.is_active = True
+                  user.save()
+                  print(f"Successfully updated user {email=} as superuser")
 
                   role = USER_ROLE.ADMIN
                   Portfolio.objects.get_or_create(
                       user=user,
                       role=role,
-                  );
-                  print(f"\tSuccessfully updated user portfolio {role=}");
+                  )
+                  print(f"\tSuccessfully updated user portfolio {role=}")
 
-            create_initial_users();
+            create_initial_users()
