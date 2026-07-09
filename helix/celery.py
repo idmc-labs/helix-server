@@ -1,5 +1,6 @@
 import os
 
+from banjo_utils.celery_health.worker import setup_worker_heartbeat
 from celery import Celery
 from celery.schedules import crontab
 
@@ -7,6 +8,7 @@ from celery.schedules import crontab
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "helix.settings")
 
 app = Celery("helix")
+setup_worker_heartbeat(app)
 
 # Using a string here means the worker doesn't have to serialize
 # the configuration object to child processes.

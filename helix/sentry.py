@@ -2,6 +2,7 @@ import logging
 import os
 
 import sentry_sdk
+from banjo_utils.health import make_sentry_traces_sampler_with_health_probe_ignore
 from celery import signals
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -79,8 +80,12 @@ def init_sentry(**_kwargs):
         RedisIntegration(),
         CeleryIntegration(monitor_beat_tasks=settings.SENTRY_MONITOR_CELERY_BEAT_TASKS),
     ]
+    config = {k: v for k, v in settings.SENTRY_CORE_CONFIG.items() if k != "traces_sample_rate"}
     sentry_sdk.init(
-        **settings.SENTRY_CORE_CONFIG,
+        **config,
+        traces_sampler=make_sentry_traces_sampler_with_health_probe_ignore(
+            settings.SENTRY_CORE_CONFIG["traces_sample_rate"]
+        ),
         integrations=integrations,
         ignore_errors=IGNORED_ERRORS,
     )
