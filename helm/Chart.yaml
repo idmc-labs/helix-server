@@ -1,6 +1,6 @@
 apiVersion: v2
-name: helix-backend-helm
-description: "Helm Chart to deploy the IDMC Helix Backend"
+name: helix-server-helm
+description: "Helm Chart to deploy the IDMC Helix Server"
 type: application
 version: 0.0.1-SET-BY-CICD
 sources:
