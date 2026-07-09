@@ -2,6 +2,12 @@ app:
   api:
     ingress:
       className: traefik
+      # Attach the helix-body-size Middleware below to the api router. Traefik
+      # references CRD middlewares as `<namespace>-<name>@kubernetescrd`; the
+      # namespace is resolved via tpl (needs banjo-helm >= 0.4.1) so this stays
+      # namespace-agnostic and matches wherever the Middleware is created.
+      annotations:
+        traefik.ingress.kubernetes.io/router.middlewares: "{{ $.Release.Namespace }}-helix-body-size@kubernetescrd"
 
   extraManifests:
     traefik-body-size-middleware:

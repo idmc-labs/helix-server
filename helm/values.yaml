@@ -141,6 +141,8 @@ app:
     APP_RELEASE: "{{ $.Values.image.tag }}"
     HELIX_ENVIRONMENT: "{{ $.Values.environment }}"
     DJANGO_DEBUG: "false"
+    # NOTE: Non S3 == disk which shouldn't be used
+    USE_S3_BUCKET: "true"
     # Sentry
     SENTRY_MONITOR_CELERY_BEAT_TASKS: "true"
     SENTRY_SAMPLE_RATE: "0.2"

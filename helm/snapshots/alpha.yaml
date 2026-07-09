@@ -48,6 +48,7 @@ data:
   SENTRY_PROFILES_SAMPLE_RATE: "0.8"
   SENTRY_SAMPLE_RATE: "0.8"
   SESSION_COOKIE_DOMAIN: ".example.com"
+  USE_S3_BUCKET: "true"
 
 ---
 # Source: helix-backend-helm/charts/app/templates/hooks/job.yaml
@@ -134,7 +135,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
       labels:
         app: helix-backend-1
         component: api
@@ -229,7 +230,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
       labels:
         app: helix-backend-1
         component: worker-addon
@@ -319,7 +320,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
       labels:
         app: helix-backend-1
         component: worker
@@ -412,7 +413,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
       labels:
         app: helix-backend-1
         component: hook
@@ -472,7 +473,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
       labels:
         app: helix-backend-1
         component: hook
@@ -544,7 +545,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
       labels:
         app: helix-backend-1
         component: hook
@@ -603,7 +604,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
       labels:
         app: helix-backend-1
         component: hook
@@ -672,7 +673,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
       labels:
         app: helix-backend-1
         component: hook
@@ -733,7 +734,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: 3981725b1aae5300be3f47067f43102c417b133154b38f84d53dbf137084d23b
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
       labels:
         app: helix-backend-1
         component: hook
@@ -788,6 +789,7 @@ metadata:
     release: release-name
   annotations:
     argocd.argoproj.io/sync-wave: "30"
+    traefik.ingress.kubernetes.io/router.middlewares: default-helix-body-size@kubernetescrd
 spec:
   ingressClassName: "traefik"
   rules:
