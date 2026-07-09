@@ -1,0 +1,10 @@
+app:
+  extraManifests:
+    traefik-body-size-middleware:
+      apiVersion: traefik.io/v1alpha1
+      kind: Middleware
+      metadata:
+        name: helix-body-size
+      spec:
+        buffering:
+          maxRequestBodyBytes: 52428800   # 50 MiB (replaces nginx proxy-body-size "50m")

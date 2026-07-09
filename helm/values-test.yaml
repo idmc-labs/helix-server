@@ -59,6 +59,7 @@ app:
         annotations:
           argocd.argoproj.io/hook: "PostSync"
           argocd.argoproj.io/sync-wave: "25"
+          argocd.argoproj.io/hook-delete-policy: "BeforeHookCreation"
         command: ["sh", "-c", "./manage.py shell < /etc/hook-files/custom_python_script_01.py"]
         files:
           custom_python_script_01.py: |

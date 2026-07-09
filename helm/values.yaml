@@ -14,8 +14,6 @@ app:
       enabled: true
       className:
       host:
-      annotations:
-          nginx.ingress.kubernetes.io/proxy-body-size: "50m"
     resources:
       requests:
         cpu: "2"
@@ -106,14 +104,6 @@ app:
     USE_S3_BUCKET: "true"
     S3_BUCKET_NAME: "helix-data"
     EXTERNAL_S3_BUCKET_NAME: "helix-external-data"
-    AWS_S3_REGION: "us-east-1"
-    # App Domain
-    APP_DOMAIN: "{{ required \".app.env.APP_DOMAIN\" nil }}"
-    DJANGO_ALLOWED_HOST: "{{ required \".app.env.DJANGO_ALLOWED_HOST\" nil }}"
-    BACKEND_BASE_URL: "{{ required \".app.env.BACKEND_BASE_URL\" nil }}"
-    FRONTEND_BASE_URL: "{{ required \".app.env.FRONTEND_BASE_URL\" nil }}"
-    SESSION_COOKIE_DOMAIN: "{{ required \".app.env.SESSION_COOKIE_DOMAIN\" nil }}"
-    CSRF_COOKIE_DOMAIN: "{{ required \".app.env.CSRF_COOKIE_DOMAIN\" nil }}"
     # Sentry
     SENTRY_MONITOR_CELERY_BEAT_TASKS: "true"
     SENTRY_SAMPLE_RATE: "0.2"
@@ -121,60 +111,7 @@ app:
 
   # NOTE: Check main/settings.py for all available options
   # Postgres and Minio (S3) are external services (provisioned outside this chart,
-  # e.g. via banjo-alpha-deps). They are referenced by plain hostname/endpoint below;
-  # credentials come in via secrets. Redis is provided via the Dragonfly extraManifest.
-  secrets:
-    DJANGO_SECRET_KEY: "{{ required \".app.secrets.DJANGO_SECRET_KEY\" nil }}"
-    # Postgres (external)
-    POSTGRES_HOST: "{{ required \".app.secrets.POSTGRES_HOST\" nil }}"
-    POSTGRES_PORT: "{{ required \".app.secrets.POSTGRES_PORT\" nil }}"
-    POSTGRES_DB: "{{ required \".app.secrets.POSTGRES_DB\" nil }}"
-    POSTGRES_USER: "{{ required \".app.secrets.POSTGRES_USER\" nil }}"
-    POSTGRES_PASSWORD: "{{ required \".app.secrets.POSTGRES_PASSWORD\" nil }}"
-    # Redis (using extraEnvVars / Dragonfly)
-    # Minio (S3, external)
-    AWS_S3_ENDPOINT_URL: "{{ required \".app.secrets.AWS_S3_ENDPOINT_URL\" nil }}"
-    AWS_S3_ACCESS_KEY_ID: "{{ required \".app.secrets.AWS_S3_ACCESS_KEY_ID\" nil }}"
-    AWS_S3_SECRET_ACCESS_KEY: "{{ required \".app.secrets.AWS_S3_SECRET_ACCESS_KEY\" nil }}"
-    # Misc
-    SENTRY_DSN: "{{ required \".app.secrets.SENTRY_DSN\" nil }}"
-    HCAPTCHA_SECRET: "{{ required \".app.secrets.HCAPTCHA_SECRET\" nil }}"
-
-  extraEnvVars:
-    # Checkout the resources defined by extraManifests
-    - name: CELERY_BROKER_URL
-      value: redis://idmc-helix-dragonfly:6379/0
-    - name: CELERY_RESULT_BACKEND_URL
-      value: redis://idmc-helix-dragonfly:6379/1
-    - name: DJANGO_CACHE_REDIS_URL
-      value: redis://idmc-helix-dragonfly:6379/2
-    - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
-      value: redis://idmc-helix-dragonfly:6379/3
-
-  extraManifests:
-    dragonflydb-cluster:
-      apiVersion: dragonflydb.io/v1alpha1
-      kind: Dragonfly
-      metadata:
-        labels:
-          app.kubernetes.io/name: dragonfly
-        name: idmc-helix-dragonfly  # NOTE: this will be the service name
-      spec:
-        replicas: 1
-        args: ["--dbfilename=mainSnapshot"]  # NOTE: Only maintains 1 last snapshot
-        resources:
-          requests:
-            cpu: "0.1"
-            memory: 500Mi
-          limits:
-            cpu: "1"
-            memory: 750Mi
-        snapshot:
-          cron: "*/5 * * * *"
-          persistentVolumeClaimSpec:
-            # storageClassName:
-            accessModes:
-            - ReadWriteOnce
-            resources:
-              requests:
-                storage: 0.5Gi
+  # e.g. via banjo-alpha-deps). Their hostnames/endpoints and credentials, along with
+  # the required app domain/URL env and DJANGO_SECRET_KEY, are supplied by deploys via
+  # env/secrets values (see values/alpha.yaml). Redis is provided via the Dragonfly
+  # extraManifest defined in values/operators.yaml.

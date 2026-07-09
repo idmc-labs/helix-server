@@ -1,6 +1,5 @@
 tests:
-  alpha-1.yaml:
+  alpha.yaml:
+    - values/operators.yaml
+    - values/traefik-middleware.yaml
     - values/alpha.yaml
-  alpha-2-as-prod.yaml:
-    - values/alpha.yaml
-    - tests/alpha-1.yaml
