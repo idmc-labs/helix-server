@@ -74,6 +74,26 @@ metadata:
 data:
   create_users.py: "import os\nimport re\nfrom apps.users.models import User\nfrom apps.users.enums import USER_ROLE\nfrom apps.users.models import Portfolio\n\nfrom django.db import transaction\nfrom django.core.management import call_command\n\ncall_command(\"wait_for_resources\", \"--cache\", \"--db\")\n\nset_as_admin_user_emails = [\n  email.strip(\" \")\n  for email in re.split(r\"[,\\s]+\", os.environ[\"SET_AS_ADMIN_USER_EMAILS\"])\n  if email is not None and email.strip(\" \") != \"\"\n]\n\n@transaction.atomic\ndef create_initial_users():\n  for email in set_as_admin_user_emails:\n      user = User.objects.filter(email=email).first()\n      if user is None:\n          print(f\"Failed to process user {email=}. Doesn't exists\")\n\n      user.username = user.email = email\n      user.is_superuser = True\n      user.is_staff = True\n      user.is_active = True\n      user.save()\n      print(f\"Successfully updated user {email=} as superuser\")\n\n      role = USER_ROLE.ADMIN\n      Portfolio.objects.get_or_create(\n          user=user,\n          role=role,\n      )\n      print(f\"\\tSuccessfully updated user portfolio {role=}\")\n\ncreate_initial_users()\n"
 ---
+# Source: helix-backend-helm/charts/app/templates/hooks/job.yaml
+# Hook files ConfigMap for: init-fix-script
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helix-backend-1-init-fix-script-files
+  annotations:
+    argocd.argoproj.io/hook: "PostSync"
+    argocd.argoproj.io/sync-wave: "25"
+    # Refresh content on every sync and clean up before the next run.
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  labels:
+    app: helix-backend-1
+    component: hook
+    hookName: init-fix-script
+    environment: ALPHA-1
+    release: release-name
+data:
+  init_fix_script.py: "# NOTE: This will trigger client-redis sync\nfrom apps.contrib.models import Client\nfrom django.core.management import call_command\n\ncall_command(\"wait_for_resources\", \"--cache\", \"--db\")\nClient.objects.first().save()\n"
+---
 # Source: helix-backend-helm/charts/app/templates/api/service.yaml
 apiVersion: v1
 kind: Service
@@ -526,21 +546,18 @@ spec:
         hookName: init-fix-script
     spec:
       restartPolicy: "Never"
+      volumes:
+        - configMap:
+            name: helix-backend-1-init-fix-script-files
+          name: hook-files
       containers:
         - name: init-fix-script
           image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
           imagePullPolicy: IfNotPresent
           command: 
-            - ./manage.py
-            - shell
+            - sh
             - -c
-            - |
-              # NOTE: This will trigger client-redis sync
-              from apps.contrib.models import Client;
-              from django.core.management import call_command;
-            
-              call_command("wait_for_resources", "--cache", "--db");
-              Client.objects.first().save();
+            - ./manage.py shell < /etc/hook-files/init_fix_script.py
           resources:
             limits:
               cpu: "4"
@@ -564,6 +581,11 @@ spec:
               value: redis://idmc-helix-dragonfly:6379/2
             - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
               value: redis://idmc-helix-dragonfly:6379/3
+            
+          volumeMounts:
+            - mountPath: /etc/hook-files
+              name: hook-files
+              readOnly: true
 ---
 # Source: helix-backend-helm/charts/app/templates/hooks/job.yaml
 # Hook: load-geojson
