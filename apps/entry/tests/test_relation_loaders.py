@@ -14,6 +14,7 @@ that every auto-wired field across the whole schema still routes through the loa
 """
 
 import json
+from collections import defaultdict
 
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
@@ -31,6 +32,7 @@ from utils.factories import (
     OrganizationKindFactory,
     ParkingLotFactory,
     TagFactory,
+    UnifiedReviewCommentFactory,
     UserFactory,
     ViolenceFactory,
 )
@@ -125,6 +127,26 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
         by_id = {r["id"]: {f["id"] for f in r["figures"]} for r in data["violenceList"]["results"]}
         self.assertEqual(by_id[str(violence.id)], {str(f1.id), str(f2.id)})
         self.assertEqual(by_id[str(empty_violence.id)], set())
+
+    def test_sibling_reverse_fk_fields_sharing_child_fk_name_stay_separate(self) -> None:
+        # EventType exposes two reverse-FK lists whose child FKs are both named `event`:
+        # eventCodes (EventCode.event) and eventReviews (UnifiedReviewComment.event). A loader
+        # cache ref keyed only by the FK field name collapses them into ONE per-request loader,
+        # so whichever field resolves second gets the other model's rows.
+        event = EventFactory.create()
+        code = EventCodeFactory.create(event=event)
+        review = UnifiedReviewCommentFactory.create(event=event, created_by=self.admin)
+
+        data = self._run(
+            """
+            query { eventList(ordering: "id") { results {
+              id eventCodes { id } eventReviews { id }
+            } } }
+            """
+        )
+        row = next(r for r in data["eventList"]["results"] if r["id"] == str(event.id))
+        self.assertEqual({c["id"] for c in row["eventCodes"]}, {str(code.id)})
+        self.assertEqual({r["id"] for r in row["eventReviews"]}, {str(review.id)})
 
     # ------------------------------------------------------------------ #
     # M2M list  ->  M2MListLoader
@@ -264,17 +286,73 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
                 f"FigureType.{field} is not loader-wired",
             )
 
+    def test_relation_list_loader_refs_are_collision_free(self) -> None:
+        # Two fields resolving DIFFERENT relations must never share a loader cache ref: refs key
+        # the per-request loader cache, so a shared ref means one loader serves both fields and
+        # whichever resolves second gets the other model's rows (the eventCodes/eventReviews bug).
+        from graphene_django_extras.utils import to_snake_case
+
+        import helix.schema  # noqa: F401
+        from utils.graphene.fields import DjangoPaginatedListObjectField
+        from utils.graphene.relation_loaders import (
+            RelationBatchedDjangoObjectType,
+            ReverseFKListLoader,
+            _list_loader_factory_for,
+        )
+
+        def all_subclasses(cls):
+            found = set()
+            for sub in cls.__subclasses__():
+                found.add(sub)
+                found |= all_subclasses(sub)
+            return found
+
+        ref_to_specs = defaultdict(set)
+        checked = 0
+        for cls in all_subclasses(RelationBatchedDjangoObjectType):
+            model = getattr(getattr(cls, "_meta", None), "model", None)
+            if model is None:
+                continue
+            rels = {f.name: f for f in model._meta.get_fields() if f.is_relation}
+            for name in list(cls._meta.fields.keys()):
+                snake = to_snake_case(name)
+                rel = rels.get(snake) or rels.get(name)
+                if rel is None:
+                    continue
+                if isinstance(cls._meta.fields.get(name), DjangoPaginatedListObjectField):
+                    continue
+                if not (getattr(rel, "one_to_many", False) or getattr(rel, "many_to_many", False)):
+                    continue
+                spec_pair = _list_loader_factory_for(model, rel)
+                if spec_pair is None:
+                    continue
+                ref, factory = spec_pair
+                loader = factory()
+                if isinstance(loader, ReverseFKListLoader):
+                    spec = ("rfk", loader.child_model._meta.label, loader.fk_name)
+                else:
+                    spec = ("m2m", loader.through._meta.label, loader.source_fk, loader.target_fk)
+                ref_to_specs[ref].add(spec)
+                checked += 1
+
+        self.assertGreater(checked, 100, "list-relation field walk shrank unexpectedly")
+        collisions = {ref: specs for ref, specs in ref_to_specs.items() if len(specs) > 1}
+        self.assertFalse(
+            collisions,
+            "loader cache refs shared by distinct relations (fields would swap rows): %r" % collisions,
+        )
+
     def test_deduped_bespoke_loaders_now_route_through_generic_loaders(self) -> None:
         # The 8 pure-traversal loaders were deleted; these fields now use the generic loaders.
-        # 7 via auto-wire (resolver lives in relation_loaders); event_codes uses an explicit thin
-        # resolver over the generic ReverseFKListLoader (covered behaviourally elsewhere).
+        # 7 via auto-wire; event_codes is wired explicitly in the class body via
+        # reverse_fk_list_resolver (the field name does not match the model reverse accessor).
         import helix.schema  # noqa: F401
         from apps.country.schema import MonitoringSubRegionType
         from apps.entry.schema import EntryType, FigureType
         from apps.event.schema import EventType
         from apps.organization.schema import OrganizationType
 
-        auto_wired = [
+        loader_wired = [
             (FigureType, "entry"),  # was FigureEntryLoader
             (EntryType, "document"),  # was EntryDocumentLoader
             (EntryType, "preview"),  # was EntryPreviewLoader
@@ -282,12 +360,13 @@ class TestRelationLoaderEngine(HelixGraphQLTestCase):
             (OrganizationType, "organization_kind"),  # was OrganizationOrganizationKindLoader
             (OrganizationType, "countries"),  # was OrganizationCountriesLoader (M2M)
             (MonitoringSubRegionType, "countries"),  # was MonitoringSubRegionCountryLoader
+            (EventType, "event_codes"),  # was EventCodeLoader; explicit reverse_fk_list_resolver
         ]
-        for cls, field in auto_wired:
+        for cls, field in loader_wired:
             resolver = getattr(cls, "resolve_%s" % field, None)
             self.assertTrue(
                 resolver is not None and "relation_loaders" in getattr(resolver, "__module__", ""),
-                f"{cls.__name__}.{field} (formerly a bespoke loader) is not auto-wired to a generic loader",
+                f"{cls.__name__}.{field} (formerly a bespoke loader) is not wired to a generic loader",
             )
 
 

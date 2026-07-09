@@ -98,13 +98,26 @@ def _make_list_resolver(field_name, ref, loader_factory):
     return resolver
 
 
+def _reverse_fk_spec(child_model, fk_name):
+    # The ref keys the per-request loader cache, so it must be built from exactly what the
+    # loader queries (child model + FK name). Keying by the parent-side accessor collides:
+    # two reverse FKs on one parent whose child FKs share a name would share a loader and
+    # one field would get the other model's rows.
+    ref = "rfk:%s.%s" % (child_model._meta.label, fk_name)
+    return ref, lambda: ReverseFKListLoader(child_model, fk_name)
+
+
+def reverse_fk_list_resolver(child_model, fk_name):
+    """Build a class-body resolver for a reverse-FK list field the auto-wire cannot map
+    (GraphQL field name differs from the model reverse accessor)."""
+    ref, factory = _reverse_fk_spec(child_model, fk_name)
+    return _make_list_resolver(ref, ref, factory)
+
+
 def _list_loader_factory_for(parent_model, rel):
     """Return (ref, factory) for a reverse-FK or M2M relation, or None if unsupported."""
-    label = parent_model._meta.label
     if rel.one_to_many:  # reverse FK: child has the FK back to parent
-        child = rel.related_model
-        fk_name = rel.field.name
-        return ("%s.%s.rfk" % (label, fk_name), lambda: ReverseFKListLoader(child, fk_name))
+        return _reverse_fk_spec(rel.related_model, rel.field.name)
     if rel.many_to_many:
         if hasattr(rel, "m2m_field_name"):  # forward M2M field defined on parent
             through = rel.remote_field.through
@@ -113,7 +126,9 @@ def _list_loader_factory_for(parent_model, rel):
             f = rel.field
             through = f.remote_field.through
             source_fk, target_fk = f.m2m_reverse_field_name(), f.m2m_field_name()
-        ref = "%s.%s.m2m" % (label, getattr(rel, "name", target_fk))
+        # both FK names stay in the ref: forward and reverse traversals of the same through
+        # table are different queries and must not share a loader
+        ref = "m2m:%s.%s.%s" % (through._meta.label, source_fk, target_fk)
         return (ref, lambda: M2MListLoader(through, source_fk, target_fk))
     return None
 
