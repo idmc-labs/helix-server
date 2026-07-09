@@ -90,7 +90,8 @@ class GQLContext:
         return self.relation_node_loaders[ref]
 
     def get_relation_list_loader(self, ref, factory):
-        # one reverse-FK / M2M list loader per (parent, accessor) ref; factory() builds it once
+        # one reverse-FK / M2M list loader per relation ref (keyed by what the loader
+        # queries: child/through model + FK names); factory() builds it once
         if ref not in self.relation_list_loaders:
             self.relation_list_loaders[ref] = factory()
         return self.relation_list_loaders[ref]
