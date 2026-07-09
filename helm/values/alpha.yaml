@@ -70,12 +70,11 @@ app:
           argocd.argoproj.io/sync-wave: "25"
         extraEnv:
           SET_AS_ADMIN_USER_EMAILS: ""
-        command:
-          - ./manage.py
-          - shell
-          - -c
-          - |
+        command: ["sh", "-c", "./manage.py shell < /etc/hook-files/create_users.py"]
+        files:
+          create_users.py: |
             import os
+            import re
             from apps.users.models import User;
             from apps.users.enums import USER_ROLE;
             from apps.users.models import Portfolio;
@@ -87,7 +86,7 @@ app:
 
             set_as_admin_user_emails = [
               email.strip(" ")
-              for email in os.environ["SET_AS_ADMIN_USER_EMAILS"].split(",")
+              for email in re.split(r"[,\s]+", os.environ["SET_AS_ADMIN_USER_EMAILS"])
               if email is not None and email.strip(" ") != ""
             ]
 
