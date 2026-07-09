@@ -1,5 +1,5 @@
 ---
-# Source: helix-backend-helm/charts/app/templates/config/secret.yaml
+# Source: helix-server-helm/charts/app/templates/config/secret.yaml
 kind: Secret
 apiVersion: v1
 metadata:
@@ -24,7 +24,7 @@ stringData:
   SENTRY_DSN: "https://xyz@sentry.local.example.com/14"
 
 ---
-# Source: helix-backend-helm/charts/app/templates/config/configmap.yaml
+# Source: helix-server-helm/charts/app/templates/config/configmap.yaml
 kind: ConfigMap
 apiVersion: v1
 metadata:
@@ -51,7 +51,7 @@ data:
   USE_S3_BUCKET: "true"
 
 ---
-# Source: helix-backend-helm/charts/app/templates/hooks/job.yaml
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
 # Hook files ConfigMap for: create-users
 apiVersion: v1
 kind: ConfigMap
@@ -71,7 +71,7 @@ metadata:
 data:
   create_users.py: "import os\nimport re\nfrom apps.users.models import User\nfrom apps.users.enums import USER_ROLE\nfrom apps.users.models import Portfolio\n\nfrom django.db import transaction\nfrom django.core.management import call_command\n\ncall_command(\"wait_for_resources\", \"--cache\", \"--db\")\n\nset_as_admin_user_emails = [\n  email.strip(\" \")\n  for email in re.split(r\"[,\\s]+\", os.environ[\"SET_AS_ADMIN_USER_EMAILS\"])\n  if email is not None and email.strip(\" \") != \"\"\n]\n\n@transaction.atomic\ndef create_initial_users():\n  for email in set_as_admin_user_emails:\n      user = User.objects.filter(email=email).first()\n      if user is None:\n          print(f\"Failed to process user {email=}. Doesn't exists\")\n\n      user.username = user.email = email\n      user.is_superuser = True\n      user.is_staff = True\n      user.is_active = True\n      user.save()\n      print(f\"Successfully updated user {email=} as superuser\")\n\n      role = USER_ROLE.ADMIN\n      Portfolio.objects.get_or_create(\n          user=user,\n          role=role,\n      )\n      print(f\"\\tSuccessfully updated user portfolio {role=}\")\n\ncreate_initial_users()\n"
 ---
-# Source: helix-backend-helm/charts/app/templates/hooks/job.yaml
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
 # Hook files ConfigMap for: init-fix-script
 apiVersion: v1
 kind: ConfigMap
@@ -91,7 +91,7 @@ metadata:
 data:
   init_fix_script.py: "# NOTE: This will trigger client-redis sync\nfrom apps.contrib.models import Client\nfrom django.core.management import call_command\n\ncall_command(\"wait_for_resources\", \"--cache\", \"--db\")\nClient.objects.first().save()\n"
 ---
-# Source: helix-backend-helm/charts/app/templates/api/service.yaml
+# Source: helix-server-helm/charts/app/templates/api/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
@@ -112,7 +112,7 @@ spec:
       targetPort: 80
 
 ---
-# Source: helix-backend-helm/charts/app/templates/api/deployment.yaml
+# Source: helix-server-helm/charts/app/templates/api/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -201,7 +201,7 @@ spec:
                 seconds: 8
 
 ---
-# Source: helix-backend-helm/charts/app/templates/worker-addons/deployment.yaml
+# Source: helix-server-helm/charts/app/templates/worker-addons/deployment.yaml
 # Addon: beat
 apiVersion: apps/v1
 kind: Deployment
@@ -294,7 +294,7 @@ spec:
               name: celery-heartbeat
 
 ---
-# Source: helix-backend-helm/charts/app/templates/worker/deployment.yaml
+# Source: helix-server-helm/charts/app/templates/worker/deployment.yaml
 # Queue: default
 apiVersion: apps/v1
 kind: Deployment
@@ -392,7 +392,7 @@ spec:
               name: celery-heartbeat
 
 ---
-# Source: helix-backend-helm/charts/app/templates/hooks/job.yaml
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
 # Hook: collect-static
 apiVersion: batch/v1
 kind: Job
@@ -452,7 +452,7 @@ spec:
             - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
               value: redis://idmc-helix-dragonfly:6379/3
 ---
-# Source: helix-backend-helm/charts/app/templates/hooks/job.yaml
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
 # Hook: create-users
 apiVersion: batch/v1
 kind: Job
@@ -523,7 +523,7 @@ spec:
               name: hook-files
               readOnly: true
 ---
-# Source: helix-backend-helm/charts/app/templates/hooks/job.yaml
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
 # Hook: db-migrate
 apiVersion: batch/v1
 kind: Job
@@ -583,7 +583,7 @@ spec:
             - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
               value: redis://idmc-helix-dragonfly:6379/3
 ---
-# Source: helix-backend-helm/charts/app/templates/hooks/job.yaml
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
 # Hook: init-fix-script
 apiVersion: batch/v1
 kind: Job
@@ -652,7 +652,7 @@ spec:
               name: hook-files
               readOnly: true
 ---
-# Source: helix-backend-helm/charts/app/templates/hooks/job.yaml
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
 # Hook: load-geojson
 apiVersion: batch/v1
 kind: Job
@@ -713,7 +713,7 @@ spec:
             - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
               value: redis://idmc-helix-dragonfly:6379/3
 ---
-# Source: helix-backend-helm/charts/app/templates/hooks/job.yaml
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
 # Hook: wait-for-resources
 apiVersion: batch/v1
 kind: Job
@@ -777,7 +777,7 @@ spec:
             
 
 ---
-# Source: helix-backend-helm/charts/app/templates/api/ingress.yaml
+# Source: helix-server-helm/charts/app/templates/api/ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -805,7 +805,7 @@ spec:
                   number: 80
 
 ---
-# Source: helix-backend-helm/charts/app/templates/extraManifests.yaml
+# Source: helix-server-helm/charts/app/templates/extraManifests.yaml
 # Manifest: dragonflydb-cluster
 apiVersion: dragonflydb.io/v1alpha1
 kind: Dragonfly
@@ -834,7 +834,7 @@ spec:
           storage: 0.5Gi
       storageClassName: local-path
 ---
-# Source: helix-backend-helm/charts/app/templates/extraManifests.yaml
+# Source: helix-server-helm/charts/app/templates/extraManifests.yaml
 # Manifest: traefik-body-size-middleware
 apiVersion: traefik.io/v1alpha1
 kind: Middleware
