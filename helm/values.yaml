@@ -18,11 +18,11 @@ app:
       host:
     resources:
       requests:
-        cpu: "2"
-        memory: 0.5Gi
+        cpu: "0.1"
+        memory: 2Gi
       limits:
-        cpu: "2"
-        memory: 1Gi
+        cpu: "4"
+        memory: 2Gi
 
   worker:
     enabled: true
@@ -51,6 +51,24 @@ app:
           exec: {command: [banjo-celery-probe]}
           periodSeconds: 5
           failureThreshold: 30
+      resources:
+        requests:
+          cpu: "0.1"
+          memory: 1Gi
+        limits:
+          cpu: "4"
+          memory: 2Gi
+    queues:
+      # NOTE: Make sure keys are lowercase
+      default:
+        enabled: true
+        celeryArgs:
+          - "-Q"
+          - "celery"
+          - "--concurrency"
+          - "4"
+          - "--max-tasks-per-child"
+          - "10"
     addons:
       beat:
         enabled: true
@@ -80,11 +98,11 @@ app:
             failureThreshold: 3
         resources:
           requests:
-            cpu: "1"
-            memory: 0.5Gi
+            cpu: "0.1"
+            memory: 256Mi
           limits:
-            cpu: "1"
-            memory: 1Gi
+            cpu: "4"
+            memory: 512Mi
       flower:
         enabled: false  # Install flower package first
         command: ["celery", "-A", "main", "flower", "--port=8000"]
@@ -95,28 +113,10 @@ app:
         resources:
           requests:
             cpu: "0.1"
-            memory: 0.5Gi
+            memory: 256Mi
           limits:
             cpu: "1"
-            memory: 1Gi
-    queues:
-      # NOTE: Make sure keys are lowercase
-      default:
-        enabled: true
-        celeryArgs:
-          - "-Q"
-          - "celery"
-          - "--concurrency"
-          - "4"
-          - "--max-tasks-per-child"
-          - "10"
-        resources:
-          requests:
-            cpu: "1"
-            memory: 1Gi
-          limits:
-            cpu: "1"
-            memory: 2Gi
+            memory: 512Mi
 
   hooks:
     enabled: true
@@ -141,18 +141,7 @@ app:
     APP_RELEASE: "{{ $.Values.image.tag }}"
     HELIX_ENVIRONMENT: "{{ $.Values.environment }}"
     DJANGO_DEBUG: "false"
-    # AWS
-    USE_S3_BUCKET: "true"
-    S3_BUCKET_NAME: "helix-data"
-    EXTERNAL_S3_BUCKET_NAME: "helix-external-data"
     # Sentry
     SENTRY_MONITOR_CELERY_BEAT_TASKS: "true"
     SENTRY_SAMPLE_RATE: "0.2"
     SENTRY_PROFILES_SAMPLE_RATE: "0.2"
-
-  # NOTE: Check main/settings.py for all available options
-  # Postgres and Minio (S3) are external services (provisioned outside this chart,
-  # e.g. via banjo-alpha-deps). Their hostnames/endpoints and credentials, along with
-  # the required app domain/URL env and DJANGO_SECRET_KEY, are supplied by deploys via
-  # env/secrets values (see values/alpha.yaml). Redis is provided via the Dragonfly
-  # extraManifest defined in values/operators.yaml.
