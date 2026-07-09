@@ -38,7 +38,6 @@ data:
   ADDITIONAL_TRUSTED_ORIGINS: "https://preview-idmc-website-components-1.idmc.local.example.com,https://release-idmc-website-components-1.idmc.local.example.com"
   APP_DOMAIN: "helix-api-1.idmc.local.example.com"
   APP_RELEASE: "develop.xxxxxxxx"
-  AWS_S3_REGION: "us-east-1"
   BACKEND_BASE_URL: "https://helix-api-1.idmc.local.example.com"
   CSRF_COOKIE_DOMAIN: ".example.com"
   DJANGO_ALLOWED_HOST: "helix-1.idmc.local.example.com,helix-api-1.idmc.local.example.com"
@@ -138,7 +137,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: d4ab31033ffe3a0eec4d35bcc557b0eba27da27430aae833d59a1713b773c985
+        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
       labels:
         app: helix-backend-1
         component: api
@@ -156,11 +155,11 @@ spec:
               protocol: TCP
           resources:
             limits:
-              cpu: 1024m
-              memory: 4096Mi
+              cpu: "4"
+              memory: 2Gi
             requests:
-              cpu: 1024m
-              memory: 4096Mi
+              cpu: "0.1"
+              memory: 2Gi
           envFrom:
             - secretRef:
                 name: helix-backend-1-secret
@@ -211,7 +210,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: d4ab31033ffe3a0eec4d35bcc557b0eba27da27430aae833d59a1713b773c985
+        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
       labels:
         app: helix-backend-1
         component: worker-addon
@@ -280,7 +279,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: d4ab31033ffe3a0eec4d35bcc557b0eba27da27430aae833d59a1713b773c985
+        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
       labels:
         app: helix-backend-1
         component: worker
@@ -305,11 +304,11 @@ spec:
           imagePullPolicy: IfNotPresent
           resources:
             limits:
-              cpu: 1024m
-              memory: 8192Mi
+              cpu: "4"
+              memory: 2Gi
             requests:
-              cpu: 1024m
-              memory: 8192Mi
+              cpu: "0.1"
+              memory: 2Gi
           envFrom:
             - secretRef:
                 name: helix-backend-1-secret
@@ -350,7 +349,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: d4ab31033ffe3a0eec4d35bcc557b0eba27da27430aae833d59a1713b773c985
+        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
       labels:
         app: helix-backend-1
         component: hook
@@ -397,6 +396,7 @@ metadata:
   name: helix-backend-1-create-users
   annotations:
     argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
     argocd.argoproj.io/sync-wave: "25"
   labels:
     app: helix-backend-1
@@ -409,7 +409,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: d4ab31033ffe3a0eec4d35bcc557b0eba27da27430aae833d59a1713b773c985
+        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
       labels:
         app: helix-backend-1
         component: hook
@@ -481,7 +481,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: d4ab31033ffe3a0eec4d35bcc557b0eba27da27430aae833d59a1713b773c985
+        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
       labels:
         app: helix-backend-1
         component: hook
@@ -527,6 +527,7 @@ metadata:
   name: helix-backend-1-init-fix-script
   annotations:
     argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
     argocd.argoproj.io/sync-wave: "25"
   labels:
     app: helix-backend-1
@@ -539,7 +540,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: d4ab31033ffe3a0eec4d35bcc557b0eba27da27430aae833d59a1713b773c985
+        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
       labels:
         app: helix-backend-1
         component: hook
@@ -595,6 +596,7 @@ metadata:
   name: helix-backend-1-load-geojson
   annotations:
     argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
     argocd.argoproj.io/sync-wave: "25"
   labels:
     app: helix-backend-1
@@ -607,7 +609,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: d4ab31033ffe3a0eec4d35bcc557b0eba27da27430aae833d59a1713b773c985
+        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
       labels:
         app: helix-backend-1
         component: hook
@@ -668,7 +670,7 @@ spec:
     metadata:
       annotations:
         checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
-        checksum/configmap: d4ab31033ffe3a0eec4d35bcc557b0eba27da27430aae833d59a1713b773c985
+        checksum/configmap: c08dca8a51073e748cf2260758b2ae184e742140829058f61ce6cb2c29e98be1
       labels:
         app: helix-backend-1
         component: hook
@@ -723,7 +725,6 @@ metadata:
     release: release-name
   annotations:
     argocd.argoproj.io/sync-wave: "30"
-    nginx.ingress.kubernetes.io/proxy-body-size: 50m
 spec:
   ingressClassName: "default"
   rules:
@@ -767,3 +768,13 @@ spec:
         requests:
           storage: 0.5Gi
       storageClassName: local-path
+---
+# Source: helix-backend-helm/charts/app/templates/extraManifests.yaml
+# Manifest: traefik-body-size-middleware
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: helix-body-size
+spec:
+  buffering:
+    maxRequestBodyBytes: 52428800

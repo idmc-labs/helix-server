@@ -45,6 +45,7 @@ app:
         annotations:
           argocd.argoproj.io/hook: "PostSync"
           argocd.argoproj.io/sync-wave: "25"
+          argocd.argoproj.io/hook-delete-policy: "BeforeHookCreation"
         extraEnv:
           SET_AS_ADMIN_USER_EMAILS: "xyz@example.com,abc@example.com"
 

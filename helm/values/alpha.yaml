@@ -44,6 +44,7 @@ app:
         annotations:
           argocd.argoproj.io/hook: "PostSync"
           argocd.argoproj.io/sync-wave: "25"
+          argocd.argoproj.io/hook-delete-policy: "BeforeHookCreation"
         command: ["sh", "-c", "./manage.py shell < /etc/hook-files/init_fix_script.py"]
         files:
           init_fix_script.py: |
@@ -58,6 +59,7 @@ app:
         annotations:
           argocd.argoproj.io/hook: "PostSync"
           argocd.argoproj.io/sync-wave: "25"
+          argocd.argoproj.io/hook-delete-policy: "BeforeHookCreation"
         command: ["/bin/bash", "-c"]
         args:
           - "./manage.py wait_for_resources --db --minio && ./manage.py split_geojson"
@@ -66,6 +68,7 @@ app:
         annotations:
           argocd.argoproj.io/hook: "PostSync"
           argocd.argoproj.io/sync-wave: "25"
+          argocd.argoproj.io/hook-delete-policy: "BeforeHookCreation"
         extraEnv:
           SET_AS_ADMIN_USER_EMAILS: ""
         command: ["sh", "-c", "./manage.py shell < /etc/hook-files/create_users.py"]
