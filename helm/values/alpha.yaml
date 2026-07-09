@@ -44,17 +44,15 @@ app:
         annotations:
           argocd.argoproj.io/hook: "PostSync"
           argocd.argoproj.io/sync-wave: "25"
-        command:
-          - ./manage.py
-          - shell
-          - -c
-          - |
+        command: ["sh", "-c", "./manage.py shell < /etc/hook-files/init_fix_script.py"]
+        files:
+          init_fix_script.py: |
             # NOTE: This will trigger client-redis sync
-            from apps.contrib.models import Client;
-            from django.core.management import call_command;
+            from apps.contrib.models import Client
+            from django.core.management import call_command
 
-            call_command("wait_for_resources", "--cache", "--db");
-            Client.objects.first().save();
+            call_command("wait_for_resources", "--cache", "--db")
+            Client.objects.first().save()
       load-geojson:
         enabled: true
         annotations:
