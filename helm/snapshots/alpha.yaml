@@ -153,6 +153,26 @@ spec:
             - name: http
               containerPort: 80
               protocol: TCP
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /healthz/live/
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 2
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /healthz/ready/
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /healthz/ready/
+              port: http
+            periodSeconds: 5
           resources:
             limits:
               cpu: "4"
@@ -200,6 +220,8 @@ metadata:
     release: release-name
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   revisionHistoryLimit: 1
   selector:
     matchLabels:
@@ -216,6 +238,11 @@ spec:
         component: worker-addon
         addon: beat
     spec:
+      volumes:
+        - emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+          name: celery-heartbeat
       containers:
         - name: beat
           image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
@@ -227,6 +254,17 @@ spec:
             - beat
             - -l
             - INFO
+            - --scheduler
+            - banjo_utils.celery_health.persistent.HeartbeatPersistentScheduler
+          livenessProbe:
+            exec:
+              command:
+              - banjo-celery-probe
+              - --max-age
+              - "360"
+            failureThreshold: 3
+            periodSeconds: 60
+            timeoutSeconds: 5
           resources:
             limits:
               cpu: "4"
@@ -251,6 +289,11 @@ spec:
             - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
               value: redis://idmc-helix-dragonfly:6379/3
             
+            - name: BANJO_CELERY_HEARTBEAT_FILE
+              value: "/var/run/celery/beat_heartbeat"
+          volumeMounts:
+            - mountPath: /var/run/celery
+              name: celery-heartbeat
 
 ---
 # Source: helix-backend-helm/charts/app/templates/worker/deployment.yaml
@@ -285,6 +328,11 @@ spec:
         component: worker
         queue: default
     spec:
+      volumes:
+        - emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+          name: celery-heartbeat
       containers:
         - name: worker
           command:
@@ -302,6 +350,19 @@ spec:
             - "10"
           image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
           imagePullPolicy: IfNotPresent
+          livenessProbe:
+            exec:
+              command:
+              - banjo-celery-probe
+            failureThreshold: 6
+            periodSeconds: 20
+            timeoutSeconds: 5
+          startupProbe:
+            exec:
+              command:
+              - banjo-celery-probe
+            failureThreshold: 30
+            periodSeconds: 5
           resources:
             limits:
               cpu: "4"
@@ -326,6 +387,11 @@ spec:
             - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
               value: redis://idmc-helix-dragonfly:6379/3
             
+            - name: BANJO_CELERY_HEARTBEAT_FILE
+              value: "/var/run/celery/worker_heartbeat"
+          volumeMounts:
+            - mountPath: /var/run/celery
+              name: celery-heartbeat
 
 ---
 # Source: helix-backend-helm/charts/app/templates/hooks/job.yaml

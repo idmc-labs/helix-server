@@ -10,6 +10,8 @@ app:
     enabled: true
     containerPort: 80
     command: ["/code/deploy/scripts/run_prod.sh"]
+    probes:
+      enabled: true
     ingress:
       enabled: true
       className:
@@ -32,11 +34,50 @@ app:
         - "worker"
         - "-l"
         - "INFO"
+      extraEnv:
+        BANJO_CELERY_HEARTBEAT_FILE: /var/run/celery/worker_heartbeat
+      volumes:
+        celery-heartbeat: {emptyDir: {medium: Memory, sizeLimit: 1Mi}}
+      volumeMounts:
+        celery-heartbeat: {mountPath: /var/run/celery}
+      probes:
+        enabled: true
+        liveness:
+          exec: {command: [banjo-celery-probe]}
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 6
+        startup:
+          exec: {command: [banjo-celery-probe]}
+          periodSeconds: 5
+          failureThreshold: 30
     addons:
       beat:
         enabled: true
         replicaCount: 1
-        command: ["celery", "-A", "helix", "beat", "-l", "INFO"]
+        strategy: {type: Recreate}
+        command:
+          - "celery"
+          - "-A"
+          - "helix"
+          - "beat"
+          - "-l"
+          - "INFO"
+          - "--scheduler"
+          - "banjo_utils.celery_health.persistent.HeartbeatPersistentScheduler"
+        extraEnv:
+          BANJO_CELERY_HEARTBEAT_FILE: /var/run/celery/beat_heartbeat
+        volumes:
+          celery-heartbeat: {emptyDir: {medium: Memory, sizeLimit: 1Mi}}
+        volumeMounts:
+          celery-heartbeat: {mountPath: /var/run/celery}
+        probes:
+          enabled: true
+          liveness:
+            exec: {command: [banjo-celery-probe, --max-age, "360"]}
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
         resources:
           requests:
             cpu: "1"

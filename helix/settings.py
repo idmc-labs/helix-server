@@ -202,6 +202,7 @@ INSTALLED_APPS = (
 )
 
 MIDDLEWARE = [
+    "banjo_utils.health.HealthProbeMiddleware",
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
