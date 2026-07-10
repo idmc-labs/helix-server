@@ -1,66 +1,10 @@
 app:
-  ingress:
-    enabled: true
-    className: default
-
-  postgresql:
-    enabled: true
-    auth:
-      username: "helix"
-      database: "helix"
-    primary:
-      resources:
-        requests:
-          cpu: "0.2"
-          memory: 1Gi
-        limits:
-          cpu: "4"
-      initdb:
-        scripts:
-          my_init_script.sh: |
-            #!/bin/sh -e
-
-            DATABASE_DUMP_URL="$DUMP_REGISTRY_URL$DUMP_FILENAME"
-
-            # Don't have curl here
-            /usr/lib/apt/apt-helper download-file -o "Acquire::https::Verify-Peer=false" "$DATABASE_DUMP_URL" /tmp/db.dump
-
-            du -sh /tmp/db.dump
-
-            PGPASSWORD="${POSTGRES_PASSWORD}" PGUSER=$POSTGRES_USER pg_restore -v --no-owner --no-privileges -d "$POSTGRES_DATABASE" < /tmp/db.dump
-
-  minio:
-    enabled: true
-    apiIngress:
-      ingressClassName: default
-      annotations:
-        nginx.ingress.kubernetes.io/proxy-body-size: "5g"
-
   api:
-    resources:
-      requests:
-        cpu: "0.1"
-        memory: "2Gi"
-      limits:
-        cpu: "4"
-        memory: "2Gi"
+    ingress:
+      enabled: true
 
   worker:
     enabled: true
-    beat:
-      resources:
-        limits:
-          cpu: "4"
-    queues:
-      # NOTE: Make sure keys are lowercase
-      default:
-        resources:
-          requests:
-            cpu: "0.1"
-            memory: 2Gi
-          limits:
-            cpu: "4"
-            memory: 2Gi
 
   env:
     # Sentry
@@ -68,75 +12,81 @@ app:
     SENTRY_PROFILES_SAMPLE_RATE: "0.8"
     SENTRY_MONITOR_CELERY_BEAT_TASKS: "true"
 
-  argoHook:
+  hooks:
     enabled: true
-    hooks:
+    jobs:
       # NOTE: Make sure keys are lowercase
       init-fix-script:
         enabled: true
-        hook: PostSync
-        command:
-          - ./manage.py
-          - shell
-          - -c
-          - |
+        annotations:
+          argocd.argoproj.io/hook: "PostSync"
+          argocd.argoproj.io/sync-wave: "25"
+          argocd.argoproj.io/hook-delete-policy: "BeforeHookCreation"
+        command: ["sh", "-c", "./manage.py shell < /etc/hook-files/init_fix_script.py"]
+        files:
+          init_fix_script.py: |
             # NOTE: This will trigger client-redis sync
-            from apps.contrib.models import Client;
-            from django.core.management import call_command;
+            from apps.contrib.models import Client
+            from django.core.management import call_command
 
-            call_command("wait_for_resources", "--redis", "--db");
-            Client.objects.first().save();
+            call_command("wait_for_resources", "--cache", "--db")
+            Client.objects.first().save()
       load-geojson:
         enabled: true
-        hook: PostSync
+        annotations:
+          argocd.argoproj.io/hook: "PostSync"
+          argocd.argoproj.io/sync-wave: "25"
+          argocd.argoproj.io/hook-delete-policy: "BeforeHookCreation"
         command: ["/bin/bash", "-c"]
         args:
           - "./manage.py wait_for_resources --db --minio && ./manage.py split_geojson"
       create-users:
         enabled: true
-        hook: PostSync
-        env:
+        annotations:
+          argocd.argoproj.io/hook: "PostSync"
+          argocd.argoproj.io/sync-wave: "25"
+          argocd.argoproj.io/hook-delete-policy: "BeforeHookCreation"
+        extraEnv:
           SET_AS_ADMIN_USER_EMAILS: ""
-        command:
-          - ./manage.py
-          - shell
-          - -c
-          - |
+        command: ["sh", "-c", "./manage.py shell < /etc/hook-files/create_users.py"]
+        files:
+          create_users.py: |
             import os
-            from apps.users.models import User;
-            from apps.users.enums import USER_ROLE;
-            from apps.users.models import Portfolio;
+            import re
+            from apps.users.models import User
+            from apps.users.enums import USER_ROLE
+            from apps.users.models import Portfolio
 
-            from django.db import transaction;
-            from django.core.management import call_command;
+            from django.db import transaction
+            from django.core.management import call_command
 
-            call_command("wait_for_resources", "--redis", "--db");
+            call_command("wait_for_resources", "--cache", "--db")
 
             set_as_admin_user_emails = [
               email.strip(" ")
-              for email in os.environ["SET_AS_ADMIN_USER_EMAILS"].split(",")
+              for email in re.split(r"[,\s]+", os.environ["SET_AS_ADMIN_USER_EMAILS"])
               if email is not None and email.strip(" ") != ""
             ]
 
             @transaction.atomic
             def create_initial_users():
               for email in set_as_admin_user_emails:
-                  user = User.objects.filter(email=email).first();
+                  user = User.objects.filter(email=email).first()
                   if user is None:
-                      print(f"Failed to process user {email=}. Doesn't exists");
+                      print(f"Failed to process user {email=}. Doesn't exists")
 
-                  user.username = user.email = email;
-                  user.is_superuser = True;
-                  user.is_staff = True;
-                  user.is_active = True;
-                  user.save();
-                  print(f"Successfully updated user {email=} as superuser");
+                  user.username = user.email = email
+                  user.is_superuser = True
+                  user.is_staff = True
+                  user.is_active = True
+                  user.save()
+                  print(f"Successfully updated user {email=} as superuser")
 
                   role = USER_ROLE.ADMIN
                   Portfolio.objects.get_or_create(
                       user=user,
                       role=role,
-                  );
-                  print(f"\tSuccessfully updated user portfolio {role=}");
+                  )
+                  print(f"\tSuccessfully updated user portfolio {role=}")
 
-            create_initial_users();
+            create_initial_users()

@@ -1,11 +1,13 @@
 services:
   server:
-    image: $DOCKER_IMAGE_SERVER
+    image: $DOCKER_IMAGE_BACKEND
     environment:
       CI: "true"
       USE_S3_BUCKET: ${USE_S3_BUCKET:-true}
       PYTEST_ADDOPTS: "--color=yes"
       HELIX_ENVIRONMENT: development
+    volumes:
+      - ./ci-share/:/ci-share/
   minio:
       volumes:
         - /data

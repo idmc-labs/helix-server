@@ -1,0 +1,845 @@
+---
+# Source: helix-server-helm/charts/app/templates/config/secret.yaml
+kind: Secret
+apiVersion: v1
+metadata:
+  name: helix-backend-1-secret
+  labels:
+    app: helix-backend-1
+    environment: ALPHA-1
+    release: release-name
+type: Opaque
+stringData:
+  # secrets
+  AWS_S3_ACCESS_KEY_ID: "helix"
+  AWS_S3_ENDPOINT_URL: "https://helix-minio-1.idmc.local.example.com/"
+  AWS_S3_SECRET_ACCESS_KEY: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  DJANGO_SECRET_KEY: "xyz"
+  HCAPTCHA_SECRET: "xyz"
+  POSTGRES_DB: "helix"
+  POSTGRES_HOST: "helix-backend-1-pg"
+  POSTGRES_PASSWORD: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: "helix"
+  SENTRY_DSN: "https://xyz@sentry.local.example.com/14"
+
+---
+# Source: helix-server-helm/charts/app/templates/config/configmap.yaml
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: helix-backend-1-env-name
+  labels:
+    app: helix-backend-1
+    environment: ALPHA-1
+    release: release-name
+data:
+  # Configs
+  ADDITIONAL_TRUSTED_ORIGINS: "https://preview-idmc-website-components-1.idmc.local.example.com,https://release-idmc-website-components-1.idmc.local.example.com"
+  APP_DOMAIN: "helix-api-1.idmc.local.example.com"
+  APP_RELEASE: "develop.xxxxxxxx"
+  BACKEND_BASE_URL: "https://helix-api-1.idmc.local.example.com"
+  CSRF_COOKIE_DOMAIN: ".example.com"
+  DJANGO_ALLOWED_HOST: "helix-1.idmc.local.example.com,helix-api-1.idmc.local.example.com"
+  DJANGO_DEBUG: "false"
+  FRONTEND_BASE_URL: "https://helix-1.idmc.local.example.com"
+  HELIX_ENVIRONMENT: "ALPHA-1"
+  SENTRY_MONITOR_CELERY_BEAT_TASKS: "true"
+  SENTRY_PROFILES_SAMPLE_RATE: "0.8"
+  SENTRY_SAMPLE_RATE: "0.8"
+  SESSION_COOKIE_DOMAIN: ".example.com"
+  USE_S3_BUCKET: "true"
+
+---
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
+# Hook files ConfigMap for: create-users
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helix-backend-1-create-users-files
+  annotations:
+    argocd.argoproj.io/hook: "PostSync"
+    argocd.argoproj.io/sync-wave: "25"
+    # Refresh content on every sync and clean up before the next run.
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  labels:
+    app: helix-backend-1
+    component: hook
+    hookName: create-users
+    environment: ALPHA-1
+    release: release-name
+data:
+  create_users.py: "import os\nimport re\nfrom apps.users.models import User\nfrom apps.users.enums import USER_ROLE\nfrom apps.users.models import Portfolio\n\nfrom django.db import transaction\nfrom django.core.management import call_command\n\ncall_command(\"wait_for_resources\", \"--cache\", \"--db\")\n\nset_as_admin_user_emails = [\n  email.strip(\" \")\n  for email in re.split(r\"[,\\s]+\", os.environ[\"SET_AS_ADMIN_USER_EMAILS\"])\n  if email is not None and email.strip(\" \") != \"\"\n]\n\n@transaction.atomic\ndef create_initial_users():\n  for email in set_as_admin_user_emails:\n      user = User.objects.filter(email=email).first()\n      if user is None:\n          print(f\"Failed to process user {email=}. Doesn't exists\")\n\n      user.username = user.email = email\n      user.is_superuser = True\n      user.is_staff = True\n      user.is_active = True\n      user.save()\n      print(f\"Successfully updated user {email=} as superuser\")\n\n      role = USER_ROLE.ADMIN\n      Portfolio.objects.get_or_create(\n          user=user,\n          role=role,\n      )\n      print(f\"\\tSuccessfully updated user portfolio {role=}\")\n\ncreate_initial_users()\n"
+---
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
+# Hook files ConfigMap for: init-fix-script
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: helix-backend-1-init-fix-script-files
+  annotations:
+    argocd.argoproj.io/hook: "PostSync"
+    argocd.argoproj.io/sync-wave: "25"
+    # Refresh content on every sync and clean up before the next run.
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+  labels:
+    app: helix-backend-1
+    component: hook
+    hookName: init-fix-script
+    environment: ALPHA-1
+    release: release-name
+data:
+  init_fix_script.py: "# NOTE: This will trigger client-redis sync\nfrom apps.contrib.models import Client\nfrom django.core.management import call_command\n\ncall_command(\"wait_for_resources\", \"--cache\", \"--db\")\nClient.objects.first().save()\n"
+---
+# Source: helix-server-helm/charts/app/templates/api/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: helix-backend-1-api
+  labels:
+    app: helix-backend-1
+    component: api
+    environment: ALPHA-1
+    release: release-name
+spec:
+  type: ClusterIP
+  selector:
+    app: helix-backend-1
+    component: api
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+
+---
+# Source: helix-server-helm/charts/app/templates/api/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helix-backend-1-api
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
+    reloader.stakater.com/auto: "true"
+  labels:
+    app: helix-backend-1
+    component: api
+    environment: ALPHA-1
+    release: release-name
+spec:
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: helix-backend-1
+      component: api
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
+      labels:
+        app: helix-backend-1
+        component: api
+    spec:
+      terminationGracePeriodSeconds: 38
+      containers:
+        - name: api
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command:
+            - /code/deploy/scripts/run_prod.sh
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /healthz/live/
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 2
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /healthz/ready/
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+          startupProbe:
+            failureThreshold: 30
+            httpGet:
+              path: /healthz/ready/
+              port: http
+            periodSeconds: 5
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 2Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "web"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+            
+          lifecycle:
+            preStop:
+              sleep:
+                seconds: 8
+
+---
+# Source: helix-server-helm/charts/app/templates/worker-addons/deployment.yaml
+# Addon: beat
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helix-backend-1-worker-beat
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
+    reloader.stakater.com/auto: "true"
+  labels:
+    app: helix-backend-1
+    component: worker-addon
+    addon: beat
+    environment: ALPHA-1
+    release: release-name
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: helix-backend-1
+      component: worker-addon
+      addon: beat
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
+      labels:
+        app: helix-backend-1
+        component: worker-addon
+        addon: beat
+    spec:
+      volumes:
+        - emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+          name: celery-heartbeat
+      containers:
+        - name: beat
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command:
+            - celery
+            - -A
+            - helix
+            - beat
+            - -l
+            - INFO
+            - --scheduler
+            - banjo_utils.celery_health.persistent.HeartbeatPersistentScheduler
+          livenessProbe:
+            exec:
+              command:
+              - banjo-celery-probe
+              - --max-age
+              - "360"
+            failureThreshold: 3
+            periodSeconds: 60
+            timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: "4"
+              memory: 512Mi
+            requests:
+              cpu: "0.1"
+              memory: 256Mi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "worker"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+            
+            - name: BANJO_CELERY_HEARTBEAT_FILE
+              value: "/var/run/celery/beat_heartbeat"
+          volumeMounts:
+            - mountPath: /var/run/celery
+              name: celery-heartbeat
+
+---
+# Source: helix-server-helm/charts/app/templates/worker/deployment.yaml
+# Queue: default
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: helix-backend-1-worker-default
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
+    reloader.stakater.com/auto: "true"
+  labels:
+    app: helix-backend-1
+    component: worker
+    queue: default
+    environment: ALPHA-1
+    release: release-name
+spec:
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: helix-backend-1
+      component: worker
+      queue: default
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
+      labels:
+        app: helix-backend-1
+        component: worker
+        queue: default
+    spec:
+      volumes:
+        - emptyDir:
+            medium: Memory
+            sizeLimit: 1Mi
+          name: celery-heartbeat
+      containers:
+        - name: worker
+          command:
+            - celery
+            - -A
+            - helix
+            - worker
+            - -l
+            - INFO
+            - -Q
+            - celery
+            - --concurrency
+            - "4"
+            - --max-tasks-per-child
+            - "10"
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            exec:
+              command:
+              - banjo-celery-probe
+            failureThreshold: 6
+            periodSeconds: 20
+            timeoutSeconds: 5
+          startupProbe:
+            exec:
+              command:
+              - banjo-celery-probe
+            failureThreshold: 30
+            periodSeconds: 5
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 1Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "worker"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+            
+            - name: BANJO_CELERY_HEARTBEAT_FILE
+              value: "/var/run/celery/worker_heartbeat"
+          volumeMounts:
+            - mountPath: /var/run/celery
+              name: celery-heartbeat
+
+---
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
+# Hook: collect-static
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: helix-backend-1-collect-static
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "20"
+  labels:
+    app: helix-backend-1
+    component: hook
+    hookName: collect-static
+    environment: ALPHA-1
+    release: release-name
+spec:
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
+      labels:
+        app: helix-backend-1
+        component: hook
+        hookName: collect-static
+    spec:
+      restartPolicy: "Never"
+      containers:
+        - name: collect-static
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command: 
+            - ./manage.py
+            - collectstatic
+            - --noinput
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 1Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "hook"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+---
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
+# Hook: create-users
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: helix-backend-1-create-users
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "25"
+  labels:
+    app: helix-backend-1
+    component: hook
+    hookName: create-users
+    environment: ALPHA-1
+    release: release-name
+spec:
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
+      labels:
+        app: helix-backend-1
+        component: hook
+        hookName: create-users
+    spec:
+      restartPolicy: "Never"
+      volumes:
+        - configMap:
+            name: helix-backend-1-create-users-files
+          name: hook-files
+      containers:
+        - name: create-users
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command: 
+            - sh
+            - -c
+            - ./manage.py shell < /etc/hook-files/create_users.py
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 1Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "hook"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+            
+            - name: SET_AS_ADMIN_USER_EMAILS
+              value: "xyz@example.com,abc@example.com"
+          volumeMounts:
+            - mountPath: /etc/hook-files
+              name: hook-files
+              readOnly: true
+---
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
+# Hook: db-migrate
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: helix-backend-1-db-migrate-
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/sync-wave: "20"
+  labels:
+    app: helix-backend-1
+    component: hook
+    hookName: db-migrate
+    environment: ALPHA-1
+    release: release-name
+spec:
+  activeDeadlineSeconds: 3600
+  ttlSecondsAfterFinished: 604800
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
+      labels:
+        app: helix-backend-1
+        component: hook
+        hookName: db-migrate
+    spec:
+      restartPolicy: "Never"
+      containers:
+        - name: db-migrate
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command: 
+            - ./manage.py
+            - migrate
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 1Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "hook"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+---
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
+# Hook: init-fix-script
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: helix-backend-1-init-fix-script
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "25"
+  labels:
+    app: helix-backend-1
+    component: hook
+    hookName: init-fix-script
+    environment: ALPHA-1
+    release: release-name
+spec:
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
+      labels:
+        app: helix-backend-1
+        component: hook
+        hookName: init-fix-script
+    spec:
+      restartPolicy: "Never"
+      volumes:
+        - configMap:
+            name: helix-backend-1-init-fix-script-files
+          name: hook-files
+      containers:
+        - name: init-fix-script
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command: 
+            - sh
+            - -c
+            - ./manage.py shell < /etc/hook-files/init_fix_script.py
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 1Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "hook"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+            
+          volumeMounts:
+            - mountPath: /etc/hook-files
+              name: hook-files
+              readOnly: true
+---
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
+# Hook: load-geojson
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: helix-backend-1-load-geojson
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "25"
+  labels:
+    app: helix-backend-1
+    component: hook
+    hookName: load-geojson
+    environment: ALPHA-1
+    release: release-name
+spec:
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
+      labels:
+        app: helix-backend-1
+        component: hook
+        hookName: load-geojson
+    spec:
+      restartPolicy: "Never"
+      containers:
+        - name: load-geojson
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command: 
+            - /bin/bash
+            - -c
+          args: 
+            - ./manage.py wait_for_resources --db --minio && ./manage.py split_geojson
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 1Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "hook"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+---
+# Source: helix-server-helm/charts/app/templates/hooks/job.yaml
+# Hook: wait-for-resources
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: helix-backend-1-wait-for-resources
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+    argocd.argoproj.io/sync-wave: "10"
+  labels:
+    app: helix-backend-1
+    component: hook
+    hookName: wait-for-resources
+    environment: ALPHA-1
+    release: release-name
+spec:
+  template:
+    metadata:
+      annotations:
+        checksum/secret: 1b8f1800b5308f129764c60fcba91e698cf868cd1a1a46dba6addaec0cf1a52a
+        checksum/configmap: 4356f80d381f0ee143e1e02a7d763ed27b28d90550e1f81567dba3c0e5409a1a
+      labels:
+        app: helix-backend-1
+        component: hook
+        hookName: wait-for-resources
+    spec:
+      restartPolicy: "Never"
+      containers:
+        - name: wait-for-resources
+          image: "local.git.com/idmc/helix-backend:develop.xxxxxxxx"
+          imagePullPolicy: IfNotPresent
+          command: 
+            - ./manage.py
+            - wait_for_resources
+            - --db
+            - --cache
+            - --minio
+          resources:
+            limits:
+              cpu: "4"
+              memory: 2Gi
+            requests:
+              cpu: "0.1"
+              memory: 1Gi
+          envFrom:
+            - secretRef:
+                name: helix-backend-1-secret
+            - configMapRef:
+                name: helix-backend-1-env-name
+          env:
+            - name: DJANGO_APP_TYPE
+              value: "hook"
+            - name: CELERY_BROKER_URL
+              value: redis://idmc-helix-dragonfly:6379/0
+            - name: CELERY_RESULT_BACKEND_URL
+              value: redis://idmc-helix-dragonfly:6379/1
+            - name: DJANGO_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/2
+            - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
+              value: redis://idmc-helix-dragonfly:6379/3
+            
+
+---
+# Source: helix-server-helm/charts/app/templates/api/ingress.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: helix-backend-1-api
+  labels:
+    app: helix-backend-1
+    component: api
+    environment: ALPHA-1
+    release: release-name
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
+    traefik.ingress.kubernetes.io/router.middlewares: default-helix-body-size@kubernetescrd
+spec:
+  ingressClassName: "traefik"
+  rules:
+    - host: "helix-api-1.idmc.local.example.com"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: helix-backend-1-api
+                port:
+                  number: 80
+
+---
+# Source: helix-server-helm/charts/app/templates/extraManifests.yaml
+# Manifest: dragonflydb-cluster
+apiVersion: dragonflydb.io/v1alpha1
+kind: Dragonfly
+metadata:
+  labels:
+    app.kubernetes.io/name: dragonfly
+  name: idmc-helix-dragonfly
+spec:
+  args:
+  - --dbfilename=mainSnapshot
+  replicas: 1
+  resources:
+    limits:
+      cpu: "1"
+      memory: 750Mi
+    requests:
+      cpu: "0.1"
+      memory: 500Mi
+  snapshot:
+    cron: '*/5 * * * *'
+    persistentVolumeClaimSpec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 0.5Gi
+      storageClassName: local-path
+---
+# Source: helix-server-helm/charts/app/templates/extraManifests.yaml
+# Manifest: traefik-body-size-middleware
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: helix-body-size
+spec:
+  buffering:
+    maxRequestBodyBytes: 52428800

@@ -6,111 +6,62 @@ app:
     tag: SET-BY-CICD-TAG
     imagePullPolicy: IfNotPresent
 
-  ingress:
-    enabled: true
-    className:
-    host:
-    annotations:
-        nginx.ingress.kubernetes.io/proxy-body-size: "50m"
-
-  redis:
-    enabled: false
-
-  postgresql:
-    enabled: false
-    fullnameOverride: "idmc-pg"
-    architecture: standalone
-    auth:
-      postgresPassword: ""
-      username: ""
-      password: ""
-      database: ""
-    primary:
-      persistence:
-        enabled: true
-        storageClass: ""
-        size: 8Gi
-
-  # https://artifacthub.io/packages/helm/bitnami/minio
-  # extraEnvVars: https://github.com/bitnami/containers/blob/main/bitnami/minio/README.md#environment-variables
-  minio:
-    enabled: false
-    disableWebUI: true
-    mode: standalone
-    fullnameOverride: helix-minio
-    global:
-      defaultStorageClass:
-    apiIngress:
-      enabled: true
-      ingressClassName:
-      hostname:
-      annotations:
-        nginx.ingress.kubernetes.io/proxy-body-size: "50m"
-    auth:
-      forceNewKeys: True
-      rootUser: helix
-      rootPassword:
-    persistence:
-      enabled: true
-      size: 1Gi
-    defaultBuckets: helix-data,helix-external-data  # XXX: Don't change this
-    provisioning:
-      enabled: true
-      resourcesPreset: "nano"
-      cleanupAfterFinished:
-        enabled: true
-      extraCommands:
-        - "mc anonymous set download provisioning/helix-data"
-        - "mc anonymous set download provisioning/helix-external-data"
-        - 'mc ilm rule add --prefix "external-media/" provisioning/helix-external-data --expire-days "2"'
-
   api:
     enabled: true
-    replicaCount: 1
     containerPort: 80
     command: ["/code/deploy/scripts/run_prod.sh"]
+    probes:
+      enabled: true
+    ingress:
+      enabled: true
+      className:
+      host:
     resources:
       requests:
-        cpu: "2"
-        memory: 0.5Gi
+        cpu: "0.1"
+        memory: 2Gi
       limits:
-        cpu: "2"
-        memory: 1Gi
+        cpu: "4"
+        memory: 2Gi
 
   worker:
     enabled: true
-    beat:
-      enabled: true
-      command: ["celery", "-A", "helix", "beat", "-l", "INFO"]
-      resources:
-        requests:
-          cpu: "1"
-          memory: 0.5Gi
-        limits:
-          cpu: "1"
-          memory: 1Gi
-    flower:
-      enabled: false  # Install flower package first
-      command: ["celery", "-A", "main", "flower", "--port=8000"]
+    queueDefaults:
+      commandPrefix:
+        - "celery"
+        - "-A"
+        - "helix"
+        - "worker"
+        - "-l"
+        - "INFO"
+      extraEnv:
+        BANJO_CELERY_HEARTBEAT_FILE: /var/run/celery/worker_heartbeat
+      volumes:
+        celery-heartbeat: {emptyDir: {medium: Memory, sizeLimit: 1Mi}}
+      volumeMounts:
+        celery-heartbeat: {mountPath: /var/run/celery}
+      probes:
+        enabled: true
+        liveness:
+          exec: {command: [banjo-celery-probe]}
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 6
+        startup:
+          exec: {command: [banjo-celery-probe]}
+          periodSeconds: 5
+          failureThreshold: 30
       resources:
         requests:
           cpu: "0.1"
-          memory: 0.5Gi
-        limits:
-          cpu: "1"
           memory: 1Gi
-    queueCommandPrefix:
-      - "celery"
-      - "-A"
-      - "helix"
-      - "worker"
-      - "-l"
-      - "INFO"
+        limits:
+          cpu: "4"
+          memory: 2Gi
     queues:
       # NOTE: Make sure keys are lowercase
       default:
         enabled: true
-        replicaCount: 1
         celeryArgs:
           - "-Q"
           - "celery"
@@ -118,114 +69,81 @@ app:
           - "4"
           - "--max-tasks-per-child"
           - "10"
+    addons:
+      beat:
+        enabled: true
+        replicaCount: 1
+        strategy: {type: Recreate}
+        command:
+          - "celery"
+          - "-A"
+          - "helix"
+          - "beat"
+          - "-l"
+          - "INFO"
+          - "--scheduler"
+          - "banjo_utils.celery_health.persistent.HeartbeatPersistentScheduler"
+        extraEnv:
+          BANJO_CELERY_HEARTBEAT_FILE: /var/run/celery/beat_heartbeat
+        volumes:
+          celery-heartbeat: {emptyDir: {medium: Memory, sizeLimit: 1Mi}}
+        volumeMounts:
+          celery-heartbeat: {mountPath: /var/run/celery}
+        probes:
+          enabled: true
+          liveness:
+            exec: {command: [banjo-celery-probe, --max-age, "360"]}
+            periodSeconds: 60
+            timeoutSeconds: 5
+            failureThreshold: 3
         resources:
           requests:
-            cpu: "1"
-            memory: 1Gi
+            cpu: "0.1"
+            memory: 256Mi
+          limits:
+            cpu: "4"
+            memory: 512Mi
+      flower:
+        enabled: false  # Install flower package first
+        command: ["celery", "-A", "main", "flower", "--port=8000"]
+        service:
+          enabled: true
+          port: 80
+          targetPort: 8000
+        resources:
+          requests:
+            cpu: "0.1"
+            memory: 256Mi
           limits:
             cpu: "1"
-            memory: 2Gi
+            memory: 512Mi
 
-  argoHook:
+  hooks:
     enabled: true
-    resources:
-      requests:
-        cpu: "0.1"
-        memory: 1Gi
-      limits:
-        cpu: "4"
-        memory: 2Gi
-    hooks:
-      # NOTE: Make sure keys are lowercase
-      db-migrate:
-        enabled: true
-        hook: PostSync
-        preserveHistory: true
-        command: ["/bin/bash", "-c"]
-        args:
-          - "./manage.py wait_for_resources --db && ./manage.py migrate"
-      collect-static:
-        enabled: true
-        hook: PostSync
-        command: ["/bin/bash", "-c"]
-        args:
-          - "./manage.py wait_for_resources --minio && ./manage.py collectstatic --noinput"
+    defaults:
+      resources:
+        requests:
+          cpu: "0.1"
+          memory: 1Gi
+        limits:
+          cpu: "4"
+          memory: 2Gi
+    jobs:
+      # NOTE: Make sure keys are lowercase.
+      # db-migrate and collect-static inherit the chart defaults verbatim
+      # (Sync hook @ wave 20, `manage.py migrate` / `collectstatic --noinput`).
+      # wait-for-resources (Sync hook @ wave 10) gates api/worker on connectivity.
+      wait-for-resources:
+        command: ["./manage.py", "wait_for_resources", "--db", "--cache", "--minio"]
 
   # NOTE: Check main/settings.py for all available options
   env:
     APP_RELEASE: "{{ $.Values.image.tag }}"
     HELIX_ENVIRONMENT: "{{ $.Values.environment }}"
     DJANGO_DEBUG: "false"
-    # AWS
+    # NOTE: Non S3 == disk which shouldn't be used
     USE_S3_BUCKET: "true"
-    AWS_S3_ENDPOINT_URL: "https://{{ $.Values.minio.apiIngress.hostname }}/"
-    S3_BUCKET_NAME: "helix-data"
-    EXTERNAL_S3_BUCKET_NAME: "helix-external-data"
-    # App Domain
-    APP_DOMAIN: "{{ required \".app.env.APP_DOMAIN\" nil }}"
-    DJANGO_ALLOWED_HOST: "{{ required \".app.env.DJANGO_ALLOWED_HOST\" nil }}"
-    BACKEND_BASE_URL: "{{ required \".app.env.BACKEND_BASE_URL\" nil }}"
-    FRONTEND_BASE_URL: "{{ required \".app.env.FRONTEND_BASE_URL\" nil }}"
-    SESSION_COOKIE_DOMAIN: "{{ required \".app.env.SESSION_COOKIE_DOMAIN\" nil }}"
-    CSRF_COOKIE_DOMAIN: "{{ required \".app.env.CSRF_COOKIE_DOMAIN\" nil }}"
     # Sentry
     SENTRY_MONITOR_CELERY_BEAT_TASKS: "true"
     SENTRY_SAMPLE_RATE: "0.2"
     SENTRY_PROFILES_SAMPLE_RATE: "0.2"
-
-  # NOTE: Check main/settings.py for all available options
-  secrets:
-    DJANGO_SECRET_KEY: "{{ required \".app.secrets.DJANGO_SECRET_KEY\" nil }}"
-    # Postgres
-    POSTGRES_DB: "{{ $.Values.postgresql.auth.database }}"
-    POSTGRES_USER: "postgres"
-    POSTGRES_PASSWORD: "{{ $.Values.postgresql.auth.postgresPassword }}"
-    POSTGRES_HOST: "{{ include \"postgresql.v1.primary.fullname\" $.Subcharts.postgresql }}"
-    POSTGRES_PORT: "{{ include \"postgresql.v1.service.port\" $.Subcharts.postgresql }}"
-    # Redis (using extraEnvVars)
-    # Minio (S3)
-    AWS_S3_ACCESS_KEY_ID: "{{ required \".app.minio.auth.rootUser\" $.Values.minio.auth.rootUser }}"
-    AWS_S3_SECRET_ACCESS_KEY: "{{ required \".app.minio.auth.rootPassword\" $.Values.minio.auth.rootPassword }}"
-    AWS_S3_REGION: "us-east-1"
-    # Misc
-    SENTRY_DSN: "{{ required \".app.secrets.SENTRY_DSN\" nil }}"
-    HCAPTCHA_SECRET: "{{ required \".app.secrets.HCAPTCHA_SECRET\" nil }}"
-
-  extraEnvVars:
-    # Checkout the resources defined by extraManifests
-    - name: CELERY_BROKER_URL
-      value: redis://idmc-helix-dragonfly:6379/0
-    - name: CELERY_RESULT_BACKEND_URL
-      value: redis://idmc-helix-dragonfly:6379/1
-    - name: DJANGO_CACHE_REDIS_URL
-      value: redis://idmc-helix-dragonfly:6379/2
-    - name: DJANGO_EXTERNAL_API_CACHE_REDIS_URL
-      value: redis://idmc-helix-dragonfly:6379/3
-
-  extraManifests:
-    dragonflydb-cluster:
-      apiVersion: dragonflydb.io/v1alpha1
-      kind: Dragonfly
-      metadata:
-        labels:
-          app.kubernetes.io/name: dragonfly
-        name: idmc-helix-dragonfly  # NOTE: this will be the service name
-      spec:
-        replicas: 1
-        args: ["--dbfilename=mainSnapshot"]  # NOTE: Only maintains 1 last snapshot
-        resources:
-          requests:
-            cpu: "0.1"
-            memory: 500Mi
-          limits:
-            cpu: "1"
-            memory: 750Mi
-        snapshot:
-          cron: "*/5 * * * *"
-          persistentVolumeClaimSpec:
-            # storageClassName:
-            accessModes:
-            - ReadWriteOnce
-            resources:
-              requests:
-                storage: 0.5Gi

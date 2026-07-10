@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  pull_request:
+
+jobs:
+  _:
+    uses: toggle-corp/banjo-action/.github/workflows/pipeline.yml@v0.2.0
+    permissions:
+      contents: read
+      packages: write
+      pull-requests: read
+    with:
+      # Job: Docker
+      docker__wait_cmd: "./manage.py wait_for_resources --db --cache --minio"
+      docker__migration_dummy_test: "helix.tests.FakeTest"
+      docker__run_graphql_check: true
+      docker__compose_file: "docker-compose.yml:gh-docker-compose.yml"
+      docker__compose_service_name: "server"
+      docker__compose_test_cmd: "/code/run_tests.sh"
+      # Job: Helm
+      helm__chart_directory: "./helm"

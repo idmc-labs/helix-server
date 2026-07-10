@@ -18,6 +18,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     apt-get update -y \
     && apt-get install -y --no-install-recommends \
         wait-for-it \
+        libpcre3-dev \
     && uv lock --locked --offline \
         && uv sync --frozen --no-install-project --all-groups \
     # Clean-up

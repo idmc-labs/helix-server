@@ -6,36 +6,9 @@ app:
     name: local.git.com/idmc/helix-backend
     tag: develop.xxxxxxxx
 
-  ingress:
-    host: helix-api-1.idmc.local.example.com
-
-  postgresql:
-    auth:
-      postgresPassword: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-      password: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
-    primary:
-      nodeSelector:
-        kubernetes.io/hostname: "gpu-desktop-01"
-      persistence:
-        storageClass: "local-path"
-        size: 2Gi
-      extraEnvVars:
-        - name: DUMP_REGISTRY_URL
-          value: https://user:password@secure-dump.com
-        - name: DUMP_FILENAME
-          value: /helix/k8s-alpha-init-db.dump
-
-  minio:
-    nodeSelector:
-      kubernetes.io/hostname: "gpu-desktop-01"
-    global:
-      defaultStorageClass: "local-path"
-    apiIngress:
-      hostname: helix-minio-1.idmc.local.example.com
-    auth:
-      rootPassword: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-    persistence:
-      size: 0.5Gi
+  api:
+    ingress:
+      host: helix-api-1.idmc.local.example.com
 
   env:
     # App Domain
@@ -50,17 +23,30 @@ app:
 
   secrets:
     DJANGO_SECRET_KEY: xyz
+    # Postgres (external)
+    POSTGRES_HOST: helix-backend-1-pg
+    POSTGRES_PORT: "5432"
+    POSTGRES_DB: helix
+    POSTGRES_USER: helix
+    POSTGRES_PASSWORD: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+    # Minio (S3, external)
+    AWS_S3_ENDPOINT_URL: https://helix-minio-1.idmc.local.example.com/
+    AWS_S3_ACCESS_KEY_ID: helix
+    AWS_S3_SECRET_ACCESS_KEY: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
     SENTRY_DSN: https://xyz@sentry.local.example.com/14
     HCAPTCHA_SECRET: "xyz"
 
-  argoHook:
+  hooks:
     enabled: true
-    hooks:
+    jobs:
       # NOTE: Make sure keys are lowercase
       create-users:
         enabled: true
-        hook: PostSync
-        env:
+        annotations:
+          argocd.argoproj.io/hook: "PostSync"
+          argocd.argoproj.io/sync-wave: "25"
+          argocd.argoproj.io/hook-delete-policy: "BeforeHookCreation"
+        extraEnv:
           SET_AS_ADMIN_USER_EMAILS: "xyz@example.com,abc@example.com"
 
   extraManifests:

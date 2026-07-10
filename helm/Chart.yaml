@@ -1,13 +1,13 @@
 apiVersion: v2
-name: helix-backend-helm
-description: "Helm Chart to deploy the IDMC Helix Backend"
+name: helix-server-helm
+description: "Helm Chart to deploy the IDMC Helix Server"
 type: application
 version: 0.0.1-SET-BY-CICD
 sources:
   - https://github.com/idmc-labs/helix-server
 
 dependencies:
-  - name: toggle-django-helm
+  - name: banjo-helm
     alias: app
-    version: 0.2.5
+    version: 0.4.1
     repository: oci://ghcr.io/toggle-corp
