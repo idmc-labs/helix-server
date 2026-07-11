@@ -2,19 +2,24 @@ import datetime
 import json
 import typing
 from io import BytesIO
+from unittest import mock
 from unittest.mock import patch
 from urllib.parse import urlparse, urlunparse
 
 import magic
 import requests
+from botocore.exceptions import ClientError
 from django.conf import settings
 from django.core.files.temp import NamedTemporaryFile
-from django.test import override_settings
+from django.test import TestCase, override_settings
 
+from apps.contrib import utils as utils_module
 from apps.contrib.bulk_operations.tasks import run_bulk_api_operation
 from apps.contrib.models import Attachment, BulkApiOperation
+from apps.contrib.utils import AttachmentBoto3ConnectorService
 from apps.event.models import Figure
 from apps.users.enums import USER_ROLE
+from helix.exceptions import BigFileUploadVerificationException
 from utils.factories import (
     CountryFactory,
     EventFactory,
@@ -568,3 +573,83 @@ class TestBigFileUploadAttachment(HelixGraphQLTestCase):
         response = self.query(self.mark_attachment_uploaded_mutation, variables={"attachmentId": attachment_id})
         self.assertResponseNoErrors(response)
         self.assertIsNotNone(response.json()["data"]["markBigAttachmentFileAsUploaded"]["errors"])
+
+
+class TestVerifyUploadedReadAfterWriteRetry(TestCase):
+    """Unit tests for the MinIO read-after-write retry in verify_uploaded."""
+
+    def _build_service(self, get_object_responses):
+        # Bypass __init__ (and its S3MediaStorage assertion) — we only need a
+        # stubbed storage client and a couple of instance attributes for
+        # _read_head_bytes / verify_uploaded. ``get_object_responses`` is a list
+        # of per-call outcomes (a dict response or an exception to raise).
+        service = AttachmentBoto3ConnectorService.__new__(AttachmentBoto3ConnectorService)
+        client = mock.Mock()
+        client.get_object.side_effect = get_object_responses
+
+        storage = mock.Mock()
+        storage.bucket.name = "test-bucket"
+        storage.bucket.meta.client = client
+        storage._normalize_name.side_effect = lambda name: name
+
+        service.storage = storage
+
+        instance = mock.Mock()
+        instance.is_file_uploaded = False
+        instance.attachment.size = 1234
+        instance.attachment.name = "some/key.pdf"
+        instance.created_by = "creator"
+        service.instance = instance
+        service.context = {"request": mock.Mock(user="creator")}
+        return service, client
+
+    @staticmethod
+    def _no_such_key():
+        return ClientError(
+            {"Error": {"Code": "NoSuchKey", "Message": "The specified key does not exist."}},
+            "GetObject",
+        )
+
+    @staticmethod
+    def _ok_body(data=b"a big file content"):
+        return {"Body": BytesIO(data)}
+
+    @mock.patch("apps.contrib.utils.time.sleep", return_value=None)
+    def test_transient_failure_then_success_is_tolerated(self, mock_sleep):
+        # First two reads hit the read-after-write race, third succeeds.
+        service, client = self._build_service([self._no_such_key(), self._no_such_key(), self._ok_body()])
+        result = service.verify_uploaded()
+        self.assertEqual(result["file_size"], 1234)
+        self.assertEqual(result["mimetype"], "text/plain")
+        self.assertEqual(client.get_object.call_count, 3)
+        self.assertEqual(mock_sleep.call_count, 2)  # backed off between attempts
+
+    @mock.patch("apps.contrib.utils.time.sleep", return_value=None)
+    def test_empty_read_is_treated_as_transient(self, mock_sleep):
+        service, client = self._build_service([self._ok_body(b""), self._ok_body()])
+        result = service.verify_uploaded()
+        self.assertEqual(result["mimetype"], "text/plain")
+        self.assertEqual(client.get_object.call_count, 2)
+
+    @mock.patch("apps.contrib.utils.time.sleep", return_value=None)
+    def test_exhausted_retries_raises_after_max_attempts(self, mock_sleep):
+        service, client = self._build_service([self._no_such_key() for _ in range(utils_module.VERIFY_READ_MAX_ATTEMPTS)])
+        with self.assertRaises(BigFileUploadVerificationException) as cm:
+            service.verify_uploaded()
+        self.assertIn(f"after {utils_module.VERIFY_READ_MAX_ATTEMPTS} attempts", str(cm.exception))
+        self.assertEqual(client.get_object.call_count, utils_module.VERIFY_READ_MAX_ATTEMPTS)
+        # One sleep fewer than attempts (no sleep after the final attempt).
+        self.assertEqual(mock_sleep.call_count, utils_module.VERIFY_READ_MAX_ATTEMPTS - 1)
+
+    @mock.patch("apps.contrib.utils.time.sleep", return_value=None)
+    def test_invalid_pdf_is_not_retried(self, mock_sleep):
+        # libmagic sniffs a non-allowed type on the first (successful) read;
+        # this is a real validation failure, not a timing race — no retry.
+        # An ELF binary header → application/x-* which is not in ALLOWED_MIMETYPES.
+        elf_bytes = b"\x7fELF\x02\x01\x01\x00" + b"\x00" * 56
+        service, client = self._build_service([self._ok_body(elf_bytes)])
+        with self.assertRaises(BigFileUploadVerificationException) as cm:
+            service.verify_uploaded()
+        self.assertIn("Invalid attachment type", str(cm.exception))
+        self.assertEqual(client.get_object.call_count, 1)
+        self.assertEqual(mock_sleep.call_count, 0)
