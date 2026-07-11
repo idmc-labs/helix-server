@@ -144,7 +144,7 @@ class HulkEventImport(HulkBaseModel, pyhelix_models.HulkEventImport):
     @typing_extensions.override
     def parse_event_cause(cls, data: dict):
         raw_event_type = data.get("event_cause") or ""
-        event_type = validate_and_parse_enum(Crisis.CRISIS_TYPE, raw_event_type, is_required=True)
+        event_type = validate_and_parse_enum(Crisis.CRISIS_TYPE, raw_event_type, is_required=True, field_name="event_cause")
         data["event_type"] = event_type.name
 
         if event_type == Crisis.CRISIS_TYPE.CONFLICT:
@@ -210,7 +210,9 @@ class HulkFigureImport(HulkBaseModel, pyhelix_models.HulkFigureImport):
         if not isinstance(data, dict):
             return data
         raw_figure_cause = data.get("figure_cause") or ""
-        figure_cause = validate_and_parse_enum(Crisis.CRISIS_TYPE, raw_figure_cause, is_required=True)
+        figure_cause = validate_and_parse_enum(
+            Crisis.CRISIS_TYPE, raw_figure_cause, is_required=True, field_name="figure_cause"
+        )
 
         if figure_cause == Crisis.CRISIS_TYPE.CONFLICT:
             get_name_attributed_model(ViolenceSubType, data.get("violence_sub_type_id"))

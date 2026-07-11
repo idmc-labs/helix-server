@@ -184,7 +184,7 @@ class HulkEventImport(HulkBaseModel):
     def parse_event_cause(cls, data: dict):
         helix_client = get_active_helix_client()
         raw_event_type = data.get("event_cause") or ""
-        event_type = validate_and_parse_enum(CRISIS_TYPE, raw_event_type, is_required=True)
+        event_type = validate_and_parse_enum(CRISIS_TYPE, raw_event_type, is_required=True, field_name="event_cause")
         data["event_type"] = event_type.name
 
         if event_type == CRISIS_TYPE.CONFLICT:
@@ -315,7 +315,7 @@ class HulkFigureImport(HulkBaseModel):
             return data
         helix_client = get_active_helix_client()
         raw_figure_cause = data.get("figure_cause") or ""
-        figure_cause = validate_and_parse_enum(CRISIS_TYPE, raw_figure_cause, is_required=True)
+        figure_cause = validate_and_parse_enum(CRISIS_TYPE, raw_figure_cause, is_required=True, field_name="figure_cause")
 
         if figure_cause == CRISIS_TYPE.CONFLICT:
             helix_client.violence_sub_type_manager.validate_id_exists(data.get("violence_sub_type_id"))
