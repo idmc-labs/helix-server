@@ -147,6 +147,22 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
             )
         return errors
 
+    def _validate_event_date_order(self, attrs):
+        # NOTE: _validate_crisis also handles this validation but requires crisis and crisis.start_date
+        errors = OrderedDict()
+        if "start_date" not in attrs and "end_date" not in attrs:
+            return errors
+
+        start_date = attrs.get("start_date", getattr(self.instance, "start_date", None))
+        end_date = attrs.get("end_date", getattr(self.instance, "end_date", None))
+        if start_date and end_date and start_date > end_date:
+            msg = gettext("The start date must be earlier than end date.")
+            if "start_date" in attrs:
+                errors["start_date"] = msg
+            if "end_date" in attrs:
+                errors["end_date"] = msg
+        return errors
+
     def _validate_disaster(self, attrs):
         # clear conflict fields
         attrs["violence"] = None
@@ -262,6 +278,7 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
             assert_never(event_type)
 
         errors.update(self._validate_crisis(attrs))
+        errors.update(self._validate_event_date_order(attrs))
 
         # TODO: Validate that more than 50 event_codes cannot be assigned
         errors.update(self._validate_event_codes(attrs))
