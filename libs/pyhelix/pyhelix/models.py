@@ -179,6 +179,12 @@ class HulkEventImport(HulkBaseModel):
 
         return data
 
+    @model_validator(mode="after")
+    def _validate_dates(self):
+        if self.start_date and self.end_date and self.end_date < self.start_date:
+            raise ValueError("The start date must be earlier than end date.")
+        return self
+
 
 class HulkFigureImportLocation(BaseModel):
     uuid: uuid.UUID

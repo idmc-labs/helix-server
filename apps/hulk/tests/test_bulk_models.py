@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
+from pydantic import ValidationError
+
 from apps.hulk.bulk.models import HulkEventImport, HulkEventImportEventCode
 from utils.factories import (
     CountryFactory,
@@ -112,3 +114,22 @@ class TestHulkEventImportEventCodes(HelixGraphQLTestCase):
         )
         event = HulkEventImport(**row)
         self.assertIsInstance(event.event_codes[0], HulkEventImportEventCode)
+
+    def test_end_date_before_start_date_rejected(self):
+        """A row whose ``end_date`` precedes ``start_date`` must be rejected —
+        mirroring the figure/event serializer start<=end constraint."""
+        row = self._event_row(
+            start_date="2024-01-31",
+            end_date="2024-01-01",
+        )
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("The start date must be earlier than end date.", str(cm.exception))
+
+    def test_end_date_equal_start_date_allowed(self):
+        """A single-day event (``start_date == end_date``) stays valid."""
+        row = self._event_row(
+            start_date="2024-01-01",
+            end_date="2024-01-01",
+        )
+        HulkEventImport(**row)
