@@ -1,4 +1,5 @@
 import gzip
+import time
 from io import BytesIO
 
 import magic
@@ -12,6 +13,13 @@ from apps.contrib.models import Attachment
 from helix.auth import PERMISSION_DENIED_MESSAGE
 from helix.exceptions import BigFileUploadVerificationException
 from helix.storages import S3MediaStorage
+
+# MinIO/S3 are eventually consistent: right after a server-side copy, an
+# immediate read-back can momentarily not see the just-written object
+# (read-after-write race). Retry the transient read a few times with a short
+# backoff before declaring failure. Keeps total worst-case delay < ~1.5s.
+VERIFY_READ_MAX_ATTEMPTS = 4
+VERIFY_READ_BACKOFF_BASE = 0.2  # seconds; grows as base * 2**attempt (0.2, 0.4, 0.8)
 
 
 class AttachmentBoto3ConnectorService(object):
@@ -29,6 +37,36 @@ class AttachmentBoto3ConnectorService(object):
         # https://github.com/jschneier/django-storages/blob/ca89a94a7462a2423df460e7bfd5f847457042ca/storages/backends/s3.py#L530
         return self.storage._normalize_name(clean_name(file.name))
 
+    def _read_head_bytes(self) -> tuple:
+        """Range-GET the first 4KB, retrying the read-after-write race.
+
+        Only the transient "object not yet visible / empty read" case is
+        retried (``ClientError`` — e.g. NoSuchKey — or an empty body). A truly
+        malformed/non-PDF file is caught later by libmagic and is NOT a timing
+        issue, so it is deliberately outside this retry.
+        """
+        last_exc = None
+        for attempt in range(VERIFY_READ_MAX_ATTEMPTS):
+            try:
+                obj = self.storage.bucket.meta.client.get_object(
+                    Bucket=self.get_bucket_name(),
+                    Key=self.generate_s3_key_for_file(self.instance.attachment),
+                    Range="bytes=0-4095",  # only first 4KB
+                )
+                data = obj["Body"].read()
+                if data:
+                    return obj, data
+                # Empty read — object may not be fully visible yet; treat as transient.
+                last_exc = BigFileUploadVerificationException("empty read for uploaded object")
+            except ClientError as e:
+                # NoSuchKey and other transient read-after-write failures.
+                last_exc = e
+            if attempt < VERIFY_READ_MAX_ATTEMPTS - 1:
+                time.sleep(VERIFY_READ_BACKOFF_BASE * (2**attempt))
+        raise BigFileUploadVerificationException(
+            f"File verification was failed after {VERIFY_READ_MAX_ATTEMPTS} attempts: {last_exc}"
+        ) from last_exc
+
     def verify_uploaded(self) -> dict:
         if self.instance.created_by != self.context["request"].user:
             raise BigFileUploadVerificationException(gettext(PERMISSION_DENIED_MESSAGE))
@@ -37,13 +75,7 @@ class AttachmentBoto3ConnectorService(object):
             raise BigFileUploadVerificationException(gettext("Attachment is already marked as uploaded."))
         try:
             file_size = self.instance.attachment.size
-            obj = self.storage.bucket.meta.client.get_object(
-                Bucket=self.get_bucket_name(),
-                Key=self.generate_s3_key_for_file(self.instance.attachment),
-                Range="bytes=0-4095",  # only first 4KB
-            )
-
-            data = obj["Body"].read()
+            obj, data = self._read_head_bytes()
 
             # When ``AWS_IS_GZIPPED=True`` + the object's content type is in
             # ``GZIP_CONTENT_TYPES`` (PDFs are by default), django-storages
