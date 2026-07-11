@@ -6,9 +6,11 @@ via ``generate_for_graphql_mutation``.
 
 from __future__ import annotations
 
+import datetime
 from uuid import UUID
 
 from pydantic import ValidationError
+from pyhelix import models as pyhelix_models
 
 from apps.hulk.bulk.models import HulkEventImport, HulkEventImportEventCode
 from utils.factories import (
@@ -133,3 +135,78 @@ class TestHulkEventImportEventCodes(HelixGraphQLTestCase):
             end_date="2024-01-01",
         )
         HulkEventImport(**row)
+
+    def test_start_date_beyond_10_years_rejected(self):
+        """``start_date`` more than 10 years in the future must be rejected."""
+        far_future = datetime.date.today().replace(year=datetime.date.today().year + 11)
+        row = self._event_row(
+            start_date=far_future.isoformat(),
+            end_date=far_future.isoformat(),
+        )
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("start_date: This date cannot be more than 10 years in the future.", str(cm.exception))
+
+    def test_end_date_beyond_10_years_rejected(self):
+        """``end_date`` more than 10 years in the future must be rejected."""
+        far_future = datetime.date.today().replace(year=datetime.date.today().year + 11)
+        row = self._event_row(
+            start_date="2024-01-01",
+            end_date=far_future.isoformat(),
+        )
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("end_date: This date cannot be more than 10 years in the future.", str(cm.exception))
+
+    def test_dates_within_10_years_allowed(self):
+        """A future date within the 10-year window stays valid."""
+        near_future = datetime.date.today().replace(year=datetime.date.today().year + 5)
+        row = self._event_row(
+            start_date=near_future.isoformat(),
+            end_date=near_future.isoformat(),
+        )
+        HulkEventImport(**row)
+
+    def test_very_old_dates_allowed(self):
+        """Very old dates (e.g. 1900) are intentional and must still import."""
+        row = self._event_row(
+            start_date="1900-01-01",
+            end_date="1900-12-31",
+        )
+        HulkEventImport(**row)
+
+
+class TestHulkEntryImportPublishDate(HelixGraphQLTestCase):
+    """``publish_date`` must not be more than 10 years in the future.
+
+    Validation lives on the pyhelix parent model, so we exercise it directly to
+    avoid the DB-backed attachment/source-preview lookups on the app subclass."""
+
+    def _entry_row(self, **overrides) -> dict:
+        row = {
+            "uuid": "55555555-5555-5555-5555-555555555555",
+            "hulk_import_type": "DOCUMENT",
+            "attachment_uuid": "66666666-6666-6666-6666-666666666666",
+            "entry_title": "Test entry",
+            "publish_date": "2024-01-01",
+            "is_confidential": False,
+            "publishers_id": [1],
+        }
+        row.update(overrides)
+        return row
+
+    def test_publish_date_beyond_10_years_rejected(self):
+        far_future = datetime.date.today().replace(year=datetime.date.today().year + 11)
+        row = self._entry_row(publish_date=far_future.isoformat())
+        with self.assertRaises(ValidationError) as cm:
+            pyhelix_models.HulkEntryImport(**row)
+        self.assertIn("publish_date: This date cannot be more than 10 years in the future.", str(cm.exception))
+
+    def test_publish_date_within_10_years_allowed(self):
+        near_future = datetime.date.today().replace(year=datetime.date.today().year + 5)
+        row = self._entry_row(publish_date=near_future.isoformat())
+        pyhelix_models.HulkEntryImport(**row)
+
+    def test_publish_date_very_old_allowed(self):
+        row = self._entry_row(publish_date="1900-01-01")
+        pyhelix_models.HulkEntryImport(**row)

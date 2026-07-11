@@ -27,7 +27,11 @@ from apps.entry.models import (
 )
 from apps.review.models import UnifiedReviewComment
 from utils.common import round_half_up
-from utils.validations import is_child_parent_dates_valid, is_child_parent_inclusion_valid
+from utils.validations import (
+    is_child_parent_dates_valid,
+    is_child_parent_inclusion_valid,
+    is_date_within_future_bound,
+)
 
 from .utils import (
     BulkUpdateFigureManager,
@@ -718,10 +722,17 @@ class EntryCreateSerializer(
 
         return errors
 
+    def _validate_publish_date(self, attrs: dict) -> OrderedDict:
+        # reject publish_date more than N years in the future.
+        if "publish_date" not in attrs:
+            return OrderedDict()
+        return is_date_within_future_bound(attrs["publish_date"], "publish_date")
+
     def validate(self, attrs: dict) -> dict:
         attrs = super().validate(attrs)
         errors = OrderedDict()
         errors.update(self._validate_url_and_document(attrs))
+        errors.update(self._validate_publish_date(attrs))
         if errors:
             raise ValidationError(errors)
         return attrs
