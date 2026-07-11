@@ -17,7 +17,11 @@ from apps.crisis.models import Crisis
 from apps.entry.models import Figure
 from apps.event.models import Actor, ContextOfViolence, Event, EventCode
 from apps.notification.models import Notification
-from utils.validations import is_child_parent_dates_valid, is_child_parent_inclusion_valid
+from utils.validations import (
+    is_child_parent_dates_valid,
+    is_child_parent_inclusion_valid,
+    is_date_within_future_bound,
+)
 
 
 class ActorSerializer(MetaInformationSerializerMixin, serializers.ModelSerializer):
@@ -163,6 +167,15 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
                 errors["end_date"] = msg
         return errors
 
+    def _validate_event_future_dates(self, attrs):
+        # reject event start/end dates more than N years in the future.
+        errors = OrderedDict()
+        if "start_date" in attrs:
+            errors.update(is_date_within_future_bound(attrs["start_date"], "start_date"))
+        if "end_date" in attrs:
+            errors.update(is_date_within_future_bound(attrs["end_date"], "end_date"))
+        return errors
+
     def _validate_disaster(self, attrs):
         # clear conflict fields
         attrs["violence"] = None
@@ -279,6 +292,7 @@ class EventSerializer(MetaInformationSerializerMixin, serializers.ModelSerialize
 
         errors.update(self._validate_crisis(attrs))
         errors.update(self._validate_event_date_order(attrs))
+        errors.update(self._validate_event_future_dates(attrs))
 
         # TODO: Validate that more than 50 event_codes cannot be assigned
         errors.update(self._validate_event_codes(attrs))

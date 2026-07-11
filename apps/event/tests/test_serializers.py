@@ -87,6 +87,39 @@ class TestCreateEventSerializer(HelixTestCase):
         serializer = EventSerializer(data=data, context=self.context)
         self.assertTrue(serializer.is_valid(), serializer.errors)
 
+    def test_event_dates_more_than_10_years_in_future_rejected(self):
+        start = datetime.today() + timedelta(days=365 * 11)
+        end = start + timedelta(days=1)
+        data = dict(
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
+            disaster_sub_type=DisasterSubTypeFactory.create().pk,
+            name="one",
+            start_date=start.date(),
+            end_date=end.date(),
+            event_narrative="event narrative",
+            countries=[CountryFactory.create().id],
+        )
+        serializer = EventSerializer(data=data, context=self.context)
+        self.assertFalse(serializer.is_valid())
+        self.assertIn("start_date", serializer.errors)
+        self.assertIn("end_date", serializer.errors)
+
+    def test_event_dates_within_10_years_accepted(self):
+        # boundary: ~9 years in the future is allowed.
+        start = datetime.today() + timedelta(days=365 * 9)
+        end = start + timedelta(days=1)
+        data = dict(
+            event_type=Crisis.CRISIS_TYPE.DISASTER.value,
+            disaster_sub_type=DisasterSubTypeFactory.create().pk,
+            name="one",
+            start_date=start.date(),
+            end_date=end.date(),
+            event_narrative="event narrative",
+            countries=[CountryFactory.create().id],
+        )
+        serializer = EventSerializer(data=data, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+
     def test_invalid_event_type(self):
         country_1 = CountryFactory.create()
         crisis = CrisisFactory.create(crisis_type=Crisis.CRISIS_TYPE.DISASTER.value)
