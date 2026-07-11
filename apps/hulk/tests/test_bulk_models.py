@@ -176,6 +176,73 @@ class TestHulkEventImportEventCodes(HelixGraphQLTestCase):
         HulkEventImport(**row)
 
 
+class TestHulkEnumValidationFieldNames(HelixGraphQLTestCase):
+    """An invalid enum value must be reported against the field actually at
+    fault — not the hardcoded ``event_type`` label the shared parser used to
+    emit regardless of which field was wrong."""
+
+    def _event_row(self, **overrides) -> dict:
+        country = CountryFactory.create()
+        violence_sub_type = ViolenceSubTypeFactory.create()
+        row = {
+            "uuid": "11111111-1111-1111-1111-111111111111",
+            "event_name": "Test event",
+            "event_cause": "CONFLICT",
+            "violence_sub_type_id": violence_sub_type.id,
+            "disaster_sub_type_id": None,
+            "other_sub_type_id": None,
+            "start_date": "2024-01-01",
+            "start_date_accuracy": "DAY",
+            "end_date": "2024-01-31",
+            "end_date_accuracy": "DAY",
+            "event_narrative": "narrative",
+            "countries_id": [country.id],
+            "event_codes": [],
+        }
+        row.update(overrides)
+        return row
+
+    def test_invalid_event_cause_reports_event_cause(self):
+        row = self._event_row(event_cause="NOT_A_CAUSE")
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("Invalid event_cause 'NOT_A_CAUSE'", str(cm.exception))
+
+    def test_invalid_start_date_accuracy_reports_start_date_accuracy(self):
+        row = self._event_row(start_date_accuracy="BAD_ACCURACY")
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        message = str(cm.exception)
+        self.assertIn("Invalid start_date_accuracy 'BAD_ACCURACY'", message)
+        self.assertNotIn("Invalid event_type", message)
+
+    def test_invalid_end_date_accuracy_reports_end_date_accuracy(self):
+        row = self._event_row(end_date_accuracy="BAD_ACCURACY")
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        self.assertIn("Invalid end_date_accuracy 'BAD_ACCURACY'", str(cm.exception))
+
+    def test_invalid_nested_event_code_type_reports_event_code_type(self):
+        """The nested ``event_codes[].event_code_type`` list model must also
+        report its real field name rather than ``event_type``."""
+        country = CountryFactory.create()
+        row = self._event_row(
+            event_codes=[
+                {
+                    "uuid": "22222222-2222-2222-2222-222222222222",
+                    "country_id": country.id,
+                    "event_code": "GLD-001",
+                    "event_code_type": "INVALID_CODE_TYPE",
+                }
+            ]
+        )
+        with self.assertRaises(ValidationError) as cm:
+            HulkEventImport(**row)
+        message = str(cm.exception)
+        self.assertIn("Invalid event_code_type 'INVALID_CODE_TYPE'", message)
+        self.assertNotIn("Invalid event_type", message)
+
+
 class TestHulkEntryImportPublishDate(HelixGraphQLTestCase):
     """``publish_date`` must not be more than 10 years in the future.
 
