@@ -4,6 +4,7 @@ import os
 import typing
 
 import django_filters
+from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
@@ -61,8 +62,14 @@ class GiddExportCache:
         export_generator: typing.Callable,
     ) -> str:
         key_data, cache_key = cls.generate_cache_key(key, data, filename)
-        if external_storage.exists(cache_key):
+        exists = external_storage.exists(cache_key)
+        if exists and not settings.GIDD_EXPORT_CACHE_DISABLED:
             return cache_key
+        # Drop any stale entry before regenerating. FileSystemStorage.save would
+        # otherwise pick an alternative name, leaving the old file served by url().
+        if exists:
+            external_storage.delete(cache_key)
+            external_storage.delete(f"{cache_key}.json")
         # Save file as well
         external_storage.save(cache_key, ContentFile(export_generator()))
         # Save metadata as well

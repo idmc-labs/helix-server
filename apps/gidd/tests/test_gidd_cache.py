@@ -2,6 +2,7 @@ from io import StringIO
 from unittest.mock import MagicMock, patch
 
 from django.core.management import call_command
+from django.test import override_settings
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -421,6 +422,20 @@ class TestGiddExportCacheAPI(GiddCacheTestMixin, HelixTestCase):
 
         self.client.get(self.DISASTER_EXPORT_URL)
         self.assertEqual(mock_storage.save.call_count, initial_save_count)
+
+    @override_settings(GIDD_EXPORT_CACHE_DISABLED=True)
+    @patch("apps.gidd.cache.external_storage")
+    def test_disaster_export_regenerates_when_cache_disabled(self, mock_storage, mock_track):
+        # An existing cache entry must be ignored and overwritten when disabled.
+        mock_storage.exists.return_value = True
+        mock_storage.save.return_value = None
+        mock_storage.url.return_value = "/fake-s3/cached-file.xlsx"
+
+        response = self.client.get(self.DISASTER_EXPORT_URL)
+        self.assertEqual(response.status_code, 302)
+        # Stale file + metadata deleted, then regenerated.
+        self.assertEqual(mock_storage.delete.call_count, 2)
+        self.assertEqual(mock_storage.save.call_count, 2)
 
     @patch("apps.gidd.cache.external_storage")
     def test_displacement_export_first_call_generates_cache(self, mock_storage, mock_track):
