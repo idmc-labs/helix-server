@@ -8,6 +8,8 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
+from django.http import HttpResponse
+from django.shortcuts import redirect
 from rest_framework import serializers
 from rest_framework.request import Request
 from storages.backends.s3boto3 import S3Boto3Storage
@@ -62,14 +64,8 @@ class GiddExportCache:
         export_generator: typing.Callable,
     ) -> str:
         key_data, cache_key = cls.generate_cache_key(key, data, filename)
-        exists = external_storage.exists(cache_key)
-        if exists and not settings.GIDD_EXPORT_CACHE_DISABLED:
+        if external_storage.exists(cache_key):
             return cache_key
-        # Drop any stale entry before regenerating. FileSystemStorage.save would
-        # otherwise pick an alternative name, leaving the old file served by url().
-        if exists:
-            external_storage.delete(cache_key)
-            external_storage.delete(f"{cache_key}.json")
         # Save file as well
         external_storage.save(cache_key, ContentFile(export_generator()))
         # Save metadata as well
@@ -113,14 +109,26 @@ class GiddExportCache:
         key: Key,
         export_generator: typing.Callable,
         s3_parameters: dict,
-    ) -> str:
+    ) -> HttpResponse:
+        # When disabled, bypass the cache/storage entirely and stream the
+        # generated file directly (the pre-cache behaviour).
+        if settings.GIDD_EXPORT_CACHE_DISABLED:
+            response = HttpResponse(
+                content=export_generator(),
+                content_type=s3_parameters["ResponseContentType"],
+            )
+            response["Content-Disposition"] = s3_parameters["ResponseContentDisposition"]
+            return response
+
         data = cls.build_cache_data(request.query_params, filter_sets)
 
         cache_key = cls._get_or_create(key, data, filename, export_generator)
         if isinstance(external_storage, S3Boto3Storage):
             with TemporaryStorageEnableAuthString(external_storage):
-                return external_storage.url(
-                    cache_key,
-                    parameters=s3_parameters,
+                return redirect(
+                    external_storage.url(
+                        cache_key,
+                        parameters=s3_parameters,
+                    )
                 )
-        return request.build_absolute_uri(external_storage.url(cache_key))
+        return redirect(request.build_absolute_uri(external_storage.url(cache_key)))
