@@ -5,6 +5,7 @@ import typing
 
 import django_filters
 from django.conf import settings
+from django.core.files import File
 from django.core.files.base import ContentFile
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
@@ -15,6 +16,7 @@ from rest_framework.request import Request
 from storages.backends.s3boto3 import S3Boto3Storage
 
 from helix.storages import TemporaryStorageEnableAuthString, get_external_storage
+from utils.streaming import spool_to_temp_file
 
 from .models import ReleaseMetadata, StatusLog
 
@@ -66,8 +68,17 @@ class GiddExportCache:
         key_data, cache_key = cls.generate_cache_key(key, data, filename)
         if external_storage.exists(cache_key):
             return cache_key
-        # Save file as well
-        external_storage.save(cache_key, ContentFile(export_generator()))
+        # ``export_generator`` may return the full payload as bytes (excel
+        # exports) or an iterator of byte chunks (streaming json / geojson
+        # exports). Chunks are spooled to a temp file first so the payload is
+        # never held in memory and a mid-generation failure can't publish a
+        # truncated object.
+        content = export_generator()
+        if isinstance(content, (bytes, bytearray)):
+            external_storage.save(cache_key, ContentFile(content))
+        else:
+            with spool_to_temp_file(content) as tmp:
+                external_storage.save(cache_key, File(tmp))
         # Save metadata as well
         external_storage.save(f"{cache_key}.json", ContentFile(key_data))
         return cache_key

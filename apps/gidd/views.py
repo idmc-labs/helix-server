@@ -1,10 +1,8 @@
-import json
 import typing
 from datetime import datetime
 from pathlib import Path
 
 from django.core.exceptions import FieldDoesNotExist
-from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.db.models import Case, F, Q, When
 from django.utils import timezone
@@ -33,6 +31,7 @@ from apps.entry.models import ExternalApiDump, Figure, FigureLocation
 from apps.event.models import EventCode
 from utils.common import client_id, get_valid_xml_string, track_gidd
 from utils.graphene.ordering import leads_descending, orders_by_pk
+from utils.streaming import stream_json_object_with_array
 
 from .cache import GiddExportCache
 from .models import Conflict, Disaster, DisplacementData, GiddFigure, IdpsSaddEstimate, PublicFigureAnalysis, StatusLog
@@ -1407,74 +1406,80 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             "Displacement occurred: This field contains values that represent if preventive "
             "evacuations were reported. These evacuations are the result of existing early warning systems.\n"
         )
-        feature_collection = {
+        scalar_fields = {
             "type": "FeatureCollection",
             "readme": readme_text,
             "lastUpdated": StatusLog.last_release_date(format="%Y-%m-%d"),
-            "features": [],
         }
 
-        for item in qs:
-            feature = {
-                "type": "Feature",
-                "geometry": {
-                    "type": "MultiPoint",
-                    "coordinates": format_coordinates(item.locations_coordinates),
-                },
-                "properties": remove_null_from_dict(
-                    {
-                        "ID": item.figure_raw_id,
-                        "ISO3": item.iso3,
-                        "Country": item.country_name,
-                        "Geographical region": item.geographical_region_name,
-                        "Figure cause": self._get_cause(item.cause),
-                        "Year": item.year,
-                        "Figure category": self._get_category(item.category),
-                        "Figure unit": self._get_unit(item.unit),
-                        "Reported figures": item.reported,
-                        "Household size": item.household_size,
-                        "Total figures": item.total_figures,
-                        "Hazard category": item.disaster_category_name,
-                        "Hazard sub category": item.disaster_sub_category_name,
-                        "Hazard type": item.disaster_type_name,
-                        "Hazard sub type": item.disaster_sub_type_name,
-                        "Violence type": item.violence_name,
-                        "Other event sub type": item.other_sub_type_name,
-                        "Start date": item.start_date,
-                        "Start date accuracy": self._get_date_accuracy(item.start_date_accuracy),
-                        "End date": item.end_date,
-                        "End date accuracy": self._get_date_accuracy(item.end_date_accuracy),
-                        "Stock date": item.stock_date,
-                        "Stock date accuracy": self._get_date_accuracy(item.stock_date_accuracy),
-                        "Stock reporting date": item.stock_reporting_date,
-                        "Publishers": item.publishers,
-                        "Sources": item.sources,
-                        "Sources type": item.sources_type,
-                        "Event ID": item.gidd_event.event_raw_id,
-                        "Event name": item.gidd_event.name,
-                        "Event cause": self._get_cause(item.gidd_event.cause),
-                        "Event main trigger": item.event_main_trigger,
-                        "Event start date": item.gidd_event.start_date,
-                        "Event end date": item.gidd_event.end_date,
-                        "Event start date accuracy": self._get_date_accuracy(item.gidd_event.start_date_accuracy),
-                        "Event end date accuracy": self._get_date_accuracy(item.gidd_event.end_date_accuracy),
-                        "Is housing destruction": "Yes" if item.is_housing_destruction is not None else "No",
-                        "Event codes (Code:Type)": self.extract_event_data_raw(
-                            item.gidd_event.event_codes,
-                            item.gidd_event.event_codes_type,
-                            item.gidd_event.event_codes_iso3,
-                            item.iso3,
-                        ),
-                        "Locations name": item.locations_names,
-                        "Locations accuracy": [_get_location_accuracy_label(x) for x in item.locations_accuracy],
-                        "Locations type": [_get_location_type_label(x) for x in item.locations_type],
-                        "Displacement occurred": self._get_displacement_occurred(item.displacement_occurred),
-                    }
-                ),
-            }
-            feature_collection["features"].append(feature)
+        def feature_iterator():
+            # ``.iterator()`` streams rows from a server-side cursor so the whole
+            # queryset is never held in memory; ``stream_json_object_with_array``
+            # then encodes one feature at a time.
+            for item in qs.iterator(chunk_size=2000):
+                yield {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "MultiPoint",
+                        "coordinates": format_coordinates(item.locations_coordinates),
+                    },
+                    "properties": remove_null_from_dict(
+                        {
+                            "ID": item.figure_raw_id,
+                            "ISO3": item.iso3,
+                            "Country": item.country_name,
+                            "Geographical region": item.geographical_region_name,
+                            "Figure cause": self._get_cause(item.cause),
+                            "Year": item.year,
+                            "Figure category": self._get_category(item.category),
+                            "Figure unit": self._get_unit(item.unit),
+                            "Reported figures": item.reported,
+                            "Household size": item.household_size,
+                            "Total figures": item.total_figures,
+                            "Hazard category": item.disaster_category_name,
+                            "Hazard sub category": item.disaster_sub_category_name,
+                            "Hazard type": item.disaster_type_name,
+                            "Hazard sub type": item.disaster_sub_type_name,
+                            "Violence type": item.violence_name,
+                            "Other event sub type": item.other_sub_type_name,
+                            "Start date": item.start_date,
+                            "Start date accuracy": self._get_date_accuracy(item.start_date_accuracy),
+                            "End date": item.end_date,
+                            "End date accuracy": self._get_date_accuracy(item.end_date_accuracy),
+                            "Stock date": item.stock_date,
+                            "Stock date accuracy": self._get_date_accuracy(item.stock_date_accuracy),
+                            "Stock reporting date": item.stock_reporting_date,
+                            "Publishers": item.publishers,
+                            "Sources": item.sources,
+                            "Sources type": item.sources_type,
+                            "Event ID": item.gidd_event.event_raw_id,
+                            "Event name": item.gidd_event.name,
+                            "Event cause": self._get_cause(item.gidd_event.cause),
+                            "Event main trigger": item.event_main_trigger,
+                            "Event start date": item.gidd_event.start_date,
+                            "Event end date": item.gidd_event.end_date,
+                            "Event start date accuracy": self._get_date_accuracy(item.gidd_event.start_date_accuracy),
+                            "Event end date accuracy": self._get_date_accuracy(item.gidd_event.end_date_accuracy),
+                            "Is housing destruction": "Yes" if item.is_housing_destruction is not None else "No",
+                            "Event codes (Code:Type)": self.extract_event_data_raw(
+                                item.gidd_event.event_codes,
+                                item.gidd_event.event_codes_type,
+                                item.gidd_event.event_codes_iso3,
+                                item.iso3,
+                            ),
+                            "Locations name": item.locations_names,
+                            "Locations accuracy": [_get_location_accuracy_label(x) for x in item.locations_accuracy],
+                            "Locations type": [_get_location_type_label(x) for x in item.locations_type],
+                            "Displacement occurred": self._get_displacement_occurred(item.displacement_occurred),
+                        }
+                    ),
+                }
 
-        return json.dumps(feature_collection, cls=DjangoJSONEncoder).encode("utf-8")
+        return stream_json_object_with_array(
+            scalar_fields=scalar_fields,
+            array_key="features",
+            items=feature_iterator(),
+        )
 
     def _export_disaggregated_excel(self, filename, qs, pfa_qs):
         wb = Workbook(write_only=True)
