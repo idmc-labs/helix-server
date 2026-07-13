@@ -65,6 +65,10 @@ class HulkSourcePreviewImport(HulkBaseModel, pyhelix_models.HulkSourcePreviewImp
         return {
             # TODO: Is file_url it a local path?
             "url": self.file_url,
+            # Skip the recent in-progress preview reuse: each hulk row must map to its
+            # own SourcePreview entity (HulkSourcePreview.entity is OneToOne). Reusing
+            # would make two uuids point at one entity and violate the unique on entity_id.
+            "skipRecentReuse": True,
             # TODO: Other fields?
             # - versionId
             # - token
