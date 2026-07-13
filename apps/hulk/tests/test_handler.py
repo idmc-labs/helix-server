@@ -650,6 +650,111 @@ class TestHulkBulkImportHandler(HelixGraphQLTestCase):
         }
         self.assertEqual(post_error_uuids, attempted_mutation_uuids)
 
+    def test_same_url_source_previews_do_not_collide_on_entity(self):
+        """
+        Regression: two source_preview rows sharing the same url (distinct
+        uuids) must both import successfully, each backed by its OWN SourcePreview
+        entity, so the OneToOne unique on ``HulkSourcePreview.entity_id`` holds and
+        a downstream URL entry referencing the SECOND uuid still resolves.
+
+        The responder below mimics the real ``SourcePreviewSerializer.create``
+        reuse rule (same url → same entity id) UNLESS the mutation input carries
+        ``skipRecentReuse: True`` — which is exactly what the hulk source_preview
+        path now sends. Under the old behavior (reuse) the second HulkSourcePreview
+        insert collided on entity_id → IntegrityError → the second uuid never got a
+        relation row → the entry referencing it failed "Unknown source_preview".
+        """
+        from apps.contrib.models import SourcePreview
+        from apps.hulk.models import HulkSourcePreview
+        from utils.factories import EntryFactory
+
+        uuid_a = "11111111-1111-1111-1111-111111111111"
+        uuid_b = "22222222-2222-2222-2222-222222222222"
+        entry_uuid = "33333333-3333-3333-3333-333333333333"
+        shared_url = "https://example.com/shared-page"
+
+        source_preview_rows = [
+            {"uuid": uuid_a, "file_url": shared_url},
+            {"uuid": uuid_b, "file_url": shared_url},
+        ]
+        # URL entry that points at the SECOND source_preview uuid — this is the
+        # link that used to cascade-fail when uuid_b had no HulkSourcePreview row.
+        entry_rows = [
+            {
+                "uuid": entry_uuid,
+                "hulk_import_type": "URL",
+                "attachment_uuid": None,
+                "source_preview_uuid": uuid_b,
+                "url": shared_url,
+                "entry_title": "URL entry on shared preview",
+                "publish_date": "2024-01-15",
+                "is_confidential": False,
+                "publishers_id": [str(self.ctx["publisher_id"])],
+            },
+        ]
+
+        bulk = HulkBulkImport.objects.create(created_by=self.user)
+        _create_dataset(bulk, "source_previews", dump_jsonl(source_preview_rows))
+        _create_dataset(bulk, "entries", dump_jsonl(entry_rows))
+
+        class _ReuseAwareResponder:
+            """Reproduces the serializer's url-based reuse unless skipRecentReuse=True."""
+
+            def __init__(self):
+                self._entry_factory = EntryFactory
+                # url -> entity id, for in-progress previews (mirrors the serializer).
+                self._preview_by_url: dict[str, int] = {}
+
+            def __call__(self, query, variables):
+                if "createSourcePreview" in query:
+                    inp = variables["input"]
+                    url = inp.get("url")
+                    skip_recent_reuse = inp.get("skipRecentReuse", False)
+                    if not skip_recent_reuse and url in self._preview_by_url:
+                        pk = self._preview_by_url[url]
+                    else:
+                        pk = SourcePreview.objects.create(url=url).pk
+                        self._preview_by_url[url] = pk
+                    return ({"createSourcePreview": {"ok": True, "errors": None, "result": {"id": pk}}}, None)
+                if "createEntry" in query:
+                    obj = self._entry_factory.create()
+                    return ({"createEntry": {"ok": True, "errors": None, "result": {"id": obj.pk}}}, None)
+                return ({}, None)
+
+        with patch("apps.hulk.bulk.handler.InternalHelixGraphQlClient") as MockClient:
+            mock_client = MagicMock()
+            mock_client.run_mutation.side_effect = _ReuseAwareResponder()
+            MockClient.return_value.__enter__.return_value = mock_client
+            HulkBulkImportHandler(bulk).handle()
+
+        bulk.refresh_from_db()
+        self.assertEqual(bulk.status, HulkBulkImport.HULK_BULK_IMPORT_STATUS.COMPLETED)
+
+        # Both source_preview uuids succeeded, each with a distinct entity.
+        sp_success = {r["uuid"]: r for r in _jsonl_rows(_success_file(bulk, "source_previews"))}
+        sp_failure = _jsonl_rows(_failure_file(bulk, "source_previews"))
+        self.assertEqual(set(sp_success), {uuid_a, uuid_b}, sp_failure)
+        self.assertEqual(sp_failure, [])
+        self.assertNotEqual(
+            sp_success[uuid_a]["id"],
+            sp_success[uuid_b]["id"],
+            "each same-url row must get its own SourcePreview entity",
+        )
+
+        # Two relation rows, two entities — the OneToOne held.
+        self.assertEqual(HulkSourcePreview.objects.filter(bulk_import=bulk).count(), 2)
+        self.assertEqual(
+            HulkSourcePreview.objects.filter(bulk_import=bulk).values_list("entity_id", flat=True).distinct().count(),
+            2,
+        )
+
+        # The dependent URL entry (referencing uuid_b) resolved and imported —
+        # no "Unknown source_preview" cascade.
+        entry_success = {r["uuid"] for r in _jsonl_rows(_success_file(bulk, "entries"))}
+        entry_failure = _jsonl_rows(_failure_file(bulk, "entries"))
+        self.assertIn(entry_uuid, entry_success, entry_failure)
+        self.assertEqual(entry_failure, [])
+
     def test_handle_failed_status_on_exception(self):
         """If anything in process() raises, status flips to FAILED."""
         bulk = self._make_bulk_import_with_inputs()

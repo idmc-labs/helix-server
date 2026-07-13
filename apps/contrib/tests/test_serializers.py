@@ -1,9 +1,11 @@
+from unittest.mock import patch
+
 from django.conf import settings
 from django.test import RequestFactory
 from django.utils import timezone
 
-from apps.contrib.models import ExcelDownload
-from apps.contrib.serializers import ExcelDownloadSerializer
+from apps.contrib.models import ExcelDownload, SourcePreview
+from apps.contrib.serializers import ExcelDownloadSerializer, SourcePreviewSerializer
 from apps.users.enums import USER_ROLE
 from utils.tests import HelixTestCase, create_user_with_role
 
@@ -124,3 +126,57 @@ class TestExcelDownload(HelixTestCase):
             context=self.context,
         )
         self.assertTrue(serializer.is_valid(), serializer.errors)
+
+
+class TestSourcePreviewSerializer(HelixTestCase):
+    def setUp(self) -> None:
+        self.admin = create_user_with_role(USER_ROLE.ADMIN.name)
+        self.request = RequestFactory().post("/graphql")
+        self.request.user = self.admin
+        self.context = {"request": self.request}
+        self.url = "https://example.com/preview-page"
+
+    def _in_progress_preview(self) -> SourcePreview:
+        return SourcePreview.objects.create(
+            url=self.url,
+            created_by=self.admin,
+            status=SourcePreview.PREVIEW_STATUS.IN_PROGRESS,
+        )
+
+    @patch("apps.entry.tasks.generate_pdf.delay")
+    def test_default_reuses_recent_existing(self, _mock_delay):
+        """Default (skip_recent_reuse absent/False) returns the matching IN_PROGRESS preview."""
+        existing = self._in_progress_preview()
+
+        serializer = SourcePreviewSerializer(data={"url": self.url}, context=self.context)
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        instance = serializer.save()
+
+        self.assertEqual(instance.pk, existing.pk)
+        self.assertEqual(SourcePreview.objects.count(), 1)
+
+    @patch("apps.entry.tasks.generate_pdf.delay")
+    def test_skip_recent_reuse_creates_new(self, _mock_delay):
+        """skip_recent_reuse=True always creates a fresh preview (hulk bulk path)."""
+        existing = self._in_progress_preview()
+
+        serializer = SourcePreviewSerializer(
+            data={"url": self.url, "skip_recent_reuse": True},
+            context=self.context,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        instance = serializer.save()
+
+        self.assertNotEqual(instance.pk, existing.pk)
+        self.assertEqual(SourcePreview.objects.count(), 2)
+
+    @patch("apps.entry.tasks.generate_pdf.delay")
+    def test_skip_recent_reuse_not_leaked_into_response_data(self, _mock_delay):
+        """The write-only flag must not surface in serialized output."""
+        serializer = SourcePreviewSerializer(
+            data={"url": self.url, "skip_recent_reuse": True},
+            context=self.context,
+        )
+        self.assertTrue(serializer.is_valid(), serializer.errors)
+        serializer.save()
+        self.assertNotIn("skip_recent_reuse", serializer.data)
