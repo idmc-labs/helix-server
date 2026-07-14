@@ -7,8 +7,10 @@ from django.contrib.postgres.aggregates.general import ArrayAgg, StringAgg
 from django.contrib.postgres.fields import ArrayField
 from django.db.models import Avg, Case, CharField, F, Func, Q, Value, When
 from django.db.models.functions import Cast, Coalesce, Concat, ExtractYear, Lower
+from django.db.models.sql.constants import LOUTER
 from django.shortcuts import redirect
 from django.utils import timezone
+from django_cte import With
 from drf_spectacular.utils import extend_schema
 from openpyxl import Workbook
 from rest_framework import status, viewsets
@@ -40,6 +42,79 @@ def get_idu_data(filters=None):
     if filters:
         include_sources = filters.pop("include_sources", False)
 
+    # The flat form joined FOUR to-many relations (geo_locations,
+    # event__event_code, sources, entry__publishers) into one GROUP BY, so
+    # every aggregate processed the cross-product of all four fan-outs.
+    # Aggregating each relation in its own figure-grouped CTE keeps every scan
+    # linear and drops the GROUP BY from the outer query entirely.
+    idu_figures = Figure.objects.filter(
+        category__in=[
+            Figure.FIGURE_CATEGORY_TYPES.RETURNEES.value,
+            Figure.FIGURE_CATEGORY_TYPES.NEW_DISPLACEMENT.value,
+            Figure.FIGURE_CATEGORY_TYPES.CROSS_BORDER_RETURN.value,
+            Figure.FIGURE_CATEGORY_TYPES.FAILED_RETURN_RETURNEE_DISPLACEMENT.value,
+        ],
+        excerpt_idu__isnull=False,
+        include_idu=True,
+    )
+    geo_cte = With(
+        idu_figures.values("id")
+        .annotate(
+            centroid_lat=Avg("geo_locations__lat"),
+            centroid_lon=Avg("geo_locations__lon"),
+            locations=ArrayAgg(
+                Array(
+                    F("geo_locations__display_name"),
+                    Concat(
+                        F("geo_locations__lat"),
+                        Value(EXTERNAL_TUPLE_SEPARATOR),
+                        F("geo_locations__lon"),
+                        output_field=CharField(),
+                    ),
+                    Cast("geo_locations__accuracy", CharField()),
+                    Cast("geo_locations__identifier", CharField()),
+                    output_field=ArrayField(CharField()),
+                ),
+                distinct=True,
+                filter=~Q(Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name="")),
+            ),
+        )
+        .values("id", "centroid_lat", "centroid_lon", "locations"),
+        name="idu_geo_agg",
+    )
+    event_code_cte = With(
+        idu_figures.values("id")
+        .annotate(
+            event_codes=ArrayAgg(
+                Array(
+                    F("event__event_code__event_code"),
+                    Cast(F("event__event_code__event_code_type"), CharField()),
+                    output_field=ArrayField(CharField()),
+                ),
+                distinct=True,
+                filter=Q(event__event_code__country__id=F("country__id")),
+            ),
+        )
+        .values("id", "event_codes"),
+        name="idu_event_code_agg",
+    )
+    sources_cte = With(
+        idu_figures.values("id")
+        .annotate(
+            sources_name=StringAgg("sources__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()),
+        )
+        .values("id", "sources_name"),
+        name="idu_sources_agg",
+    )
+    publishers_cte = With(
+        idu_figures.values("id")
+        .annotate(
+            publishers_name=StringAgg("entry__publishers__name", " ", distinct=True, output_field=CharField()),
+        )
+        .values("id", "publishers_name"),
+        name="idu_publishers_agg",
+    )
+
     base_query = (
         Figure.objects.annotate(
             displacement_date=Coalesce("end_date", "start_date"),
@@ -59,12 +134,19 @@ def get_idu_data(filters=None):
             ~(Q(entry__document_url__isnull=True) | Q(entry__document_url=""))
             | ~(Q(entry__url__isnull=True) | Q(entry__url=""))
         )
-        .annotate(
+    )
+    for relation_cte in (geo_cte, event_code_cte, sources_cte, publishers_cte):
+        base_query = relation_cte.join(base_query, id=relation_cte.col.id, _join_type=LOUTER).with_cte(relation_cte)
+
+    base_query = (
+        base_query.annotate(
             country_name=F("country__idmc_short_name"),
             iso3=F("country__iso3"),
             figure_role=F("role"),
-            centroid_lat=Avg("geo_locations__lat"),
-            centroid_lon=Avg("geo_locations__lon"),
+            centroid_lat=geo_cte.col.centroid_lat,
+            centroid_lon=geo_cte.col.centroid_lon,
+            locations=geo_cte.col.locations,
+            event_codes=event_code_cte.col.event_codes,
             centroid=Case(
                 When(
                     centroid_lat__isnull=False,
@@ -83,15 +165,6 @@ def get_idu_data(filters=None):
             displacement_end_date=F("end_date"),
             year=Coalesce(ExtractYear("start_date", "year"), ExtractYear("end_date", "year")),
             event_name=F("event__name"),
-            event_codes=ArrayAgg(
-                Array(
-                    F("event__event_code__event_code"),
-                    Cast(F("event__event_code__event_code_type"), CharField()),
-                    output_field=ArrayField(CharField()),
-                ),
-                distinct=True,
-                filter=Q(event__event_code__country__id=F("country__id")),
-            ),
             event_start_date=F("event__start_date"),
             event_end_date=F("event__end_date"),
             disaster_category_name=F("disaster_category__name"),
@@ -123,23 +196,7 @@ def get_idu_data(filters=None):
             total_figures_text=Func(
                 F("total_figures"), Value("999G999G999G990D"), function="to_char", output_field=CharField()
             ),
-            sources_name=StringAgg("sources__name", EXTERNAL_ARRAY_SEPARATOR, distinct=True, output_field=CharField()),
-            locations=ArrayAgg(
-                Array(
-                    F("geo_locations__display_name"),
-                    Concat(
-                        F("geo_locations__lat"),
-                        Value(EXTERNAL_TUPLE_SEPARATOR),
-                        F("geo_locations__lon"),
-                        output_field=CharField(),
-                    ),
-                    Cast("geo_locations__accuracy", CharField()),
-                    Cast("geo_locations__identifier", CharField()),
-                    output_field=ArrayField(CharField()),
-                ),
-                distinct=True,
-                filter=~Q(Q(geo_locations__display_name__isnull=True) | Q(geo_locations__display_name="")),
-            ),
+            sources_name=sources_cte.col.sources_name,
             displacement_occurred_transformed=Case(
                 When(displacement_occurred=0, then=Value("Displacement reporting preventive evacuations")),
                 When(
@@ -246,7 +303,7 @@ def get_idu_data(filters=None):
         base_query = base_query.annotate(
             entry_url_or_document_url=Value("", output_field=CharField()),
             custom_link_text=Concat(
-                StringAgg("entry__publishers__name", " ", distinct=True),
+                publishers_cte.col.publishers_name,
                 Value(" - "),
                 Func(F("entry__publish_date"), Value("DD Month YYYY"), function="to_char", output_field=CharField()),
                 output_field=CharField(),
@@ -276,7 +333,7 @@ def get_idu_data(filters=None):
                 ),
                 Value('"'),
                 Value('target="_blank">'),
-                StringAgg("entry__publishers__name", " ", distinct=True),
+                publishers_cte.col.publishers_name,
                 Value(" - "),
                 Func(F("entry__publish_date"), Value("DD Month YYYY"), function="to_char", output_field=CharField()),
                 Value("</a>"),
@@ -301,14 +358,20 @@ def get_idu_data(filters=None):
     # the queryset result cache. NOTE: incompatible with `prefetch_related` on
     # Django 3.2 — adding one here would silently re-buffer.
     for figure_data in base_query.values().iterator(chunk_size=2000):
-        locations_data = figure_data.pop("locations", [])
+        # Raw CTE columns skip ArrayAgg/StringAgg's client-side NULL->[]/""
+        # conversion — restore it here. From Django 5.0 that conversion lives in
+        # the aggregate's `convert_value`, which a CTE-nested aggregate never
+        # reaches: a `default=` on these aggregates would be silently dropped
+        # rather than merely redundant, so this compensation is load-bearing.
+        locations_data = figure_data.pop("locations", None) or []
         location_parse = extract_location_data(locations_data)
 
-        event_codes_data = figure_data.pop("event_codes", [])
+        event_codes_data = figure_data.pop("event_codes", None) or []
         event_code_parse = extract_event_code_data(event_codes_data)
 
         yield {
             **figure_data,
+            "sources_name": figure_data["sources_name"] or "",
             "locations_name": location_parse["display_name"],
             "locations_coordinates": location_parse["lat_lon"],
             "locations_accuracy": location_parse["accuracy"],
