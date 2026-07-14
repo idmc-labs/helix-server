@@ -1,3 +1,4 @@
+import functools
 import typing
 
 REDIS_SEPARATOR = ":"
@@ -8,18 +9,32 @@ EXTERNAL_ARRAY_SEPARATOR = "; "
 EXTERNAL_FIELD_SEPARATOR = ":"
 
 
+@functools.lru_cache(maxsize=None)
+def _cached_enum_label(enum_cls, member) -> str:
+    return str(member.label)
+
+
+def get_enum_label(member) -> typing.Optional[str]:
+    """django_enumfield resolves the gettext translation on EVERY `.label`
+    access, and the exports look a label up per row. Caching is safe because
+    celery exports run under a single locale. Keyed by (class, member):
+    members are int-like, so same-valued members of DIFFERENT enums are equal
+    and hash-equal and would poison a member-only key."""
+    if member is None:
+        return None
+    return _cached_enum_label(type(member), member)
+
+
 def format_locations(
     locations_data: typing.List[typing.Tuple[str, str, str, str]],
 ) -> typing.List[typing.Tuple[str, str, str, str]]:
     from apps.entry.models import FigureLocation
 
     def _get_accuracy_label(key: str) -> str:
-        obj = FigureLocation.ACCURACY(int(key))
-        return getattr(obj, "label", key)
+        return get_enum_label(FigureLocation.ACCURACY(int(key)))
 
     def _get_identifier_label(key: str) -> str:
-        obj = FigureLocation.IDENTIFIER(int(key))
-        return getattr(obj, "label", key)
+        return get_enum_label(FigureLocation.IDENTIFIER(int(key)))
 
     location_list = []
     for loc in locations_data:
@@ -133,8 +148,7 @@ def format_event_codes(
     from apps.event.models import EventCode
 
     def _get_event_code_label(key: str) -> str:
-        obj = EventCode.EVENT_CODE_TYPE(int(key))
-        return getattr(obj, "label", key)
+        return get_enum_label(EventCode.EVENT_CODE_TYPE(int(key)))
 
     code_list = []
     for code in event_codes_data:

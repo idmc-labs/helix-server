@@ -22,6 +22,7 @@ from rest_framework.permissions import AllowAny
 from apps.common.utils import (
     EXTERNAL_ARRAY_SEPARATOR,
     EXTERNAL_FIELD_SEPARATOR,
+    get_enum_label,
 )
 from apps.contrib.commons import DATE_ACCURACY
 from apps.country.models import Country
@@ -66,19 +67,19 @@ class XlsxRenderer(renderers.BaseRenderer):
 def _get_location_accuracy_label(accuracy):
     if accuracy is None:
         return None
-    return FigureLocation.ACCURACY.get(accuracy).label
+    return get_enum_label(FigureLocation.ACCURACY.get(accuracy))
 
 
 def _get_location_type_label(type):
     if type is None:
         return None
-    return FigureLocation.IDENTIFIER.get(type).label
+    return get_enum_label(FigureLocation.IDENTIFIER.get(type))
 
 
 def _get_event_code_label(key: str):
     if key is None:
         return None
-    return EventCode.EVENT_CODE_TYPE.get(int(key)).label
+    return get_enum_label(EventCode.EVENT_CODE_TYPE.get(int(key)))
 
 
 def _get_location_accuracy_labels(location_accuracy: typing.List[typing.Tuple[int]]) -> str:
@@ -669,8 +670,8 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 [
                     item.iso3,
                     item.year,
-                    item.figure_cause.label,
-                    item.figure_category.label,
+                    get_enum_label(item.figure_cause),
+                    get_enum_label(item.figure_category),
                     item.description,
                     item.figures,
                     item.figures_rounded,
@@ -700,7 +701,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                     item.country_name,
                     item.year,
                     item.sex,
-                    item.cause.label,
+                    get_enum_label(item.cause),
                     item.zero_to_four,
                     item.five_to_eleven,
                     item.twelve_to_seventeen,
@@ -1140,6 +1141,56 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         )
 
 
+# Only the columns the disaggregation exports read — `.values()` skips model
+# hydration and the wide unused columns (calculation_logic, source_excerpt, ...).
+DISAGGREGATION_EXPORT_VALUES = (
+    "figure_raw_id",
+    "iso3",
+    "country_name",
+    "geographical_region_name",
+    "cause",
+    "year",
+    "category",
+    "unit",
+    "reported",
+    "household_size",
+    "total_figures",
+    "disaster_category_name",
+    "disaster_sub_category_name",
+    "disaster_type_name",
+    "disaster_sub_type_name",
+    "violence_name",
+    "other_sub_type_name",
+    "start_date",
+    "start_date_accuracy",
+    "end_date",
+    "end_date_accuracy",
+    "stock_date",
+    "stock_date_accuracy",
+    "stock_reporting_date",
+    "publishers",
+    "sources",
+    "sources_type",
+    "is_housing_destruction",
+    "locations_coordinates",
+    "locations_names",
+    "locations_accuracy",
+    "locations_type",
+    "displacement_occurred",
+    "event_main_trigger",
+    "gidd_event__event_raw_id",
+    "gidd_event__name",
+    "gidd_event__cause",
+    "gidd_event__start_date",
+    "gidd_event__end_date",
+    "gidd_event__start_date_accuracy",
+    "gidd_event__end_date_accuracy",
+    "gidd_event__event_codes",
+    "gidd_event__event_codes_type",
+    "gidd_event__event_codes_iso3",
+)
+
+
 @client_id
 class DisaggregationViewSet(viewsets.GenericViewSet):
     # `@client_id` is declared here rather than inherited: it documents the required query
@@ -1170,17 +1221,17 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
     def _get_category(self, category) -> typing.Optional[str]:
         if category is None:
             return
-        return Figure.FIGURE_CATEGORY_TYPES.get(category).label
+        return get_enum_label(Figure.FIGURE_CATEGORY_TYPES.get(category))
 
     def _get_cause(self, cause) -> typing.Optional[str]:
         if cause is None:
             return
-        return Crisis.CRISIS_TYPE.get(cause).label
+        return get_enum_label(Crisis.CRISIS_TYPE.get(cause))
 
     def _get_date_accuracy(self, accuracy) -> typing.Optional[str]:
         if accuracy is None:
             return
-        return DATE_ACCURACY.get(accuracy).label
+        return get_enum_label(DATE_ACCURACY.get(accuracy))
 
     def _get_displacement_occurred(self, displacement_occurred) -> str:
         if displacement_occurred is not None:
@@ -1190,7 +1241,7 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
     def _get_unit(self, unit) -> typing.Optional[str]:
         if unit is None:
             return None
-        return Figure.UNIT.get(unit).label
+        return get_enum_label(Figure.UNIT.get(unit))
 
     def extract_event_data(
         self,
@@ -1415,61 +1466,61 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             # ``.iterator()`` streams rows from a server-side cursor so the whole
             # queryset is never held in memory; ``stream_json_object_with_array``
             # then encodes one feature at a time.
-            for item in qs.iterator(chunk_size=2000):
+            for item in qs.values(*DISAGGREGATION_EXPORT_VALUES).iterator(chunk_size=2000):
                 yield {
                     "type": "Feature",
                     "geometry": {
                         "type": "MultiPoint",
-                        "coordinates": format_coordinates(item.locations_coordinates),
+                        "coordinates": format_coordinates(item["locations_coordinates"]),
                     },
                     "properties": remove_null_from_dict(
                         {
-                            "ID": item.figure_raw_id,
-                            "ISO3": item.iso3,
-                            "Country": item.country_name,
-                            "Geographical region": item.geographical_region_name,
-                            "Figure cause": self._get_cause(item.cause),
-                            "Year": item.year,
-                            "Figure category": self._get_category(item.category),
-                            "Figure unit": self._get_unit(item.unit),
-                            "Reported figures": item.reported,
-                            "Household size": item.household_size,
-                            "Total figures": item.total_figures,
-                            "Hazard category": item.disaster_category_name,
-                            "Hazard sub category": item.disaster_sub_category_name,
-                            "Hazard type": item.disaster_type_name,
-                            "Hazard sub type": item.disaster_sub_type_name,
-                            "Violence type": item.violence_name,
-                            "Other event sub type": item.other_sub_type_name,
-                            "Start date": item.start_date,
-                            "Start date accuracy": self._get_date_accuracy(item.start_date_accuracy),
-                            "End date": item.end_date,
-                            "End date accuracy": self._get_date_accuracy(item.end_date_accuracy),
-                            "Stock date": item.stock_date,
-                            "Stock date accuracy": self._get_date_accuracy(item.stock_date_accuracy),
-                            "Stock reporting date": item.stock_reporting_date,
-                            "Publishers": item.publishers,
-                            "Sources": item.sources,
-                            "Sources type": item.sources_type,
-                            "Event ID": item.gidd_event.event_raw_id,
-                            "Event name": item.gidd_event.name,
-                            "Event cause": self._get_cause(item.gidd_event.cause),
-                            "Event main trigger": item.event_main_trigger,
-                            "Event start date": item.gidd_event.start_date,
-                            "Event end date": item.gidd_event.end_date,
-                            "Event start date accuracy": self._get_date_accuracy(item.gidd_event.start_date_accuracy),
-                            "Event end date accuracy": self._get_date_accuracy(item.gidd_event.end_date_accuracy),
-                            "Is housing destruction": "Yes" if item.is_housing_destruction is not None else "No",
+                            "ID": item["figure_raw_id"],
+                            "ISO3": item["iso3"],
+                            "Country": item["country_name"],
+                            "Geographical region": item["geographical_region_name"],
+                            "Figure cause": self._get_cause(item["cause"]),
+                            "Year": item["year"],
+                            "Figure category": self._get_category(item["category"]),
+                            "Figure unit": self._get_unit(item["unit"]),
+                            "Reported figures": item["reported"],
+                            "Household size": item["household_size"],
+                            "Total figures": item["total_figures"],
+                            "Hazard category": item["disaster_category_name"],
+                            "Hazard sub category": item["disaster_sub_category_name"],
+                            "Hazard type": item["disaster_type_name"],
+                            "Hazard sub type": item["disaster_sub_type_name"],
+                            "Violence type": item["violence_name"],
+                            "Other event sub type": item["other_sub_type_name"],
+                            "Start date": item["start_date"],
+                            "Start date accuracy": self._get_date_accuracy(item["start_date_accuracy"]),
+                            "End date": item["end_date"],
+                            "End date accuracy": self._get_date_accuracy(item["end_date_accuracy"]),
+                            "Stock date": item["stock_date"],
+                            "Stock date accuracy": self._get_date_accuracy(item["stock_date_accuracy"]),
+                            "Stock reporting date": item["stock_reporting_date"],
+                            "Publishers": item["publishers"],
+                            "Sources": item["sources"],
+                            "Sources type": item["sources_type"],
+                            "Event ID": item["gidd_event__event_raw_id"],
+                            "Event name": item["gidd_event__name"],
+                            "Event cause": self._get_cause(item["gidd_event__cause"]),
+                            "Event main trigger": item["event_main_trigger"],
+                            "Event start date": item["gidd_event__start_date"],
+                            "Event end date": item["gidd_event__end_date"],
+                            "Event start date accuracy": self._get_date_accuracy(item["gidd_event__start_date_accuracy"]),
+                            "Event end date accuracy": self._get_date_accuracy(item["gidd_event__end_date_accuracy"]),
+                            "Is housing destruction": "Yes" if item["is_housing_destruction"] is not None else "No",
                             "Event codes (Code:Type)": self.extract_event_data_raw(
-                                item.gidd_event.event_codes,
-                                item.gidd_event.event_codes_type,
-                                item.gidd_event.event_codes_iso3,
-                                item.iso3,
+                                item["gidd_event__event_codes"],
+                                item["gidd_event__event_codes_type"],
+                                item["gidd_event__event_codes_iso3"],
+                                item["iso3"],
                             ),
-                            "Locations name": item.locations_names,
-                            "Locations accuracy": [_get_location_accuracy_label(x) for x in item.locations_accuracy],
-                            "Locations type": [_get_location_type_label(x) for x in item.locations_type],
-                            "Displacement occurred": self._get_displacement_occurred(item.displacement_occurred),
+                            "Locations name": item["locations_names"],
+                            "Locations accuracy": [_get_location_accuracy_label(x) for x in item["locations_accuracy"]],
+                            "Locations type": [_get_location_type_label(x) for x in item["locations_type"]],
+                            "Displacement occurred": self._get_displacement_occurred(item["displacement_occurred"]),
                         }
                     ),
                 }
@@ -1550,8 +1601,8 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                 [
                     item.iso3,
                     item.year,
-                    item.figure_cause.label,
-                    item.figure_category.label,
+                    get_enum_label(item.figure_cause),
+                    get_enum_label(item.figure_category),
                     item.description,
                     item.figures,
                     item.figures_rounded,
@@ -1977,56 +2028,56 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             ),
         )
 
-        for item in qs.iterator(chunk_size=2000):
+        for item in qs.values(*DISAGGREGATION_EXPORT_VALUES).iterator(chunk_size=2000):
             ws.append(
                 [
-                    item.figure_raw_id,
-                    item.iso3,
-                    item.country_name,
-                    item.geographical_region_name,
-                    self._get_cause(item.cause),
-                    item.year,
-                    self._get_category(item.category),
-                    self._get_unit(item.unit),
-                    item.reported,
-                    item.household_size,
-                    item.total_figures,
-                    item.disaster_category_name,
-                    item.disaster_sub_category_name,
-                    item.disaster_type_name,
-                    item.disaster_sub_type_name,
-                    item.violence_name,
-                    item.other_sub_type_name,
-                    item.start_date,
-                    self._get_date_accuracy(item.start_date_accuracy),
-                    item.end_date,
-                    self._get_date_accuracy(item.end_date_accuracy),
-                    item.stock_date,
-                    self._get_date_accuracy(item.stock_date_accuracy),
-                    item.stock_reporting_date,
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item.publishers),
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item.sources),
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item.sources_type),
-                    item.gidd_event.event_raw_id,
-                    item.gidd_event.name,
-                    self._get_cause(item.gidd_event.cause),
-                    item.event_main_trigger,
-                    item.gidd_event.start_date,
-                    item.gidd_event.end_date,
-                    self._get_date_accuracy(item.gidd_event.start_date_accuracy),
-                    self._get_date_accuracy(item.gidd_event.end_date_accuracy),
-                    "Yes" if item.is_housing_destruction else "No",
+                    item["figure_raw_id"],
+                    item["iso3"],
+                    item["country_name"],
+                    item["geographical_region_name"],
+                    self._get_cause(item["cause"]),
+                    item["year"],
+                    self._get_category(item["category"]),
+                    self._get_unit(item["unit"]),
+                    item["reported"],
+                    item["household_size"],
+                    item["total_figures"],
+                    item["disaster_category_name"],
+                    item["disaster_sub_category_name"],
+                    item["disaster_type_name"],
+                    item["disaster_sub_type_name"],
+                    item["violence_name"],
+                    item["other_sub_type_name"],
+                    item["start_date"],
+                    self._get_date_accuracy(item["start_date_accuracy"]),
+                    item["end_date"],
+                    self._get_date_accuracy(item["end_date_accuracy"]),
+                    item["stock_date"],
+                    self._get_date_accuracy(item["stock_date_accuracy"]),
+                    item["stock_reporting_date"],
+                    string_join(EXTERNAL_ARRAY_SEPARATOR, item["publishers"]),
+                    string_join(EXTERNAL_ARRAY_SEPARATOR, item["sources"]),
+                    string_join(EXTERNAL_ARRAY_SEPARATOR, item["sources_type"]),
+                    item["gidd_event__event_raw_id"],
+                    item["gidd_event__name"],
+                    self._get_cause(item["gidd_event__cause"]),
+                    item["event_main_trigger"],
+                    item["gidd_event__start_date"],
+                    item["gidd_event__end_date"],
+                    self._get_date_accuracy(item["gidd_event__start_date_accuracy"]),
+                    self._get_date_accuracy(item["gidd_event__end_date_accuracy"]),
+                    "Yes" if item["is_housing_destruction"] else "No",
                     self.extract_event_data(
-                        item.gidd_event.event_codes,
-                        item.gidd_event.event_codes_type,
-                        item.gidd_event.event_codes_iso3,
-                        item.iso3,
+                        item["gidd_event__event_codes"],
+                        item["gidd_event__event_codes_type"],
+                        item["gidd_event__event_codes_iso3"],
+                        item["iso3"],
                     ),
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item.locations_coordinates),
-                    string_join(EXTERNAL_ARRAY_SEPARATOR, item.locations_names),
-                    _get_location_accuracy_labels(item.locations_accuracy),
-                    _get_location_type_labels(item.locations_type),
-                    self._get_displacement_occurred(item.displacement_occurred),
+                    string_join(EXTERNAL_ARRAY_SEPARATOR, item["locations_coordinates"]),
+                    string_join(EXTERNAL_ARRAY_SEPARATOR, item["locations_names"]),
+                    _get_location_accuracy_labels(item["locations_accuracy"]),
+                    _get_location_type_labels(item["locations_type"]),
+                    self._get_displacement_occurred(item["displacement_occurred"]),
                 ]
             )
 
