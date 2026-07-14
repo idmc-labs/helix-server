@@ -370,9 +370,11 @@ def get_idu_data_excel(filters=None):
     else:
         idu_data = get_idu_data()
 
+    # One shared serializer, one record at a time — instantiating (and binding
+    # the fields of) a serializer per row dominates the export wall time.
+    serializer = FigureReadOnlySerializer()
     for obj in idu_data:
-        serializer = FigureReadOnlySerializer(obj)
-        item = dict(serializer.data)  # dict used here to solve pyright issue
+        item = serializer.to_representation(obj)
         ws.append(
             [
                 item["id"],

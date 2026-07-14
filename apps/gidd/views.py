@@ -14,7 +14,6 @@ from drf_spectacular.utils import (
 )
 from openpyxl import Workbook
 from openpyxl.cell import Cell as OpCell
-from openpyxl.writer.excel import save_virtual_workbook
 from rest_framework import filters, mixins, renderers, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError
@@ -294,7 +293,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
             ]
         )
 
-        for disaster in qs:
+        for disaster in qs.iterator(chunk_size=2000):
             ws.append(
                 [
                     disaster.country.iso3,
@@ -495,7 +494,7 @@ class DisasterViewSet(ListOnlyViewSetMixin):
 
         for item in readme_text_3:
             ws2.append(item)
-        return save_virtual_workbook(wb)
+        return wb
 
     @extend_schema(
         description=Path("docs/disaster/xlsx-export-description.md").read_text(),
@@ -565,7 +564,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 "Conflict Internal Displacements (Raw)",
             ]
         )
-        for item in qs:
+        for item in qs.iterator(chunk_size=2000):
             ws.append(
                 [
                     item.iso3,
@@ -590,7 +589,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 "Disaster Stock Displacement (Raw)",
             ]
         )
-        for item in qs:
+        for item in qs.iterator(chunk_size=2000):
             ws.append(
                 [
                     item.iso3,
@@ -619,7 +618,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
                 "Disaster Stock Displacement (Raw)",
             ]
         )
-        for item in qs:
+        for item in qs.iterator(chunk_size=2000):
             ws.append(
                 [
                     item.iso3,
@@ -665,7 +664,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             ]
         )
 
-        for item in pfa_qs:
+        for item in pfa_qs.iterator(chunk_size=2000):
             ws2.append(
                 [
                     item.iso3,
@@ -694,7 +693,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
             ]
         )
 
-        for item in idps_sadd_qs:
+        for item in idps_sadd_qs.iterator(chunk_size=2000):
             ws3.append(
                 [
                     item.iso3,
@@ -1091,7 +1090,7 @@ class DisplacementDataViewSet(ListOnlyViewSetMixin):
         for item in readme_text_7:
             ws4.append(item)
 
-        return save_virtual_workbook(wb)
+        return wb
 
     @extend_schema(
         description=Path("docs/displacement/xlsx-export-description.md").read_text(),
@@ -1537,7 +1536,7 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             ]
         )
 
-        for item in pfa_qs:
+        for item in pfa_qs.iterator(chunk_size=2000):
             ws2.append(
                 [
                     item.iso3,
@@ -1969,7 +1968,7 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
             ),
         )
 
-        for item in qs:
+        for item in qs.iterator(chunk_size=2000):
             ws.append(
                 [
                     item.figure_raw_id,
@@ -2022,7 +2021,7 @@ class DisaggregationViewSet(viewsets.GenericViewSet):
                 ]
             )
 
-        return save_virtual_workbook(wb)
+        return wb
 
     @extend_schema(
         description=Path("docs/disaggregation/geojson-export-description.md").read_text(),

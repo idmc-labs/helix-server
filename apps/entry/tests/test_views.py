@@ -1,12 +1,14 @@
 import json
+import tempfile
 
 from django.core.files.base import ContentFile
+from openpyxl import load_workbook
 from rest_framework import status
 
 from apps.contrib.tasks import generate_external_endpoint_dump_file
 from apps.entry.models import ExternalApiDump, Figure
 from apps.entry.serializers import FigureReadOnlySerializer
-from apps.entry.views import get_idu_data, get_idu_data_geojson
+from apps.entry.views import get_idu_data, get_idu_data_excel, get_idu_data_geojson
 from utils.factories import (
     ClientFactory,
     CountryFactory,
@@ -78,7 +80,7 @@ class TestIduDumpGeneration(HelixTestCase):
 
     def setUp(self):
         super().setUp()
-        self.country = CountryFactory.create()
+        self.country = CountryFactory.create(idmc_short_name="Nepal")
         self.event = EventFactory.create()
         self.entry = EntryFactory.create(url="https://example.com/source-report", is_confidential=False)
         self.location = FigureLocationFactory.create()
@@ -124,6 +126,19 @@ class TestIduDumpGeneration(HelixTestCase):
         self.assertEqual(feature["geometry"]["type"], "MultiPoint")
         self.assertTrue(feature["geometry"]["coordinates"])
         self.assertEqual(feature["properties"]["id"], self.figure.id)
+
+    def test_excel_dump_rows_match_serializer_output(self):
+        wb = get_idu_data_excel({"include_sources": False})
+        with tempfile.NamedTemporaryFile(suffix=".xlsx") as tmp:
+            wb.save(tmp.name)
+            wb.close()
+            loaded = load_workbook(tmp.name, read_only=True)
+
+        rows = list(loaded["IDUS_Data"].iter_rows(max_row=2, values_only=True))
+        self.assertEqual(rows[0][0], "Id")
+        expected = FigureReadOnlySerializer(next(iter(get_idu_data({"include_sources": False})))).data
+        self.assertEqual(rows[1][0], self.figure.id)
+        self.assertEqual(rows[1][1], expected["country"])
 
 
 class TestIduExportSourceRouting(HelixAPITestCase):
