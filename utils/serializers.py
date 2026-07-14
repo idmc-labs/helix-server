@@ -12,6 +12,22 @@ class IntegerIDField(serializers.IntegerField):
     pass
 
 
+def make_flat_to_representation(serializer: serializers.Serializer):
+    """Fast path for a read-only serializer fed flat `.values()`-style dicts:
+    same fields, same per-field coercions, without DRF's per-row
+    bind/get_attribute machinery.
+    """
+    spec = [(field.field_name, field.source, field.to_representation) for field in serializer.fields.values()]
+    unsupported = [source for _, source, _ in spec if "." in source]
+    if unsupported:
+        raise ValueError(f"dotted sources need DRF's get_attribute traversal: {unsupported}")
+
+    def to_representation(row: dict) -> dict:
+        return {name: to_repr(row[source]) if row[source] is not None else None for name, source, to_repr in spec}
+
+    return to_representation
+
+
 class GraphqlSupportDrfSerializerJSONField(serializers.JSONField):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

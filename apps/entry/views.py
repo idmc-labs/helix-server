@@ -29,6 +29,7 @@ from apps.gidd.views import client_id
 from helix.storages import TemporaryStorageEnableAuthString, get_external_storage
 from utils.common import track_gidd
 from utils.db import Array
+from utils.serializers import make_flat_to_representation
 from utils.streaming import stream_json_object_with_array
 
 external_storage = get_external_storage()
@@ -370,11 +371,9 @@ def get_idu_data_excel(filters=None):
     else:
         idu_data = get_idu_data()
 
-    # One shared serializer, one record at a time — instantiating (and binding
-    # the fields of) a serializer per row dominates the export wall time.
-    serializer = FigureReadOnlySerializer()
+    serialize_record = make_flat_to_representation(FigureReadOnlySerializer())
     for obj in idu_data:
-        item = serializer.to_representation(obj)
+        item = serialize_record(obj)
         ws.append(
             [
                 item["id"],
@@ -443,13 +442,11 @@ def get_idu_data_geojson(filters=None):
         "lastUpdated": timezone.now().strftime("%Y-%m-%d %H:%M:%S"),
     }
 
-    # One shared serializer, one record at a time — no context/request
-    # dependency, and no many=True materialisation of the whole dump.
-    serializer = FigureReadOnlySerializer()
+    serialize_record = make_flat_to_representation(FigureReadOnlySerializer())
 
     def feature_iterator():
         for obj in idu_data:
-            item = serializer.to_representation(obj)
+            item = serialize_record(obj)
 
             coordinates = format_coordinates(item["locations_coordinates"])
             if coordinates == []:

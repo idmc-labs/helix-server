@@ -41,6 +41,7 @@ from apps.common.utils import (
     format_event_codes_as_string,
     format_locations_as_string,
 )
+from apps.common.utils import get_enum_label as cached_enum_label
 from apps.contrib.commons import DATE_ACCURACY
 from apps.contrib.models import (
     MetaInformationAbstractModel,
@@ -1299,8 +1300,11 @@ class Figure(MetaInformationArchiveAbstractModel, UUIDAbstractModel, FigureDisag
         def transformer(datum):
             def get_enum_label(key, Enum):
                 val = datum[key]
-                obj = Enum.get(val)
-                return getattr(obj, "label", val)
+                member = Enum.get(val)
+                # Resolved through the cache: `.label` re-runs the gettext lookup on every access,
+                # and this is called once per enum column per row. A value outside the enum keeps
+                # its raw form, as it did before.
+                return cached_enum_label(member) if member is not None else val
 
             location_data = extract_location_data(datum["locations"])
 
