@@ -1,3 +1,4 @@
+import contextlib
 import hashlib
 import json
 import os
@@ -11,11 +12,13 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.http import HttpResponse
 from django.shortcuts import redirect
+from openpyxl import Workbook
 from rest_framework import serializers
 from rest_framework.request import Request
 from storages.backends.s3boto3 import S3Boto3Storage
 
 from helix.storages import TemporaryStorageEnableAuthString, get_external_storage
+from utils.common import get_temp_file
 from utils.streaming import spool_to_temp_file
 
 from .models import ReleaseMetadata, StatusLog
@@ -57,6 +60,21 @@ class GiddExportCache:
             filename,
         ).format(last_release_date, hash_md5.hexdigest())
 
+    @staticmethod
+    @contextlib.contextmanager
+    def _workbook_to_temp_file(workbook: Workbook) -> typing.Generator[typing.IO[bytes], None, None]:
+        """Serialise a workbook to a temp file and yield it rewound.
+
+        `save_virtual_workbook` would materialise the whole xlsx in memory; a
+        write-only workbook serialises straight to disk instead. The temp file
+        is removed on exit.
+        """
+        with get_temp_file(suffix=".xlsx") as tmp:
+            workbook.save(tmp.name)
+            workbook.close()
+            tmp.seek(0)
+            yield tmp
+
     @classmethod
     def _get_or_create(
         cls,
@@ -68,14 +86,17 @@ class GiddExportCache:
         key_data, cache_key = cls.generate_cache_key(key, data, filename)
         if external_storage.exists(cache_key):
             return cache_key
-        # ``export_generator`` may return the full payload as bytes (excel
-        # exports) or an iterator of byte chunks (streaming json / geojson
-        # exports). Chunks are spooled to a temp file first so the payload is
-        # never held in memory and a mid-generation failure can't publish a
-        # truncated object.
+        # ``export_generator`` may return the full payload as bytes, an openpyxl
+        # ``Workbook`` (excel exports), or an iterator of byte chunks (streaming
+        # json / geojson exports). Workbooks and chunks go through a temp file so
+        # the payload is never held in memory and a mid-generation failure can't
+        # publish a truncated object.
         content = export_generator()
         if isinstance(content, (bytes, bytearray)):
             external_storage.save(cache_key, ContentFile(content))
+        elif isinstance(content, Workbook):
+            with cls._workbook_to_temp_file(content) as tmp:
+                external_storage.save(cache_key, File(tmp))
         else:
             with spool_to_temp_file(content) as tmp:
                 external_storage.save(cache_key, File(tmp))
@@ -128,8 +149,17 @@ class GiddExportCache:
         # When disabled, bypass the cache/storage entirely and stream the
         # generated file directly (the pre-cache behaviour).
         if settings.GIDD_EXPORT_CACHE_DISABLED:
+            content = export_generator()
+            if isinstance(content, Workbook):
+                # A workbook is iterable over its worksheets, so handing it to
+                # `HttpResponse` unchanged would serialise their repr; it needs
+                # the same temp-file materialisation the cached path uses.
+                with cls._workbook_to_temp_file(content) as tmp:
+                    content = tmp.read()
+            # bytes and byte-chunk iterators are both content the response can
+            # take as they are.
             response = HttpResponse(
-                content=export_generator(),
+                content=content,
                 content_type=s3_parameters["ResponseContentType"],
             )
             response["Content-Disposition"] = s3_parameters["ResponseContentDisposition"]

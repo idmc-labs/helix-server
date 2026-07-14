@@ -1,14 +1,17 @@
 import json
 import tempfile
 from datetime import date
+from unittest import mock
 
 from django.core.files import File
 from django.core.files.storage import FileSystemStorage
 from django.test import SimpleTestCase
+from openpyxl import Workbook, load_workbook
 
 from apps.crisis.models import Crisis
 from apps.entry.models import Figure
-from apps.gidd.models import GiddEvent, GiddFigure
+from apps.gidd import cache as gidd_cache
+from apps.gidd.models import GiddEvent, GiddFigure, PublicFigureAnalysis
 from apps.gidd.views import DisaggregationViewSet
 from utils.factories import CountryFactory
 from utils.streaming import spool_to_temp_file, stream_json_array, stream_json_object_with_array
@@ -142,40 +145,85 @@ class SpoolToTempFileTest(SimpleTestCase):
         self.assertEqual(json.loads(written)["features"], [{"id": 1}, {"id": 2}])
 
 
-class DisaggregationGeojsonSmokeTest(HelixTestCase):
-    def test_streamed_export_is_valid_geojson(self):
-        country = CountryFactory.create(iso3="NPL", idmc_short_name="Nepal")
-        gidd_event = GiddEvent.objects.create(
+class DisaggregationExportSmokeTest(HelixTestCase):
+    def setUp(self):
+        super().setUp()
+        self.country = CountryFactory.create(iso3="NPL", idmc_short_name="Nepal")
+        self.gidd_event = GiddEvent.objects.create(
             name="Nepal Flood 2024",
             cause=Crisis.CRISIS_TYPE.DISASTER,
             event_codes=[],
             event_codes_type=[],
             event_codes_iso3=[],
         )
-        gidd_figure = GiddFigure.objects.create(
+        self.gidd_figure = GiddFigure.objects.create(
             iso3="NPL",
             country_name="Nepal",
-            country=country,
+            country=self.country,
             year=2024,
             figure_raw_id=101,
             total_figures=100,
             reported=100,
             unit=Figure.UNIT.PERSON,
             cause=Crisis.CRISIS_TYPE.DISASTER,
-            gidd_event=gidd_event,
+            gidd_event=self.gidd_event,
             locations_coordinates=["12.3, 45.6"],
             locations_names=["Kathmandu"],
             locations_accuracy=[],
             locations_type=[],
         )
 
-        qs = GiddFigure.objects.select_related("gidd_event").order_by("-year", "iso3", "id")
-        chunks = DisaggregationViewSet()._export_disaggregated_geojson("export", qs)
+    def _figure_qs(self):
+        return GiddFigure.objects.select_related("gidd_event").order_by("-year", "iso3", "id")
+
+    def test_streamed_export_is_valid_geojson(self):
+        chunks = DisaggregationViewSet()._export_disaggregated_geojson("export", self._figure_qs())
         doc = json.loads(b"".join(chunks))
 
         self.assertEqual(doc["type"], "FeatureCollection")
         self.assertEqual(len(doc["features"]), 1)
         feature = doc["features"][0]
         self.assertEqual(feature["geometry"], {"type": "MultiPoint", "coordinates": [[45.6, 12.3]]})
-        self.assertEqual(feature["properties"]["ID"], gidd_figure.figure_raw_id)
+        self.assertEqual(feature["properties"]["ID"], self.gidd_figure.figure_raw_id)
         self.assertEqual(feature["properties"]["Country"], "Nepal")
+
+    def test_excel_export_is_a_loadable_workbook(self):
+        wb = DisaggregationViewSet()._export_disaggregated_excel(
+            "export", self._figure_qs(), PublicFigureAnalysis.objects.none()
+        )
+        self.assertIsInstance(wb, Workbook)
+
+        with tempfile.NamedTemporaryFile(suffix=".xlsx") as tmp:
+            wb.save(tmp.name)
+            wb.close()
+            loaded = load_workbook(tmp.name, read_only=True)
+        sheet = loaded[loaded.sheetnames[0]]
+        rows = list(sheet.iter_rows(max_row=2, values_only=True))
+        self.assertEqual(rows[0][:3], ("ID", "ISO3", "Country"))
+        self.assertEqual(rows[1][:3], (101, "NPL", "Nepal"))
+
+
+class WorkbookThroughCacheTest(HelixTestCase):
+    def test_workbook_generator_is_spooled_to_storage(self):
+        # The cache must route Workbook payloads through a temp file — never
+        # `save_virtual_workbook`-style whole-xlsx bytes in memory.
+        wb = Workbook(write_only=True)
+        ws = wb.create_sheet("Main")
+        ws.append(["a", "b"])
+        ws.append([1, 2])
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            storage = FileSystemStorage(location=tmp_dir)
+            with mock.patch.object(gidd_cache, "external_storage", storage):
+                cache_key = gidd_cache.GiddExportCache._get_or_create(
+                    gidd_cache.GiddExportCache.Key.DISAGGREGATION_EXPORT,
+                    {"year": 2024},
+                    "export.xlsx",
+                    lambda: wb,
+                )
+            loaded = load_workbook(storage.path(cache_key), read_only=True)
+
+        self.assertEqual(
+            list(loaded["Main"].iter_rows(values_only=True)),
+            [("a", "b"), (1, 2)],
+        )
