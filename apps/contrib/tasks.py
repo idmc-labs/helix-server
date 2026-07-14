@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import re
 import time
@@ -28,6 +27,7 @@ from apps.report.tasks import REPORT_TIMEOUT
 # from helix.settings import QueuePriority
 from helix.celery import app as celery_app
 from utils.common import get_temp_file, redis_lock
+from utils.streaming import spool_to_temp_file, stream_json_array
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -203,13 +203,15 @@ def generate_external_endpoint_dump_file(
                 data.close()
                 external_api_dump.dump_file.save(filename, File(tmp), save=False)
         elif format == ExternalApiDump.Format.GEOJSON:
-            with get_temp_file(mode="wb+") as tmp:
-                tmp.write(json.dumps(data).encode("utf-8"))
+            # `data` is already an iterator of encoded byte chunks.
+            with spool_to_temp_file(data) as tmp:
                 external_api_dump.dump_file.save(filename, File(tmp), save=False)
         else:
-            serializer = serializer(data, many=True)
-            with get_temp_file(mode="w+") as tmp:
-                json.dump(serializer.data, tmp)
+            # One shared serializer, one record encoded at a time — no
+            # many=True materialisation of the whole dump.
+            record_serializer = serializer()
+            chunks = stream_json_array(record_serializer.to_representation(row) for row in data)
+            with spool_to_temp_file(chunks) as tmp:
                 external_api_dump.dump_file.save(filename, File(tmp), save=False)
 
         external_api_dump.status = ExternalApiDump.Status.COMPLETED
